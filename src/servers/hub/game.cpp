@@ -256,6 +256,10 @@ void HubGame::OnPlayerEnterCity(ClientHandle clientHd)
 	}
 	LOG("[client%x] HubGame :: entered the city without a leader character, spawning the last one", clientHd);
 	OnPlayerSetLeaderCharacter(clientHd, characterID, skin);
+	if(Config().DevShowcase) {
+		LOG("[client%x] HubGame :: showcase, auto dispatch", clientHd);
+		OnCreateParty(clientHd, EntrySystemID::ARENA_3v3, StageType::PVP_GAME);
+	}
 }
 
 void HubGame::OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID characterID, SkinIndex skinIndex)
@@ -385,6 +389,10 @@ void HubGame::OnSortieRoomFound(ClientHandle clientHd, SortieUID sortieID)
 
 	const i32 userID = plidMap->Get(clientHd);
 	matchmaker->QueryPlayerNotifyRoomFound(playerAccountData[userID]->UID, sortieID);
+	if(Config().DevShowcase) {
+		playerMap[userID]->sortieUID = sortieID;
+		matchmaker->QueryPlayerRoomConfirm(playerAccountData[userID]->UID, sortieID, true);
+	}
 }
 
 void HubGame::OnSortieRoomConfirm(ClientHandle clientHd, bool confirm)
@@ -421,6 +429,7 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 	party.mapIndex = mapID;
 
 	replication.SendPartyCreateSucess(clientHd, UserID(userID + 1), StageType::PVP_GAME);
+	if(Config().DevShowcase) OnEnqueueGame(clientHd);
 }
 
 void HubGame::MmOnPartyEnqueued(PartyUID partyUID)

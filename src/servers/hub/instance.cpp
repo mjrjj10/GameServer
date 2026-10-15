@@ -311,6 +311,11 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 		foreach_const(it, allowedMastersSet) all.push_back(*it);
 		eastl::sort(all.begin(), all.end());
 		foreach(u, userList) {
+			if(!u->isBot && u->Main().classType == ClassType::NONE) {
+				TryPickMaster(u, ClassType::STRIKER);
+				TryPickMaster(u, ClassType::LAUNCHER);
+				u->replicate.masterPick = true;
+			}
 			if(!u->isBot || all.empty()) continue;
 			for(int k = 0; k < 2; k++) {
 				const ClassType c = all[showcaseNext % all.size()];
