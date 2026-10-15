@@ -2212,6 +2212,8 @@ void World::UpdateRemotes(f32 delta)
 		}
 
 		if(destroyed && inst.hasLandZ) inst.pos.z = inst.landZ;
+		// tell clients a moving remote ended here (otherwise they let it fly on, e.g. a boomerang curve past its target)
+		if(destroyed && !inst.destroyedByHit && inst.clientRemoteID != 0 && inst.speed > 0) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
 		if(destroyed) {
 			const RemoteIdx next = remote.destroyCreateRemote;
 			const RemoteInst copy = inst;
