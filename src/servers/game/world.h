@@ -513,6 +513,8 @@ struct World
 		vec2 dir = vec2(1, 0);
 		i32 probeDir = 0;
 		f32 groundZ = 0;
+		eastl::fixed_vector<vec2,24,false> candidates;
+		i32 candIdx = 0;
 		vec3 anchor = vec3(0);
 		f32 yaw = 0;
 	} showcase;

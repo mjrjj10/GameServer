@@ -1800,25 +1800,51 @@ void World::UpdateShowcase()
 	}
 	static const vec2 probeDirs[4] = { vec2(1, 0), vec2(-1, 0), vec2(0, 1), vec2(0, -1) };
 	static const f32 probeDist[4] = { 400.0f, 800.0f, 1200.0f, 1600.0f };
+	const i32 probes = MIN((i32)bots.size(), 4);
 	if(showcase.phase == 0) {
+		if(showcase.candidates.empty()) showcase.candidates.push_back(vec2(showcase.mid));
+		showcase.phase = 3;
+		TeleportPlayer(players[bots[0]], vec3(showcase.candidates[showcase.candIdx], showcase.mid.z), 0);
+		showcase.next = TimeAdd(localTime, TimeMsToTime(2500));
+		return;
+	}
+	if(showcase.phase == 3) {
 		showcase.groundZ = players[bots[0]].body->GetWorldPos().z;
-		showcase.phase = 2;
 		showcase.probeDir = 0;
-		for(int k = 0; k < 4 && k < (i32)bots.size(); k++) TeleportPlayer(players[bots[k]], showcase.mid + vec3(probeDirs[0] * probeDist[k], 0), 0);
+		showcase.phase = 2;
+		const vec2 c = showcase.candidates[showcase.candIdx];
+		for(int k = 0; k < probes; k++) TeleportPlayer(players[bots[k]], vec3(c + probeDirs[0] * probeDist[k], showcase.mid.z), 0);
 		showcase.next = TimeAdd(localTime, TimeMsToTime(2500));
 		return;
 	}
 	if(showcase.phase == 2) {
+		const vec2 c = showcase.candidates[showcase.candIdx];
 		f32 dev = 0;
-		for(int k = 0; k < 4 && k < (i32)bots.size(); k++) dev = MAX(dev, fabsf(players[bots[k]].body->GetWorldPos().z - showcase.groundZ));
-		LOG("Showcase :: probe dir=(%.0f, %.0f) max deviation=%.0f", probeDirs[showcase.probeDir].x, probeDirs[showcase.probeDir].y, dev);
-		if(dev > 15.0f && showcase.probeDir < 3) {
-			showcase.probeDir++;
-			for(int k = 0; k < 4 && k < (i32)bots.size(); k++) TeleportPlayer(players[bots[k]], showcase.mid + vec3(probeDirs[showcase.probeDir] * probeDist[k], 0), 0);
-			showcase.next = TimeAdd(localTime, TimeMsToTime(2500));
-			return;
+		for(int k = 0; k < probes; k++) {
+			const vec3 lp = players[bots[k]].body->GetWorldPos();
+			dev = MAX(dev, fabsf(lp.z - showcase.groundZ));
+			if(lp.z < showcase.groundZ - 50.0f && !showcase.candidates.full()) showcase.candidates.push_back(vec2(lp));
+		}
+		LOG("Showcase :: probe from (%.0f, %.0f) z=%.0f dir=(%.0f, %.0f) max deviation=%.0f", c.x, c.y, showcase.groundZ, probeDirs[showcase.probeDir].x, probeDirs[showcase.probeDir].y, dev);
+		if(dev > 15.0f) {
+			if(showcase.probeDir < 3) {
+				showcase.probeDir++;
+				for(int k = 0; k < probes; k++) TeleportPlayer(players[bots[k]], vec3(c + probeDirs[showcase.probeDir] * probeDist[k], showcase.mid.z), 0);
+				showcase.next = TimeAdd(localTime, TimeMsToTime(2500));
+				return;
+			}
+			if(showcase.candIdx + 1 < (i32)showcase.candidates.size() && showcase.candIdx < 8) {
+				showcase.candIdx++;
+				showcase.phase = 0;
+				TeleportPlayer(players[bots[0]], vec3(showcase.candidates[showcase.candIdx], showcase.mid.z), 0);
+				showcase.phase = 3;
+				showcase.next = TimeAdd(localTime, TimeMsToTime(2500));
+				return;
+			}
+			LOG("Showcase :: no flat line found, using the last probe");
 		}
 		showcase.dir = probeDirs[showcase.probeDir];
+		showcase.mid = vec3(c, showcase.mid.z);
 		showcase.phase = 0;
 	}
 	if(showcase.phase == 0) {
