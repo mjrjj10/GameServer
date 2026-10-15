@@ -17,6 +17,15 @@ inline bool ValidatePacket(const void* packetData, i32 packetSize)
 // u32 dwErrorCRC, u32 version, u8 unknown) with no specific bound, so a
 // valid packet is simply one whose size matches the struct exactly.
 template<>
+inline bool ValidatePacket<Cl::CQ_GamePlayerSyncPhy>(const void* packetData, i32 packetSize)
+{
+	const i32 nameOffset = 12 + 12 + 18;
+	if(packetSize < nameOffset + 2) return false;
+	const u16 nameLen = *(const u16*)((const u8*)packetData + nameOffset);
+	return packetSize >= nameOffset + 2 + nameLen * 2;
+}
+
+template<>
 inline bool ValidatePacket<Cl::CQ_FirstHello>(const void* packetData, i32 packetSize)
 {
 	(void)packetData;

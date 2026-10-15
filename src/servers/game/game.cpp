@@ -614,6 +614,43 @@ void Game::OnPlayerJump(ClientHandle clientHd, ActorUID actorUID, f32 rotate, f3
 	player.input.jump = 1;
 }
 
+void Game::OnPlayerWeaponFire(ClientHandle clientHd, f32 aimYaw)
+{
+	Player& p = *playerMap.at(clientHd);
+	World::Player& player = world.GetPlayer(p.playerIndex);
+	ASSERT(player.clientHd == clientHd);
+
+	player.weaponFired = true;
+	player.weaponAimYaw = aimYaw;
+	world.OnWeaponAimPacket(player, aimYaw);
+}
+
+void Game::OnPlayerWeaponStateRelay(ClientHandle clientHd, ActorUID ownerUID, i32 state, u8 chargeLevel, u8 firingCombo)
+{
+	Player& p = *playerMap.at(clientHd);
+	World::Player& player = world.GetPlayer(p.playerIndex);
+	ASSERT(player.clientHd == clientHd);
+
+	if(ownerUID == ActorUID::INVALID) ownerUID = player.Main().UID;
+	const WeaponIndex weapon = player.mainCharaID == 0 ? player.mainWeapon : player.subWeapon;
+	replication.RelayWeaponState(clientHd, ownerUID, (i32)weapon, state, chargeLevel, firingCombo);
+}
+
+void Game::OnPlayerWeaponShot(ClientHandle clientHd, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize)
+{
+	Player& p = *playerMap.at(clientHd);
+	World::Player& player = world.GetPlayer(p.playerIndex);
+	ASSERT(player.clientHd == clientHd);
+
+	const i32 sid = replication.server->clientHandle2IDMap.at(clientHd);
+	const auto& ip = replication.server->clientInfo[sid].ip;
+	const auto& host = Config().HostIP;
+	const bool isHost = ip[0] == 127 || (ip[0] == host[0] && ip[1] == host[1] && ip[2] == host[2] && ip[3] == host[3]);
+	player.shotLeadSec = isHost ? 0.0f : Config().ShotLeadMs / 1000.0f;
+
+	world.OnWeaponShotPacket(player, origin, dir, distance, rawPacket, rawSize);
+}
+
 void Game::OnPlayerCastSkill(ClientHandle clientHd, ActorUID actorUID, const PlayerInputCastSkill& cast, const Cl::CQ_PlayerCastSkill::PosStruct& posInfo)
 {
 	Player& p = *playerMap.at(clientHd);

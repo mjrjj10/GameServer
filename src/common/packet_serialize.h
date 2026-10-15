@@ -2571,6 +2571,177 @@ DEFAULT_SERIALIZE(Sv::SN_UpdateEntrySystem);
 
 #undef DEFAULT_SERIALIZE
 
+template<>
+inline const char* PacketSerialize<Sv::SN_BroadcastDamage>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_BroadcastDamage(%d, %d) :: {", Sv::SN_BroadcastDamage::NET_ID, packetSize);
+	SER("	damageSeqNum=%u", buff.Read<u32>());
+	SER("	remoteID=0x%08x", buff.Read<u32>());
+	SER("	defID=0x%08x", buff.Read<u32>());
+	SER("	attID=0x%08x", buff.Read<u32>());
+	SER("	remoteDocIndex=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_RemoteSyncCreateFromRemoteDoc>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_RemoteSyncCreateFromRemoteDoc(%d, %d) :: {", Sv::SN_RemoteSyncCreateFromRemoteDoc::NET_ID, packetSize);
+	SER("	ParentEntity=0x%08x", buff.Read<u32>());
+	SER("	OwnerEntity=0x%08x", buff.Read<u32>());
+	SER("	RemoteSeedID=0x%08x", buff.Read<u32>());
+	SER("	FirePosition=%s", PS::ToStr(buff.Read<float3>()));
+	SER("	FireRotation=(%u, %u, %u)", buff.Read<u16>(), buff.Read<u16>(), buff.Read<u16>());
+	SER("	TargetPosition=%s", PS::ToStr(buff.Read<float3>()));
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_RemoteSyncCreateFromCreatorId>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_RemoteSyncCreateFromCreatorId(%d, %d) :: {", Sv::SN_RemoteSyncCreateFromCreatorId::NET_ID, packetSize);
+	SER("	ParentEntity=0x%08x", buff.Read<u32>());
+	SER("	OwnerEntity=0x%08x", buff.Read<u32>());
+	SER("	RemoteSeedID=0x%08x", buff.Read<u32>());
+	SER("	FirePosition=%s", PS::ToStr(buff.Read<float3>()));
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_GamePlayerSyncPhy>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_GamePlayerSyncPhy(%d, %d) :: {", Cl::CQ_GamePlayerSyncPhy::NET_ID, packetSize);
+	SER("	ownerID=0x%08x", buff.Read<u32>());
+	SER("	ownerID2=0x%08x", buff.Read<u32>());
+	SER("	remoteSeq=0x%08x", buff.Read<u32>());
+	SER("	pos=%s", PS::ToStr(buff.Read<float3>()));
+	const i16 dirX = buff.Read<i16>();
+	const i16 dirY = buff.Read<i16>();
+	SER("	dir=(%d, %d)", dirX, dirY);
+	for(int i = 0; i < 6; i++) buff.Read<i16>();
+	SER("	distance=%d", buff.Read<i16>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_WeaponState>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_WeaponState(%d, %d) :: {", Cl::CQ_WeaponState::NET_ID, packetSize);
+	SER("	unk0=0x%08x", buff.Read<u32>());
+	SER("	unk1=%u", buff.Read<u32>());
+	SER("	unk2=%u", buff.Read<u8>());
+	SER("	unk3=%u", buff.Read<u8>());
+	SER("	unk4=%u", buff.Read<u32>());
+	SER("	unk5=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_UpdateStat>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_UpdateStat(%d, %d) :: {", Sv::SN_UpdateStat::NET_ID, packetSize);
+	SER("	characterID=0x%08x", buff.Read<u32>());
+	SER("	statType=%u", buff.Read<u32>());
+	SER("	cur=%g", buff.Read<f32>());
+	SER("	max=%g", buff.Read<f32>());
+	SER("	reasonCode=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_ScoreUpdate>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_ScoreUpdate(%d, %d) :: {", Sv::SN_ScoreUpdate::NET_ID, packetSize);
+	SER("	usn=%u", buff.Read<u32>());
+	SER("	teamType=%d", buff.Read<i32>());
+	const u16 count = buff.Read<u16>();
+	for(int i = 0; i < count; i++) {
+		const u32 type = buff.Read<u32>();
+		SER("	record type=%u value=%u", type, buff.Read<u32>());
+	}
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_DeadAck>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_DeadAck(%d, %d) :: {", Sv::SN_DeadAck::NET_ID, packetSize);
+	SER("	sourceID=0x%08x", buff.Read<u32>());
+	SER("	targetID=0x%08x", buff.Read<u32>());
+	SER("	targetDocIndex=%u", buff.Read<u32>());
+	SER("	dwRemoteID=%u", buff.Read<u32>());
+	SER("	dwRemoteDocIndex=%u", buff.Read<u32>());
+	SER("	isPast=%u", buff.Read<u8>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_RespawnDelaytime>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_RespawnDelaytime(%d, %d) :: {", Sv::SN_RespawnDelaytime::NET_ID, packetSize);
+	SER("	usn=%u", buff.Read<u32>());
+	SER("	respawnDelayTimeMS=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_RevivePlayerAtStartingPoint>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_RevivePlayerAtStartingPoint(%d, %d) :: {", Sv::SN_RevivePlayerAtStartingPoint::NET_ID, packetSize);
+	SER("	usn=%u", buff.Read<u32>());
+	SER("	activeID=0x%08x", buff.Read<u32>());
+	SER("	inactiveID=0x%08x", buff.Read<u32>());
+	SER("	position=%s", PS::ToStr(buff.Read<float3>()));
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_BroadcastNonRemoteDamage>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_BroadcastNonRemoteDamage(%d, %d) :: {", Sv::SN_BroadcastNonRemoteDamage::NET_ID, packetSize);
+	SER("	defID=0x%08x", buff.Read<u32>());
+	SER("	attID=0x%08x", buff.Read<u32>());
+	SER("	statusDocID=%u", buff.Read<u32>());
+	SER("	skillDocID=%u", buff.Read<u32>());
+	SER("	damageType=%u", buff.Read<u32>());
+	SER("	damage=%u", buff.Read<u32>());
+	SER("	masterGroupingDamage=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
 
 /*
 template<>

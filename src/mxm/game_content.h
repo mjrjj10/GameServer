@@ -168,8 +168,21 @@ struct Remote
 	DamageGroup damageGroup = DamageGroup::INVALID;
 	BehaviorType behaviorType = BehaviorType::INVALID;
 
-	eastl::array<u16,3> boundSize;
+	eastl::array<u16,3> boundSize = { 0, 0, 0 };
 	u8 vs = 0;
+
+	f32 maxSpeed = 0;
+	f32 maxDistance = 0;
+	f32 lifeTime = 0;
+	i32 activateCount = 1;
+	RemoteIdx destroyCreateRemote = RemoteIdx::INVALID;
+	f32 attackMultiplier = 0;
+	f32 offsetY = 0;
+	f32 boundOffsetY = 0;
+	f32 angle = 0;
+	f32 hitInvalidTime = 1;
+	f32 fixedGraphLength = 0;
+	bool memorizeTarget = false;
 
 };
 
@@ -257,6 +270,7 @@ struct GameXmlContent
 			ActionCommand::Type type;
 			f32 delay;
 			f32 relativeEndTimeFromStart;
+			i32 animIndex = 0;
 
 			union {
 				struct {
@@ -275,6 +289,8 @@ struct GameXmlContent
 				struct {
 					RemoteIdx idx;
 					ActionCommand::TargetPreset targetPreset;
+					f32 offsetSide;
+					f32 offsetFront;
 				} remote;
 
 				struct {
@@ -384,6 +400,7 @@ struct GameXmlContent
 	i32 WeaponTypeOf(ClassType classType, WeaponIndex weaponIndex) const;
 	const Action& GetSkillAction(ClassType classType, ActionStateID actionID) const;
 	const Remote& GetRemote(RemoteIdx remoteID) const;
+	const Remote* FindRemote(RemoteIdx remoteID) const;
 
 private:
 	bool LoadXMLFile(const wchar* fileName, tinyxml2::XMLDocument& xmlData);

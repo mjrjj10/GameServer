@@ -63,9 +63,13 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 		CASE(CQ_GamePlayerTag);
 		CASE(CQ_PlayerJump);
 		CASE(CQ_PlayerCastSkill);
+		CASE(CQ_WeaponState);
+		CASE(CQ_GamePlayerSyncPhy);
 
 		default: {
-			NT_LOG("[client%x] Client :: Unknown packet :: size=%d netID=%d", clientHd, header.size, header.netID);
+			eastl::fixed_string<char,2048,true> hex;
+			for(int i = 0; i < packetSize && i < 512; i++) hex.append_sprintf("%02x ", packetData[i]);
+			NT_LOG("[client%x] Client :: Unknown packet :: size=%d netID=%d :: %s", clientHd, header.size, header.netID, hex.data());
 		} break;
 	}
 
@@ -311,6 +315,53 @@ void GamePacketHandler::HandlePacket_CQ_PlayerJump(ClientHandle clientHd, const 
 	const f32 moveDirY = buff.Read<f32>();
 
 	game->OnPlayerJump(clientHd, replication->GetWorldActorUID(clientHd, actorID), rotate, moveDirX, moveDirY);
+}
+
+void GamePacketHandler::HandlePacket_CQ_WeaponState(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_WeaponState>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_WeaponState (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_WeaponState>(packetData, packetSize));
+
+	ConstBuffer buff(packetData, packetSize);
+	const LocalActorID ownerLocal = buff.Read<LocalActorID>();
+	const u32 state = buff.Read<u32>();
+	const u8 chargeLevel = buff.Read<u8>();
+	const u8 firingCombo = buff.Read<u8>();
+	buff.Read<f32>();
+	const f32 aimYaw = buff.Read<f32>();
+
+	game->OnPlayerWeaponStateRelay(clientHd, replication->GetWorldActorUID(clientHd, ownerLocal), (i32)state, chargeLevel, firingCombo);
+
+	if(state == 2) {
+		game->OnPlayerWeaponFire(clientHd, MxmYawToWorldYaw(aimYaw));
+	}
+}
+
+void GamePacketHandler::HandlePacket_CQ_GamePlayerSyncPhy(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_GamePlayerSyncPhy>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_GamePlayerSyncPhy (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_GamePlayerSyncPhy>(packetData, packetSize));
+
+	ConstBuffer buff(packetData, packetSize);
+	buff.Read<u32>();
+	buff.Read<u32>();
+	buff.Read<u32>();
+	const vec3 origin = f2v(buff.Read<float3>());
+	const i16 dirX = buff.Read<i16>();
+	const i16 dirY = buff.Read<i16>();
+	for(int i = 0; i < 6; i++) buff.Read<i16>();
+	const i16 distance = buff.Read<i16>();
+
+	const vec2 dir = vec2((f32)dirX, (f32)dirY);
+	if(glm::length(dir) < 1.0f) return;
+
+	game->OnPlayerWeaponShot(clientHd, origin, glm::normalize(dir), (f32)MAX(distance, (i16)0), packetData, packetSize);
 }
 
 void GamePacketHandler::HandlePacket_CQ_PlayerCastSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

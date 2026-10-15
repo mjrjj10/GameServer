@@ -410,29 +410,8 @@ void HubGame::MmOnMatchFound(const In::MN_MatchingPartyFound& matchingParty)
 	if(f == partyMap.end()) return;
 	Party& party = *f->second;
 	eastl::fixed_vector<UserID,16> rowIDs;
-	eastl::fixed_vector<UserID,17> usedIDs;
 	for(i32 i = 0; i < matchingParty.playerCount; i++) {
-		const auto& p = matchingParty.playerList[i];
-		UserID rowID = UserID::INVALID;
-		auto h = accountClientHandleMap.find(p.accountUID);
-		if(h != accountClientHandleMap.end()) {
-			const i32 pid = plidMap->Get(h->second);
-			if(playerAccountData[pid]) {
-				UserID hubID = UserID(pid + 1);
-				bool taken = false;
-				for(auto u : usedIDs) if(u == hubID) { taken = true; break; }
-				if(!taken) rowID = hubID;
-			}
-		}
-		if(rowID == UserID::INVALID) {
-			for(i32 n = 1; n < 100; n++) {
-				bool taken = false;
-				for(auto u : usedIDs) if(u == UserID(n)) { taken = true; break; }
-				if(!taken) { rowID = UserID(n); break; }
-			}
-		}
-		usedIDs.push_back(rowID);
-		rowIDs.push_back(rowID);
+		rowIDs.push_back(UserID(i + 1));
 	}
 	foreach_const(m, party.memberList) {
 		auto h = accountClientHandleMap.find(m->accountUID);
@@ -442,7 +421,11 @@ void HubGame::MmOnMatchFound(const In::MN_MatchingPartyFound& matchingParty)
 		if(!playerAccountData[userID]) continue;
 		playerMap[userID]->sortieUID = matchingParty.sortieUID;
 
-		replication.SendMatchingPartyFound(clientHd, matchingParty, party.stageIndex, rowIDs);
+		u8 myTeam = 0;
+		for(i32 i = 0; i < matchingParty.playerCount; i++) {
+			if(matchingParty.playerList[i].accountUID == m->accountUID) myTeam = matchingParty.playerList[i].team;
+		}
+		replication.SendMatchingPartyFound(clientHd, matchingParty, party.stageIndex, rowIDs, myTeam);
 	}
 }
 

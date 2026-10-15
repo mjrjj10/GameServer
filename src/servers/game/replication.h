@@ -293,6 +293,16 @@ struct Replication
 	void SendGameStart(ClientHandle clientHd);
 	void SendPlayerTag(ClientHandle clientHd, ActorUID mainActorUID, ActorUID subActorUID);
 	void SendPlayerJump(ClientHandle clientHd, ActorUID mainActorUID, f32 rotate, f32 moveDirX, f32 moveDirY);
+	void SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, SkillID skillID, i32 damage, i32 hp, i32 hpMax);
+	void SendHpToAll(ActorUID actorUID, i32 hp, i32 hpMax);
+	void SendRemoteDamageToAll(u32 remoteID, RemoteIdx remoteDoc, ActorUID attackerUID, ActorUID targetUID, const vec3& hitPos, const vec2& hitDir, i32 damage, i32 hp, i32 hpMax);
+	void SendAttackActionToOthers(ClientHandle senderHd, ActorUID actorUID, f32 mxmYaw);
+	void SendDestroyRemoteToAll(u32 remoteID);
+	void RelayRemoteCreate(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, f32 lifeTime, RemoteIdx remoteDoc);
+	void RelayWeaponState(ClientHandle senderHd, ActorUID ownerUID, i32 weaponID, i32 state, u8 chargeLevel, u8 firingCombo);
+	void SendScoreToAll(UserID userID, u8 team, i32 kills, i32 teamKills);
+	void SendDeathToAll(ActorUID killerUID, ActorUID targetUID, CreatureIndex targetDocID, UserID targetUserID, i32 respawnDelayMs);
+	void SendReviveToAll(UserID userID, ActorUID activeUID, ActorUID inactiveUID, const vec3& pos);
 
 	void OnPlayerDisconnect(ClientHandle clientHd);
 

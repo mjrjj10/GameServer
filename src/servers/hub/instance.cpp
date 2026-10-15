@@ -268,10 +268,12 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 			eastl::fixed_vector<UserID,5> enemyTeamUserIds;
 
 			foreach_const(u, teamRed) {
-				allyTeamUserIds.push_back((*u)->userID);
+				if(user.team == Team::BLUE) enemyTeamUserIds.push_back((*u)->userID);
+				else allyTeamUserIds.push_back((*u)->userID);
 			}
 			foreach_const(u, teamBlue) {
-				enemyTeamUserIds.push_back((*u)->userID);
+				if(user.team == Team::BLUE) allyTeamUserIds.push_back((*u)->userID);
+				else enemyTeamUserIds.push_back((*u)->userID);
 			}
 
 			packet.WriteVec(allyTeamUserIds.data(), allyTeamUserIds.size()); // alliesTeamUserIds

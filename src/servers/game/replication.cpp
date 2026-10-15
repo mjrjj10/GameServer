@@ -794,6 +794,253 @@ void Replication::SendPlayerJump(ClientHandle clientHd, ActorUID mainActorUID, f
 	SendPacket(clientHd, packet);
 }
 
+void Replication::SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, SkillID skillID, i32 damage, i32 hp, i32 hpMax)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID targetLocalID = GetLocalActorID(clientHd, targetUID);
+		if(targetLocalID == LocalActorID::INVALID) continue;
+		const LocalActorID attackerLocalID = GetLocalActorID(clientHd, attackerUID);
+
+		Sv::SN_BroadcastNonRemoteDamage dmg;
+		dmg.defID = (u32)targetLocalID;
+		dmg.attID = (u32)attackerLocalID;
+		dmg.statusDocID = 0;
+		dmg.skillDocID = skillID == SkillID::INVALID ? 0 : (u32)skillID;
+		dmg.damageType = 0;
+		dmg.damage = (u32)damage;
+		dmg.masterGroupingDamage = (u32)damage;
+		SendPacket(clientHd, dmg);
+	}
+
+	SendHpToAll(targetUID, hp, hpMax);
+}
+
+void Replication::SendScoreToAll(UserID userID, u8 team, i32 kills, i32 teamKills)
+{
+	PacketWriter<Sv::SN_ScoreUpdate> packet;
+	packet.Write<u32>((u32)userID);
+	packet.Write<TeamType>(team == 0 ? TeamType::RED : TeamType::BLUE);
+	packet.Write<u16>(6);
+	for(u32 type = 0; type < 6; type++) {
+		packet.Write<u32>(type);
+		packet.Write<u32>((u32)(type == 0 ? teamKills : kills));
+	}
+
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		SendPacket(clientHandle[clientID], packet);
+	}
+}
+
+static const f32 REMOTE_FIRE_HEIGHT = 158.0f;
+
+void Replication::RelayRemoteCreate(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, f32 lifeTime, RemoteIdx remoteDoc)
+{
+	const i32 nameOffset = 12 + 12 + 6 + 12;
+	if(packetSize < nameOffset + 2) return;
+	const u16 nameLen = *(const u16*)(packetData + nameOffset);
+	const i32 relaySize = sizeof(Sv::SN_RemoteSyncCreateFromCreatorId) - sizeof(wchar_t) + nameLen * sizeof(wchar_t);
+	if(packetSize < relaySize || relaySize > 512) return;
+
+	const ActorUID parentUID = GetWorldActorUID(senderHd, *(const LocalActorID*)(packetData + 0));
+	const ActorUID ownerUID = GetWorldActorUID(senderHd, *(const LocalActorID*)(packetData + 4));
+	if(parentUID == ActorUID::INVALID || ownerUID == ActorUID::INVALID) return;
+
+	u8 buff[512];
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		if(clientHd == senderHd) continue;
+
+		const LocalActorID parentLocal = GetLocalActorID(clientHd, parentUID);
+		const LocalActorID ownerLocal = GetLocalActorID(clientHd, ownerUID);
+		if(parentLocal == LocalActorID::INVALID || ownerLocal == LocalActorID::INVALID) continue;
+
+		const i32 headSize = nameOffset + 2 + nameLen * 2 + 2;
+		memmove(buff, packetData, headSize);
+		*(LocalActorID*)(buff + 0) = parentLocal;
+		*(LocalActorID*)(buff + 4) = ownerLocal;
+		*(float3*)(buff + 30) = v2f(target);
+		{
+			float3& firePos = *(float3*)(buff + 12);
+			const f32 worldYaw = atan2f(target.y - firePos.y, target.x - firePos.x);
+			f32 yawDeg = 90.0f - worldYaw * 180.0f / PI;
+			while(yawDeg > 180.0f) yawDeg -= 360.0f;
+			while(yawDeg < -180.0f) yawDeg += 360.0f;
+			*(i16*)(buff + 24) = 0;
+			*(i16*)(buff + 26) = 0;
+			*(i16*)(buff + 28) = (i16)(yawDeg * 100.0f);
+			firePos.z += REMOTE_FIRE_HEIGHT;
+			*(f32*)(buff + 38) = firePos.z;
+		}
+		u8* tail = buff + headSize;
+		*(f32*)tail = 0; tail += 4;
+		*(u32*)tail = 0; tail += 4;
+		*(u32*)tail = (u32)remoteDoc; tail += 4;
+		*(u32*)tail = 0; tail += 4;
+		*tail = 0; tail += 1;
+		SendPacketData<Sv::SN_RemoteSyncCreateFromRemoteDoc>(clientHd, (u16)(tail - buff), buff);
+	}
+}
+
+void Replication::RelayWeaponState(ClientHandle senderHd, ActorUID ownerUID, i32 weaponID, i32 state, u8 chargeLevel, u8 firingCombo)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		if(clientHd == senderHd) continue;
+
+		const LocalActorID ownerLocal = GetLocalActorID(clientHd, ownerUID);
+		if(ownerLocal == LocalActorID::INVALID) continue;
+
+		Sv::SN_WeaponState packet;
+		packet.ownerID = ownerLocal;
+		packet.weaponID = weaponID;
+		packet.state = state;
+		packet.chargeLevel = chargeLevel;
+		packet.firingCombo = firingCombo;
+		packet.result = 0;
+		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendRemoteDamageToAll(u32 remoteID, RemoteIdx remoteDoc, ActorUID attackerUID, ActorUID targetUID, const vec3& hitPos, const vec2& hitDir, i32 damage, i32 hp, i32 hpMax)
+{
+	static u32 damageSeq = 1;
+	const u32 seq = damageSeq++;
+	const float3 dir3 = { hitDir.x, hitDir.y, 0 };
+	const float3 pos3 = v2f(hitPos);
+
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID targetLocalID = GetLocalActorID(clientHd, targetUID);
+		if(targetLocalID == LocalActorID::INVALID) continue;
+
+		PacketWriter<Sv::SN_BroadcastDamage,256> packet;
+		packet.Write<u32>(seq);
+		packet.Write<u32>(remoteID);
+		packet.Write<u32>((u32)targetLocalID);
+		packet.Write<u32>((u32)GetLocalActorID(clientHd, attackerUID));
+		packet.Write<u32>((u32)remoteDoc);
+		packet.Write<float3>(pos3);
+		packet.Write<float3>(dir3);
+		packet.Write<float3>(dir3);
+		packet.Write<float3>(pos3);
+		packet.Write<float3>(dir3);
+		packet.Write<u32>(0);
+		packet.Write<u32>(0);
+		packet.Write<u32>(0);
+		packet.Write<u32>(0);
+		packet.Write<u16>(0);
+		packet.Write<u32>((u32)damage);
+		packet.Write<u16>(0);
+		packet.Write<u32>(0);
+		packet.Write<u32>((u32)damage);
+		packet.Write<u32>(0);
+		SendPacket(clientHd, packet);
+	}
+
+	SendHpToAll(targetUID, hp, hpMax);
+}
+
+void Replication::SendDestroyRemoteToAll(u32 remoteID)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		Sv::SN_DestroyEntity packet;
+		packet.objectID = (LocalActorID)remoteID;
+		SendPacket(clientHandle[clientID], packet);
+	}
+}
+
+void Replication::SendAttackActionToOthers(ClientHandle senderHd, ActorUID actorUID, f32 mxmYaw)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		if(clientHd == senderHd) continue;
+
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+
+		Sv::SN_PlayerSyncActionStateOnly packet;
+		memset(&packet, 0, sizeof(packet));
+		packet.characterID = localID;
+		packet.state = ActionStateID::ATTACK_BEHAVIORSTATE;
+		packet.param1 = 0;
+		packet.param2 = 0;
+		packet.rotate = mxmYaw;
+		packet.upperRotate = mxmYaw;
+		packet.graphMove.bApply = 0;
+		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendHpToAll(ActorUID actorUID, i32 hp, i32 hpMax)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+
+		Sv::SN_UpdateStat stat;
+		stat.characterID = (u32)localID;
+		stat._STAT_TYPE = 0;
+		stat._CUR = (f32)hp;
+		stat._MAX = (f32)hpMax;
+		stat._ReasonCode = 0;
+		SendPacket(clientHd, stat);
+	}
+}
+
+void Replication::SendDeathToAll(ActorUID killerUID, ActorUID targetUID, CreatureIndex targetDocID, UserID targetUserID, i32 respawnDelayMs)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID targetLocalID = GetLocalActorID(clientHd, targetUID);
+		if(targetLocalID == LocalActorID::INVALID) continue;
+
+		Sv::SN_DeadAck dead;
+		dead.sourceID = (u32)targetLocalID;
+		dead.targetID = (u32)GetLocalActorID(clientHd, killerUID);
+		dead.targetDocIndex = (u32)targetDocID;
+		dead.dwRemoteID = 0;
+		dead.dwRemoteDocIndex = 0;
+		dead.isPast = 0;
+		SendPacket(clientHd, dead);
+
+		Sv::SN_RespawnDelaytime delay;
+		delay.usn = (u32)targetUserID;
+		delay.respawnDelayTimeMS = (u32)respawnDelayMs;
+		SendPacket(clientHd, delay);
+	}
+}
+
+void Replication::SendReviveToAll(UserID userID, ActorUID activeUID, ActorUID inactiveUID, const vec3& pos)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+
+		const ClientHandle clientHd = clientHandle[clientID];
+
+		Sv::SN_RevivePlayerAtStartingPoint revive;
+		revive.usn = (u32)userID;
+		revive.activeID = (u32)GetLocalActorID(clientHd, activeUID);
+		revive.inactiveID = (u32)GetLocalActorID(clientHd, inactiveUID);
+		revive.position = v2f(pos);
+		SendPacket(clientHd, revive);
+	}
+}
+
 void Replication::OnPlayerDisconnect(ClientHandle clientHd)
 {
 	const i32 clientID = playerMap.at(clientHd);

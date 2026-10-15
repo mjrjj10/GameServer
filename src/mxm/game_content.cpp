@@ -1296,6 +1296,7 @@ bool GameXmlContent::LoadAnimationData()
 
 		Action::Command cmd;
 		cmd.type = ActionCommand::TypeFromString(CommandType);
+		pActionBase->QueryAttribute("AnimationIndex", &cmd.animIndex);
 		if(pActionBase->QueryAttribute("Delay", &cmd.delay) != XMLError::XML_SUCCESS) {
 			cmd.delay = 0.0f;
 		}
@@ -1333,6 +1334,17 @@ bool GameXmlContent::LoadAnimationData()
 
 				cmd.remote.idx = RemoteIdx(RemoteIndex);
 				cmd.remote.targetPreset = ActionCommand::TargetPresetFromString(TargetPreset);
+				cmd.remote.offsetSide = 0;
+				cmd.remote.offsetFront = 0;
+				const char* TargetParam = nullptr;
+				pActionBase->QueryStringAttribute("TargetParam", &TargetParam);
+				if(TargetParam) {
+					f32 p[7] = { 0 };
+					if(EA::StdC::Sscanf(TargetParam, "%f|%f|%f|%f|%f|%f|%f", &p[0], &p[1], &p[2], &p[3], &p[4], &p[5], &p[6]) == 7) {
+						cmd.remote.offsetSide = p[5];
+						cmd.remote.offsetFront = p[6];
+					}
+				}
 				ASSERT(cmd.remote.targetPreset != ActionCommand::TargetPreset::INVALID);
 			} break;
 
@@ -1419,6 +1431,9 @@ bool GameXmlContent::LoadRemoteData()
 				ELT_GET(pComp, bool, _VsNPC_Monster, false);
 				ELT_GET(pComp, bool, _VsPC, false);
 
+				remote.boundSize = { (u16)_LengthX, (u16)_LengthY, (u16)_LengthZ };
+				pComp->QueryFloatAttribute("_OffsetY", &remote.boundOffsetY);
+				pComp->QueryFloatAttribute("_Angle", &remote.angle);
 				remote.boundType = Remote::BoundTypeFromString(_Type);
 				remote.damageGroup = Remote::DamageGroupFromString(_DamageGroup);
 				remote.vs =
@@ -1433,6 +1448,14 @@ bool GameXmlContent::LoadRemoteData()
 			else if((EA::StdC::Strcmp("RemoteComData2", compName) == 0)) {
 				ELT_GET(pComp, i32, _ActivateCount, 0);
 				ELT_GET(pComp, i32, _AttackMultiplier, 0);
+				ELT_GET(pComp, f32, _LifeTime, 0);
+				remote.activateCount = _ActivateCount;
+				remote.lifeTime = _LifeTime;
+				pComp->QueryFloatAttribute("_AttackMultiplier", &remote.attackMultiplier);
+				pComp->QueryFloatAttribute("_OffsetY", &remote.offsetY);
+				const char* _OnHitOwnerMemorizeTarget = nullptr;
+				pComp->QueryStringAttribute("_OnHitOwnerMemorizeTarget", &_OnHitOwnerMemorizeTarget);
+				remote.memorizeTarget = _OnHitOwnerMemorizeTarget && EA::StdC::Stricmp(_OnHitOwnerMemorizeTarget, "true") == 0;
 
 				const char* _BehaviorType = 0;
 				pComp->QueryStringAttribute("_BehaviorType", &_BehaviorType);
@@ -1442,6 +1465,31 @@ bool GameXmlContent::LoadRemoteData()
 
 				VERBOSE("	_ActivateCount=%d _ActivateMultiplier=%d", _ActivateCount, _AttackMultiplier);
 				VERBOSE("	_BehaviorType=%s", Remote::BehaviourTypeToString(remote.behaviorType));
+			}
+
+			else if((EA::StdC::Strcmp("RemoteTargetComData", compName) == 0)) {
+				pComp->QueryFloatAttribute("_HitInvalidTime", &remote.hitInvalidTime);
+			}
+
+			else if((EA::StdC::Strcmp("RemoteGraphComData", compName) == 0)) {
+				pComp->QueryFloatAttribute("_FixedGraphLength", &remote.fixedGraphLength);
+			}
+
+			else if((EA::StdC::Strcmp("SteeringBehaviorsComData", compName) == 0)) {
+				ELT_GET(pComp, f32, _MaxSpeed, 0);
+				ELT_GET(pComp, f32, _MaxDistance, 0);
+				remote.maxSpeed = _MaxSpeed;
+				remote.maxDistance = _MaxDistance;
+			}
+
+			else if((EA::StdC::Strcmp("RemoteSystemComData", compName) == 0)) {
+				XMLElement* pDestroy = pComp->FirstChildElement("_Destroy");
+				XMLElement* pCreate = pDestroy ? pDestroy->FirstChildElement("_CreateEntity") : nullptr;
+				if(pCreate) {
+					i32 _RemoteIndex = -1;
+					pCreate->QueryAttribute("_RemoteIndex", &_RemoteIndex);
+					remote.destroyCreateRemote = RemoteIdx(_RemoteIndex);
+				}
 			}
 		}
 
@@ -1694,6 +1742,13 @@ const GameXmlContent::Action& GameXmlContent::GetSkillAction(ClassType classType
 
 	ASSERT(0); // not found
 	return actionListMap.cbegin()->second.front(); // unreachable
+}
+
+const Remote* GameXmlContent::FindRemote(RemoteIdx remoteID) const
+{
+	auto found = remoteMap.find(remoteID);
+	if(found == remoteMap.end()) return nullptr;
+	return &found->second;
 }
 
 const Remote& GameXmlContent::GetRemote(RemoteIdx remoteID) const
