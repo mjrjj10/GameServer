@@ -923,7 +923,7 @@ static f32 MasterStat(ClassType classType, i32 statType)
 	return 0;
 }
 
-// element triangle (as described by players): red/fire > green/leaf > blue/water > red/fire
+// affinity triangle: Argent (red) > Helix (green) > Kinetic (blue) > Argent
 static bool ElementBeats(i32 a, i32 b)
 {
 	return (a == 1 && b == 2) || (a == 2 && b == 3) || (a == 3 && b == 1);
@@ -935,8 +935,11 @@ static f32 ElementMultiplier(const World::Player& attacker, const World::Player&
 	const ClassType ac = attacker.Main().classType;
 	const i32 ea = content.GetCreatureElement((i32)content.GetMaster(ac).ID);
 	const i32 et = content.GetCreatureElement((i32)content.GetMaster(target.Main().classType).ID);
-	if(!ElementBeats(ea, et)) return 1.0f;
-	return 1.0f + MasterStat(ac, skill ? STAT_ELEMENT_SKILL_DAMAGE_BONUS : STAT_ELEMENT_DAMAGE_BONUS) / 100.0f;
+	const i32 stat = skill ? STAT_ELEMENT_SKILL_DAMAGE_BONUS : STAT_ELEMENT_DAMAGE_BONUS;
+	// advantage: attacker deals +bonus% to the element it counters, and takes -bonus% from it
+	if(ElementBeats(ea, et)) return 1.0f + MasterStat(ac, stat) / 100.0f;
+	if(ElementBeats(et, ea)) return 1.0f - MasterStat(target.Main().classType, stat) / 100.0f;
+	return 1.0f;
 }
 
 bool World::RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const
