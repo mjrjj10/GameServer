@@ -109,6 +109,8 @@ struct World
 		bool weaponFired = false;
 		f32 ultGauge = -1.0f; // initialised to the master's max on first update
 		f32 stamina = -1.0f;
+		f32 mana = -1.0f;
+		Time tNextManaSend = Time::ZERO;
 		eastl::array<f32,2> heat = { 0, 0 };        // weapon overheat gauge per master
 		eastl::array<Time,2> heatLastShot = { Time::ZERO, Time::ZERO };
 		eastl::array<Time,2> overheatUntil = { Time::ZERO, Time::ZERO };
@@ -409,7 +411,7 @@ struct World
 	ActorDynamic& SpawnDynamic(CreatureIndex docID, i32 localID);
 
 	Player& GetPlayer(u32 playerIndex);
-	bool PlayerDodge(Player& player, i32 skillID);
+	bool PlayerPaySkillCost(Player& player, i32 skillID);
 	void UpdateWeaponHeat(Player& player);
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActor(ActorUID actorUID) const;

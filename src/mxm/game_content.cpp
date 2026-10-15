@@ -1925,6 +1925,9 @@ bool GameXmlContent::LoadStatusData()
 			if(pCommon) {
 				f32 stamina = 0;
 				if(pCommon->QueryFloatAttribute("_ConsumeStamina", &stamina) == XML_SUCCESS && stamina > 0) skillConsumeStamina[skillID] = stamina;
+				f32 mp = 0, ug = 0;
+				if(pCommon->QueryFloatAttribute("_ConsumeMP", &mp) == XML_SUCCESS && mp > 0) skillConsumeMP[skillID] = mp;
+				if(pCommon->QueryFloatAttribute("_ConsumeUG", &ug) == XML_SUCCESS && ug > 0) skillConsumeUG[skillID] = ug;
 			}
 			XMLElement* pEvent = pCommon ? pCommon->FirstChildElement("_HitEvent") : nullptr;
 			if(!pEvent) continue;

@@ -6,6 +6,8 @@ static const i32 STAT_STAMINA = 2;
 static const i32 STAT_STAMINAREGEN = 5;
 static const i32 STAT_CRITICALRATE = 9;
 static const i32 STAT_CRITICALDAMAGE = 10;
+static const i32 STAT_MANA = 35;
+static const i32 STAT_MANAREGEN = 39;
 static const i32 STAT_ULTIMATE = 37;
 static const i32 STAT_ULTIMATEREGEN = 42;
 static const i32 STAT_SKILL_CRITICALRATE = 63;
@@ -577,10 +579,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 	const auto& skill = skillFound->second;
 	const ActionStateID actionState = skill.action;
 
-	if(GetGameXmlContent().GetSkillConsumeStamina((i32)skillID) > 0 && !PlayerDodge(player, (i32)skillID)) {
-		LOG("Dodge :: %ls refused (not enough stamina)", player.name.data());
-		return;
-	}
+	if(!PlayerPaySkillCost(player, (i32)skillID)) return;
 
 	const f32 angle = player.input.rot.upperYaw;
 	const vec2 dir = vec2(cosf(angle), sinf(angle));
@@ -1010,6 +1009,16 @@ void World::UpdateUltimateGauges(f32 delta)
 			}
 		}
 
+		const f32 manaMax = MasterStat(cls, STAT_MANA);
+		if(manaMax > 0) {
+			if(it->mana < 0) it->mana = manaMax;
+			it->mana = MIN(it->mana + MasterStat(cls, STAT_MANAREGEN) * delta, manaMax);
+			if(localTime >= it->tNextManaSend) {
+				it->tNextManaSend = TimeAdd(localTime, TimeMsToTime(250));
+				replication->SendStatToAll(it->Main().UID, STAT_MANA, it->mana, manaMax);
+			}
+		}
+
 		if(localTime < it->tNextUltSend) continue;
 		it->tNextUltSend = TimeAdd(localTime, TimeMsToTime(1000));
 		it->ultGaugeSent = it->ultGauge;
@@ -1019,15 +1028,26 @@ void World::UpdateUltimateGauges(f32 delta)
 	}
 }
 
-bool World::PlayerDodge(Player& player, i32 skillID)
+bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 {
-	// dodge = SKILL_TYPE_SHIRK skill cast (right click), cost SKILL.xml _ConsumeStamina
-	const f32 cost = GetGameXmlContent().GetSkillConsumeStamina(skillID);
-	LOG("Dodge :: %ls skill=%d stamina=%.0f cost=%.0f", player.name.data(), skillID, player.stamina, cost);
-	if(cost <= 0 || player.stamina < 0) return true;
-	if(player.stamina < cost) return false;
-	player.stamina -= cost;
-	player.tNextStaminaSend = Time::ZERO;
+	// base costs from SKILL.xml: _ConsumeMP (mana), _ConsumeUG (ultimate gauge), _ConsumeStamina (dodge)
+	const auto& content = GetGameXmlContent();
+	const f32 mp = content.GetSkillConsumeMP(skillID);
+	const f32 ug = content.GetSkillConsumeUG(skillID);
+	const f32 st = content.GetSkillConsumeStamina(skillID);
+	if(mp <= 0 && ug <= 0 && st <= 0) return true;
+	if(player.clientHd == ClientHandle::INVALID) return true; // bots don't track resources
+
+	const bool ok = (mp <= 0 || player.mana < 0 || player.mana >= mp) &&
+		(ug <= 0 || player.ultGauge < 0 || player.ultGauge >= ug) &&
+		(st <= 0 || player.stamina < 0 || player.stamina >= st);
+	LOG("Cost :: %ls skill=%d mp=%.0f/%.0f ug=%.0f/%.0f stamina=%.0f/%.0f %s", player.name.data(), skillID,
+		mp, player.mana, ug, player.ultGauge, st, player.stamina, ok ? "paid" : "REFUSED");
+	if(!ok) return false;
+
+	if(mp > 0 && player.mana >= 0) { player.mana -= mp; player.tNextManaSend = Time::ZERO; }
+	if(ug > 0 && player.ultGauge >= 0) { player.ultGauge -= ug; player.tNextUltSend = Time::ZERO; }
+	if(st > 0 && player.stamina >= 0) { player.stamina -= st; player.tNextStaminaSend = Time::ZERO; }
 	return true;
 }
 
@@ -1195,10 +1215,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	{
 		SkillNormalModel& skillModel = const_cast<SkillNormalModel&>(skill);
 		const f32 consumeUG = skillModel.getSkillNormalLevelByIndex(0)->getConsumeUG();
-		if(consumeUG > 0 && forceAnim < 0) {
-			player.ultGauge = 0.0f;
-			player.tNextUltSend = Time::ZERO;
-		}
+		(void)consumeUG; // paid in PlayerPaySkillCost
 	}
 
 	const u32 castID = nextCastID++;
@@ -1372,6 +1389,7 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	foreach(h, castHits) {
 		if(h->castID == inst.castID && h->remoteID == hitKey && h->playerIndex == target.index && localTime < h->until) return;
 	}
+	if(inst.speed <= 0 && enemy) inst.hitsLeft--;
 	if(!castHits.full()) {
 		CastHit h;
 		h.remoteID = hitKey;
@@ -1677,9 +1695,15 @@ void World::UpdateRemotes(f32 delta)
 					inst.areaDone = true;
 					RemoteApplyArea(inst);
 				}
-				else if(remote.activateCount > 1 && remote.lifeTime > 0) {
-					// lingering zone: hits again once each target's hit window expires
+				else if(remote.lifeTime > 0 && inst.hitsLeft > 0) {
+					// lingering zone / mine: keeps checking contact, hits again once each target's hit window expires
 					RemoteApplyArea(inst);
+				}
+				if(inst.hitsLeft <= 0 && remote.lifeTime > 0) {
+					// activation count used up (e.g. a mine triggered by an enemy): ends now and spawns its chain
+					if(inst.clientRemoteID != 0) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
+					inst.destroyedByHit = true;
+					destroyed = true;
 				}
 			} break;
 		}

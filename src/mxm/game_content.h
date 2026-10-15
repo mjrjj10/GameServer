@@ -488,6 +488,8 @@ struct GameXmlContent
 	const wchar* GetNodeName(u16 idx) const { return idx < nodeNames.size() ? nodeNames[idx].c_str() : L"Scene Root"; }
 	const StatusInfo* FindStatus(i32 statusID) const;
 	const WeaponHeatInfo* FindWeaponHeat(i32 weaponID) const { auto f = weaponHeat.find(weaponID); return f == weaponHeat.end() ? nullptr : &f->second; }
+	f32 GetSkillConsumeMP(i32 skillID) const { auto f = skillConsumeMP.find(skillID); return f == skillConsumeMP.end() ? 0 : f->second; }
+	f32 GetSkillConsumeUG(i32 skillID) const { auto f = skillConsumeUG.find(skillID); return f == skillConsumeUG.end() ? 0 : f->second; }
 	f32 GetSkillConsumeStamina(i32 skillID) const { auto f = skillConsumeStamina.find(skillID); return f == skillConsumeStamina.end() ? 0 : f->second; }
 	i32 GetCreatureElement(i32 creatureID) const { auto f = creatureElement.find(creatureID); return f == creatureElement.end() ? 0 : f->second; }
 	i32 FindSkillHitEventRemote(i32 skillID) const { auto f = skillHitEventRemote.find(skillID); return f == skillHitEventRemote.end() ? 0 : f->second; }
@@ -539,6 +541,8 @@ private:
 	eastl::hash_map<i32, i32> skillHitEventRemote;
 	eastl::hash_map<i32, WeaponHeatInfo> weaponHeat;
 	eastl::hash_map<i32, f32> skillConsumeStamina; // SKILL.xml _ConsumeStamina (dodge)
+	eastl::hash_map<i32, f32> skillConsumeMP;      // SKILL.xml _ConsumeMP
+	eastl::hash_map<i32, f32> skillConsumeUG;      // SKILL.xml _ConsumeUG
 	eastl::hash_map<i32, i32> creatureElement; // CREATURE_CHARACTER _ElementType: 0 none, 1 red, 2 green, 3 blue
 	bool LoadStatusData();
 };
