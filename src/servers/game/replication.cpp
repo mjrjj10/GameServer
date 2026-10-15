@@ -2007,9 +2007,11 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 		packet.Write<SkinIndex>(SkinIndex::DEFAULT);
 		packet.Write<i32>(actor.seed);
 
-
-		packet.Write<u16>(0);
-		packet.Write<u16>(0);
+		const f32 hp = actor.ownerUID != ActorUID::INVALID ? 1.0f : 0.0f;
+		packet.Write<u16>(hp > 0 ? 1 : 0);
+		if(hp > 0) { packet.Write<u8>(0); packet.Write<f32>(hp); }
+		packet.Write<u16>(hp > 0 ? 1 : 0);
+		if(hp > 0) { packet.Write<u8>(0); packet.Write<f32>(hp); }
 
 
 
