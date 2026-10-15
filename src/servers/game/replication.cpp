@@ -820,6 +820,11 @@ void Replication::SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, Skil
 
 void Replication::SendDoConnectChannel(ClientHandle clientHd, const wchar* nickname, const i32 hubIP[4], u16 hubPort)
 {
+	// client handler 0xa0dccf: errcode 0 resets its game state and goes back to the city
+	Sv::SA_ReturnToCity ret;
+	ret.errcode = 0;
+	SendPacket(clientHd, ret);
+
 	// same redirection the login server uses to send the client to the hub (channel) server
 	PacketWriter<Sv::SN_DoConnectChannelServer,256> packet;
 	packet.Write<u16>(1); // addresses count

@@ -614,10 +614,6 @@ void Game::OnPlayerReturnToChannel(ClientHandle clientHd)
 	World::Player& player = world.GetPlayer(found->second->playerIndex);
 	i32 hubIP[4] = { Config().HostIP[0], Config().HostIP[1], Config().HostIP[2], Config().HostIP[3] };
 	if(hubIP[0] == 0) { hubIP[0] = 127; hubIP[3] = 1; }
-	// client handler 0xa0dccf: errcode 0 resets its game state and goes back to the city
-	Sv::SA_ReturnToCity ret;
-	ret.errcode = 0;
-	replication.SendPacket(clientHd, ret);
 	replication.SendDoConnectChannel(clientHd, player.name.data(), hubIP, 11900);
 }
 
