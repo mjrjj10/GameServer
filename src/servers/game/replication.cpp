@@ -904,6 +904,23 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 		SendPacket(clientHd, res);
 		SendPacket(clientHd, score);
 	}
+	// reward stage with no reward slot: the result screen moves on (client: slotCount 0 skips the card pick)
+	for(i32 i = 0; i < count; i++) {
+		const ClientHandle clientHd = players[i].clientHd;
+		if(clientHd == ClientHandle::INVALID) continue;
+		PacketWriter<Sv::SN_RewardStageStart,64> start;
+		start.Write<u32>(0); // timeToWaitSec
+		start.Write<u8>(0);  // nextAction
+		start.Write<u32>(0); // nextActionCost
+		start.Write<u8>(0);  // slotCount
+		start.Write<u32>(0); // slotRewardPenaltyReason
+		SendPacket(clientHd, start);
+		PacketWriter<Sv::SN_RewardStageEnd,64> end;
+		end.Write<u16>(0); // rewardItemList
+		end.Write<u16>(0); // otherSelectList
+		end.Write<u32>(0); // spSlotIndex
+		SendPacket(clientHd, end);
+	}
 	LOG("Replication :: game end (red %d - blue %d)", redScore, blueScore);
 }
 

@@ -1408,6 +1408,9 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			if(info && it->overlap < info->maxOverlap) it->overlap++;
 			LOG("Status :: %ls -> %ls status=%d refreshed overlap=%d", caster.name.data(), target.name.data(), statusID, it->overlap);
 			const vec3 pos = target.body->GetWorldPos();
+			// clients add one instance per SN_AddStatus: drop the previous one first, otherwise the final remove
+			// leaves a copy (icon and effect) on screen
+			replication->SendRemoveStatusToAll(statusID, it->targetUID, it->casterUID);
 			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, sentDuration, pos, pos, 0);
 			// stacking passive (_ICEQUEEN): full stack -> remove it and apply the burst status
 			if(info && it->overlap >= info->maxOverlap && info->maxOverlap > 1) {

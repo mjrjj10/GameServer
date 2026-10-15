@@ -2628,6 +2628,22 @@ inline const char* PacketSerialize<Sv::SA_ReturnToCity>(const void* packetData, 
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_RewardStageStart>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	SER("SN_RewardStageStart(%d, %d) :: {}", Sv::SN_RewardStageStart::NET_ID, packetSize);
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_RewardStageEnd>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	SER("SN_RewardStageEnd(%d, %d) :: {}", Sv::SN_RewardStageEnd::NET_ID, packetSize);
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_PvpResult>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();
