@@ -232,6 +232,7 @@ void World::Update(Time localTime_)
 	UpdateRemotes((f32)tdelta);
 	UpdateUltimateGauges((f32)tdelta);
 	UpdateStatuses();
+	UpdateSummons();
 
 	// execute skill programs
 	for(auto it = skillProgramList.begin(); it != skillProgramList.end(); ) {
@@ -408,6 +409,7 @@ void World::Replicate()
 		rfl.actionState = actor.actionState;
 		rfl.seed = actor.seed;
 		rfl.entityType = actor.entityType;
+		rfl.ownerUID = actor.ownerUID;
 
 
 		replication->FramePushNpcActor(rfl);
@@ -1210,6 +1212,38 @@ f32 World::StatusModSum(const Player& p, i32 stat) const
 	return sum;
 }
 
+void World::UpdateSummons()
+{
+	for(auto ps = pendingSummons.begin(); ps != pendingSummons.end(); ) {
+		if(localTime < ps->time) { ++ps; continue; }
+		Player& owner = players[ps->ownerIndex];
+		const SummonInfo* info = GetGameXmlContent().FindSummon(ps->creature);
+		if(!owner.dead) {
+			ActorNpc& actor = SpawnNpcActor(CreatureIndex(ps->creature), nextSummonLocalID++);
+			actor.pos = ps->pos;
+			actor.rot = ps->rot;
+			actor.faction = owner.team == 0 ? Faction::RED : Faction::BLUE;
+			actor.ownerUID = owner.Main().UID;
+			actor.seed = (i32)RandUint();
+			const f32 life = info && info->lifeTime > 0 ? info->lifeTime : 5.0f;
+			actor.despawnAt = TimeAdd(localTime, TimeMsToTime(life * 1000.0));
+			LOG("Summon :: %ls creature=%d at (%.0f, %.0f) life=%.1fs known=%d", owner.name.data(), ps->creature, ps->pos.x, ps->pos.y, life, info != nullptr);
+		}
+		ps = pendingSummons.erase_unsorted(ps);
+	}
+
+	for(auto it = actorNpcList.begin(); it != actorNpcList.end(); ) {
+		if(it->despawnAt != Time::ZERO && localTime >= it->despawnAt) {
+			LOG("Summon :: creature=%d despawned", (i32)it->docID);
+			actorNpcMap.erase(it->UID);
+			it = actorNpcList.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
+}
+
 void World::UpdateStatuses()
 {
 	for(auto ps = pendingStatuses.begin(); ps != pendingStatuses.end(); ) {
@@ -1365,6 +1399,26 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.atTarget = cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET;
 			pr.nodeName = cmd->nodeName;
 			pendingRemotes.push_back(pr);
+			scheduled = true;
+		}
+		if(cmd->type == ActionCommand::Type::ENTITY && cmd->entity.entityIndex != 0 && !pendingSummons.full()) {
+			PendingSummon ps;
+			ps.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
+			ps.creature = cmd->entity.entityIndex;
+			ps.ownerIndex = player.index;
+			const auto preset = cmd->entity.targetPreset;
+			vec3 pos = player.body->GetWorldPos();
+			if(preset == ActionCommand::TargetPreset::POS_FFF || preset == ActionCommand::TargetPreset::POS_TFF ||
+			   preset == ActionCommand::TargetPreset::POS_TTT_1 || preset == ActionCommand::TargetPreset::POS_TFF_1_800_1000) {
+				if(glm::length(vec2(castPos)) > 1.0f) pos = vec3(vec2(castPos), pos.z);
+			}
+			else if(preset == ActionCommand::TargetPreset::CURRENT_FFF && currentTarget != ActorUID::INVALID) {
+				const ActorMaster* tm = FindMasterActor(currentTarget);
+				if(tm) pos = tm->parent->body->GetWorldPos();
+			}
+			ps.pos = pos;
+			ps.rot = vec3(0, 0, angle);
+			pendingSummons.push_back(ps);
 			scheduled = true;
 		}
 		if((cmd->type == ActionCommand::Type::STATUS || cmd->type == ActionCommand::Type::STATUS_SKILL_TARGET) && cmd->status.statusIndex != 0 && !pendingStatuses.full()) {

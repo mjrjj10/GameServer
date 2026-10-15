@@ -224,6 +224,8 @@ struct World
 		ActionStateID actionState = ActionStateID::INVALID;
 		i32 seed = 0;
 		i32 entityType = 1;
+		ActorUID ownerUID = ActorUID::INVALID;
+		Time despawnAt = Time::ZERO;   // summons: end of LifeTime
 
 		vec3 pos;
 		vec3 rot;
@@ -397,6 +399,17 @@ struct World
 		f32 power;
 	};
 	eastl::fixed_vector<PendingStatus,256,false> pendingStatuses;
+
+	struct PendingSummon
+	{
+		Time time;
+		i32 creature;
+		u32 ownerIndex;
+		vec3 pos;
+		vec3 rot;
+	};
+	eastl::fixed_vector<PendingSummon,64,false> pendingSummons;
+	i32 nextSummonLocalID = 900000;
 	u32 nextCastID = 1;
 	u32 nextRemoteSeed = 0x40000000;
 	eastl::fixed_vector<u32,64,false> comboTriggeredCasts;
@@ -419,6 +432,7 @@ struct World
 	Player& GetPlayer(u32 playerIndex);
 	bool PlayerPaySkillCost(Player& player, i32 skillID);
 	void UpdateWeaponHeat(Player& player);
+	void UpdateSummons();
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActorByCreatureID(CreatureIndex docID); // Warning: slow!

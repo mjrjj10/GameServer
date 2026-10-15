@@ -109,6 +109,16 @@ const char* TargetPresetToString(TargetPreset p);
 }
 
 // a stat modifier of a status, from skilltt.xml TTATTR_STATUS_STAT (base skill level)
+// summoned creature (CREATURE_MONSTER_SUMMON.xml)
+struct SummonInfo
+{
+	f32 lifeTime = 0;          // LifeTime_ComData
+	f32 moveSpeed = 0;         // EntityComData _MoveSpeed
+	f32 perception = 0;        // Ai_ComData _PerceptionLength
+	bool targetable = false;   // EntityComData _IsTargetable
+	eastl::fixed_vector<i32,4,false> skills; // SkillComData _SkillID
+};
+
 struct StatusMod
 {
 	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE };
@@ -402,6 +412,11 @@ struct GameXmlContent
 				} status;
 
 				struct {
+					i32 entityIndex;
+					ActionCommand::TargetPreset targetPreset;
+				} entity;
+
+				struct {
 					f32 distance;
 				} graphMoveHorz;
 
@@ -517,6 +532,7 @@ struct GameXmlContent
 	f32 GetSkillConsumeMP(i32 skillID) const { auto f = skillConsumeMP.find(skillID); return f == skillConsumeMP.end() ? 0 : f->second; }
 	f32 GetSkillConsumeUG(i32 skillID) const { auto f = skillConsumeUG.find(skillID); return f == skillConsumeUG.end() ? 0 : f->second; }
 	f32 GetSkillConsumeStamina(i32 skillID) const { auto f = skillConsumeStamina.find(skillID); return f == skillConsumeStamina.end() ? 0 : f->second; }
+	const SummonInfo* FindSummon(i32 creatureID) const { auto f = summonMap.find(creatureID); return f == summonMap.end() ? nullptr : &f->second; }
 	i32 GetCreatureElement(i32 creatureID) const { auto f = creatureElement.find(creatureID); return f == creatureElement.end() ? 0 : f->second; }
 	i32 FindSkillHitEventRemote(i32 skillID) const { auto f = skillHitEventRemote.find(skillID); return f == skillHitEventRemote.end() ? 0 : f->second; }
 
@@ -569,6 +585,7 @@ private:
 	eastl::hash_map<i32, f32> skillConsumeStamina; // SKILL.xml _ConsumeStamina (dodge)
 	eastl::hash_map<i32, f32> skillConsumeMP;      // SKILL.xml _ConsumeMP
 	eastl::hash_map<i32, f32> skillConsumeUG;      // SKILL.xml _ConsumeUG
+	eastl::hash_map<i32, SummonInfo> summonMap;
 	eastl::hash_map<i32, i32> creatureElement; // CREATURE_CHARACTER _ElementType: 0 none, 1 red, 2 green, 3 blue
 	bool LoadStatusData();
 };

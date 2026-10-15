@@ -111,6 +111,7 @@ struct Replication
 		ActionStateID actionState = ActionStateID::INVALID;
 		i32 seed = 0;
 		i32 entityType = 1;
+		ActorUID ownerUID = ActorUID::INVALID; // summons: owner master, converted per client
 
 
 		vec3 pos;

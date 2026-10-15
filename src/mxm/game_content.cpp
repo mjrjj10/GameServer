@@ -1374,6 +1374,14 @@ bool GameXmlContent::LoadAnimationData()
 				pActionBase->QueryAttribute("Param1", &cmd.graphMoveHorz.distance);
 			} break;
 
+			case ActionCommand::Type::ENTITY: {
+				cmd.entity.entityIndex = 0;
+				pActionBase->QueryAttribute("EntityIndex", &cmd.entity.entityIndex);
+				const char* TargetPreset = nullptr;
+				pActionBase->QueryStringAttribute("TargetPreset", &TargetPreset);
+				cmd.entity.targetPreset = TargetPreset ? ActionCommand::TargetPresetFromString(TargetPreset) : ActionCommand::TargetPreset::SELF_FFF;
+			} break;
+
 			case ActionCommand::Type::STATUS:
 			case ActionCommand::Type::STATUS_SKILL_TARGET: {
 				cmd.status.statusIndex = 0;
@@ -2036,6 +2044,32 @@ bool GameXmlContent::LoadStatusData()
 			}
 		}
 		LOG("Loaded %d character elements", (i32)creatureElement.size());
+	}
+
+	XMLDocument xmlSummon;
+	if(LoadXMLFile(L"/client/CREATURE_MONSTER_SUMMON.xml", xmlSummon)) {
+		for(XMLElement* pInfo = xmlSummon.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+			i32 id = 0;
+			pInfo->QueryAttribute("ID", &id);
+			SummonInfo si;
+			if(XMLElement* p = pInfo->FirstChildElement("EntityComData")) {
+				p->QueryFloatAttribute("_MoveSpeed", &si.moveSpeed);
+				const char* t = nullptr;
+				p->QueryStringAttribute("_IsTargetable", &t);
+				si.targetable = t && EA::StdC::Stricmp(t, "true") == 0;
+			}
+			if(XMLElement* p = pInfo->FirstChildElement("LifeTime_ComData")) p->QueryFloatAttribute("LifeTime", &si.lifeTime);
+			if(XMLElement* p = pInfo->FirstChildElement("Ai_ComData")) p->QueryFloatAttribute("_PerceptionLength", &si.perception);
+			if(XMLElement* p = pInfo->FirstChildElement("SkillComData")) {
+				for(XMLElement* s = p->FirstChildElement("_SkillID"); s; s = s->NextSiblingElement("_SkillID")) {
+					i32 sk = 0;
+					s->QueryAttribute("_Index", &sk);
+					if(sk != 0 && !si.skills.full()) si.skills.push_back(sk);
+				}
+			}
+			summonMap[id] = si;
+		}
+		LOG("Loaded %d summon creatures", (i32)summonMap.size());
 	}
 
 	XMLDocument xmlFiring, xmlWeapon;

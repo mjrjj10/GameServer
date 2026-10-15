@@ -1843,7 +1843,7 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 		packet.Write(actor.dir);
 		packet.Write<i32>(actor.spawnAnim);
 		packet.Write<ActionStateID>(actor.actionState);
-		packet.Write<i32>(actor.ownerID);
+		packet.Write<i32>(actor.ownerUID != ActorUID::INVALID ? (i32)GetLocalActorID(clientHd, actor.ownerUID) : actor.ownerID);
 		packet.Write<u8>(actor.dirToNearPC);
 		packet.Write<i32>(actor.wanderDist);
 		packet.Write<i32>(actor.tagID);
