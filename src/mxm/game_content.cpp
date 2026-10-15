@@ -1903,6 +1903,30 @@ bool GameXmlContent::LoadStatusData()
 		pCommon->QueryFloatAttribute("_OffsetDraggedDistanceFromTarget", &st.dragOffset);
 		pCommon->QueryAttribute("_MaxOverlapCount", &st.maxOverlap);
 		pCommon->QueryAttribute("_NextStatusIndex", &st.nextStatus);
+		pCommon->QueryFloatAttribute("_TargetingRange", &st.targetingRange);
+		{
+			const char* eff = nullptr;
+			pCommon->QueryStringAttribute("_EffectType", &eff);
+			st.isDebuff = eff && EA::StdC::Strcmp(eff, "STATUS_EFFECT_DEBUFF") == 0;
+			const char* dis = nullptr;
+			pCommon->QueryStringAttribute("_CanDispel", &dis);
+			st.canDispel = dis && EA::StdC::Stricmp(dis, "true") == 0;
+			const char* dispelType = nullptr;
+			pCommon->QueryStringAttribute("_DispelEffectType", &dispelType);
+			if(dispelType) st.dispelEffect = EA::StdC::Strcmp(dispelType, "STATUS_EFFECT_DEBUFF") == 0 ? 1 : 0;
+			XMLElement* pBlock = pCommon->FirstChildElement("_INPUT_STATE_BLOCK");
+			if(pBlock) {
+				i32 v = 0;
+				v = 0; pBlock->QueryAttribute("_Attack", &v); st.blockAttack = v != 0;
+				v = 0; pBlock->QueryAttribute("_Skill", &v); st.blockSkill = v != 0;
+				i32 m = 0, s2 = 0;
+				pBlock->QueryAttribute("_MovingShirk", &m);
+				pBlock->QueryAttribute("_StandingShirk", &s2);
+				st.blockShirk = m != 0 || s2 != 0;
+			}
+			XMLElement* pAura = pCommon->FirstChildElement("_AuraStatusIndex");
+			if(pAura) pAura->QueryAttribute("DATA", &st.auraStatus);
+		}
 		{
 			const char* cond = nullptr;
 			pCommon->QueryStringAttribute("_NextStatusCondition", &cond);

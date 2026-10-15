@@ -579,6 +579,13 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 	const auto& skill = skillFound->second;
 	const ActionStateID actionState = skill.action;
 
+	{
+		const bool shirk = GetGameXmlContent().GetSkillConsumeStamina((i32)skillID) > 0;
+		if(IsBlocked(player, false, !shirk, shirk)) {
+			LOG("Blocked :: %ls skill=%d (input blocked by a status)", player.name.data(), (i32)skillID);
+			return;
+		}
+	}
 	if(!PlayerPaySkillCost(player, (i32)skillID)) return;
 
 	const f32 angle = player.input.rot.upperYaw;
@@ -955,6 +962,10 @@ static bool WeaponHeatShot(World::Player& player, Time now, Replication* replica
 
 void World::OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize)
 {
+	if(IsBlocked(player, true, false, false)) {
+		LOG("Blocked :: %ls shot ignored (attack blocked by a status)", player.name.data());
+		return;
+	}
 	if(!WeaponHeatShot(player, localTime, replication)) {
 		LOG("Overheat :: %ls shot ignored (weapon overheated)", player.name.data());
 		return;
@@ -1164,8 +1175,27 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		}
 	}
 
+	if(info && info->type == "STATUS_TYPE_DISPEL" && info->dispelEffect >= 0) {
+		// removes the target's dispellable buffs (0) or debuffs (1)
+		foreach(it, activeStatuses) {
+			if(it->targetIndex != target.index || !it->info || !it->info->canDispel || it->statusID == statusID) continue;
+			if((it->info->isDebuff ? 1 : 0) != info->dispelEffect) continue;
+			it->until = localTime;
+			LOG("Dispel :: %ls removed status %d from %ls", caster.name.data(), it->statusID, target.name.data());
+		}
+	}
+
 	LOG("Status :: %ls -> %ls status=%d type=%s duration=%.2f shield=%.0f", caster.name.data(), target.name.data(), statusID, info ? info->type.c_str() : "?", duration, st.shieldHP);
 	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, duration, from, to, graphDuration);
+}
+
+bool World::IsBlocked(const Player& p, bool attack, bool skill, bool shirk) const
+{
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex != p.index || !it->info || localTime >= it->until) continue;
+		if((attack && it->info->blockAttack) || (skill && it->info->blockSkill) || (shirk && it->info->blockShirk)) return true;
+	}
+	return false;
 }
 
 f32 World::StatusModSum(const Player& p, i32 stat) const
@@ -1212,6 +1242,34 @@ void World::UpdateStatuses()
 				it->healTicksDone++;
 				const i32 amount = (i32)(m->mul ? target.Main().hpMax * m->value / 100.0f : m->value);
 				HealPlayer(players[it->casterIndex], target, amount * it->overlap);
+			}
+		}
+
+		// aura: periodically gives its _AuraStatusIndex to players around (buffs to allies, debuffs to enemies)
+		if(it->info && it->info->auraStatus != 0 && !target.dead && localTime >= it->nextAuraPulse) {
+			it->nextAuraPulse = TimeAdd(localTime, TimeMsToTime(500));
+			const StatusInfo* child = GetGameXmlContent().FindStatus(it->info->auraStatus);
+			const f32 range = it->info->targetingRange > 0 ? it->info->targetingRange : (child ? child->targetingRange : 0);
+			if(child && range > 0) {
+				const i32 auraStatus = it->info->auraStatus;
+				const u32 casterIndex = it->casterIndex;
+				const vec2 center = vec2(target.body->GetWorldPos());
+				foreach(p, players) {
+					if(p->dead) continue;
+					const bool ally = p->team == target.team;
+					if(ally == child->isDebuff) continue;
+					if(glm::length(vec2(p->body->GetWorldPos()) - center) > range + WEAPON_TARGET_RADIUS) continue;
+					if(!pendingStatuses.full()) {
+						PendingStatus ps;
+						ps.time = localTime;
+						ps.statusID = auraStatus;
+						ps.casterIndex = casterIndex;
+						ps.targetUID = p->Main().UID;
+						ps.duration = -1.0f;
+						ps.power = 0;
+						pendingStatuses.push_back(ps);
+					}
+				}
 			}
 		}
 
@@ -1871,6 +1929,10 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 {
 	if(target.dead) return;
 	if(HasStatusType(target, "STATUS_TYPE_GODMODE")) return;
+	if(HasStatusType(target, "STATUS_TYPE_EVADE") && attacker.team != target.team) {
+		LOG("Evade :: %ls evaded %ls", target.name.data(), attacker.name.data());
+		return;
+	}
 
 	// element advantage: weapon shots use the weapon bonus, skills the skill bonus, DoTs none
 	u32 damageType = PACKET_DAMAGE_TYPE_NORMAL;

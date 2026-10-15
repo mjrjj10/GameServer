@@ -382,6 +382,7 @@ struct World
 		f32 shieldHP;
 		Time nextHealTick;
 		i32 healTicksDone;
+		Time nextAuraPulse = Time::ZERO;
 		bool removeOnHit = false; // marked when its target got hit (E_NEXT_STATUS_CONDITION_REMOVE_ONHIT)
 	};
 	eastl::fixed_vector<ActiveStatus,512,false> activeStatuses;
@@ -444,6 +445,7 @@ private:
 	void ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power = 0, f32 durationOverride = -1);
 	bool HasStatusType(const Player& p, const char* type) const;
 	f32 StatusModSum(const Player& p, i32 stat) const;
+	bool IsBlocked(const Player& p, bool attack, bool skill, bool shirk) const;
 	void HealPlayer(Player& healer, Player& target, i32 amount);
 	bool RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const;
 	void RemoteApplyShape(RemoteInst& inst);

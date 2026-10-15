@@ -143,6 +143,15 @@ struct StatusInfo
 	eastl::fixed_vector<StatusMod,6,false> mods;
 	enum class NextCondition: u8 { NONE = 0, ALL, TIMEOVER, REMOVE_ONHIT };
 	i32 nextStatus = 0;                 // _NextStatusIndex
+	// _INPUT_STATE_BLOCK
+	bool blockAttack = false;
+	bool blockSkill = false;
+	bool blockShirk = false;
+	bool isDebuff = false;              // _EffectType STATUS_EFFECT_DEBUFF
+	bool canDispel = false;             // _CanDispel
+	i8 dispelEffect = -1;               // STATUS_TYPE_DISPEL _DispelEffectType: 0 buffs, 1 debuffs
+	i32 auraStatus = 0;                 // STATUS_TYPE_AURA _AuraStatusIndex
+	f32 targetingRange = 0;             // _TargetingRange
 	NextCondition nextCondition = NextCondition::NONE;
 	eastl::fixed_string<char,40,false> type;
 };
