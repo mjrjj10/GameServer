@@ -111,6 +111,8 @@ struct World
 		u8 chargeLevel = 0;
 		eastl::array<i32,2> shotCount = { 0, 0 }; // weapon shots per master (_FIRINGCOUNT)
 		bool passivesApplied = false;
+		i32 pendingChildSkill = 0;
+		Time pendingChildSkillUntil = Time::ZERO;
 		eastl::array<Time,5> botSkillReady = { Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO };
 		Time tNextBotSkill = Time::ZERO;
 		f32 ultGauge = -1.0f; // initialised to the master's max on first update
@@ -241,6 +243,10 @@ struct World
 		ActorUID ownerUID = ActorUID::INVALID;
 		Time despawnAt = Time::ZERO;   // summons: end of LifeTime
 		u32 ownerIndex = 0;
+		u8 ai = 0;
+		ActorUID chaseTarget = ActorUID::INVALID;
+		bool stuck = false;
+		Time nextMoveSync = Time::ZERO;
 
 		vec3 pos;
 		vec3 rot;
@@ -482,6 +488,8 @@ struct World
 	void UpdateSummons();
 	void UpdateBotCombat();
 	void UpdateBotSkills();
+	void UpdateSummonAi(f32 delta);
+	void RunSummonState(ActorNpc& npc, i32 state);
 	bool frozen = false; // game over: no more shots, skills or bot actions
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActor(ActorUID actorUID) const;

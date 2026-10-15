@@ -2628,6 +2628,14 @@ inline const char* PacketSerialize<Sv::SA_ReturnToCity>(const void* packetData, 
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_AIMonsterSyncMove>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	SER("SN_AIMonsterSyncMove(%d, %d) :: {}", Sv::SN_AIMonsterSyncMove::NET_ID, packetSize);
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SA_RestartPvpEntryLeave>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

@@ -248,6 +248,7 @@ void World::Update(Time localTime_)
 	UpdateUltimateGauges((f32)tdelta);
 	UpdateStatuses();
 	UpdateSummons();
+	UpdateSummonAi((f32)tdelta);
 	if(!frozen) UpdateBotCombat();
 	if(!frozen) UpdateBotSkills();
 
@@ -696,6 +697,12 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 
 	if(!ScheduleSkillRemotes(player, skillID, castPos, targets, angle)) {
 		PlayerSkillDamage(player, skillID, castPos, targets, angle);
+	}
+
+	const i32 child = content.GetChildSkill(player.Main().classType, actionState);
+	if(child > 0) {
+		player.pendingChildSkill = child;
+		player.pendingChildSkillUntil = TimeAdd(localTime, TimeMsToTime(2000));
 	}
 }
 
@@ -1610,6 +1617,113 @@ void World::UpdateBotSkills()
 	}
 }
 
+void World::RunSummonState(ActorNpc& npc, i32 state)
+{
+	const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc.docID);
+	if(!info || state < 0 || state > 20) return;
+	Player& owner = players[npc.ownerIndex];
+	Player* current = &owner;
+	if(npc.ai == SummonInfo::AI_CHASE) {
+		ActorMaster* m = FindMasterActor(npc.chaseTarget);
+		current = m ? m->parent : nullptr;
+	}
+	f32 yaw = owner.input.rot.upperYaw;
+	if(current && current != &owner) {
+		const vec2 rel = vec2(current->body->GetWorldPos()) - vec2(npc.pos);
+		if(glm::length(rel) > 1.0f) yaw = atan2f(rel.y, rel.x);
+	}
+	f32 t = 0;
+	foreach_const(c, info->skillStates[state]) {
+		t += c->delay;
+		if(c->kind == SummonCommand::REMOTE) {
+			if(pendingSummonCommands.full()) continue;
+			PendingSummonCommand pc;
+			pc.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
+			pc.ownerIndex = npc.ownerIndex;
+			pc.kind = c->kind;
+			pc.index = c->index;
+			pc.pos = npc.pos;
+			pc.yaw = yaw;
+			pc.skill = info->skills.empty() ? 0 : info->skills[0];
+			pc.until = npc.despawnAt;
+			pendingSummonCommands.push_back(pc);
+		}
+		else if(c->kind == SummonCommand::STATUS) {
+			if(c->onCurrent && current && !current->dead) ApplyStatus(owner, *current, c->index);
+		}
+		else if(c->kind == SummonCommand::DIE) {
+			npc.despawnAt = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
+		}
+	}
+}
+
+void World::UpdateSummonAi(f32 delta)
+{
+	const auto& content = GetGameXmlContent();
+	foreach(it, actorNpcList) {
+		ActorNpc& npc = *it;
+		if(npc.ai == SummonInfo::AI_NONE) continue;
+		if(npc.despawnAt != Time::ZERO && localTime >= npc.despawnAt) continue;
+		const SummonInfo* info = content.FindSummon((i32)npc.docID);
+		if(!info) continue;
+		Player& owner = players[npc.ownerIndex];
+		vec3 goal = npc.pos;
+		f32 stopDist = 0;
+
+		if(npc.ai == SummonInfo::AI_RELAY) {
+			if(owner.dead) continue;
+			goal = owner.body->GetWorldPos();
+			stopDist = info->aiDistance;
+		}
+		else {
+			ActorMaster* tm = FindMasterActor(npc.chaseTarget);
+			Player* target = tm ? tm->parent : nullptr;
+			if(npc.stuck) {
+				if(!target || target->dead) { npc.stuck = false; npc.chaseTarget = ActorUID::INVALID; continue; }
+				npc.pos = target->body->GetWorldPos();
+				continue;
+			}
+			if(!target || target->dead || glm::length(vec2(target->body->GetWorldPos()) - vec2(npc.pos)) > info->perception) {
+				target = nullptr;
+				f32 best = info->perception;
+				foreach(e, players) {
+					if(e->dead || e->team == owner.team) continue;
+					bool taken = false;
+					foreach_const(o, actorNpcList) {
+						if(&*o != &npc && o->ownerIndex == npc.ownerIndex && o->docID == npc.docID && o->chaseTarget == e->Main().UID) taken = true;
+					}
+					if(taken) continue;
+					const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(npc.pos));
+					if(d < best) { best = d; target = &*e; }
+				}
+				npc.chaseTarget = target ? target->Main().UID : ActorUID::INVALID;
+			}
+			if(!target) continue;
+			goal = target->body->GetWorldPos();
+			const f32 d = glm::length(vec2(goal) - vec2(npc.pos));
+			if(d <= WEAPON_TARGET_RADIUS) {
+				LOG("Summon :: creature=%d reached %ls", (i32)npc.docID, target->name.data());
+				RunSummonState(npc, 1);
+				if(npc.despawnAt == Time::ZERO || npc.despawnAt > localTime) npc.stuck = true;
+				continue;
+			}
+		}
+
+		if(info->moveSpeed <= 0) continue;
+		const vec2 rel = vec2(goal) - vec2(npc.pos);
+		const f32 dist = glm::length(rel);
+		if(dist <= stopDist + 1.0f) continue;
+		const f32 step = MIN(info->moveSpeed * delta, dist - stopDist);
+		const vec2 dir = rel / dist;
+		npc.pos = vec3(vec2(npc.pos) + dir * step, goal.z);
+		npc.rot.z = atan2f(dir.y, dir.x);
+		if(localTime >= npc.nextMoveSync) {
+			npc.nextMoveSync = TimeAdd(localTime, TimeMsToTime(200));
+			replication->SendNpcMoveToAll(npc.UID, npc.pos, goal, npc.rot.z, info->moveSpeed);
+		}
+	}
+}
+
 void World::UpdateBotCombat()
 {
 	const auto& content = GetGameXmlContent();
@@ -1664,6 +1778,18 @@ void World::UpdateSummons()
 			const f32 life = info && info->lifeTime > 0 ? info->lifeTime : 5.0f;
 			actor.despawnAt = TimeAdd(localTime, TimeMsToTime(life * 1000.0));
 			actor.ownerIndex = ps->ownerIndex;
+			actor.ai = info ? (u8)info->ai : 0;
+			if(info && info->ai == SummonInfo::AI_RELAY) {
+				foreach(other, actorNpcList) {
+					if(&*other == &actor || other->ownerIndex != ps->ownerIndex || other->ai != SummonInfo::AI_RELAY) continue;
+					other->despawnAt = localTime;
+				}
+				if(owner.pendingChildSkill > 0 && localTime < owner.pendingChildSkillUntil) {
+					LOG("Summon :: %ls relay state SKILL_%d", owner.name.data(), owner.pendingChildSkill);
+					RunSummonState(actor, owner.pendingChildSkill);
+				}
+				owner.pendingChildSkill = 0;
+			}
 			if(info) {
 				f32 t = 0;
 				foreach_const(c, info->onSpawn) {

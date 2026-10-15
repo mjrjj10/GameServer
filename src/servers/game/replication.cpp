@@ -1189,6 +1189,31 @@ void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx d
 	}
 }
 
+void Replication::SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed)
+{
+	f32 yawDeg = 90.0f - worldYaw * 180.0f / PI;
+	while(yawDeg > 180.0f) yawDeg -= 360.0f;
+	while(yawDeg < -180.0f) yawDeg += 360.0f;
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+		Sv::SN_AIMonsterSyncMove packet;
+		packet.excludedFieldBits = 0;
+		packet.monsterID = (u32)localID;
+		packet.upperBodyPitch = 0;
+		packet.upperBodyYaw = (i16)(yawDeg * 100.0f);
+		packet.lowerBodyYaw = (i16)(yawDeg * 100.0f);
+		packet.angularSpeed = 0;
+		packet.linearSpeed = (u16)speed;
+		packet.currPos = v2f(pos);
+		packet.goalPos = v2f(goal);
+		packet.movingFlags = 1;
+		SendPacket(clientHd, packet);
+	}
+}
+
 void Replication::SendDestroyRemoteToAll(u32 remoteID)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {

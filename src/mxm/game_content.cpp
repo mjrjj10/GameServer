@@ -2196,7 +2196,16 @@ bool GameXmlContent::LoadStatusData()
 				p->QueryStringAttribute("KeyName", &key);
 				if(key) si.className = key;
 			}
-			if(XMLElement* p = pInfo->FirstChildElement("Ai_ComData")) p->QueryFloatAttribute("_PerceptionLength", &si.perception);
+			if(XMLElement* p = pInfo->FirstChildElement("Ai_ComData")) {
+				p->QueryFloatAttribute("_PerceptionLength", &si.perception);
+				const char* ai = nullptr;
+				p->QueryStringAttribute("_AiIndex", &ai);
+				if(ai && EA::StdC::Strcmp(ai, "AI_PC_MONDOZAX_ROBOT") == 0) si.ai = SummonInfo::AI_RELAY;
+				else if(ai && (EA::StdC::Strcmp(ai, "AI_PC_ARTILLERY_SPIDERMINE") == 0 || EA::StdC::Strcmp(ai, "AI_PC_SOULMASTER_SLOWSOUL") == 0 ||
+					EA::StdC::Strcmp(ai, "AI_PC_ELECTRO_ENERGYBALL") == 0)) si.ai = SummonInfo::AI_CHASE;
+			}
+			if(XMLElement* p = pInfo->FirstChildElement("MoveController_ComData")) p->QueryFloatAttribute("_AIDistanceWidth", &si.aiDistance);
+			if(XMLElement* p = pInfo->FirstChildElement("StatsComData")) p->QueryAttribute("_VariationType", &si.variation);
 			if(XMLElement* p = pInfo->FirstChildElement("SkillComData")) {
 				for(XMLElement* s = p->FirstChildElement("_SkillID"); s; s = s->NextSiblingElement("_SkillID")) {
 					i32 sk = 0;
@@ -2267,19 +2276,57 @@ bool GameXmlContent::LoadStatusData()
 				if(!cls || !state || !type) continue;
 				const bool spawn = EA::StdC::Strcmp(state, "SPAWN_BEHAVIORSTATE") == 0;
 				const bool die = EA::StdC::Strcmp(state, "DIE_BEHAVIORSTATE") == 0;
-				if(!spawn && !die) continue;
+				i32 skillState = 0;
+				if(!spawn && !die && EA::StdC::Sscanf(state, "SKILL_%d_BEHAVIORSTATE", &skillState) != 1) continue;
+				if(skillState < 0 || skillState > 20) continue;
+				const char* p2 = nullptr;
+				pA->QueryStringAttribute("Param2", &p2);
+				if(p2 && EA::StdC::Strstr(p2, "Remove")) continue;
 				SummonCommand cmd;
 				if(EA::StdC::Strcmp(type, "REMOTE") == 0) { cmd.kind = SummonCommand::REMOTE; pA->QueryAttribute("RemoteIndex", &cmd.index); }
 				else if(EA::StdC::Strcmp(type, "STATUS") == 0) { cmd.kind = SummonCommand::STATUS; pA->QueryAttribute("StatusIndex", &cmd.index); }
+				else if(EA::StdC::Strcmp(type, "DIE_MODE") == 0) cmd.kind = SummonCommand::DIE;
 				else continue;
+				if(cmd.kind != SummonCommand::DIE && cmd.index == 0) continue;
 				pA->QueryFloatAttribute("Delay", &cmd.delay);
+				const char* preset = nullptr;
+				pA->QueryStringAttribute("TargetPreset", &preset);
+				cmd.onCurrent = preset && EA::StdC::Strstr(preset, "CURRENT");
+				const char* var = nullptr;
+				pA->QueryStringAttribute("VariationType", &var);
 				foreach(it, summonMap) {
 					if(it->second.className != cls) continue;
-					auto& list = spawn ? it->second.onSpawn : it->second.onDie;
+					if(var) {
+						i32 v = -1;
+						if(EA::StdC::Sscanf(var, "STATS_VARIATION_TYPE_%d", &v) == 1) { if(v != it->second.variation) continue; }
+						else if(EA::StdC::Strcmp(var, "STANCE_TYPE_DEFAULT") != 0) continue;
+					}
+					auto& list = spawn ? it->second.onSpawn : (die ? it->second.onDie : it->second.skillStates[skillState]);
 					if(!list.full()) { list.push_back(cmd); count++; }
 				}
 			}
-			LOG("Loaded %d summon spawn/die commands", count);
+			LOG("Loaded %d summon spawn/die/skill commands", count);
+		}
+
+		XMLDocument xmlChild;
+		if(LoadXMLFile(L"/ActionBase.xml", xmlChild)) {
+			for(XMLElement* pA = xmlChild.FirstChildElement()->FirstChildElement(); pA; pA = pA->NextSiblingElement()) {
+				const char* type = nullptr;
+				pA->QueryStringAttribute("CommandType", &type);
+				if(!type || EA::StdC::Strcmp(type, "CALL_CHILD_SKILL") != 0) continue;
+				const char* cls = nullptr; const char* state = nullptr; const char* p1 = nullptr;
+				pA->QueryStringAttribute("Class", &cls);
+				pA->QueryStringAttribute("BehaviorState", &state);
+				pA->QueryStringAttribute("Param1", &p1);
+				i32 n = 0;
+				if(!cls || !state || !p1 || EA::StdC::Sscanf(p1, "MONSTER_SKILL_ID_%d", &n) != 1) continue;
+				eastl::fixed_string<char,64,false> c = cls;
+				c.make_upper();
+				const ClassType ct = ClassTypeFromString(c.data());
+				const ActionStateID as = ActionStateFromString(state);
+				childSkill[((u32)ct << 16) | ((u32)as & 0xFFFF)] = n;
+			}
+			LOG("Loaded %d child skill calls", (i32)childSkill.size());
 		}
 	}
 
