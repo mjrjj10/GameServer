@@ -226,6 +226,7 @@ struct World
 		i32 entityType = 1;
 		ActorUID ownerUID = ActorUID::INVALID;
 		Time despawnAt = Time::ZERO;   // summons: end of LifeTime
+		u32 ownerIndex = 0;
 
 		vec3 pos;
 		vec3 rot;
@@ -409,6 +410,32 @@ struct World
 		vec3 rot;
 	};
 	eastl::fixed_vector<PendingSummon,64,false> pendingSummons;
+
+	// commands run by a summon (spawn / die actions), attributed to its owner
+	struct PendingSummonCommand
+	{
+		Time time;
+		u32 ownerIndex;
+		i32 kind;      // SummonCommand::Kind
+		i32 index;
+		vec3 pos;
+		f32 yaw;
+		i32 skill;     // the summon's own skill (SkillComData), gives remote damage
+		Time until;    // summon end (auras stop with it)
+	};
+	eastl::fixed_vector<PendingSummonCommand,128,false> pendingSummonCommands;
+
+	// auras carried by a summon: give the aura status around a fixed point
+	struct GroundAura
+	{
+		u32 ownerIndex;
+		i32 auraStatus;
+		f32 range;
+		vec3 pos;
+		Time until;
+		Time nextPulse;
+	};
+	eastl::fixed_vector<GroundAura,64,false> groundAuras;
 	i32 nextSummonLocalID = 900000;
 	u32 nextCastID = 1;
 	u32 nextRemoteSeed = 0x40000000;

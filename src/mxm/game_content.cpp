@@ -2059,6 +2059,11 @@ bool GameXmlContent::LoadStatusData()
 				si.targetable = t && EA::StdC::Stricmp(t, "true") == 0;
 			}
 			if(XMLElement* p = pInfo->FirstChildElement("LifeTime_ComData")) p->QueryFloatAttribute("LifeTime", &si.lifeTime);
+			if(XMLElement* p = pInfo->FirstChildElement("Kfm_ComData")) {
+				const char* key = nullptr;
+				p->QueryStringAttribute("KeyName", &key);
+				if(key) si.className = key;
+			}
 			if(XMLElement* p = pInfo->FirstChildElement("Ai_ComData")) p->QueryFloatAttribute("_PerceptionLength", &si.perception);
 			if(XMLElement* p = pInfo->FirstChildElement("SkillComData")) {
 				for(XMLElement* s = p->FirstChildElement("_SkillID"); s; s = s->NextSiblingElement("_SkillID")) {
@@ -2070,6 +2075,32 @@ bool GameXmlContent::LoadStatusData()
 			summonMap[id] = si;
 		}
 		LOG("Loaded %d summon creatures", (i32)summonMap.size());
+
+		XMLDocument xmlMobActions;
+		if(LoadXMLFile(L"/client/ActionBase_Monster_MOB_PvP.xml", xmlMobActions)) {
+			i32 count = 0;
+			for(XMLElement* pA = xmlMobActions.FirstChildElement()->FirstChildElement(); pA; pA = pA->NextSiblingElement()) {
+				const char* cls = nullptr; const char* state = nullptr; const char* type = nullptr;
+				pA->QueryStringAttribute("Class", &cls);
+				pA->QueryStringAttribute("BehaviorState", &state);
+				pA->QueryStringAttribute("CommandType", &type);
+				if(!cls || !state || !type) continue;
+				const bool spawn = EA::StdC::Strcmp(state, "SPAWN_BEHAVIORSTATE") == 0;
+				const bool die = EA::StdC::Strcmp(state, "DIE_BEHAVIORSTATE") == 0;
+				if(!spawn && !die) continue;
+				SummonCommand cmd;
+				if(EA::StdC::Strcmp(type, "REMOTE") == 0) { cmd.kind = SummonCommand::REMOTE; pA->QueryAttribute("RemoteIndex", &cmd.index); }
+				else if(EA::StdC::Strcmp(type, "STATUS") == 0) { cmd.kind = SummonCommand::STATUS; pA->QueryAttribute("StatusIndex", &cmd.index); }
+				else continue;
+				pA->QueryFloatAttribute("Delay", &cmd.delay);
+				foreach(it, summonMap) {
+					if(it->second.className != cls) continue;
+					auto& list = spawn ? it->second.onSpawn : it->second.onDie;
+					if(!list.full()) { list.push_back(cmd); count++; }
+				}
+			}
+			LOG("Loaded %d summon spawn/die commands", count);
+		}
 	}
 
 	XMLDocument xmlFiring, xmlWeapon;

@@ -1227,14 +1227,120 @@ void World::UpdateSummons()
 			actor.seed = (i32)RandUint();
 			const f32 life = info && info->lifeTime > 0 ? info->lifeTime : 5.0f;
 			actor.despawnAt = TimeAdd(localTime, TimeMsToTime(life * 1000.0));
+			actor.ownerIndex = ps->ownerIndex;
+			if(info) {
+				f32 t = 0;
+				foreach_const(c, info->onSpawn) {
+					if(!pendingSummonCommands.full()) {
+						PendingSummonCommand pc;
+						pc.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
+						pc.ownerIndex = ps->ownerIndex;
+						pc.kind = c->kind;
+						pc.index = c->index;
+						pc.pos = ps->pos;
+						pc.yaw = ps->rot.z;
+						pc.skill = info->skills.empty() ? 0 : info->skills[0];
+						pc.until = actor.despawnAt;
+						pendingSummonCommands.push_back(pc);
+					}
+					t += c->delay;
+				}
+			}
 			LOG("Summon :: %ls creature=%d at (%.0f, %.0f) life=%.1fs known=%d", owner.name.data(), ps->creature, ps->pos.x, ps->pos.y, life, info != nullptr);
 		}
 		ps = pendingSummons.erase_unsorted(ps);
 	}
 
+	for(auto pc = pendingSummonCommands.begin(); pc != pendingSummonCommands.end(); ) {
+		if(localTime < pc->time) { ++pc; continue; }
+		Player& owner = players[pc->ownerIndex];
+		if(pc->kind == SummonCommand::REMOTE) {
+			if(!pendingRemotes.full()) {
+				PendingRemote pr;
+				pr.time = localTime;
+				pr.idx = RemoteIdx(pc->index);
+				pr.preset = (i32)ActionCommand::TargetPreset::POS_FFF; // fired from the summon's position
+				pr.offsetSide = 0;
+				pr.offsetFront = 0;
+				pr.ownerIndex = pc->ownerIndex;
+				pr.skillID = pc->skill != 0 ? SkillID(pc->skill) : SkillID::INVALID;
+				pr.castID = nextCastID++;
+				pr.damage = pc->skill != 0 ? (i32)SkillDamage(SkillID(pc->skill)) : 0;
+				pr.castPos = pc->pos;
+				pr.angle = pc->yaw;
+				pr.target = ActorUID::INVALID;
+				pendingRemotes.push_back(pr);
+			}
+		}
+		else {
+			const StatusInfo* st = GetGameXmlContent().FindStatus(pc->index);
+			if(st && st->auraStatus != 0 && !groundAuras.full()) {
+				GroundAura ga;
+				ga.ownerIndex = pc->ownerIndex;
+				ga.auraStatus = st->auraStatus;
+				ga.range = st->targetingRange;
+				ga.pos = pc->pos;
+				const Time statusEnd = st->durationSec > 0 ? TimeAdd(localTime, TimeMsToTime(st->durationSec * 1000.0)) : pc->until;
+				ga.until = pc->until < statusEnd ? pc->until : statusEnd;
+				ga.nextPulse = localTime;
+				groundAuras.push_back(ga);
+				LOG("Summon :: %ls aura %d (gives %d within %.0f)", owner.name.data(), pc->index, st->auraStatus, st->targetingRange);
+			}
+		}
+		pc = pendingSummonCommands.erase_unsorted(pc);
+	}
+
+	for(auto ga = groundAuras.begin(); ga != groundAuras.end(); ) {
+		if(localTime >= ga->until) { ga = groundAuras.erase_unsorted(ga); continue; }
+		if(localTime >= ga->nextPulse) {
+			ga->nextPulse = TimeAdd(localTime, TimeMsToTime(500));
+			const StatusInfo* child = GetGameXmlContent().FindStatus(ga->auraStatus);
+			const Player& owner = players[ga->ownerIndex];
+			if(child && ga->range > 0) {
+				foreach(p, players) {
+					if(p->dead) continue;
+					const bool ally = p->team == owner.team;
+					if(ally == child->isDebuff) continue;
+					if(glm::length(vec2(p->body->GetWorldPos()) - vec2(ga->pos)) > ga->range + WEAPON_TARGET_RADIUS) continue;
+					if(!pendingStatuses.full()) {
+						PendingStatus ps;
+						ps.time = localTime;
+						ps.statusID = ga->auraStatus;
+						ps.casterIndex = ga->ownerIndex;
+						ps.targetUID = p->Main().UID;
+						// short-lived so it fades once out of the aura
+						ps.duration = child->durationSec > 0 ? child->durationSec : 1.0f;
+						ps.power = 0;
+						pendingStatuses.push_back(ps);
+					}
+				}
+			}
+		}
+		++ga;
+	}
+
 	for(auto it = actorNpcList.begin(); it != actorNpcList.end(); ) {
 		if(it->despawnAt != Time::ZERO && localTime >= it->despawnAt) {
 			LOG("Summon :: creature=%d despawned", (i32)it->docID);
+			const SummonInfo* info = GetGameXmlContent().FindSummon((i32)it->docID);
+			if(info) {
+				f32 t = 0;
+				foreach_const(c, info->onDie) {
+					if(!pendingSummonCommands.full()) {
+						PendingSummonCommand pc;
+						pc.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
+						pc.ownerIndex = it->ownerIndex;
+						pc.kind = c->kind;
+						pc.index = c->index;
+						pc.pos = it->pos;
+						pc.yaw = it->rot.z;
+						pc.skill = info->skills.empty() ? 0 : info->skills[0];
+						pc.until = localTime;
+						pendingSummonCommands.push_back(pc);
+					}
+					t += c->delay;
+				}
+			}
 			actorNpcMap.erase(it->UID);
 			it = actorNpcList.erase(it);
 		}
@@ -1299,7 +1405,7 @@ void World::UpdateStatuses()
 						ps.statusID = auraStatus;
 						ps.casterIndex = casterIndex;
 						ps.targetUID = p->Main().UID;
-						ps.duration = -1.0f;
+						ps.duration = child->durationSec > 0 ? child->durationSec : 1.0f;
 						ps.power = 0;
 						pendingStatuses.push_back(ps);
 					}

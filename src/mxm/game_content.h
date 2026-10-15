@@ -110,8 +110,20 @@ const char* TargetPresetToString(TargetPreset p);
 
 // a stat modifier of a status, from skilltt.xml TTATTR_STATUS_STAT (base skill level)
 // summoned creature (CREATURE_MONSTER_SUMMON.xml)
+// a command of a summoned creature's action (ActionBase_Monster_MOB_PvP.xml)
+struct SummonCommand
+{
+	enum Kind: u8 { REMOTE = 0, STATUS };
+	Kind kind = REMOTE;
+	i32 index = 0;     // RemoteIndex / StatusIndex
+	f32 delay = 0;     // time after the previous command
+};
+
 struct SummonInfo
 {
+	eastl::fixed_string<char,48,false> className;           // Kfm_ComData KeyName = ActionBase class
+	eastl::fixed_vector<SummonCommand,12,false> onSpawn;    // SPAWN_BEHAVIORSTATE
+	eastl::fixed_vector<SummonCommand,12,false> onDie;      // DIE_BEHAVIORSTATE
 	f32 lifeTime = 0;          // LifeTime_ComData
 	f32 moveSpeed = 0;         // EntityComData _MoveSpeed
 	f32 perception = 0;        // Ai_ComData _PerceptionLength
