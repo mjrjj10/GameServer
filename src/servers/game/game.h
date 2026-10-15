@@ -69,6 +69,8 @@ struct Game
 	Time startTime;
 	Time tGameStarted = Time::ZERO;
 	bool gameEnded = false;
+	Time tGameEnded = Time::ZERO;
+	bool sentBackToLobby = false;
 	void EndGame();
 	Time localTime;
 

@@ -184,6 +184,15 @@ void Game::Update(Time localTime_)
 				if(limit <= 0) limit = 300.0f;
 				if(TimeDiffSec(TimeDiff(tGameStarted, localTime)) >= limit) EndGame();
 			}
+			// the result screen's return button stays disabled on this client: send everyone back to the lobby
+			// after a delay of our own (not from data) leaving time to read the results
+			if(gameEnded && !sentBackToLobby && TimeDiffSec(TimeDiff(tGameEnded, localTime)) >= 15.0) {
+				sentBackToLobby = true;
+				foreach_const(p, playerList) {
+					if(p->clientHd != ClientHandle::INVALID) OnPlayerReturnToChannel(p->clientHd);
+				}
+				LOG("Game :: players sent back to the lobby");
+			}
 #if 1
 			// bot random actions
 			if(!gameEnded) foreach(bot, botList) {
@@ -618,6 +627,7 @@ void Game::OnPlayerTag(ClientHandle clientHd, ActorUID actorUID)
 void Game::EndGame()
 {
 	gameEnded = true;
+	tGameEnded = localTime;
 	world.frozen = true;
 	eastl::fixed_vector<Replication::EndPlayer,10,false> list;
 	i32 red = 0, blue = 0;
