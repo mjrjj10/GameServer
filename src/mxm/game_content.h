@@ -141,6 +141,9 @@ struct StatusInfo
 	i32 maxOverlap = 1;
 	Kind kind = Kind::OTHER;
 	eastl::fixed_vector<StatusMod,6,false> mods;
+	enum class NextCondition: u8 { NONE = 0, ALL, TIMEOVER, REMOVE_ONHIT };
+	i32 nextStatus = 0;                 // _NextStatusIndex
+	NextCondition nextCondition = NextCondition::NONE;
 	eastl::fixed_string<char,40,false> type;
 };
 
@@ -258,6 +261,8 @@ struct Remote
 	bool attachFireObject = false;
 	f32 sight = 0;
 	f32 criticalRate = 0; // extra crit chance % (RemoteComData2 _CriticalRate)
+	i32 onHitOwnerStatus = 0; // _OnHitOwnerStatusIndex: status applied to the caster when this remote hits
+	f32 activateDelay = 0;    // RemoteBoundComData2 _ActivateDelayTime: bound inactive for this long after spawn
 };
 
 // weapon overheat gauge (FIRING_METHOD.xml _GAUGE of the weapon's _DefaultFiringIndex)

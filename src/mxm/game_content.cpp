@@ -1523,6 +1523,7 @@ bool GameXmlContent::LoadRemoteData()
 				pComp->QueryStringAttribute("_AddContactGroup", &_AddContactGroup);
 				remote.contactFriend = _AddContactGroup && (EA::StdC::Strcmp(_AddContactGroup, "eFRIEND") == 0 || EA::StdC::Strcmp(_AddContactGroup, "eALL") == 0);
 				remote.vsOwner = XmlAttrTrue(pComp, "_VsOwner");
+				pComp->QueryFloatAttribute("_ActivateDelayTime", &remote.activateDelay);
 				remote.boundType = Remote::BoundTypeFromString(_Type);
 				remote.damageGroup = Remote::DamageGroupFromString(_DamageGroup);
 				remote.vs =
@@ -1560,6 +1561,7 @@ bool GameXmlContent::LoadRemoteData()
 				}
 				remote.attachFireObject = XmlAttrTrue(pComp, "_AttachFireObject");
 				pComp->QueryFloatAttribute("_CriticalRate", &remote.criticalRate);
+				pComp->QueryAttribute("_OnHitOwnerStatusIndex", &remote.onHitOwnerStatus);
 				remote.activateCount = _ActivateCount;
 				remote.lifeTime = _LifeTime;
 				pComp->QueryFloatAttribute("_AttackMultiplier", &remote.attackMultiplier);
@@ -1900,6 +1902,16 @@ bool GameXmlContent::LoadStatusData()
 		pCommon->QueryFloatAttribute("_ParamRatio", &st.paramRatio);
 		pCommon->QueryFloatAttribute("_OffsetDraggedDistanceFromTarget", &st.dragOffset);
 		pCommon->QueryAttribute("_MaxOverlapCount", &st.maxOverlap);
+		pCommon->QueryAttribute("_NextStatusIndex", &st.nextStatus);
+		{
+			const char* cond = nullptr;
+			pCommon->QueryStringAttribute("_NextStatusCondition", &cond);
+			if(st.nextStatus != 0) {
+				st.nextCondition = StatusInfo::NextCondition::ALL;
+				if(cond && EA::StdC::Strcmp(cond, "E_NEXT_STATUS_CONDITION_TIMEOVER") == 0) st.nextCondition = StatusInfo::NextCondition::TIMEOVER;
+				else if(cond && EA::StdC::Strcmp(cond, "E_NEXT_STATUS_CONDITION_REMOVE_ONHIT") == 0) st.nextCondition = StatusInfo::NextCondition::REMOVE_ONHIT;
+			}
+		}
 		if(st.maxOverlap < 1) st.maxOverlap = 1;
 		const char* type = nullptr;
 		pCommon->QueryStringAttribute("_Type", &type);

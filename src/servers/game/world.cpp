@@ -1216,9 +1216,29 @@ void World::UpdateStatuses()
 		}
 
 		const bool shieldBroken = it->info && it->info->type == "STATUS_TYPE_SHIELD" && it->shieldHP <= 0;
-		if(localTime >= it->until || target.dead || shieldBroken) {
+		const bool timeOver = localTime >= it->until;
+		if(timeOver || target.dead || shieldBroken || it->removeOnHit) {
 			replication->SendRemoveStatusToAll(it->statusID, it->targetUID, it->casterUID);
+			// next status chain (_NextStatusIndex / _NextStatusCondition)
+			i32 next = 0;
+			if(it->info && it->info->nextStatus != 0 && !target.dead) {
+				const auto cond = it->info->nextCondition;
+				if(cond == StatusInfo::NextCondition::ALL ||
+				   (cond == StatusInfo::NextCondition::TIMEOVER && timeOver) ||
+				   (cond == StatusInfo::NextCondition::REMOVE_ONHIT && it->removeOnHit)) next = it->info->nextStatus;
+			}
+			const u32 casterIndex = it->casterIndex;
 			it = activeStatuses.erase_unsorted(it);
+			if(next != 0 && !pendingStatuses.full()) {
+				PendingStatus ps;
+				ps.time = localTime;
+				ps.statusID = next;
+				ps.casterIndex = casterIndex;
+				ps.targetUID = target.Main().UID;
+				ps.duration = -1.0f;
+				ps.power = 0;
+				pendingStatuses.push_back(ps);
+			}
 		}
 		else {
 			++it;
@@ -1423,6 +1443,7 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	const Remote& remote = *inst.remote;
 	Player& owner = players[inst.ownerIndex];
 	if(!RemoteCanAffect(inst, target, true)) return;
+	if(remote.activateDelay > 0 && TimeDiffSec(TimeDiff(inst.spawnTime, localTime)) < remote.activateDelay) return;
 	const bool enemy = target.team != owner.team;
 
 	const i32 amount = (i32)(inst.damage * remote.attackMultiplier);
@@ -1451,6 +1472,7 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	}
 
 	inst.lastHitIndex = (i32)target.index;
+	if(enemy && remote.onHitOwnerStatus != 0 && !owner.dead) ApplyStatus(owner, owner, remote.onHitOwnerStatus);
 	if(!target.dead) {
 		const bool friendGroup = remote.damageGroup == Remote::DamageGroup::eFRIEND;
 		if(enemy || friendGroup) {
@@ -1739,8 +1761,10 @@ void World::UpdateRemotes(f32 delta)
 					}
 				}
 				else if(!inst.areaDone) {
-					inst.areaDone = true;
-					RemoteApplyArea(inst);
+					if(remote.activateDelay <= 0 || elapsed >= remote.activateDelay) {
+						inst.areaDone = true;
+						RemoteApplyArea(inst);
+					}
 				}
 				else if(remote.lifeTime > 0 && inst.hitsLeft > 0) {
 					// lingering zone / mine: keeps checking contact, hits again once each target's hit window expires
@@ -1865,6 +1889,10 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			damage = (i32)(damage * (critDamage > 0 ? critDamage : 100.0f) / 100.0f);
 			damageType = PACKET_DAMAGE_TYPE_CRITICAL;
 		}
+	}
+
+	foreach(it, activeStatuses) {
+		if(it->targetIndex == target.index && it->info && it->info->nextCondition == StatusInfo::NextCondition::REMOVE_ONHIT) it->removeOnHit = true;
 	}
 
 	foreach(it, activeStatuses) {

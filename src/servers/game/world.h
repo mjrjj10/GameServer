@@ -382,6 +382,7 @@ struct World
 		f32 shieldHP;
 		Time nextHealTick;
 		i32 healTicksDone;
+		bool removeOnHit = false; // marked when its target got hit (E_NEXT_STATUS_CONDITION_REMOVE_ONHIT)
 	};
 	eastl::fixed_vector<ActiveStatus,512,false> activeStatuses;
 
