@@ -1312,6 +1312,7 @@ bool GameXmlContent::LoadAnimationData()
 		Action::Command cmd;
 		cmd.type = ActionCommand::TypeFromString(CommandType);
 		pActionBase->QueryAttribute("AnimationIndex", &cmd.animIndex);
+		pActionBase->QueryAttribute("AnimationId", &cmd.animationId);
 		{
 			const char* NodeName = nullptr;
 			pActionBase->QueryStringAttribute("NodeName", &NodeName);
@@ -2192,6 +2193,11 @@ bool GameXmlContent::LoadStatusData()
 					pEnt->QueryStringAttribute("_Key", &key);
 					if(!key) continue;
 					for(XMLElement* pAni = pEnt->FirstChildElement("AnimationInfo"); pAni; pAni = pAni->NextSiblingElement("AnimationInfo")) {
+						i32 seqID = 0;
+						f32 seqTime = 0;
+						pAni->QueryAttribute("_SeqID", &seqID);
+						pAni->QueryFloatAttribute("_SeqTime", &seqTime);
+						if(seqID != 0) aniSeqTime[AniKey(key, seqID)] = seqTime;
 						const char* name = nullptr;
 						pAni->QueryStringAttribute("_AnimationName", &name);
 						if(!name || EA::StdC::Strcmp(name, "LIE_END") != 0) continue;

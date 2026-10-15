@@ -396,6 +396,7 @@ struct GameXmlContent
 			f32 delay;
 			f32 relativeEndTimeFromStart;
 			i32 animIndex = 0;
+			i32 animationId = 0; // AnimationId (AniLength _SeqID)
 			u16 nodeName = 0; // index in GameXmlContent::nodeNames, 0 = Scene Root
 			u8 byDummyDir = 0;
 
@@ -551,6 +552,14 @@ struct GameXmlContent
 	f32 GetSkillConsumeMP(i32 skillID) const { auto f = skillConsumeMP.find(skillID); return f == skillConsumeMP.end() ? 0 : f->second; }
 	f32 GetSkillConsumeUG(i32 skillID) const { auto f = skillConsumeUG.find(skillID); return f == skillConsumeUG.end() ? 0 : f->second; }
 	f32 GetSkillConsumeStamina(i32 skillID) const { auto f = skillConsumeStamina.find(skillID); return f == skillConsumeStamina.end() ? 0 : f->second; }
+	static u64 AniKey(const char* className, i32 seqID)
+	{
+		const char* key = EA::StdC::Strncmp(className, "CLASS_TYPE_", 11) == 0 ? className + 11 : className;
+		u32 h = 2166136261u;
+		for(const char* c = key; *c; c++) { h ^= (u8)(*c >= 'a' && *c <= 'z' ? *c - 32 : *c); h *= 16777619u; }
+		return ((u64)h << 32) | (u32)seqID;
+	}
+	f32 GetAniSeqTime(const char* className, i32 seqID) const { auto f = aniSeqTime.find(AniKey(className, seqID)); return f == aniSeqTime.end() ? 0 : f->second; }
 	// stand-up animation length of a master (AniLength LIE_END, entity key = class name without CLASS_TYPE_)
 	f32 GetLieEndTime(const char* className) const
 	{
@@ -618,6 +627,7 @@ private:
 	eastl::hash_map<i32, f32> skillBaseDamage;     // skilltt.xml base level TTATTR_REMOTE_DAMAGE
 	eastl::hash_map<i32, f32> skillConsumeUG;      // SKILL.xml _ConsumeUG
 	eastl::hash_map<i32, SummonInfo> summonMap;
+	eastl::hash_map<u64, f32> aniSeqTime; // AniLength.xml PC: (entity key hash, SeqID) -> length
 	eastl::hash_map<i32, f32> stageTimeLimit; // STAGELIST success condition TIME_COUNT (seconds)
 	eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,48,false>, f32>,128,true> lieEndTime; // AniLength.xml PC LIE_END per entity key
 	eastl::hash_map<i32, i32> creatureElement; // CREATURE_CHARACTER _ElementType: 0 none, 1 red, 2 green, 3 blue

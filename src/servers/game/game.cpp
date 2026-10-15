@@ -185,7 +185,7 @@ void Game::Update(Time localTime_)
 			}
 #if 1
 			// bot random actions
-			foreach(bot, botList) {
+			if(!gameEnded) foreach(bot, botList) {
 				if(localTime > bot->tNextAction) {
 					bot->tNextAction = TimeAdd(localTime, TimeMsToTime(Randf01() * 5 * 1000));
 					World::Player& wpl = world.GetPlayer(bot->playerIndex);
@@ -617,6 +617,7 @@ void Game::OnPlayerTag(ClientHandle clientHd, ActorUID actorUID)
 void Game::EndGame()
 {
 	gameEnded = true;
+	world.frozen = true;
 	eastl::fixed_vector<Replication::EndPlayer,10,false> list;
 	i32 red = 0, blue = 0;
 	for(u32 i = 0; i < world.PlayerCount(); i++) {

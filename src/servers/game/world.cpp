@@ -242,7 +242,7 @@ void World::Update(Time localTime_)
 	UpdateUltimateGauges((f32)tdelta);
 	UpdateStatuses();
 	UpdateSummons();
-	UpdateBotCombat();
+	if(!frozen) UpdateBotCombat();
 
 	// execute skill programs
 	for(auto it = skillProgramList.begin(); it != skillProgramList.end(); ) {
@@ -579,6 +579,7 @@ World::ActorMasterHandle World::MasterInvalidHandle()
 
 void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 clientTime)
 {
+	if(frozen) return;
 	// TODO: check if can cast
 
 	// access method is kinda convoluted
@@ -987,6 +988,7 @@ static bool WeaponHeatShot(World::Player& player, Time now, Replication* replica
 
 void World::OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize)
 {
+	if(frozen) return;
 	if(IsBlocked(player, true, false, false)) {
 		LOG("Blocked :: %ls shot ignored (attack blocked by a status)", player.name.data());
 		return;
@@ -1617,7 +1619,25 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	const ActorUID currentTarget = targets.size() > 0 ? targets[0] : ActorUID::INVALID;
 
 	bool scheduled = false;
-	f32 t = 0;
+	// animation 0 without any action and no hit-event combo: animation 1 is its continuation,
+	// played once animation 0 is over (AniLength of its AnimationId)
+	f32 tStart = 0;
+	if(anim == 0 && forceAnim < 0 && GetGameXmlContent().FindSkillHitEventRemote((i32)skillID) == 0) {
+		bool anim0Acts = false, anim1Acts = false;
+		i32 anim0Id = 0;
+		foreach_const(cmd, action.commands) {
+			const bool acts = cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET ||
+				cmd->type == ActionCommand::Type::STATUS || cmd->type == ActionCommand::Type::ENTITY;
+			if(cmd->animIndex == 0) { anim0Acts |= acts; if(!anim0Id) anim0Id = cmd->animationId; }
+			if(cmd->animIndex == 1) anim1Acts |= acts;
+		}
+		if(!anim0Acts && anim1Acts) {
+			anim = 1;
+			tStart = content.GetAniSeqTime(content.GetMaster(player.Main().classType).className.c_str(), anim0Id);
+		}
+	}
+
+	f32 t = tStart;
 	foreach_const(cmd, action.commands) {
 		if(cmd->animIndex != anim && cmd->animIndex != -1) continue; // -1: command shared by every animation
 		if((cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) && !pendingRemotes.full()) {
@@ -1752,7 +1772,7 @@ struct WorldRemoteSpawner
 	}
 };
 
-static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, const Remote::SpawnRules& rules, const vec3& pos, i32 excludeIndex, RemoteIdx skipFirst)
+static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, const Remote::SpawnRules& rules, const vec3& pos, i32 excludeIndex, RemoteIdx skipFirst, bool fromDestroy = false)
 {
 	bool skipped = false;
 	foreach_const(rule, rules) {
@@ -1789,7 +1809,9 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 				const vec2 rel = vec2(owner.body->GetWorldPos()) - vec2(at);
 				if(glm::length(rel) > 1.0f) dir = glm::normalize(rel);
 			}
-			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, rule->idx, at + vec3(dir * child->offsetY, 0), dir, childTarget, parent.skillID, parent.castID, parent.damage, parent.clientRemoteID != 0, parent.casterLocal);
+			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, rule->idx, at + vec3(dir * child->offsetY, 0), dir, childTarget, parent.skillID, parent.castID, parent.damage,
+				// clients spawn the directed children (_CreateRemote) of a remote ending on their side themselves
+				parent.clientRemoteID != 0 && !(fromDestroy && rule->kind != Remote::SPAWN_SINGLE), parent.casterLocal);
 			if(inst) inst->excludeIndex = excludeIndex;
 		}
 	}
@@ -2179,7 +2201,7 @@ void World::UpdateRemotes(f32 delta)
 					RemoteInst* child = SpawnRemote(copy.ownerIndex, next, copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, 0, copy.casterLocal);
 					if(child) child->excludeIndex = childExclude;
 				}
-				SpawnRemoteRules(*this, copy, remote.onDestroy, copy.pos, childExclude, next);
+				SpawnRemoteRules(*this, copy, remote.onDestroy, copy.pos, childExclude, next, true);
 			}
 		}
 		else {

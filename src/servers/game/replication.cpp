@@ -878,9 +878,7 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 	for(i32 i = 0; i < count; i++) {
 		const ClientHandle clientHd = players[i].clientHd;
 		if(clientHd == ClientHandle::INVALID) continue;
-		SendPacket(clientHd, score);
-
-		// SN_PvpResult (rewards left empty)
+		// SN_PvpResult first: the result window opens on the score packet and reads the result right away
 		PacketWriter<Sv::SN_PvpResult,512> res;
 		res.Write<u32>(0); // gameEndReason
 		res.Write<u32>(playTimeMs);
@@ -904,6 +902,7 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 		res.Write<u16>(0); // deltaGuildRp
 		res.Write<u16>(0); // pcCafeUserIds
 		SendPacket(clientHd, res);
+		SendPacket(clientHd, score);
 	}
 	LOG("Replication :: game end (red %d - blue %d)", redScore, blueScore);
 }
