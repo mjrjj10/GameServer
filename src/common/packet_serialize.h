@@ -2628,6 +2628,22 @@ inline const char* PacketSerialize<Sv::SA_ReturnToCity>(const void* packetData, 
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_PvpResult>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	SER("SN_PvpResult(%d, %d) :: {}", Sv::SN_PvpResult::NET_ID, packetSize);
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_PvpResultScoreDeathmatch>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	SER("SN_PvpResultScoreDeathmatch(%d, %d) :: {}", Sv::SN_PvpResultScoreDeathmatch::NET_ID, packetSize);
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_Gauge>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

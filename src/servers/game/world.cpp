@@ -1782,7 +1782,14 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 					dir = RotateDir(parent.dir, rule->angleY);
 				} break;
 			}
-			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, rule->idx, at + vec3(dir * child->offsetY, 0), dir, parent.target, parent.skillID, parent.castID, parent.damage, parent.clientRemoteID != 0, parent.casterLocal);
+			ActorUID childTarget = parent.target;
+			if(rule->targetOwner) {
+				World::Player& owner = world.GetPlayer(parent.ownerIndex);
+				childTarget = owner.Main().UID;
+				const vec2 rel = vec2(owner.body->GetWorldPos()) - vec2(at);
+				if(glm::length(rel) > 1.0f) dir = glm::normalize(rel);
+			}
+			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, rule->idx, at + vec3(dir * child->offsetY, 0), dir, childTarget, parent.skillID, parent.castID, parent.damage, parent.clientRemoteID != 0, parent.casterLocal);
 			if(inst) inst->excludeIndex = excludeIndex;
 		}
 	}
@@ -1856,6 +1863,20 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 			LOG("ComboHit :: %ls skill=%d remote=%d -> next part", owner.name.data(), (i32)inst.skillID, (i32)remote.ID);
 			ScheduleSkillRemotes(owner, inst.skillID, target.body->GetWorldPos(), Slice<const ActorUID>(&targetUID, 1), atan2f(rel.y, rel.x), 1);
 		}
+	}
+}
+
+void World::RemoteHitAlongPath(RemoteInst& inst)
+{
+	const Remote& remote = *inst.remote;
+	if(remote.damageGroup == Remote::DamageGroup::eNONE || remote.damageGroup == Remote::DamageGroup::INVALID) return;
+	if(remote.attackMultiplier <= 0 && remote.statuses.empty()) return;
+	const f32 radius = remote.boundSize[0] * 0.5f;
+	foreach(it, players) {
+		if(!RemoteCanAffect(inst, *it, false)) continue;
+		if(it->team == players[inst.ownerIndex].team) continue; // on the way: enemies only
+		if(glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos)) > radius + WEAPON_TARGET_RADIUS) continue;
+		RemoteHit(inst, *it);
 	}
 }
 
@@ -2070,6 +2091,7 @@ void World::UpdateRemotes(f32 delta)
 				else {
 					inst.dir = rel / dist;
 					inst.pos += vec3(inst.dir * step, 0);
+					RemoteHitAlongPath(inst);
 				}
 			} break;
 
@@ -2077,6 +2099,7 @@ void World::UpdateRemotes(f32 delta)
 				const f32 step = MIN(inst.speed * delta, inst.range - inst.travelled);
 				inst.pos += vec3(inst.dir * step, 0);
 				inst.travelled += step;
+				RemoteHitAlongPath(inst);
 				destroyed = inst.travelled >= inst.range - 0.01f;
 				if(destroyed && inst.hasLandZ) inst.pos.z = inst.landZ; // landed on the ground
 			} break;

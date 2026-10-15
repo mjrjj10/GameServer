@@ -172,10 +172,17 @@ void Game::Update(Time localTime_)
 				foreach_const(p, playerList) {
 					replication.SendGameStart(p->clientHd);
 				}
+				tGameStarted = localTime;
 			}
 		} break;
 
 		case Phase::Game: {
+			// end of game: stage success condition E_CONDITION_TYPE_TIME_COUNT
+			if(!gameEnded && tGameStarted != Time::ZERO) {
+				f32 limit = GetGameXmlContent().GetStageTimeLimit((i32)replication.stageIndex);
+				if(limit <= 0) limit = 300.0f;
+				if(TimeDiffSec(TimeDiff(tGameStarted, localTime)) >= limit) EndGame();
+			}
 #if 1
 			// bot random actions
 			foreach(bot, botList) {
@@ -605,6 +612,29 @@ void Game::OnPlayerTag(ClientHandle clientHd, ActorUID actorUID)
 
 	// TODO: cooldown
 	player.input.tag = 1;
+}
+
+void Game::EndGame()
+{
+	gameEnded = true;
+	eastl::fixed_vector<Replication::EndPlayer,10,false> list;
+	i32 red = 0, blue = 0;
+	for(u32 i = 0; i < world.PlayerCount(); i++) {
+		World::Player& p = world.GetPlayer(i);
+		Replication::EndPlayer e;
+		e.userID = p.userID;
+		e.clientHd = p.clientHd;
+		e.name = p.name.data();
+		e.team = p.team;
+		e.kills = p.kills;
+		e.deaths = p.deaths;
+		e.masters[0] = CreatureIndex(100000000 + (i32)p.mainClass);
+		e.masters[1] = CreatureIndex(100000000 + (i32)p.subClass);
+		list.push_back(e);
+		if(p.team == 0) red += p.kills; else blue += p.kills;
+	}
+	LOG("Game :: time over, red %d - blue %d", red, blue);
+	replication.SendGameEnd(list.data(), (i32)list.size(), red, blue, (u32)(TimeDiffSec(TimeDiff(tGameStarted, localTime)) * 1000.0));
 }
 
 void Game::OnPlayerReturnToChannel(ClientHandle clientHd)

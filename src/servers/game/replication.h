@@ -297,6 +297,17 @@ struct Replication
 	void SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, SkillID skillID, i32 damage, i32 hp, i32 hpMax, u32 damageType = 0);
 	void SendHpToAll(ActorUID actorUID, i32 hp, i32 hpMax);
 	void SendDoConnectChannel(ClientHandle clientHd, const wchar* nickname, const i32 hubIP[4], u16 hubPort);
+	struct EndPlayer
+	{
+		UserID userID;
+		ClientHandle clientHd;
+		const wchar* name;
+		u8 team;
+		i32 kills;
+		i32 deaths;
+		CreatureIndex masters[2];
+	};
+	void SendGameEnd(const EndPlayer* players, i32 count, i32 redScore, i32 blueScore, u32 playTimeMs);
 	void SendGaugeToAll(UserID userID, u8 updateType, bool overheated, f32 overheatTime, u16 gauge, u16 maxGauge);
 	void SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 max);
 	void SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration);

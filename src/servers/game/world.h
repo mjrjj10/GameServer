@@ -463,6 +463,7 @@ struct World
 	ActorDynamic& SpawnDynamic(CreatureIndex docID, i32 localID);
 
 	Player& GetPlayer(u32 playerIndex);
+	u32 PlayerCount() const { return (u32)players.size(); }
 	bool PlayerPaySkillCost(Player& player, i32 skillID);
 	void UpdateWeaponHeat(Player& player);
 	void UpdateSummons();
@@ -498,6 +499,7 @@ private:
 	void HealPlayer(Player& healer, Player& target, i32 amount);
 	bool RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const;
 	void RemoteApplyShape(RemoteInst& inst);
+	void RemoteHitAlongPath(RemoteInst& inst);
 	void UpdateStatuses();
 	void RemoteApplyArea(RemoteInst& inst);
 	f32 LagDistToSegment(const Player& p, const vec2& a, const vec2& b) const;

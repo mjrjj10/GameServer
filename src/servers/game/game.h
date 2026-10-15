@@ -67,6 +67,9 @@ struct Game
 	eastl::array<eastl::fixed_vector<SpawnPoint,128,false>, (i32)Faction::_COUNT> mapSpawnPoints;
 
 	Time startTime;
+	Time tGameStarted = Time::ZERO;
+	bool gameEnded = false;
+	void EndGame();
 	Time localTime;
 
 	Time phaseTime = Time::ZERO;

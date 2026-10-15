@@ -841,6 +841,73 @@ void Replication::SendDoConnectChannel(ClientHandle clientHd, const wchar* nickn
 	SendPacket(clientHd, packet);
 }
 
+void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore, i32 blueScore, u32 playTimeMs)
+{
+	// client enums: PVP_RESULT 1 WIN / 2 LOSE / 3 DRAW, TeamType RED / BLUE
+	const u32 redResult = redScore > blueScore ? 1 : (redScore < blueScore ? 2 : 3);
+	const u32 blueResult = redScore < blueScore ? 1 : (redScore > blueScore ? 2 : 3);
+
+	// SN_PvpResultScoreDeathmatch
+	PacketWriter<Sv::SN_PvpResultScoreDeathmatch,4096> score;
+	score.Write<u16>(2);
+	score.Write<TeamType>(TeamType::RED);
+	score.Write<u32>((u32)redScore);
+	score.Write<TeamType>(TeamType::BLUE);
+	score.Write<u32>((u32)blueScore);
+	score.Write<u16>((u16)count);
+	for(i32 i = 0; i < count; i++) {
+		const EndPlayer& p = players[i];
+		score.Write<u32>((u32)p.userID);
+		score.WriteStringObj(p.name, (i32)EA::StdC::Strlen(p.name));
+		score.Write<TeamType>(p.team == 0 ? TeamType::RED : TeamType::BLUE);
+		score.Write<u8>(0); // disconnected
+		score.Write<u32>((u32)p.kills);
+		score.Write<u16>(2);
+		for(int m = 0; m < 2; m++) {
+			score.Write<u32>((u32)p.masters[m]);
+			score.Write<u32>(playTimeMs / 2);
+			score.Write<u8>((u8)(m == 0 ? p.kills : 0));
+			score.Write<u8>(0);
+			score.Write<u8>(0);
+			score.Write<u8>((u8)(m == 0 ? p.deaths : 0));
+			score.Write<u8>(0);
+			for(int d = 0; d < 8; d++) score.Write<u32>(0);
+		}
+	}
+
+	for(i32 i = 0; i < count; i++) {
+		const ClientHandle clientHd = players[i].clientHd;
+		if(clientHd == ClientHandle::INVALID) continue;
+		SendPacket(clientHd, score);
+
+		// SN_PvpResult (rewards left empty)
+		PacketWriter<Sv::SN_PvpResult,512> res;
+		res.Write<u32>(0); // gameEndReason
+		res.Write<u32>(playTimeMs);
+		res.Write<u16>(2);
+		res.Write<TeamType>(TeamType::RED);
+		res.Write<u32>(redResult);
+		res.Write<TeamType>(TeamType::BLUE);
+		res.Write<u32>(blueResult);
+		res.Write<u32>((u32)players[i].userID); // m_playerID
+		res.Write<u32>(0); // baseRon
+		res.Write<u16>(0); // bonusRon
+		res.Write<u32>(0); // baseExp
+		res.Write<u16>(0); // bonusExp
+		res.Write<u16>(0); // rewardItems
+		for(int z = 0; z < 15; z++) res.Write<u8>(0); // guild reward
+		for(int z = 0; z < 12; z++) res.Write<u8>(0); // pc cafe item
+		res.Write<u8>(0); // tierGameResult
+		res.Write<u8>(0); // tierTypeResult
+		res.Write<u16>(0); // curTierPoint
+		res.Write<u16>(0); // deltaTierPoint
+		res.Write<u16>(0); // deltaGuildRp
+		res.Write<u16>(0); // pcCafeUserIds
+		SendPacket(clientHd, res);
+	}
+	LOG("Replication :: game end (red %d - blue %d)", redScore, blueScore);
+}
+
 void Replication::SendGaugeToAll(UserID userID, u8 updateType, bool overheated, f32 overheatTime, u16 gauge, u16 maxGauge)
 {
 	PacketWriter<Sv::SN_Gauge> packet;

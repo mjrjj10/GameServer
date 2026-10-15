@@ -280,6 +280,7 @@ struct Remote
 		f32 maxAngle = 0;
 		f32 radius = 0;
 		f32 angleY = 0;
+		bool targetOwner = false; // _CreateRemote _TargetOwner: the child goes back to the caster
 	};
 	typedef eastl::fixed_vector<SpawnRule,4,false> SpawnRules;
 	SpawnRules onDestroy;
@@ -559,6 +560,7 @@ struct GameXmlContent
 		}
 		return 0;
 	}
+	f32 GetStageTimeLimit(i32 stageID) const { auto f = stageTimeLimit.find(stageID); return f == stageTimeLimit.end() ? 0 : f->second; }
 	const SummonInfo* FindSummon(i32 creatureID) const { auto f = summonMap.find(creatureID); return f == summonMap.end() ? nullptr : &f->second; }
 	i32 GetCreatureElement(i32 creatureID) const { auto f = creatureElement.find(creatureID); return f == creatureElement.end() ? 0 : f->second; }
 	i32 FindSkillHitEventRemote(i32 skillID) const { auto f = skillHitEventRemote.find(skillID); return f == skillHitEventRemote.end() ? 0 : f->second; }
@@ -616,6 +618,7 @@ private:
 	eastl::hash_map<i32, f32> skillBaseDamage;     // skilltt.xml base level TTATTR_REMOTE_DAMAGE
 	eastl::hash_map<i32, f32> skillConsumeUG;      // SKILL.xml _ConsumeUG
 	eastl::hash_map<i32, SummonInfo> summonMap;
+	eastl::hash_map<i32, f32> stageTimeLimit; // STAGELIST success condition TIME_COUNT (seconds)
 	eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,48,false>, f32>,128,true> lieEndTime; // AniLength.xml PC LIE_END per entity key
 	eastl::hash_map<i32, i32> creatureElement; // CREATURE_CHARACTER _ElementType: 0 none, 1 red, 2 green, 3 blue
 	bool LoadStatusData();

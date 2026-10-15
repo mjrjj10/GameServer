@@ -1445,8 +1445,12 @@ static void ParseRemoteSpawnRules(XMLElement* pEvent, Remote::SpawnRules& out)
 			out.push_back(rule);
 		}
 		else if(EA::StdC::Strcmp(pAct->Name(), "_CreateRemote") == 0) {
+			const char* toOwner = nullptr;
+			pAct->QueryStringAttribute("_TargetOwner", &toOwner);
+			const bool targetOwner = toOwner && EA::StdC::Stricmp(toOwner, "true") == 0;
 			for(XMLElement* pKind = pAct->FirstChildElement(); pKind; pKind = pKind->NextSiblingElement()) {
 				Remote::SpawnRule rule;
+				rule.targetOwner = targetOwner;
 				i32 idx = -1;
 				if(EA::StdC::Strcmp(pKind->Name(), "_Radiate") == 0) {
 					rule.kind = Remote::SPAWN_RADIATE;
@@ -2156,6 +2160,26 @@ bool GameXmlContent::LoadStatusData()
 			summonMap[id] = si;
 		}
 		LOG("Loaded %d summon creatures", (i32)summonMap.size());
+
+		XMLDocument xmlStage;
+		if(LoadXMLFile(L"/client/STAGELIST.xml", xmlStage)) {
+			for(XMLElement* pInfo = xmlStage.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+				i32 id = 0;
+				pInfo->QueryAttribute("ID", &id);
+				XMLElement* pStage = pInfo->FirstChildElement();
+				XMLElement* pList = pStage ? pStage->FirstChildElement("_SUCCESS_CONDITION_LIST") : nullptr;
+				XMLElement* pSet = pList ? pList->FirstChildElement("_MCASESET") : nullptr;
+				for(XMLElement* pC = pSet ? pSet->FirstChildElement("_MCONDITION") : nullptr; pC; pC = pC->NextSiblingElement("_MCONDITION")) {
+					const char* type = nullptr;
+					pC->QueryStringAttribute("_Type", &type);
+					if(!type || EA::StdC::Strcmp(type, "E_CONDITION_TYPE_TIME_COUNT") != 0) continue;
+					f32 v = 0;
+					pC->QueryFloatAttribute("_Value", &v);
+					if(v > 0) stageTimeLimit[id] = v;
+				}
+			}
+			LOG("Loaded %d stage time limits", (i32)stageTimeLimit.size());
+		}
 
 		XMLDocument xmlAni;
 		if(LoadXMLFile(L"/client/AniLength.xml", xmlAni)) {
