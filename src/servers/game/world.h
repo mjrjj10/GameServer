@@ -116,6 +116,7 @@ struct World
 		eastl::array<f32,3> res = { -1, -1, -1 };      // energy, rage, charges (bubble)
 		eastl::array<f32,3> resSent = { -1, -1, -1 };
 		Time tNextResSend = Time::ZERO;
+		Time tNextResRefresh = Time::ZERO; // periodic resend: early sends are dropped until the client is in game
 		eastl::array<f32,2> heat = { 0, 0 };        // weapon overheat gauge per master
 		eastl::array<Time,2> heatLastShot = { Time::ZERO, Time::ZERO };
 		eastl::array<Time,2> overheatUntil = { Time::ZERO, Time::ZERO };

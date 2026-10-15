@@ -1038,7 +1038,7 @@ void World::UpdateUltimateGauges(f32 delta)
 			if(base > 0 && fabsf(speed - it->moveSpeedSent) > 0.01f) {
 				it->moveSpeedSent = speed;
 				replication->SendStatToAll(it->Main().UID, STAT_MOVESPEED, speed, speed);
-				LOG("MoveSpeed :: %ls %.0f%%", it->name.data(), speed);
+				if(fabsf(speed - base) > 0.01f) LOG("MoveSpeed :: %ls %.0f%%", it->name.data(), speed);
 			}
 		}
 
@@ -1063,6 +1063,11 @@ void World::UpdateUltimateGauges(f32 delta)
 			if(it->res[r] < 0) it->res[r] = RESOURCES[r].startFull ? resMax : 0;
 			it->res[r] = MIN(MAX(it->res[r] + MasterStat(cls, RESOURCES[r].regenStat) * delta, 0.0f), resMax);
 			if(fabsf(it->res[r] - it->resSent[r]) >= 0.01f) resChanged = true;
+		}
+		if(localTime >= it->tNextResRefresh) {
+			it->tNextResRefresh = TimeAdd(localTime, TimeMsToTime(1000));
+			resChanged = true;
+			it->moveSpeedSent = -1.0f; // resend move speed too
 		}
 		if(resChanged && localTime >= it->tNextResSend) {
 			it->tNextResSend = TimeAdd(localTime, TimeMsToTime(250));
