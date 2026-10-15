@@ -1124,7 +1124,17 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	st.until = TimeAdd(localTime, TimeMsToTime(MAX(duration, 0.1f) * 1000.0));
 	st.nextTick = TimeAdd(localTime, TimeMsToTime((info && info->intervalSec > 0 ? info->intervalSec : 1.0f) * 1000.0));
 	st.overlap = 1;
-	st.shieldHP = (info && info->type == "STATUS_TYPE_SHIELD") ? MAX(power, 100.0f) * (info->paramRatio > 0 ? info->paramRatio : 1.0f) : 0;
+	st.nextHealTick = localTime;
+	st.healTicksDone = 0;
+	st.shieldHP = 0;
+	if(info && info->type == "STATUS_TYPE_SHIELD") {
+		f32 dataShield = 0;
+		foreach_const(m, info->mods) {
+			if(m->stat == StatusMod::SHIELD_DEFENCE && !m->mul) dataShield += m->value;
+		}
+		// skilltt shield value when present, otherwise the old estimate
+		st.shieldHP = dataShield > 0 ? dataShield : MAX(power, 100.0f) * (info->paramRatio > 0 ? info->paramRatio : 1.0f);
+	}
 	activeStatuses.push_back(st);
 
 	if(info && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT) && st.until > target.ccUntil) {
@@ -1158,6 +1168,18 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, duration, from, to, graphDuration);
 }
 
+f32 World::StatusModSum(const Player& p, i32 stat) const
+{
+	f32 sum = 0;
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex != p.index || !it->info) continue;
+		foreach_const(m, it->info->mods) {
+			if((i32)m->stat == stat && !m->regen && !m->mul) sum += m->value * it->overlap;
+		}
+	}
+	return sum;
+}
+
 void World::UpdateStatuses()
 {
 	for(auto ps = pendingStatuses.begin(); ps != pendingStatuses.end(); ) {
@@ -1176,6 +1198,20 @@ void World::UpdateStatuses()
 			while(localTime >= it->nextTick && localTime < it->until && !target.dead) {
 				it->nextTick = TimeAdd(it->nextTick, TimeMsToTime(it->info->intervalSec * 1000.0));
 				DamagePlayer(players[it->casterIndex], target, SkillID::INVALID, (i32)(it->info->dotDamage * it->overlap));
+			}
+		}
+
+		// regen modifiers (skilltt STATPROC_REGEN HEALTH): value per tick, value_2 ticks over the status duration
+		if(it->info && !target.dead) {
+			foreach_const(m, it->info->mods) {
+				if(!m->regen || m->stat != StatusMod::HEALTH) continue;
+				const f32 ticks = MAX(m->count, 1.0f);
+				const f32 interval = it->info->intervalSec > 0 ? it->info->intervalSec : MAX(it->info->durationSec, 0.1f) / ticks;
+				if(it->healTicksDone >= (i32)ticks || localTime < it->nextHealTick) continue;
+				it->nextHealTick = TimeAdd(localTime, TimeMsToTime(interval * 1000.0));
+				it->healTicksDone++;
+				const i32 amount = (i32)(m->mul ? target.Main().hpMax * m->value / 100.0f : m->value);
+				HealPlayer(players[it->casterIndex], target, amount * it->overlap);
 			}
 		}
 
@@ -1219,7 +1255,15 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	}
 
 	const u32 castID = nextCastID++;
-	const i32 damage = (i32)SkillDamage(skillID);
+	i32 damage = (i32)SkillDamage(skillID);
+	{
+		// skill power granted by active statuses (skilltt STAT_TYPE_SKILLPOWER) scales with the skill's attack multiplier
+		const f32 skillPower = StatusModSum(player, StatusMod::SKILLPOWER);
+		if(skillPower > 0) {
+			SkillNormalModel& sm = const_cast<SkillNormalModel&>(skill);
+			damage += (i32)(skillPower * sm.getSkillNormalLevelByIndex(0)->getAttackMultiplier());
+		}
+	}
 	const ActorUID currentTarget = targets.size() > 0 ? targets[0] : ActorUID::INVALID;
 
 	bool scheduled = false;
@@ -1814,7 +1858,8 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		const ClassType ac = attacker.Main().classType;
 		const RemoteIdx doc = proj ? proj->remoteDoc : remoteDoc;
 		const Remote* critRemote = doc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(doc) : nullptr;
-		const f32 rate = MasterStat(ac, proj ? STAT_CRITICALRATE : STAT_SKILL_CRITICALRATE) + (critRemote ? critRemote->criticalRate : 0);
+		const f32 rate = MasterStat(ac, proj ? STAT_CRITICALRATE : STAT_SKILL_CRITICALRATE) + (critRemote ? critRemote->criticalRate : 0) +
+			StatusModSum(attacker, proj ? StatusMod::CRITICALRATE : StatusMod::SKILL_CRITICALRATE);
 		if(rate > 0 && (RandUint() % 10000) < (u32)(rate * 100.0f)) {
 			const f32 critDamage = MasterStat(ac, proj ? STAT_CRITICALDAMAGE : STAT_SKILL_CRITICALDAMAGE);
 			damage = (i32)(damage * (critDamage > 0 ? critDamage : 100.0f) / 100.0f);

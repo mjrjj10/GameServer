@@ -108,6 +108,17 @@ const char* TargetPresetToString(TargetPreset p);
 
 }
 
+// a stat modifier of a status, from skilltt.xml TTATTR_STATUS_STAT (base skill level)
+struct StatusMod
+{
+	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE };
+	Stat stat = OTHER;
+	bool regen = false;  // STATPROC_REGEN: applied every tick (value_2 = tick count)
+	bool mul = false;    // STATAPPLY_MUL: percent
+	f32 value = 0;       // value_1
+	f32 count = 0;       // value_2
+};
+
 struct StatusInfo
 {
 	enum class Kind: i8 {
@@ -129,6 +140,7 @@ struct StatusInfo
 	f32 dragOffset = 0;
 	i32 maxOverlap = 1;
 	Kind kind = Kind::OTHER;
+	eastl::fixed_vector<StatusMod,6,false> mods;
 	eastl::fixed_string<char,40,false> type;
 };
 

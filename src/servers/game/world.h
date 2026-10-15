@@ -380,6 +380,8 @@ struct World
 		Time nextTick;
 		i32 overlap;
 		f32 shieldHP;
+		Time nextHealTick;
+		i32 healTicksDone;
 	};
 	eastl::fixed_vector<ActiveStatus,512,false> activeStatuses;
 
@@ -440,6 +442,7 @@ private:
 	void UpdateUltimateGauges(f32 delta);
 	void ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power = 0, f32 durationOverride = -1);
 	bool HasStatusType(const Player& p, const char* type) const;
+	f32 StatusModSum(const Player& p, i32 stat) const;
 	void HealPlayer(Player& healer, Player& target, i32 amount);
 	bool RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const;
 	void RemoteApplyShape(RemoteInst& inst);

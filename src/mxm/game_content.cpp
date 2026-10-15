@@ -1916,6 +1916,47 @@ bool GameXmlContent::LoadStatusData()
 
 	LOG("Loaded %d statuses", (i32)statusMap.size());
 
+	// skilltt.xml: master > skill > one <data> per upgrade combination (first = base level)
+	XMLDocument xmlTT;
+	if(LoadXMLFile(L"/client/skilltt.xml", xmlTT)) {
+		i32 modCount = 0;
+		for(XMLElement* pMaster = xmlTT.FirstChildElement()->FirstChildElement(); pMaster; pMaster = pMaster->NextSiblingElement()) {
+			for(XMLElement* pSkill = pMaster->FirstChildElement("data"); pSkill; pSkill = pSkill->NextSiblingElement("data")) {
+				XMLElement* pBase = pSkill->FirstChildElement("data");
+				if(!pBase) continue;
+				i32 statusID = 0;
+				for(XMLElement* pAttr = pBase->FirstChildElement("attrMap"); pAttr; pAttr = pAttr->NextSiblingElement("attrMap")) {
+					const char* key = nullptr;
+					pAttr->QueryStringAttribute("DATAKEY", &key);
+					if(key && EA::StdC::Strcmp(key, "TTATTR_STATUS_DELIGATE") == 0) pAttr->QueryAttribute("DATA", &statusID);
+				}
+				auto found = statusMap.find(statusID);
+				if(found == statusMap.end() || !found->second.mods.empty()) continue;
+				for(XMLElement* pT = pBase->FirstChildElement("tableDatas"); pT; pT = pT->NextSiblingElement("tableDatas")) {
+					const char* attrType = nullptr; const char* proc = nullptr; const char* apply = nullptr; const char* stat = nullptr;
+					pT->QueryStringAttribute("attrType", &attrType);
+					if(!attrType || EA::StdC::Strcmp(attrType, "TTATTR_STATUS_STAT") != 0) continue;
+					pT->QueryStringAttribute("proc", &proc);
+					pT->QueryStringAttribute("apply", &apply);
+					pT->QueryStringAttribute("stat", &stat);
+					StatusMod mod;
+					pT->QueryFloatAttribute("value_1", &mod.value);
+					pT->QueryFloatAttribute("value_2", &mod.count);
+					if(mod.value == 0 || !stat) continue;
+					mod.regen = proc && EA::StdC::Strcmp(proc, "STATPROC_REGEN") == 0;
+					mod.mul = apply && EA::StdC::Strcmp(apply, "STATAPPLY_MUL") == 0;
+					if(EA::StdC::Strcmp(stat, "STAT_TYPE_SHIELD_DEFENCE") == 0) mod.stat = StatusMod::SHIELD_DEFENCE;
+					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_HEALTH") == 0) mod.stat = StatusMod::HEALTH;
+					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_SKILLPOWER") == 0) mod.stat = StatusMod::SKILLPOWER;
+					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_CRITICALRATE") == 0) mod.stat = StatusMod::CRITICALRATE;
+					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_SKILL_CRITICALRATE") == 0) mod.stat = StatusMod::SKILL_CRITICALRATE;
+					if(!found->second.mods.full()) { found->second.mods.push_back(mod); modCount++; }
+				}
+			}
+		}
+		LOG("Loaded %d status stat modifiers from skilltt", modCount);
+	}
+
 	XMLDocument xmlSkill;
 	if(LoadXMLFile(L"/SKILL.xml", xmlSkill)) {
 		for(XMLElement* pInfo = xmlSkill.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
