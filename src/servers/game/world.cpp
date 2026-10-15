@@ -173,6 +173,12 @@ void World::Update(Time localTime_)
 		if(p.input.tag) {
 			p.input.tag = 0;
 			p.mainCharaID ^= 1;
+			// mana and master resources belong to each master
+			eastl::swap(p.mana, p.benchMana);
+			eastl::swap(p.res, p.benchRes);
+			p.tNextManaSend = Time::ZERO;
+			p.resSent = { -1, -1, -1 };
+			p.tNextResSend = Time::ZERO;
 		}
 
 		// cast skills
@@ -1137,6 +1143,22 @@ void World::UpdateUltimateGauges(f32 delta)
 			if(localTime >= it->tNextManaSend) {
 				it->tNextManaSend = TimeAdd(localTime, TimeMsToTime(250));
 				replication->SendStatToAll(it->Main().UID, STAT_MANA, it->mana, manaMax);
+			}
+		}
+
+		// tagged-out master regenerates its own pools (its regen stats; STAT_TYPE_TAG_* bonuses only come from items)
+		{
+			const ClassType benchCls = it->Sub().classType;
+			const f32 benchManaMax = MasterStat(benchCls, STAT_MANA);
+			if(benchManaMax > 0) {
+				if(it->benchMana < 0) it->benchMana = benchManaMax;
+				it->benchMana = MIN(it->benchMana + MasterStat(benchCls, STAT_MANAREGEN) * delta, benchManaMax);
+			}
+			for(int r = 0; r < 3; r++) {
+				const f32 resMax = MasterStat(benchCls, RESOURCES[r].maxStat);
+				if(resMax <= 0) continue;
+				if(it->benchRes[r] < 0) it->benchRes[r] = RESOURCES[r].startFull ? resMax : 0;
+				it->benchRes[r] = MIN(MAX(it->benchRes[r] + MasterStat(benchCls, RESOURCES[r].regenStat) * delta, 0.0f), resMax);
 			}
 		}
 
@@ -2671,6 +2693,15 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 void World::RespawnPlayer(Player& player)
 {
 	player.dead = false;
+	// pools back to their start values (initialised again on the next update)
+	player.mana = -1.0f;
+	player.benchMana = -1.0f;
+	player.stamina = -1.0f;
+	player.res = { -1, -1, -1 };
+	player.benchRes = { -1, -1, -1 };
+	player.resSent = { -1, -1, -1 };
+	player.tNextManaSend = Time::ZERO;
+	player.tNextStaminaSend = Time::ZERO;
 	foreach(c, player.characters) {
 		(*c)->hp = (*c)->hpMax;
 	}

@@ -120,6 +120,8 @@ struct World
 		f32 moveSpeedSent = -1.0f;
 		Time tNextManaSend = Time::ZERO;
 		eastl::array<f32,3> res = { -1, -1, -1 };      // energy, rage, charges (bubble)
+		f32 benchMana = -1.0f;                          // tagged-out master's own pools (swapped on tag)
+		eastl::array<f32,3> benchRes = { -1, -1, -1 };
 		eastl::array<f32,3> resSent = { -1, -1, -1 };
 		Time tNextResSend = Time::ZERO;
 		Time tNextResRefresh = Time::ZERO; // periodic resend: early sends are dropped until the client is in game
