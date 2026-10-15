@@ -2106,10 +2106,17 @@ bool GameXmlContent::LoadStatusData()
 	XMLDocument xmlFiring, xmlWeapon;
 	if(LoadXMLFile(L"/client/FIRING_METHOD.xml", xmlFiring) && LoadXMLFile(L"/client/WEAPON.xml", xmlWeapon)) {
 		eastl::hash_map<i32, WeaponHeatInfo> byFiring;
+		eastl::hash_map<i32, f32> delayByFiring;
 		for(XMLElement* pInfo = xmlFiring.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
 			i32 id = 0;
 			pInfo->QueryAttribute("ID", &id);
 			XMLElement* pData = pInfo->FirstChildElement("FiringMethodData");
+			XMLElement* pFire = pData ? pData->FirstChildElement("_FIREINFO") : nullptr;
+			if(pFire) {
+				f32 delay = 0;
+				pFire->QueryFloatAttribute("_FireDelayTime", &delay);
+				if(delay > 0) delayByFiring[id] = delay;
+			}
 			XMLElement* pGauge = pData ? pData->FirstChildElement("_GAUGE") : nullptr;
 			if(!pGauge) continue;
 			const char* type = nullptr;
@@ -2133,6 +2140,8 @@ bool GameXmlContent::LoadStatusData()
 				if(pComp->QueryAttribute("_DefaultFiringIndex", &firing) != XML_SUCCESS) continue;
 				auto f = byFiring.find(firing);
 				if(f != byFiring.end()) weaponHeat[id] = f->second;
+				auto d = delayByFiring.find(firing);
+				if(d != delayByFiring.end()) weaponFireDelay[id] = d->second;
 				break;
 			}
 		}

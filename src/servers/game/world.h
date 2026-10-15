@@ -110,6 +110,7 @@ struct World
 		f32 ultGauge = -1.0f; // initialised to the master's max on first update
 		f32 stamina = -1.0f;
 		f32 mana = -1.0f;
+		Time tNextBotShot = Time::ZERO;
 		Time tNextManaSend = Time::ZERO;
 		eastl::array<f32,2> heat = { 0, 0 };        // weapon overheat gauge per master
 		eastl::array<Time,2> heatLastShot = { Time::ZERO, Time::ZERO };
@@ -460,6 +461,7 @@ struct World
 	bool PlayerPaySkillCost(Player& player, i32 skillID);
 	void UpdateWeaponHeat(Player& player);
 	void UpdateSummons();
+	void UpdateBotCombat();
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActorByCreatureID(CreatureIndex docID); // Warning: slow!

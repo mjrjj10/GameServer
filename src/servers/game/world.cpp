@@ -233,6 +233,7 @@ void World::Update(Time localTime_)
 	UpdateUltimateGauges((f32)tdelta);
 	UpdateStatuses();
 	UpdateSummons();
+	UpdateBotCombat();
 
 	// execute skill programs
 	for(auto it = skillProgramList.begin(); it != skillProgramList.end(); ) {
@@ -751,6 +752,15 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		replication->RelayRemoteCreate(player.clientHd, player.pendingShotRaw.data(), player.pendingShotRawSize, target, remote ? remote->lifeTime : 0, remote ? remote->ID : RemoteIdx::INVALID);
 		player.pendingShotRawSize = 0;
 	}
+	else if(player.clientHd == ClientHandle::INVALID && remote) {
+		// bot shot: no client packet to relay, create the weapon remote for everyone
+		const u32 seed = nextRemoteSeed;
+		nextRemoteSeed += 2;
+		proj.remoteID = seed + 1;
+		const vec3 firePos = proj.pos + vec3(0, 0, 158.0f);
+		const vec3 target = firePos + vec3(proj.dir * proj.range, 0);
+		replication->SendRemoteCreateToAll(player.Main().UID, seed, remote->ID, firePos, atan2f(proj.dir.y, proj.dir.x), target, ActorUID::INVALID, L"Attack_Fire_Dummy");
+	}
 	proj.damage = WEAPON_HIT_DAMAGE;
 	LOG("Shot :: %ls class=%d remote=%d graph=%d reliable=%d dist=%.0f range=%.0f speed=%.0f width=%.0f hits=%d aoe=%.0f", player.name.data(), (i32)classType, remote ? (i32)remote->ID : -1, graph, reliable, distance, proj.range, proj.speed, proj.halfWidth, proj.hitsLeft, proj.aoeRadius);
 	projectileList.push_back(proj);
@@ -1210,6 +1220,44 @@ f32 World::StatusModSum(const Player& p, i32 stat) const
 		}
 	}
 	return sum;
+}
+
+void World::UpdateBotCombat()
+{
+	const auto& content = GetGameXmlContent();
+	foreach(it, players) {
+		Player& bot = *it;
+		if(bot.clientHd != ClientHandle::INVALID || bot.dead) continue;
+		if(localTime < bot.tNextBotShot || localTime < bot.ccUntil) continue;
+		if(IsBlocked(bot, true, false, false)) continue;
+		const ClassType cls = bot.Main().classType;
+		if(ClassIsMelee(cls)) continue;
+
+		const Remote* remote = content.FindRemote(RemoteIdx(1430000000 + (i32)cls * 10000 + 10));
+		f32 range = ClassAttackRange(cls) * WEAPON_RANGE_SCALE;
+		if(remote && remote->maxDistance > 0) range = remote->maxDistance;
+
+		// nearest living enemy in weapon range
+		const vec3 pos = bot.body->GetWorldPos();
+		Player* target = nullptr;
+		f32 best = range;
+		foreach(e, players) {
+			if(e->dead || e->team == bot.team) continue;
+			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(pos));
+			if(d < best) { best = d; target = &*e; }
+		}
+		const u32 m = bot.mainCharaID & 1;
+		const WeaponIndex weapon = m == 0 ? bot.mainWeapon : bot.subWeapon;
+		const f32 delay = MAX(content.GetWeaponFireDelay((i32)weapon), 0.15f);
+		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(delay * 1000.0));
+		if(!target) continue;
+
+		if(!WeaponHeatShot(bot, localTime, replication)) continue; // overheated
+		const vec2 rel = vec2(target->body->GetWorldPos()) - vec2(pos);
+		const vec2 dir = glm::length(rel) > 1.0f ? glm::normalize(rel) : vec2(1, 0);
+		bot.weaponAimYaw = atan2f(dir.y, dir.x);
+		PlayerWeaponShot(bot, pos, dir, best);
+	}
 }
 
 void World::UpdateSummons()

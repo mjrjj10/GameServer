@@ -540,6 +540,7 @@ struct GameXmlContent
 	u16 InternNodeName(const char* name);
 	const wchar* GetNodeName(u16 idx) const { return idx < nodeNames.size() ? nodeNames[idx].c_str() : L"Scene Root"; }
 	const StatusInfo* FindStatus(i32 statusID) const;
+	f32 GetWeaponFireDelay(i32 weaponID) const { auto f = weaponFireDelay.find(weaponID); return f == weaponFireDelay.end() ? 0 : f->second; }
 	const WeaponHeatInfo* FindWeaponHeat(i32 weaponID) const { auto f = weaponHeat.find(weaponID); return f == weaponHeat.end() ? nullptr : &f->second; }
 	f32 GetSkillConsumeMP(i32 skillID) const { auto f = skillConsumeMP.find(skillID); return f == skillConsumeMP.end() ? 0 : f->second; }
 	f32 GetSkillConsumeUG(i32 skillID) const { auto f = skillConsumeUG.find(skillID); return f == skillConsumeUG.end() ? 0 : f->second; }
@@ -594,6 +595,7 @@ private:
 	eastl::hash_map<i32, StatusInfo> statusMap;
 	eastl::hash_map<i32, i32> skillHitEventRemote;
 	eastl::hash_map<i32, WeaponHeatInfo> weaponHeat;
+	eastl::hash_map<i32, f32> weaponFireDelay; // weapon -> FIRING_METHOD _FIREINFO _FireDelayTime
 	eastl::hash_map<i32, f32> skillConsumeStamina; // SKILL.xml _ConsumeStamina (dodge)
 	eastl::hash_map<i32, f32> skillConsumeMP;      // SKILL.xml _ConsumeMP
 	eastl::hash_map<i32, f32> skillConsumeUG;      // SKILL.xml _ConsumeUG
