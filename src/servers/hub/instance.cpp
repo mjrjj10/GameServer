@@ -586,8 +586,55 @@ void RoomInstance::OnClientPacket(ClientHandle clientHd, const NetHeader& header
 			SetReady(user);
 		} break;
 
-		case Cl::CQ_RoomEquipSkill::NET_ID:
-		case Cl::CQ_RoomSwapSkill::NET_ID:
+		case Cl::CQ_RoomEquipSkill::NET_ID: {
+			// client sender 0x58f99a writes 3 u32: the master (local id), the skill and the slot
+			User* user = FindUser(clientHd);
+			if(!user || packetSize < 12) break;
+			u32 v[3];
+			memmove(v, packetData, sizeof(v));
+			NT_LOG("[client%x] Client :: CQ_RoomEquipSkill :: %u %u %u", clientHd, v[0], v[1], v[2]);
+			const GameXmlContent& content = GetGameXmlContent();
+			SkillID skill = SkillID::INVALID;
+			i32 slot = -1;
+			i32 masterIndex = -1;
+			for(int i = 0; i < 3; i++) {
+				if(v[i] >= 180000000 && v[i] < 190000000) skill = SkillID(v[i]);
+			}
+			for(int mi = 0; mi < 2 && skill != SkillID::INVALID; mi++) {
+				if(user->masters[mi].classType == ClassType::NONE) continue;
+				const auto& master = content.GetMaster(user->masters[mi].classType);
+				if(eastl::find(master.skillIDs.begin(), master.skillIDs.end(), skill) != master.skillIDs.end()) masterIndex = mi;
+			}
+			for(int i = 0; i < 3; i++) {
+				if(v[i] <= 2) slot = (i32)v[i];
+			}
+			if(slot == 2) slot = 1; // 1-based
+			if(masterIndex < 0 || slot < 0) {
+				WARN("[client%x] CQ_RoomEquipSkill not understood (%u %u %u)", clientHd, v[0], v[1], v[2]);
+				break;
+			}
+			auto& skills = user->masters[masterIndex].skills;
+			if(skills[slot ^ 1] == skill) skills[slot ^ 1] = skills[slot]; // already in the other slot: swap
+			skills[slot] = skill;
+			user->replicate.masterPick = true;
+			LOG("[Room] %ls equips skill %d in slot %d of master %d", user->name.data(), (i32)skill, slot, masterIndex);
+		} break;
+
+		case Cl::CQ_RoomSwapSkill::NET_ID: {
+			// client sender 0x58fa11 writes 1 u32 (the master)
+			User* user = FindUser(clientHd);
+			if(!user) break;
+			u32 v = 0;
+			if(packetSize >= 4) memmove(&v, packetData, 4);
+			NT_LOG("[client%x] Client :: CQ_RoomSwapSkill :: %u", clientHd, v);
+			for(int mi = 0; mi < 2; mi++) {
+				if(user->masters[mi].classType == ClassType::NONE) continue;
+				if(v != (u32)LocalActorID::FIRST_SELF_MASTER + (u32)user->masters[mi].classType && v != (u32)user->masters[mi].classType) continue;
+				eastl::swap(user->masters[mi].skills[0], user->masters[mi].skills[1]);
+				user->replicate.masterPick = true;
+			}
+		} break;
+
 		case Cl::CQ_RoomEquipWeapon::NET_ID: {
 			NT_LOG("[client%x] Client :: CQ_RoomEquip* :: size=%d", clientHd, packetSize);
 			SendDbgMsg(clientHd, L"Feature not implemented right now sorry :(");
