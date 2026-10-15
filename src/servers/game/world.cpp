@@ -1813,7 +1813,7 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 			}
 			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, rule->idx, at + vec3(dir * child->offsetY, 0), dir, childTarget, parent.skillID, parent.castID, parent.damage,
 				// clients spawn the directed children (_CreateRemote) of a remote ending on their side themselves
-				parent.clientRemoteID != 0 && !(fromDestroy && rule->kind != Remote::SPAWN_SINGLE), parent.casterLocal);
+				parent.clientRemoteID != 0 && !(fromDestroy && rule->kind != Remote::SPAWN_SINGLE && !rule->targetOwner), parent.casterLocal); // returns to the caster are not spawned by clients
 			if(inst) inst->excludeIndex = excludeIndex;
 		}
 	}
