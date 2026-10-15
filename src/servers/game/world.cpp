@@ -701,6 +701,7 @@ void World::UpdateProjectiles(f32 delta)
 		Player& owner = players[proj->ownerIndex];
 		const f32 step = MIN(proj->speed * delta + proj->pendingAdvance, proj->range - proj->travelled);
 		proj->pendingAdvance = 0;
+		const bool lastStep = proj->travelled + step >= proj->range - 0.01f;
 		const vec2 from = vec2(proj->pos);
 		const vec2 to = from + proj->dir * step;
 		bool destroyed = false;
@@ -713,7 +714,7 @@ void World::UpdateProjectiles(f32 delta)
 				const f32 lagDist = LagDistToSegment(*it, from, to);
 				proj->closest = MIN(proj->closest, lagDist);
 				if(fabsf(pos.z - proj->pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
-				if(!LagSegmentHits(*it, from, to, proj->halfWidth + PROJECTILE_TARGET_RADIUS + PROJECTILE_HIT_TOLERANCE, proj->forwardReach)) continue;
+				if(!LagSegmentHits(*it, from, to, proj->halfWidth + PROJECTILE_TARGET_RADIUS + PROJECTILE_HIT_TOLERANCE, lastStep ? proj->forwardReach : PROJECTILE_TARGET_RADIUS)) continue;
 
 				if(!proj->hitList.full()) proj->hitList.push_back(it->index);
 				DamagePlayer(owner, *it, SkillID::INVALID, proj->damage, &*proj);
