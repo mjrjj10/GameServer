@@ -1932,9 +1932,9 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.angle = angle;
 			pr.target = cmd->remote.targetPreset == ActionCommand::TargetPreset::MEMORIZED_TFT ? player.memorizedTarget : currentTarget;
 			pr.atTarget = cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET;
-			// DestroyAwayTarget is NOT a stop at the target: gameplay video + description show V-merang's E
-			// travelling a fixed distance through enemies before rising (meaning of the option still unknown)
-			pr.stopAtTarget = false;
+			// DestroyAwayTarget: the remote ends at the aimed point. Client RE: ActionBase Param2 flag 0x20 passed to
+			// the remote creation; every PC skill using it is aimed with a ground cursor (SKILL_CAST_TARGET_POSITION*)
+			pr.stopAtTarget = cmd->remote.stopAtTarget;
 			pr.nodeName = cmd->nodeName;
 			pendingRemotes.push_back(pr);
 			scheduled = true;
@@ -2004,7 +2004,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		inst.landZ = aimPos->z;
 		inst.hasLandZ = true;
 	}
-	inst.stopAtFirstHit = stopAtTarget;
+	inst.stopAtFirstHit = false; // first-hit stop comes from _ActivateCount
 	if(stopAtTarget && remote->behaviorType != Remote::BehaviorType::GRAPH && aimPos && glm::length(vec2(*aimPos)) > 1.0f && inst.speed > 0) {
 		// DestroyAwayTarget: the remote ends at the aimed point
 		const f32 aimDist = glm::length(vec2(*aimPos) - vec2(pos));
