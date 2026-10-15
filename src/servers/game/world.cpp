@@ -1655,7 +1655,9 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.angle = angle;
 			pr.target = cmd->remote.targetPreset == ActionCommand::TargetPreset::MEMORIZED_TFT ? player.memorizedTarget : currentTarget;
 			pr.atTarget = cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET;
-			pr.stopAtTarget = cmd->remote.stopAtTarget != 0;
+			// DestroyAwayTarget is NOT a stop at the target: gameplay video + description show V-merang's E
+			// travelling a fixed distance through enemies before rising (meaning of the option still unknown)
+			pr.stopAtTarget = false;
 			pr.nodeName = cmd->nodeName;
 			pendingRemotes.push_back(pr);
 			scheduled = true;
