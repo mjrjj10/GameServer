@@ -891,40 +891,72 @@ vec2 World::LagClosestPos(const Player& p, const vec2& point) const
 	return best;
 }
 
-// weapon overheat (FIRING_METHOD _GAUGE): returns false while the weapon is overheated
-static bool WeaponHeatShot(World::Player& player, Time now)
+// weapon overheat (FIRING_METHOD _GAUGE)
+static const WeaponHeatInfo* ActiveWeaponHeat(const World::Player& player)
 {
 	const u32 m = player.mainCharaID & 1;
 	const WeaponIndex weapon = m == 0 ? player.mainWeapon : player.subWeapon;
-	const WeaponHeatInfo* h = GetGameXmlContent().FindWeaponHeat((i32)weapon);
-	if(!h) return true;
+	return GetGameXmlContent().FindWeaponHeat((i32)weapon);
+}
 
-	if(player.overheatUntil[m] != Time::ZERO) {
-		if(now < player.overheatUntil[m]) return false;
+// current gauge of the active master, cooling applied since its last shot
+static f32 CurrentHeat(const World::Player& player, const WeaponHeatInfo& h, Time now)
+{
+	const u32 m = player.mainCharaID & 1;
+	if(player.overheatUntil[m] != Time::ZERO && now < player.overheatUntil[m]) return h.maxGauge;
+	const f32 idle = player.heatLastShot[m] == Time::ZERO ? 999.0f : (f32)TimeDiffSec(TimeDiff(player.heatLastShot[m], now));
+	if(idle <= h.autoRegenDelay || h.autoRegenInterval <= 0) return player.heat[m];
+	return MIN(MAX(player.heat[m] + h.autoRegen * (idle - h.autoRegenDelay) / h.autoRegenInterval, 0.0f), h.maxGauge);
+}
+
+void World::UpdateWeaponHeat(Player& player)
+{
+	const WeaponHeatInfo* h = ActiveWeaponHeat(player);
+	if(!h) return;
+	const u32 m = player.mainCharaID & 1;
+
+	// overheat finished: gauge resets, cooling starts from there
+	if(player.overheatUntil[m] != Time::ZERO && localTime >= player.overheatUntil[m]) {
 		player.overheatUntil[m] = Time::ZERO;
 		player.heat[m] = h->overheatResetGauge;
-		player.heatLastShot[m] = now;
+		player.heatLastShot[m] = TimeAdd(localTime, TimeMsToTime(-h->autoRegenDelay * 1000.0));
+		replication->SendGaugeToAll(player.userID, 1, false, 0, (u16)player.heat[m], (u16)h->maxGauge);
+		player.heatSent = (i32)player.heat[m];
+		LOG("Overheat :: %ls weapon cooled down", player.name.data());
 	}
 
-	// cooling since the last shot, after the regen delay
-	const f32 idle = player.heatLastShot[m] == Time::ZERO ? 999.0f : (f32)TimeDiffSec(TimeDiff(player.heatLastShot[m], now));
-	if(idle > h->autoRegenDelay && h->autoRegenInterval > 0) {
-		player.heat[m] = MAX(player.heat[m] + h->autoRegen * (idle - h->autoRegenDelay) / h->autoRegenInterval, 0.0f);
-	}
+	if(localTime < player.tNextHeatSend) return;
+	player.tNextHeatSend = TimeAdd(localTime, TimeMsToTime(100));
+	const i32 cur = (i32)CurrentHeat(player, *h, localTime);
+	if(cur == player.heatSent) return;
+	player.heatSent = cur;
+	const bool overheated = player.overheatUntil[m] != Time::ZERO;
+	replication->SendGaugeToAll(player.userID, 0, overheated, 0, (u16)cur, (u16)h->maxGauge);
+}
 
-	player.heat[m] += h->consumption;
+// returns false while the weapon is overheated
+static bool WeaponHeatShot(World::Player& player, Time now, Replication* replication)
+{
+	const WeaponHeatInfo* h = ActiveWeaponHeat(player);
+	if(!h) return true;
+	const u32 m = player.mainCharaID & 1;
+	if(player.overheatUntil[m] != Time::ZERO) return false;
+
+	player.heat[m] = CurrentHeat(player, *h, now) + h->consumption;
 	player.heatLastShot[m] = now;
 	if(player.heat[m] >= h->maxGauge) {
 		player.heat[m] = h->maxGauge;
 		player.overheatUntil[m] = TimeAdd(now, TimeMsToTime(h->overheatDuration * 1000.0));
-		LOG("Overheat :: %ls weapon=%d locked %.1fs", player.name.data(), (i32)weapon, h->overheatDuration);
+		replication->SendGaugeToAll(player.userID, 1, true, h->overheatDuration, (u16)h->maxGauge, (u16)h->maxGauge);
+		player.heatSent = (i32)h->maxGauge;
+		LOG("Overheat :: %ls locked %.1fs", player.name.data(), h->overheatDuration);
 	}
 	return true;
 }
 
 void World::OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize)
 {
-	if(!WeaponHeatShot(player, localTime)) {
+	if(!WeaponHeatShot(player, localTime, replication)) {
 		LOG("Overheat :: %ls shot ignored (weapon overheated)", player.name.data());
 		return;
 	}
@@ -961,6 +993,8 @@ void World::UpdateUltimateGauges(f32 delta)
 	foreach(it, players) {
 		if(it->clientHd == ClientHandle::INVALID) continue;
 		const ClassType cls = it->Main().classType;
+
+		UpdateWeaponHeat(*it);
 
 		const f32 ultMax = MAX(MasterStat(cls, STAT_ULTIMATE), 1.0f);
 		if(it->ultGauge < 0) it->ultGauge = ultMax;

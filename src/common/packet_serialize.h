@@ -2589,6 +2589,22 @@ inline const char* PacketSerialize<Sv::SN_AddStatus>(const void* packetData, con
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_Gauge>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_Gauge(%d, %d) :: {", Sv::SN_Gauge::NET_ID, packetSize);
+	SER("	userId=%u", buff.Read<u32>());
+	SER("	updateType=%u", buff.Read<u8>());
+	SER("	flag=%u", buff.Read<u8>());
+	SER("	overheatTime=%g", buff.Read<f32>());
+	SER("	gauge=%u", buff.Read<u16>());
+	SER("	maxGauge=%u", buff.Read<u16>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_RemoveStatus>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

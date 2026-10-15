@@ -112,6 +112,8 @@ struct World
 		eastl::array<f32,2> heat = { 0, 0 };        // weapon overheat gauge per master
 		eastl::array<Time,2> heatLastShot = { Time::ZERO, Time::ZERO };
 		eastl::array<Time,2> overheatUntil = { Time::ZERO, Time::ZERO };
+		i32 heatSent = -1;
+		Time tNextHeatSend = Time::ZERO;
 		Time tNextStaminaSend = Time::ZERO;
 		f32 ultGaugeSent = -1.0f;
 		Time tNextUltSend = Time::ZERO;
@@ -407,6 +409,7 @@ struct World
 
 	Player& GetPlayer(u32 playerIndex);
 	bool PlayerDodge(Player& player, i32 skillID);
+	void UpdateWeaponHeat(Player& player);
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActorByCreatureID(CreatureIndex docID); // Warning: slow!

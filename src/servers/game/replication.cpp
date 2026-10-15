@@ -818,6 +818,22 @@ void Replication::SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, Skil
 	SendHpToAll(targetUID, hp, hpMax);
 }
 
+void Replication::SendGaugeToAll(UserID userID, u8 updateType, bool overheated, f32 overheatTime, u16 gauge, u16 maxGauge)
+{
+	PacketWriter<Sv::SN_Gauge> packet;
+	packet.Write<u32>((u32)userID);
+	packet.Write<u8>(updateType);
+	packet.Write<u8>(overheated ? 1 : 0);
+	packet.Write<f32>(overheatTime);
+	packet.Write<u16>(gauge);
+	packet.Write<u16>(maxGauge);
+
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		SendPacket(clientHandle[clientID], packet);
+	}
+}
+
 void Replication::SendScoreToAll(UserID userID, u8 team, i32 kills, i32 teamKills)
 {
 	PacketWriter<Sv::SN_ScoreUpdate> packet;
