@@ -122,6 +122,12 @@ struct StatusInfo
 	f32 distanceRatio = 0;
 	f32 timeRatio = 0;
 	f32 heightRatio = 0;
+	f32 dotDamage = 0;
+	f32 intervalSec = 0;
+	f32 distance = 0;
+	f32 paramRatio = 0;
+	f32 dragOffset = 0;
+	i32 maxOverlap = 1;
 	Kind kind = Kind::OTHER;
 	eastl::fixed_string<char,40,false> type;
 };
@@ -318,6 +324,12 @@ struct GameXmlContent
 					f32 offsetSide;
 					f32 offsetFront;
 				} remote;
+
+				struct {
+					i32 statusIndex;
+					ActionCommand::TargetPreset targetPreset;
+					u8 removeAtEnd;
+				} status;
 
 				struct {
 					f32 distance;

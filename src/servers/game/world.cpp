@@ -888,18 +888,71 @@ void World::UpdateUltimateGauges(f32 delta)
 
 static const f32 STATUS_PUSH_BASE_DISTANCE = 400.0f;
 
-void World::ApplyStatus(Player& caster, Player& target, i32 statusID)
+bool World::HasStatusType(const Player& p, const char* type) const
 {
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex == p.index && it->info && it->info->type == type) return true;
+	}
+	return false;
+}
+
+void World::HealPlayer(Player& healer, Player& target, i32 amount)
+{
+	if(target.dead || amount <= 0) return;
+	ActorMaster& chara = target.Main();
+	chara.hp = MIN(chara.hp + amount, chara.hpMax);
+	LOG("Heal :: %ls -> %ls amount=%d hp=%d/%d", healer.name.data(), target.name.data(), amount, chara.hp, chara.hpMax);
+	replication->SendHpToAll(chara.UID, chara.hp, chara.hpMax);
+}
+
+bool World::RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const
+{
+	if(p.dead) return false;
+	const Player& owner = players[inst.ownerIndex];
+	const auto group = inst.remote->damageGroup;
+	if(p.index == owner.index) return includeOwner && (group == Remote::DamageGroup::eFRIEND || group == Remote::DamageGroup::eALL);
+	const bool enemy = p.team != owner.team;
+	if(enemy) return group == Remote::DamageGroup::eENEMY || group == Remote::DamageGroup::eALL;
+	return group == Remote::DamageGroup::eFRIEND || group == Remote::DamageGroup::eALL;
+}
+
+void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power, f32 durationOverride)
+{
+	if(target.dead) return;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
-	const f32 duration = info ? info->durationSec : 1.0f;
+	f32 duration = durationOverride > 0 ? durationOverride : (info && info->durationSec > 0 ? info->durationSec : 1.0f);
+
+	const bool displacement = info && (info->type == "STATUS_TYPE_PUSH" || info->type == "STATUS_TYPE_FORCEBACK" ||
+		info->type == "STATUS_TYPE_KNOCKDOWN" || info->type == "STATUS_TYPE_AIRBORNE" || info->type == "STATUS_TYPE_DRAGGED");
+	if(displacement && HasStatusType(target, "STATUS_TYPE_SUPERARMOR")) {
+		LOG("Status :: %ls resisted %d (superarmor)", target.name.data(), statusID);
+		return;
+	}
+
+	foreach(it, activeStatuses) {
+		if(it->statusID == statusID && it->targetIndex == target.index) {
+			const Time until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
+			if(until > it->until) it->until = until;
+			if(info && it->overlap < info->maxOverlap) it->overlap++;
+			LOG("Status :: %ls -> %ls status=%d refreshed overlap=%d", caster.name.data(), target.name.data(), statusID, it->overlap);
+			const vec3 pos = target.body->GetWorldPos();
+			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, duration, pos, pos, 0);
+			return;
+		}
+	}
 	if(activeStatuses.full()) return;
 
 	ActiveStatus st;
 	st.statusID = statusID;
+	st.info = info;
 	st.targetIndex = target.index;
+	st.casterIndex = caster.index;
 	st.targetUID = target.Main().UID;
 	st.casterUID = caster.Main().UID;
 	st.until = TimeAdd(localTime, TimeMsToTime(MAX(duration, 0.1f) * 1000.0));
+	st.nextTick = TimeAdd(localTime, TimeMsToTime((info && info->intervalSec > 0 ? info->intervalSec : 1.0f) * 1000.0));
+	st.overlap = 1;
+	st.shieldHP = (info && info->type == "STATUS_TYPE_SHIELD") ? MAX(power, 100.0f) * (info->paramRatio > 0 ? info->paramRatio : 1.0f) : 0;
 	activeStatuses.push_back(st);
 
 	if(info && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT) && st.until > target.ccUntil) {
@@ -908,29 +961,54 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID)
 
 	const vec3 from = target.body->GetWorldPos();
 	vec3 to = from;
-	const bool push = info && (info->type == "STATUS_TYPE_PUSH" || info->type == "STATUS_TYPE_FORCEBACK");
 	const f32 graphDuration = duration * (info && info->timeRatio > 0 ? info->timeRatio : 1.0f);
-	if(push) {
+	if(info && displacement && info->type != "STATUS_TYPE_AIRBORNE") {
 		vec2 dir = vec2(from - caster.body->GetWorldPos());
 		const f32 len = glm::length(dir);
 		dir = len > 1.0f ? dir / len : vec2(1, 0);
-		const f32 dist = STATUS_PUSH_BASE_DISTANCE * (info->distanceRatio > 0 ? info->distanceRatio : 1.0f);
-		to = from + vec3(dir * dist, 0);
+		if(info->type == "STATUS_TYPE_DRAGGED") {
+			to = caster.body->GetWorldPos() + vec3(dir * (info->dragOffset > 0 ? info->dragOffset : 200.0f), 0);
+		}
+		else {
+			const f32 dist = info->type == "STATUS_TYPE_FORCEBACK" && info->distance > 0 ? info->distance :
+				STATUS_PUSH_BASE_DISTANCE * (info->distanceRatio > 0 ? info->distanceRatio : 1.0f);
+			to = from + vec3(dir * dist, 0);
+		}
 		if(target.clientHd == ClientHandle::INVALID && graphDuration > 0) {
 			target.pushTarget = to;
-			target.pushSpeed = dist / graphDuration;
+			target.pushSpeed = glm::length(vec2(to - from)) / graphDuration;
 			target.pushUntil = TimeAdd(localTime, TimeMsToTime(graphDuration * 1000.0));
+			if(target.pushUntil > target.ccUntil) target.ccUntil = target.pushUntil;
 		}
 	}
 
-	LOG("Status :: %ls -> %ls status=%d type=%s duration=%.2f push=%d", caster.name.data(), target.name.data(), statusID, info ? info->type.c_str() : "?", duration, push);
+	LOG("Status :: %ls -> %ls status=%d type=%s duration=%.2f shield=%.0f", caster.name.data(), target.name.data(), statusID, info ? info->type.c_str() : "?", duration, st.shieldHP);
 	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, duration, from, to, graphDuration);
 }
 
 void World::UpdateStatuses()
 {
+	for(auto ps = pendingStatuses.begin(); ps != pendingStatuses.end(); ) {
+		if(localTime < ps->time) { ++ps; continue; }
+		Player& caster = players[ps->casterIndex];
+		const ActorMaster* targetMaster = ps->targetUID != ActorUID::INVALID ? FindMasterActor(ps->targetUID) : nullptr;
+		if(!caster.dead && targetMaster) {
+			ApplyStatus(caster, *targetMaster->parent, ps->statusID, ps->power, ps->duration);
+		}
+		ps = pendingStatuses.erase_unsorted(ps);
+	}
+
 	for(auto it = activeStatuses.begin(); it != activeStatuses.end(); ) {
-		if(localTime >= it->until) {
+		Player& target = players[it->targetIndex];
+		if(it->info && it->info->dotDamage > 0 && it->info->intervalSec > 0) {
+			while(localTime >= it->nextTick && localTime < it->until && !target.dead) {
+				it->nextTick = TimeAdd(it->nextTick, TimeMsToTime(it->info->intervalSec * 1000.0));
+				DamagePlayer(players[it->casterIndex], target, SkillID::INVALID, (i32)(it->info->dotDamage * it->overlap));
+			}
+		}
+
+		const bool shieldBroken = it->info && it->info->type == "STATUS_TYPE_SHIELD" && it->shieldHP <= 0;
+		if(localTime >= it->until || target.dead || shieldBroken) {
 			replication->SendRemoveStatusToAll(it->statusID, it->targetUID, it->casterUID);
 			it = activeStatuses.erase_unsorted(it);
 		}
@@ -994,6 +1072,19 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pendingRemotes.push_back(pr);
 			scheduled = true;
 		}
+		if((cmd->type == ActionCommand::Type::STATUS || cmd->type == ActionCommand::Type::STATUS_SKILL_TARGET) && cmd->status.statusIndex != 0 && !pendingStatuses.full()) {
+			PendingStatus ps;
+			ps.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
+			ps.statusID = cmd->status.statusIndex;
+			ps.casterIndex = player.index;
+			const auto preset = cmd->status.targetPreset;
+			const bool self = preset == ActionCommand::TargetPreset::SELF_FFF || preset == ActionCommand::TargetPreset::SELF_FFF_1 ||
+				preset == ActionCommand::TargetPreset::SELF_TFF || preset == ActionCommand::TargetPreset::SELF_TTF || preset == ActionCommand::TargetPreset::SELF_TTT;
+			ps.targetUID = self ? player.Main().UID : currentTarget;
+			ps.duration = cmd->status.removeAtEnd ? MAX(action.seqLength - t, 0.3f) : -1.0f;
+			ps.power = (f32)damage;
+			if(ps.targetUID != ActorUID::INVALID) pendingStatuses.push_back(ps);
+		}
 		t += cmd->delay;
 	}
 
@@ -1001,7 +1092,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	return scheduled;
 }
 
-void World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast)
+void World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast, const vec3* aimPos)
 {
 	const Remote* remote = GetGameXmlContent().FindRemote(idx);
 	if(!remote || remoteInsts.full()) return;
@@ -1019,6 +1110,11 @@ void World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const ve
 	inst.range = remote->maxDistance;
 	if(remote->behaviorType == Remote::BehaviorType::GRAPH && remote->fixedGraphLength > 0) inst.range = remote->fixedGraphLength;
 	if(inst.range <= 0 && remote->lifeTime > 0 && inst.speed > 0) inst.range = remote->lifeTime * inst.speed;
+	// lobbed remotes (bezier graph) land on the aimed point, clamped to their max reach
+	if(remote->behaviorType == Remote::BehaviorType::GRAPH && remote->fixedGraphLength <= 0 && aimPos && glm::length(vec2(*aimPos)) > 1.0f) {
+		const f32 aimDist = glm::length(vec2(*aimPos) - vec2(pos));
+		inst.range = inst.range > 0 ? MIN(aimDist, inst.range) : aimDist;
+	}
 	inst.spawnTime = localTime;
 	inst.target = target;
 	inst.hitsLeft = MAX(remote->activateCount, 1);
@@ -1043,14 +1139,13 @@ void World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const ve
 void World::RemoteHit(RemoteInst& inst, Player& target)
 {
 	const Remote& remote = *inst.remote;
-	if(remote.damageGroup != Remote::DamageGroup::eENEMY && remote.damageGroup != Remote::DamageGroup::eALL) return;
-
 	Player& owner = players[inst.ownerIndex];
-	if(target.team == owner.team || target.dead) return;
+	if(!RemoteCanAffect(inst, target, true)) return;
+	const bool enemy = target.team != owner.team;
 
-	const i32 damage = (i32)(inst.damage * remote.attackMultiplier);
-	if(remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;
-	if(damage <= 0 && remote.statuses.empty()) return;
+	const i32 amount = (i32)(inst.damage * remote.attackMultiplier);
+	if(enemy && remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;
+	if(amount <= 0 && remote.statuses.empty()) return;
 
 	foreach(h, castHits) {
 		if(h->castID == inst.castID && h->playerIndex == target.index && localTime < h->until) return;
@@ -1063,9 +1158,18 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 		castHits.push_back(h);
 	}
 
-	if(damage > 0) DamagePlayer(owner, target, inst.skillID, damage, nullptr, inst.clientRemoteID, remote.ID, inst.dir);
+	if(amount > 0) {
+		if(enemy) DamagePlayer(owner, target, inst.skillID, amount, nullptr, inst.clientRemoteID, remote.ID, inst.dir);
+		else if(remote.damageGroup == Remote::DamageGroup::eFRIEND) HealPlayer(owner, target, amount);
+	}
 
-	{
+	if(!target.dead) {
+		foreach_const(st, remote.statuses) {
+			if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(owner, target, st->statusID, (f32)inst.damage);
+		}
+	}
+
+	if(enemy) {
 		const i32 hitEventRemote = GetGameXmlContent().FindSkillHitEventRemote((i32)inst.skillID);
 		if(hitEventRemote != 0 && hitEventRemote == (i32)remote.ID &&
 		   eastl::find(comboTriggeredCasts.begin(), comboTriggeredCasts.end(), inst.castID) == comboTriggeredCasts.end()) {
@@ -1076,11 +1180,6 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 			const vec2 rel = vec2(target.body->GetWorldPos() - owner.body->GetWorldPos());
 			LOG("ComboHit :: %ls skill=%d remote=%d -> next part", owner.name.data(), (i32)inst.skillID, (i32)remote.ID);
 			ScheduleSkillRemotes(owner, inst.skillID, target.body->GetWorldPos(), Slice<const ActorUID>(&targetUID, 1), atan2f(rel.y, rel.x), 1);
-		}
-	}
-	if(!target.dead) {
-		foreach_const(st, remote.statuses) {
-			if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(owner, target, st->statusID);
 		}
 	}
 }
@@ -1146,7 +1245,7 @@ void World::UpdateRemotes(f32 delta)
 		}
 
 		if(!owner.dead) {
-			SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true);
+			SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos);
 		}
 		pr = pendingRemotes.erase_unsorted(pr);
 	}
@@ -1195,9 +1294,9 @@ void World::UpdateRemotes(f32 delta)
 					const vec2 from = vec2(inst.pos);
 					const vec2 to = from + inst.dir * step;
 					const f32 halfWidth = remote.boundSize[0] * 0.5f;
-					if(remote.damageGroup != Remote::DamageGroup::eNONE) {
+					if(remote.damageGroup != Remote::DamageGroup::eNONE && remote.damageGroup != Remote::DamageGroup::INVALID) {
 						foreach(it, players) {
-							if(it->team == players[inst.ownerIndex].team || it->dead) continue;
+							if(!RemoteCanAffect(inst, *it, false)) continue;
 							const vec3 pos = it->body->GetWorldPos();
 							if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 							if(!LagSegmentHits(*it, from, to, halfWidth + PROJECTILE_TARGET_RADIUS + PROJECTILE_HIT_TOLERANCE, PROJECTILE_TARGET_RADIUS)) continue;
@@ -1310,9 +1409,19 @@ void World::PlayerSkillDamage(Player& player, SkillID skillID, const vec3& castP
 void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 damage, const Projectile* proj, u32 remoteID, RemoteIdx remoteDoc, vec2 remoteDir)
 {
 	if(target.dead) return;
+	if(HasStatusType(target, "STATUS_TYPE_GODMODE")) return;
+
+	foreach(it, activeStatuses) {
+		if(damage <= 0) break;
+		if(it->targetIndex != target.index || it->shieldHP <= 0) continue;
+		const f32 absorbed = MIN(it->shieldHP, (f32)damage);
+		it->shieldHP -= absorbed;
+		damage -= (i32)absorbed;
+	}
+	if(damage <= 0) return;
 
 	ActorMaster& chara = target.Main();
-	chara.hp = MAX(chara.hp - damage, 0);
+	chara.hp = MAX(chara.hp - damage, HasStatusType(target, "STATUS_TYPE_NEARLY_IMMORTAL") ? 1 : 0);
 
 	LOG("Damage :: %ls -> %ls skill=%d damage=%d hp=%d/%d", attacker.name.data(), target.name.data(), (i32)skillID, damage, chara.hp, chara.hpMax);
 	if(proj && proj->remoteID != 0) {

@@ -1352,6 +1352,19 @@ bool GameXmlContent::LoadAnimationData()
 				pActionBase->QueryAttribute("Param1", &cmd.graphMoveHorz.distance);
 			} break;
 
+			case ActionCommand::Type::STATUS:
+			case ActionCommand::Type::STATUS_SKILL_TARGET: {
+				cmd.status.statusIndex = 0;
+				pActionBase->QueryAttribute("StatusIndex", &cmd.status.statusIndex);
+				const char* TargetPreset = nullptr;
+				pActionBase->QueryStringAttribute("TargetPreset", &TargetPreset);
+				cmd.status.targetPreset = TargetPreset ? ActionCommand::TargetPresetFromString(TargetPreset) : ActionCommand::TargetPreset::CURRENT_FFF;
+				if(cmd.type == ActionCommand::Type::STATUS_SKILL_TARGET) cmd.status.targetPreset = ActionCommand::TargetPreset::CURRENT_FFF;
+				const char* Param2 = nullptr;
+				pActionBase->QueryStringAttribute("Param2", &Param2);
+				cmd.status.removeAtEnd = Param2 && EA::StdC::Strstr(Param2, "RemoveWhenAniEnd") ? 1 : 0;
+			} break;
+
 			case ActionCommand::Type::ROTATESPEED: {
 				pActionBase->QueryAttribute("Param1", &cmd.rotateSpeed.speed);
 			} break;
@@ -1776,6 +1789,15 @@ bool GameXmlContent::LoadStatusData()
 		pCommon->QueryFloatAttribute("_DistanceRatio", &st.distanceRatio);
 		pCommon->QueryFloatAttribute("_TimeRatio", &st.timeRatio);
 		pCommon->QueryFloatAttribute("_HeightRatio", &st.heightRatio);
+		pCommon->QueryFloatAttribute("_DotBaseDamage", &st.dotDamage);
+		f32 intervalMs = 0;
+		pCommon->QueryFloatAttribute("_Interval", &intervalMs);
+		st.intervalSec = intervalMs / 1000.0f;
+		pCommon->QueryFloatAttribute("_Distance", &st.distance);
+		pCommon->QueryFloatAttribute("_ParamRatio", &st.paramRatio);
+		pCommon->QueryFloatAttribute("_OffsetDraggedDistanceFromTarget", &st.dragOffset);
+		pCommon->QueryAttribute("_MaxOverlapCount", &st.maxOverlap);
+		if(st.maxOverlap < 1) st.maxOverlap = 1;
 		const char* type = nullptr;
 		pCommon->QueryStringAttribute("_Type", &type);
 		if(type) st.type = type;

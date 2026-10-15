@@ -11,6 +11,8 @@
 #include "replication.h"
 #include "physics.h"
 
+struct StatusInfo;
+
 struct ColliderSize
 {
 	u16 radius;
@@ -347,12 +349,28 @@ struct World
 	struct ActiveStatus
 	{
 		i32 statusID;
+		const StatusInfo* info;
 		u32 targetIndex;
+		u32 casterIndex;
 		ActorUID targetUID;
 		ActorUID casterUID;
 		Time until;
+		Time nextTick;
+		i32 overlap;
+		f32 shieldHP;
 	};
 	eastl::fixed_vector<ActiveStatus,512,false> activeStatuses;
+
+	struct PendingStatus
+	{
+		Time time;
+		i32 statusID;
+		u32 casterIndex;
+		ActorUID targetUID;
+		f32 duration;
+		f32 power;
+	};
+	eastl::fixed_vector<PendingStatus,256,false> pendingStatuses;
 	u32 nextCastID = 1;
 	u32 nextRemoteSeed = 0x40000000;
 	eastl::fixed_vector<u32,64,false> comboTriggeredCasts;
@@ -393,10 +411,13 @@ private:
 	void Explode(Player& owner, const vec3& center, f32 radius, i32 damage);
 	void RespawnPlayer(Player& player);
 	bool ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle, i32 forceAnim = -1);
-	void SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast = false);
+	void SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast = false, const vec3* aimPos = nullptr);
 	void UpdateRemotes(f32 delta);
 	void UpdateUltimateGauges(f32 delta);
-	void ApplyStatus(Player& caster, Player& target, i32 statusID);
+	void ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power = 0, f32 durationOverride = -1);
+	bool HasStatusType(const Player& p, const char* type) const;
+	void HealPlayer(Player& healer, Player& target, i32 amount);
+	bool RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const;
 	void UpdateStatuses();
 	void RemoteApplyArea(RemoteInst& inst);
 	f32 LagDistToSegment(const Player& p, const vec2& a, const vec2& b) const;
