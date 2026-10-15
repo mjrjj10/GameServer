@@ -251,6 +251,10 @@ struct Remote
 	f32 attackMultiplier = 0;
 	f32 offsetY = 0;
 	f32 offsetZ = 0;     // RemoteComData2 _OffsetZ: height offset the client applies to the fire position
+	// close-range penalty: damage reduced by _DistPenaltyRate % when the target is within _PenaltyApplyDistance
+	// of the caster (guides: "-30% damage to enemies within 5 m", V-Merang ult "-40% until 8 m")
+	f32 distPenaltyRate = 0;
+	f32 penaltyApplyDistance = 0;
 	f32 boundOffsetY = 0;
 	f32 angle = 0;
 	f32 hitInvalidTime = 1;

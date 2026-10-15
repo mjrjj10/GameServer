@@ -2309,6 +2309,16 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		return;
 	}
 
+	// close-range penalty of the remote (_DistPenaltyRate within _PenaltyApplyDistance of the caster)
+	{
+		const RemoteIdx doc = proj ? proj->remoteDoc : remoteDoc;
+		const Remote* pr = doc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(doc) : nullptr;
+		if(pr && pr->distPenaltyRate > 0 && pr->penaltyApplyDistance > 0 &&
+		   glm::length(vec2(target.body->GetWorldPos()) - vec2(attacker.body->GetWorldPos())) < pr->penaltyApplyDistance) {
+			damage = (i32)(damage * (1.0f - pr->distPenaltyRate / 100.0f));
+		}
+	}
+
 	// element advantage: weapon shots use the weapon bonus, skills the skill bonus, DoTs none
 	u32 damageType = PACKET_DAMAGE_TYPE_NORMAL;
 	if(proj || skillID != SkillID::INVALID) {
