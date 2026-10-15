@@ -1,7 +1,8 @@
 #include "world.h"
 #include <mxm/game_content.h>
 
-static const f32 COMBAT_ATTACK_STAT = 200.0f;
+static const f32 COMBAT_ATTACK_STAT = 0.0f; // characters have no attack/skill power without gear
+static const i32 STAT_DEFENCE = 7;
 static const i32 WEAPON_HIT_DAMAGE = 120;
 static const f64 WEAPON_HIT_INTERVAL_MS = 80.0;
 static const f32 WEAPON_PROJECTILE_SPEED = 4000.0f;
@@ -911,6 +912,16 @@ void World::HealPlayer(Player& healer, Player& target, i32 amount)
 	replication->SendHpToAll(chara.UID, chara.hp, chara.hpMax);
 }
 
+static f32 DefenceFactor(const World::Player& target)
+{
+	// assumed MOBA-style reduction: 100 / (100 + defence)
+	const auto& master = GetGameXmlContent().GetMaster(target.Main().classType);
+	foreach_const(st, master.baseStats) {
+		if(st->type == STAT_DEFENCE && st->value > 0) return 100.0f / (100.0f + st->value);
+	}
+	return 1.0f;
+}
+
 bool World::RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const
 {
 	if(p.dead) return false;
@@ -1147,6 +1158,10 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		vec3 targetPos = pos + vec3(dir * (inst.range > 0 ? inst.range : 1000.0f), 0);
 		const ActorMaster* targetMaster = target != ActorUID::INVALID ? FindMasterActor(target) : nullptr;
 		if(targetMaster) targetPos = targetMaster->parent->body->GetWorldPos();
+		if(remote->behaviorType == Remote::BehaviorType::GRAPH && aimPos && glm::length(vec2(*aimPos)) > 1.0f) {
+			targetPos = pos + vec3(dir * inst.range, 0);
+			targetPos.z = aimPos->z;
+		}
 		// the client draws plain (non-fan) static boxes facing the opposite way of their rotation
 		const bool plainStaticBox = inst.speed <= 0 && remote->boundType == Remote::BoundType::E_BOUND_BOX && remote->angle <= 0;
 		const f32 sendYaw = atan2f(dir.y, dir.x) + (plainStaticBox ? PI : 0.0f);
@@ -1217,7 +1232,7 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	if(!RemoteCanAffect(inst, target, true)) return;
 	const bool enemy = target.team != owner.team;
 
-	const i32 amount = (i32)(inst.damage * remote.attackMultiplier);
+	const i32 amount = (i32)(inst.damage * remote.attackMultiplier * (enemy ? DefenceFactor(target) : 1.0f));
 	if(enemy && remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;
 	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty()) return;
 
