@@ -65,6 +65,24 @@ void HubInstance::OnMatchmakerPacket(const NetHeader& header, const u8* packetDa
 const i32 PICKING_TIME = 60;
 const i32 MATCH_WAIT_TIME = 10;
 
+#include <mutex>
+#include <EASTL/hash_set.h>
+
+static std::mutex g_sentToGameMutex;
+static eastl::hash_set<u64> g_sentToGame;
+
+void MarkAccountSentToGame(AccountUID accountUID)
+{
+	std::lock_guard<std::mutex> lock(g_sentToGameMutex);
+	g_sentToGame.insert((u64)accountUID);
+}
+
+bool TakeAccountReturningFromGame(AccountUID accountUID)
+{
+	std::lock_guard<std::mutex> lock(g_sentToGameMutex);
+	return g_sentToGame.erase((u64)accountUID) > 0;
+}
+
 void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 userCount)
 {
 	server = server_;
@@ -427,6 +445,7 @@ void RoomInstance::Update(Time localTime_)
 				packet.WriteStringObj(user.name.data(), user.name.size());
 				packet.Write<u32>(In::ProduceInstantKey(user.accountUID, sortieUID));
 				SendPacket(user.clientHd, packet);
+				MarkAccountSentToGame(user.accountUID);
 			}
 		}
 

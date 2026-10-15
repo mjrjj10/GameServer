@@ -1,5 +1,6 @@
 #include "game.h"
 #include "coordinator.h" // account data
+#include "instance.h"
 #include <mxm/game_content.h>
 #include "config.h"
 #include <EAStdC/EAString.h>
@@ -137,6 +138,11 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 	replication.SendAccountDataLobby(clientHd, *accountData);
 
 	replication.OnPlayerConnect(clientHd);
+
+	if(TakeAccountReturningFromGame(accountData->UID)) {
+		LOG("[client%x] HubGame :: back from a game, loading the lobby", clientHd);
+		replication.SendLoadLobby(clientHd, MapIndex::LOBBY_NORMAL);
+	}
 }
 
 void HubGame::OnPlayerDisconnect(ClientHandle clientHd)

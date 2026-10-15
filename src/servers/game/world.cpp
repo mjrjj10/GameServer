@@ -852,7 +852,10 @@ static f32 SkillDamage(SkillID skillID)
 	if(found == content.skillMap.end()) return (f32)SKILL_FALLBACK_DAMAGE;
 	SkillNormalModel& skill = const_cast<SkillNormalModel&>(found->second);
 	SkillNormalLevelModel& level = *skill.getSkillNormalLevelByIndex(0);
-	const f32 damage = level.getBaseDamage() + COMBAT_ATTACK_STAT * level.getAttackMultiplier();
+	// base damage of the un-upgraded skill: skilltt TTATTR_REMOTE_DAMAGE (SKILL_PROPERTY rows are upgrades)
+	const f32 ttBase = content.GetSkillBaseDamage((i32)skillID);
+	const f32 base = ttBase > 0 ? ttBase : level.getBaseDamage();
+	const f32 damage = base + COMBAT_ATTACK_STAT * level.getAttackMultiplier();
 	return damage > 0 ? damage : (f32)SKILL_FALLBACK_DAMAGE;
 }
 

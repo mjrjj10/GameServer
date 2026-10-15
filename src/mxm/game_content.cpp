@@ -1976,6 +1976,14 @@ bool GameXmlContent::LoadStatusData()
 				if(!pBase) continue;
 				i32 skillID = 0;
 				pSkill->QueryAttribute("DATAKEY", &skillID);
+				for(XMLElement* pT = pBase->FirstChildElement("tableDatas"); pT; pT = pT->NextSiblingElement("tableDatas")) {
+					const char* attrType = nullptr;
+					pT->QueryStringAttribute("attrType", &attrType);
+					if(!attrType || EA::StdC::Strcmp(attrType, "TTATTR_REMOTE_DAMAGE") != 0) continue;
+					f32 dmg = 0;
+					pT->QueryFloatAttribute("value_1", &dmg);
+					if(dmg > 0 && skillBaseDamage.find(skillID) == skillBaseDamage.end()) skillBaseDamage[skillID] = dmg;
+				}
 				// attrMap: key -> status (TTATTR_STATUS_DELIGATE = main status, TTATTR_STATUS_DEFINE_n = other statuses of the skill)
 				eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,40,false>, i32>,16,false> keyStatus;
 				i32 delegateID = 0;

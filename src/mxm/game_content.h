@@ -544,6 +544,7 @@ struct GameXmlContent
 	const StatusInfo* FindStatus(i32 statusID) const;
 	f32 GetWeaponFireDelay(i32 weaponID) const { auto f = weaponFireDelay.find(weaponID); return f == weaponFireDelay.end() ? 0 : f->second; }
 	const WeaponHeatInfo* FindWeaponHeat(i32 weaponID) const { auto f = weaponHeat.find(weaponID); return f == weaponHeat.end() ? nullptr : &f->second; }
+	f32 GetSkillBaseDamage(i32 skillID) const { auto f = skillBaseDamage.find(skillID); return f == skillBaseDamage.end() ? 0 : f->second; }
 	f32 GetSkillConsumeMP(i32 skillID) const { auto f = skillConsumeMP.find(skillID); return f == skillConsumeMP.end() ? 0 : f->second; }
 	f32 GetSkillConsumeUG(i32 skillID) const { auto f = skillConsumeUG.find(skillID); return f == skillConsumeUG.end() ? 0 : f->second; }
 	f32 GetSkillConsumeStamina(i32 skillID) const { auto f = skillConsumeStamina.find(skillID); return f == skillConsumeStamina.end() ? 0 : f->second; }
@@ -609,6 +610,7 @@ private:
 	eastl::hash_map<i32, f32> weaponFireDelay; // weapon -> FIRING_METHOD _FIREINFO _FireDelayTime
 	eastl::hash_map<i32, f32> skillConsumeStamina; // SKILL.xml _ConsumeStamina (dodge)
 	eastl::hash_map<i32, f32> skillConsumeMP;      // SKILL.xml _ConsumeMP
+	eastl::hash_map<i32, f32> skillBaseDamage;     // skilltt.xml base level TTATTR_REMOTE_DAMAGE
 	eastl::hash_map<i32, f32> skillConsumeUG;      // SKILL.xml _ConsumeUG
 	eastl::hash_map<i32, SummonInfo> summonMap;
 	eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,48,false>, f32>,128,true> lieEndTime; // AniLength.xml PC LIE_END per entity key
