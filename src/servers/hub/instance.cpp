@@ -75,6 +75,7 @@ void MarkAccountSentToGame(AccountUID accountUID)
 {
 	std::lock_guard<std::mutex> lock(g_sentToGameMutex);
 	g_sentToGame.insert((u64)accountUID);
+	LOG("[Room] account %llu sent to a game server", (u64)accountUID);
 }
 
 bool TakeAccountReturningFromGame(AccountUID accountUID)
