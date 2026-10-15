@@ -1324,8 +1324,9 @@ bool GameXmlContent::LoadAnimationData()
 				}
 			} break;
 
-			case ActionCommand::Type::REMOTE: {
-				const char* TargetPreset;
+			case ActionCommand::Type::REMOTE:
+			case ActionCommand::Type::REMOTE_SKILL_TARGET: {
+				const char* TargetPreset = nullptr;
 				//const char* Param2;
 				i32 RemoteIndex;
 				pActionBase->QueryStringAttribute("TargetPreset", &TargetPreset);
@@ -1333,7 +1334,7 @@ bool GameXmlContent::LoadAnimationData()
 				pActionBase->QueryAttribute("RemoteIndex", &RemoteIndex);
 
 				cmd.remote.idx = RemoteIdx(RemoteIndex);
-				cmd.remote.targetPreset = ActionCommand::TargetPresetFromString(TargetPreset);
+				cmd.remote.targetPreset = TargetPreset ? ActionCommand::TargetPresetFromString(TargetPreset) : ActionCommand::TargetPreset::CURRENT_FFF;
 				cmd.remote.offsetSide = 0;
 				cmd.remote.offsetFront = 0;
 				const char* TargetParam = nullptr;
@@ -1400,6 +1401,56 @@ bool GameXmlContent::LoadAnimationData()
 	return true;
 }
 
+static void ParseRemoteSpawnRules(XMLElement* pEvent, Remote::SpawnRules& out)
+{
+	if(!pEvent) return;
+	for(XMLElement* pAct = pEvent->FirstChildElement(); pAct; pAct = pAct->NextSiblingElement()) {
+		if(EA::StdC::Strcmp(pAct->Name(), "_CreateEntity") == 0) {
+			Remote::SpawnRule rule;
+			i32 idx = -1;
+			pAct->QueryAttribute("_RemoteIndex", &idx);
+			if(idx <= 0 || out.full()) continue;
+			rule.idx = RemoteIdx(idx);
+			out.push_back(rule);
+		}
+		else if(EA::StdC::Strcmp(pAct->Name(), "_CreateRemote") == 0) {
+			for(XMLElement* pKind = pAct->FirstChildElement(); pKind; pKind = pKind->NextSiblingElement()) {
+				Remote::SpawnRule rule;
+				i32 idx = -1;
+				if(EA::StdC::Strcmp(pKind->Name(), "_Radiate") == 0) {
+					rule.kind = Remote::SPAWN_RADIATE;
+					pKind->QueryAttribute("_Index", &idx);
+					pKind->QueryAttribute("_MaxNum", &rule.maxNum);
+					pKind->QueryFloatAttribute("_MaxAngle", &rule.maxAngle);
+				}
+				else if(EA::StdC::Strcmp(pKind->Name(), "_CircleArea") == 0) {
+					rule.kind = Remote::SPAWN_CIRCLE;
+					pKind->QueryAttribute("_Index", &idx);
+					pKind->QueryAttribute("_MaxNum", &rule.maxNum);
+					pKind->QueryFloatAttribute("_Radius", &rule.radius);
+				}
+				else if(EA::StdC::Strcmp(pKind->Name(), "_Default") == 0) {
+					rule.kind = Remote::SPAWN_DEFAULT;
+					pKind->QueryFloatAttribute("_AngleY", &rule.angleY);
+					XMLElement* pRemote = pKind->FirstChildElement("_Remote");
+					if(pRemote) pRemote->QueryAttribute("_RemoteIndex", &idx);
+				}
+				if(idx <= 0 || out.full()) continue;
+				rule.idx = RemoteIdx(idx);
+				if(rule.maxNum < 1) rule.maxNum = 1;
+				out.push_back(rule);
+			}
+		}
+	}
+}
+
+static bool XmlAttrTrue(XMLElement* pElt, const char* name)
+{
+	const char* v = nullptr;
+	pElt->QueryStringAttribute(name, &v);
+	return v && EA::StdC::Stricmp(v, "true") == 0;
+}
+
 bool GameXmlContent::LoadRemoteData()
 {
 	// TODO: use these everywhere?
@@ -1447,6 +1498,10 @@ bool GameXmlContent::LoadRemoteData()
 				remote.boundSize = { (u16)_LengthX, (u16)_LengthY, (u16)_LengthZ };
 				pComp->QueryFloatAttribute("_OffsetY", &remote.boundOffsetY);
 				pComp->QueryFloatAttribute("_Angle", &remote.angle);
+				const char* _AddContactGroup = nullptr;
+				pComp->QueryStringAttribute("_AddContactGroup", &_AddContactGroup);
+				remote.contactFriend = _AddContactGroup && (EA::StdC::Strcmp(_AddContactGroup, "eFRIEND") == 0 || EA::StdC::Strcmp(_AddContactGroup, "eALL") == 0);
+				remote.vsOwner = XmlAttrTrue(pComp, "_VsOwner");
 				remote.boundType = Remote::BoundTypeFromString(_Type);
 				remote.damageGroup = Remote::DamageGroupFromString(_DamageGroup);
 				remote.vs =
@@ -1472,6 +1527,17 @@ bool GameXmlContent::LoadRemoteData()
 					pStatus->QueryAttribute("_Value", &st.value);
 					if(st.statusID != 0 && !remote.statuses.full()) remote.statuses.push_back(st);
 				}
+				for(XMLElement* pStatus = pComp->FirstChildElement("_StatusFriendly"); pStatus; pStatus = pStatus->NextSiblingElement("_StatusFriendly")) {
+					Remote::AppliedStatus st;
+					st.statusID = 0;
+					st.rate = 100;
+					st.value = 100;
+					pStatus->QueryAttribute("DATAKEY", &st.statusID);
+					pStatus->QueryAttribute("_Rate", &st.rate);
+					pStatus->QueryAttribute("_Value", &st.value);
+					if(st.statusID != 0 && !remote.friendlyStatuses.full()) remote.friendlyStatuses.push_back(st);
+				}
+				remote.attachFireObject = XmlAttrTrue(pComp, "_AttachFireObject");
 				remote.activateCount = _ActivateCount;
 				remote.lifeTime = _LifeTime;
 				pComp->QueryFloatAttribute("_AttackMultiplier", &remote.attackMultiplier);
@@ -1492,6 +1558,7 @@ bool GameXmlContent::LoadRemoteData()
 
 			else if((EA::StdC::Strcmp("RemoteTargetComData", compName) == 0)) {
 				pComp->QueryFloatAttribute("_HitInvalidTime", &remote.hitInvalidTime);
+				pComp->QueryFloatAttribute("_Sight", &remote.sight);
 			}
 
 			else if((EA::StdC::Strcmp("RemoteGraphComData", compName) == 0)) {
@@ -1513,6 +1580,16 @@ bool GameXmlContent::LoadRemoteData()
 					pCreate->QueryAttribute("_RemoteIndex", &_RemoteIndex);
 					remote.destroyCreateRemote = RemoteIdx(_RemoteIndex);
 				}
+				ParseRemoteSpawnRules(pDestroy, remote.onDestroy);
+				XMLElement* pTime = pComp->FirstChildElement("_Time");
+				if(pTime) {
+					pTime->QueryFloatAttribute("_Time", &remote.timeEventDelay);
+					remote.timeEventRecycle = XmlAttrTrue(pTime, "_Recycle");
+					ParseRemoteSpawnRules(pTime, remote.onTime);
+					if(remote.onTime.empty()) remote.timeEventDelay = -1;
+				}
+				ParseRemoteSpawnRules(pComp->FirstChildElement("_Activate"), remote.onActivate);
+				ParseRemoteSpawnRules(pComp->FirstChildElement("_ActivateOnNotGround"), remote.onHitCharacter);
 			}
 		}
 
@@ -1756,8 +1833,12 @@ i32 GameXmlContent::WeaponTypeOf(ClassType classType, WeaponIndex weaponIndex) c
 
 const GameXmlContent::Action& GameXmlContent::GetSkillAction(ClassType classType, ActionStateID actionID) const
 {
+	static const Action emptyAction = {};
 	auto found = actionListMap.find(classType);
-	ASSERT(found != actionListMap.end());
+	if(found == actionListMap.end()) {
+		WARN("GetSkillAction :: no actions for class %d", (i32)classType);
+		return emptyAction;
+	}
 
 	foreach_const(it, found->second) {
 		if(it->ID == actionID) {
@@ -1765,8 +1846,8 @@ const GameXmlContent::Action& GameXmlContent::GetSkillAction(ClassType classType
 		}
 	}
 
-	ASSERT(0); // not found
-	return actionListMap.cbegin()->second.front(); // unreachable
+	WARN("GetSkillAction :: action %d not found for class %d", (i32)actionID, (i32)classType);
+	return emptyAction;
 }
 
 bool GameXmlContent::LoadStatusData()

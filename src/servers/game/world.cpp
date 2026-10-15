@@ -528,7 +528,12 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 
 	// access method is kinda convoluted
 	const auto& content = GetGameXmlContent();
-	const auto& skill = content.skillMap.at(skillID);
+	auto skillFound = content.skillMap.find(skillID);
+	if(skillFound == content.skillMap.end()) {
+		WARN("PlayerCastSkill :: unknown skill %d", (i32)skillID);
+		return;
+	}
+	const auto& skill = skillFound->second;
 	const ActionStateID actionState = skill.action;
 
 	const f32 angle = player.input.rot.upperYaw;
@@ -887,6 +892,7 @@ void World::UpdateUltimateGauges(f32 delta)
 }
 
 static const f32 STATUS_PUSH_BASE_DISTANCE = 400.0f;
+static const f32 ORBIT_RADIUS = 150.0f;
 
 bool World::HasStatusType(const Player& p, const char* type) const
 {
@@ -908,12 +914,18 @@ void World::HealPlayer(Player& healer, Player& target, i32 amount)
 bool World::RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const
 {
 	if(p.dead) return false;
+	if(inst.excludeIndex >= 0 && (i32)p.index == inst.excludeIndex) return false;
 	const Player& owner = players[inst.ownerIndex];
-	const auto group = inst.remote->damageGroup;
-	if(p.index == owner.index) return includeOwner && (group == Remote::DamageGroup::eFRIEND || group == Remote::DamageGroup::eALL);
+	const Remote& remote = *inst.remote;
+	const auto group = remote.damageGroup;
+	const bool friendContact = group == Remote::DamageGroup::eFRIEND || group == Remote::DamageGroup::eALL || remote.contactFriend;
+	if(p.index == owner.index) {
+		if(!includeOwner && !remote.vsOwner) return false;
+		return remote.vsOwner || group == Remote::DamageGroup::eFRIEND || group == Remote::DamageGroup::eALL;
+	}
 	const bool enemy = p.team != owner.team;
 	if(enemy) return group == Remote::DamageGroup::eENEMY || group == Remote::DamageGroup::eALL;
-	return group == Remote::DamageGroup::eFRIEND || group == Remote::DamageGroup::eALL;
+	return friendContact;
 }
 
 void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power, f32 durationOverride)
@@ -1021,7 +1033,9 @@ void World::UpdateStatuses()
 bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle, i32 forceAnim)
 {
 	const auto& content = GetGameXmlContent();
-	const auto& skill = content.skillMap.at(skillID);
+	auto skillFound = content.skillMap.find(skillID);
+	if(skillFound == content.skillMap.end()) return false;
+	const auto& skill = skillFound->second;
 	const auto& action = content.GetSkillAction(player.Main().classType, skill.action);
 
 	i32 anim = 0;
@@ -1055,7 +1069,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	f32 t = 0;
 	foreach_const(cmd, action.commands) {
 		if(cmd->animIndex != anim) continue;
-		if(cmd->type == ActionCommand::Type::REMOTE && !pendingRemotes.full()) {
+		if((cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) && !pendingRemotes.full()) {
 			PendingRemote pr;
 			pr.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
 			pr.idx = cmd->remote.idx;
@@ -1069,6 +1083,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.castPos = castPos;
 			pr.angle = angle;
 			pr.target = cmd->remote.targetPreset == ActionCommand::TargetPreset::MEMORIZED_TFT ? player.memorizedTarget : currentTarget;
+			pr.atTarget = cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET;
 			pendingRemotes.push_back(pr);
 			scheduled = true;
 		}
@@ -1092,10 +1107,10 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	return scheduled;
 }
 
-void World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast, const vec3* aimPos)
+World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast, const vec3* aimPos)
 {
 	const Remote* remote = GetGameXmlContent().FindRemote(idx);
-	if(!remote || remoteInsts.full()) return;
+	if(!remote || remoteInsts.full()) return nullptr;
 
 	RemoteInst inst;
 	inst.remote = remote;
@@ -1119,6 +1134,10 @@ void World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const ve
 	inst.target = target;
 	inst.hitsLeft = MAX(remote->activateCount, 1);
 	inst.areaDone = false;
+	if(remote->timeEventDelay >= 0) {
+		inst.timeEventActive = true;
+		inst.nextTimeEvent = TimeAdd(localTime, TimeMsToTime(remote->timeEventDelay * 1000.0));
+	}
 
 	if(broadcast) {
 		const u32 seed = nextRemoteSeed;
@@ -1134,6 +1153,50 @@ void World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const ve
 	remoteInsts.push_back(inst);
 
 	LOG("Remote :: spawn %d at (%.0f, %.0f) dir=(%.2f, %.2f) speed=%.0f range=%.0f", (i32)idx, pos.x, pos.y, dir.x, dir.y, inst.speed, inst.range);
+	return &remoteInsts.back();
+}
+
+static vec2 RotateDir(const vec2& d, f32 deg)
+{
+	const f32 a = deg * PI / 180.0f;
+	const f32 c = cosf(a), s = sinf(a);
+	return vec2(d.x * c - d.y * s, d.x * s + d.y * c);
+}
+
+void World::SpawnRemoteRules(const RemoteInst& parent, const Remote::SpawnRules& rules, const vec3& pos, i32 excludeIndex, RemoteIdx skipFirst)
+{
+	bool skipped = false;
+	foreach_const(rule, rules) {
+		if(!skipped && rule->kind == Remote::SPAWN_SINGLE && rule->idx == skipFirst) {
+			skipped = true;
+			continue;
+		}
+		const Remote* child = GetGameXmlContent().FindRemote(rule->idx);
+		if(!child) continue;
+
+		for(i32 n = 0; n < rule->maxNum; n++) {
+			vec2 dir = parent.dir;
+			vec3 at = pos;
+			switch(rule->kind) {
+				case Remote::SPAWN_RADIATE: {
+					if(rule->maxNum > 1 && rule->maxAngle > 0) {
+						if(rule->maxAngle >= 360.0f) dir = RotateDir(parent.dir, 360.0f * n / rule->maxNum);
+						else dir = RotateDir(parent.dir, -rule->maxAngle * 0.5f + rule->maxAngle * n / (rule->maxNum - 1));
+					}
+				} break;
+				case Remote::SPAWN_CIRCLE: {
+					const f32 a = (RandUint() % 3600) * 0.1f * PI / 180.0f;
+					const f32 r = rule->radius * sqrtf((RandUint() % 1000) / 1000.0f);
+					at = pos + vec3(cosf(a) * r, sinf(a) * r, 0);
+				} break;
+				case Remote::SPAWN_DEFAULT: {
+					dir = RotateDir(parent.dir, rule->angleY);
+				} break;
+			}
+			RemoteInst* inst = SpawnRemote(parent.ownerIndex, rule->idx, at + vec3(dir * child->offsetY, 0), dir, parent.target, parent.skillID, parent.castID, parent.damage);
+			if(inst) inst->excludeIndex = excludeIndex;
+		}
+	}
 }
 
 void World::RemoteHit(RemoteInst& inst, Player& target)
@@ -1145,13 +1208,14 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 
 	const i32 amount = (i32)(inst.damage * remote.attackMultiplier);
 	if(enemy && remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;
-	if(amount <= 0 && remote.statuses.empty()) return;
+	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty()) return;
 
 	foreach(h, castHits) {
-		if(h->castID == inst.castID && h->playerIndex == target.index && localTime < h->until) return;
+		if(h->castID == inst.castID && h->remoteID == remote.ID && h->playerIndex == target.index && localTime < h->until) return;
 	}
 	if(!castHits.full()) {
 		CastHit h;
+		h.remoteID = remote.ID;
 		h.castID = inst.castID;
 		h.playerIndex = target.index;
 		h.until = TimeAdd(localTime, TimeMsToTime(MAX(remote.hitInvalidTime, 0.1f) * 1000.0));
@@ -1163,10 +1227,26 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 		else if(remote.damageGroup == Remote::DamageGroup::eFRIEND) HealPlayer(owner, target, amount);
 	}
 
+	inst.lastHitIndex = (i32)target.index;
 	if(!target.dead) {
-		foreach_const(st, remote.statuses) {
-			if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(owner, target, st->statusID, (f32)inst.damage);
+		const bool friendGroup = remote.damageGroup == Remote::DamageGroup::eFRIEND;
+		if(enemy || friendGroup) {
+			foreach_const(st, remote.statuses) {
+				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(owner, target, st->statusID, (f32)inst.damage);
+			}
 		}
+		if(!enemy) {
+			foreach_const(st, remote.friendlyStatuses) {
+				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(owner, target, st->statusID, (f32)inst.damage);
+			}
+		}
+	}
+
+	if(!remote.onActivate.empty() || !remote.onHitCharacter.empty()) {
+		const RemoteInst copy = inst;
+		const vec3 at = vec3(vec2(target.body->GetWorldPos()), inst.pos.z);
+		SpawnRemoteRules(copy, remote.onActivate, at, -1, RemoteIdx::INVALID);
+		SpawnRemoteRules(copy, remote.onHitCharacter, at, (i32)target.index, RemoteIdx::INVALID);
 	}
 
 	if(enemy) {
@@ -1184,9 +1264,48 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	}
 }
 
+void World::RemoteApplyShape(RemoteInst& inst)
+{
+	const Remote& remote = *inst.remote;
+	f32 halfWidth = remote.boundSize[0] * 0.5f;
+	f32 start = 0;
+	f32 length = inst.range > 0 ? inst.range : remote.boundSize[1];
+	switch(remote.boundType) {
+		case Remote::BoundType::E_BOUND_CAPSULE: {
+			length = remote.boundSize[1] + remote.boundSize[0];
+			start = -remote.boundSize[0] * 0.5f;
+		} break;
+		case Remote::BoundType::E_BOUND_HAMMER:
+		case Remote::BoundType::E_BOUND_BEAM:
+		case Remote::BoundType::E_BOUND_BEAM_NIF:
+		case Remote::BoundType::E_BOUND_LASER:
+		case Remote::BoundType::E_BOUND_RAY: {
+			if(length <= 0) length = MAX((f32)remote.boundSize[0], 300.0f);
+		} break;
+		default: return;
+	}
+	if(length <= 0) return;
+
+	foreach(it, players) {
+		const vec3 pos = it->body->GetWorldPos();
+		if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
+		const vec2 center = vec2(inst.pos) + inst.dir * (start + length * 0.5f);
+		const vec2 rel = LagClosestPos(*it, center) - vec2(inst.pos);
+		const f32 along = glm::dot(rel, inst.dir);
+		const f32 side = fabsf(glm::dot(rel, Perp(inst.dir)));
+		if(along < start - WEAPON_TARGET_RADIUS || along > start + length + WEAPON_TARGET_RADIUS) continue;
+		if(side > halfWidth + WEAPON_TARGET_RADIUS) continue;
+		RemoteHit(inst, *it);
+	}
+}
+
 void World::RemoteApplyArea(RemoteInst& inst)
 {
 	const Remote& remote = *inst.remote;
+	if(remote.boundType != Remote::BoundType::E_BOUND_SPHERE && remote.boundType != Remote::BoundType::E_BOUND_BOX) {
+		RemoteApplyShape(inst);
+		return;
+	}
 	if(remote.boundType == Remote::BoundType::E_BOUND_SPHERE) {
 		const bool cone = remote.angle > 0;
 		const f32 radius = remote.boundSize[0] * 0.5f;
@@ -1243,6 +1362,11 @@ void World::UpdateRemotes(f32 delta)
 				pos = vec3(vec2(base) + dir * pr->offsetFront + Perp(dir) * pr->offsetSide, owner.body->GetWorldPos().z);
 			} break;
 		}
+		if(pr->atTarget) {
+			const ActorMaster* targetMaster = pr->target != ActorUID::INVALID ? FindMasterActor(pr->target) : nullptr;
+			if(targetMaster) pos = targetMaster->parent->body->GetWorldPos();
+			else if(glm::length(vec2(pr->castPos)) > 1.0f) pos = vec3(vec2(pr->castPos), owner.body->GetWorldPos().z);
+		}
 
 		if(!owner.dead) {
 			SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos);
@@ -1255,8 +1379,66 @@ void World::UpdateRemotes(f32 delta)
 		const Remote& remote = *inst.remote;
 		const f32 elapsed = (f32)TimeDiffSec(TimeDiff(inst.spawnTime, localTime));
 		bool destroyed = false;
+		Player& instOwner = players[inst.ownerIndex];
 
-		switch(remote.behaviorType) {
+		const bool attached = remote.attachFireObject || remote.behaviorType == Remote::BehaviorType::ORBIT ||
+			remote.behaviorType == Remote::BehaviorType::CASTER_TARGET || remote.behaviorType == Remote::BehaviorType::BEAM;
+		if(attached) {
+			if(instOwner.dead) {
+				destroyed = true;
+			}
+			else {
+				const f32 yaw = instOwner.input.rot.upperYaw;
+				inst.dir = vec2(cosf(yaw), sinf(yaw));
+				inst.pos = instOwner.body->GetWorldPos() + vec3(inst.dir * remote.offsetY, 158.0f);
+			}
+		}
+
+		if(!destroyed && inst.timeEventActive && localTime >= inst.nextTimeEvent) {
+			if(remote.timeEventRecycle && remote.timeEventDelay > 0.01f) inst.nextTimeEvent = TimeAdd(inst.nextTimeEvent, TimeMsToTime(remote.timeEventDelay * 1000.0));
+			else inst.timeEventActive = false;
+			const RemoteInst copy = inst;
+			SpawnRemoteRules(copy, remote.onTime, copy.pos, copy.excludeIndex, RemoteIdx::INVALID);
+		}
+
+		if(destroyed) {
+		}
+		else if(remote.behaviorType == Remote::BehaviorType::CHAIN) {
+			if(!inst.areaDone) {
+				inst.areaDone = true;
+				const f32 sight = remote.sight > 0 ? remote.sight : 1450.0f;
+				Player* best = nullptr;
+				f32 bestDist = sight + WEAPON_TARGET_RADIUS;
+				foreach(it, players) {
+					if(!RemoteCanAffect(inst, *it, remote.vsOwner)) continue;
+					const f32 d = glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos));
+					if(d < bestDist) { bestDist = d; best = &*it; }
+				}
+				if(best) {
+					inst.dir = glm::length(vec2(best->body->GetWorldPos() - inst.pos)) > 1.0f ? glm::normalize(vec2(best->body->GetWorldPos() - inst.pos)) : inst.dir;
+					inst.pos = vec3(vec2(best->body->GetWorldPos()), inst.pos.z);
+					RemoteHit(inst, *best);
+					inst.excludeIndex = (i32)best->index;
+				}
+				else {
+					inst.chainEnded = true;
+					destroyed = true;
+				}
+			}
+		}
+		else if(attached) {
+			if(remote.behaviorType == Remote::BehaviorType::ORBIT) {
+				const f32 radius = remote.boundSize[0] * 0.5f + ORBIT_RADIUS;
+				foreach(it, players) {
+					if(!RemoteCanAffect(inst, *it, false)) continue;
+					if(glm::length(vec2(it->body->GetWorldPos()) - vec2(instOwner.body->GetWorldPos())) <= radius + WEAPON_TARGET_RADIUS) RemoteHit(inst, *it);
+				}
+			}
+			else if(remote.boundType != Remote::BoundType::E_BOUND_NONE && remote.damageGroup != Remote::DamageGroup::eNONE) {
+				RemoteApplyArea(inst);
+			}
+		}
+		else switch(remote.behaviorType) {
 			case Remote::BehaviorType::TARGET:
 			case Remote::BehaviorType::FOLLOW_TARGET:
 			case Remote::BehaviorType::HOMING: {
@@ -1321,6 +1503,10 @@ void World::UpdateRemotes(f32 delta)
 					inst.areaDone = true;
 					RemoteApplyArea(inst);
 				}
+				else if(remote.activateCount > 1 && remote.lifeTime > 0) {
+					// lingering zone: hits again once each target's hit window expires
+					RemoteApplyArea(inst);
+				}
 			} break;
 		}
 
@@ -1342,10 +1528,15 @@ void World::UpdateRemotes(f32 delta)
 			const RemoteIdx next = remote.destroyCreateRemote;
 			const RemoteInst copy = inst;
 			remoteInsts.erase_unsorted(remoteInsts.begin() + i);
-			if(next != RemoteIdx::INVALID) {
-				const Remote* nextRemote = GetGameXmlContent().FindRemote(next);
-				const f32 nextOffset = nextRemote ? nextRemote->offsetY : 0;
-				SpawnRemote(copy.ownerIndex, next, copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.destroyedByHit && copy.clientRemoteID != 0);
+			if(!copy.chainEnded) {
+				const i32 childExclude = remote.behaviorType == Remote::BehaviorType::CHAIN ? copy.lastHitIndex : copy.excludeIndex;
+				if(next != RemoteIdx::INVALID) {
+					const Remote* nextRemote = GetGameXmlContent().FindRemote(next);
+					const f32 nextOffset = nextRemote ? nextRemote->offsetY : 0;
+					RemoteInst* child = SpawnRemote(copy.ownerIndex, next, copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.destroyedByHit && copy.clientRemoteID != 0);
+					if(child) child->excludeIndex = childExclude;
+				}
+				SpawnRemoteRules(copy, remote.onDestroy, copy.pos, childExclude, next);
 			}
 		}
 		else {

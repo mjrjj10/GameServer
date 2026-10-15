@@ -11,7 +11,7 @@
 #include "replication.h"
 #include "physics.h"
 
-struct StatusInfo;
+#include <mxm/game_content.h>
 
 struct ColliderSize
 {
@@ -313,6 +313,7 @@ struct World
 		vec3 castPos;
 		f32 angle;
 		ActorUID target;
+		bool atTarget = false;
 	};
 
 	struct RemoteInst
@@ -333,10 +334,16 @@ struct World
 		bool areaDone;
 		u32 clientRemoteID = 0;
 		bool destroyedByHit = false;
+		Time nextTimeEvent = Time::ZERO;
+		bool timeEventActive = false;
+		i32 excludeIndex = -1;
+		i32 lastHitIndex = -1;
+		bool chainEnded = false;
 	};
 
 	struct CastHit
 	{
+		RemoteIdx remoteID;
 		u32 castID;
 		u32 playerIndex;
 		Time until;
@@ -411,13 +418,15 @@ private:
 	void Explode(Player& owner, const vec3& center, f32 radius, i32 damage);
 	void RespawnPlayer(Player& player);
 	bool ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle, i32 forceAnim = -1);
-	void SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast = false, const vec3* aimPos = nullptr);
+	RemoteInst* SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast = false, const vec3* aimPos = nullptr);
 	void UpdateRemotes(f32 delta);
 	void UpdateUltimateGauges(f32 delta);
 	void ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power = 0, f32 durationOverride = -1);
 	bool HasStatusType(const Player& p, const char* type) const;
 	void HealPlayer(Player& healer, Player& target, i32 amount);
 	bool RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const;
+	void SpawnRemoteRules(const RemoteInst& parent, const Remote::SpawnRules& rules, const vec3& pos, i32 excludeIndex, RemoteIdx skipFirst);
+	void RemoteApplyShape(RemoteInst& inst);
 	void UpdateStatuses();
 	void RemoteApplyArea(RemoteInst& inst);
 	f32 LagDistToSegment(const Player& p, const vec2& a, const vec2& b) const;

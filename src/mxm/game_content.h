@@ -215,7 +215,36 @@ struct Remote
 		i32 value;
 	};
 	eastl::fixed_vector<AppliedStatus,4,false> statuses;
+	eastl::fixed_vector<AppliedStatus,4,false> friendlyStatuses;
 
+	// child remotes spawned by remote system events
+	enum SpawnKind: u8 {
+		SPAWN_SINGLE = 0,
+		SPAWN_RADIATE,
+		SPAWN_CIRCLE,
+		SPAWN_DEFAULT,
+	};
+	struct SpawnRule
+	{
+		RemoteIdx idx = RemoteIdx::INVALID;
+		u8 kind = SPAWN_SINGLE;
+		i32 maxNum = 1;
+		f32 maxAngle = 0;
+		f32 radius = 0;
+		f32 angleY = 0;
+	};
+	typedef eastl::fixed_vector<SpawnRule,4,false> SpawnRules;
+	SpawnRules onDestroy;
+	SpawnRules onTime;
+	SpawnRules onActivate;
+	SpawnRules onHitCharacter;
+	f32 timeEventDelay = -1;
+	bool timeEventRecycle = false;
+
+	bool contactFriend = false;
+	bool vsOwner = false;
+	bool attachFireObject = false;
+	f32 sight = 0;
 };
 
 struct GameXmlContent
