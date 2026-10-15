@@ -11,7 +11,7 @@
 #include "replication.h"
 #include "physics.h"
 
-#include <mxm/game_content.h>
+struct StatusInfo;
 
 struct ColliderSize
 {
@@ -31,6 +31,8 @@ struct Remote;
 
 struct World
 {
+	friend struct WorldRemoteSpawner;
+
 	struct Player;
 	struct ActorMaster;
 
@@ -425,7 +427,6 @@ private:
 	bool HasStatusType(const Player& p, const char* type) const;
 	void HealPlayer(Player& healer, Player& target, i32 amount);
 	bool RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const;
-	void SpawnRemoteRules(const RemoteInst& parent, const Remote::SpawnRules& rules, const vec3& pos, i32 excludeIndex, RemoteIdx skipFirst);
 	void RemoteApplyShape(RemoteInst& inst);
 	void UpdateStatuses();
 	void RemoteApplyArea(RemoteInst& inst);

@@ -57,6 +57,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 		desc.masterGearNo = p.masterGearNo;
 		desc.characterType = p.characterType;
 
+		LOG("Spawn :: preparing %ls masters=(%d, %d)", desc.name.data(), (i32)p.masters[0], (i32)p.masters[1]);
 		const auto& master0 = xml.GetMaster(p.masters[0]);
 		const auto& master1 = xml.GetMaster(p.masters[1]);
 
@@ -72,6 +73,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 		const auto& spawnPoints = mapSpawnPoints[p.team];
 		const SpawnPoint& spawnPoint = spawnPoints[spawnPointIndex[p.team]++ % spawnPoints.size()];
 
+		LOG("Spawn :: %ls team=%d masters=(%d, %d) skins=(%d, %d) weapons=(%d, %d)", desc.name.data(), (i32)desc.team, (i32)desc.masters[0], (i32)desc.masters[1], (i32)desc.skins[0], (i32)desc.skins[1], (i32)desc.weapons[0], (i32)desc.weapons[1]);
 		World::Player& worldPlayer = world.CreatePlayer(desc, spawnPoint.pos, RotationHumanoid{0.f, 0.f, MxmYawToWorldYaw(spawnPoint.rot.z)});
 
 		playerList.emplace_back(desc.clientHd, p.accountUID, desc.name, worldPlayer.index);

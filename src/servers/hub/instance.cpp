@@ -284,17 +284,13 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 	// make bots pick random masters
 	foreach(u, userList) {
 		if(u->isBot) {
+			// bots only use the original, fully supported characters
+			static const ClassType botMasters[] = {
+				ClassType::STRIKER, ClassType::ARTILLERY, ClassType::ASSASSIN, ClassType::ELECTRO,
+				ClassType::DEFENDER, ClassType::SNIPER, ClassType::LAUNCHER,
+			};
 			for(int attempts = 0; attempts < 1000; attempts++) {
-				const u32 r0 = RandUint() % allowedMastersSet.size();
-
-				u32 i = 0;
-				foreach_const(m, allowedMastersSet) {
-					if(i == r0) {
-						TryPickMaster(u, *m);
-						break;
-					}
-					i++;
-				}
+				TryPickMaster(u, botMasters[RandUint() % ARRAY_COUNT(botMasters)]);
 
 				if(u->Sub().classType != ClassType::NONE) {
 					break;

@@ -1163,7 +1163,15 @@ static vec2 RotateDir(const vec2& d, f32 deg)
 	return vec2(d.x * c - d.y * s, d.x * s + d.y * c);
 }
 
-void World::SpawnRemoteRules(const RemoteInst& parent, const Remote::SpawnRules& rules, const vec3& pos, i32 excludeIndex, RemoteIdx skipFirst)
+struct WorldRemoteSpawner
+{
+	static World::RemoteInst* Spawn(World& w, u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage)
+	{
+		return w.SpawnRemote(ownerIndex, idx, pos, dir, target, skillID, castID, damage);
+	}
+};
+
+static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, const Remote::SpawnRules& rules, const vec3& pos, i32 excludeIndex, RemoteIdx skipFirst)
 {
 	bool skipped = false;
 	foreach_const(rule, rules) {
@@ -1193,7 +1201,7 @@ void World::SpawnRemoteRules(const RemoteInst& parent, const Remote::SpawnRules&
 					dir = RotateDir(parent.dir, rule->angleY);
 				} break;
 			}
-			RemoteInst* inst = SpawnRemote(parent.ownerIndex, rule->idx, at + vec3(dir * child->offsetY, 0), dir, parent.target, parent.skillID, parent.castID, parent.damage);
+			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, rule->idx, at + vec3(dir * child->offsetY, 0), dir, parent.target, parent.skillID, parent.castID, parent.damage);
 			if(inst) inst->excludeIndex = excludeIndex;
 		}
 	}
@@ -1245,8 +1253,8 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	if(!remote.onActivate.empty() || !remote.onHitCharacter.empty()) {
 		const RemoteInst copy = inst;
 		const vec3 at = vec3(vec2(target.body->GetWorldPos()), inst.pos.z);
-		SpawnRemoteRules(copy, remote.onActivate, at, -1, RemoteIdx::INVALID);
-		SpawnRemoteRules(copy, remote.onHitCharacter, at, (i32)target.index, RemoteIdx::INVALID);
+		SpawnRemoteRules(*this, copy, remote.onActivate, at, -1, RemoteIdx::INVALID);
+		SpawnRemoteRules(*this, copy, remote.onHitCharacter, at, (i32)target.index, RemoteIdx::INVALID);
 	}
 
 	if(enemy) {
@@ -1398,7 +1406,7 @@ void World::UpdateRemotes(f32 delta)
 			if(remote.timeEventRecycle && remote.timeEventDelay > 0.01f) inst.nextTimeEvent = TimeAdd(inst.nextTimeEvent, TimeMsToTime(remote.timeEventDelay * 1000.0));
 			else inst.timeEventActive = false;
 			const RemoteInst copy = inst;
-			SpawnRemoteRules(copy, remote.onTime, copy.pos, copy.excludeIndex, RemoteIdx::INVALID);
+			SpawnRemoteRules(*this, copy, remote.onTime, copy.pos, copy.excludeIndex, RemoteIdx::INVALID);
 		}
 
 		if(destroyed) {
@@ -1536,7 +1544,7 @@ void World::UpdateRemotes(f32 delta)
 					RemoteInst* child = SpawnRemote(copy.ownerIndex, next, copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.destroyedByHit && copy.clientRemoteID != 0);
 					if(child) child->excludeIndex = childExclude;
 				}
-				SpawnRemoteRules(copy, remote.onDestroy, copy.pos, childExclude, next);
+				SpawnRemoteRules(*this, copy, remote.onDestroy, copy.pos, childExclude, next);
 			}
 		}
 		else {
