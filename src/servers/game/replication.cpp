@@ -920,6 +920,12 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 		end.Write<u16>(0); // otherSelectList
 		end.Write<u32>(0); // spSlotIndex
 		SendPacket(clientHd, end);
+
+		// client RE: SA_RestartPvpEntryLeave (errcode 0) calls SHOW_PVP_RESULT_BUTTON(1), enabling the
+		// result screen's return button (it starts disabled; its click sends the return to the city)
+		Sv::SA_RestartPvpEntryLeave leave;
+		leave.errcode = 0;
+		SendPacket(clientHd, leave);
 	}
 	LOG("Replication :: game end (red %d - blue %d)", redScore, blueScore);
 }

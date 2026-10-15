@@ -184,9 +184,9 @@ void Game::Update(Time localTime_)
 				if(limit <= 0) limit = 300.0f;
 				if(TimeDiffSec(TimeDiff(tGameStarted, localTime)) >= limit) EndGame();
 			}
-			// the result screen's return button stays disabled on this client: send everyone back to the lobby
-			// after a delay of our own (not from data) leaving time to read the results
-			if(gameEnded && !sentBackToLobby && TimeDiffSec(TimeDiff(tGameEnded, localTime)) >= 15.0) {
+			// fallback if a player never clicks the result screen's return button: send everyone back to the lobby
+			// after a delay of our own (not from data)
+			if(gameEnded && !sentBackToLobby && TimeDiffSec(TimeDiff(tGameEnded, localTime)) >= 60.0) {
 				sentBackToLobby = true;
 				foreach_const(p, playerList) {
 					if(p->clientHd != ClientHandle::INVALID) OnPlayerReturnToChannel(p->clientHd);
