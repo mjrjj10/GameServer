@@ -2589,6 +2589,34 @@ inline const char* PacketSerialize<Sv::SN_AddStatus>(const void* packetData, con
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SA_SkillSelect>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SA_SkillSelect(%d, %d) :: {", Sv::SA_SkillSelect::NET_ID, packetSize);
+	SER("	characterID=%u", buff.Read<u32>());
+	SER("	result=%u", buff.Read<u32>());
+	SER("	skill=%u", buff.Read<u32>());
+	SER("	slot=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_SkillSelect>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_SkillSelect(%d, %d) :: {", Sv::SN_SkillSelect::NET_ID, packetSize);
+	SER("	userId=%u", buff.Read<u32>());
+	SER("	characterID=%u", buff.Read<u32>());
+	SER("	skill=%u", buff.Read<u32>());
+	SER("	slot=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_Gauge>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

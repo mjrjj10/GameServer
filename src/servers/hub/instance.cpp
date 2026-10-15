@@ -587,30 +587,22 @@ void RoomInstance::OnClientPacket(ClientHandle clientHd, const NetHeader& header
 		} break;
 
 		case Cl::CQ_RoomEquipSkill::NET_ID: {
-			// client sender 0x58f99a writes 3 u32: the master (local id), the skill and the slot
+			// client sender 0x58f99a: u32 master local id, u32 skill, u32 slot (0/1)
 			User* user = FindUser(clientHd);
 			if(!user || packetSize < 12) break;
 			u32 v[3];
 			memmove(v, packetData, sizeof(v));
 			NT_LOG("[client%x] Client :: CQ_RoomEquipSkill :: %u %u %u", clientHd, v[0], v[1], v[2]);
-			const GameXmlContent& content = GetGameXmlContent();
-			SkillID skill = SkillID::INVALID;
-			i32 slot = -1;
+			const u32 characterID = v[0];
+			const SkillID skill = SkillID(v[1]);
+			const i32 slot = (i32)v[2];
+			const ClassType cls = ClassType((i32)characterID - (i32)LocalActorID::FIRST_SELF_MASTER);
 			i32 masterIndex = -1;
-			for(int i = 0; i < 3; i++) {
-				if(v[i] >= 180000000 && v[i] < 190000000) skill = SkillID(v[i]);
+			for(int mi = 0; mi < 2; mi++) {
+				if(user->masters[mi].classType == cls) masterIndex = mi;
 			}
-			for(int mi = 0; mi < 2 && skill != SkillID::INVALID; mi++) {
-				if(user->masters[mi].classType == ClassType::NONE) continue;
-				const auto& master = content.GetMaster(user->masters[mi].classType);
-				if(eastl::find(master.skillIDs.begin(), master.skillIDs.end(), skill) != master.skillIDs.end()) masterIndex = mi;
-			}
-			for(int i = 0; i < 3; i++) {
-				if(v[i] <= 2) slot = (i32)v[i];
-			}
-			if(slot == 2) slot = 1; // 1-based
-			if(masterIndex < 0 || slot < 0) {
-				WARN("[client%x] CQ_RoomEquipSkill not understood (%u %u %u)", clientHd, v[0], v[1], v[2]);
+			if(masterIndex < 0 || slot < 0 || slot > 1) {
+				WARN("[client%x] CQ_RoomEquipSkill ignored (%u %u %u): master not picked", clientHd, v[0], v[1], v[2]);
 				break;
 			}
 			auto& skills = user->masters[masterIndex].skills;
@@ -618,6 +610,20 @@ void RoomInstance::OnClientPacket(ClientHandle clientHd, const NetHeader& header
 			skills[slot] = skill;
 			user->replicate.masterPick = true;
 			LOG("[Room] %ls equips skill %d in slot %d of master %d", user->name.data(), (i32)skill, slot, masterIndex);
+
+			// answers matching the request fields (characterID, result, skill, slot)
+			Sv::SA_SkillSelect ack;
+			ack.characterID = characterID;
+			ack.result = 0;
+			ack.dwSkillIndex = (u32)skill;
+			ack.dwSkillSlot = (u32)slot;
+			SendPacket(clientHd, ack);
+			Sv::SN_SkillSelect notify;
+			notify.userId = (u32)user->userID;
+			notify.characterID = characterID;
+			notify.dwSkillIndex = (u32)skill;
+			notify.dwSkillSlot = (u32)slot;
+			SendPacket(clientHd, notify);
 		} break;
 
 		case Cl::CQ_RoomSwapSkill::NET_ID: {
