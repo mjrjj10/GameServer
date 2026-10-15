@@ -406,7 +406,7 @@ struct World
 	ActorDynamic& SpawnDynamic(CreatureIndex docID, i32 localID);
 
 	Player& GetPlayer(u32 playerIndex);
-	bool PlayerDodge(Player& player, i32 actionID);
+	bool PlayerDodge(Player& player, i32 skillID);
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActorByCreatureID(CreatureIndex docID); // Warning: slow!

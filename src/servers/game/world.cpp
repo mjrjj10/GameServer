@@ -577,6 +577,11 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 	const auto& skill = skillFound->second;
 	const ActionStateID actionState = skill.action;
 
+	if(GetGameXmlContent().GetSkillConsumeStamina((i32)skillID) > 0 && !PlayerDodge(player, (i32)skillID)) {
+		LOG("Dodge :: %ls refused (not enough stamina)", player.name.data());
+		return;
+	}
+
 	const f32 angle = player.input.rot.upperYaw;
 	const vec2 dir = vec2(cosf(angle), sinf(angle));
 
@@ -980,13 +985,11 @@ void World::UpdateUltimateGauges(f32 delta)
 	}
 }
 
-bool World::PlayerDodge(Player& player, i32 actionID)
+bool World::PlayerDodge(Player& player, i32 skillID)
 {
-	// dodge (shirk) skill of the master: 1800xx002, cost SKILL.xml _ConsumeStamina
-	const ClassType cls = player.Main().classType;
-	const i32 shirkSkill = 180000002 + (i32)cls * 10000;
-	const f32 cost = GetGameXmlContent().GetSkillConsumeStamina(shirkSkill);
-	LOG("Dodge :: %ls action=%d stamina=%.0f cost=%.0f", player.name.data(), actionID, player.stamina, cost);
+	// dodge = SKILL_TYPE_SHIRK skill cast (right click), cost SKILL.xml _ConsumeStamina
+	const f32 cost = GetGameXmlContent().GetSkillConsumeStamina(skillID);
+	LOG("Dodge :: %ls skill=%d stamina=%.0f cost=%.0f", player.name.data(), skillID, player.stamina, cost);
 	if(cost <= 0 || player.stamina < 0) return true;
 	if(player.stamina < cost) return false;
 	player.stamina -= cost;

@@ -613,7 +613,7 @@ void Game::OnPlayerJump(ClientHandle clientHd, ActorUID actorUID, f32 rotate, f3
 	World::Player& player = world.GetPlayer(p.playerIndex);
 	ASSERT(player.clientHd == clientHd);
 
-	if(!world.PlayerDodge(player, actionID)) return;
+	(void)actionID;
 	player.input.jump = 1;
 }
 
