@@ -1657,6 +1657,10 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			if(!st) continue;
 			const f32 duration = st->durationSec > 0 ? st->durationSec : 1.0f;
 			replication->SendAddStatusToAll(c->index, npc.UID, owner.Main().UID, duration, npc.pos, npc.pos, 0);
+			if(st->type == "STATUS_TYPE_SUICIDE") {
+				const Time at = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
+				if(npc.despawnAt == Time::ZERO || at < npc.despawnAt) npc.despawnAt = at;
+			}
 			LOG("Summon :: creature=%d self status %d (%s)", (i32)npc.docID, c->index, st->type.c_str());
 			if(st->auraStatus != 0 && st->targetingRange > 0 && !groundAuras.full()) {
 				GroundAura ga;
@@ -1670,7 +1674,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			}
 		}
 		else if(c->kind == SummonCommand::DIE) {
-			npc.despawnAt = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
+			npc.dieMode = c->dieMode;
 		}
 	}
 }
@@ -1905,7 +1909,10 @@ void World::UpdateSummons()
 			const SummonInfo* info = GetGameXmlContent().FindSummon((i32)it->docID);
 			if(info) {
 				f32 t = 0;
+				u8 wanted = 0;
+				foreach_const(c, info->onDie) if(c->dieMode == it->dieMode) wanted = it->dieMode;
 				foreach_const(c, info->onDie) {
+					if(c->dieMode != wanted) continue;
 					if(!pendingSummonCommands.full()) {
 						PendingSummonCommand pc;
 						pc.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));

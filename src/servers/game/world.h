@@ -246,6 +246,7 @@ struct World
 		u8 ai = 0;
 		ActorUID chaseTarget = ActorUID::INVALID;
 		bool stuck = false;
+		u8 dieMode = 0;
 		Time nextMoveSync = Time::ZERO;
 
 		vec3 pos;

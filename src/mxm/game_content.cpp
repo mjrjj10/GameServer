@@ -2285,7 +2285,13 @@ bool GameXmlContent::LoadStatusData()
 				SummonCommand cmd;
 				if(EA::StdC::Strcmp(type, "REMOTE") == 0) { cmd.kind = SummonCommand::REMOTE; pA->QueryAttribute("RemoteIndex", &cmd.index); }
 				else if(EA::StdC::Strcmp(type, "STATUS") == 0) { cmd.kind = SummonCommand::STATUS; pA->QueryAttribute("StatusIndex", &cmd.index); }
-				else if(EA::StdC::Strcmp(type, "DIE_MODE") == 0) cmd.kind = SummonCommand::DIE;
+				else if(EA::StdC::Strcmp(type, "DIE_MODE") == 0) {
+					cmd.kind = SummonCommand::DIE;
+					const char* p1 = nullptr;
+					pA->QueryStringAttribute("Param1", &p1);
+					i32 mode = 0;
+					if(p1 && EA::StdC::Sscanf(p1, "CUSTOM_DIE_MODE_%d", &mode) == 1) cmd.dieMode = (u8)mode;
+				}
 				else continue;
 				if(cmd.kind != SummonCommand::DIE && cmd.index == 0) continue;
 				pA->QueryFloatAttribute("Delay", &cmd.delay);
@@ -2296,7 +2302,11 @@ bool GameXmlContent::LoadStatusData()
 				pA->QueryStringAttribute("VariationType", &var);
 				foreach(it, summonMap) {
 					if(it->second.className != cls) continue;
-					if(var) {
+					i32 dieMode = 0;
+					if(var && die && EA::StdC::Sscanf(var, "CUSTOM_DIE_MODE_%d", &dieMode) == 1) {
+						cmd.dieMode = (u8)dieMode;
+					}
+					else if(var) {
 						i32 v = -1;
 						if(EA::StdC::Sscanf(var, "STATS_VARIATION_TYPE_%d", &v) == 1) { if(v != it->second.variation) continue; }
 						else if(EA::StdC::Strcmp(var, "STANCE_TYPE_DEFAULT") != 0) continue;

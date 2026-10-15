@@ -1206,10 +1206,10 @@ void Replication::SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec
 		packet.upperBodyYaw = (i16)(yawDeg * 100.0f);
 		packet.lowerBodyYaw = (i16)(yawDeg * 100.0f);
 		packet.angularSpeed = 0;
-		packet.linearSpeed = (u16)speed;
+		packet.linearSpeed = (u16)MIN(speed * 5.0f, 65535.0f);
 		packet.currPos = v2f(pos);
 		packet.goalPos = v2f(goal);
-		packet.movingFlags = 1;
+		packet.movingFlags = 0;
 		SendPacket(clientHd, packet);
 	}
 }

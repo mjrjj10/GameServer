@@ -116,6 +116,7 @@ struct SummonCommand
 	enum Kind: u8 { REMOTE = 0, STATUS, DIE };
 	Kind kind = REMOTE;
 	bool onCurrent = false;
+	u8 dieMode = 0;
 	i32 index = 0;     // RemoteIndex / StatusIndex
 	f32 delay = 0;     // time after the previous command
 };
