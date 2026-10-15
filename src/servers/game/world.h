@@ -510,6 +510,9 @@ struct World
 		u32 prevCaster = 0;
 		i32 phase = 0;
 		vec3 mid = vec3(0);
+		vec2 dir = vec2(1, 0);
+		i32 probeDir = 0;
+		f32 groundZ = 0;
 		vec3 anchor = vec3(0);
 		f32 yaw = 0;
 	} showcase;

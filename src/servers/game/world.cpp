@@ -1798,14 +1798,38 @@ void World::UpdateShowcase()
 		LOG("Showcase :: start wall=%lld bots=%d probe=(%.0f, %.0f, %.0f)", ShowcaseWallMs(), (i32)bots.size(), showcase.mid.x, showcase.mid.y, showcase.mid.z);
 		return;
 	}
+	static const vec2 probeDirs[4] = { vec2(1, 0), vec2(-1, 0), vec2(0, 1), vec2(0, -1) };
+	static const f32 probeDist[4] = { 400.0f, 800.0f, 1200.0f, 1600.0f };
 	if(showcase.phase == 0) {
-		const vec3 ground = players[bots[0]].body->GetWorldPos();
-		showcase.anchor = vec3(showcase.mid.x - 300.0f, showcase.mid.y, ground.z);
+		showcase.groundZ = players[bots[0]].body->GetWorldPos().z;
+		showcase.phase = 2;
+		showcase.probeDir = 0;
+		for(int k = 0; k < 4 && k < (i32)bots.size(); k++) TeleportPlayer(players[bots[k]], showcase.mid + vec3(probeDirs[0] * probeDist[k], 0), 0);
+		showcase.next = TimeAdd(localTime, TimeMsToTime(2500));
+		return;
+	}
+	if(showcase.phase == 2) {
+		f32 dev = 0;
+		for(int k = 0; k < 4 && k < (i32)bots.size(); k++) dev = MAX(dev, fabsf(players[bots[k]].body->GetWorldPos().z - showcase.groundZ));
+		LOG("Showcase :: probe dir=(%.0f, %.0f) max deviation=%.0f", probeDirs[showcase.probeDir].x, probeDirs[showcase.probeDir].y, dev);
+		if(dev > 15.0f && showcase.probeDir < 3) {
+			showcase.probeDir++;
+			for(int k = 0; k < 4 && k < (i32)bots.size(); k++) TeleportPlayer(players[bots[k]], showcase.mid + vec3(probeDirs[showcase.probeDir] * probeDist[k], 0), 0);
+			showcase.next = TimeAdd(localTime, TimeMsToTime(2500));
+			return;
+		}
+		showcase.dir = probeDirs[showcase.probeDir];
+		showcase.phase = 0;
+	}
+	if(showcase.phase == 0) {
+		const vec3 ground = vec3(0, 0, showcase.groundZ);
+		showcase.anchor = vec3(vec2(showcase.mid), ground.z);
 		showcase.phase = 1;
 		foreach(it, players) {
 			if(it->clientHd == ClientHandle::INVALID) TeleportPlayer(*it, it->spawnPos, 0);
 		}
-		const vec3 humanPos = showcase.anchor + vec3(-250, -250, 0);
+		const vec2 perp = vec2(-showcase.dir.y, showcase.dir.x);
+		const vec3 humanPos = showcase.anchor + vec3(showcase.dir * -250.0f - perp * 250.0f, 0);
 		TeleportPlayer(*human, humanPos, 0);
 		replication->SendReviveToAll(human->userID, human->Main().UID, human->Sub().UID, humanPos);
 		LOG("Showcase :: ground z=%.0f anchor=(%.0f, %.0f, %.0f)", ground.z, showcase.anchor.x, showcase.anchor.y, showcase.anchor.z);
@@ -1830,7 +1854,7 @@ void World::UpdateShowcase()
 	Player& caster = players[bots[showcase.casterSlot]];
 	Player& dummy = players[bots[showcase.dummySlot]];
 	const vec3 casterPos = showcase.anchor;
-	vec3 dummyPos = showcase.anchor + vec3(650, 0, 0);
+	vec3 dummyPos = showcase.anchor + vec3(showcase.dir * 650.0f, 0);
 
 	if(caster.dead || dummy.dead) {
 		if(caster.dead) RespawnPlayer(caster);
@@ -1847,7 +1871,7 @@ void World::UpdateShowcase()
 			if(it->targetIndex == showcase.prevDummy && it->casterIndex == showcase.prevCaster) hit = true;
 		}
 		const bool ok = showcase.prevExpect < 0 || (showcase.prevExpect == 1) == hit;
-		LOG("Showcase :: result hit=%d expect=%d %s damage=%d", hit ? 1 : 0, showcase.prevExpect, ok ? "OK" : "MISMATCH", showcase.lastDummyHp - pd.Main().hp);
+		LOG("Showcase :: result hit=%d expect=%d %s damage=%d dummyZ=%.0f groundZ=%.0f", hit ? 1 : 0, showcase.prevExpect, ok ? "OK" : "MISMATCH", showcase.lastDummyHp - pd.Main().hp, pd.body->GetWorldPos().z, showcase.groundZ);
 	}
 
 	const ClassType cls = caster.Main().classType;
@@ -1855,8 +1879,10 @@ void World::UpdateShowcase()
 	const i32 step = showcase.step;
 
 	foreach(c, dummy.characters) { (*c)->hp = (*c)->hpMax; replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax); }
-	TeleportPlayer(dummy, dummyPos, PI);
-	TeleportPlayer(caster, casterPos, 0);
+	const f32 faceCaster = atan2f(-showcase.dir.y, -showcase.dir.x);
+	const f32 faceDummy = atan2f(showcase.dir.y, showcase.dir.x);
+	TeleportPlayer(dummy, dummyPos, faceCaster);
+	TeleportPlayer(caster, casterPos, faceDummy);
 	foreach(it, activeStatuses) {
 		if(it->targetIndex == dummy.index || it->targetIndex == caster.index) {
 			if(!it->info || !it->info->permanent) it->until = localTime;
@@ -1907,11 +1933,11 @@ void World::UpdateShowcase()
 		}
 		showcase.testCount = (i32)tests.size();
 		const T& t = tests[MIN(showcase.rangeIdx, (i32)tests.size() - 1)];
-		dummyPos = showcase.anchor + vec3(t.dist, 0, 0);
-		castPos = dummyPos + vec3(0, t.side, 0);
+		dummyPos = showcase.anchor + vec3(showcase.dir * t.dist, 0);
+		castPos = dummyPos + vec3(vec2(-showcase.dir.y, showcase.dir.x) * t.side, 0);
 		testName = t.name;
 		expect = t.expect;
-		TeleportPlayer(dummy, dummyPos, PI);
+		TeleportPlayer(dummy, dummyPos, faceCaster);
 	}
 	else if(step == 0) {
 		const u32 wm = caster.mainCharaID & 1;
@@ -1936,11 +1962,11 @@ void World::UpdateShowcase()
 		}
 		showcase.testCount = (i32)tests.size();
 		const T& t = tests[MIN(showcase.rangeIdx, (i32)tests.size() - 1)];
-		dummyPos = showcase.anchor + vec3(t.dist, 0, 0);
-		castPos = dummyPos + vec3(0, t.side, 0);
+		dummyPos = showcase.anchor + vec3(showcase.dir * t.dist, 0);
+		castPos = dummyPos + vec3(vec2(-showcase.dir.y, showcase.dir.x) * t.side, 0);
 		testName = t.name;
 		expect = t.expect;
-		TeleportPlayer(dummy, dummyPos, PI);
+		TeleportPlayer(dummy, dummyPos, faceCaster);
 	}
 	showcase.lastDummyHp = dummy.Main().hp;
 	showcase.pendingResult = step <= 6 && (step == 0 || skill != 0);
