@@ -248,6 +248,10 @@ static eastl::fixed_vector<LastLeader,64,true> g_lastLeader;
 void HubGame::OnPlayerEnterCity(ClientHandle clientHd)
 {
 	const i32 userID = plidMap->Get(clientHd);
+	if(Config().DevShowcase && playerAccountData[userID] && playerMap[userID]->partyUID == PartyUID::INVALID) {
+		LOG("[client%x] HubGame :: showcase, auto dispatch", clientHd);
+		OnCreateParty(clientHd, EntrySystemID::ARENA_3v3, StageType::PVP_GAME);
+	}
 	if(playerActorUID[userID] != ActorUID::INVALID || !playerAccountData[userID]) return;
 	LocalActorID characterID = LocalActorID((u32)LocalActorID::FIRST_SELF_MASTER + 35); // Lua
 	SkinIndex skin = SkinIndex::DEFAULT;
@@ -256,10 +260,6 @@ void HubGame::OnPlayerEnterCity(ClientHandle clientHd)
 	}
 	LOG("[client%x] HubGame :: entered the city without a leader character, spawning the last one", clientHd);
 	OnPlayerSetLeaderCharacter(clientHd, characterID, skin);
-	if(Config().DevShowcase) {
-		LOG("[client%x] HubGame :: showcase, auto dispatch", clientHd);
-		OnCreateParty(clientHd, EntrySystemID::ARENA_3v3, StageType::PVP_GAME);
-	}
 }
 
 void HubGame::OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID characterID, SkinIndex skinIndex)
