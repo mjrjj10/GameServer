@@ -1725,7 +1725,8 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		inst.landZ = aimPos->z;
 		inst.hasLandZ = true;
 	}
-	else if(stopAtTarget && aimPos && glm::length(vec2(*aimPos)) > 1.0f && inst.speed > 0) {
+	inst.stopAtFirstHit = stopAtTarget;
+	if(stopAtTarget && remote->behaviorType != Remote::BehaviorType::GRAPH && aimPos && glm::length(vec2(*aimPos)) > 1.0f && inst.speed > 0) {
 		// DestroyAwayTarget: the remote ends at the aimed point
 		const f32 aimDist = glm::length(vec2(*aimPos) - vec2(pos));
 		inst.range = inst.range > 0 ? MIN(aimDist, inst.range) : aimDist;
@@ -2172,6 +2173,7 @@ void World::UpdateRemotes(f32 delta)
 							if(!LagSegmentHits(*it, from, to, halfWidth + PROJECTILE_TARGET_RADIUS + PROJECTILE_HIT_TOLERANCE, PROJECTILE_TARGET_RADIUS)) continue;
 							RemoteHit(inst, *it);
 							inst.hitsLeft--;
+							if(inst.stopAtFirstHit && it->team != players[inst.ownerIndex].team) inst.hitsLeft = 0;
 							if(inst.hitsLeft <= 0) {
 								if(inst.clientRemoteID != 0) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
 								inst.destroyedByHit = true;

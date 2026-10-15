@@ -364,6 +364,7 @@ struct World
 		bool casterLocal = false; // the caster's client creates this remote (and its children) itself
 		f32 landZ = 0;            // lobbed remotes: height of the aimed point
 		vec3 graphStart = vec3(0);
+		bool stopAtFirstHit = false; // DestroyAwayTarget: ends on the first enemy hit (or at the aimed point)
 		vec2 graphDir = vec2(1, 0);
 		bool hasLandZ = false;
 	};
