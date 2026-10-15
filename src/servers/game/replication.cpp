@@ -794,7 +794,7 @@ void Replication::SendPlayerJump(ClientHandle clientHd, ActorUID mainActorUID, f
 	SendPacket(clientHd, packet);
 }
 
-void Replication::SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, SkillID skillID, i32 damage, i32 hp, i32 hpMax)
+void Replication::SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, SkillID skillID, i32 damage, i32 hp, i32 hpMax, u32 damageType)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
@@ -809,7 +809,7 @@ void Replication::SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, Skil
 		dmg.attID = (u32)attackerLocalID;
 		dmg.statusDocID = 0;
 		dmg.skillDocID = skillID == SkillID::INVALID ? 0 : (u32)skillID;
-		dmg.damageType = 0;
+		dmg.damageType = damageType;
 		dmg.damage = (u32)damage;
 		dmg.masterGroupingDamage = (u32)damage;
 		SendPacket(clientHd, dmg);
@@ -907,7 +907,7 @@ void Replication::RelayWeaponState(ClientHandle senderHd, ActorUID ownerUID, i32
 	}
 }
 
-void Replication::SendRemoteDamageToAll(u32 remoteID, RemoteIdx remoteDoc, ActorUID attackerUID, ActorUID targetUID, const vec3& hitPos, const vec2& hitDir, i32 damage, i32 hp, i32 hpMax)
+void Replication::SendRemoteDamageToAll(u32 remoteID, RemoteIdx remoteDoc, ActorUID attackerUID, ActorUID targetUID, const vec3& hitPos, const vec2& hitDir, i32 damage, i32 hp, i32 hpMax, u32 damageType)
 {
 	static u32 damageSeq = 1;
 	const u32 seq = damageSeq++;
@@ -932,7 +932,7 @@ void Replication::SendRemoteDamageToAll(u32 remoteID, RemoteIdx remoteDoc, Actor
 		packet.Write<float3>(dir3);
 		packet.Write<float3>(pos3);
 		packet.Write<float3>(dir3);
-		packet.Write<u32>(0);
+		packet.Write<u32>(damageType);
 		packet.Write<u32>(0);
 		packet.Write<u32>(0);
 		packet.Write<u32>(0);

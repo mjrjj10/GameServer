@@ -293,12 +293,12 @@ struct Replication
 	void SendGameStart(ClientHandle clientHd);
 	void SendPlayerTag(ClientHandle clientHd, ActorUID mainActorUID, ActorUID subActorUID);
 	void SendPlayerJump(ClientHandle clientHd, ActorUID mainActorUID, f32 rotate, f32 moveDirX, f32 moveDirY);
-	void SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, SkillID skillID, i32 damage, i32 hp, i32 hpMax);
+	void SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, SkillID skillID, i32 damage, i32 hp, i32 hpMax, u32 damageType = 0);
 	void SendHpToAll(ActorUID actorUID, i32 hp, i32 hpMax);
 	void SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 max);
 	void SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration);
 	void SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID);
-	void SendRemoteDamageToAll(u32 remoteID, RemoteIdx remoteDoc, ActorUID attackerUID, ActorUID targetUID, const vec3& hitPos, const vec2& hitDir, i32 damage, i32 hp, i32 hpMax);
+	void SendRemoteDamageToAll(u32 remoteID, RemoteIdx remoteDoc, ActorUID attackerUID, ActorUID targetUID, const vec3& hitPos, const vec2& hitDir, i32 damage, i32 hp, i32 hpMax, u32 damageType = 0);
 	void SendAttackActionToOthers(ClientHandle senderHd, ActorUID actorUID, f32 mxmYaw);
 	void SendDestroyRemoteToAll(u32 remoteID);
 	void SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject = L"Scene Root");

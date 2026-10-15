@@ -607,12 +607,13 @@ void Game::OnPlayerTag(ClientHandle clientHd, ActorUID actorUID)
 	player.input.tag = 1;
 }
 
-void Game::OnPlayerJump(ClientHandle clientHd, ActorUID actorUID, f32 rotate, f32 moveDirX, f32 moveDirY)
+void Game::OnPlayerJump(ClientHandle clientHd, ActorUID actorUID, f32 rotate, f32 moveDirX, f32 moveDirY, i32 actionID)
 {
 	Player& p = *playerMap.at(clientHd);
 	World::Player& player = world.GetPlayer(p.playerIndex);
 	ASSERT(player.clientHd == clientHd);
 
+	if(!world.PlayerDodge(player, actionID)) return;
 	player.input.jump = 1;
 }
 

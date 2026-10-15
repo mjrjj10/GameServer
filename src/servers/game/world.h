@@ -107,7 +107,9 @@ struct World
 		PhysicsDynamicBody* body = nullptr;
 
 		bool weaponFired = false;
-		f32 ultGauge = 100.0f;
+		f32 ultGauge = -1.0f; // initialised to the master's max on first update
+		f32 stamina = -1.0f;
+		Time tNextStaminaSend = Time::ZERO;
 		f32 ultGaugeSent = -1.0f;
 		Time tNextUltSend = Time::ZERO;
 		f32 shotLeadSec = 0;
@@ -401,6 +403,7 @@ struct World
 	ActorDynamic& SpawnDynamic(CreatureIndex docID, i32 localID);
 
 	Player& GetPlayer(u32 playerIndex);
+	bool PlayerDodge(Player& player, i32 actionID);
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActorByCreatureID(CreatureIndex docID); // Warning: slow!

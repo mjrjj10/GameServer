@@ -1559,6 +1559,7 @@ bool GameXmlContent::LoadRemoteData()
 					if(st.statusID != 0 && !remote.friendlyStatuses.full()) remote.friendlyStatuses.push_back(st);
 				}
 				remote.attachFireObject = XmlAttrTrue(pComp, "_AttachFireObject");
+				pComp->QueryFloatAttribute("_CriticalRate", &remote.criticalRate);
 				remote.activateCount = _ActivateCount;
 				remote.lifeTime = _LifeTime;
 				pComp->QueryFloatAttribute("_AttackMultiplier", &remote.attackMultiplier);
@@ -1921,6 +1922,10 @@ bool GameXmlContent::LoadStatusData()
 			i32 skillID = 0;
 			pInfo->QueryAttribute("ID", &skillID);
 			XMLElement* pCommon = pInfo->FirstChildElement("ST_COMMONSKILL");
+			if(pCommon) {
+				f32 stamina = 0;
+				if(pCommon->QueryFloatAttribute("_ConsumeStamina", &stamina) == XML_SUCCESS && stamina > 0) skillConsumeStamina[skillID] = stamina;
+			}
 			XMLElement* pEvent = pCommon ? pCommon->FirstChildElement("_HitEvent") : nullptr;
 			if(!pEvent) continue;
 			const char* type = nullptr;

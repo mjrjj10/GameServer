@@ -2,6 +2,47 @@
 #include <mxm/game_content.h>
 
 static const f32 COMBAT_ATTACK_STAT = 0.0f; // skill power only comes from in-game ability upgrades (CREATURE_CHARACTER _STAT_UP), none yet
+static const i32 STAT_STAMINA = 2;
+static const i32 STAT_STAMINAREGEN = 5;
+static const i32 STAT_CRITICALRATE = 9;
+static const i32 STAT_CRITICALDAMAGE = 10;
+static const i32 STAT_ULTIMATE = 37;
+static const i32 STAT_ULTIMATEREGEN = 42;
+static const i32 STAT_SKILL_CRITICALRATE = 63;
+static const i32 STAT_SKILL_CRITICALDAMAGE = 64;
+static const u32 PACKET_DAMAGE_TYPE_NORMAL = 0;   // client enum PACKET_DAMAGE_TYPE
+static const u32 PACKET_DAMAGE_TYPE_CRITICAL = 2;
+static const i32 STAT_ELEMENT_DAMAGE_BONUS = 54;       // weapon damage bonus % (CHARACTER_BASE_STATS)
+static const i32 STAT_ELEMENT_SKILL_DAMAGE_BONUS = 55; // skill damage bonus % (CHARACTER_BASE_STATS)
+
+static f32 MasterStat(ClassType classType, i32 statType)
+{
+	const auto& master = GetGameXmlContent().GetMaster(classType);
+	foreach_const(st, master.baseStats) {
+		if(st->type == statType) return st->value;
+	}
+	return 0;
+}
+
+// affinity triangle: Argent (red) > Helix (green) > Kinetic (blue) > Argent
+static bool ElementBeats(i32 a, i32 b)
+{
+	return (a == 1 && b == 2) || (a == 2 && b == 3) || (a == 3 && b == 1);
+}
+
+static f32 ElementMultiplier(const World::Player& attacker, const World::Player& target, bool skill)
+{
+	const auto& content = GetGameXmlContent();
+	const ClassType ac = attacker.Main().classType;
+	const i32 ea = content.GetCreatureElement((i32)content.GetMaster(ac).ID);
+	const i32 et = content.GetCreatureElement((i32)content.GetMaster(target.Main().classType).ID);
+	const i32 stat = skill ? STAT_ELEMENT_SKILL_DAMAGE_BONUS : STAT_ELEMENT_DAMAGE_BONUS;
+	// advantage: attacker deals +bonus% to the element it counters, and takes -bonus% from it
+	if(ElementBeats(ea, et)) return 1.0f + MasterStat(ac, stat) / 100.0f;
+	if(ElementBeats(et, ea)) return 1.0f - MasterStat(target.Main().classType, stat) / 100.0f;
+	return 1.0f;
+}
+
 static const i32 WEAPON_HIT_DAMAGE = 120;
 static const f64 WEAPON_HIT_INTERVAL_MS = 80.0;
 static const f32 WEAPON_PROJECTILE_SPEED = 4000.0f;
@@ -874,21 +915,47 @@ void World::OnWeaponAimPacket(Player& player, f32 aimYaw)
 	player.pendingAimTime = localTime;
 }
 
-static const f32 ULTIMATE_GAUGE_MAX = 100.0f;
-static const f32 ULTIMATE_RECHARGE_SEC = 45.0f;
-
 void World::UpdateUltimateGauges(f32 delta)
 {
 	foreach(it, players) {
 		if(it->clientHd == ClientHandle::INVALID) continue;
-		it->ultGauge = MIN(it->ultGauge + ULTIMATE_GAUGE_MAX / ULTIMATE_RECHARGE_SEC * delta, ULTIMATE_GAUGE_MAX);
+		const ClassType cls = it->Main().classType;
+
+		const f32 ultMax = MAX(MasterStat(cls, STAT_ULTIMATE), 1.0f);
+		if(it->ultGauge < 0) it->ultGauge = ultMax;
+		it->ultGauge = MIN(it->ultGauge + MasterStat(cls, STAT_ULTIMATEREGEN) * delta, ultMax);
+
+		const f32 staminaMax = MasterStat(cls, STAT_STAMINA);
+		if(staminaMax > 0) {
+			if(it->stamina < 0) it->stamina = staminaMax;
+			it->stamina = MIN(it->stamina + MasterStat(cls, STAT_STAMINAREGEN) * delta, staminaMax);
+			if(localTime >= it->tNextStaminaSend) {
+				it->tNextStaminaSend = TimeAdd(localTime, TimeMsToTime(250));
+				replication->SendStatToAll(it->Main().UID, STAT_STAMINA, it->stamina, staminaMax);
+			}
+		}
+
 		if(localTime < it->tNextUltSend) continue;
 		it->tNextUltSend = TimeAdd(localTime, TimeMsToTime(1000));
 		it->ultGaugeSent = it->ultGauge;
 		foreach(c, it->characters) {
-			replication->SendStatToAll((*c)->UID, (i32)StatType::STAT_TYPE_ULTIMATE, it->ultGauge, ULTIMATE_GAUGE_MAX);
+			replication->SendStatToAll((*c)->UID, (i32)StatType::STAT_TYPE_ULTIMATE, it->ultGauge, ultMax);
 		}
 	}
+}
+
+bool World::PlayerDodge(Player& player, i32 actionID)
+{
+	// dodge (shirk) skill of the master: 1800xx002, cost SKILL.xml _ConsumeStamina
+	const ClassType cls = player.Main().classType;
+	const i32 shirkSkill = 180000002 + (i32)cls * 10000;
+	const f32 cost = GetGameXmlContent().GetSkillConsumeStamina(shirkSkill);
+	LOG("Dodge :: %ls action=%d stamina=%.0f cost=%.0f", player.name.data(), actionID, player.stamina, cost);
+	if(cost <= 0 || player.stamina < 0) return true;
+	if(player.stamina < cost) return false;
+	player.stamina -= cost;
+	player.tNextStaminaSend = Time::ZERO;
+	return true;
 }
 
 static const f32 STATUS_PUSH_BASE_DISTANCE = 400.0f;
@@ -909,37 +976,6 @@ void World::HealPlayer(Player& healer, Player& target, i32 amount)
 	chara.hp = MIN(chara.hp + amount, chara.hpMax);
 	LOG("Heal :: %ls -> %ls amount=%d hp=%d/%d", healer.name.data(), target.name.data(), amount, chara.hp, chara.hpMax);
 	replication->SendHpToAll(chara.UID, chara.hp, chara.hpMax);
-}
-
-static const i32 STAT_ELEMENT_DAMAGE_BONUS = 54;       // weapon damage bonus % (CHARACTER_BASE_STATS)
-static const i32 STAT_ELEMENT_SKILL_DAMAGE_BONUS = 55; // skill damage bonus % (CHARACTER_BASE_STATS)
-
-static f32 MasterStat(ClassType classType, i32 statType)
-{
-	const auto& master = GetGameXmlContent().GetMaster(classType);
-	foreach_const(st, master.baseStats) {
-		if(st->type == statType) return st->value;
-	}
-	return 0;
-}
-
-// affinity triangle: Argent (red) > Helix (green) > Kinetic (blue) > Argent
-static bool ElementBeats(i32 a, i32 b)
-{
-	return (a == 1 && b == 2) || (a == 2 && b == 3) || (a == 3 && b == 1);
-}
-
-static f32 ElementMultiplier(const World::Player& attacker, const World::Player& target, bool skill)
-{
-	const auto& content = GetGameXmlContent();
-	const ClassType ac = attacker.Main().classType;
-	const i32 ea = content.GetCreatureElement((i32)content.GetMaster(ac).ID);
-	const i32 et = content.GetCreatureElement((i32)content.GetMaster(target.Main().classType).ID);
-	const i32 stat = skill ? STAT_ELEMENT_SKILL_DAMAGE_BONUS : STAT_ELEMENT_DAMAGE_BONUS;
-	// advantage: attacker deals +bonus% to the element it counters, and takes -bonus% from it
-	if(ElementBeats(ea, et)) return 1.0f + MasterStat(ac, stat) / 100.0f;
-	if(ElementBeats(et, ea)) return 1.0f - MasterStat(target.Main().classType, stat) / 100.0f;
-	return 1.0f;
 }
 
 bool World::RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const
@@ -1652,9 +1688,21 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	if(HasStatusType(target, "STATUS_TYPE_GODMODE")) return;
 
 	// element advantage: weapon shots use the weapon bonus, skills the skill bonus, DoTs none
+	u32 damageType = PACKET_DAMAGE_TYPE_NORMAL;
 	if(proj || skillID != SkillID::INVALID) {
 		const f32 mul = ElementMultiplier(attacker, target, !proj);
 		if(mul != 1.0f) damage = (i32)(damage * mul);
+
+		// critical hit: master crit stats (weapon or skill) + the remote's own _CriticalRate
+		const ClassType ac = attacker.Main().classType;
+		const RemoteIdx doc = proj ? proj->remoteDoc : remoteDoc;
+		const Remote* critRemote = doc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(doc) : nullptr;
+		const f32 rate = MasterStat(ac, proj ? STAT_CRITICALRATE : STAT_SKILL_CRITICALRATE) + (critRemote ? critRemote->criticalRate : 0);
+		if(rate > 0 && (RandUint() % 10000) < (u32)(rate * 100.0f)) {
+			const f32 critDamage = MasterStat(ac, proj ? STAT_CRITICALDAMAGE : STAT_SKILL_CRITICALDAMAGE);
+			damage = (i32)(damage * (critDamage > 0 ? critDamage : 100.0f) / 100.0f);
+			damageType = PACKET_DAMAGE_TYPE_CRITICAL;
+		}
 	}
 
 	foreach(it, activeStatuses) {
@@ -1669,15 +1717,15 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	ActorMaster& chara = target.Main();
 	chara.hp = MAX(chara.hp - damage, HasStatusType(target, "STATUS_TYPE_NEARLY_IMMORTAL") ? 1 : 0);
 
-	LOG("Damage :: %ls -> %ls skill=%d damage=%d hp=%d/%d", attacker.name.data(), target.name.data(), (i32)skillID, damage, chara.hp, chara.hpMax);
+	LOG("Damage :: %ls -> %ls skill=%d damage=%d%s hp=%d/%d", attacker.name.data(), target.name.data(), (i32)skillID, damage, damageType == PACKET_DAMAGE_TYPE_CRITICAL ? " CRIT" : "", chara.hp, chara.hpMax);
 	if(proj && proj->remoteID != 0) {
-		replication->SendRemoteDamageToAll(proj->remoteID, proj->remoteDoc, attacker.Main().UID, chara.UID, target.body->GetWorldPos(), proj->dir, damage, chara.hp, chara.hpMax);
+		replication->SendRemoteDamageToAll(proj->remoteID, proj->remoteDoc, attacker.Main().UID, chara.UID, target.body->GetWorldPos(), proj->dir, damage, chara.hp, chara.hpMax, damageType);
 	}
 	else if(remoteID != 0) {
-		replication->SendRemoteDamageToAll(remoteID, remoteDoc, attacker.Main().UID, chara.UID, target.body->GetWorldPos(), remoteDir, damage, chara.hp, chara.hpMax);
+		replication->SendRemoteDamageToAll(remoteID, remoteDoc, attacker.Main().UID, chara.UID, target.body->GetWorldPos(), remoteDir, damage, chara.hp, chara.hpMax, damageType);
 	}
 	else {
-		replication->SendDamageToAll(attacker.Main().UID, chara.UID, skillID, damage, chara.hp, chara.hpMax);
+		replication->SendDamageToAll(attacker.Main().UID, chara.UID, skillID, damage, chara.hp, chara.hpMax, damageType);
 	}
 
 	if(chara.hp == 0) {

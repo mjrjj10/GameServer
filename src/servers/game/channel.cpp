@@ -318,13 +318,12 @@ void GamePacketHandler::HandlePacket_CQ_PlayerJump(ClientHandle clientHd, const 
 	const u8 excludedFieldBits = buff.Read<u8>();
 	const i32 actionID = buff.Read<i32>();
 	(void)excludedFieldBits;
-	(void)actionID;
 	const LocalActorID actorID = buff.Read<LocalActorID>();
 	const f32 rotate = buff.Read<f32>();
 	const f32 moveDirX = buff.Read<f32>();
 	const f32 moveDirY = buff.Read<f32>();
 
-	game->OnPlayerJump(clientHd, replication->GetWorldActorUID(clientHd, actorID), rotate, moveDirX, moveDirY);
+	game->OnPlayerJump(clientHd, replication->GetWorldActorUID(clientHd, actorID), rotate, moveDirX, moveDirY, actionID);
 }
 
 void GamePacketHandler::HandlePacket_CQ_WeaponState(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
