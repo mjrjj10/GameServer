@@ -1294,7 +1294,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		// the client draws plain (non-fan) static boxes facing the opposite way of their rotation
 		const bool plainStaticBox = inst.speed <= 0 && remote->boundType == Remote::BoundType::E_BOUND_BOX && remote->angle <= 0;
 		const f32 sendYaw = atan2f(dir.y, dir.x) + (plainStaticBox ? PI : 0.0f);
-		replication->SendRemoteCreateToAll(players[ownerIndex].Main().UID, seed, idx, pos, sendYaw, targetPos, targetMaster ? target : ActorUID::INVALID, GetGameXmlContent().GetNodeName(nodeName));
+		replication->SendRemoteCreateToAll(players[ownerIndex].Main().UID, seed, idx, pos, sendYaw, targetPos, targetMaster ? target : ActorUID::INVALID, GetGameXmlContent().GetNodeName(nodeName), players[ownerIndex].clientHd);
 	}
 
 	remoteInsts.push_back(inst);
@@ -1464,7 +1464,8 @@ void World::RemoteApplyArea(RemoteInst& inst)
 		RemoteApplyShape(inst);
 		return;
 	}
-	if(remote.boundType == Remote::BoundType::E_BOUND_SPHERE) {
+	const bool fanBox = remote.boundType == Remote::BoundType::E_BOUND_BOX && remote.angle > 0;
+	if(remote.boundType == Remote::BoundType::E_BOUND_SPHERE || fanBox) {
 		const bool cone = remote.angle > 0;
 		const f32 radius = remote.boundSize[0] * 0.5f;
 		const f32 margin = WEAPON_TARGET_RADIUS;

@@ -1021,7 +1021,7 @@ void Replication::RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetD
 	}
 }
 
-void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject)
+void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject, ClientHandle exclude)
 {
 	f32 yawDeg = 90.0f - worldYaw * 180.0f / PI;
 	while(yawDeg > 180.0f) yawDeg -= 360.0f;
@@ -1032,6 +1032,7 @@ void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx d
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
+		if(clientHd == exclude) continue; // the caster's client already shows its own skill remotes
 
 		const LocalActorID ownerLocal = GetLocalActorID(clientHd, ownerUID);
 		if(ownerLocal == LocalActorID::INVALID) continue;
