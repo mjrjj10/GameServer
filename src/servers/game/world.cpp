@@ -911,6 +911,34 @@ void World::HealPlayer(Player& healer, Player& target, i32 amount)
 	replication->SendHpToAll(chara.UID, chara.hp, chara.hpMax);
 }
 
+static const i32 STAT_ELEMENT_DAMAGE_BONUS = 54;       // weapon damage bonus % (CHARACTER_BASE_STATS)
+static const i32 STAT_ELEMENT_SKILL_DAMAGE_BONUS = 55; // skill damage bonus % (CHARACTER_BASE_STATS)
+
+static f32 MasterStat(ClassType classType, i32 statType)
+{
+	const auto& master = GetGameXmlContent().GetMaster(classType);
+	foreach_const(st, master.baseStats) {
+		if(st->type == statType) return st->value;
+	}
+	return 0;
+}
+
+// element triangle (as described by players): red/fire > green/leaf > blue/water > red/fire
+static bool ElementBeats(i32 a, i32 b)
+{
+	return (a == 1 && b == 2) || (a == 2 && b == 3) || (a == 3 && b == 1);
+}
+
+static f32 ElementMultiplier(const World::Player& attacker, const World::Player& target, bool skill)
+{
+	const auto& content = GetGameXmlContent();
+	const ClassType ac = attacker.Main().classType;
+	const i32 ea = content.GetCreatureElement((i32)content.GetMaster(ac).ID);
+	const i32 et = content.GetCreatureElement((i32)content.GetMaster(target.Main().classType).ID);
+	if(!ElementBeats(ea, et)) return 1.0f;
+	return 1.0f + MasterStat(ac, skill ? STAT_ELEMENT_SKILL_DAMAGE_BONUS : STAT_ELEMENT_DAMAGE_BONUS) / 100.0f;
+}
+
 bool World::RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const
 {
 	if(p.dead) return false;
@@ -1619,6 +1647,12 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 {
 	if(target.dead) return;
 	if(HasStatusType(target, "STATUS_TYPE_GODMODE")) return;
+
+	// element advantage: weapon shots use the weapon bonus, skills the skill bonus, DoTs none
+	if(proj || skillID != SkillID::INVALID) {
+		const f32 mul = ElementMultiplier(attacker, target, !proj);
+		if(mul != 1.0f) damage = (i32)(damage * mul);
+	}
 
 	foreach(it, activeStatuses) {
 		if(damage <= 0) break;

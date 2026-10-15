@@ -1933,6 +1933,25 @@ bool GameXmlContent::LoadStatusData()
 		}
 		LOG("Loaded %d skill hit events", (i32)skillHitEventRemote.size());
 	}
+
+	XMLDocument xmlChara;
+	if(LoadXMLFile(L"/client/CREATURE_CHARACTER.xml", xmlChara)) {
+		for(XMLElement* pInfo = xmlChara.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+			i32 id = 0;
+			pInfo->QueryAttribute("ID", &id);
+			for(XMLElement* pComp = pInfo->FirstChildElement(); pComp; pComp = pComp->NextSiblingElement()) {
+				const char* el = nullptr;
+				if(pComp->QueryStringAttribute("_ElementType", &el) != XML_SUCCESS || !el) continue;
+				i32 e = 0;
+				if(EA::StdC::Strcmp(el, "CELEMENT_TYPE_RED") == 0) e = 1;
+				else if(EA::StdC::Strcmp(el, "CELEMENT_TYPE_GREEN") == 0) e = 2;
+				else if(EA::StdC::Strcmp(el, "CELEMENT_TYPE_BLUE") == 0) e = 3;
+				creatureElement[id] = e;
+				break;
+			}
+		}
+		LOG("Loaded %d character elements", (i32)creatureElement.size());
+	}
 	return true;
 }
 

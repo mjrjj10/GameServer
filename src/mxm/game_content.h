@@ -474,6 +474,7 @@ struct GameXmlContent
 	u16 InternNodeName(const char* name);
 	const wchar* GetNodeName(u16 idx) const { return idx < nodeNames.size() ? nodeNames[idx].c_str() : L"Scene Root"; }
 	const StatusInfo* FindStatus(i32 statusID) const;
+	i32 GetCreatureElement(i32 creatureID) const { auto f = creatureElement.find(creatureID); return f == creatureElement.end() ? 0 : f->second; }
 	i32 FindSkillHitEventRemote(i32 skillID) const { auto f = skillHitEventRemote.find(skillID); return f == skillHitEventRemote.end() ? 0 : f->second; }
 
 private:
@@ -521,6 +522,7 @@ private:
 	eastl::fixed_hash_map<RemoteIdx, Remote, 1500> remoteMap;
 	eastl::hash_map<i32, StatusInfo> statusMap;
 	eastl::hash_map<i32, i32> skillHitEventRemote;
+	eastl::hash_map<i32, i32> creatureElement; // CREATURE_CHARACTER _ElementType: 0 none, 1 red, 2 green, 3 blue
 	bool LoadStatusData();
 };
 
