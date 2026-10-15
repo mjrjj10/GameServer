@@ -196,7 +196,7 @@ void Game::Update(Time localTime_)
 			}
 #if 1
 			// bot random actions
-			if(!gameEnded) foreach(bot, botList) {
+			if(!gameEnded && !Config().DevShowcase) foreach(bot, botList) {
 				if(localTime > bot->tNextAction) {
 					bot->tNextAction = TimeAdd(localTime, TimeMsToTime(Randf01() * 5 * 1000));
 					World::Player& wpl = world.GetPlayer(bot->playerIndex);

@@ -490,6 +490,20 @@ struct World
 	void UpdateBotCombat();
 	void UpdateBotSkills();
 	void UpdateSummonAi(f32 delta);
+	void UpdateShowcase();
+	void TeleportPlayer(Player& p, const vec3& pos, f32 yaw);
+	struct Showcase
+	{
+		bool started = false;
+		bool done = false;
+		Time next = Time::ZERO;
+		i32 casterSlot = 0;
+		i32 dummySlot = -1;
+		i32 masterPass = 0;
+		i32 step = 0;
+		vec3 anchor = vec3(0);
+		f32 yaw = 0;
+	} showcase;
 	void RunSummonState(ActorNpc& npc, i32 state);
 	bool frozen = false; // game over: no more shots, skills or bot actions
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;

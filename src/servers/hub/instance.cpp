@@ -1,3 +1,5 @@
+#include <EASTL/sort.h>
+#include "config.h"
 #include <mxm/game_content.h>
 #include <common/packet_serialize.h>
 #include <common/packet_validator.h>
@@ -303,9 +305,27 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 		}
 	}
 
+	if(Config().DevShowcase) {
+		static i32 showcaseNext = 0;
+		eastl::fixed_vector<ClassType,100,false> all;
+		foreach_const(it, allowedMastersSet) all.push_back(*it);
+		eastl::sort(all.begin(), all.end());
+		foreach(u, userList) {
+			if(!u->isBot || all.empty()) continue;
+			for(int k = 0; k < 2; k++) {
+				const ClassType c = all[showcaseNext % all.size()];
+				showcaseNext++;
+				TryPickMaster(u, c);
+			}
+			if(u->Sub().classType == ClassType::NONE) TryPickMaster(u, all[showcaseNext++ % all.size()]);
+			u->replicate.masterPick = true;
+			LOG("[Room] showcase bot masters %d %d", (i32)u->Main().classType, (i32)u->Sub().classType);
+		}
+	}
+
 	// make bots pick random masters
 	foreach(u, userList) {
-		if(u->isBot) {
+		if(u->isBot && !Config().DevShowcase) {
 			// bots only use the original, fully supported characters
 			static const ClassType botMasters[] = {
 				ClassType::STRIKER, ClassType::ARTILLERY, ClassType::ASSASSIN, ClassType::ELECTRO,

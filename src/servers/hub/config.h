@@ -7,6 +7,7 @@ struct CConfigHub
 	i32 DevMode = false;
 	i32 DevQuickConnect = false;
 	i32 TraceNetwork = false;
+	i32 DevShowcase = false;
 	i32 LobbyMap = 160000042; // TODO: restore
 	eastl::fixed_vector<i32,16> regionBanMaster = {};
 	eastl::fixed_vector<i32,16> regionNewMaster = {};

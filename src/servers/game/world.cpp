@@ -1,3 +1,5 @@
+#include "config.h"
+#include <chrono>
 #include "world.h"
 #include <mxm/game_content.h>
 
@@ -249,8 +251,11 @@ void World::Update(Time localTime_)
 	UpdateStatuses();
 	UpdateSummons();
 	UpdateSummonAi((f32)tdelta);
-	if(!frozen) UpdateBotCombat();
-	if(!frozen) UpdateBotSkills();
+	if(Config().DevShowcase) { if(!frozen) UpdateShowcase(); }
+	else {
+		if(!frozen) UpdateBotCombat();
+		if(!frozen) UpdateBotSkills();
+	}
 
 	// execute skill programs
 	for(auto it = skillProgramList.begin(); it != skillProgramList.end(); ) {
@@ -1744,6 +1749,132 @@ void World::UpdateSummonAi(f32 delta)
 			replication->SendNpcMoveToAll(npc.UID, npc.pos, goal, npc.rot.z, info->moveSpeed);
 		}
 	}
+}
+
+void World::TeleportPlayer(Player& p, const vec3& pos, f32 yaw)
+{
+	p.body->collider->setFootPosition(PxExtendedVec3(pos.x, pos.y, pos.z));
+	p.body->vel = vec3(0);
+	p.input.moveTo = pos;
+	p.input.rot.upperYaw = yaw;
+	p.input.rot.bodyYaw = yaw;
+	p.weaponAimYaw = yaw;
+}
+
+static i64 ShowcaseWallMs()
+{
+	return (i64)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+void World::UpdateShowcase()
+{
+	if(showcase.done || localTime < showcase.next) return;
+	const auto& content = GetGameXmlContent();
+	eastl::fixed_vector<u32,16,false> bots;
+	Player* human = nullptr;
+	foreach(it, players) {
+		if(it->clientHd == ClientHandle::INVALID) bots.push_back(it->index);
+		else if(!human) human = &*it;
+	}
+	if(!human || bots.size() < 2) return;
+
+	if(!showcase.started) {
+		showcase.started = true;
+		showcase.anchor = human->body->GetWorldPos() + vec3(250, 250, 0);
+		showcase.yaw = 0;
+		showcase.dummySlot = (i32)bots.size() - 1;
+		showcase.next = TimeAdd(localTime, TimeMsToTime(4000));
+		foreach(it, players) {
+			if(it->clientHd != ClientHandle::INVALID) continue;
+			TeleportPlayer(*it, it->spawnPos, 0);
+		}
+		LOG("Showcase :: start wall=%lld bots=%d", ShowcaseWallMs(), (i32)bots.size());
+		return;
+	}
+
+	if(showcase.casterSlot >= (i32)bots.size()) {
+		showcase.done = true;
+		LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
+		return;
+	}
+	if(showcase.casterSlot == showcase.dummySlot) {
+		if(showcase.dummySlot == (i32)bots.size() - 1) {
+			showcase.dummySlot = 0;
+			showcase.casterSlot = (i32)bots.size() - 1;
+		}
+		else { showcase.casterSlot++; }
+		return;
+	}
+
+	Player& caster = players[bots[showcase.casterSlot]];
+	Player& dummy = players[bots[showcase.dummySlot]];
+	const vec3 casterPos = showcase.anchor;
+	const vec3 dummyPos = showcase.anchor + vec3(650, 0, 0);
+
+	if(caster.dead || dummy.dead) {
+		if(caster.dead) RespawnPlayer(caster);
+		if(dummy.dead) RespawnPlayer(dummy);
+		showcase.next = TimeAdd(localTime, TimeMsToTime(1500));
+		return;
+	}
+
+	const ClassType cls = caster.Main().classType;
+	static const char* slotNames[] = { "WEAPON", "SKILL_1", "SKILL_2", "SKILL_3", "SKILL_4", "ULTIMATE", "SHIRK", "TAG" };
+	const i32 step = showcase.step;
+
+	foreach(c, dummy.characters) { (*c)->hp = (*c)->hpMax; replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax); }
+	TeleportPlayer(dummy, dummyPos, PI);
+	TeleportPlayer(caster, casterPos, 0);
+	foreach(it, activeStatuses) {
+		if(it->targetIndex == dummy.index || it->targetIndex == caster.index) {
+			if(!it->info || !it->info->permanent) it->until = localTime;
+		}
+	}
+	dummy.ccUntil = Time::ZERO;
+	caster.ccUntil = Time::ZERO;
+
+	i32 skill = 0;
+	if(step >= 1 && step <= 6) {
+		const auto& master = content.GetMaster(cls);
+		foreach_const(sid, master.skillIDs) {
+			auto f = content.skillMap.find(*sid);
+			if(f == content.skillMap.end()) continue;
+			const auto& sk = f->second;
+			if(step == 6) {
+				if(sk.type == SkillType::SHIRK) { skill = (i32)*sid; break; }
+				continue;
+			}
+			eastl::fixed_string<char,48,false> name;
+			name.sprintf("SKILL_%d_BEHAVIORSTATE", step);
+			if(sk.type == SkillType::NORMAL && sk.action == ActionStateFromString(name.c_str())) { skill = (i32)*sid; break; }
+		}
+	}
+
+	LOG("Showcase :: wall=%lld master=%d slot=%s skill=%d caster=%ls", ShowcaseWallMs(), (i32)cls, slotNames[step], skill, caster.name.data());
+	const ActorUID targetUID = dummy.Main().UID;
+	if(step == 0) {
+		for(int k = 0; k < 3; k++) PlayerWeaponShot(caster, casterPos, vec2(1, 0), 650);
+	}
+	else if(step >= 1 && step <= 6) {
+		if(skill != 0) PlayerCastSkill(caster, SkillID(skill), dummyPos, Slice<const ActorUID>(&targetUID, 1), 0);
+	}
+	else {
+		caster.input.tag = true;
+	}
+
+	showcase.step++;
+	f32 wait = step == 7 ? 2.0f : 3.5f;
+	if(step >= 1 && step <= 6 && skill == 0) wait = 0.2f;
+	if(showcase.step > 7) {
+		showcase.step = 0;
+		showcase.masterPass++;
+		if(showcase.masterPass >= 2) {
+			showcase.masterPass = 0;
+			if(showcase.casterSlot == (i32)bots.size() - 1 && showcase.dummySlot == 0) showcase.casterSlot = (i32)bots.size();
+			else showcase.casterSlot++;
+		}
+	}
+	showcase.next = TimeAdd(localTime, TimeMsToTime(wait * 1000.0));
 }
 
 void World::UpdateBotCombat()

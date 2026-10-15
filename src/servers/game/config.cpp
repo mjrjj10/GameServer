@@ -10,6 +10,7 @@ bool CConfigGame::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "DevForcedMap=%d", &DevForcedMap) == 1) return true;
 	if(EA::StdC::Sscanf(line, "ShotLeadMs=%d", &ShotLeadMs) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevGameTimeSec=%d", &DevGameTimeSec) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevShowcase=%d", &DevShowcase) == 1) return true;
 	if(EA::StdC::Sscanf(line, "HostIP=%d.%d.%d.%d", &HostIP[0], &HostIP[1], &HostIP[2], &HostIP[3]) == 4) return true;
 	if(EA::StdC::Sscanf(line, "TraceNetwork=%d", &TraceNetwork) == 1) return true;
 	if(EA::StdC::Sscanf(line, "WindowWidth=%d", &WindowWidth) == 1) return true;
@@ -80,6 +81,7 @@ bool CConfigGame::SaveConfigFile()
 	out.append_sprintf("DevForcedMap=%d\n", DevForcedMap);
 	out.append_sprintf("ShotLeadMs=%d\n", ShotLeadMs);
 	out.append_sprintf("DevGameTimeSec=%d\n", DevGameTimeSec);
+	out.append_sprintf("DevShowcase=%d\n", DevShowcase);
 	out.append_sprintf("HostIP=%d.%d.%d.%d\n", HostIP[0], HostIP[1], HostIP[2], HostIP[3]);
 	out.append_sprintf("TraceNetwork=%d\n", TraceNetwork);
 	out.append_sprintf("WindowWidth=%d\n", WindowWidth);
