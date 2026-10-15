@@ -94,6 +94,18 @@ void World::Update(Time localTime_)
 
 		p.movement.rot = p.input.rot;
 
+		if(!p.dead && p.clientHd == ClientHandle::INVALID && localTime < p.ccUntil) {
+			if(localTime < p.pushUntil) {
+				p.input.moveTo = p.pushTarget;
+				p.input.speed = p.pushSpeed;
+			}
+			else {
+				p.input.moveTo = body.GetWorldPos();
+			}
+			p.input.tag = 0;
+			p.input.jump = 0;
+		}
+
 		if(p.dead) {
 			p.input.moveTo = body.GetWorldPos();
 			p.input.tag = 0;
@@ -176,6 +188,7 @@ void World::Update(Time localTime_)
 	UpdateProjectiles((f32)tdelta);
 	UpdateRemotes((f32)tdelta);
 	UpdateUltimateGauges((f32)tdelta);
+	UpdateStatuses();
 
 	// execute skill programs
 	for(auto it = skillProgramList.begin(); it != skillProgramList.end(); ) {
@@ -873,7 +886,61 @@ void World::UpdateUltimateGauges(f32 delta)
 	}
 }
 
-bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle)
+static const f32 STATUS_PUSH_BASE_DISTANCE = 400.0f;
+
+void World::ApplyStatus(Player& caster, Player& target, i32 statusID)
+{
+	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
+	const f32 duration = info ? info->durationSec : 1.0f;
+	if(activeStatuses.full()) return;
+
+	ActiveStatus st;
+	st.statusID = statusID;
+	st.targetIndex = target.index;
+	st.targetUID = target.Main().UID;
+	st.casterUID = caster.Main().UID;
+	st.until = TimeAdd(localTime, TimeMsToTime(MAX(duration, 0.1f) * 1000.0));
+	activeStatuses.push_back(st);
+
+	if(info && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT) && st.until > target.ccUntil) {
+		target.ccUntil = st.until;
+	}
+
+	const vec3 from = target.body->GetWorldPos();
+	vec3 to = from;
+	const bool push = info && (info->type == "STATUS_TYPE_PUSH" || info->type == "STATUS_TYPE_FORCEBACK");
+	const f32 graphDuration = duration * (info && info->timeRatio > 0 ? info->timeRatio : 1.0f);
+	if(push) {
+		vec2 dir = vec2(from - caster.body->GetWorldPos());
+		const f32 len = glm::length(dir);
+		dir = len > 1.0f ? dir / len : vec2(1, 0);
+		const f32 dist = STATUS_PUSH_BASE_DISTANCE * (info->distanceRatio > 0 ? info->distanceRatio : 1.0f);
+		to = from + vec3(dir * dist, 0);
+		if(target.clientHd == ClientHandle::INVALID && graphDuration > 0) {
+			target.pushTarget = to;
+			target.pushSpeed = dist / graphDuration;
+			target.pushUntil = TimeAdd(localTime, TimeMsToTime(graphDuration * 1000.0));
+		}
+	}
+
+	LOG("Status :: %ls -> %ls status=%d type=%s duration=%.2f push=%d", caster.name.data(), target.name.data(), statusID, info ? info->type.c_str() : "?", duration, push);
+	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, duration, from, to, graphDuration);
+}
+
+void World::UpdateStatuses()
+{
+	for(auto it = activeStatuses.begin(); it != activeStatuses.end(); ) {
+		if(localTime >= it->until) {
+			replication->SendRemoveStatusToAll(it->statusID, it->targetUID, it->casterUID);
+			it = activeStatuses.erase_unsorted(it);
+		}
+		else {
+			++it;
+		}
+	}
+}
+
+bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle, i32 forceAnim)
 {
 	const auto& content = GetGameXmlContent();
 	const auto& skill = content.skillMap.at(skillID);
@@ -885,13 +952,18 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			if(cmd->animIndex == 1 && cmd->type == ActionCommand::Type::REMOTE) anim = 1;
 		}
 	}
-	player.lastComboSkill = anim == 0 ? skillID : SkillID::INVALID;
-	player.lastComboTime = localTime;
+	if(forceAnim >= 0) {
+		anim = forceAnim;
+	}
+	else {
+		player.lastComboSkill = anim == 0 ? skillID : SkillID::INVALID;
+		player.lastComboTime = localTime;
+	}
 
 	{
 		SkillNormalModel& skillModel = const_cast<SkillNormalModel&>(skill);
 		const f32 consumeUG = skillModel.getSkillNormalLevelByIndex(0)->getConsumeUG();
-		if(consumeUG > 0) {
+		if(consumeUG > 0 && forceAnim < 0) {
 			player.ultGauge = 0.0f;
 			player.tNextUltSend = Time::ZERO;
 		}
@@ -978,7 +1050,7 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 
 	const i32 damage = (i32)(inst.damage * remote.attackMultiplier);
 	if(remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;
-	if(damage <= 0) return;
+	if(damage <= 0 && remote.statuses.empty()) return;
 
 	foreach(h, castHits) {
 		if(h->castID == inst.castID && h->playerIndex == target.index && localTime < h->until) return;
@@ -991,7 +1063,26 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 		castHits.push_back(h);
 	}
 
-	DamagePlayer(owner, target, inst.skillID, damage);
+	if(damage > 0) DamagePlayer(owner, target, inst.skillID, damage, nullptr, inst.clientRemoteID, remote.ID, inst.dir);
+
+	{
+		const i32 hitEventRemote = GetGameXmlContent().FindSkillHitEventRemote((i32)inst.skillID);
+		if(hitEventRemote != 0 && hitEventRemote == (i32)remote.ID &&
+		   eastl::find(comboTriggeredCasts.begin(), comboTriggeredCasts.end(), inst.castID) == comboTriggeredCasts.end()) {
+			if(comboTriggeredCasts.full()) comboTriggeredCasts.erase(comboTriggeredCasts.begin());
+			comboTriggeredCasts.push_back(inst.castID);
+			owner.memorizedTarget = target.Main().UID;
+			const ActorUID targetUID = target.Main().UID;
+			const vec2 rel = vec2(target.body->GetWorldPos() - owner.body->GetWorldPos());
+			LOG("ComboHit :: %ls skill=%d remote=%d -> next part", owner.name.data(), (i32)inst.skillID, (i32)remote.ID);
+			ScheduleSkillRemotes(owner, inst.skillID, target.body->GetWorldPos(), Slice<const ActorUID>(&targetUID, 1), atan2f(rel.y, rel.x), 1);
+		}
+	}
+	if(!target.dead) {
+		foreach_const(st, remote.statuses) {
+			if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(owner, target, st->statusID);
+		}
+	}
 }
 
 void World::RemoteApplyArea(RemoteInst& inst)
@@ -1216,7 +1307,7 @@ void World::PlayerSkillDamage(Player& player, SkillID skillID, const vec3& castP
 	}
 }
 
-void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 damage, const Projectile* proj)
+void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 damage, const Projectile* proj, u32 remoteID, RemoteIdx remoteDoc, vec2 remoteDir)
 {
 	if(target.dead) return;
 
@@ -1226,6 +1317,9 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	LOG("Damage :: %ls -> %ls skill=%d damage=%d hp=%d/%d", attacker.name.data(), target.name.data(), (i32)skillID, damage, chara.hp, chara.hpMax);
 	if(proj && proj->remoteID != 0) {
 		replication->SendRemoteDamageToAll(proj->remoteID, proj->remoteDoc, attacker.Main().UID, chara.UID, target.body->GetWorldPos(), proj->dir, damage, chara.hp, chara.hpMax);
+	}
+	else if(remoteID != 0) {
+		replication->SendRemoteDamageToAll(remoteID, remoteDoc, attacker.Main().UID, chara.UID, target.body->GetWorldPos(), remoteDir, damage, chara.hp, chara.hpMax);
 	}
 	else {
 		replication->SendDamageToAll(attacker.Main().UID, chara.UID, skillID, damage, chara.hp, chara.hpMax);

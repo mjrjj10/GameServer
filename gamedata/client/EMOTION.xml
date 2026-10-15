@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ENTITY_FILE>
+  <INFO ID="10000">
+    <ST_EMOTION_DATA _Index="10000" _Keyword="j" _Kind="E_EMOTION_KIND_BASIC" _VariableNumber="0" />
+  </INFO>
+  <INFO ID="10001">
+    <ST_EMOTION_DATA _Index="10001" _Keyword="d" _Kind="E_EMOTION_KIND_BASIC" _VariableNumber="1" />
+  </INFO>
+  <INFO ID="10002">
+    <ST_EMOTION_DATA _Index="10002" _Keyword="l" _Kind="E_EMOTION_KIND_BASIC" _VariableNumber="2" />
+  </INFO>
+  <INFO ID="10003">
+    <ST_EMOTION_DATA _Index="10003" _Keyword="t" _Kind="E_EMOTION_KIND_BASIC" _VariableNumber="3" />
+  </INFO>
+  <INFO ID="20004">
+    <ST_EMOTION_DATA _Index="20004" _Keyword="p" _Kind="E_EMOTION_KIND_PREMIUM" _VariableNumber="4" />
+  </INFO>
+</ENTITY_FILE>

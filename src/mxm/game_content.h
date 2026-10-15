@@ -108,6 +108,24 @@ const char* TargetPresetToString(TargetPreset p);
 
 }
 
+struct StatusInfo
+{
+	enum class Kind: i8 {
+		OTHER = 0,
+		HARD_CC,
+		ROOT,
+		SLOW,
+	};
+
+	i32 ID = 0;
+	f32 durationSec = 0;
+	f32 distanceRatio = 0;
+	f32 timeRatio = 0;
+	f32 heightRatio = 0;
+	Kind kind = Kind::OTHER;
+	eastl::fixed_string<char,40,false> type;
+};
+
 struct Remote
 {
 	enum class BoundType: i8 {
@@ -183,6 +201,14 @@ struct Remote
 	f32 hitInvalidTime = 1;
 	f32 fixedGraphLength = 0;
 	bool memorizeTarget = false;
+
+	struct AppliedStatus
+	{
+		i32 statusID;
+		i32 rate;
+		i32 value;
+	};
+	eastl::fixed_vector<AppliedStatus,4,false> statuses;
 
 };
 
@@ -401,6 +427,8 @@ struct GameXmlContent
 	const Action& GetSkillAction(ClassType classType, ActionStateID actionID) const;
 	const Remote& GetRemote(RemoteIdx remoteID) const;
 	const Remote* FindRemote(RemoteIdx remoteID) const;
+	const StatusInfo* FindStatus(i32 statusID) const;
+	i32 FindSkillHitEventRemote(i32 skillID) const { auto f = skillHitEventRemote.find(skillID); return f == skillHitEventRemote.end() ? 0 : f->second; }
 
 private:
 	bool LoadXMLFile(const wchar* fileName, tinyxml2::XMLDocument& xmlData);
@@ -445,6 +473,9 @@ private:
 	tinyxml2::XMLDocument xmlWEAPONTT;
 
 	eastl::fixed_hash_map<RemoteIdx, Remote, 1500> remoteMap;
+	eastl::hash_map<i32, StatusInfo> statusMap;
+	eastl::hash_map<i32, i32> skillHitEventRemote;
+	bool LoadStatusData();
 };
 
 bool GameXmlContentLoad();

@@ -1,0 +1,728 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ENTITY_FILE>
+  <INFO ID="100036891">
+    <EntityComData KEYNAME="NPC_SHOP_ATTGEAR" _Description="기어 상점" _MoveSpeed="600" _Name="STR_NPC_NAME_100036891" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.2" _Title="STR_NPC_TITLE_100036891" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_gold_shop" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Gear_01" />
+    <HUDComData _NameTagOffsetZ="335" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _shop="170000001" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036894">
+    <EntityComData KEYNAME="NPC_DECO_CAPTAIN_F" _Description="함장" _MoveSpeed="600" _Name="STR_NPC_NAME_100036894" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.1" _Title="STR_NPC_TITLE_100036894" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Captain_F" />
+    <HUDComData _NameTagOffsetZ="315" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036894" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036895">
+    <EntityComData KEYNAME="NPC_DECO_IMADAS" _Description="아누인 대표" _MoveSpeed="600" _Name="STR_NPC_NAME_100036895" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.1" _Title="STR_NPC_TITLE_100036895" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Imadas" />
+    <HUDComData _NameTagOffsetZ="470" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036895" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036896">
+    <EntityComData KEYNAME="NPC_DECO_OPERATOR_01" _Description="오퍼레이터1" _MoveSpeed="600" _Name="STR_NPC_NAME_100036896" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.1" _Title="STR_NPC_TITLE_100036896" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Operator01" />
+    <HUDComData _NameTagOffsetZ="320" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036896" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036897">
+    <EntityComData KEYNAME="NPC_DECO_OPERATOR_02" _Description="오퍼레이터2" _MoveSpeed="600" _Name="STR_NPC_NAME_100036897" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.1" _Title="STR_NPC_TITLE_100036897" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Operator02" />
+    <HUDComData _NameTagOffsetZ="310" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036897" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036899">
+    <EntityComData KEYNAME="NPC_DECO_SAM_MASTER_01" _MoveSpeed="600" _Name="STR_NPC_NAME_100036899" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.6" _Title="STR_NPC_TITLE_100036899" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_guild" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Sam_Master_01" />
+    <HUDComData _NameTagOffsetZ="370" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_GUILD" _intro_text="STR_NPC_INTRO_TEXT_100036899" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036901">
+    <EntityComData KEYNAME="NPC_DECO_SAM_MASTER_02" _MoveSpeed="600" _Name="STR_NPC_NAME_100036901" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.2" _Title="STR_NPC_TITLE_100036901" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" _bShowInFog="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Sam_Master_02" />
+    <HUDComData _NameTagOffsetZ="170" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036901" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036903">
+    <EntityComData KEYNAME="NPC_DECO_SCOLAR_01" _MoveSpeed="600" _Name="STR_NPC_NAME_100036903" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.1" _Title="STR_NPC_TITLE_100036903" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Scholar_01" />
+    <HUDComData _NameTagOffsetZ="310" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036903" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036904">
+    <EntityComData KEYNAME="NPC_DECO_NURSE_01" _Description="골드(동생)" _MoveSpeed="600" _Name="STR_NPC_NAME_100036904" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.1" _Title="STR_NPC_TITLE_100036904" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Nurse_01" />
+    <HUDComData _NameTagOffsetZ="315" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036904" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036905">
+    <EntityComData KEYNAME="NPC_DECO_NURSE_02" _Description="레드(언니)" _MoveSpeed="600" _Name="STR_NPC_NAME_100036905" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.1" _Title="STR_NPC_TITLE_100036905" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Nurse_02" />
+    <HUDComData _NameTagOffsetZ="315" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036905" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036906">
+    <EntityComData KEYNAME="NPC_DECO_SHUGO" _Description="슈고냥" _MoveSpeed="600" _Name="STR_NPC_NAME_100036906" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036906" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Shugo" />
+    <HUDComData _NameTagOffsetZ="245" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036906" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036909">
+    <EntityComData KEYNAME="NPC_DECO_HUMAN_01" _Description="개구쟁이" _MoveSpeed="600" _Name="STR_NPC_NAME_100036909" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.1" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Human_01" />
+    <HUDComData _NameTagOffsetZ="235" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036909" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036910">
+    <EntityComData KEYNAME="NPC_DECO_ENGINEER_01" _Description="기술자" _MoveSpeed="600" _Name="STR_NPC_NAME_100036910" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.2" _Title="STR_NPC_TITLE_100036910" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Engineer_01" />
+    <HUDComData _NameTagOffsetZ="275" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036910" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036911">
+    <EntityComData KEYNAME="NPC_DECO_DANDI" _Description="다이노스" _MoveSpeed="600" _Name="STR_NPC_NAME_100036911" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.2" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Dandi" />
+    <HUDComData _NameTagOffsetZ="250" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036833">
+    <EntityComData KEYNAME="NPC_STORAGE" _Description="창고" _MoveSpeed="600" _Name="STR_NPC_NAME_100036833" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.2" _Title="STR_NPC_TITLE_100036833" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_warehouse" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_STORAGE_01" />
+    <HUDComData _NameTagOffsetZ="300" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_WAREHOUSE" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036842">
+    <EntityComData KEYNAME="NPC_TRADER_BOOTY" _Description="훈장 교환병" _MoveSpeed="600" _Name="STR_NPC_NAME_100036842" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.2" _Title="STR_NPC_TITLE_100036842" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_medal_shop" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Gear_02" />
+    <HUDComData _NameTagOffsetZ="300" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_MEDAL_TRADER" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036843">
+    <EntityComData KEYNAME="NPC_TRADER_INGREDIENT" _Description="재료 교환병" _MoveSpeed="600" _Name="STR_NPC_NAME_100036843" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.2" _Title="STR_NPC_TITLE_100036843" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_ingredient_trader" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Gear_03" />
+    <HUDComData _NameTagOffsetZ="300" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_INGREDIENT_TRADER" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036951">
+    <EntityComData KEYNAME="NPC_SHOP_GEAR_01" _Description="슈고 복제 기어 상인1" _MoveSpeed="600" _Name="STR_NPC_NAME_100036951" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036951" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_gold_shop" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Shugo" />
+    <HUDComData _NameTagOffsetZ="245" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _shop="170000001" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036952">
+    <EntityComData KEYNAME="NPC_SHOP_GEAR_02" _Description="슈고 복제 기어 상인2" _MoveSpeed="600" _Name="STR_NPC_NAME_100036952" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036952" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_gold_shop" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Shugo" />
+    <HUDComData _NameTagOffsetZ="245" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _shop="170000001" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036953">
+    <EntityComData KEYNAME="NPC_SHOP_GEAR_03" _Description="슈고 복제 기어 상인3" _MoveSpeed="600" _Name="STR_NPC_NAME_100036953" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036953" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_gold_shop" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Shugo" />
+    <HUDComData _NameTagOffsetZ="245" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _shop="170000001" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036954">
+    <EntityComData KEYNAME="NPC_SHOP_GEAR_04" _Description="슈고 복제 기어 상인4" _MoveSpeed="600" _Name="STR_NPC_NAME_100036954" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036954" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_gold_shop" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Shugo" />
+    <HUDComData _NameTagOffsetZ="245" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _shop="170000001" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036902">
+    <EntityComData KEYNAME="NPC_TRADER_SAM_MASTER_03" _Description="스킨 조각 교환" _MoveSpeed="600" _Name="STR_NPC_NAME_100036902" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.2" _Title="STR_NPC_TITLE_100036902" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_skinchip_forge" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Sam_Master_03" />
+    <HUDComData _NameTagOffsetZ="195" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_SKIN_TRADER" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036777">
+    <EntityComData KEYNAME="NPC_JUKEBOX" _Description="주크박스" _MoveSpeed="600" _Name="STR_NPC_NAME_100036777" _NormalMoveSpeed="0" _Outline="True" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036777" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_jukebox" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_JUKEBOX" />
+    <HUDComData _NameTagOffsetZ="445" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_JUKEBOX" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036778">
+    <EntityComData KEYNAME="HALLOWEEN_JUKEBOX" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036778" _NormalMoveSpeed="0" _Outline="True" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036778" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_jukebox" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_JUKEBOX_Retro" />
+    <HUDComData _NameTagOffsetZ="335" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_JUKEBOX" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036779">
+    <EntityComData KEYNAME="XMAS_JUKEBOX" _Description="크리스마스" _MoveSpeed="600" _Name="STR_NPC_NAME_100036779" _NormalMoveSpeed="0" _Outline="True" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036779" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_jukebox" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_JUKEBOX_Xmas" />
+    <HUDComData _NameTagOffsetZ="445" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_JUKEBOX" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036700">
+    <EntityComData KEYNAME="HALLOWEEN_ATTGEAR" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036700" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.2" _Title="STR_NPC_TITLE_100036700" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_gold_shop" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Gear_01_HW" />
+    <HUDComData _NameTagOffsetZ="335" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _shop="170000001" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036701">
+    <EntityComData KEYNAME="HALLOWEEN_STORAGE" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036701" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.2" _Title="STR_NPC_TITLE_100036701" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_warehouse" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Storage_HW" />
+    <HUDComData _NameTagOffsetZ="300" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_WAREHOUSE" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036702">
+    <EntityComData KEYNAME="HALLOWEEN_BOOTY" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036702" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.2" _Title="STR_NPC_TITLE_100036702" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_medal_shop" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Trader_01_HW" />
+    <HUDComData _NameTagOffsetZ="300" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_MEDAL_TRADER" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036703">
+    <EntityComData KEYNAME="HALLOWEEN_INGREDIENT" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036703" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.2" _Title="STR_NPC_TITLE_100036703" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_ingredient_trader" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Trader_02_HW" />
+    <HUDComData _NameTagOffsetZ="300" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_INGREDIENT_TRADER" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036704">
+    <EntityComData KEYNAME="HALLOWEEN_GEAR_01" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036704" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036704" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_gold_shop" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Shugo_HW" />
+    <HUDComData _NameTagOffsetZ="245" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _shop="170000001" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036705">
+    <EntityComData KEYNAME="HALLOWEEN_GEAR_02" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036705" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036705" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_gold_shop" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Shugo_HW" />
+    <HUDComData _NameTagOffsetZ="245" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _shop="170000001" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036706">
+    <EntityComData KEYNAME="HALLOWEEN_GEAR_03" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036706" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036706" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_gold_shop" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Shugo_HW" />
+    <HUDComData _NameTagOffsetZ="245" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _shop="170000001" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036707">
+    <EntityComData KEYNAME="HALLOWEEN_GEAR_04" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036707" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036707" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_gold_shop" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Shugo_HW" />
+    <HUDComData _NameTagOffsetZ="245" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _shop="170000001" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036708">
+    <EntityComData KEYNAME="HALLOWEEN_SAM_MASTER_03" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036708" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.2" _Title="STR_NPC_TITLE_100036708" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_skinchip_forge" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Sam_Master_03_HW" />
+    <HUDComData _NameTagOffsetZ="195" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_SKIN_TRADER" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036709">
+    <EntityComData KEYNAME="HALLOWEEN_SHUGO" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036709" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036709" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Shugo_HW" />
+    <HUDComData _NameTagOffsetZ="245" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036709" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036710">
+    <EntityComData KEYNAME="HALLOWEEN_CAPTAIN_F" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036710" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.1" _Title="STR_NPC_TITLE_100036710" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Captain_F_HW" />
+    <HUDComData _NameTagOffsetZ="315" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036710" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036711">
+    <EntityComData KEYNAME="HALLOWEEN_IMADAS" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036711" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.1" _Title="STR_NPC_TITLE_100036711" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Imadas_HW" />
+    <HUDComData _NameTagOffsetZ="470" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036711" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036712">
+    <EntityComData KEYNAME="HALLOWEEN_OPERATOR_01" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036712" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.1" _Title="STR_NPC_TITLE_100036712" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Operator01_HW" />
+    <HUDComData _NameTagOffsetZ="320" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036712" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036713">
+    <EntityComData KEYNAME="HALLOWEEN_OPERATOR_02" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036713" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.1" _Title="STR_NPC_TITLE_100036713" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Operator02_HW" />
+    <HUDComData _NameTagOffsetZ="310" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036713" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036716">
+    <EntityComData KEYNAME="HALLOWEEN_SAM_MASTER_01" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036716" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.6" _Title="STR_NPC_TITLE_100036716" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <ResourceComData _IconAlias="npc_guild" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Sam_Master_01_HW" />
+    <HUDComData _NameTagOffsetZ="370" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_GUILD" _intro_text="STR_NPC_INTRO_TEXT_100036716" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036717">
+    <EntityComData KEYNAME="HALLOWEEN_SCOLAR_01" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036717" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.1" _Title="STR_NPC_TITLE_100036717" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Scholar_01_HW" />
+    <HUDComData _NameTagOffsetZ="310" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036717" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036718">
+    <EntityComData KEYNAME="HALLOWEEN_NURSE_01" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036718" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.1" _Title="STR_NPC_TITLE_100036718" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Nurse_01_HW" />
+    <HUDComData _NameTagOffsetZ="315" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036718" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036719">
+    <EntityComData KEYNAME="HALLOWEEN_NURSE_02" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036719" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.1" _Title="STR_NPC_TITLE_100036719" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Nurse_02_HW" />
+    <HUDComData _NameTagOffsetZ="315" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036719" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036721">
+    <EntityComData KEYNAME="HALLOWEEN_HUMAN_01" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036721" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.1" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Human_01_HW" />
+    <HUDComData _NameTagOffsetZ="235" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036721" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036722">
+    <EntityComData KEYNAME="HALLOWEEN_ENGINEER_01" _Description="할로윈" _MoveSpeed="600" _Name="STR_NPC_NAME_100036722" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1.2" _Title="STR_NPC_TITLE_100036722" _Type="ENTITY_TYPE_CREATURE" _bForceUpdate="True" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Engineer_01_HW" />
+    <HUDComData _NameTagOffsetZ="275" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _intro_text="STR_NPC_INTRO_TEXT_100036722" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036801">
+    <EntityComData KEYNAME="ENTRY_CALIGO" _Description="칼리고 출격장치" _MoveSpeed="600" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="0.5" _Title="STR_NPC_TITLE_100036801" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_CARIGO" />
+    <WorldStageComData>
+      <_Area _Index="190000001" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="210" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+    <SpawnScheduleComData _IsTest="TRUE" />
+  </INFO>
+  <INFO ID="100036878">
+    <EntityComData KEYNAME="ENTRY_LACRIMOSA" _Description="라크리모사 출격장치" _MoveSpeed="600" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="0.5" _Title="STR_NPC_TITLE_100036878" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM" />
+    <WorldStageComData>
+      <_Area _Index="190000002" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="210" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" _shop=" " />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+    <SpawnScheduleComData _IsTest="TRUE" />
+  </INFO>
+  <INFO ID="100036814">
+    <EntityComData KEYNAME="ENTRY_VENTUS" _Description="벤투스 출격장치" _MoveSpeed="600" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="0.5" _Title="STR_NPC_TITLE_100036814" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_VENTUS" />
+    <WorldStageComData>
+      <_Area _Index="190000003" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="210" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" _shop=" " />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+    <SpawnScheduleComData _IsTest="TRUE" />
+  </INFO>
+  <INFO ID="100036835">
+    <EntityComData KEYNAME="ENTRY_KARIS" _Description="카리스 출격장치" _MoveSpeed="600" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="0.5" _Title="STR_NPC_TITLE_100036835" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_CARIS" />
+    <WorldStageComData>
+      <_Area _Index="190000004" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="210" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+    <SpawnScheduleComData _IsTest="TRUE" />
+  </INFO>
+  <INFO ID="100036890">
+    <EntityComData KEYNAME="ENTRY_NURAN" _Description="누란 출격장치" _MoveSpeed="600" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="0.5" _Title="STR_NPC_TITLE_100036890" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_CARIS" />
+    <WorldStageComData>
+      <_Area _Index="190000005" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="210" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+    <SpawnScheduleComData _IsTest="TRUE" />
+  </INFO>
+  <INFO ID="100036812">
+    <EntityComData KEYNAME="ENTRY_PVP" _Description="PvP 출격장치" _MoveSpeed="600" _Name="STR_NPC_NAME_100036812" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036812" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_PVP" />
+    <WorldStageComData _HoverSound="True" _IgnoreTodayArea="False" />
+    <HUDComData _NameTagOffsetZ="475" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVP" _shop=" " />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036815">
+    <EntityComData KEYNAME="ENTRY_EVENT" _Description="이벤트 출격장치" _MoveSpeed="600" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="0.5" _Title="STR_NPC_TITLE_100036815" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM" />
+    <WorldStageComData>
+      <_Area _Index="190009110" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="210" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" _shop=" " />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+    <SpawnScheduleComData _IsTest="TRUE" />
+  </INFO>
+  <INFO ID="100036002">
+    <EntityComData KEYNAME="ENTRY_PVETUTORIAL" _Description="PvE 튜토리얼" _MoveSpeed="600" _Name="STR_NPC_NAME_100036002" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036002" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_PVE" />
+    <WorldStageComData _HoverSound="True">
+      <_Area _Index="190003000" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="500" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" />
+    <SpawnScheduleComData _IsTest="TRUE" />
+  </INFO>
+  <INFO ID="100036003">
+    <EntityComData KEYNAME="ENTRY_PVPTUTORIAL" _Description="PvP 튜토리얼" _MoveSpeed="600" _Name="STR_NPC_NAME_100036003" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036003" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_PVP" />
+    <WorldStageComData _HoverSound="True">
+      <_Area _Index="190003001" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="475" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVP" />
+    <SpawnScheduleComData _IsTest="TRUE" />
+  </INFO>
+  <INFO ID="100036004">
+    <EntityComData KEYNAME="ENTRY_PVETUTORIALDUMMY" _Description="PvE 튜토리얼 더미" _MoveSpeed="600" _Name="STR_NPC_NAME_100036004" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036004" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_PVE" />
+    <WorldStageComData _HoverSound="True" />
+    <HUDComData _NameTagOffsetZ="500" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+  </INFO>
+  <INFO ID="100036005">
+    <EntityComData KEYNAME="ENTRY_PVPTUTORIALDUMMY" _Description="PvP 튜토리얼 더미" _MoveSpeed="600" _Name="STR_NPC_NAME_100036005" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036005" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_PVP" />
+    <WorldStageComData _HoverSound="True" />
+    <HUDComData _NameTagOffsetZ="475" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+  </INFO>
+  <INFO ID="100036880">
+    <EntityComData KEYNAME="ENTRY_CALIGOTEST" _Description="보스존 출격장치" _MoveSpeed="600" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="0.5" _Title="STR_NPC_TITLE_100036880" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM" />
+    <WorldStageComData>
+      <_Area _Index="190009103" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="210" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+    <SpawnScheduleComData _IsTest="TRUE" />
+  </INFO>
+  <INFO ID="100036913">
+    <EntityComData KEYNAME="ENTRY_PVPTEST" _Description="PvP 테스트" _MoveSpeed="600" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="0.5" _Title="STR_NPC_TITLE_100036913" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_MezzanineCity" />
+    <WorldStageComData>
+      <_Area _Index="190009201" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="210" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVP" _shop=" " />
+    <SpawnScheduleComData _IsTest="TRUE" />
+  </INFO>
+  <INFO ID="100036914">
+    <EntityComData KEYNAME="ENTRY_PVPTEST" _Description="M PvP 테스트" _MoveSpeed="600" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="0.5" _Title="STR_NPC_TITLE_100036914" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_MezzanineCity" />
+    <WorldStageComData>
+      <_Area _Index="190009202" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="210" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVP" _shop=" " />
+    <SpawnScheduleComData _IsTest="TRUE" />
+  </INFO>
+  <INFO ID="100036915">
+    <EntityComData KEYNAME="ENTRY_SPORTSTEST" _Description="운동회 테스트" _MoveSpeed="600" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="0.5" _Title="STR_NPC_TITLE_100036915" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_MezzanineCity" />
+    <WorldStageComData>
+      <_Area _Index="190009203" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="210" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVP" _shop=" " />
+    <SpawnScheduleComData _IsTest="TRUE" />
+  </INFO>
+  <INFO ID="100036813">
+    <EntityComData KEYNAME="ENTRY_MEZZANIN" _Description="PvE 테스트" _MoveSpeed="600" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="0.5" _Title="STR_NPC_TITLE_100036813" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM" />
+    <WorldStageComData>
+      <_Area _Index="190009101" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="210" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" _shop=" " />
+    <SpawnScheduleComData _IsTest="TRUE" />
+  </INFO>
+  <INFO ID="100036816">
+    <EntityComData KEYNAME="ENTRY_MEZZANIN" _Description="M PvE 테스트" _MoveSpeed="600" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="0.5" _Title="STR_NPC_TITLE_100036816" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM" />
+    <WorldStageComData>
+      <_Area _Index="190009102" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="210" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" _shop=" " />
+    <SpawnScheduleComData _IsTest="TRUE" />
+  </INFO>
+  <INFO ID="100036889">
+    <EntityComData KEYNAME="ENTRY_RANDOM" _Description="요일 출격장치" _MoveSpeed="600" _Name="STR_NPC_NAME_100036889" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100036889" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_PVE" />
+    <WorldStageComData _HoverSound="True" _IgnoreTodayArea="False">
+      <_Area _Index="190000001" />
+      <_Area _Index="190000002" />
+      <_Area _Index="190000003" />
+      <_Area _Index="190000004" />
+      <_Area _Index="190000005" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="500" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100037000">
+    <EntityComData KEYNAME="ENTRY_BNS" _Description="바다뱀 보급기지" _MoveSpeed="600" _Name="STR_NPC_NAME_100037000" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100037000" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_EVENT_01" />
+    <WorldStageComData _HoverSound="True">
+      <_Area _Index="190000006" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="535" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+    <SpawnScheduleComData _SchedulePriority="4" />
+  </INFO>
+  <INFO ID="100037001">
+    <EntityComData KEYNAME="ENTRY_AION" _Description="불의 신전" _MoveSpeed="600" _Name="STR_NPC_NAME_100037001" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100037001" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_EVENT_01" />
+    <WorldStageComData _HoverSound="True">
+      <_Area _Index="190000007" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="535" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+    <SpawnScheduleComData _SchedulePriority="4" />
+  </INFO>
+  <INFO ID="100037002">
+    <EntityComData KEYNAME="ENTRY_TRAINING" _Description="마스터 훈련실" _MoveSpeed="600" _Name="STR_NPC_NAME_100037002" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100037002" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_MezzanineGuard_T" />
+    <WorldStageComData>
+      <_Area _Index="190004000" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="275" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_MASTERTRAINING" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100037003">
+    <EntityComData KEYNAME="ENTRY_SPORTS" _Description="마스터 운동회" _MoveSpeed="600" _Name="STR_NPC_NAME_100037003" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100037003" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Sam_Master_02" />
+    <WorldStageComData>
+      <_Area _Index="190002200" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="170" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVP" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+    <SpawnScheduleComData _SchedulePriority="3" />
+  </INFO>
+  <INFO ID="100037004">
+    <EntityComData KEYNAME="ENTRY_L1" _Description="글루디오 던전" _MoveSpeed="600" _Name="STR_NPC_NAME_100037004" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100037004" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_EVENT_01" />
+    <WorldStageComData _HoverSound="True">
+      <_Area _Index="190000008" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="535" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+    <SpawnScheduleComData _SchedulePriority="4" />
+  </INFO>
+  <INFO ID="100037005">
+    <EntityComData KEYNAME="ENTRY_L2" _Description="개미굴" _MoveSpeed="600" _Name="STR_NPC_NAME_100037005" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100037005" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_EVENT_01" />
+    <WorldStageComData _HoverSound="True">
+      <_Area _Index="190000009" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="535" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+    <SpawnScheduleComData _SchedulePriority="4" />
+  </INFO>
+  <INFO ID="100037006">
+    <EntityComData KEYNAME="ENTRY_DEFENCE" _Description="디펜스" _MoveSpeed="600" _Name="STR_NPC_NAME_100037006" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100037006" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_EVENT_01" />
+    <WorldStageComData _HoverSound="True">
+      <_Area _Index="190001000" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="535" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+    <SpawnScheduleComData _SchedulePriority="4" />
+  </INFO>
+  <INFO ID="100037007">
+    <EntityComData KEYNAME="ENTRY_GW2" _Description="아스칼론" _MoveSpeed="600" _Name="STR_NPC_NAME_100037007" _NormalMoveSpeed="0" _Outline="true" _RotateSpeed="600" _Scale="1" _Title="STR_NPC_TITLE_100037007" _Type="ENTITY_TYPE_CREATURE" />
+    <ResourceComData _IconAlias="npc_entrysystem" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_ENTRYSYSTEM_EVENT_01" />
+    <WorldStageComData _HoverSound="True">
+      <_Area _Index="190000010" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="535" _ShowIcon="-1" _ShowMinimap="False" _ShowNameTag="-1" />
+    <DialogComData _eDIALOGTYPE="E_DIALOG_PVE" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+    <SpawnScheduleComData _SchedulePriority="4" />
+  </INFO>
+  <INFO ID="100036886">
+    <EntityComData KEYNAME="CUT_SCHOLAR" _Description="컷신용 엘렌 오그든" _MoveSpeed="600" _Name="STR_NPC_NAME_100036886" _NormalMoveSpeed="0" _Outline="False" _RotateSpeed="600" _Scale="1.1" _Title="STR_NPC_TITLE_100036886" _Type="ENTITY_TYPE_CREATURE" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Scholar_Cut" />
+    <WorldStageComData>
+      <_Area _Index="190001000" />
+    </WorldStageComData>
+    <HUDComData _NameTagOffsetZ="310" _ShowIcon="-1" _ShowMinimap="true" _ShowNameTag="-1" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036887">
+    <EntityComData KEYNAME="CUT_ENGINEER" _Description="컷신용 존 스타이그" _MoveSpeed="600" _Name="STR_NPC_NAME_100036887" _NormalMoveSpeed="0" _Outline="False" _RotateSpeed="600" _Scale="1.2" _Title="STR_NPC_TITLE_100036887" _Type="ENTITY_TYPE_CREATURE" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="NPC_Engineer_Cut" />
+    <HUDComData _NameTagOffsetZ="310" _ShowIcon="-1" _ShowMinimap="true" _ShowNameTag="-1" />
+    <PhysXMeshComData _ActorGroup="GROUP_BODY_BOSSNPC" />
+  </INFO>
+  <INFO ID="100036888">
+    <EntityComData KEYNAME="CUT_KING" _Description="컷신용 카리스 왕" _MoveSpeed="600" _Name="STR_NPC_NAME_100036888" _NormalMoveSpeed="0" _Outline="False" _RotateSpeed="600" _Scale="1.5" _Title="STR_NPC_TITLE_100036888" _Type="ENTITY_TYPE_CREATURE" />
+    <CreatureComData _Type="CREATURE_TYPE_NPC" />
+    <Kfm_ComData KeyName="TRIBE_BIGSWORD_ALLY_NPC" />
+    <HUDComData _NameTagOffsetZ="470" _ShowIcon="-1" _ShowMinimap="true" _ShowNameTag="-1" />
+  </INFO>
+</ENTITY_FILE>

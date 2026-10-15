@@ -296,6 +296,8 @@ struct Replication
 	void SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, SkillID skillID, i32 damage, i32 hp, i32 hpMax);
 	void SendHpToAll(ActorUID actorUID, i32 hp, i32 hpMax);
 	void SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 max);
+	void SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration);
+	void SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID);
 	void SendRemoteDamageToAll(u32 remoteID, RemoteIdx remoteDoc, ActorUID attackerUID, ActorUID targetUID, const vec3& hitPos, const vec2& hitDir, i32 damage, i32 hp, i32 hpMax);
 	void SendAttackActionToOthers(ClientHandle senderHd, ActorUID actorUID, f32 mxmYaw);
 	void SendDestroyRemoteToAll(u32 remoteID);

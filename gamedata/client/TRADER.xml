@@ -1,0 +1,269 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ENTITY_FILE>
+  <INFO ID="573000002">
+    <ST_TRADER _NpcIndex="100036842">
+      <_TRADELIST _ItemIndex="244299010" />
+      <_TRADELIST _ItemIndex="244299011" />
+      <_TRADELIST _ItemIndex="244299012" />
+      <_TRADELIST _ItemIndex="244299013" />
+      <_TRADELIST _ItemIndex="241020001" />
+      <_TRADELIST _ItemIndex="241020002" />
+      <_TRADELIST _ItemIndex="241020003" />
+      <_TRADELIST _ItemIndex="241020011" />
+      <_TRADELIST _ItemIndex="241020012" />
+      <_TRADELIST _ItemIndex="241020013" />
+      <_TRADELIST _ItemIndex="241020014" />
+      <_TRADELIST _ItemIndex="241020015" />
+      <_TRADELIST _ItemIndex="241030011" />
+      <_TRADELIST _ItemIndex="241030012" />
+      <_TRADELIST _ItemIndex="241030013" />
+      <_TRADELIST _ItemIndex="241030014" />
+      <_TRADELIST _ItemIndex="241030015" />
+      <_TRADELIST _ItemIndex="241040400" />
+      <_TRADELIST _ItemIndex="241040401" />
+      <_TRADELIST _ItemIndex="241040402" />
+      <_TRADELIST _ItemIndex="241040403" />
+      <_TRADELIST _ItemIndex="241040200" />
+      <_TRADELIST _ItemIndex="241040201" />
+      <_TRADELIST _ItemIndex="241040202" />
+      <_TRADELIST _ItemIndex="241040203" />
+      <_TRADELIST _ItemIndex="241040100" />
+      <_TRADELIST _ItemIndex="241040101" />
+      <_TRADELIST _ItemIndex="241040102" />
+      <_TRADELIST _ItemIndex="241040103" />
+      <_TRADELIST _ItemIndex="241040300" />
+      <_TRADELIST _ItemIndex="241040301" />
+      <_TRADELIST _ItemIndex="241040302" />
+      <_TRADELIST _ItemIndex="241040303" />
+      <_TRADELIST _ItemIndex="241040500" />
+      <_TRADELIST _ItemIndex="241040501" />
+      <_TRADELIST _ItemIndex="241040502" />
+      <_TRADELIST _ItemIndex="241040503" />
+      <_TRADELIST _ItemIndex="241101301" />
+      <_TRADELIST _ItemIndex="241101303" />
+      <_TRADELIST _ItemIndex="241101305" />
+      <_TRADELIST _ItemIndex="241101306" />
+      <_TRADELIST _ItemIndex="241101401" />
+      <_TRADELIST _ItemIndex="241101402" />
+      <_TRADELIST _ItemIndex="241101403" />
+      <_TRADELIST _ItemIndex="241101404" />
+      <_TRADELIST _ItemIndex="241101405" />
+      <_TRADELIST _ItemIndex="241101406" />
+      <_TRADELIST _ItemIndex="241101501" />
+      <_TRADELIST _ItemIndex="241101502" />
+      <_TRADELIST _ItemIndex="241101503" />
+      <_TRADELIST _ItemIndex="241101504" />
+      <_TRADELIST _ItemIndex="241101505" />
+      <_TRADELIST _ItemIndex="241101506" />
+      <_TRADELIST _ItemIndex="241201301" />
+      <_TRADELIST _ItemIndex="241201302" />
+      <_TRADELIST _ItemIndex="241201304" />
+      <_TRADELIST _ItemIndex="241201306" />
+      <_TRADELIST _ItemIndex="241201401" />
+      <_TRADELIST _ItemIndex="241201402" />
+      <_TRADELIST _ItemIndex="241201404" />
+      <_TRADELIST _ItemIndex="241201405" />
+      <_TRADELIST _ItemIndex="241201406" />
+      <_TRADELIST _ItemIndex="241201407" />
+      <_TRADELIST _ItemIndex="241201408" />
+      <_TRADELIST _ItemIndex="241201501" />
+      <_TRADELIST _ItemIndex="241201502" />
+      <_TRADELIST _ItemIndex="241201504" />
+      <_TRADELIST _ItemIndex="241201505" />
+      <_TRADELIST _ItemIndex="241201506" />
+      <_TRADELIST _ItemIndex="241201507" />
+      <_TRADELIST _ItemIndex="241201508" />
+      <_TRADELIST _ItemIndex="241301301" />
+      <_TRADELIST _ItemIndex="241301303" />
+      <_TRADELIST _ItemIndex="241301306" />
+      <_TRADELIST _ItemIndex="241301310" />
+      <_TRADELIST _ItemIndex="241301401" />
+      <_TRADELIST _ItemIndex="241301402" />
+      <_TRADELIST _ItemIndex="241301403" />
+      <_TRADELIST _ItemIndex="241301404" />
+      <_TRADELIST _ItemIndex="241301405" />
+      <_TRADELIST _ItemIndex="241301406" />
+      <_TRADELIST _ItemIndex="241301407" />
+      <_TRADELIST _ItemIndex="241301408" />
+      <_TRADELIST _ItemIndex="241301409" />
+      <_TRADELIST _ItemIndex="241301410" />
+      <_TRADELIST _ItemIndex="241301411" />
+      <_TRADELIST _ItemIndex="241301412" />
+      <_TRADELIST _ItemIndex="241301413" />
+      <_TRADELIST _ItemIndex="241301414" />
+      <_TRADELIST _ItemIndex="241301501" />
+      <_TRADELIST _ItemIndex="241301502" />
+      <_TRADELIST _ItemIndex="241301503" />
+      <_TRADELIST _ItemIndex="241301504" />
+      <_TRADELIST _ItemIndex="241301505" />
+      <_TRADELIST _ItemIndex="241301506" />
+      <_TRADELIST _ItemIndex="241301507" />
+      <_TRADELIST _ItemIndex="241301508" />
+      <_TRADELIST _ItemIndex="241301509" />
+      <_TRADELIST _ItemIndex="241301510" />
+      <_TRADELIST _ItemIndex="241301511" />
+      <_TRADELIST _ItemIndex="241301512" />
+      <_TRADELIST _ItemIndex="241301513" />
+      <_TRADELIST _ItemIndex="241301514" />
+    </ST_TRADER>
+  </INFO>
+  <INFO ID="573000003">
+    <ST_TRADER _NpcIndex="100036843">
+      <_TRADELIST _ItemIndex="242000014" _Group="TRADERGROUP_INGREDIENT_MODULE_UPGRADE" />
+      <_TRADELIST _ItemIndex="242000015" _Group="TRADERGROUP_INGREDIENT_MODULE_UPGRADE" />
+      <_TRADELIST _ItemIndex="242000016" _Group="TRADERGROUP_INGREDIENT_MODULE_UPGRADE" />
+      <_TRADELIST _ItemIndex="242000017" _Group="TRADERGROUP_INGREDIENT_MODULE_UPGRADE" />
+      <_TRADELIST _ItemIndex="242000018" _Group="TRADERGROUP_INGREDIENT_MODULE_UPGRADE" />
+      <_TRADELIST _ItemIndex="242000561" _Group="TRADERGROUP_ETC_UNLOCK" />
+      <_TRADELIST _ItemIndex="242000562" _Group="TRADERGROUP_ETC_UNLOCK" />
+      <_TRADELIST _ItemIndex="242000563" _Group="TRADERGROUP_ETC_UNLOCK" />
+      <_TRADELIST _ItemIndex="242000564" _Group="TRADERGROUP_ETC_UNLOCK" />
+      <_TRADELIST _ItemIndex="242000565" _Group="TRADERGROUP_ETC_UNLOCK" />
+      <_TRADELIST _ItemIndex="242000566" _Group="TRADERGROUP_ETC_UNLOCK" />
+    </ST_TRADER>
+  </INFO>
+  <INFO ID="573000004">
+    <ST_TRADER _NpcIndex="100036902">
+      <_TRADELIST _ItemIndex="240000002" _Group="TRADERGROUP_SKIN_CREATE" />
+      <_TRADELIST _ItemIndex="240000001" _Group="TRADERGROUP_SKIN_CREATE" />
+      <_TRADELIST _ItemIndex="240000003" _Group="TRADERGROUP_SKIN_BREAK" />
+      <_TRADELIST _ItemIndex="240000004" _Group="TRADERGROUP_SKIN_BREAK" />
+      <_TRADELIST _ItemIndex="240000005" _Group="TRADERGROUP_SKIN_BREAK" />
+      <_TRADELIST _ItemIndex="240000006" _Group="TRADERGROUP_SKIN_BREAK" />
+      <_TRADELIST _ItemIndex="240000007" _Group="TRADERGROUP_SKIN_BREAK" />
+    </ST_TRADER>
+  </INFO>
+  <INFO ID="573000005">
+    <ST_TRADER _NpcIndex="100036702">
+      <_TRADELIST _ItemIndex="244299010" />
+      <_TRADELIST _ItemIndex="244299011" />
+      <_TRADELIST _ItemIndex="244299012" />
+      <_TRADELIST _ItemIndex="244299013" />
+      <_TRADELIST _ItemIndex="241020001" />
+      <_TRADELIST _ItemIndex="241020002" />
+      <_TRADELIST _ItemIndex="241020003" />
+      <_TRADELIST _ItemIndex="241020011" />
+      <_TRADELIST _ItemIndex="241020012" />
+      <_TRADELIST _ItemIndex="241020013" />
+      <_TRADELIST _ItemIndex="241020014" />
+      <_TRADELIST _ItemIndex="241020015" />
+      <_TRADELIST _ItemIndex="241030011" />
+      <_TRADELIST _ItemIndex="241030012" />
+      <_TRADELIST _ItemIndex="241030013" />
+      <_TRADELIST _ItemIndex="241030014" />
+      <_TRADELIST _ItemIndex="241030015" />
+      <_TRADELIST _ItemIndex="241040400" />
+      <_TRADELIST _ItemIndex="241040401" />
+      <_TRADELIST _ItemIndex="241040402" />
+      <_TRADELIST _ItemIndex="241040403" />
+      <_TRADELIST _ItemIndex="241040200" />
+      <_TRADELIST _ItemIndex="241040201" />
+      <_TRADELIST _ItemIndex="241040202" />
+      <_TRADELIST _ItemIndex="241040203" />
+      <_TRADELIST _ItemIndex="241040100" />
+      <_TRADELIST _ItemIndex="241040101" />
+      <_TRADELIST _ItemIndex="241040102" />
+      <_TRADELIST _ItemIndex="241040103" />
+      <_TRADELIST _ItemIndex="241040300" />
+      <_TRADELIST _ItemIndex="241040301" />
+      <_TRADELIST _ItemIndex="241040302" />
+      <_TRADELIST _ItemIndex="241040303" />
+      <_TRADELIST _ItemIndex="241040500" />
+      <_TRADELIST _ItemIndex="241040501" />
+      <_TRADELIST _ItemIndex="241040502" />
+      <_TRADELIST _ItemIndex="241040503" />
+      <_TRADELIST _ItemIndex="241101301" />
+      <_TRADELIST _ItemIndex="241101303" />
+      <_TRADELIST _ItemIndex="241101305" />
+      <_TRADELIST _ItemIndex="241101306" />
+      <_TRADELIST _ItemIndex="241101401" />
+      <_TRADELIST _ItemIndex="241101402" />
+      <_TRADELIST _ItemIndex="241101403" />
+      <_TRADELIST _ItemIndex="241101404" />
+      <_TRADELIST _ItemIndex="241101405" />
+      <_TRADELIST _ItemIndex="241101406" />
+      <_TRADELIST _ItemIndex="241101501" />
+      <_TRADELIST _ItemIndex="241101502" />
+      <_TRADELIST _ItemIndex="241101503" />
+      <_TRADELIST _ItemIndex="241101504" />
+      <_TRADELIST _ItemIndex="241101505" />
+      <_TRADELIST _ItemIndex="241101506" />
+      <_TRADELIST _ItemIndex="241201301" />
+      <_TRADELIST _ItemIndex="241201302" />
+      <_TRADELIST _ItemIndex="241201304" />
+      <_TRADELIST _ItemIndex="241201306" />
+      <_TRADELIST _ItemIndex="241201401" />
+      <_TRADELIST _ItemIndex="241201402" />
+      <_TRADELIST _ItemIndex="241201404" />
+      <_TRADELIST _ItemIndex="241201405" />
+      <_TRADELIST _ItemIndex="241201406" />
+      <_TRADELIST _ItemIndex="241201407" />
+      <_TRADELIST _ItemIndex="241201408" />
+      <_TRADELIST _ItemIndex="241201501" />
+      <_TRADELIST _ItemIndex="241201502" />
+      <_TRADELIST _ItemIndex="241201504" />
+      <_TRADELIST _ItemIndex="241201505" />
+      <_TRADELIST _ItemIndex="241201506" />
+      <_TRADELIST _ItemIndex="241201507" />
+      <_TRADELIST _ItemIndex="241201508" />
+      <_TRADELIST _ItemIndex="241301301" />
+      <_TRADELIST _ItemIndex="241301303" />
+      <_TRADELIST _ItemIndex="241301306" />
+      <_TRADELIST _ItemIndex="241301310" />
+      <_TRADELIST _ItemIndex="241301401" />
+      <_TRADELIST _ItemIndex="241301402" />
+      <_TRADELIST _ItemIndex="241301403" />
+      <_TRADELIST _ItemIndex="241301404" />
+      <_TRADELIST _ItemIndex="241301405" />
+      <_TRADELIST _ItemIndex="241301406" />
+      <_TRADELIST _ItemIndex="241301407" />
+      <_TRADELIST _ItemIndex="241301408" />
+      <_TRADELIST _ItemIndex="241301409" />
+      <_TRADELIST _ItemIndex="241301410" />
+      <_TRADELIST _ItemIndex="241301411" />
+      <_TRADELIST _ItemIndex="241301412" />
+      <_TRADELIST _ItemIndex="241301413" />
+      <_TRADELIST _ItemIndex="241301414" />
+      <_TRADELIST _ItemIndex="241301501" />
+      <_TRADELIST _ItemIndex="241301502" />
+      <_TRADELIST _ItemIndex="241301503" />
+      <_TRADELIST _ItemIndex="241301504" />
+      <_TRADELIST _ItemIndex="241301505" />
+      <_TRADELIST _ItemIndex="241301506" />
+      <_TRADELIST _ItemIndex="241301507" />
+      <_TRADELIST _ItemIndex="241301508" />
+      <_TRADELIST _ItemIndex="241301509" />
+      <_TRADELIST _ItemIndex="241301510" />
+      <_TRADELIST _ItemIndex="241301511" />
+      <_TRADELIST _ItemIndex="241301512" />
+      <_TRADELIST _ItemIndex="241301513" />
+      <_TRADELIST _ItemIndex="241301514" />
+    </ST_TRADER>
+  </INFO>
+  <INFO ID="573000006">
+    <ST_TRADER _NpcIndex="100036703">
+      <_TRADELIST _ItemIndex="242000014" _Group="TRADERGROUP_INGREDIENT_MODULE_UPGRADE" />
+      <_TRADELIST _ItemIndex="242000015" _Group="TRADERGROUP_INGREDIENT_MODULE_UPGRADE" />
+      <_TRADELIST _ItemIndex="242000016" _Group="TRADERGROUP_INGREDIENT_MODULE_UPGRADE" />
+      <_TRADELIST _ItemIndex="242000017" _Group="TRADERGROUP_INGREDIENT_MODULE_UPGRADE" />
+      <_TRADELIST _ItemIndex="242000018" _Group="TRADERGROUP_INGREDIENT_MODULE_UPGRADE" />
+      <_TRADELIST _ItemIndex="242000561" _Group="TRADERGROUP_ETC_UNLOCK" />
+      <_TRADELIST _ItemIndex="242000562" _Group="TRADERGROUP_ETC_UNLOCK" />
+      <_TRADELIST _ItemIndex="242000563" _Group="TRADERGROUP_ETC_UNLOCK" />
+      <_TRADELIST _ItemIndex="242000564" _Group="TRADERGROUP_ETC_UNLOCK" />
+      <_TRADELIST _ItemIndex="242000565" _Group="TRADERGROUP_ETC_UNLOCK" />
+      <_TRADELIST _ItemIndex="242000566" _Group="TRADERGROUP_ETC_UNLOCK" />
+    </ST_TRADER>
+  </INFO>
+  <INFO ID="573000007">
+    <ST_TRADER _NpcIndex="100036708">
+      <_TRADELIST _ItemIndex="240000002" _Group="TRADERGROUP_SKIN_CREATE" />
+      <_TRADELIST _ItemIndex="240000001" _Group="TRADERGROUP_SKIN_CREATE" />
+      <_TRADELIST _ItemIndex="240000003" _Group="TRADERGROUP_SKIN_BREAK" />
+      <_TRADELIST _ItemIndex="240000004" _Group="TRADERGROUP_SKIN_BREAK" />
+      <_TRADELIST _ItemIndex="240000005" _Group="TRADERGROUP_SKIN_BREAK" />
+      <_TRADELIST _ItemIndex="240000006" _Group="TRADERGROUP_SKIN_BREAK" />
+      <_TRADELIST _ItemIndex="240000007" _Group="TRADERGROUP_SKIN_BREAK" />
+    </ST_TRADER>
+  </INFO>
+</ENTITY_FILE>

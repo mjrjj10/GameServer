@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ENTITY_FILE>
+  <ST_COLOR_RULE_DEFINE_LIST>
+    <_ColorRuleDefineList _Mode="COLOR_MODE_LOBBY">
+      <_ColorRuleDefine _RelationShip="FRIENDLY">
+        <_ColorRuleList _Target="COLOR_TARGET_NAME" _Rule="COLOR_RULE_WHITE" />
+        <_ColorRuleList _Target="COLOR_TARGET_GAUGE" _Rule="COLOR_RULE_BLUE" />
+        <_ColorRuleList _Target="COLOR_TARGET_OUTLINE" _Rule="COLOR_RULE_BLUE" />
+      </_ColorRuleDefine>
+      <_ColorRuleDefine _RelationShip="UNFRIENDLY">
+        <_ColorRuleList _Target="COLOR_TARGET_NAME" _Rule="COLOR_RULE_RED" />
+        <_ColorRuleList _Target="COLOR_TARGET_GAUGE" _Rule="COLOR_RULE_RED" />
+        <_ColorRuleList _Target="COLOR_TARGET_OUTLINE" _Rule="COLOR_RULE_RED" />
+      </_ColorRuleDefine>
+      <_ColorRuleDefine _RelationShip="NEUTRAL">
+        <_ColorRuleList _Target="COLOR_TARGET_NAME" _Rule="COLOR_RULE_WHITE" />
+        <_ColorRuleList _Target="COLOR_TARGET_GAUGE" _Rule="COLOR_RULE_WHITE" />
+        <_ColorRuleList _Target="COLOR_TARGET_OUTLINE" _Rule="COLOR_RULE_WHITE" />
+      </_ColorRuleDefine>
+    </_ColorRuleDefineList>
+    <_ColorRuleDefineList _Mode="COLOR_MODE_PVE">
+      <_ColorRuleDefine _RelationShip="FRIENDLY">
+        <_ColorRuleList _Target="COLOR_TARGET_NAME" _Rule="COLOR_RULE_WHITE" />
+        <_ColorRuleList _Target="COLOR_TARGET_GAUGE" _Rule="COLOR_RULE_BLUE" />
+        <_ColorRuleList _Target="COLOR_TARGET_OUTLINE" _Rule="COLOR_RULE_BLUE" />
+      </_ColorRuleDefine>
+      <_ColorRuleDefine _RelationShip="UNFRIENDLY">
+        <_ColorRuleList _Target="COLOR_TARGET_NAME" _Rule="COLOR_RULE_RED" />
+        <_ColorRuleList _Target="COLOR_TARGET_GAUGE" _Rule="COLOR_RULE_RED" />
+        <_ColorRuleList _Target="COLOR_TARGET_OUTLINE" _Rule="COLOR_RULE_RED" />
+      </_ColorRuleDefine>
+      <_ColorRuleDefine _RelationShip="NEUTRAL">
+        <_ColorRuleList _Target="COLOR_TARGET_NAME" _Rule="COLOR_RULE_WHITE" />
+        <_ColorRuleList _Target="COLOR_TARGET_GAUGE" _Rule="COLOR_RULE_WHITE" />
+        <_ColorRuleList _Target="COLOR_TARGET_OUTLINE" _Rule="COLOR_RULE_WHITE" />
+      </_ColorRuleDefine>
+    </_ColorRuleDefineList>
+    <_ColorRuleDefineList _Mode="COLOR_MODE_PVP">
+      <_ColorRuleDefine _RelationShip="FRIENDLY">
+        <_ColorRuleList _Target="COLOR_TARGET_NAME" _Rule="COLOR_RULE_TEAM" />
+        <_ColorRuleList _Target="COLOR_TARGET_GAUGE" _Rule="COLOR_RULE_TEAM" />
+        <_ColorRuleList _Target="COLOR_TARGET_OUTLINE" _Rule="COLOR_RULE_TEAM" />
+      </_ColorRuleDefine>
+      <_ColorRuleDefine _RelationShip="UNFRIENDLY">
+        <_ColorRuleList _Target="COLOR_TARGET_NAME" _Rule="COLOR_RULE_TEAM" />
+        <_ColorRuleList _Target="COLOR_TARGET_GAUGE" _Rule="COLOR_RULE_TEAM" />
+        <_ColorRuleList _Target="COLOR_TARGET_OUTLINE" _Rule="COLOR_RULE_TEAM" />
+      </_ColorRuleDefine>
+      <_ColorRuleDefine _RelationShip="NEUTRAL">
+        <_ColorRuleList _Target="COLOR_TARGET_NAME" _Rule="COLOR_RULE_TEAM" />
+        <_ColorRuleList _Target="COLOR_TARGET_GAUGE" _Rule="COLOR_RULE_TEAM" />
+        <_ColorRuleList _Target="COLOR_TARGET_OUTLINE" _Rule="COLOR_RULE_TEAM" />
+      </_ColorRuleDefine>
+    </_ColorRuleDefineList>
+    <_ColorRuleDefineList _Mode="COLOR_MODE_OBSERVER">
+      <_ColorRuleDefine _RelationShip="FRIENDLY">
+        <_ColorRuleList _Target="COLOR_TARGET_NAME" _Rule="COLOR_RULE_TEAM" />
+        <_ColorRuleList _Target="COLOR_TARGET_GAUGE" _Rule="COLOR_RULE_TEAM" />
+        <_ColorRuleList _Target="COLOR_TARGET_OUTLINE" _Rule="COLOR_RULE_TEAM" />
+      </_ColorRuleDefine>
+      <_ColorRuleDefine _RelationShip="UNFRIENDLY">
+        <_ColorRuleList _Target="COLOR_TARGET_NAME" _Rule="COLOR_RULE_TEAM" />
+        <_ColorRuleList _Target="COLOR_TARGET_GAUGE" _Rule="COLOR_RULE_TEAM" />
+        <_ColorRuleList _Target="COLOR_TARGET_OUTLINE" _Rule="COLOR_RULE_TEAM" />
+      </_ColorRuleDefine>
+      <_ColorRuleDefine _RelationShip="NEUTRAL">
+        <_ColorRuleList _Target="COLOR_TARGET_NAME" _Rule="COLOR_RULE_TEAM" />
+        <_ColorRuleList _Target="COLOR_TARGET_GAUGE" _Rule="COLOR_RULE_TEAM" />
+        <_ColorRuleList _Target="COLOR_TARGET_OUTLINE" _Rule="COLOR_RULE_TEAM" />
+      </_ColorRuleDefine>
+    </_ColorRuleDefineList>
+    <_ColorRuleDefineList _Mode="COLOR_MODE_FFA">
+      <_ColorRuleDefine _RelationShip="FRIENDLY">
+        <_ColorRuleList _Target="COLOR_TARGET_NAME" _Rule="COLOR_RULE_FFA" />
+        <_ColorRuleList _Target="COLOR_TARGET_GAUGE" _Rule="COLOR_RULE_FFA" />
+        <_ColorRuleList _Target="COLOR_TARGET_OUTLINE" _Rule="COLOR_RULE_FFA" />
+      </_ColorRuleDefine>
+      <_ColorRuleDefine _RelationShip="UNFRIENDLY">
+        <_ColorRuleList _Target="COLOR_TARGET_NAME" _Rule="COLOR_RULE_FFA" />
+        <_ColorRuleList _Target="COLOR_TARGET_GAUGE" _Rule="COLOR_RULE_FFA" />
+        <_ColorRuleList _Target="COLOR_TARGET_OUTLINE" _Rule="COLOR_RULE_FFA" />
+      </_ColorRuleDefine>
+      <_ColorRuleDefine _RelationShip="NEUTRAL">
+        <_ColorRuleList _Target="COLOR_TARGET_NAME" _Rule="COLOR_RULE_FFA" />
+        <_ColorRuleList _Target="COLOR_TARGET_GAUGE" _Rule="COLOR_RULE_FFA" />
+        <_ColorRuleList _Target="COLOR_TARGET_OUTLINE" _Rule="COLOR_RULE_FFA" />
+      </_ColorRuleDefine>
+    </_ColorRuleDefineList>
+  </ST_COLOR_RULE_DEFINE_LIST>
+</ENTITY_FILE>

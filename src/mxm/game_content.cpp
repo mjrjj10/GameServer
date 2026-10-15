@@ -1449,6 +1449,16 @@ bool GameXmlContent::LoadRemoteData()
 				ELT_GET(pComp, i32, _ActivateCount, 0);
 				ELT_GET(pComp, i32, _AttackMultiplier, 0);
 				ELT_GET(pComp, f32, _LifeTime, 0);
+				for(XMLElement* pStatus = pComp->FirstChildElement("_Status"); pStatus; pStatus = pStatus->NextSiblingElement("_Status")) {
+					Remote::AppliedStatus st;
+					st.statusID = 0;
+					st.rate = 100;
+					st.value = 100;
+					pStatus->QueryAttribute("DATAKEY", &st.statusID);
+					pStatus->QueryAttribute("_Rate", &st.rate);
+					pStatus->QueryAttribute("_Value", &st.value);
+					if(st.statusID != 0 && !remote.statuses.full()) remote.statuses.push_back(st);
+				}
 				remote.activateCount = _ActivateCount;
 				remote.lifeTime = _LifeTime;
 				pComp->QueryFloatAttribute("_AttackMultiplier", &remote.attackMultiplier);
@@ -1552,6 +1562,8 @@ bool GameXmlContent::Load()
 
 	r = LoadRemoteData();
 	if(!r) return false;
+
+	LoadStatusData();
 
 	/*
 	LOG("Masters:");
@@ -1742,6 +1754,69 @@ const GameXmlContent::Action& GameXmlContent::GetSkillAction(ClassType classType
 
 	ASSERT(0); // not found
 	return actionListMap.cbegin()->second.front(); // unreachable
+}
+
+bool GameXmlContent::LoadStatusData()
+{
+	XMLDocument xml;
+	if(!LoadXMLFile(L"/client/STATUS_PC.xml", xml)) {
+		LOG("WARNING(LoadStatusData): client/STATUS_PC.xml missing, statuses disabled");
+		return false;
+	}
+
+	for(XMLElement* pInfo = xml.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+		StatusInfo st;
+		pInfo->QueryAttribute("ID", &st.ID);
+		XMLElement* pCommon = pInfo->FirstChildElement("ST_COMMONSTATUS");
+		if(!pCommon) continue;
+
+		f32 durationMs = 0;
+		pCommon->QueryFloatAttribute("_DurationTime", &durationMs);
+		st.durationSec = durationMs / 1000.0f;
+		pCommon->QueryFloatAttribute("_DistanceRatio", &st.distanceRatio);
+		pCommon->QueryFloatAttribute("_TimeRatio", &st.timeRatio);
+		pCommon->QueryFloatAttribute("_HeightRatio", &st.heightRatio);
+		const char* type = nullptr;
+		pCommon->QueryStringAttribute("_Type", &type);
+		if(type) st.type = type;
+
+		static const char* hardCC[] = { "STATUS_TYPE_STUN", "STATUS_TYPE_PUSH", "STATUS_TYPE_KNOCKDOWN", "STATUS_TYPE_AIRBORNE",
+			"STATUS_TYPE_FEAR", "STATUS_TYPE_FORCEBACK", "STATUS_TYPE_DRAGGED", "STATUS_TYPE_SHOCKED", "STATUS_TYPE_ACTIONBLOCK" };
+		for(const char* t : hardCC) if(type && EA::StdC::Strcmp(type, t) == 0) st.kind = StatusInfo::Kind::HARD_CC;
+		if(type && EA::StdC::Strcmp(type, "STATUS_TYPE_ROOT") == 0) st.kind = StatusInfo::Kind::ROOT;
+		if(type && EA::StdC::Strcmp(type, "STATUS_TYPE_SLOW") == 0) st.kind = StatusInfo::Kind::SLOW;
+
+		statusMap[st.ID] = st;
+	}
+
+	LOG("Loaded %d statuses", (i32)statusMap.size());
+
+	XMLDocument xmlSkill;
+	if(LoadXMLFile(L"/SKILL.xml", xmlSkill)) {
+		for(XMLElement* pInfo = xmlSkill.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+			i32 skillID = 0;
+			pInfo->QueryAttribute("ID", &skillID);
+			XMLElement* pCommon = pInfo->FirstChildElement("ST_COMMONSKILL");
+			XMLElement* pEvent = pCommon ? pCommon->FirstChildElement("_HitEvent") : nullptr;
+			if(!pEvent) continue;
+			const char* type = nullptr;
+			pEvent->QueryStringAttribute("_HIT_EVENT_TYPE", &type);
+			i32 remote = 0;
+			pEvent->QueryAttribute("_HIT_EVENT_CONDITION", &remote);
+			if(type && EA::StdC::Strstr(type, "ENABLE_NEXT_COMBO") && remote != 0) {
+				skillHitEventRemote[skillID] = remote;
+			}
+		}
+		LOG("Loaded %d skill hit events", (i32)skillHitEventRemote.size());
+	}
+	return true;
+}
+
+const StatusInfo* GameXmlContent::FindStatus(i32 statusID) const
+{
+	auto found = statusMap.find(statusID);
+	if(found == statusMap.end()) return nullptr;
+	return &found->second;
 }
 
 const Remote* GameXmlContent::FindRemote(RemoteIdx remoteID) const

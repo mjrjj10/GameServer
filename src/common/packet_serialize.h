@@ -2572,6 +2572,36 @@ DEFAULT_SERIALIZE(Sv::SN_UpdateEntrySystem);
 #undef DEFAULT_SERIALIZE
 
 template<>
+inline const char* PacketSerialize<Sv::SN_AddStatus>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_AddStatus(%d, %d) :: {", Sv::SN_AddStatus::NET_ID, packetSize);
+	const u8 bits = buff.Read<u8>();
+	SER("	excludedFieldBits=%u", bits);
+	if(!(bits & 1)) buff.ReadRaw(40);
+	SER("	statusID=%u", buff.Read<u32>());
+	SER("	bEnabled=%u", buff.Read<u8>());
+	SER("	targetID=0x%08x", buff.Read<u32>());
+	SER("	casterID=0x%08x", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_RemoveStatus>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_RemoveStatus(%d, %d) :: {", Sv::SN_RemoveStatus::NET_ID, packetSize);
+	SER("	statusID=%u", buff.Read<u32>());
+	SER("	targetID=0x%08x", buff.Read<u32>());
+	SER("	casterID=0x%08x", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_RemoteSyncTarget>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<FILE>
+  <OptionTableData EnablePreload="true" FrameRate="60" TestWorldIndex="160000146" EnableAccountTestSceneMode="false" BattleStateTime="2000" EnableNvPerfHUD="0" CreatureGravity="-2100" Gravity="-1800" LoginID="pp" AutoLogin="false" RemoteShadowMaxHeight="1000" RemoteShadowMinScale="0.5" RemoteShadowMaxScale="2" RemoteShadowMinAlpha="0.3" RemoteShadowDefaultAlpha="0.8" SphereShadowDistance="2300" PointShadowDistance="800" DirectionShadowDistance="2300" SpawnFadeTime="0.2" LoadSoundBank="true" UseSpatialization="true" SoundListenerMode="E_SOUND_LISTENER_CAMERA" UseWWiseSoundFrame="false" ViewPhysicDisableMesh="false" RewardEndTime="20.0" UseLODShadow="false" StartZ="0.5" RangeAngle="180" RangeRandomSpeed="1000" RangeMinSpeed="600" RangeRotate="90" LiftedTargetNodeName="Character_Attack_Dummy01" StandardSkillRangeLength="500" TextureMipmapLODBias="-2.5" ThinDivisionValue="400" ThickDivisionValue="2000" IgnoreThinValue="20000" IgnoreDivisionValue="100000" AimMarkerSFXKeyName="Pointer_Box" boundaryGap="10" UnusedResCheckTime="30.0f" UnusedResRemoveCount="10" WarFogColorR="4" WarFogColorG="2" WarFogColorB="5" WarFogAlpha="0.85" >
+  
+    <SoundBankList DATA="Events.bnk" />
+    <SoundBankList DATA="UI.bnk" />
+    <DRAGGED DATA="0.00" />
+    <DRAGGED DATA="2.00" />
+    <DRAGGED DATA="5.00" />
+    <DRAGGED DATA="8.00" />
+    <DRAGGED DATA="13.00" />
+    <DRAGGED DATA="18.00" />
+    <DRAGGED DATA="25.00" />
+    <DRAGGED DATA="37.00" />
+    <DRAGGED DATA="51.00" />
+    <DRAGGED DATA="70.00" />
+    <DRAGGED DATA="100.00" />
+	<DefaultChatMacroKey DATA="CHATMACRO_DEFAULT_10" />
+	<DefaultChatMacroKey DATA="CHATMACRO_DEFAULT_1" />
+	<DefaultChatMacroKey DATA="CHATMACRO_DEFAULT_3" />
+	<DefaultChatMacroKey DATA="CHATMACRO_DEFAULT_5" />
+	<DefaultChatMacroKey DATA="CHATMACRO_DEFAULT_7" />
+	<DefaultChatMacroKey DATA="CHATMACRO_DEFAULT_8" />
+	<DefaultChatMacroKey DATA="CHATMACRO_BATTLE_1" />
+	<DefaultChatMacroKey DATA="CHATMACRO_DEFAULT_14" />
+	<DefaultChatMacroKey DATA="CHATMACRO_BATTLE_10" />
+	<DefaultChatMacroKey DATA="CHATMACRO_BATTLE_12" />
+  </OptionTableData>
+</FILE>

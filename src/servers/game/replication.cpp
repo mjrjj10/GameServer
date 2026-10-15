@@ -1075,6 +1075,54 @@ void Replication::SendAttackActionToOthers(ClientHandle senderHd, ActorUID actor
 	}
 }
 
+void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID targetLocal = GetLocalActorID(clientHd, targetUID);
+		if(targetLocal == LocalActorID::INVALID) continue;
+		const LocalActorID casterLocal = GetLocalActorID(clientHd, casterUID);
+
+		const f32 dist = glm::length(to - from);
+		PacketWriter<Sv::SN_AddStatus,128> packet;
+		packet.Write<u8>(0);
+		packet.Write<f32>(1.0f);
+		packet.Write<float3>(v2f(from));
+		packet.Write<float3>(v2f(to));
+		packet.Write<f32>(dist);
+		packet.Write<f32>(dist);
+		packet.Write<f32>(graphDuration);
+		packet.Write<u32>((u32)statusID);
+		packet.Write<u8>(1);
+		packet.Write<u32>((u32)targetLocal);
+		packet.Write<u32>(casterLocal != LocalActorID::INVALID ? (u32)casterLocal : 0);
+		packet.Write<u8>(0);
+		packet.Write<u8>(1);
+		packet.Write<u8>(0);
+		packet.Write<f32>(durationSec);
+		packet.Write<f32>(0);
+		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID targetLocal = GetLocalActorID(clientHd, targetUID);
+		if(targetLocal == LocalActorID::INVALID) continue;
+		const LocalActorID casterLocal = GetLocalActorID(clientHd, casterUID);
+
+		Sv::SN_RemoveStatus packet;
+		packet.statusID = (u32)statusID;
+		packet.targetID = (u32)targetLocal;
+		packet.casterID = casterLocal != LocalActorID::INVALID ? (u32)casterLocal : 0;
+		SendPacket(clientHd, packet);
+	}
+}
+
 void Replication::SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 max)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {

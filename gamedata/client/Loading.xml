@@ -1,0 +1,334 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ENTITY_FILE>
+  <INFO ID="0">
+    <ST_LOADING_IMAGE>
+      <_Layout _MapType="LOADING_MAP_DEFAULT" _Condition="LOADING_CONDITION_NEWBIE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_tip_01" _TipSetName="tipset_nb_01" />
+      <_Layout _MapType="LOADING_MAP_DEFAULT" _Condition="LOADING_CONDITION_NEWBIE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_tip_02" _TipSetName="tipset_nb_02" />
+      <_Layout _MapType="LOADING_MAP_DEFAULT" _Condition="LOADING_CONDITION_NEWBIE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_tip_03" _TipSetName="tipset_nb_03" />
+      <_Layout _MapType="LOADING_MAP_DEFAULT" _Condition="LOADING_CONDITION_NEWBIE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_11" _TipSetName="tipset_lobby_nb" />
+      <_Layout _MapType="LOADING_MAP_DEFAULT" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_01" _TipSetName="tipset_all" />
+      <_Layout _MapType="LOADING_MAP_DEFAULT" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_02" _TipSetName="tipset_all" />
+      <_Layout _MapType="LOADING_MAP_DEFAULT" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_03" _TipSetName="tipset_all" />
+      <_Layout _MapType="LOADING_MAP_DEFAULT" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_04" _TipSetName="tipset_all" />
+      <_Layout _MapType="LOADING_MAP_DEFAULT" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_05" _TipSetName="tipset_all" />
+      <_Layout _MapType="LOADING_MAP_DEFAULT" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_06" _TipSetName="tipset_all" />
+      <_Layout _MapType="LOADING_MAP_DEFAULT" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_07" _TipSetName="tipset_all" />
+      <_Layout _MapType="LOADING_MAP_DEFAULT" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_08" _TipSetName="tipset_all" />
+      <_Layout _MapType="LOADING_MAP_DEFAULT" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_09" _TipSetName="tipset_all" />
+      <_Layout _MapType="LOADING_MAP_DEFAULT" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_10" _TipSetName="tipset_all" />
+      <_Layout _MapType="LOADING_MAP_DEFAULT" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_11" _TipSetName="tipset_all" />
+      <_Layout _MapType="LOADING_MAP_DEATHMATCH" _Condition="LOADING_CONDITION_NEWBIE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_deathmatch_01" _TipSetName="tipset_nb_02" />
+      <_Layout _MapType="LOADING_MAP_DEATHMATCH" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_deathmatch_01" _TipSetName="tipset_death" />
+      <_Layout _MapType="LOADING_MAP_DEATHMATCH_BUSH" _Condition="LOADING_CONDITION_NEWBIE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_deathmatch_02" _TipSetName="tipset_pvp_nb_03" />
+      <_Layout _MapType="LOADING_MAP_DEATHMATCH_BUSH" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_deathmatch_02" _TipSetName="tipset_death_bush" />
+      <_Layout _MapType="LOADING_MAP_DEATHMATCH_PORTAL" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_deathmatch_03" _TipSetName="tipset_death_portal" />
+      <_Layout _MapType="LOADING_MAP_OCCUPY_CORE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_occupy_01" _TipSetName="tipset_occupy_core" />
+      <_Layout _MapType="LOADING_MAP_OCCUPY_BUSH" _Condition="LOADING_CONDITION_NEWBIE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_occupy_02" _TipSetName="tipset_pvp_nb_03" />
+      <_Layout _MapType="LOADING_MAP_OCCUPY_BUSH" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_occupy_02" _TipSetName="tipset_occupy_bush" />
+      <_Layout _MapType="LOADING_MAP_TITAN" _Condition="LOADING_CONDITION_NEWBIE" _LayoutType="LAYOUT_LIST_THREE" _IconAlias="loading_titan_01" _TipSetName="tipset_titan_nb" _Title="STR_MAPLIST_NAME_160000050" _Desc1="GAMETIP_TITAN_LAYOUT_1_SUB_01" _Desc2="GAMETIP_TITAN_LAYOUT_1_SUB_02">
+        <_SubData _IconAlias="loading_T1_img_01" _Title="GAMETIP_TITAN_LAYOUT_1_TITLE_01" _Desc="GAMETIP_TITAN_LAYOUT_1_DESC_01" />
+        <_SubData _IconAlias="loading_T1_img_02" _Title="GAMETIP_TITAN_LAYOUT_1_TITLE_02" _Desc="GAMETIP_TITAN_LAYOUT_1_DESC_02" />
+        <_SubData _IconAlias="loading_T1_img_03" _Title="GAMETIP_TITAN_LAYOUT_1_TITLE_03" _Desc="GAMETIP_TITAN_LAYOUT_1_DESC_03" />
+      </_Layout>
+      <_Layout _MapType="LOADING_MAP_TITAN" _Condition="LOADING_CONDITION_NEWBIE" _LayoutType="LAYOUT_LIST_THREE" _IconAlias="loading_titan_01" _TipSetName="tipset_titan_nb" _Title="STR_MAPLIST_NAME_160000050" _Desc1="GAMETIP_TITAN_LAYOUT_2_SUB_01" _Desc2="GAMETIP_TITAN_LAYOUT_2_SUB_02">
+        <_SubData _IconAlias="loading_T1_img_04" _Title="GAMETIP_TITAN_LAYOUT_2_TITLE_01" _Desc="GAMETIP_TITAN_LAYOUT_2_DESC_01" />
+        <_SubData _IconAlias="loading_T1_img_05" _Title="GAMETIP_TITAN_LAYOUT_2_TITLE_02" _Desc="GAMETIP_TITAN_LAYOUT_2_DESC_02" />
+        <_SubData _IconAlias="loading_T1_img_06" _Title="GAMETIP_TITAN_LAYOUT_2_TITLE_03" _Desc="GAMETIP_TITAN_LAYOUT_2_DESC_03" />
+      </_Layout>
+      <_Layout _MapType="LOADING_MAP_TITAN" _Condition="LOADING_CONDITION_NEWBIE" _LayoutType="LAYOUT_LIST_THREE" _IconAlias="loading_titan_01" _TipSetName="tipset_titan_nb" _Title="STR_MAPLIST_NAME_160000050" _Desc1="GAMETIP_TITAN_LAYOUT_3_SUB_01" _Desc2="GAMETIP_TITAN_LAYOUT_3_SUB_02">
+        <_SubData _IconAlias="loading_T1_img_07" _Title="GAMETIP_TITAN_LAYOUT_3_TITLE_01" _Desc="GAMETIP_TITAN_LAYOUT_3_DESC_01" />
+        <_SubData _IconAlias="loading_T1_img_08" _Title="GAMETIP_TITAN_LAYOUT_3_TITLE_02" _Desc="GAMETIP_TITAN_LAYOUT_3_DESC_02" />
+        <_SubData _IconAlias="loading_T1_img_09" _Title="GAMETIP_TITAN_LAYOUT_3_TITLE_03" _Desc="GAMETIP_TITAN_LAYOUT_3_DESC_03" />
+      </_Layout>
+      <_Layout _MapType="LOADING_MAP_TITAN" _Condition="LOADING_CONDITION_NEWBIE" _LayoutType="LAYOUT_LIST_THREE" _IconAlias="loading_titan_01" _TipSetName="tipset_titan_all" _Title="STR_MAPLIST_NAME_160000050" _Desc1="GAMETIP_TITAN_LAYOUT_4_SUB_01" _Desc2="GAMETIP_TITAN_LAYOUT_4_SUB_02">
+        <_SubData _IconAlias="loading_T1_img_10" _Title="GAMETIP_TITAN_LAYOUT_4_TITLE_01" _Desc="GAMETIP_TITAN_LAYOUT_4_DESC_01" />
+        <_SubData _IconAlias="loading_T1_img_11" _Title="GAMETIP_TITAN_LAYOUT_4_TITLE_02" _Desc="GAMETIP_TITAN_LAYOUT_4_DESC_02" />
+        <_SubData _IconAlias="loading_T1_img_12" _Title="GAMETIP_TITAN_LAYOUT_4_TITLE_03" _Desc="GAMETIP_TITAN_LAYOUT_4_DESC_03" />
+      </_Layout>
+      <_Layout _MapType="LOADING_MAP_TITAN" _Condition="LOADING_CONDITION_NEWBIE" _LayoutType="LAYOUT_LIST_THREE" _IconAlias="loading_titan_01" _TipSetName="tipset_titan_all" _Title="STR_MAPLIST_NAME_160000050" _Desc1="GAMETIP_TITAN_LAYOUT_5_SUB_01" _Desc2="GAMETIP_TITAN_LAYOUT_5_SUB_02">
+        <_SubData _IconAlias="loading_T1_img_13" _Title="GAMETIP_TITAN_LAYOUT_5_TITLE_01" _Desc="GAMETIP_TITAN_LAYOUT_5_DESC_01" />
+        <_SubData _IconAlias="loading_T1_img_14" _Title="GAMETIP_TITAN_LAYOUT_5_TITLE_02" _Desc="GAMETIP_TITAN_LAYOUT_5_DESC_02" />
+        <_SubData _IconAlias="loading_T1_img_15" _Title="GAMETIP_TITAN_LAYOUT_5_TITLE_03" _Desc="GAMETIP_TITAN_LAYOUT_5_DESC_03" />
+      </_Layout>
+      <_Layout _MapType="LOADING_MAP_TITAN" _Condition="LOADING_CONDITION_NEWBIE" _LayoutType="LAYOUT_MINIMAP" _IconAlias="loading_titan_01" _TipSetName="tipset_titan_nb" _Title="STR_MAPLIST_NAME_160000050" _DescFile="SUB_LOADING_TITAN_INFO.swf" />
+      <_Layout _MapType="LOADING_MAP_TITAN" _LayoutType="LAYOUT_LIST_THREE" _IconAlias="loading_titan_01" _TipSetName="tipset_titan_all" _Title="STR_MAPLIST_NAME_160000050" _Desc1="GAMETIP_TITAN_LAYOUT_1_SUB_01" _Desc2="GAMETIP_TITAN_LAYOUT_1_SUB_02">
+        <_SubData _IconAlias="loading_T1_img_01" _Title="GAMETIP_TITAN_LAYOUT_1_TITLE_01" _Desc="GAMETIP_TITAN_LAYOUT_1_DESC_01" />
+        <_SubData _IconAlias="loading_T1_img_02" _Title="GAMETIP_TITAN_LAYOUT_1_TITLE_02" _Desc="GAMETIP_TITAN_LAYOUT_1_DESC_02" />
+        <_SubData _IconAlias="loading_T1_img_03" _Title="GAMETIP_TITAN_LAYOUT_1_TITLE_03" _Desc="GAMETIP_TITAN_LAYOUT_1_DESC_03" />
+      </_Layout>
+      <_Layout _MapType="LOADING_MAP_TITAN" _LayoutType="LAYOUT_LIST_THREE" _IconAlias="loading_titan_01" _TipSetName="tipset_titan_all" _Title="STR_MAPLIST_NAME_160000050" _Desc1="GAMETIP_TITAN_LAYOUT_2_SUB_01" _Desc2="GAMETIP_TITAN_LAYOUT_2_SUB_02">
+        <_SubData _IconAlias="loading_T1_img_04" _Title="GAMETIP_TITAN_LAYOUT_2_TITLE_01" _Desc="GAMETIP_TITAN_LAYOUT_2_DESC_01" />
+        <_SubData _IconAlias="loading_T1_img_05" _Title="GAMETIP_TITAN_LAYOUT_2_TITLE_02" _Desc="GAMETIP_TITAN_LAYOUT_2_DESC_02" />
+        <_SubData _IconAlias="loading_T1_img_06" _Title="GAMETIP_TITAN_LAYOUT_2_TITLE_03" _Desc="GAMETIP_TITAN_LAYOUT_2_DESC_03" />
+      </_Layout>
+      <_Layout _MapType="LOADING_MAP_TITAN" _LayoutType="LAYOUT_LIST_THREE" _IconAlias="loading_titan_01" _TipSetName="tipset_titan_all" _Title="STR_MAPLIST_NAME_160000050" _Desc1="GAMETIP_TITAN_LAYOUT_3_SUB_01" _Desc2="GAMETIP_TITAN_LAYOUT_3_SUB_02">
+        <_SubData _IconAlias="loading_T1_img_07" _Title="GAMETIP_TITAN_LAYOUT_3_TITLE_01" _Desc="GAMETIP_TITAN_LAYOUT_3_DESC_01" />
+        <_SubData _IconAlias="loading_T1_img_08" _Title="GAMETIP_TITAN_LAYOUT_3_TITLE_02" _Desc="GAMETIP_TITAN_LAYOUT_3_DESC_02" />
+        <_SubData _IconAlias="loading_T1_img_09" _Title="GAMETIP_TITAN_LAYOUT_3_TITLE_03" _Desc="GAMETIP_TITAN_LAYOUT_3_DESC_03" />
+      </_Layout>
+      <_Layout _MapType="LOADING_MAP_TITAN" _LayoutType="LAYOUT_LIST_THREE" _IconAlias="loading_titan_01" _TipSetName="tipset_titan_all" _Title="STR_MAPLIST_NAME_160000050" _Desc1="GAMETIP_TITAN_LAYOUT_4_SUB_01" _Desc2="GAMETIP_TITAN_LAYOUT_4_SUB_02">
+        <_SubData _IconAlias="loading_T1_img_10" _Title="GAMETIP_TITAN_LAYOUT_4_TITLE_01" _Desc="GAMETIP_TITAN_LAYOUT_4_DESC_01" />
+        <_SubData _IconAlias="loading_T1_img_11" _Title="GAMETIP_TITAN_LAYOUT_4_TITLE_02" _Desc="GAMETIP_TITAN_LAYOUT_4_DESC_02" />
+        <_SubData _IconAlias="loading_T1_img_12" _Title="GAMETIP_TITAN_LAYOUT_4_TITLE_03" _Desc="GAMETIP_TITAN_LAYOUT_4_DESC_03" />
+      </_Layout>
+      <_Layout _MapType="LOADING_MAP_TITAN" _LayoutType="LAYOUT_LIST_THREE" _IconAlias="loading_titan_01" _TipSetName="tipset_titan_all" _Title="STR_MAPLIST_NAME_160000050" _Desc1="GAMETIP_TITAN_LAYOUT_5_SUB_01" _Desc2="GAMETIP_TITAN_LAYOUT_5_SUB_02">
+        <_SubData _IconAlias="loading_T1_img_13" _Title="GAMETIP_TITAN_LAYOUT_5_TITLE_01" _Desc="GAMETIP_TITAN_LAYOUT_5_DESC_01" />
+        <_SubData _IconAlias="loading_T1_img_14" _Title="GAMETIP_TITAN_LAYOUT_5_TITLE_02" _Desc="GAMETIP_TITAN_LAYOUT_5_DESC_02" />
+        <_SubData _IconAlias="loading_T1_img_15" _Title="GAMETIP_TITAN_LAYOUT_5_TITLE_03" _Desc="GAMETIP_TITAN_LAYOUT_5_DESC_03" />
+      </_Layout>
+      <_Layout _MapType="LOADING_MAP_TITAN" _LayoutType="LAYOUT_MINIMAP" _IconAlias="loading_titan_01" _TipSetName="tipset_titan_all" _Title="STR_MAPLIST_NAME_160000050" _DescFile="SUB_LOADING_TITAN_INFO.swf" />
+      <_Layout _MapType="LOADING_MAP_TITAN" _Condition="LOADING_CONDITION_GUILDPVP" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_titan_01" _TipSetName="tipset_titan_all" />
+      <_Layout _MapType="LOADING_MAP_TITAN_TUTORIAL" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_titan_01" _TipSetName="tipset_titan_all" />
+      <_Layout _MapType="LOADING_MAP_TITAN_FIRE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_titan_01" _TipSetName="tipset_titan_all" />
+      <_Layout _MapType="LOADING_MAP_TITAN_ULTIMATE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_titan_01" _TipSetName="tipset_titan_all" />
+      <_Layout _MapType="LOADING_MAP_TUTORIAL" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_tutorial_01" _TipSetName="tipset_all_nb" />
+      <_Layout _MapType="LOADING_MAP_STAGE" _Condition="LOADING_CONDITION_NEWBIE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_tip_01" _TipSetName="tipset_nb_01" />
+      <_Layout _MapType="LOADING_MAP_STAGE" _Condition="LOADING_CONDITION_NEWBIE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_tip_02" _TipSetName="tipset_nb_02" />
+      <_Layout _MapType="LOADING_MAP_STAGE" _Condition="LOADING_CONDITION_NEWBIE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_tip_03" _TipSetName="tipset_nb_03" />
+      <_Layout _MapType="LOADING_MAP_STAGE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_01" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_STAGE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_02" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_STAGE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_03" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_STAGE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_04" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_STAGE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_05" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_STAGE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_06" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_STAGE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_07" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_STAGE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_08" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_STAGE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_09" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_STAGE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_10" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_STAGE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_11" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_SPORTS_RUN" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_sports_01" _TipSetName="tipset_sports_run" />
+      <_Layout _MapType="LOADING_MAP_SPORTS_DODGE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_sports_01" _TipSetName="tipset_sports_dodge" />
+      <_Layout _MapType="LOADING_MAP_SPORTS_JUMP" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_sports_01" _TipSetName="tipset_sports_jump" />
+      <_Layout _MapType="LOADING_MAP_SPORTS_RUN_SIDE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_sports_01" _TipSetName="tipset_sports_siderun" />
+      <_Layout _MapType="LOADING_MAP_SPORTS_CANDY" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_sports_01" _TipSetName="tipset_sports_candy" />
+      <_Layout _MapType="LOADING_MAP_SPORTS_FADEFLOOR" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_sports_01" _TipSetName="tipset_sports_fall" />
+      <_Layout _MapType="LOADING_MAP_SPORTS_SIDEDODGE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_sports_01" _TipSetName="tipset_sports_sidedodge" />
+      <_Layout _MapType="LOADING_MAP_SPORTS_LIFTJUMP" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_sports_01" _TipSetName="tipset_sports_updown" />
+      <_Layout _MapType="LOADING_MAP_DEFENSE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_01" _TipSetName="tipset_defence" />
+      <_Layout _MapType="LOADING_MAP_DEFENSE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_02" _TipSetName="tipset_defence" />
+      <_Layout _MapType="LOADING_MAP_DEFENSE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_03" _TipSetName="tipset_defence" />
+      <_Layout _MapType="LOADING_MAP_DEFENSE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_04" _TipSetName="tipset_defence" />
+      <_Layout _MapType="LOADING_MAP_DEFENSE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_05" _TipSetName="tipset_defence" />
+      <_Layout _MapType="LOADING_MAP_DEFENSE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_06" _TipSetName="tipset_defence" />
+      <_Layout _MapType="LOADING_MAP_DEFENSE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_07" _TipSetName="tipset_defence" />
+      <_Layout _MapType="LOADING_MAP_DEFENSE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_08" _TipSetName="tipset_defence" />
+      <_Layout _MapType="LOADING_MAP_DEFENSE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_09" _TipSetName="tipset_defence" />
+      <_Layout _MapType="LOADING_MAP_DEFENSE" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_10" _TipSetName="tipset_defence" />
+      <_Layout _MapType="LOADING_MAP_BNS" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_bns_01" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_TOF" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_tof_01" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_GLUDIO" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_gludio_01" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_ANT_NEST" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_ant_01" _TipSetName="tipset_antnest" />
+      <_Layout _MapType="LOADING_MAP_GW" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_gw_01" _TipSetName="tipset_ascalon" />
+      <_Layout _MapType="LOADING_MAP_COH" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_coh_01" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_COH" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_coh_02" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_DI" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_11" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_TEST_00" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_11" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_TEST_01" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_11" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_TEST_02" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_11" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_TEST_03" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_11" _TipSetName="tipset_stage" />
+      <_Layout _MapType="LOADING_MAP_TEST_04" _LayoutType="LAYOUT_IMAGE_ONLY" _IconAlias="loading_random_11" _TipSetName="tipset_stage" />
+      <_TipSet _Name="tipset_all">
+        <_Tip DATA="GAMETIP_ALL_01" />
+        <_Tip DATA="GAMETIP_ALL_02" />
+        <_Tip DATA="GAMETIP_ALL_03" />
+        <_Tip DATA="GAMETIP_ALL_04" />
+        <_Tip DATA="GAMETIP_ALL_05" />
+        <_Tip DATA="GAMETIP_ALL_06" />
+        <_Tip DATA="GAMETIP_ALL_07" />
+        <_Tip DATA="GAMETIP_ALL_08" />
+        <_Tip DATA="GAMETIP_ALL_09" />
+        <_Tip DATA="GAMETIP_ALL_10" />
+        <_Tip DATA="GAMETIP_GROUP_01" />
+        <_Tip DATA="GAMETIP_GROUP_02" />
+        <_Tip DATA="GAMETIP_GROUP_03" />
+        <_Tip DATA="GAMETIP_GROUP_04" />
+        <_Tip DATA="GAMETIP_GROUP_05" />
+        <_Tip DATA="GAMETIP_GROUP_06" />
+        <_Tip DATA="GAMETIP_GROUP_07" />
+        <_Tip DATA="GAMETIP_GROUP_08" />
+        <_Tip DATA="GAMETIP_GROUP_09" />
+        <_Tip DATA="GAMETIP_GROUP_10" />
+        <_Tip DATA="GAMETIP_GROUP_11" />
+      </_TipSet>
+      <_TipSet _Name="tipset_all_nb">
+        <_Tip DATA="GAMETIP_ALL_NB_01" />
+        <_Tip DATA="GAMETIP_ALL_NB_02" />
+      </_TipSet>
+      <_TipSet _Name="tipset_nb_01">
+        <_Tip DATA="GAMETIP_ALL_NB_01" />
+      </_TipSet>
+      <_TipSet _Name="tipset_nb_02">
+        <_Tip DATA="GAMETIP_PVP_NB_02" />
+      </_TipSet>
+      <_TipSet _Name="tipset_nb_03">
+        <_Tip DATA="GAMETIP_ALL_NB_02" />
+      </_TipSet>
+      <_TipSet _Name="tipset_lobby_nb">
+        <_Tip DATA="GAMETIP_LOBBY_NB_01" />
+      </_TipSet>
+      <_TipSet _Name="tipset_pvp_nb_03">
+        <_Tip DATA="GAMETIP_PVP_NB_03" />
+      </_TipSet>
+      <_TipSet _Name="tipset_death">
+        <_Tip DATA="GAMETIP_DEATH_01" />
+        <_Tip DATA="GAMETIP_DEATH_02" />
+        <_Tip DATA="GAMETIP_DEATH_03" />
+      </_TipSet>
+      <_TipSet _Name="tipset_death_bush">
+        <_Tip DATA="GAMETIP_DEATH_BUSH_01" />
+        <_Tip DATA="GAMETIP_DEATH_BUSH_02" />
+        <_Tip DATA="GAMETIP_DEATH_BUSH_03" />
+      </_TipSet>
+      <_TipSet _Name="tipset_death_portal">
+        <_Tip DATA="GAMETIP_DEATH_PORTAL_01" />
+        <_Tip DATA="GAMETIP_DEATH_PORTAL_02" />
+        <_Tip DATA="GAMETIP_DEATH_PORTAL_03" />
+      </_TipSet>
+      <_TipSet _Name="tipset_occupy_bush">
+        <_Tip DATA="GAMETIP_OCCUPY_BUSH_01" />
+        <_Tip DATA="GAMETIP_OCCUPY_BUSH_02" />
+        <_Tip DATA="GAMETIP_OCCUPY_BUSH_03" />
+      </_TipSet>
+      <_TipSet _Name="tipset_occupy_core">
+        <_Tip DATA="GAMETIP_OCCUPY_CORE_01" />
+        <_Tip DATA="GAMETIP_OCCUPY_CORE_02" />
+        <_Tip DATA="GAMETIP_OCCUPY_CORE_03" />
+      </_TipSet>
+      <_TipSet _Name="tipset_sports_dodge">
+        <_Tip DATA="GAMETIP_SPORTS_DODGE_01" />
+        <_Tip DATA="GAMETIP_SPORTS_DODGE_02" />
+        <_Tip DATA="GAMETIP_SPORTS_DODGE_03" />
+      </_TipSet>
+      <_TipSet _Name="tipset_sports_jump">
+        <_Tip DATA="GAMETIP_SPORTS_JUMP_01" />
+        <_Tip DATA="GAMETIP_SPORTS_JUMP_02" />
+        <_Tip DATA="GAMETIP_SPORTS_JUMP_03" />
+      </_TipSet>
+      <_TipSet _Name="tipset_sports_run">
+        <_Tip DATA="GAMETIP_SPORTS_RUN_01" />
+        <_Tip DATA="GAMETIP_SPORTS_RUN_02" />
+        <_Tip DATA="GAMETIP_SPORTS_RUN_03" />
+      </_TipSet>
+      <_TipSet _Name="tipset_sports_siderun">
+        <_Tip DATA="GAMETIP_SPORTS_SIDERUN_01" />
+        <_Tip DATA="GAMETIP_SPORTS_SIDERUN_02" />
+        <_Tip DATA="GAMETIP_SPORTS_SIDERUN_03" />
+      </_TipSet>
+      <_TipSet _Name="tipset_sports_candy">
+        <_Tip DATA="GAMETIP_SPORTS_CANDY_01" />
+        <_Tip DATA="GAMETIP_SPORTS_CANDY_02" />
+        <_Tip DATA="GAMETIP_SPORTS_CANDY_03" />
+      </_TipSet>
+      <_TipSet _Name="tipset_sports_sidedodge">
+        <_Tip DATA="GAMETIP_SPORTS_SIDEDODGE_01" />
+        <_Tip DATA="GAMETIP_SPORTS_SIDEDODGE_02" />
+        <_Tip DATA="GAMETIP_SPORTS_SIDEDODGE_03" />
+      </_TipSet>
+      <_TipSet _Name="tipset_sports_fall">
+        <_Tip DATA="GAMETIP_SPORTS_FALL_01" />
+        <_Tip DATA="GAMETIP_SPORTS_FALL_02" />
+        <_Tip DATA="GAMETIP_SPORTS_FALL_03" />
+      </_TipSet>
+      <_TipSet _Name="tipset_sports_updown">
+        <_Tip DATA="GAMETIP_SPORTS_UPDOWN_01" />
+        <_Tip DATA="GAMETIP_SPORTS_UPDOWN_02" />
+        <_Tip DATA="GAMETIP_SPORTS_UPDOWN_03" />
+      </_TipSet>
+      <_TipSet _Name="tipset_stage">
+        <_Tip DATA="GAMETIP_STAGE_01" />
+        <_Tip DATA="GAMETIP_STAGE_02" />
+        <_Tip DATA="GAMETIP_STAGE_03" />
+        <_Tip DATA="GAMETIP_STAGE_04" />
+        <_Tip DATA="GAMETIP_STAGE_05" />
+        <_Tip DATA="GAMETIP_STAGE_06" />
+        <_Tip DATA="GAMETIP_ALL_01" />
+        <_Tip DATA="GAMETIP_ALL_02" />
+        <_Tip DATA="GAMETIP_ALL_03" />
+        <_Tip DATA="GAMETIP_ALL_04" />
+        <_Tip DATA="GAMETIP_ALL_05" />
+        <_Tip DATA="GAMETIP_ALL_06" />
+      </_TipSet>
+      <_TipSet _Name="tipset_defence">
+        <_Tip DATA="GAMETIP_DEFENCE_01" />
+        <_Tip DATA="GAMETIP_DEFENCE_02" />
+        <_Tip DATA="GAMETIP_DEFENCE_03" />
+      </_TipSet>
+      <_TipSet _Name="tipset_antnest">
+        <_Tip DATA="GAMETIP_ANTNEST_01" />
+      </_TipSet>
+      <_TipSet _Name="tipset_ascalon">
+        <_Tip DATA="GAMETIP_ASCALON_01" />
+        <_Tip DATA="GAMETIP_ASCALON_02" />
+        <_Tip DATA="GAMETIP_ASCALON_03" />
+        <_Tip DATA="GAMETIP_ASCALON_04" />
+        <_Tip DATA="GAMETIP_ASCALON_05" />
+        <_Tip DATA="GAMETIP_ASCALON_06" />
+      </_TipSet>
+      <_TipSet _Name="tipset_group">
+        <_Tip DATA="GAMETIP_GROUP_01" />
+        <_Tip DATA="GAMETIP_GROUP_02" />
+        <_Tip DATA="GAMETIP_GROUP_03" />
+        <_Tip DATA="GAMETIP_GROUP_04" />
+        <_Tip DATA="GAMETIP_GROUP_05" />
+        <_Tip DATA="GAMETIP_GROUP_06" />
+        <_Tip DATA="GAMETIP_GROUP_07" />
+        <_Tip DATA="GAMETIP_GROUP_08" />
+        <_Tip DATA="GAMETIP_GROUP_09" />
+        <_Tip DATA="GAMETIP_GROUP_10" />
+        <_Tip DATA="GAMETIP_GROUP_11" />
+      </_TipSet>
+      <_TipSet _Name="tipset_titan_all">
+        <_Tip DATA="GAMETIP_TITAN_01" />
+        <_Tip DATA="GAMETIP_TITAN_02" />
+        <_Tip DATA="GAMETIP_TITAN_03" />
+        <_Tip DATA="GAMETIP_TITAN_04" />
+        <_Tip DATA="GAMETIP_TITAN_05" />
+        <_Tip DATA="GAMETIP_TITAN_06" />
+        <_Tip DATA="GAMETIP_TITAN_07" />
+        <_Tip DATA="GAMETIP_TITAN_08" />
+        <_Tip DATA="GAMETIP_TITAN_09" />
+        <_Tip DATA="GAMETIP_TITAN_10" />
+        <_Tip DATA="GAMETIP_TITAN_11" />
+        <_Tip DATA="GAMETIP_TITAN_12" />
+        <_Tip DATA="GAMETIP_TITAN_13" />
+        <_Tip DATA="GAMETIP_TITAN_14" />
+        <_Tip DATA="GAMETIP_TITAN_15" />
+        <_Tip DATA="GAMETIP_TITAN_16" />
+        <_Tip DATA="GAMETIP_TITAN_17" />
+        <_Tip DATA="GAMETIP_TITAN_18" />
+        <_Tip DATA="GAMETIP_TITAN_19" />
+        <_Tip DATA="GAMETIP_TITAN_20" />
+        <_Tip DATA="GAMETIP_TITAN_21" />
+        <_Tip DATA="GAMETIP_TITAN_22" />
+        <_Tip DATA="GAMETIP_TITAN_23" />
+        <_Tip DATA="GAMETIP_TITAN_24" />
+        <_Tip DATA="GAMETIP_TITAN_25" />
+        <_Tip DATA="GAMETIP_TITAN_26" />
+        <_Tip DATA="GAMETIP_TITAN_27" />
+        <_Tip DATA="GAMETIP_TITAN_28" />
+        <_Tip DATA="GAMETIP_TITAN_29" />
+        <_Tip DATA="GAMETIP_TITAN_30" />
+        <_Tip DATA="GAMETIP_TITAN_31" />
+        <_Tip DATA="GAMETIP_TITAN_32" />
+        <_Tip DATA="GAMETIP_TITAN_33" />
+        <_Tip DATA="GAMETIP_TITAN_34" />
+        <_Tip DATA="GAMETIP_TITAN_35" />
+        <_Tip DATA="GAMETIP_TITAN_36" />
+        <_Tip DATA="GAMETIP_TITAN_37" />
+        <_Tip DATA="GAMETIP_TITAN_38" />
+        <_Tip DATA="GAMETIP_TITAN_39" />
+        <_Tip DATA="GAMETIP_TITAN_40" />
+        <_Tip DATA="GAMETIP_TITAN_41" />
+        <_Tip DATA="GAMETIP_TITAN_42" />
+        <_Tip DATA="GAMETIP_TITAN_43" />
+        <_Tip DATA="GAMETIP_TITAN_44" />
+        <_Tip DATA="GAMETIP_TITAN_RANK_01" />
+        <_Tip DATA="GAMETIP_TITAN_RANK_02" />
+      </_TipSet>
+      <_TipSet _Name="tipset_titan_nb">
+        <_Tip DATA="GAMETIP_PVP_NB_01" />
+        <_Tip DATA="GAMETIP_PVP_NB_03" />
+      </_TipSet>
+    </ST_LOADING_IMAGE>
+  </INFO>
+</ENTITY_FILE>

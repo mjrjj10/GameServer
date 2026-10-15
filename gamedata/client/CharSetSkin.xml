@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ENTITY_FILE>
+  <INFO ID="590000001">
+    <ST_SKIN_SET _Index="590000001" _SchedulePriority="1" _IconAlias="skinset_start_01" _EndIconAlias="skinset_end_01" _Title="STR_SETSKIN_NAME_590000001" _Description="STR_SETSKIN_DESC_590000001" _Description1="STR_SETSKIN_DESC1_590000001" _ThumbnailText="STR_SETSKIN_THUMBNAIL_590000001">
+      <_SkinList _Required="3">
+        <_Skin _SkinDataKey="SKIN_SOULMASTER_04" _ClassType="CLASS_TYPE_SOULMASTER" _SkinIndex="3" />
+        <_Skin _SkinDataKey="SKIN_SNIPER_02" _ClassType="CLASS_TYPE_SNIPER" _SkinIndex="3" />
+        <_Skin _SkinDataKey="SKIN_SLIME_03" _ClassType="CLASS_TYPE_SLIME" _SkinIndex="1" />
+        <_Skin _SkinDataKey="SKIN_MECHANIC_04" _ClassType="CLASS_TYPE_MECHANIC" _SkinIndex="2" />
+        <_Skin _SkinDataKey="SKIN_MAGICGIRL_04" _ClassType="CLASS_TYPE_MAGICGIRL" _SkinIndex="3" />
+      </_SkinList>
+      <_SkinEffect>
+        <_Effect _Type="SKIN_EFFECT_TYPE_GOLD_RATIO" _Data="50" />
+        <_Effect _Type="SKIN_EFFECT_TYPE_EXP_RATIO" _Data="50" />
+      </_SkinEffect>
+    </ST_SKIN_SET>
+  </INFO>
+  <INFO ID="590000002">
+    <ST_SKIN_SET _Index="590000002" _SchedulePriority="1" _IconAlias="skinset_start_01" _EndIconAlias="skinset_end_01" _Title="STR_SETSKIN_NAME_590000002" _Description="STR_SETSKIN_DESC_590000002" _Description1="STR_SETSKIN_DESC1_590000002" _ThumbnailText="STR_SETSKIN_THUMBNAIL_590000002">
+      <_SkinList _Required="3">
+        <_Skin _SkinDataKey="SKIN_ELECTRO_04" _ClassType="CLASS_TYPE_ELECTRO" _SkinIndex="3" />
+        <_Skin _SkinDataKey="SKIN_DESTROYER_04" _ClassType="CLASS_TYPE_DESTROYER" _SkinIndex="2" />
+        <_Skin _SkinDataKey="SKIN_DOUBLEGUN_02" _ClassType="CLASS_TYPE_DOUBLEGUN" _SkinIndex="1" />
+        <_Skin _SkinDataKey="SKIN_RODMASTER_03" _ClassType="CLASS_TYPE_RODMASTER" _SkinIndex="2" />
+        <_Skin _SkinDataKey="SKIN_STRIKER_02" _ClassType="CLASS_TYPE_STRIKER" _SkinIndex="2" />
+      </_SkinList>
+      <_SkinEffect>
+        <_Effect _Type="SKIN_EFFECT_TYPE_GOLD_RATIO" _Data="50" />
+        <_Effect _Type="SKIN_EFFECT_TYPE_EXP_RATIO" _Data="50" />
+      </_SkinEffect>
+    </ST_SKIN_SET>
+  </INFO>
+  <INFO ID="590000003">
+    <ST_SKIN_SET _Index="590000003" _SchedulePriority="1" _IconAlias="skinset_start_01" _EndIconAlias="skinset_end_01" _Title="STR_SETSKIN_NAME_590000003" _Description="STR_SETSKIN_DESC_590000003" _Description1="STR_SETSKIN_DESC1_590000003" _ThumbnailText="STR_SETSKIN_THUMBNAIL_590000003">
+      <_SkinList _Required="3">
+        <_Skin _SkinDataKey="SKIN_DEFENDER_02" _ClassType="CLASS_TYPE_DEFENDER" _SkinIndex="3" />
+        <_Skin _SkinDataKey="SKIN_POHWARAN_03" _ClassType="CLASS_TYPE_POHWARAN" _SkinIndex="2" />
+        <_Skin _SkinDataKey="SKIN_KROMEDE_02" _ClassType="CLASS_TYPE_KROMEDE" _SkinIndex="1" />
+        <_Skin _SkinDataKey="SKIN_MONDOZAX_03" _ClassType="CLASS_TYPE_MONDOZAX" _SkinIndex="2" />
+        <_Skin _SkinDataKey="SKIN_PHOTOG_03" _ClassType="CLASS_TYPE_PHOTOG" _SkinIndex="2" />
+      </_SkinList>
+      <_SkinEffect>
+        <_Effect _Type="SKIN_EFFECT_TYPE_GOLD_RATIO" _Data="50" />
+        <_Effect _Type="SKIN_EFFECT_TYPE_EXP_RATIO" _Data="50" />
+      </_SkinEffect>
+    </ST_SKIN_SET>
+  </INFO>
+  <INFO ID="590000004">
+    <ST_SKIN_SET _Index="590000004" _SchedulePriority="1" _IconAlias="skinset_start_01" _EndIconAlias="skinset_end_01" _Title="STR_SETSKIN_NAME_590000004" _Description="STR_SETSKIN_DESC_590000004" _Description1="STR_SETSKIN_DESC1_590000004" _ThumbnailText="STR_SETSKIN_THUMBNAIL_590000004">
+      <_SkinList _Required="3">
+        <_Skin _SkinDataKey="SKIN_JINSEOYEON_03" _ClassType="CLASS_TYPE_JINSEOYEON" _SkinIndex="2" />
+        <_Skin _SkinDataKey="SKIN_ICEQUEEN_03" _ClassType="CLASS_TYPE_ICEQUEEN" _SkinIndex="2" />
+        <_Skin _SkinDataKey="SKIN_KROMEDE_03" _ClassType="CLASS_TYPE_KROMEDE" _SkinIndex="2" />
+        <_Skin _SkinDataKey="SKIN_MAGICGIRL_03" _ClassType="CLASS_TYPE_MAGICGIRL" _SkinIndex="2" />
+        <_Skin _SkinDataKey="SKIN_ASSASSIN_05" _ClassType="CLASS_TYPE_ASSASSIN" _SkinIndex="4" />
+      </_SkinList>
+      <_SkinEffect>
+        <_Effect _Type="SKIN_EFFECT_TYPE_GOLD_RATIO" _Data="50" />
+        <_Effect _Type="SKIN_EFFECT_TYPE_EXP_RATIO" _Data="50" />
+      </_SkinEffect>
+    </ST_SKIN_SET>
+  </INFO>
+  <INFO ID="590000005">
+    <ST_SKIN_SET _Index="590000005" _SchedulePriority="1" _IconAlias="skinset_start_01" _EndIconAlias="skinset_end_01" _Title="STR_SETSKIN_NAME_590000005" _Description="STR_SETSKIN_DESC_590000005" _Description1="STR_SETSKIN_DESC1_590000005" _ThumbnailText="STR_SETSKIN_THUMBNAIL_590000005">
+      <_SkinList _Required="3">
+        <_Skin _SkinDataKey="SKIN_ICEQUEEN_02" _ClassType="CLASS_TYPE_ICEQUEEN" _SkinIndex="1" />
+        <_Skin _SkinDataKey="SKIN_MECHANIC_03" _ClassType="CLASS_TYPE_MECHANIC" _SkinIndex="1" />
+        <_Skin _SkinDataKey="SKIN_RYTLOCK_02" _ClassType="CLASS_TYPE_RYTLOCK" _SkinIndex="1" />
+        <_Skin _SkinDataKey="SKIN_SLIME_02" _ClassType="CLASS_TYPE_SLIME" _SkinIndex="2" />
+        <_Skin _SkinDataKey="SKIN_EFREET_03" _ClassType="CLASS_TYPE_EFREET" _SkinIndex="2" />
+      </_SkinList>
+      <_SkinEffect>
+        <_Effect _Type="SKIN_EFFECT_TYPE_GOLD_RATIO" _Data="50" />
+        <_Effect _Type="SKIN_EFFECT_TYPE_EXP_RATIO" _Data="50" />
+      </_SkinEffect>
+    </ST_SKIN_SET>
+  </INFO>
+  <INFO ID="590000006">
+    <ST_SKIN_SET _Index="590000006" _SchedulePriority="1" _IconAlias="skinset_start_01" _EndIconAlias="skinset_end_01" _Title="STR_SETSKIN_NAME_590000006" _Description="STR_SETSKIN_DESC_590000006" _Description1="STR_SETSKIN_DESC1_590000006" _ThumbnailText="STR_SETSKIN_THUMBNAIL_590000006">
+      <_SkinList _Required="3">
+        <_Skin _SkinDataKey="SKIN_SNIPER_03" _ClassType="CLASS_TYPE_SNIPER" _SkinIndex="2" />
+        <_Skin _SkinDataKey="SKIN_LAUNCHER_02" _ClassType="CLASS_TYPE_LAUNCHER" _SkinIndex="1" />
+        <_Skin _SkinDataKey="SKIN_PHOTOG_02" _ClassType="CLASS_TYPE_PHOTOG" _SkinIndex="1" />
+        <_Skin _SkinDataKey="SKIN_KROMEDE_03" _ClassType="CLASS_TYPE_KROMEDE" _SkinIndex="2" />
+        <_Skin _SkinDataKey="SKIN_POHWARAN_02" _ClassType="CLASS_TYPE_POHWARAN" _SkinIndex="1" />
+      </_SkinList>
+      <_SkinEffect>
+        <_Effect _Type="SKIN_EFFECT_TYPE_GOLD_RATIO" _Data="50" />
+        <_Effect _Type="SKIN_EFFECT_TYPE_EXP_RATIO" _Data="50" />
+      </_SkinEffect>
+    </ST_SKIN_SET>
+  </INFO>
+</ENTITY_FILE>

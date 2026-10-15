@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ENTITY_FILE>
+  <ST_CURSOR_ICON>
+    <_CursorInfo DATAKEY="CURSOR_ICON_TYPE_NORMAL" _cursorImage="UI/cursor/cursor.dds" _cursorWidth="32" _cursorHeight="32" _curHotSpotX="0" _curHotSpotY="0" _frameCount="1" _framePerSecond="0" />
+    <_CursorInfo DATAKEY="CURSOR_ICON_TYPE_WAIT" _cursorImage="UI/cursor/animate.dds" _cursorWidth="32" _cursorHeight="32" _curHotSpotX="0" _curHotSpotY="0" _frameCount="1" _framePerSecond="0" />
+    <_CursorInfo DATAKEY="CURSOR_ICON_TYPE_MAGAZINE" _cursorImage="UI/cursor/magazine.dds" _cursorWidth="32" _cursorHeight="32" _curHotSpotX="16" _curHotSpotY="16" _frameCount="10" _framePerSecond="0" />
+    <_CursorInfo DATAKEY="CURSOR_ICON_TYPE_RESIZE" _cursorImage="UI/cursor/resize.dds" _cursorWidth="32" _cursorHeight="32" _curHotSpotX="16" _curHotSpotY="16" _frameCount="1" _framePerSecond="0" />
+    <_CursorInfo DATAKEY="CURSOR_ICON_TYPE_SMARTPING" _cursorImage="UI/cursor/smart.dds" _cursorWidth="32" _cursorHeight="32" _curHotSpotX="16" _curHotSpotY="16" _frameCount="1" _framePerSecond="0" />
+  </ST_CURSOR_ICON>
+</ENTITY_FILE>

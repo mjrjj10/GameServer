@@ -1,0 +1,689 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ENTITY_FILE>
+  <ST_COLOR_SET_DEFINE_LIST>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_PLAYER">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_MONSTER">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_DYNAMIC">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_RED">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_BLUE">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_GREEN">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_ORANGE">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_ORANGE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_ORANGE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_ORANGE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_PURPLE">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_YELLOW">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_PINK">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_PLAYER">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_MONSTER">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_DYNAMIC">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_RED">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_BLUE">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_GREEN">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_ORANGE">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_PURPLE">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_YELLOW">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_PINK">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+  </ST_COLOR_SET_DEFINE_LIST>
+</ENTITY_FILE>﻿<?xml version="1.0" encoding="utf-8"?>
+<ENTITY_FILE>
+  <ST_COLOR_SET_DEFINE_LIST>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_PLAYER">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_MONSTER">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_DYNAMIC">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_RED">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_BLUE">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_GREEN">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_ORANGE">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_ORANGE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_ORANGE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_ORANGE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_PURPLE">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_YELLOW">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_TEAM" _Team="TEAM_PINK">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_PLAYER">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_MONSTER">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_DYNAMIC">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_RED">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_BLUE">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_GREEN">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_ORANGE">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_PURPLE">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_YELLOW">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+    <_ColorSetDefineList _Rule="COLOR_RULE_FFA" _Team="TEAM_PINK">
+      <_ColorSetDefine _RelationShip="FRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_BLUE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_BLUE" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="UNFRIENDLY">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_RED" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_RED" />
+      </_ColorSetDefine>
+      <_ColorSetDefine _RelationShip="NEUTRAL">
+        <_ColorList _Target="COLOR_TARGET_NAME" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_GAUGE" _Color="COLOR_TYPE_WHITE" />
+        <_ColorList _Target="COLOR_TARGET_OUTLINE" _Color="COLOR_TYPE_WHITE" />
+      </_ColorSetDefine>
+    </_ColorSetDefineList>
+  </ST_COLOR_SET_DEFINE_LIST>
+</ENTITY_FILE>

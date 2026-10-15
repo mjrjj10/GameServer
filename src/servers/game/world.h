@@ -113,6 +113,10 @@ struct World
 		i32 deaths = 0;
 		Time tNextWeaponHit = Time::ZERO;
 		bool dead = false;
+		Time ccUntil = Time::ZERO;
+		vec3 pushTarget = vec3(0);
+		f32 pushSpeed = 0;
+		Time pushUntil = Time::ZERO;
 		Time tRespawn = Time::ZERO;
 		ActorUID memorizedTarget = ActorUID::INVALID;
 		bool pendingShot = false;
@@ -339,8 +343,19 @@ struct World
 	eastl::fixed_vector<PendingRemote,256,false> pendingRemotes;
 	eastl::fixed_vector<RemoteInst,256,false> remoteInsts;
 	eastl::fixed_vector<CastHit,512,false> castHits;
+
+	struct ActiveStatus
+	{
+		i32 statusID;
+		u32 targetIndex;
+		ActorUID targetUID;
+		ActorUID casterUID;
+		Time until;
+	};
+	eastl::fixed_vector<ActiveStatus,512,false> activeStatuses;
 	u32 nextCastID = 1;
 	u32 nextRemoteSeed = 0x40000000;
+	eastl::fixed_vector<u32,64,false> comboTriggeredCasts;
 
 	u32 nextActorUID;
 	Time localTime = Time::ZERO;
@@ -377,10 +392,12 @@ private:
 	void UpdateProjectiles(f32 delta);
 	void Explode(Player& owner, const vec3& center, f32 radius, i32 damage);
 	void RespawnPlayer(Player& player);
-	bool ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle);
+	bool ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle, i32 forceAnim = -1);
 	void SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast = false);
 	void UpdateRemotes(f32 delta);
 	void UpdateUltimateGauges(f32 delta);
+	void ApplyStatus(Player& caster, Player& target, i32 statusID);
+	void UpdateStatuses();
 	void RemoteApplyArea(RemoteInst& inst);
 	f32 LagDistToSegment(const Player& p, const vec2& a, const vec2& b) const;
 	bool LagSegmentHits(const Player& p, const vec2& a, const vec2& b, f32 lateral, f32 forwardReach) const;
@@ -388,5 +405,5 @@ private:
 	vec2 LagClosestPos(const Player& p, const vec2& point) const;
 	void RemoteHit(RemoteInst& inst, Player& target);
 	void PlayerSkillDamage(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle);
-	void DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 damage, const Projectile* proj = nullptr);
+	void DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 damage, const Projectile* proj = nullptr, u32 remoteID = 0, RemoteIdx remoteDoc = RemoteIdx::INVALID, vec2 remoteDir = vec2(1, 0));
 };
