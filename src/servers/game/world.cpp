@@ -723,6 +723,30 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 
 	const auto& content = GetGameXmlContent();
 	const Remote* remote = content.FindRemote(RemoteIdx(1430000000 + (i32)classType * 10000 + 10));
+
+	// the client picks the weapon remote itself (firing combo step, charge level, status replacement such as
+	// passives or stances): look for a weapon remote document index in the fire packet after the fire node name
+	if(player.pendingShotRawSize > 44) {
+		const u8* raw = player.pendingShotRaw.data();
+		const i32 nameLen = *(const u16*)(raw + 42);
+		for(i32 off = 44 + nameLen * 2; off + 4 <= player.pendingShotRawSize; off++) {
+			const u32 v = *(const u32*)(raw + off);
+			if(v < 1430000000 || v >= 1440000000) continue;
+			const Remote* fired = content.FindRemote(RemoteIdx(v));
+			if(!fired) continue;
+			if(!remote || fired->ID != remote->ID) LOG("Shot :: %ls client weapon remote %u (offset %d)", player.name.data(), v, off);
+			remote = fired;
+			break;
+		}
+		static i32 dumpCount = 0;
+		if(dumpCount < 6) {
+			dumpCount++;
+			char hex[600] = {};
+			i32 n = 0;
+			for(i32 i = 44 + nameLen * 2; i < player.pendingShotRawSize && n < 590; i++) { static const char* H = "0123456789abcdef"; hex[n++] = H[raw[i] >> 4]; hex[n++] = H[raw[i] & 15]; }
+			LOG("Shot :: fire packet tail (%d bytes, name %d) %s", player.pendingShotRawSize, nameLen, hex);
+		}
+	}
 	const Remote* bomb = remote ? content.FindRemote(remote->destroyCreateRemote) : nullptr;
 
 	const f32 classRange = ClassAttackRange(classType) * WEAPON_RANGE_SCALE;
