@@ -254,6 +254,11 @@ struct Remote
 	f32 angle = 0;
 	f32 hitInvalidTime = 1;
 	f32 fixedGraphLength = 0;
+	// RemoteGraphComData REMOTE_GRAPH_BEZIER_CURVE: two control points
+	bool bezier = false;
+	f32 bezierUp[2] = { 0, 0 };
+	f32 bezierRotate[2] = { 0, 0 };   // degrees around the forward axis (0 = up, 90 = sideways)
+	f32 bezierFront[2] = { 0, 0 };
 	bool memorizeTarget = false;
 
 	struct AppliedStatus

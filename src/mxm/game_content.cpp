@@ -1602,6 +1602,17 @@ bool GameXmlContent::LoadRemoteData()
 
 			else if((EA::StdC::Strcmp("RemoteGraphComData", compName) == 0)) {
 				pComp->QueryFloatAttribute("_FixedGraphLength", &remote.fixedGraphLength);
+				const char* graphType = nullptr;
+				pComp->QueryStringAttribute("_Type", &graphType);
+				remote.bezier = graphType && EA::StdC::Strcmp(graphType, "REMOTE_GRAPH_BEZIER_CURVE") == 0;
+				i32 nUp = 0, nRot = 0, nFront = 0;
+				for(XMLElement* p = pComp->FirstChildElement(); p; p = p->NextSiblingElement()) {
+					f32 v = 0;
+					p->QueryFloatAttribute("DATA", &v);
+					if(EA::StdC::Strcmp(p->Name(), "_BezierUp") == 0 && nUp < 2) remote.bezierUp[nUp++] = v;
+					else if(EA::StdC::Strcmp(p->Name(), "_BezierRotate") == 0 && nRot < 2) remote.bezierRotate[nRot++] = v;
+					else if(EA::StdC::Strcmp(p->Name(), "_BezierFront") == 0 && nFront < 2) remote.bezierFront[nFront++] = v;
+				}
 			}
 
 			else if((EA::StdC::Strcmp("SteeringBehaviorsComData", compName) == 0)) {

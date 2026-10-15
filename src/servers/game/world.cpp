@@ -1729,6 +1729,8 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	inst.hitsLeft = MAX(remote->activateCount, 1);
 	inst.areaDone = false;
 	inst.casterLocal = casterCreatesLocally;
+	inst.graphStart = pos;
+	inst.graphDir = dir;
 	if(remote->timeEventDelay >= 0) {
 		inst.timeEventActive = true;
 		inst.nextTimeEvent = TimeAdd(localTime, TimeMsToTime(remote->timeEventDelay * 1000.0));
@@ -2119,8 +2121,29 @@ void World::UpdateRemotes(f32 delta)
 
 			case Remote::BehaviorType::GRAPH: {
 				const f32 step = MIN(inst.speed * delta, inst.range - inst.travelled);
-				inst.pos += vec3(inst.dir * step, 0);
 				inst.travelled += step;
+				if(remote.bezier && inst.range > 0) {
+					// cubic bezier start -> end; control points at 1/3 and 2/3, offset by up rotated around the
+					// forward axis (only its horizontal part matters here) and pushed by front
+					const vec2 f = inst.graphDir;
+					const vec2 side = Perp(f);
+					const vec2 p0 = vec2(inst.graphStart);
+					const vec2 p3 = p0 + f * inst.range;
+					vec2 c[2];
+					for(int k = 0; k < 2; k++) {
+						const f32 a = remote.bezierRotate[k] * PI / 180.0f;
+						c[k] = p0 + f * (inst.range * (k + 1) / 3.0f + remote.bezierFront[k]) + side * (remote.bezierUp[k] * sinf(a));
+					}
+					const f32 u = MIN(inst.travelled / inst.range, 1.0f);
+					const f32 v = 1.0f - u;
+					const vec2 p = p0 * (v * v * v) + c[0] * (3 * v * v * u) + c[1] * (3 * v * u * u) + p3 * (u * u * u);
+					const vec2 tangent = (c[0] - p0) * (3 * v * v) + (c[1] - c[0]) * (6 * v * u) + (p3 - c[1]) * (3 * u * u);
+					if(glm::length(tangent) > 0.001f) inst.dir = glm::normalize(tangent);
+					inst.pos = vec3(p, inst.pos.z);
+				}
+				else {
+					inst.pos += vec3(inst.dir * step, 0);
+				}
 				RemoteHitAlongPath(inst);
 				destroyed = inst.travelled >= inst.range - 0.01f;
 				if(destroyed && inst.hasLandZ) inst.pos.z = inst.landZ; // landed on the ground

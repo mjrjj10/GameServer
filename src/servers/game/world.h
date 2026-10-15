@@ -362,6 +362,8 @@ struct World
 		bool chainEnded = false;
 		bool casterLocal = false; // the caster's client creates this remote (and its children) itself
 		f32 landZ = 0;            // lobbed remotes: height of the aimed point
+		vec3 graphStart = vec3(0);
+		vec2 graphDir = vec2(1, 0);
 		bool hasLandZ = false;
 	};
 
