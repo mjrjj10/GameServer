@@ -2126,7 +2126,7 @@ void World::UpdateRemotes(f32 delta)
 					// cubic bezier start -> end; control points at 1/3 and 2/3, offset by up rotated around the
 					// forward axis (only its horizontal part matters here) and pushed by front
 					const vec2 f = inst.graphDir;
-					const vec2 side = Perp(f);
+					const vec2 side = -Perp(f); // positive rotate = right of the travel direction (client angles are clockwise; matches gameplay video)
 					const vec2 p0 = vec2(inst.graphStart);
 					const vec2 p3 = p0 + f * inst.range;
 					vec2 c[2];
