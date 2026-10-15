@@ -122,7 +122,7 @@ struct World
 		bool pendingAim = false;
 		f32 pendingAimYaw = 0;
 		Time pendingAimTime = Time::ZERO;
-		eastl::array<vec3,12> posHistory;
+		eastl::array<vec3,6> posHistory;
 		u32 posHistoryCount = 0;
 		u32 posHistoryHead = 0;
 		SkillID lastComboSkill = SkillID::INVALID;
