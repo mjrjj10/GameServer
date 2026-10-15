@@ -1,0 +1,414 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ENTITY_FILE>
+  <StringTableData>
+    <StringData DATAKEY="STR_MAPLIST_NAME_160000042" data="Dredgion Bridge" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160000043" data="Halloween Bridge" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160008100" data="Master Training Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160000094" data="Basic Training Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160000098" data="Cloaking Training Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160000100" data="Portal-type Training Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160006103" data="Core Conquest" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160006101" data="Altar Capture" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160000050" data="Titan Ruins" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160006151" data="Titan Ruins Beginner's Tutorial" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160006152" data="Titan Ruins Advanced Tutorial" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160000061" data="Titan Ruins - Frenzy" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160000062" data="Titan Ruins - Titanic" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160006107" data="Sprint Course 1" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_TITLE_160006107" data="Sprint" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA1_160006107" data="First to the finish wins" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA2_160006107" data="Attacks Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA3_160006107" data="Skills Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA4_160006107" data="Unlimited Jumps" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160006108" data="Bullet Hell" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_TITLE_160006108" data="Bullet Hell" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA1_160006108" data="Last one standing wins" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA2_160006108" data="Attacks Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA3_160006108" data="Skills Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA4_160006108" data="Dodge Enabled" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160006109" data="Jump Rope" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_TITLE_160006109" data="Jump Rope" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA1_160006109" data="Last one standing wins" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA2_160006109" data="Attacks Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA3_160006109" data="Skills Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA4_160006109" data="Unlimited Jumps" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160006110" data="Sprint Course 2" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_TITLE_160006110" data="Sprint" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA1_160006110" data="First to the finish wins" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA2_160006110" data="Attacks Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA3_160006110" data="Skills Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA4_160006110" data="Unlimited Jumps" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160006114" data="Horizontal Sprint" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_TITLE_160006114" data="Horizontal Sprint" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA1_160006114" data="First to the finish wins" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA2_160006114" data="Attacks Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA3_160006114" data="Skills Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA4_160006114" data="Unlimited Jumps" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160006116" data="Candy Rush" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_TITLE_160006116" data="Candy Rush" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA1_160006116" data="Last one standing wins" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA2_160006116" data="Attacks Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA3_160006116" data="Skills Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA4_160006116" data="Dodge Enabled" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160006117" data="Tile Drop" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_TITLE_160006117" data="Tile Drop" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA1_160006117" data="Last one standing wins" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA2_160006117" data="Attacks Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA3_160006117" data="Skills Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA4_160006117" data="Dodge Enabled" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160006118" data="Jumper Cables" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_TITLE_160006118" data="Jumper Cables" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA1_160006118" data="Last one standing wins" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA2_160006118" data="Attacks Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA3_160006118" data="Skills Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA4_160006118" data="Unlimited Jumps" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160006119" data="Lightning Runner" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_TITLE_160006119" data="Lightning Runner" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA1_160006119" data="Last one standing wins" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA2_160006119" data="Attacks Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA3_160006119" data="Skills Disabled" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA4_160006119" data="Unlimited Jumps" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160011107" data="Natium Defense Line" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160008112" data="Dredgion Upper Deck" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160008113" data="Dredgion Lower Deck" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002110" data="Caligo Workshop No. 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002111" data="Caligo Workshop No. 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002112" data="Caligo Workshop No. 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002113" data="Caligo Workshop No. 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002114" data="Caligo Workshop No. 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002120" data="Caligo Arms Facility" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002121" data="Caligo Arms Facility" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002122" data="Caligo Arms Facility" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002123" data="Caligo Arms Facility" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002124" data="Caligo Arms Facility" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002190" data="New Product Research Center" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002191" data="New Product Research Center" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002192" data="New Product Research Center" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002193" data="New Product Research Center" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002194" data="New Product Research Center" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002210" data="Caligo Electrical Room No. 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002211" data="Caligo Electrical Room No. 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002212" data="Caligo Electrical Room No. 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002213" data="Caligo Electrical Room No. 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002214" data="Caligo Electrical Room No. 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002220" data="Caligo Underground Electrical Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002221" data="Caligo Underground Electrical Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002222" data="Caligo Underground Electrical Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002223" data="Caligo Underground Electrical Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002224" data="Caligo Underground Electrical Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002290" data="Main Electrical Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002291" data="Main Electrical Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002292" data="Main Electrical Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002293" data="Main Electrical Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002294" data="Main Electrical Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002310" data="Caligo Pressing Factory" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002311" data="Caligo Pressing Factory" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002312" data="Caligo Pressing Factory" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002313" data="Caligo Pressing Factory" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002314" data="Caligo Pressing Factory" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002320" data="Caligo Grinding Factory" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002321" data="Caligo Grinding Factory" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002322" data="Caligo Grinding Factory" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002323" data="Caligo Grinding Factory" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002324" data="Caligo Grinding Factory" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002390" data="Special Grinding Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002391" data="Special Grinding Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002392" data="Special Grinding Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002393" data="Special Grinding Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002394" data="Special Grinding Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002520" data="Data Management Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002521" data="Data Management Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002522" data="Data Management Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002523" data="Data Management Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002524" data="Data Management Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002530" data="Central Control Tower" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002531" data="Central Control Tower" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002532" data="Central Control Tower" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002533" data="Central Control Tower" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002534" data="Central Control Tower" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002590" data="Central Control Tower" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002591" data="Central Control Tower" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002592" data="Central Control Tower" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002593" data="Central Control Tower" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160002594" data="Central Control Tower" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160013210" data="Research Wing Area 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003211" data="Research Wing Area 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003212" data="Research Wing Area 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003213" data="Research Wing Area 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003214" data="Research Wing Area 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003220" data="Rentu Drone Research Wing" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003221" data="Rentu Drone Research Wing" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003222" data="Rentu Drone Research Wing" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003223" data="Rentu Drone Research Wing" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003224" data="Rentu Drone Research Wing" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003290" data="Special Testing Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003291" data="Special Testing Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003292" data="Special Testing Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003293" data="Special Testing Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003294" data="Special Testing Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003310" data="Rentu Breeding Chamber No. 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003311" data="Rentu Breeding Chamber No. 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003312" data="Rentu Breeding Chamber No. 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003313" data="Rentu Breeding Chamber No. 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003314" data="Rentu Breeding Chamber No. 1" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003320" data="Rentu Incubators" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003321" data="Rentu Incubators" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003322" data="Rentu Incubators" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003323" data="Rentu Incubators" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003324" data="Rentu Incubators" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003390" data="Special Breeding Chamber" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003391" data="Special Breeding Chamber" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003392" data="Special Breeding Chamber" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003393" data="Special Breeding Chamber" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003394" data="Special Breeding Chamber" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003410" data="Rentu Basic Testing Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003411" data="Rentu Basic Testing Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003412" data="Rentu Basic Testing Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003413" data="Rentu Basic Testing Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003414" data="Rentu Basic Testing Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003430" data="Rentu Combat Testing Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003431" data="Rentu Combat Testing Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003432" data="Rentu Combat Testing Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003433" data="Rentu Combat Testing Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003434" data="Rentu Combat Testing Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003490" data="Final Product Preservation Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003491" data="Final Product Preservation Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003492" data="Final Product Preservation Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003493" data="Final Product Preservation Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003494" data="Final Product Preservation Room" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003510" data="Rentu Waste Disposal Upper Level" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003511" data="Rentu Waste Disposal Upper Level" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003512" data="Rentu Waste Disposal Upper Level" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003513" data="Rentu Waste Disposal Upper Level" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003514" data="Rentu Waste Disposal Upper Level" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003520" data="Rentu Waste Disposal Lower Level" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003521" data="Rentu Waste Disposal Lower Level" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003522" data="Rentu Waste Disposal Lower Level" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003523" data="Rentu Waste Disposal Lower Level" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003524" data="Rentu Waste Disposal Lower Level" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003590" data="Incineration Plant" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003591" data="Incineration Plant" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003592" data="Incineration Plant" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003593" data="Incineration Plant" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160003594" data="Incineration Plant" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004110" data="Lacrimosa Shopping District" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004120" data="Lacrimosa Roads" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004111" data="Lacrimosa Shopping District" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004121" data="Lacrimosa Roads" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004112" data="Lacrimosa Shopping District" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004122" data="Lacrimosa Roads" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004113" data="Lacrimosa Shopping District" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004123" data="Lacrimosa Roads" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004114" data="Lacrimosa Shopping District" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004124" data="Lacrimosa Roads" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004190" data="Occupied Parking Lot" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004191" data="Occupied Parking Lot" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004192" data="Occupied Parking Lot" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004193" data="Occupied Parking Lot" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004194" data="Occupied Parking Lot" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004210" data="Electrical Substation" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004220" data="Power Plant Central" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004211" data="Electrical Substation" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004221" data="Power Plant Central" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004212" data="Electrical Substation" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004222" data="Power Plant Central" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004213" data="Electrical Substation" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004223" data="Power Plant Central" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004214" data="Electrical Substation" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004224" data="Power Plant Central" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004290" data="Miranium Core" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004291" data="Miranium Core" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004292" data="Miranium Core" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004293" data="Miranium Core" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004294" data="Miranium Core" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004310" data="Highcrest Industrial Tower: Outskirts" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004311" data="Highcrest Industrial Tower: Outskirts" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004312" data="Highcrest Industrial Tower: Outskirts" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004313" data="Highcrest Industrial Tower: Outskirts" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004314" data="Highcrest Industrial Tower: Outskirts" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004390" data="Highcrest Industrial Tower: Rooftop" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004391" data="Highcrest Industrial Tower: Rooftop" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004392" data="Highcrest Industrial Tower: Rooftop" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004393" data="Highcrest Industrial Tower: Rooftop" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004394" data="Highcrest Industrial Tower: Rooftop" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004420" data="East Lacrimosa Tunnel" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004430" data="West Lacrimosa Tunnel" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004421" data="East Lacrimosa Tunnel" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004431" data="West Lacrimosa Tunnel" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004422" data="East Lacrimosa Tunnel" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004432" data="West Lacrimosa Tunnel" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004423" data="East Lacrimosa Tunnel" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004433" data="West Lacrimosa Tunnel" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004424" data="East Lacrimosa Tunnel" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004434" data="West Lacrimosa Tunnel" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004490" data="Monarch Worm's Nest" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004491" data="Monarch Worm's Nest" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004492" data="Monarch Worm's Nest" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004493" data="Monarch Worm's Nest" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160004494" data="Monarch Worm's Nest" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005110" data="Karith Forest Outskirts" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005130" data="Karith Forest Camp" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005190" data="Totem Altar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005111" data="Karith Forest Outskirts" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005131" data="Karith Forest Camp" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005191" data="Totem Altar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005112" data="Karith Forest Outskirts" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005132" data="Karith Forest Camp" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005192" data="Totem Altar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005113" data="Karith Forest Outskirts" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005133" data="Karith Forest Camp" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005193" data="Totem Altar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005114" data="Karith Forest Outskirts" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005134" data="Karith Forest Camp" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005194" data="Totem Altar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005210" data="Karith Sanctuary Ruins" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005211" data="Karith Sanctuary Ruins" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005212" data="Karith Sanctuary Ruins" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005213" data="Karith Sanctuary Ruins" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005214" data="Karith Sanctuary Ruins" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005290" data="Victim's Altar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005291" data="Victim's Altar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005292" data="Victim's Altar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005293" data="Victim's Altar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005294" data="Victim's Altar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005410" data="Karith Tribal Grounds Village Entrance" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005420" data="Karith Tribal Grounds Village Central" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005490" data="Traitor's Hideout" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005411" data="Karith Tribal Grounds Village Entrance" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005421" data="Karith Tribal Grounds Village Central" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005491" data="Traitor's Hideout" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005412" data="Karith Tribal Grounds Village Entrance" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005422" data="Karith Tribal Grounds Village Central" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005492" data="Traitor's Hideout" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005413" data="Karith Tribal Grounds Village Entrance" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005423" data="Karith Tribal Grounds Village Central" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005493" data="Traitor's Hideout" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005414" data="Karith Tribal Grounds Village Entrance" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005424" data="Karith Tribal Grounds Village Central" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005494" data="Traitor's Hideout" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005510" data="Karith Cavern Entrance" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005520" data="Karith Cavern Temple" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005590" data="A'ula's Altar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005511" data="Karith Cavern Entrance" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005521" data="Karith Cavern Temple" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005591" data="A'ula's Altar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005512" data="Karith Cavern Entrance" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005522" data="Karith Cavern Temple" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005592" data="A'ula's Altar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005513" data="Karith Cavern Entrance" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005523" data="Karith Cavern Temple" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005593" data="A'ula's Altar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005514" data="Karith Cavern Entrance" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005524" data="Karith Cavern Temple" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160005594" data="A'ula's Altar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009110" data="Outer Nuuran Ruins" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009111" data="Outer Nuuran Ruins" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009112" data="Outer Nuuran Ruins" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009113" data="Outer Nuuran Ruins" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009114" data="Outer Nuuran Ruins" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009120" data="Nuuran Outskirts Overpass" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009121" data="Nuuran Outskirts Overpass" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009122" data="Nuuran Outskirts Overpass" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009123" data="Nuuran Outskirts Overpass" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009124" data="Nuuran Outskirts Overpass" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009190" data="Abandoned Hangar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009191" data="Abandoned Hangar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009192" data="Abandoned Hangar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009193" data="Abandoned Hangar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009194" data="Abandoned Hangar" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010210" data="Weathered Nuuran Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010211" data="Weathered Nuuran Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010212" data="Weathered Nuuran Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010213" data="Weathered Nuuran Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010214" data="Weathered Nuuran Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010220" data="Weathered Nuuran Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010221" data="Weathered Nuuran Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010222" data="Weathered Nuuran Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010223" data="Weathered Nuuran Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010224" data="Weathered Nuuran Area" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010290" data="Ruins Opening" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010291" data="Ruins Opening" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010292" data="Ruins Opening" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010293" data="Ruins Opening" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010294" data="Ruins Opening" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010310" data="Collapsed Old Town" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010311" data="Collapsed Old Town" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010312" data="Collapsed Old Town" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010313" data="Collapsed Old Town" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010314" data="Collapsed Old Town" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010320" data="Nuuran Ghost Town" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010321" data="Nuuran Ghost Town" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010322" data="Nuuran Ghost Town" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010323" data="Nuuran Ghost Town" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010324" data="Nuuran Ghost Town" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010390" data="Buried Facility" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010391" data="Buried Facility" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010392" data="Buried Facility" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010393" data="Buried Facility" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010394" data="Buried Facility" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010410" data="Nuuran Battlefield" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010411" data="Nuuran Battlefield" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010412" data="Nuuran Battlefield" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010413" data="Nuuran Battlefield" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010414" data="Nuuran Battlefield" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010420" data="Nuuran Defense Base Ruins" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010421" data="Nuuran Defense Base Ruins" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010422" data="Nuuran Defense Base Ruins" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010423" data="Nuuran Defense Base Ruins" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010424" data="Nuuran Defense Base Ruins" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010490" data="Defense Base Center" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010491" data="Defense Base Center" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010492" data="Defense Base Center" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010493" data="Defense Base Center" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160010494" data="Defense Base Center" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007111" data="Black Ram Supply Chain" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007191" data="Poharan's Training Grounds" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007113" data="Black Ram Supply Chain" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007193" data="Poharan's Training Grounds" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007211" data="Fire Temple" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007291" data="Kromede's Hideout" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007213" data="Fire Temple" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007293" data="Kromede's Hideout" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007311" data="Gludio Dungeon" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007313" data="Gludio Dungeon" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007391" data="Death Knight’s Lair" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007393" data="Death Knight’s Lair" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007411" data="Ant Nest" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007413" data="Ant Nest" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007491" data="Ant Queen Nest" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007493" data="Ant Queen Nest" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007511" data="Ossuary Crypts" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007513" data="Ossuary Crypts" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007591" data="Foefire’s Heart" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007593" data="Foefire’s Heart" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007611" data="Independence Port" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007613" data="Independence Port" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007691" data="Independence Port" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160007693" data="Independence Port" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160000024" data="Test Map for Quick Run (Do not delete this.)" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160000146" data="Test Level" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160000149" data="Test Level (Fog of War on)" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160000147" data="Character Optimization Index Test" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009701" data="Brightness Stages Test Map (Art Only)" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009702" data="Stage Art Preview" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160000057" data="ML-2 Turret" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160000058" data="ML-2" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009308" data="PVP AI Learning Test" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009508" data="Core Conquest Bot" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009608" data="Altar of Domination Bot" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009103" data="Navmesh Test Map" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009104" data="Empty Space" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009106" data="FFA_Portal" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_TITLE_160009106" data="Free For All" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA1_160009106" data="Have time limit" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA2_160009106" data="Rank by points" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009107" data="FFA_Hexagon" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_TITLE_160009107" data="Free For All" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA1_160009107" data="Time Limited" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA2_160009107" data="Rank by points" />
+    <StringData DATAKEY="STR_MAPLIST_NAME_160009108" data="FFA_CircleGarden" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_TITLE_160009108" data="Free For All" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA1_160009108" data="Time Limited" />
+    <StringData DATAKEY="STR_MAPLIST_RULE_DATA2_160009108" data="Rank by points" />
+  </StringTableData>
+</ENTITY_FILE>

@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ENTITY_FILE>
+  <StringTableData>
+    <StringData DATAKEY="STR_SCHEDULE_THUMBNAIL_70600002" data="Master Mini Games" />
+    <StringData DATAKEY="STR_SCHEDULE_THUMBNAIL_70600011" data="Guild Battle" />
+    <StringData DATAKEY="STR_SCHEDULE_THUMBNAIL_70600012" data="Hardpoint Capture" />
+    <StringData DATAKEY="STR_SCHEDULE_THUMBNAIL_70600013" data="Titan Ruins - Frenzy" />
+    <StringData DATAKEY="STR_SCHEDULE_THUMBNAIL_70600014" data="Titan Ruins - Titanic" />
+    <StringData DATAKEY="STR_SCHEDULE_THUMBNAIL_80602001" data="Black Ram Supply Chain" />
+    <StringData DATAKEY="STR_SCHEDULE_THUMBNAIL_80602002" data="Fire Temple" />
+    <StringData DATAKEY="STR_SCHEDULE_THUMBNAIL_80602003" data="Gludio Dungeon" />
+    <StringData DATAKEY="STR_SCHEDULE_THUMBNAIL_80602004" data="Ant Nest" />
+    <StringData DATAKEY="STR_SCHEDULE_THUMBNAIL_80602005" data="Natium Defense Line" />
+    <StringData DATAKEY="STR_SCHEDULE_THUMBNAIL_80602006" data="Ascalonian Catacombs" />
+    <StringData DATAKEY="STR_SCHEDULE_THUMBNAIL_80602007" data="Independence Port" />
+  </StringTableData>
+</ENTITY_FILE>

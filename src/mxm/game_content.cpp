@@ -1968,10 +1968,14 @@ bool GameXmlContent::LoadStatusData()
 	if(LoadXMLFile(L"/client/skilltt.xml", xmlTT)) {
 		i32 modCount = 0;
 		eastl::hash_set<i32> touched; // statuses already filled (first skill describing them wins)
+		struct SkillMulStat { i32 skill; i32 status; u8 stat; f32 value; };
+		eastl::fixed_vector<SkillMulStat,512,false> skillMulStats;
 		for(XMLElement* pMaster = xmlTT.FirstChildElement()->FirstChildElement(); pMaster; pMaster = pMaster->NextSiblingElement()) {
 			for(XMLElement* pSkill = pMaster->FirstChildElement("data"); pSkill; pSkill = pSkill->NextSiblingElement("data")) {
 				XMLElement* pBase = pSkill->FirstChildElement("data");
 				if(!pBase) continue;
+				i32 skillID = 0;
+				pSkill->QueryAttribute("DATAKEY", &skillID);
 				// attrMap: key -> status (TTATTR_STATUS_DELIGATE = main status, TTATTR_STATUS_DEFINE_n = other statuses of the skill)
 				eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,40,false>, i32>,16,false> keyStatus;
 				i32 delegateID = 0;
@@ -2012,6 +2016,8 @@ bool GameXmlContent::LoadStatusData()
 					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_CRITICALRATE") == 0) mod.stat = StatusMod::CRITICALRATE;
 					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_SKILL_CRITICALRATE") == 0) mod.stat = StatusMod::SKILL_CRITICALRATE;
 					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_ATTACK") == 0) mod.stat = StatusMod::ATTACK;
+					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_MOVESPEED") == 0) mod.stat = StatusMod::MOVESPEED;
+					if(mod.mul && mod.stat != StatusMod::OTHER && !skillMulStats.full()) skillMulStats.push_back({ skillID, statusID, (u8)mod.stat, mod.value });
 					if(!found->second.mods.full()) { found->second.mods.push_back(mod); modCount++; }
 					touched.insert(statusID);
 				}
@@ -2022,6 +2028,44 @@ bool GameXmlContent::LoadStatusData()
 			if(f != statusMap.end()) f->second.modsFromTT = true;
 		}
 		LOG("Loaded %d status stat modifiers from skilltt", modCount);
+
+		// skill descriptions (string/skilldesc.xml): "... weapon damage and movespeed ... by {skill:ID:status:stat:mul:attack:1}%"
+		// -> movespeed shares that percent (only when the status has no movespeed value of its own)
+		XMLDocument xmlDesc;
+		if(LoadXMLFile(L"/client/string/skilldesc.xml", xmlDesc)) {
+			i32 added = 0;
+			XMLElement* pTable = xmlDesc.FirstChildElement()->FirstChildElement("StringTableData");
+			for(XMLElement* pS = pTable ? pTable->FirstChildElement("StringData") : nullptr; pS; pS = pS->NextSiblingElement("StringData")) {
+				const char* key = nullptr; const char* text = nullptr;
+				pS->QueryStringAttribute("DATAKEY", &key);
+				pS->QueryStringAttribute("data", &text);
+				if(!key || !text || EA::StdC::Strncmp(key, "STR_SKILL_DESC_", 15) != 0) continue;
+				if(!EA::StdC::Stristr(text, "movespeed") && !EA::StdC::Stristr(text, "movement speed")) continue;
+				const char* ph = EA::StdC::Strstr(text, ":status:stat:mul:");
+				if(!ph) continue;
+				const char* statName = ph + 18;
+				StatusMod::Stat stat = StatusMod::OTHER;
+				if(EA::StdC::Strnicmp(statName, "attack:", 7) == 0) stat = StatusMod::ATTACK;
+				if(stat == StatusMod::OTHER) continue;
+				const i32 skillID = EA::StdC::AtoI32(key + 15);
+				foreach_const(sm, skillMulStats) {
+					if(sm->skill != skillID || sm->stat != (u8)stat) continue;
+					auto found = statusMap.find(sm->status);
+					if(found == statusMap.end()) continue;
+					bool hasMove = false;
+					foreach_const(m, found->second.mods) hasMove |= m->stat == StatusMod::MOVESPEED;
+					if(hasMove || found->second.mods.full()) continue;
+					StatusMod mod;
+					mod.stat = StatusMod::MOVESPEED;
+					mod.mul = true;
+					mod.value = sm->value;
+					mod.count = 1;
+					found->second.mods.push_back(mod);
+					added++;
+				}
+			}
+			LOG("Loaded %d movespeed modifiers from skill descriptions", added);
+		}
 	}
 
 	XMLDocument xmlSkill;

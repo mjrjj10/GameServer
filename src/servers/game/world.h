@@ -111,6 +111,7 @@ struct World
 		f32 stamina = -1.0f;
 		f32 mana = -1.0f;
 		Time tNextBotShot = Time::ZERO;
+		f32 moveSpeedSent = -1.0f;
 		Time tNextManaSend = Time::ZERO;
 		eastl::array<f32,2> heat = { 0, 0 };        // weapon overheat gauge per master
 		eastl::array<Time,2> heatLastShot = { Time::ZERO, Time::ZERO };

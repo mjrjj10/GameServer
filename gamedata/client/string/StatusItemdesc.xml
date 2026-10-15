@@ -1,0 +1,67 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ENTITY_FILE>
+  <StringTableData>
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000020" data="Regenerating 5% of max HP per second (15 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000040" data="Defenses increased by 100%" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000041" data="Defenses increased by 100% for 20 seconds" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1200000093" data="Collect life force from fallen allies to gain a temporary buff.&#10;Increases Weapon Damage/Attack Speed/Movespeed" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1200000091" data="The Titan Shard shines brightly and feels heavier in your hands." />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1200000089" data="Engraved with a Titanic Rune.&#10;Maximum HP +10%." />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1200000094" data="Cannot be seen by enemies while in Stealth." />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1200000095" data="Movespeed Increased" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1200000096" data="Restores both HP and MP." />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1200000097" data="Increases damage dealth and damage taken by 30%. Weapon Attacks cause slow." />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000097" data="Auxiliary Skill: Swiftness&#10;&gt; Movespeed increased by 20%.&#10;&gt; Attack Speed increased by 20%." />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000098" data="Auxiliary Skill: Rejuvenate&#10;&gt; Restores 0.5% HP per second.&#10;&gt; Restores 1% resources per 1 second." />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000099" data="Auxiliary Skill: Rage&#10;&gt; Reduces heat buildup by 20%.&#10;&gt; Increases critical strike chance by 5%." />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000102" data="+75% Movespeed (5 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000103" data="Regenerating HP (5 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000104" data="Invincible (5 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000105" data="Terrified (3 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000106" data="Terrified (3 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000107" data="Terrified (3 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000108" data="Shocked (3 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000109" data="Invulnerability and +15% Movespeed for 5 seconds" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000110" data="+30% Weapon Damage/+30% Crit Chance, +300 Max HP, + and 20% Skill Power, and +50 mana" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000111" data="+30% Defense/+30% Skill Power, +10 HP/+25 Mana Recovery" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000116" data="Heals 1,500 HP" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000117" data="Shocked (4 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000118" data="Slowed by 50% (5 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000119" data="Poisoned (10 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000120" data="Invincible and +10% Movespeed (3 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000121" data="Invincible and +30% Movespeed (5 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000122" data="Invincible and +60% Movespeed (7 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000123" data="Heals 1,500 HP" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000124" data="Shocked (5 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000125" data="+70% Movespeed (7 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000126" data="Terrified (3 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000127" data="Shocked (5 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000128" data="Slowed by 70% (7 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000129" data="Invincible and +15% Movespeed (5 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000130" data="Invincible and +30% Movespeed (5 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000131" data="Invincible and +60% Movespeed (5 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000132" data="Shocked (5 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000133" data="Slowed (7 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000134" data="Shocked (5 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000135" data="Slowed (7 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000136" data="Power courses through me! I am invincible!" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000137" data="My defense is down!" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000141" data="Slowed by 30% (5 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000142" data="Immediately heals 25% of max HP" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000143" data="Fully Restores HP, MP, RP, and EP" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000144" data="Immediately adds +25% to your Ultimate Gauge" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000145" data="Cannot Overheat (10 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000146" data="Increases Critical Strike by 100% for 12 seconds" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000148" data="40% Cooldown Reduction / Regenerating Master resources (12 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000149" data="Increases Critical Strike by 100% for 7 seconds" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000151" data="40% Cooldown Reduction / Regenerating Master resources (7 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000152" data="+5% Weapon Damage, Skill Power, and Survivability for each orb held. (90 seconds)&#10;You will lose an orb every time you die." />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000153" data="Nerve stimulated for 8 seconds" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000155" data="Nerve stimulated for 5 seconds" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000157" data="Enraged (12 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000171" data="Skill Cooldown decreased by 50% (10 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000173" data="Increases Movespeed by 30% for 7 seconds" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000174" data="Enraged (7 seconds)" />
+    <StringData DATAKEY="STR_STATUS_ITEM_TOOLTIP_1238000184" data="Welcome to the madness.&#10;- Tag Cooldown -80%&#10;- Skill Cooldown - 65%&#10;- SUltimate Guage Regen Rate +100%&#10;- Stamina Regen +100%&#10;- Critical Strike Chance +100%&#10;- Weapon Overheat Limit +100&#10;- Unlimited Resources" />
+  </StringTableData>
+</ENTITY_FILE>

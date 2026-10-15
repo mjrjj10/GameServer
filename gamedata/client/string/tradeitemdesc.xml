@@ -1,0 +1,247 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ENTITY_FILE>
+  <StringTableData>
+    <StringData DATAKEY="STR_TRADE_NAME_240000001" data="Manufacture Style Token" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_240000001" data="Manufacture Style Token with SOL fiber piece.\nThe manufacturing can fail if you don’t use SOL Fiber Refiners.\n\n{color:#ffff66}[Available Style Token]{color:end}\nHigh, Mid, Low" />
+    <StringData DATAKEY="STR_TRADE_NAME_240000002" data="Manufacture Enhanced Style Token" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_240000002" data="Manufacture Style Token with a SOL fiber piece.\nThe probability of manufacturing quality Style Tokens increases when you add SOL fiber refinement materials.\n\n{color:#ffff66}[Available Style Token]{color:end}\nLow, Mid, High, Highest" />
+    <StringData DATAKEY="STR_TRADE_NAME_240000003" data="Disassemble Standard Style Token" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_240000003" data="Creates a SOL fiber piece by disassembling Style Tokens" />
+    <StringData DATAKEY="STR_TRADE_NAME_240000004" data="Disassemble Superior Style Token" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_240000004" data="Creates a SOL fiber piece by disassembling Style Tokens" />
+    <StringData DATAKEY="STR_TRADE_NAME_240000005" data="Disassemble Rare Style Token" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_240000005" data="Creates a SOL fiber piece by disassembling Style Tokens" />
+    <StringData DATAKEY="STR_TRADE_NAME_240000006" data="Disassemble Legendary Style Token" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_240000006" data="Creates a SOL fiber piece by disassembling Style Tokens" />
+    <StringData DATAKEY="STR_TRADE_NAME_240000007" data="Disassemble Ancient Style Token" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_240000007" data="Creates a SOL fiber piece by disassembling Style Tokens" />
+    <StringData DATAKEY="STR_TRADE_NAME_244299010" data="Attunements Material Box" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_244299010" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_244299011" data="Augmentation Module Box (Low)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_244299011" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_244299012" data="Augmentation Module Box (High)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_244299012" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_244299013" data="Special Material Box" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_244299013" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241020001" data="Kinetic Augmentation Crystal" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241020001" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241020002" data="Ardent Augmentation Crystal" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241020002" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241020003" data="Helix Augmentation Crystal" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241020003" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241020011" data="Damage Augment Module (low)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241020011" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241020012" data="Speed Augment Module (low)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241020012" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241020013" data="Expansion Augment Module (low)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241020013" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241020014" data="Focus Augment Module (low)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241020014" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241020015" data="Trait Augment Module (low)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241020015" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241030011" data="Damage Augment Module (high)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241030011" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241030012" data="Speed Augment Module (high)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241030012" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241030013" data="Expansion Augment Module (high)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241030013" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241030014" data="Focus Augment Module (high)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241030014" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241030015" data="Trait Augment Module (high)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241030015" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040400" data="VEP-01 AI Chip" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040400" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040401" data="Pulverizer Blueprints" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040401" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040402" data="GT-99 Blueprints" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040402" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040403" data="GT-9A Security Console" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040403" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040200" data="All-seeing Eye" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040200" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040201" data="Incinerator Outer Panel" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040201" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040202" data="DH-07 Super Cannon" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040202" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040203" data="Mutated Mechanical Heart" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040203" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040100" data="Gigantos's Tendon" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040100" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040101" data="Reaper's Wings" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040101" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040102" data="Monarch Worm's Tooth" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040102" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040103" data="Koros' Jawbone" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040103" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040300" data="High Priest's Mask" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040300" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040301" data="Corrupt Greatsword" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040301" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040302" data="Vimumu's Crystal Globes" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040302" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040303" data="A'ula's Headpiece" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040303" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040500" data="Za'bulu's Tail" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040500" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040501" data="Environment Converter's Head" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040501" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040502" data="Desert Spider's Carapace" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040502" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241040503" data="Chimera's Eyes" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241040503" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241101301" data="Aggressive Offensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241101301" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241101303" data="Penetrating Offensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241101303" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241101305" data="Synergetic Offensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241101305" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241101306" data="Radiant Offensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241101306" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241101401" data="Aggressive Offensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241101401" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241101402" data="Critical Offensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241101402" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241101403" data="Penetrating Offensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241101403" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241101404" data="Vampiric Offensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241101404" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241101405" data="Synergetic Offensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241101405" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241101406" data="Radiant Offensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241101406" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241101501" data="Aggressive Offensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241101501" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241101502" data="Critical Offensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241101502" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241101503" data="Penetrating Offensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241101503" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241101504" data="Vampiric Offensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241101504" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241101505" data="Synergetic Offensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241101505" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241101506" data="Radiant Offensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241101506" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201301" data="Fortifying Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201301" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201302" data="Vital Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201302" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201304" data="Agile Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201304" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201306" data="Resting Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201306" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201401" data="Fortifying Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201401" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201402" data="Vital Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201402" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201404" data="Agile Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201404" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201405" data="Enduring Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201405" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201406" data="Resting Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201406" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201407" data="Persistent Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201407" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201408" data="Elastic Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201408" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201501" data="Fortifying Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201501" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201502" data="Vital Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201502" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201504" data="Agile Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201504" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201505" data="Enduring Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201505" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201506" data="Resting Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201506" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201507" data="Persistent Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201507" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241201508" data="Elastic Defensive Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241201508" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301301" data="Potent Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301301" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301303" data="Cooperative Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301303" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301306" data="Chaining Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301306" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301310" data="Piercing Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301310" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301401" data="Potent Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301401" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301402" data="Mobility Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301402" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301403" data="Cooperative Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301403" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301404" data="Clear Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301404" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301405" data="Meditation Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301405" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301406" data="Chaining Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301406" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301407" data="Absorbing Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301407" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301408" data="Reincarnating Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301408" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301409" data="Crackling Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301409" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301410" data="Piercing Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301410" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301411" data="Farseeing Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301411" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301412" data="Comeback Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301412" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301413" data="Recess Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301413" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301414" data="Synergetic Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301414" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301501" data="Potent Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301501" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301502" data="Mobility Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301502" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301503" data="Cooperative Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301503" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301504" data="Clear Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301504" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301505" data="Meditation Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301505" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301506" data="Chaining Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301506" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301507" data="Absorbing Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301507" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301508" data="Reincarnating Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301508" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301509" data="Crackling Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301509" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301510" data="Piercing Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301510" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301511" data="Farseeing Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301511" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301512" data="Comeback Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301512" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301513" data="Recess Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301513" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_241301514" data="Synergetic Auxiliary Node" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_241301514" data="" />
+    <StringData DATAKEY="STR_TRADE_NAME_242000014" data="Damage Augment Module (high)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_242000014" data="Exchange for 1 Damage Augment Module (high)." />
+    <StringData DATAKEY="STR_TRADE_NAME_242000015" data="Speed Augment Module (high)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_242000015" data="Exchange for 1 Speed Augment Module (high)." />
+    <StringData DATAKEY="STR_TRADE_NAME_242000016" data="Expansion Augment Module (high)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_242000016" data="Exchange for 1 Expansion Augment Module (high)." />
+    <StringData DATAKEY="STR_TRADE_NAME_242000017" data="Focus Augment Module (high)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_242000017" data="Exchange for 1 Focus Augment Module (high)." />
+    <StringData DATAKEY="STR_TRADE_NAME_242000018" data="Trait Augment Module (high)" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_242000018" data="Exchange for 1 Trait Augment Module (high)." />
+    <StringData DATAKEY="STR_TRADE_NAME_242000561" data="Poharan's Eyepatch" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_242000561" data="Exchange for Poharan's Eyepatch." />
+    <StringData DATAKEY="STR_TRADE_NAME_242000562" data="Judge's Long Bow" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_242000562" data="Exchange for a Judge's Long Bow." />
+    <StringData DATAKEY="STR_TRADE_NAME_242000563" data="Dragonslayer Fragment" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_242000563" data="Exchange for Death Knight's Dragonslayer." />
+    <StringData DATAKEY="STR_TRADE_NAME_242000564" data="Ant Queen's Ring" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_242000564" data="Exchange for an Ant Queen's Ring." />
+    <StringData DATAKEY="STR_TRADE_NAME_242000565" data="Shard of Sohothin" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_242000565" data="Exchange for one Shard of Sohothin" />
+    <StringData DATAKEY="STR_TRADE_NAME_242000566" data="Spider's Kiss Badge" />
+    <StringData DATAKEY="STR_TRADE_TOOLTIP_242000566" data="Exchange for 1 Spider's Kiss Badge." />
+  </StringTableData>
+</ENTITY_FILE>

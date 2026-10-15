@@ -1,0 +1,29 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ENTITY_FILE>
+  <StringTableData>
+    <StringData DATAKEY="STR_SETSKIN_NAME_590000001" data="Star-Studded" />
+    <StringData DATAKEY="STR_SETSKIN_DESC_590000001" data="Stunning." />
+    <StringData DATAKEY="STR_SETSKIN_DESC1_590000001" data="A team equipped with 3 or more skins from below" />
+    <StringData DATAKEY="STR_SETSKIN_THUMBNAIL_590000001" data="Star-Studded Harmony" />
+    <StringData DATAKEY="STR_SETSKIN_NAME_590000002" data="Bruisers" />
+    <StringData DATAKEY="STR_SETSKIN_DESC_590000002" data="I don't like the way you looked at me." />
+    <StringData DATAKEY="STR_SETSKIN_DESC1_590000002" data="A team equipped with 3 or more skins from below" />
+    <StringData DATAKEY="STR_SETSKIN_THUMBNAIL_590000002" data="Bruiser Harmony" />
+    <StringData DATAKEY="STR_SETSKIN_NAME_590000003" data="Masterful Masters" />
+    <StringData DATAKEY="STR_SETSKIN_DESC_590000003" data="A cut above." />
+    <StringData DATAKEY="STR_SETSKIN_DESC1_590000003" data="A team equipped with 3 or more skins from below" />
+    <StringData DATAKEY="STR_SETSKIN_THUMBNAIL_590000003" data="Masterful Harmony" />
+    <StringData DATAKEY="STR_SETSKIN_NAME_590000004" data="Deities" />
+    <StringData DATAKEY="STR_SETSKIN_DESC_590000004" data="Bow before us." />
+    <StringData DATAKEY="STR_SETSKIN_DESC1_590000004" data="A team equipped with 3 or more skins from below" />
+    <StringData DATAKEY="STR_SETSKIN_THUMBNAIL_590000004" data="Deity Harmony" />
+    <StringData DATAKEY="STR_SETSKIN_NAME_590000005" data="Hot Blooded" />
+    <StringData DATAKEY="STR_SETSKIN_DESC_590000005" data="Anything can set them off." />
+    <StringData DATAKEY="STR_SETSKIN_DESC1_590000005" data="A team equipped with 3 or more skins from below" />
+    <StringData DATAKEY="STR_SETSKIN_THUMBNAIL_590000005" data="Hot Blooded Harmony" />
+    <StringData DATAKEY="STR_SETSKIN_NAME_590000006" data="Clad In Gold" />
+    <StringData DATAKEY="STR_SETSKIN_DESC_590000006" data="Is that your natural color?" />
+    <StringData DATAKEY="STR_SETSKIN_DESC1_590000006" data="A team equipped with 3 or more skins from below" />
+    <StringData DATAKEY="STR_SETSKIN_THUMBNAIL_590000006" data="Clad In Gold Harmony" />
+  </StringTableData>
+</ENTITY_FILE>

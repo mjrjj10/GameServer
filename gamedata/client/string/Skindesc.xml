@@ -1,0 +1,147 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ENTITY_FILE>
+  <StringTableData>
+    <StringData DATAKEY="STR_SKIN_STRIKER_01" data="Taejin" />
+    <StringData DATAKEY="STR_SKIN_STRIKER_02" data="Mobster Taejin" />
+    <StringData DATAKEY="STR_SKIN_STRIKER_03" data="Reclamation Taejin" />
+    <StringData DATAKEY="STR_SKIN_STRIKER_04" data="Special Forces Taejin" />
+    <StringData DATAKEY="STR_SKIN_STRIKER_06" data="CBT Taejin" />
+    <StringData DATAKEY="STR_SKIN_STRIKER_07" data="Desperado Taejin" />
+    <StringData DATAKEY="STR_SKIN_ARTILLERY_01" data="MBA-07" />
+    <StringData DATAKEY="STR_SKIN_ARTILLERY_02" data="Aggressive Refreshment MBA-07" />
+    <StringData DATAKEY="STR_SKIN_ARTILLERY_05" data="Bassdrop MBA-07" />
+    <StringData DATAKEY="STR_SKIN_ARTILLERY_06" data="Robitron MBA-07" />
+    <StringData DATAKEY="STR_SKIN_ASSASSIN_01" data="Sizuka" />
+    <StringData DATAKEY="STR_SKIN_ASSASSIN_02" data="Resistance Sizuka" />
+    <StringData DATAKEY="STR_SKIN_ASSASSIN_03" data="Gamma Suit Sizuka" />
+    <StringData DATAKEY="STR_SKIN_ASSASSIN_04" data="Reclamation Sizuka" />
+    <StringData DATAKEY="STR_SKIN_ASSASSIN_05" data="Hunter Sizuka" />
+    <StringData DATAKEY="STR_SKIN_ELECTRO_01" data="Demenos" />
+    <StringData DATAKEY="STR_SKIN_ELECTRO_02" data="Specter Demenos" />
+    <StringData DATAKEY="STR_SKIN_ELECTRO_03" data="Reclamation Demenos" />
+    <StringData DATAKEY="STR_SKIN_ELECTRO_04" data="Gladiator Demenos" />
+    <StringData DATAKEY="STR_SKIN_DEFENDER_01" data="Koom" />
+    <StringData DATAKEY="STR_SKIN_DEFENDER_02" data="Linebacker Koom" />
+    <StringData DATAKEY="STR_SKIN_DEFENDER_04" data="DJ Koom" />
+    <StringData DATAKEY="STR_SKIN_SNIPER_01" data="Innowin" />
+    <StringData DATAKEY="STR_SKIN_SNIPER_03" data="Wrangler Innowin" />
+    <StringData DATAKEY="STR_SKIN_SNIPER_04" data="Neonscope Innowin" />
+    <StringData DATAKEY="STR_SKIN_SNIPER_05" data="Steampunk Innowin" />
+    <StringData DATAKEY="STR_SKIN_SNIPER_06" data="Studious Innowin" />
+    <StringData DATAKEY="STR_SKIN_SNIPER_07" data="DevKit Innowin" />
+    <StringData DATAKEY="STR_SKIN_DESTROYER_01" data="Cagnazzo" />
+    <StringData DATAKEY="STR_SKIN_DESTROYER_03" data="Inmate Cagnazzo" />
+    <StringData DATAKEY="STR_SKIN_DESTROYER_04" data="Warlord Cagnazzo" />
+    <StringData DATAKEY="STR_SKIN_DESTROYER_05" data="Assimilated Cagnazzo" />
+    <StringData DATAKEY="STR_SKIN_MECHANIC_01" data="Moro" />
+    <StringData DATAKEY="STR_SKIN_MECHANIC_03" data="Scuba Moro" />
+    <StringData DATAKEY="STR_SKIN_MECHANIC_04" data="Ladybug Moro" />
+    <StringData DATAKEY="STR_SKIN_MECHANIC_05" data="Demolition Moro" />
+    <StringData DATAKEY="STR_SKIN_SOULMASTER_01" data="Arami" />
+    <StringData DATAKEY="STR_SKIN_SOULMASTER_02" data="Supersuit Arami" />
+    <StringData DATAKEY="STR_SKIN_SOULMASTER_03" data="Snaggletooth Arami" />
+    <StringData DATAKEY="STR_SKIN_SOULMASTER_04" data="Temper Tantrum Arami" />
+    <StringData DATAKEY="STR_SKIN_SOULMASTER_06" data="Regal Arami" />
+    <StringData DATAKEY="STR_SKIN_DOUBLEGUN_01" data="Vonak" />
+    <StringData DATAKEY="STR_SKIN_DOUBLEGUN_02" data="Corsair Vonak" />
+    <StringData DATAKEY="STR_SKIN_DOUBLEGUN_03" data="Ladykiller Vonak" />
+    <StringData DATAKEY="STR_SKIN_DOUBLEGUN_04" data="Lifeguard Vonak" />
+    <StringData DATAKEY="STR_SKIN_DOUBLEGUN_05" data="Rocker Vonak" />
+    <StringData DATAKEY="STR_SKIN_JINSEOYEON_01" data="Jinsoyun" />
+    <StringData DATAKEY="STR_SKIN_JINSEOYEON_02" data="Jiwan Jinsoyun" />
+    <StringData DATAKEY="STR_SKIN_JINSEOYEON_03" data="Gilded Rose Jinsoyun" />
+    <StringData DATAKEY="STR_SKIN_KROMEDE_01" data="Kromede" />
+    <StringData DATAKEY="STR_SKIN_KROMEDE_02" data="Maid Kromede" />
+    <StringData DATAKEY="STR_SKIN_KROMEDE_03" data="Woodland Kromede" />
+    <StringData DATAKEY="STR_SKIN_RODMASTER_01" data="Jingtai" />
+    <StringData DATAKEY="STR_SKIN_RODMASTER_02" data="Masked Jingtai" />
+    <StringData DATAKEY="STR_SKIN_RODMASTER_03" data="Street King Jingtai" />
+    <StringData DATAKEY="STR_SKIN_RODMASTER_04" data="Little Dragon Jingtai" />
+    <StringData DATAKEY="STR_SKIN_RODMASTER_05" data="Wok Master Jingtai" />
+    <StringData DATAKEY="STR_SKIN_PHOTOG_01" data="Lorraine" />
+    <StringData DATAKEY="STR_SKIN_PHOTOG_02" data="Press-Pass Lorraine" />
+    <StringData DATAKEY="STR_SKIN_PHOTOG_03" data="Officer Lorraine" />
+    <StringData DATAKEY="STR_SKIN_ICEQUEEN_01" data="Eirna" />
+    <StringData DATAKEY="STR_SKIN_ICEQUEEN_02" data="Black Crystal Eirna" />
+    <StringData DATAKEY="STR_SKIN_ICEQUEEN_03" data="Dunegrave Eirna" />
+    <StringData DATAKEY="STR_SKIN_MAGICGIRL_01" data="Vita" />
+    <StringData DATAKEY="STR_SKIN_MAGICGIRL_02" data="Pinstripe Vita" />
+    <StringData DATAKEY="STR_SKIN_MAGICGIRL_03" data="Popstar Vita" />
+    <StringData DATAKEY="STR_SKIN_MAGICGIRL_04" data="Sailor Vita" />
+    <StringData DATAKEY="STR_SKIN_POHWARAN_01" data="Poharan" />
+    <StringData DATAKEY="STR_SKIN_POHWARAN_02" data="Bumblebee Poharan" />
+    <StringData DATAKEY="STR_SKIN_POHWARAN_03" data="Nurse Poharan" />
+    <StringData DATAKEY="STR_SKIN_DEATHKNIGHT_01" data="Death Knight" />
+    <StringData DATAKEY="STR_SKIN_DEATHKNIGHT_03" data="Tournament Death Knight" />
+    <StringData DATAKEY="STR_SKIN_DEATHKNIGHT_04" data="Hallow's Haunt Death Knight" />
+    <StringData DATAKEY="STR_SKIN_DEATHKNIGHT_06" data="Kingsguard Death Knight" />
+    <StringData DATAKEY="STR_SKIN_BOOMERANG_01" data="V-Merang" />
+    <StringData DATAKEY="STR_SKIN_BOOMERANG_02" data="Obsidian V-Merang" />
+    <StringData DATAKEY="STR_SKIN_BOOMERANG_03" data="Primal V-Merang" />
+    <StringData DATAKEY="STR_SKIN_SLIME_01" data="Bumaro" />
+    <StringData DATAKEY="STR_SKIN_SLIME_03" data="Trucker Bumaro" />
+    <StringData DATAKEY="STR_SKIN_MONDOZAX_01" data="Mondo Zax" />
+    <StringData DATAKEY="STR_SKIN_MONDOZAX_02" data="Mariner Mondo Zax" />
+    <StringData DATAKEY="STR_SKIN_MONDOZAX_03" data="Firefighter Mondo Zax" />
+    <StringData DATAKEY="STR_SKIN_MONDOZAX_04" data="Wonderland Mondo Zax" />
+    <StringData DATAKEY="STR_SKIN_MONDOZAX_05" data="Piper Mondo Zax" />
+    <StringData DATAKEY="STR_SKIN_LILU_01" data="Lilu" />
+    <StringData DATAKEY="STR_SKIN_LILU_02" data="Druid Lilu" />
+    <StringData DATAKEY="STR_SKIN_LILU_03" data="Hexwitch Lilu" />
+    <StringData DATAKEY="STR_SKIN_EFREET_01" data="Ignuma" />
+    <StringData DATAKEY="STR_SKIN_EFREET_02" data="Basalt Ignuma" />
+    <StringData DATAKEY="STR_SKIN_EFREET_03" data="Cindercackle Ignuma" />
+    <StringData DATAKEY="STR_SKIN_SHADOWHUNTER_01" data="Dr. Raoul" />
+    <StringData DATAKEY="STR_SKIN_SHADOWHUNTER_03" data="Crimson Dr. Raoul" />
+    <StringData DATAKEY="STR_SKIN_SHADOWHUNTER_04" data="Steampunk Dr. Raoul" />
+    <StringData DATAKEY="STR_SKIN_RYTLOCK_01" data="Rytlock" />
+    <StringData DATAKEY="STR_SKIN_RYTLOCK_02" data="Azureflame Rytlock" />
+    <StringData DATAKEY="STR_SKIN_RYTLOCK_03" data="Revenant Rytlock" />
+    <StringData DATAKEY="STR_SKIN_CATTHECAT_01" data="Kat the Cat" />
+    <StringData DATAKEY="STR_SKIN_CATTHECAT_02" data="AristoKat the Cat" />
+    <StringData DATAKEY="STR_SKIN_CATTHECAT_03" data="AstroKat the Cat" />
+    <StringData DATAKEY="STR_SKIN_BATTER_01" data="Sonid" />
+    <StringData DATAKEY="STR_SKIN_BATTER_02" data="Grand Slam Sonid" />
+    <StringData DATAKEY="STR_SKIN_BATTER_03" data="Strikeout Sonid" />
+    <StringData DATAKEY="STR_SKIN_RNB_01" data="R&amp;B" />
+    <StringData DATAKEY="STR_SKIN_RNB_02" data="Ornate R &amp; B" />
+    <StringData DATAKEY="STR_SKIN_RNB_03" data="Mechanic R &amp; B" />
+    <StringData DATAKEY="STR_SKIN_ANDROA_01" data="Merope" />
+    <StringData DATAKEY="STR_SKIN_ANDROA_02" data="Warplate Merope" />
+    <StringData DATAKEY="STR_SKIN_ANDROA_03" data="Special Forces Merope" />
+    <StringData DATAKEY="STR_SKIN_ANDROB_01" data="Maia" />
+    <StringData DATAKEY="STR_SKIN_ANDROB_02" data="Warplate Maia" />
+    <StringData DATAKEY="STR_SKIN_ANDROB_03" data="Special Forces Maia" />
+    <StringData DATAKEY="STR_SKIN_ATTACKER_01" data="Tulam" />
+    <StringData DATAKEY="STR_SKIN_ATTACKER_02" data="Running Back Tulam" />
+    <StringData DATAKEY="STR_SKIN_ATTACKER_03" data="Shadowrock Tulam" />
+    <StringData DATAKEY="STR_SKIN_BOXER_01" data="Pancuga" />
+    <StringData DATAKEY="STR_SKIN_BOXER_02" data="Chromedome Pancuga" />
+    <StringData DATAKEY="STR_SKIN_BOXER_03" data="Freestyle Pancuga" />
+    <StringData DATAKEY="STR_SKIN_SHUGOTRADER_01" data="Nanurunerk" />
+    <StringData DATAKEY="STR_SKIN_SHUGOTRADER_02" data="Ninja Nanurunerk" />
+    <StringData DATAKEY="STR_SKIN_SHUGOTRADER_03" data="Maestro Nanurunerk" />
+    <StringData DATAKEY="STR_SKIN_NAGA_01" data="Nedien" />
+    <StringData DATAKEY="STR_SKIN_NAGA_03" data="Corsair Nedien" />
+    <StringData DATAKEY="STR_SKIN_LAUNCHER_01" data="Lua" />
+    <StringData DATAKEY="STR_SKIN_LAUNCHER_02" data="Sand Drifter Lua" />
+    <StringData DATAKEY="STR_SKIN_LAUNCHER_03" data="Cosmic Lua" />
+	<StringData DATAKEY="STR_SKIN_LAUNCHER_05" data="Construct Lua" />
+    <StringData DATAKEY="STR_SKIN_STATESMAN_01" data="Statesman" />
+    <StringData DATAKEY="STR_SKIN_STATESMAN_02" data="Tyrant Statesman" />
+    <StringData DATAKEY="STR_SKIN_STATESMAN_03" data="Imperious Statesman" />
+    <StringData DATAKEY="STR_SKIN_YURI_01" data="Yuri" />
+    <StringData DATAKEY="STR_SKIN_YURI_02" data="SOL Master Yuri" />
+    <StringData DATAKEY="STR_SKIN_YURI_03" data="Bloodfist Yuri" />
+    <StringData DATAKEY="STR_SKIN_ESPER_01" data="Xero" />
+    <StringData DATAKEY="STR_SKIN_ESPER_02" data="Cyberpunk Xero" />
+    <StringData DATAKEY="STR_SKIN_ESPER_03" data="High Score Xero" />
+    <StringData DATAKEY="STR_SKIN_ESPER_04" data="Count Xero" />
+    <StringData DATAKEY="STR_SKIN_PRIEST_01" data="Titus" />
+    <StringData DATAKEY="STR_SKIN_PRIEST_02" data="Vicar Titus" />
+    <StringData DATAKEY="STR_SKIN_PRIEST_03" data="Wasteland Titus" />
+    <StringData DATAKEY="STR_SKIN_GHOSTWIDOW_01" data="Ghost Widow" />
+    <StringData DATAKEY="STR_SKIN_GHOSTWIDOW_02" data="Bloodghast Ghost Widow" />
+    <StringData DATAKEY="STR_SKIN_GHOSTWIDOW_04" data="Stitchwrap Ghost Widow" />
+  </StringTableData>
+</ENTITY_FILE>

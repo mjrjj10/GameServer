@@ -133,7 +133,7 @@ struct SummonInfo
 
 struct StatusMod
 {
-	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE, ATTACK };
+	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE, ATTACK, MOVESPEED };
 	Stat stat = OTHER;
 	bool regen = false;  // STATPROC_REGEN: applied every tick (value_2 = tick count)
 	bool mul = false;    // STATAPPLY_MUL: percent

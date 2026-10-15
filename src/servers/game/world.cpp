@@ -6,6 +6,7 @@ static const i32 STAT_STAMINA = 2;
 static const i32 STAT_STAMINAREGEN = 5;
 static const i32 STAT_CRITICALRATE = 9;
 static const i32 STAT_CRITICALDAMAGE = 10;
+static const i32 STAT_MOVESPEED = 14;
 static const i32 STAT_MANA = 35;
 static const i32 STAT_MANAREGEN = 39;
 static const i32 STAT_ULTIMATE = 37;
@@ -1018,6 +1019,17 @@ void World::UpdateUltimateGauges(f32 delta)
 		const ClassType cls = it->Main().classType;
 
 		UpdateWeaponHeat(*it);
+
+		// move speed (percent stat, base from master stats) with status percent modifiers; the client moves itself
+		{
+			const f32 base = MasterStat(cls, STAT_MOVESPEED);
+			const f32 speed = MAX(base * (1.0f + StatusModMulSum(*it, StatusMod::MOVESPEED) / 100.0f), 0.0f);
+			if(base > 0 && fabsf(speed - it->moveSpeedSent) > 0.01f) {
+				it->moveSpeedSent = speed;
+				replication->SendStatToAll(it->Main().UID, STAT_MOVESPEED, speed, speed);
+				LOG("MoveSpeed :: %ls %.0f%%", it->name.data(), speed);
+			}
+		}
 
 		const f32 ultMax = MAX(MasterStat(cls, STAT_ULTIMATE), 1.0f);
 		if(it->ultGauge < 0) it->ultGauge = ultMax;

@@ -1,0 +1,288 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ENTITY_FILE>
+  <StringTableData>
+    <StringData DATAKEY="STR_NAME_Tu_Cut_Start_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_Tu_Cut_Start_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_Tu_Cut_Start_03" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_Tu_Cut_Elev_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_Tu_Cut_Elev_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_Tu_Cut_Teleport_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_Tu_Cut_Teleport_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_Tu_Cut_Boss_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_Tu_Operator_Ending_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_Tu_Operator_Ending_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_01_Start_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_01_Start_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_01_Start_03" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_01_Start_04" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_01_Start_05" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_01_Minion_01" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_01_Minion_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_01_Minion_03" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_01_Tower_01" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_01_Tower_01_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_01_Tower_02" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_01_Tower_02_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_Lane_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_Lane_02" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_Lane_02_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_Score_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_Score_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_Win_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_Win_03" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_Win_04" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_Win_05" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_Win_06" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_Win_07" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_Win_08" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_EXP_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_EXP_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_PC_00" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_PC_01" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_PC_01_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_PC_02" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_02_PC_02_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_Titan_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_Titan_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_Titan_03" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_Titan_04" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_Titan_05" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_Titan_06" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_Titan_07" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_Titan_08" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_TitanBattle_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_TitanBattle_02" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_TitanBattle_03" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_TitanBattle_04" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_Piece_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_Piece_02" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_Piece_02_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_Piece_03" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_Piece_03_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_Piece_04" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_Piece_04_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_03_ReturnSkill_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_04_Return_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_04_Return_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_04_Return_03" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_04_Avillity_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_04_Avillity_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_04_Avillity_03" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_04_Avillity_04" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_04_Return_05" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_04_Return_06" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_04_Return_07" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_04_StageSkill_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_04_StageSkill_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_04_StageSkill_03" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_04_StageSkill_04" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_05_Tower_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_05_Tower_02" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_05_Morph_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_05_Morph_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_05_Morph_03" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_05_Morph_04" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_05_Morph_05" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_06_End_01" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_06_End_01_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_06_End_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_06_End_03" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_06_End_04" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_06_End_05" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Start_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Start_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Start_03" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Start_04" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Start_05" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Minion_01" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Minion_02" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Tower_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Tower_02" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Tower_02_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Tower_04" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Tower_04_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Tower_05" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Tower_05_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Tower_06" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Tower_06_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Tower_07" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Tower_07_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Occupation" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Jungle_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Jungle_02" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Jungle_02_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Jungle_03" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Jungle_03_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Jungle_04" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Jungle_06" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Jungle_06_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Jungle_07" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Jungle_08" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Jungle_09" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Jungle_10" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Jungle_10_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Jungle_11" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_01_Jungle_12" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Temple_01" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Temple_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Temple_03" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Temple_03_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Temple_05" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Temple_05_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Temple_06" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Temple_07" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Temple_07_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Temple_08" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Temple_09" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Temple_09_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Temple_10" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_02" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_02_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_03" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_03_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_04" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_05" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_06" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_06_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_07" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_08" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_09" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_09_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_10" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_11" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_11_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_02_Boss_12" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_03_Titan_02" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_03_Titan_03" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_03_Titan_04" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_03_Titan_05" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_03_TitanBattle_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_03_TitanBattle_02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_03_TitanBattle_03" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_03_TitanBattle_03_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_03_TitanBattle_05" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_03_TitanBattle_06" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_03_TitanBattle_06_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_03_TitanBattle_07" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_04_StageSkill_01" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_04_StageSkill_02" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_04_StageSkill_03" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_05_Morph_01" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_05_Morph_01_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_05_Morph_03" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_05_Morph_04" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_05_Morph_05" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_05_Morph_05_TB" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_05_Tower_01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_06_End_04" data="Lilu" />
+    <StringData DATAKEY="STR_NAME_TB_Tuto_EX_06_End_05" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_3100" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_3101" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_3102" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_3103" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_5B00" data="Caligo Security System" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_1100" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_1101" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_1102" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_2100" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_2101" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_2102" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_5100" data="Caligo Security System" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_5101" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_5102" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_3B00" data="Caligo Security System" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_5B01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut01_3B01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_2100" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_2101" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_2102" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_2103" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_2B00" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_2B01" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_2B02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_3100" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_3101" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_3102" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_3103" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_3B00" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_3B01" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_3B02" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_3B03" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_4100" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_4101" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_4102" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_5100" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_5101" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NAME_StoryCut02_5102" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_1100" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_1101" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_1102" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_1103" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_2100" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_2101" data="John Steig" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_2102" data="John Steig" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_2103" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_2B00" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_2B01" data="John Steig" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_3100" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_3101" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_3102" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_3103" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_3B00" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_3B01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_3B02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_4100" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_4101" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_4102" data="Dredgion Soldier" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_4103" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_4B01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut03_4B02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_1100" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_1101" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_1102" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_1103" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_1B00" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_1B01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_1B02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_2100" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_2101" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_2102" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_2B00" data="Karithian King Nakrak" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_2B01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_2B02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_4100" data="Karithian King Nakrak" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_4101" data="Karithian King Nakrak" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_4102" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_4103" data="Karithian King Nakrak" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_4B00" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_4B01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_5100" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_5101" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_5102" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut04_5103" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_1103" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_1104" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_1105" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_1106" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_2100" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_2101" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_2102" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_2103" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_2B00" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_2B01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_2B02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_3103" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_3104" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_3105" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_3106" data="John Steig" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_3107" data="John Steig" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_3108" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_3B00" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_3B01" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_3B02" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_4100" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_4101" data="Operator Seorin" />
+    <StringData DATAKEY="STR_NAME_StoryCut05_4102" data="Operator Seorin" />
+  </StringTableData>
+</ENTITY_FILE>

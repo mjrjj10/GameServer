@@ -1,0 +1,161 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ENTITY_FILE>
+  <StringTableData>
+    <StringData DATAKEY="STR_NPC_TITLE_100036891" data="Node Supply Specialist" />
+    <StringData DATAKEY="STR_NPC_NAME_100036891" data="Cain Neville" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036894" data="Dredgion Captain" />
+    <StringData DATAKEY="STR_NPC_NAME_100036894" data="Regina Millet" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036894" data="The Dredgion is humanity's last hope. &#10;Always keep that in mind when you are out there." />
+    <StringData DATAKEY="STR_NPC_TITLE_100036895" data="Wealthy Contributor" />
+    <StringData DATAKEY="STR_NPC_NAME_100036895" data="Imadath" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036895" data="Do not despair, friend!&#10;We, the Amaari, will offer our help. Earth will be a safe haven again in no time." />
+    <StringData DATAKEY="STR_NPC_TITLE_100036896" data="Operator" />
+    <StringData DATAKEY="STR_NPC_NAME_100036896" data="Leah" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036896" data="I'll watch over you in the field, Master." />
+    <StringData DATAKEY="STR_NPC_TITLE_100036897" data="Operator" />
+    <StringData DATAKEY="STR_NPC_NAME_100036897" data="Pia" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036897" data="Have you ever seen Seorin in person? I sure haven't." />
+    <StringData DATAKEY="STR_NPC_TITLE_100036899" data="Guild Keeper" />
+    <StringData DATAKEY="STR_NPC_NAME_100036899" data="Marcus Gray" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036899" data="Oh brother, the day I step in to the Titan Ruins!&#10;The enemy team had better eat their vitamins and say their prayers!" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036901" data="Wise Master" />
+    <StringData DATAKEY="STR_NPC_NAME_100036901" data="Dukeyu" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036901" data="Kuweky." />
+    <StringData DATAKEY="STR_NPC_TITLE_100036903" data="Ecologist" />
+    <StringData DATAKEY="STR_NPC_NAME_100036903" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036903" data="The enhanced cells on these drones are marvelous! The sky is the limit for what they can do.&#10;If you could heal your wounds like these drones do, wouldn't it be great?" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036904" data="Medic" />
+    <StringData DATAKEY="STR_NPC_NAME_100036904" data="Anna Bryce" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036904" data="Sometimes I don't think my sister takes our situation seriously enough.&#10;Even while Masters like you are putting their lives on the line out there!" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036905" data="Medic" />
+    <StringData DATAKEY="STR_NPC_NAME_100036905" data="Jane Bryce" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036905" data="Oh my... We're running low on materials. Come back later?" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036906" data="Black Cloud Traders" />
+    <StringData DATAKEY="STR_NPC_NAME_100036906" data="Mialrunerk" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036906" data="This place good for business, nyerk.&#10;I smell gold, gold everywhere. Nyerk." />
+    <StringData DATAKEY="STR_NPC_NAME_100036909" data="Paco" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036909" data="I may be a stowaway now, but just you wait!&#10;I'm gonna be just like you!" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036910" data="Engineer" />
+    <StringData DATAKEY="STR_NPC_NAME_100036910" data="John Steig" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036910" data="Look, can't ya see? I'm busy here!&#10;Ya can't just call me every time something ain't workin' like it's s'posed to." />
+    <StringData DATAKEY="STR_NPC_NAME_100036911" data="Dandy" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036833" data="Stashkeeper" />
+    <StringData DATAKEY="STR_NPC_NAME_100036833" data="Simon Wright" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036842" data="Medal Exchanger" />
+    <StringData DATAKEY="STR_NPC_NAME_100036842" data="Bryan Dagunn" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036843" data="Material Exchanger" />
+    <StringData DATAKEY="STR_NPC_NAME_100036843" data="Dennis Turner" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036951" data="Commissioned Node Merchant" />
+    <StringData DATAKEY="STR_NPC_NAME_100036951" data="Parunerk" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036952" data="Commissioned Node Merchant" />
+    <StringData DATAKEY="STR_NPC_NAME_100036952" data="Sarunerk" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036953" data="Commissioned Node Merchant" />
+    <StringData DATAKEY="STR_NPC_NAME_100036953" data="Ventrunerk" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036954" data="Commissioned Node Merchant" />
+    <StringData DATAKEY="STR_NPC_NAME_100036954" data="Giarunerk" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036902" data="Peculiar Designer" />
+    <StringData DATAKEY="STR_NPC_NAME_100036902" data="Dyno" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036777" data="Jukebox" />
+    <StringData DATAKEY="STR_NPC_NAME_100036777" data=" " />
+    <StringData DATAKEY="STR_NPC_TITLE_100036778" data="Jukebox" />
+    <StringData DATAKEY="STR_NPC_NAME_100036778" data=" " />
+    <StringData DATAKEY="STR_NPC_TITLE_100036779" data="Jukebox" />
+    <StringData DATAKEY="STR_NPC_NAME_100036779" data=" " />
+    <StringData DATAKEY="STR_NPC_TITLE_100036700" data="Node Supply Specialist" />
+    <StringData DATAKEY="STR_NPC_NAME_100036700" data="Cain Neville" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036701" data="Stashkeeper" />
+    <StringData DATAKEY="STR_NPC_NAME_100036701" data="Simon Wright" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036702" data="Medal Exchanger" />
+    <StringData DATAKEY="STR_NPC_NAME_100036702" data="Bryan Dagunn" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036703" data="Material Exchanger" />
+    <StringData DATAKEY="STR_NPC_NAME_100036703" data="Dennis Turner" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036704" data="Commissioned Node Merchant" />
+    <StringData DATAKEY="STR_NPC_NAME_100036704" data="Parunerk" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036705" data="Gear Commission Trader" />
+    <StringData DATAKEY="STR_NPC_NAME_100036705" data="Sarunerk" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036706" data="Gear Commission Trader" />
+    <StringData DATAKEY="STR_NPC_NAME_100036706" data="Malrunerk" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036707" data="Gear Commission Trader" />
+    <StringData DATAKEY="STR_NPC_NAME_100036707" data="Giarunerk" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036708" data="Skin Designer" />
+    <StringData DATAKEY="STR_NPC_NAME_100036708" data="Dyno" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036709" data="Stranded Shugo" />
+    <StringData DATAKEY="STR_NPC_NAME_100036709" data="Mialrunerk" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036709" data="This makes me feel like I'm back home!&#10;There were many places like this in Atreia!&#10;Lots of ghosts, nyerk." />
+    <StringData DATAKEY="STR_NPC_TITLE_100036710" data="Dredgion Captain" />
+    <StringData DATAKEY="STR_NPC_NAME_100036710" data="Regina Millet" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036710" data="Even the Masters, the hope of humanity, sometimes need festivals.&#10;Enjoy your free time... but don't forget your duty." />
+    <StringData DATAKEY="STR_NPC_TITLE_100036711" data="Wealthy Contributor" />
+    <StringData DATAKEY="STR_NPC_NAME_100036711" data="Imadath" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036711" data="What do you think? Isn't this a great costume?" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036712" data="Operator" />
+    <StringData DATAKEY="STR_NPC_NAME_100036712" data="Leah" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036712" data="I'm always here to help the Masters.&#10;Of course, I'll be doing the same during the festival." />
+    <StringData DATAKEY="STR_NPC_TITLE_100036713" data="Operator" />
+    <StringData DATAKEY="STR_NPC_NAME_100036713" data="Pia" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036713" data="I really like this uniform.&#10;It's quite comfortable." />
+    <StringData DATAKEY="STR_NPC_TITLE_100036716" data="Guild Keeper" />
+    <StringData DATAKEY="STR_NPC_NAME_100036716" data="Marcus Gray" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036716" data="Used a fresh pumpkin!&#10;Glorious!" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036717" data="Ecologist" />
+    <StringData DATAKEY="STR_NPC_NAME_100036717" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036717" data="I hear this is a very old festival from Earth? How interesting.&#10;I should research how this custom came to be." />
+    <StringData DATAKEY="STR_NPC_TITLE_100036718" data="Medic" />
+    <StringData DATAKEY="STR_NPC_NAME_100036718" data="Anna Bryce" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036718" data="We should use this festival as an opportunity to come together.&#10;A unified front is the only way to defeat the Synd." />
+    <StringData DATAKEY="STR_NPC_TITLE_100036719" data="Medic" />
+    <StringData DATAKEY="STR_NPC_NAME_100036719" data="Jane Bryce" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036719" data="An upset stomach does not require medical attention. Eat less candy and move along please." />
+    <StringData DATAKEY="STR_NPC_NAME_100036721" data="Paco" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036721" data="Candy is for kids!&#10;Come on, Captain Millet won't give me anymore!" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036722" data="Engineer" />
+    <StringData DATAKEY="STR_NPC_NAME_100036722" data="John Steig" />
+    <StringData DATAKEY="STR_NPC_INTRO_TEXT_100036722" data="Whew, I'm really busy...&#10;Apparently we don't all get time off to celebrate." />
+    <StringData DATAKEY="STR_NPC_TITLE_100036801" data="[T]Caligo Factory" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036878" data="[T]Lacrimosa" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036814" data="[T]Rentu Laboratory" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036835" data="[T]Karith" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036890" data="[T]Nuuran" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036812" data="Arena" />
+    <StringData DATAKEY="STR_NPC_NAME_100036812" data="Dispatch Terminal" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036815" data="[T]Event" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036002" data="[T]Stage Training" />
+    <StringData DATAKEY="STR_NPC_NAME_100036002" data="Dispatch Terminal" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036003" data="[T]Arena Training" />
+    <StringData DATAKEY="STR_NPC_NAME_100036003" data="Dispatch Terminal" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036004" data="[T]Stage Training" />
+    <StringData DATAKEY="STR_NPC_NAME_100036004" data="Dispatch Terminal" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036005" data="[T]Arena Training" />
+    <StringData DATAKEY="STR_NPC_NAME_100036005" data="Dispatch Terminal" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036880" data="[T]Boss Fights" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036913" data="[T]PvP Test" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036914" data="[T]M15 PvP Test" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036915" data="[T]Master Mini Games Test" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036813" data="[T]PvE Test " />
+    <StringData DATAKEY="STR_NPC_TITLE_100036816" data="[T]M15 PvE Test" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036889" data="Stage" />
+    <StringData DATAKEY="STR_NPC_NAME_100036889" data="Dispatch Terminal" />
+    <StringData DATAKEY="STR_NPC_TITLE_100037000" data="Black Ram Supply Chain" />
+    <StringData DATAKEY="STR_NPC_NAME_100037000" data="Timespace Distortion" />
+    <StringData DATAKEY="STR_NPC_TITLE_100037001" data="Fire Temple" />
+    <StringData DATAKEY="STR_NPC_NAME_100037001" data="Timespace Distortion" />
+    <StringData DATAKEY="STR_NPC_TITLE_100037002" data="Master Training Area" />
+    <StringData DATAKEY="STR_NPC_NAME_100037002" data="Remmy Thomsan" />
+    <StringData DATAKEY="STR_NPC_TITLE_100037003" data="Master Mini Games" />
+    <StringData DATAKEY="STR_NPC_NAME_100037003" data="Remmy Thomsan" />
+    <StringData DATAKEY="STR_NPC_TITLE_100037004" data="Gludio Dungeon" />
+    <StringData DATAKEY="STR_NPC_NAME_100037004" data="Timespace Distortion" />
+    <StringData DATAKEY="STR_NPC_TITLE_100037005" data="Ant Nest" />
+    <StringData DATAKEY="STR_NPC_NAME_100037005" data="Timespace Distortion" />
+    <StringData DATAKEY="STR_NPC_TITLE_100037006" data="Natium Defense Line" />
+    <StringData DATAKEY="STR_NPC_NAME_100037006" data="Timespace Distortion" />
+    <StringData DATAKEY="STR_NPC_TITLE_100037007" data="Ascalonian Catabombs" />
+    <StringData DATAKEY="STR_NPC_NAME_100037007" data="Timespace Distortion" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036886" data="Ecologist" />
+    <StringData DATAKEY="STR_NPC_NAME_100036886" data="Ellen Ogden" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036887" data="Engineer" />
+    <StringData DATAKEY="STR_NPC_NAME_100036887" data="John Steig" />
+    <StringData DATAKEY="STR_NPC_TITLE_100036888" data="Karithian King" />
+    <StringData DATAKEY="STR_NPC_NAME_100036888" data="Nakrak" />
+  </StringTableData>
+</ENTITY_FILE>
