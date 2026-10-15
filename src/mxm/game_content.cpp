@@ -1957,6 +1957,42 @@ bool GameXmlContent::LoadStatusData()
 		}
 		LOG("Loaded %d character elements", (i32)creatureElement.size());
 	}
+
+	XMLDocument xmlFiring, xmlWeapon;
+	if(LoadXMLFile(L"/client/FIRING_METHOD.xml", xmlFiring) && LoadXMLFile(L"/client/WEAPON.xml", xmlWeapon)) {
+		eastl::hash_map<i32, WeaponHeatInfo> byFiring;
+		for(XMLElement* pInfo = xmlFiring.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+			i32 id = 0;
+			pInfo->QueryAttribute("ID", &id);
+			XMLElement* pData = pInfo->FirstChildElement("FiringMethodData");
+			XMLElement* pGauge = pData ? pData->FirstChildElement("_GAUGE") : nullptr;
+			if(!pGauge) continue;
+			const char* type = nullptr;
+			pGauge->QueryStringAttribute("_Type", &type);
+			if(!type || EA::StdC::Strcmp(type, "WEAPON_GAUGE_TYPE_INCREASE") != 0) continue;
+			WeaponHeatInfo h;
+			pGauge->QueryFloatAttribute("_MaxGauge", &h.maxGauge);
+			pGauge->QueryFloatAttribute("_Consumption", &h.consumption);
+			pGauge->QueryFloatAttribute("_AutoRegen", &h.autoRegen);
+			pGauge->QueryFloatAttribute("_AutoRegenInterval", &h.autoRegenInterval);
+			pGauge->QueryFloatAttribute("_AutoRegenDelayTime", &h.autoRegenDelay);
+			pGauge->QueryFloatAttribute("_OverHeatDurationTime", &h.overheatDuration);
+			pGauge->QueryFloatAttribute("_OverHeatResetGauge", &h.overheatResetGauge);
+			if(h.maxGauge > 0 && h.consumption > 0) byFiring[id] = h;
+		}
+		for(XMLElement* pInfo = xmlWeapon.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+			i32 id = 0;
+			pInfo->QueryAttribute("ID", &id);
+			for(XMLElement* pComp = pInfo->FirstChildElement(); pComp; pComp = pComp->NextSiblingElement()) {
+				i32 firing = 0;
+				if(pComp->QueryAttribute("_DefaultFiringIndex", &firing) != XML_SUCCESS) continue;
+				auto f = byFiring.find(firing);
+				if(f != byFiring.end()) weaponHeat[id] = f->second;
+				break;
+			}
+		}
+		LOG("Loaded %d weapon overheat gauges", (i32)weaponHeat.size());
+	}
 	return true;
 }
 

@@ -109,6 +109,9 @@ struct World
 		bool weaponFired = false;
 		f32 ultGauge = -1.0f; // initialised to the master's max on first update
 		f32 stamina = -1.0f;
+		eastl::array<f32,2> heat = { 0, 0 };        // weapon overheat gauge per master
+		eastl::array<Time,2> heatLastShot = { Time::ZERO, Time::ZERO };
+		eastl::array<Time,2> overheatUntil = { Time::ZERO, Time::ZERO };
 		Time tNextStaminaSend = Time::ZERO;
 		f32 ultGaugeSent = -1.0f;
 		Time tNextUltSend = Time::ZERO;

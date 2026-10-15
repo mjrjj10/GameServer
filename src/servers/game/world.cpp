@@ -886,8 +886,44 @@ vec2 World::LagClosestPos(const Player& p, const vec2& point) const
 	return best;
 }
 
+// weapon overheat (FIRING_METHOD _GAUGE): returns false while the weapon is overheated
+static bool WeaponHeatShot(World::Player& player, Time now)
+{
+	const u32 m = player.mainCharaID & 1;
+	const WeaponIndex weapon = m == 0 ? player.mainWeapon : player.subWeapon;
+	const WeaponHeatInfo* h = GetGameXmlContent().FindWeaponHeat((i32)weapon);
+	if(!h) return true;
+
+	if(player.overheatUntil[m] != Time::ZERO) {
+		if(now < player.overheatUntil[m]) return false;
+		player.overheatUntil[m] = Time::ZERO;
+		player.heat[m] = h->overheatResetGauge;
+		player.heatLastShot[m] = now;
+	}
+
+	// cooling since the last shot, after the regen delay
+	const f32 idle = player.heatLastShot[m] == Time::ZERO ? 999.0f : (f32)TimeDiffSec(TimeDiff(player.heatLastShot[m], now));
+	if(idle > h->autoRegenDelay && h->autoRegenInterval > 0) {
+		player.heat[m] = MAX(player.heat[m] + h->autoRegen * (idle - h->autoRegenDelay) / h->autoRegenInterval, 0.0f);
+	}
+
+	player.heat[m] += h->consumption;
+	player.heatLastShot[m] = now;
+	if(player.heat[m] >= h->maxGauge) {
+		player.heat[m] = h->maxGauge;
+		player.overheatUntil[m] = TimeAdd(now, TimeMsToTime(h->overheatDuration * 1000.0));
+		LOG("Overheat :: %ls weapon=%d locked %.1fs", player.name.data(), (i32)weapon, h->overheatDuration);
+	}
+	return true;
+}
+
 void World::OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize)
 {
+	if(!WeaponHeatShot(player, localTime)) {
+		LOG("Overheat :: %ls shot ignored (weapon overheated)", player.name.data());
+		return;
+	}
+
 	player.pendingShotRawSize = MIN(rawSize, (i32)player.pendingShotRaw.size());
 	memmove(player.pendingShotRaw.data(), rawPacket, player.pendingShotRawSize);
 
