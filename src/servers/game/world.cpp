@@ -1649,7 +1649,25 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			pendingSummonCommands.push_back(pc);
 		}
 		else if(c->kind == SummonCommand::STATUS) {
-			if(c->onCurrent && current && !current->dead) ApplyStatus(owner, *current, c->index);
+			if(c->onCurrent) {
+				if(current && !current->dead) ApplyStatus(owner, *current, c->index);
+				continue;
+			}
+			const StatusInfo* st = GetGameXmlContent().FindStatus(c->index);
+			if(!st) continue;
+			const f32 duration = st->durationSec > 0 ? st->durationSec : 1.0f;
+			replication->SendAddStatusToAll(c->index, npc.UID, owner.Main().UID, duration, npc.pos, npc.pos, 0);
+			LOG("Summon :: creature=%d self status %d (%s)", (i32)npc.docID, c->index, st->type.c_str());
+			if(st->auraStatus != 0 && st->targetingRange > 0 && !groundAuras.full()) {
+				GroundAura ga;
+				ga.ownerIndex = npc.ownerIndex;
+				ga.auraStatus = st->auraStatus;
+				ga.range = st->targetingRange;
+				ga.pos = npc.pos;
+				ga.until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
+				ga.nextPulse = localTime;
+				groundAuras.push_back(ga);
+			}
 		}
 		else if(c->kind == SummonCommand::DIE) {
 			npc.despawnAt = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
