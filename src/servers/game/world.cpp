@@ -8,6 +8,14 @@ static const i32 STAT_CRITICALRATE = 9;
 static const i32 STAT_CRITICALDAMAGE = 10;
 static const i32 STAT_MOVESPEED = 14;
 static const i32 STAT_MANA = 35;
+// secondary resources: max stat, regen stat (per second), starts full
+struct ResourceDef { i32 maxStat; i32 regenStat; bool startFull; };
+static const ResourceDef RESOURCES[3] = {
+	{ 17, 41, true },   // STAT_TYPE_ENERGY / ENERGYREGEN
+	{ 36, 40, false },  // STAT_TYPE_RAGE / RAGEREGEN (negative: decays), gained by hits
+	{ 56, 57, true },   // STAT_TYPE_BUBBLE / BUBBLEREGEN (charges)
+};
+static const i32 STAT_RAGE_ATTACK_RECOVERY_VALUE = 51;
 static const i32 STAT_MANAREGEN = 39;
 static const i32 STAT_ULTIMATE = 37;
 static const i32 STAT_ULTIMATEREGEN = 42;
@@ -1048,6 +1056,24 @@ void World::UpdateUltimateGauges(f32 delta)
 			}
 		}
 
+		bool resChanged = false;
+		for(int r = 0; r < 3; r++) {
+			const f32 resMax = MasterStat(cls, RESOURCES[r].maxStat);
+			if(resMax <= 0) continue;
+			if(it->res[r] < 0) it->res[r] = RESOURCES[r].startFull ? resMax : 0;
+			it->res[r] = MIN(MAX(it->res[r] + MasterStat(cls, RESOURCES[r].regenStat) * delta, 0.0f), resMax);
+			if(fabsf(it->res[r] - it->resSent[r]) >= 0.01f) resChanged = true;
+		}
+		if(resChanged && localTime >= it->tNextResSend) {
+			it->tNextResSend = TimeAdd(localTime, TimeMsToTime(250));
+			for(int r = 0; r < 3; r++) {
+				const f32 resMax = MasterStat(cls, RESOURCES[r].maxStat);
+				if(resMax <= 0) continue;
+				it->resSent[r] = it->res[r];
+				replication->SendStatToAll(it->Main().UID, RESOURCES[r].maxStat, it->res[r], resMax);
+			}
+		}
+
 		const f32 manaMax = MasterStat(cls, STAT_MANA);
 		if(manaMax > 0) {
 			if(it->mana < 0) it->mana = manaMax;
@@ -1074,12 +1100,22 @@ bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 	const f32 mp = content.GetSkillConsumeMP(skillID);
 	const f32 ug = content.GetSkillConsumeUG(skillID);
 	const f32 st = content.GetSkillConsumeStamina(skillID);
-	if(mp <= 0 && ug <= 0 && st <= 0) return true;
+	const f32 resCost[3] = { content.GetSkillConsume(skillID, 0), content.GetSkillConsume(skillID, 1), content.GetSkillConsume(skillID, 2) };
+	const f32 hpCost = content.GetSkillConsume(skillID, 3);
+	if(mp <= 0 && ug <= 0 && st <= 0 && resCost[0] <= 0 && resCost[1] <= 0 && resCost[2] <= 0 && hpCost <= 0) return true;
 	if(player.clientHd == ClientHandle::INVALID) return true; // bots don't track resources
 
-	const bool ok = (mp <= 0 || player.mana < 0 || player.mana >= mp) &&
+	bool ok = (mp <= 0 || player.mana < 0 || player.mana >= mp) &&
 		(ug <= 0 || player.ultGauge < 0 || player.ultGauge >= ug) &&
-		(st <= 0 || player.stamina < 0 || player.stamina >= st);
+		(st <= 0 || player.stamina < 0 || player.stamina >= st) &&
+		(hpCost <= 0 || player.Main().hp > hpCost);
+	for(int r = 0; r < 3; r++) {
+		if(resCost[r] > 0 && player.res[r] >= 0 && player.res[r] < resCost[r]) ok = false;
+	}
+	if(resCost[0] > 0 || resCost[1] > 0 || resCost[2] > 0 || hpCost > 0) {
+		LOG("Cost :: %ls skill=%d energy=%.0f/%.0f rage=%.0f/%.0f charges=%.0f/%.1f hp=%.0f", player.name.data(), skillID,
+			resCost[0], player.res[0], resCost[1], player.res[1], resCost[2], player.res[2], hpCost);
+	}
 	LOG("Cost :: %ls skill=%d mp=%.0f/%.0f ug=%.0f/%.0f stamina=%.0f/%.0f %s", player.name.data(), skillID,
 		mp, player.mana, ug, player.ultGauge, st, player.stamina, ok ? "paid" : "REFUSED");
 	if(!ok) return false;
@@ -1087,6 +1123,14 @@ bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 	if(mp > 0 && player.mana >= 0) { player.mana -= mp; player.tNextManaSend = Time::ZERO; }
 	if(ug > 0 && player.ultGauge >= 0) { player.ultGauge -= ug; player.tNextUltSend = Time::ZERO; }
 	if(st > 0 && player.stamina >= 0) { player.stamina -= st; player.tNextStaminaSend = Time::ZERO; }
+	for(int r = 0; r < 3; r++) {
+		if(resCost[r] > 0 && player.res[r] >= 0) { player.res[r] -= resCost[r]; player.tNextResSend = Time::ZERO; }
+	}
+	if(hpCost > 0) {
+		ActorMaster& chara = player.Main();
+		chara.hp = MAX(chara.hp - (i32)hpCost, 1);
+		replication->SendHpToAll(chara.UID, chara.hp, chara.hpMax);
+	}
 	return true;
 }
 
@@ -2211,6 +2255,13 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 
 	ActorMaster& chara = target.Main();
 	chara.hp = MAX(chara.hp - damage, HasStatusType(target, "STATUS_TYPE_NEARLY_IMMORTAL") ? 1 : 0);
+
+	// rage: STAT_TYPE_RAGE_ATTACK_RECOVERY_VALUE per landed hit
+	if(attacker.res[1] >= 0) {
+		const ClassType ac = attacker.Main().classType;
+		const f32 rageMax = MasterStat(ac, RESOURCES[1].maxStat);
+		if(rageMax > 0) attacker.res[1] = MIN(attacker.res[1] + MasterStat(ac, STAT_RAGE_ATTACK_RECOVERY_VALUE), rageMax);
+	}
 
 	LOG("Damage :: %ls -> %ls skill=%d damage=%d%s hp=%d/%d", attacker.name.data(), target.name.data(), (i32)skillID, damage, damageType == PACKET_DAMAGE_TYPE_CRITICAL ? " CRIT" : "", chara.hp, chara.hpMax);
 	if(proj && proj->remoteID != 0) {

@@ -241,9 +241,33 @@ void HubGame::OnPlayerChatWhisper(ClientHandle clientHd, const wchar* destNick, 
 	replication.SendChatWhisperToClient(playerMap[destClientID]->clientHd, playerAccountData[userID]->nickname.data(), msg);
 }
 
+// last leader character per nickname (the client doesn't send it again when coming back from a game)
+struct LastLeader { WideString nickname; LocalActorID characterID; SkinIndex skin; };
+static eastl::fixed_vector<LastLeader,64,true> g_lastLeader;
+
+void HubGame::OnPlayerEnterCity(ClientHandle clientHd)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	if(playerActorUID[userID] != ActorUID::INVALID || !playerAccountData[userID]) return;
+	LocalActorID characterID = LocalActorID((u32)LocalActorID::FIRST_SELF_MASTER + 35); // Lua
+	SkinIndex skin = SkinIndex::DEFAULT;
+	foreach_const(it, g_lastLeader) {
+		if(it->nickname == playerAccountData[userID]->nickname) { characterID = it->characterID; skin = it->skin; }
+	}
+	LOG("[client%x] HubGame :: entered the city without a leader character, spawning the last one", clientHd);
+	OnPlayerSetLeaderCharacter(clientHd, characterID, skin);
+}
+
 void HubGame::OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID characterID, SkinIndex skinIndex)
 {
 	const i32 userID = plidMap->Get(clientHd);
+	if(playerAccountData[userID]) {
+		bool found = false;
+		foreach(it, g_lastLeader) {
+			if(it->nickname == playerAccountData[userID]->nickname) { it->characterID = characterID; it->skin = skinIndex; found = true; }
+		}
+		if(!found && !g_lastLeader.full()) g_lastLeader.push_back({ playerAccountData[userID]->nickname, characterID, skinIndex });
+	}
 
 	const i32 leaderMasterContentID = (u32)characterID - (u32)LocalActorID::FIRST_SELF_MASTER - 1;
 

@@ -2088,6 +2088,12 @@ bool GameXmlContent::LoadStatusData()
 				f32 mp = 0, ug = 0;
 				if(pCommon->QueryFloatAttribute("_ConsumeMP", &mp) == XML_SUCCESS && mp > 0) skillConsumeMP[skillID] = mp;
 				if(pCommon->QueryFloatAttribute("_ConsumeUG", &ug) == XML_SUCCESS && ug > 0) skillConsumeUG[skillID] = ug;
+				eastl::array<f32,4> res = { 0, 0, 0, 0 };
+				pCommon->QueryFloatAttribute("_ConsumeEP", &res[0]);
+				pCommon->QueryFloatAttribute("_ConsumeRP", &res[1]);
+				pCommon->QueryFloatAttribute("_ConsumeBB", &res[2]);
+				pCommon->QueryFloatAttribute("_ConsumeHP", &res[3]);
+				if(res[0] > 0 || res[1] > 0 || res[2] > 0 || res[3] > 0) skillConsumeRes[skillID] = res;
 			}
 			XMLElement* pEvent = pCommon ? pCommon->FirstChildElement("_HitEvent") : nullptr;
 			if(!pEvent) continue;
