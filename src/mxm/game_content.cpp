@@ -2093,7 +2093,7 @@ bool GameXmlContent::LoadStatusData()
 						if(!name || EA::StdC::Strcmp(name, "LIE_END") != 0) continue;
 						f32 len = 0;
 						pAni->QueryFloatAttribute("_SeqTime", &len);
-						lieEndTime[eastl::fixed_string<char,48,false>(key)] = len;
+						lieEndTime.push_back(eastl::make_pair(eastl::fixed_string<char,48,false>(key), len));
 					}
 				}
 			}

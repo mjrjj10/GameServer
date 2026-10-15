@@ -550,8 +550,10 @@ struct GameXmlContent
 	f32 GetLieEndTime(const char* className) const
 	{
 		const char* key = EA::StdC::Strncmp(className, "CLASS_TYPE_", 11) == 0 ? className + 11 : className;
-		auto f = lieEndTime.find(eastl::fixed_string<char,48,false>(key));
-		return f == lieEndTime.end() ? 0 : f->second;
+		foreach_const(it, lieEndTime) {
+			if(it->first == key) return it->second;
+		}
+		return 0;
 	}
 	const SummonInfo* FindSummon(i32 creatureID) const { auto f = summonMap.find(creatureID); return f == summonMap.end() ? nullptr : &f->second; }
 	i32 GetCreatureElement(i32 creatureID) const { auto f = creatureElement.find(creatureID); return f == creatureElement.end() ? 0 : f->second; }
@@ -608,7 +610,7 @@ private:
 	eastl::hash_map<i32, f32> skillConsumeMP;      // SKILL.xml _ConsumeMP
 	eastl::hash_map<i32, f32> skillConsumeUG;      // SKILL.xml _ConsumeUG
 	eastl::hash_map<i32, SummonInfo> summonMap;
-	eastl::hash_map<eastl::fixed_string<char,48,false>, f32> lieEndTime; // AniLength.xml PC LIE_END per entity key
+	eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,48,false>, f32>,128,true> lieEndTime; // AniLength.xml PC LIE_END per entity key
 	eastl::hash_map<i32, i32> creatureElement; // CREATURE_CHARACTER _ElementType: 0 none, 1 red, 2 green, 3 blue
 	bool LoadStatusData();
 };
