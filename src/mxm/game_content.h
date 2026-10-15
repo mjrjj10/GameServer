@@ -250,6 +250,7 @@ struct Remote
 	RemoteIdx destroyCreateRemote = RemoteIdx::INVALID;
 	f32 attackMultiplier = 0;
 	f32 offsetY = 0;
+	f32 offsetZ = 0;     // RemoteComData2 _OffsetZ: height offset the client applies to the fire position
 	f32 boundOffsetY = 0;
 	f32 angle = 0;
 	f32 hitInvalidTime = 1;

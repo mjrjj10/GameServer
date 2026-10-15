@@ -1581,6 +1581,7 @@ bool GameXmlContent::LoadRemoteData()
 				remote.lifeTime = _LifeTime;
 				pComp->QueryFloatAttribute("_AttackMultiplier", &remote.attackMultiplier);
 				pComp->QueryFloatAttribute("_OffsetY", &remote.offsetY);
+				pComp->QueryFloatAttribute("_OffsetZ", &remote.offsetZ);
 				const char* _OnHitOwnerMemorizeTarget = nullptr;
 				pComp->QueryStringAttribute("_OnHitOwnerMemorizeTarget", &_OnHitOwnerMemorizeTarget);
 				remote.memorizeTarget = _OnHitOwnerMemorizeTarget && EA::StdC::Stricmp(_OnHitOwnerMemorizeTarget, "true") == 0;
