@@ -111,6 +111,8 @@ struct World
 		u8 chargeLevel = 0;
 		eastl::array<i32,2> shotCount = { 0, 0 }; // weapon shots per master (_FIRINGCOUNT)
 		bool passivesApplied = false;
+		eastl::array<Time,5> botSkillReady = { Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO };
+		Time tNextBotSkill = Time::ZERO;
 		f32 ultGauge = -1.0f; // initialised to the master's max on first update
 		f32 stamina = -1.0f;
 		f32 mana = -1.0f;
@@ -477,6 +479,7 @@ struct World
 	void UpdateWeaponHeat(Player& player);
 	void UpdateSummons();
 	void UpdateBotCombat();
+	void UpdateBotSkills();
 	bool frozen = false; // game over: no more shots, skills or bot actions
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActor(ActorUID actorUID) const;

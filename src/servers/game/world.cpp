@@ -243,6 +243,7 @@ void World::Update(Time localTime_)
 	UpdateStatuses();
 	UpdateSummons();
 	if(!frozen) UpdateBotCombat();
+	if(!frozen) UpdateBotSkills();
 
 	// execute skill programs
 	for(auto it = skillProgramList.begin(); it != skillProgramList.end(); ) {
@@ -1526,6 +1527,62 @@ f32 World::StatusModSum(const Player& p, i32 stat) const
 		}
 	}
 	return sum;
+}
+
+// bots cast their master's skills (BotBrainData _SkillIndexData) at the nearest enemy within _BotSkillMaxDistance;
+// each skill waits max(its _CoolTime, bot NORMALSKILL/UGSKILL cooldown) before being used again
+void World::UpdateBotSkills()
+{
+	const auto& content = GetGameXmlContent();
+	foreach(it, players) {
+		Player& bot = *it;
+		if(bot.clientHd != ClientHandle::INVALID || bot.dead) continue;
+		if(localTime < bot.tNextBotSkill || localTime < bot.ccUntil) continue;
+		if(IsBlocked(bot, false, true, false)) continue;
+		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500)); // re-evaluated twice per second
+
+		const ActorMaster& master = bot.Main();
+		const auto* skills = content.FindBotSkills(100000000 + (i32)master.classType);
+		if(!skills) continue;
+
+		const vec3 pos = bot.body->GetWorldPos();
+		Player* target = nullptr;
+		f32 best = 1e9f;
+		foreach(e, players) {
+			if(e->dead || e->team == bot.team) continue;
+			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(pos));
+			if(d < best) { best = d; target = &*e; }
+		}
+		if(!target) continue;
+
+		// ready skills whose bot range reaches the target
+		eastl::fixed_vector<i32,5,false> ready;
+		for(i32 i = 0; i < 5; i++) {
+			const i32 skill = (*skills)[i];
+			if(skill == 0 || localTime < bot.botSkillReady[i]) continue;
+			const f32 maxDist = content.GetBotSkillMaxDistance(skill);
+			if(maxDist <= 0 || best > maxDist) continue;
+			ready.push_back(i);
+		}
+		if(ready.empty()) continue;
+		const i32 slot = ready[RandUint() % ready.size()];
+		const i32 skill = (*skills)[slot];
+
+		const f32 botCd = slot == 4 ? content.BotUgSkillCoolTime() : content.BotNormalSkillCoolTime();
+		const f32 cd = MAX(content.GetSkillCoolTime(skill), botCd);
+		bot.botSkillReady[slot] = TimeAdd(localTime, TimeMsToTime(cd * 1000.0));
+		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(MAX(content.BotAfterSkillDelay(), 0.5f) * 1000.0));
+
+		// face the target, then cast like a player would
+		const vec3 tpos = target->body->GetWorldPos();
+		const f32 yaw = atan2f(tpos.y - pos.y, tpos.x - pos.x);
+		bot.input.rot.upperYaw = yaw;
+		bot.input.rot.bodyYaw = yaw;
+		bot.weaponAimYaw = yaw;
+		const ActorUID targetUID = target->Main().UID;
+		LOG("BotSkill :: %ls casts %d at %ls (dist %.0f, cd %.0f)", bot.name.data(), skill, target->name.data(), best, cd);
+		PlayerCastSkill(bot, SkillID(skill), tpos, Slice<const ActorUID>(&targetUID, 1), 0);
+	}
 }
 
 void World::UpdateBotCombat()

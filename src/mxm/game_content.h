@@ -580,6 +580,12 @@ struct GameXmlContent
 	const wchar* GetNodeName(u16 idx) const { return idx < nodeNames.size() ? nodeNames[idx].c_str() : L"Scene Root"; }
 	const StatusInfo* FindStatus(i32 statusID) const;
 	f32 GetWeaponFireDelay(i32 weaponID) const { auto f = weaponFireDelay.find(weaponID); return f == weaponFireDelay.end() ? 0 : f->second; }
+	f32 GetSkillCoolTime(i32 skill) const { auto f = skillCoolTime.find(skill); return f == skillCoolTime.end() ? 0 : f->second; }
+	f32 GetBotSkillMaxDistance(i32 skill) const { auto f = botSkillMaxDistance.find(skill); return f == botSkillMaxDistance.end() ? 0 : f->second; }
+	f32 BotNormalSkillCoolTime() const { return botNormalSkillCoolTime; }
+	f32 BotUgSkillCoolTime() const { return botUgSkillCoolTime; }
+	f32 BotAfterSkillDelay() const { return botAfterSkillDelay; }
+	const eastl::array<i32,5>* FindBotSkills(i32 creature) const { auto f = botSkills.find(creature); return f == botSkills.end() ? nullptr : &f->second; }
 	const WeaponFiring* FindWeaponFiring(i32 weaponID) const { auto f = weaponFiring.find(weaponID); return f == weaponFiring.end() ? nullptr : &f->second; }
 	const eastl::fixed_vector<i32,4,false>* FindPassiveStatuses(ClassType c) const { auto f = passiveStatuses.find((i32)c); return f == passiveStatuses.end() ? nullptr : &f->second; }
 	const WeaponHeatInfo* FindWeaponHeat(i32 weaponID) const { auto f = weaponHeat.find(weaponID); return f == weaponHeat.end() ? nullptr : &f->second; }
@@ -659,6 +665,13 @@ private:
 	eastl::hash_map<i32, WeaponHeatInfo> weaponHeat;
 	eastl::hash_map<i32, f32> weaponFireDelay; // weapon -> FIRING_METHOD _FIREINFO _FireDelayTime
 	eastl::hash_map<i32, WeaponFiring> weaponFiring; // weapon -> default firing method remotes
+	// bots (BotBrainData.xml _SkillIndexData per master, E_BOT_STAGE_LEVEL_NORMAL constants; SKILL.xml)
+	eastl::hash_map<i32, eastl::array<i32,5>> botSkills;  // master creature -> _Skill0.._Skill3, _UgSkill
+	eastl::hash_map<i32, f32> skillCoolTime;              // _CoolTime (s)
+	eastl::hash_map<i32, f32> botSkillMaxDistance;        // _Target _BotSkillMaxDistance
+	f32 botNormalSkillCoolTime = 0;                       // BOTLOGIC_STAGELEVEL_KEY_NORMALSKILL_COOLTIME
+	f32 botUgSkillCoolTime = 0;                           // BOTLOGIC_STAGELEVEL_KEY_UGSKILL_COOLTIME
+	f32 botAfterSkillDelay = 0;                           // BOTLOGIC_STAGELEVEL_KEY_AFTER_SKILL_DELAY
 	eastl::hash_map<i32, eastl::fixed_vector<i32,4,false>> passiveStatuses; // class -> SKILL_TYPE_PASSIVE _Status
 	eastl::hash_map<i32, f32> skillConsumeStamina; // SKILL.xml _ConsumeStamina (dodge)
 	eastl::hash_map<i32, f32> skillConsumeMP;      // SKILL.xml _ConsumeMP

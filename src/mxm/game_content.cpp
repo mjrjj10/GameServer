@@ -2383,6 +2383,16 @@ bool GameXmlContent::LoadStatusData()
 			pSk->QueryStringAttribute("_Type", &type);
 			pSk->QueryStringAttribute("_RequireClass", &cls);
 			pSk->QueryAttribute("_Status", &status);
+			{
+				i32 skillID = 0;
+				pInfo->QueryAttribute("ID", &skillID);
+				f32 cd = 0;
+				if(pSk->QueryFloatAttribute("_CoolTime", &cd) == XML_SUCCESS) skillCoolTime[skillID] = cd;
+				if(XMLElement* pT = pSk->FirstChildElement("_Target")) {
+					f32 d = 0;
+					if(pT->QueryFloatAttribute("_BotSkillMaxDistance", &d) == XML_SUCCESS && d > 0) botSkillMaxDistance[skillID] = d;
+				}
+			}
 			if(!type || !cls || !status || EA::StdC::Strcmp(type, "SKILL_TYPE_PASSIVE") != 0) continue;
 			auto found = masterClassStringMap.find(strHash(cls));
 			if(found == masterClassStringMap.end()) continue;
@@ -2390,6 +2400,38 @@ bool GameXmlContent::LoadStatusData()
 			if(!list.full()) { list.push_back(status); count++; }
 		}
 		LOG("Loaded %d passive statuses", count);
+	}
+
+	XMLDocument xmlBrain;
+	if(LoadXMLFile(L"/client/BotBrainData.xml", xmlBrain)) {
+		XMLElement* pRoot = xmlBrain.FirstChildElement()->FirstChildElement("ST_BOT_BRAIN_DATA");
+		for(XMLElement* p = pRoot ? pRoot->FirstChildElement("_SkillIndexData") : nullptr; p; p = p->NextSiblingElement("_SkillIndexData")) {
+			i32 creature = 0;
+			p->QueryAttribute("DATAKEY", &creature);
+			eastl::array<i32,5> s = { 0, 0, 0, 0, 0 };
+			p->QueryAttribute("_Skill0", &s[0]);
+			p->QueryAttribute("_Skill1", &s[1]);
+			p->QueryAttribute("_Skill2", &s[2]);
+			p->QueryAttribute("_Skill3", &s[3]);
+			p->QueryAttribute("_UgSkill", &s[4]);
+			botSkills[creature] = s;
+		}
+		for(XMLElement* p = pRoot ? pRoot->FirstChildElement("_StageLevelData") : nullptr; p; p = p->NextSiblingElement("_StageLevelData")) {
+			const char* key = nullptr;
+			p->QueryStringAttribute("DATAKEY", &key);
+			if(!key || EA::StdC::Strcmp(key, "E_BOT_STAGE_LEVEL_NORMAL") != 0) continue;
+			for(XMLElement* d = p->FirstChildElement("_Data"); d; d = d->NextSiblingElement("_Data")) {
+				const char* k = nullptr;
+				f32 v = 0;
+				d->QueryStringAttribute("DATAKEY", &k);
+				d->QueryFloatAttribute("DATA", &v);
+				if(!k) continue;
+				if(EA::StdC::Strcmp(k, "BOTLOGIC_STAGELEVEL_KEY_NORMALSKILL_COOLTIME") == 0) botNormalSkillCoolTime = v;
+				else if(EA::StdC::Strcmp(k, "BOTLOGIC_STAGELEVEL_KEY_UGSKILL_COOLTIME") == 0) botUgSkillCoolTime = v;
+				else if(EA::StdC::Strcmp(k, "BOTLOGIC_STAGELEVEL_KEY_AFTER_SKILL_DELAY") == 0) botAfterSkillDelay = v;
+			}
+		}
+		LOG("Loaded bot skills for %d masters (skill cd %.0f, ult cd %.0f, after skill %.1f)", (i32)botSkills.size(), botNormalSkillCoolTime, botUgSkillCoolTime, botAfterSkillDelay);
 	}
 	return true;
 }
