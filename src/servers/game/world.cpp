@@ -2685,7 +2685,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		foreach_const(it, players) {
 			if(it->team == attacker.team) teamKills += it->kills;
 		}
-		replication->SendScoreToAll(attacker.userID, attacker.team, attacker.kills, teamKills);
+		replication->SendScoreToAll(attacker.userID, attacker.team, attacker.kills, teamKills, target.userID, target.deaths);
 		replication->SendDeathToAll(attacker.Main().UID, chara.UID, CreatureIndex(100000000 + (i32)chara.classType), target.userID, RESPAWN_DELAY_MS);
 	}
 }

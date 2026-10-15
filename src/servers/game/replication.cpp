@@ -940,20 +940,38 @@ void Replication::SendGaugeToAll(UserID userID, u8 updateType, bool overheated, 
 	}
 }
 
-void Replication::SendScoreToAll(UserID userID, u8 team, i32 kills, i32 teamKills)
+// SN_ScoreUpdate (client RE): teamType -1 = records of player usn, otherwise records of that team.
+// Record types (client enum): 0 SCORE, 1 KILL_COUNT, 3 PLAYER_KILL_COUNT, 14 DEAD_COUNT
+void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKills, UserID victimID, i32 victimDeaths)
 {
-	PacketWriter<Sv::SN_ScoreUpdate> packet;
-	packet.Write<u32>((u32)userID);
-	packet.Write<TeamType>(team == 0 ? TeamType::RED : TeamType::BLUE);
-	packet.Write<u16>(6);
-	for(u32 type = 0; type < 6; type++) {
-		packet.Write<u32>(type);
-		packet.Write<u32>((u32)(type == 0 ? teamKills : kills));
-	}
+	enum : u32 { SCORE = 0, KILL_COUNT = 1, PLAYER_KILL_COUNT = 3, DEAD_COUNT = 14 };
+
+	PacketWriter<Sv::SN_ScoreUpdate> teamPacket;
+	teamPacket.Write<u32>((u32)killerID);
+	teamPacket.Write<TeamType>(team == 0 ? TeamType::RED : TeamType::BLUE);
+	teamPacket.Write<u16>(2);
+	teamPacket.Write<u32>(SCORE);      teamPacket.Write<u32>((u32)teamKills);
+	teamPacket.Write<u32>(KILL_COUNT); teamPacket.Write<u32>((u32)teamKills);
+
+	PacketWriter<Sv::SN_ScoreUpdate> killerPacket;
+	killerPacket.Write<u32>((u32)killerID);
+	killerPacket.Write<u32>(0xFFFFFFFF);
+	killerPacket.Write<u16>(3);
+	killerPacket.Write<u32>(SCORE);             killerPacket.Write<u32>((u32)kills);
+	killerPacket.Write<u32>(KILL_COUNT);        killerPacket.Write<u32>((u32)kills);
+	killerPacket.Write<u32>(PLAYER_KILL_COUNT); killerPacket.Write<u32>((u32)kills);
+
+	PacketWriter<Sv::SN_ScoreUpdate> victimPacket;
+	victimPacket.Write<u32>((u32)victimID);
+	victimPacket.Write<u32>(0xFFFFFFFF);
+	victimPacket.Write<u16>(1);
+	victimPacket.Write<u32>(DEAD_COUNT); victimPacket.Write<u32>((u32)victimDeaths);
 
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
-		SendPacket(clientHandle[clientID], packet);
+		SendPacket(clientHandle[clientID], teamPacket);
+		SendPacket(clientHandle[clientID], killerPacket);
+		SendPacket(clientHandle[clientID], victimPacket);
 	}
 }
 
