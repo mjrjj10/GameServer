@@ -2043,7 +2043,7 @@ bool GameXmlContent::LoadStatusData()
 				if(!EA::StdC::Stristr(text, "movespeed") && !EA::StdC::Stristr(text, "movement speed")) continue;
 				const char* ph = EA::StdC::Strstr(text, ":status:stat:mul:");
 				if(!ph) continue;
-				const char* statName = ph + 18;
+				const char* statName = ph + 17; // strlen(":status:stat:mul:")
 				StatusMod::Stat stat = StatusMod::OTHER;
 				if(EA::StdC::Strnicmp(statName, "attack:", 7) == 0) stat = StatusMod::ATTACK;
 				if(stat == StatusMod::OTHER) continue;
