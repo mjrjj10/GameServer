@@ -1275,6 +1275,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	inst.target = target;
 	inst.hitsLeft = MAX(remote->activateCount, 1);
 	inst.areaDone = false;
+	inst.casterLocal = casterCreatesLocally;
 	if(remote->timeEventDelay >= 0) {
 		inst.timeEventActive = true;
 		inst.nextTimeEvent = TimeAdd(localTime, TimeMsToTime(remote->timeEventDelay * 1000.0));
@@ -1312,9 +1313,9 @@ static vec2 RotateDir(const vec2& d, f32 deg)
 
 struct WorldRemoteSpawner
 {
-	static World::RemoteInst* Spawn(World& w, u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage)
+	static World::RemoteInst* Spawn(World& w, u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast, bool casterLocal)
 	{
-		return w.SpawnRemote(ownerIndex, idx, pos, dir, target, skillID, castID, damage);
+		return w.SpawnRemote(ownerIndex, idx, pos, dir, target, skillID, castID, damage, broadcast, nullptr, 0, casterLocal);
 	}
 };
 
@@ -1348,7 +1349,7 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 					dir = RotateDir(parent.dir, rule->angleY);
 				} break;
 			}
-			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, rule->idx, at + vec3(dir * child->offsetY, 0), dir, parent.target, parent.skillID, parent.castID, parent.damage);
+			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, rule->idx, at + vec3(dir * child->offsetY, 0), dir, parent.target, parent.skillID, parent.castID, parent.damage, parent.clientRemoteID != 0, parent.casterLocal);
 			if(inst) inst->excludeIndex = excludeIndex;
 		}
 	}
@@ -1706,7 +1707,7 @@ void World::UpdateRemotes(f32 delta)
 				if(next != RemoteIdx::INVALID) {
 					const Remote* nextRemote = GetGameXmlContent().FindRemote(next);
 					const f32 nextOffset = nextRemote ? nextRemote->offsetY : 0;
-					RemoteInst* child = SpawnRemote(copy.ownerIndex, next, copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.destroyedByHit && copy.clientRemoteID != 0);
+					RemoteInst* child = SpawnRemote(copy.ownerIndex, next, copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, 0, copy.casterLocal);
 					if(child) child->excludeIndex = childExclude;
 				}
 				SpawnRemoteRules(*this, copy, remote.onDestroy, copy.pos, childExclude, next);

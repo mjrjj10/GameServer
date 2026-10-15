@@ -349,6 +349,7 @@ struct World
 		i32 excludeIndex = -1;
 		i32 lastHitIndex = -1;
 		bool chainEnded = false;
+		bool casterLocal = false; // the caster's client creates this remote (and its children) itself
 	};
 
 	struct CastHit
