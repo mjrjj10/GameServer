@@ -1287,6 +1287,8 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	if(remote->behaviorType == Remote::BehaviorType::GRAPH && remote->fixedGraphLength <= 0 && aimPos && glm::length(vec2(*aimPos)) > 1.0f) {
 		const f32 aimDist = glm::length(vec2(*aimPos) - vec2(pos));
 		inst.range = inst.range > 0 ? MIN(aimDist, inst.range) : aimDist;
+		inst.landZ = aimPos->z;
+		inst.hasLandZ = true;
 	}
 	inst.spawnTime = localTime;
 	inst.target = target;
@@ -1660,6 +1662,7 @@ void World::UpdateRemotes(f32 delta)
 				inst.pos += vec3(inst.dir * step, 0);
 				inst.travelled += step;
 				destroyed = inst.travelled >= inst.range - 0.01f;
+				if(destroyed && inst.hasLandZ) inst.pos.z = inst.landZ; // landed on the ground
 			} break;
 
 			default: {
@@ -1722,6 +1725,7 @@ void World::UpdateRemotes(f32 delta)
 			LOG("SkillRemoteEnd :: %d travelled=%.0f hitsLeft=%d nearest=%ls dist=%.0f", (i32)remote.ID, inst.travelled, inst.hitsLeft, nearestPlayer ? nearestPlayer->name.data() : L"-", nearest);
 		}
 
+		if(destroyed && inst.hasLandZ) inst.pos.z = inst.landZ;
 		if(destroyed) {
 			const RemoteIdx next = remote.destroyCreateRemote;
 			const RemoteInst copy = inst;

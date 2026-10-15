@@ -352,6 +352,8 @@ struct World
 		i32 lastHitIndex = -1;
 		bool chainEnded = false;
 		bool casterLocal = false; // the caster's client creates this remote (and its children) itself
+		f32 landZ = 0;            // lobbed remotes: height of the aimed point
+		bool hasLandZ = false;
 	};
 
 	struct CastHit
