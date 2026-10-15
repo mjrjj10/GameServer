@@ -2572,6 +2572,20 @@ DEFAULT_SERIALIZE(Sv::SN_UpdateEntrySystem);
 #undef DEFAULT_SERIALIZE
 
 template<>
+inline const char* PacketSerialize<Sv::SN_RemoteSyncTarget>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_RemoteSyncTarget(%d, %d) :: {", Sv::SN_RemoteSyncTarget::NET_ID, packetSize);
+	SER("	excludedFieldBits=%u", buff.Read<u8>());
+	SER("	remoteID=0x%08x", buff.Read<u32>());
+	SER("	targetEntity=0x%08x", buff.Read<u32>());
+	SER("	DestPos=%s", PS::ToStr(buff.Read<float3>()));
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_BroadcastDamage>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

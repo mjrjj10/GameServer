@@ -66,6 +66,16 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 		CASE(CQ_WeaponState);
 		CASE(CQ_GamePlayerSyncPhy);
 
+		case 60196: {
+			NT_LOG("[client%x] Client :: RemoteCreateDoc (60196) size=%d", clientHd, packetSize);
+			replication->RelayRemoteCreateDoc(clientHd, packetData, packetSize);
+		} break;
+
+		case 60197: {
+			NT_LOG("[client%x] Client :: RemoteSyncTarget (60197) size=%d", clientHd, packetSize);
+			replication->RelayRemoteSyncTarget(clientHd, packetData, packetSize);
+		} break;
+
 		default: {
 			eastl::fixed_string<char,2048,true> hex;
 			for(int i = 0; i < packetSize && i < 512; i++) hex.append_sprintf("%02x ", packetData[i]);
@@ -357,6 +367,14 @@ void GamePacketHandler::HandlePacket_CQ_GamePlayerSyncPhy(ClientHandle clientHd,
 	const i16 dirY = buff.Read<i16>();
 	for(int i = 0; i < 6; i++) buff.Read<i16>();
 	const i16 distance = buff.Read<i16>();
+
+	const u16 nameLen = buff.Read<u16>();
+	const wchar* name = (const wchar*)buff.ReadRaw(nameLen * sizeof(wchar));
+	const bool isWeapon = nameLen >= 6 && EA::StdC::Strncmp(name, L"Attack", 6) == 0;
+	if(!isWeapon) {
+		NT_LOG("[client%x] SyncPhy :: non-weapon fire object '%.*ls'", clientHd, nameLen, name);
+		return;
+	}
 
 	const vec2 dir = vec2((f32)dirX, (f32)dirY);
 	if(glm::length(dir) < 1.0f) return;

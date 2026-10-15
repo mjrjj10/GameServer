@@ -175,6 +175,7 @@ void World::Update(Time localTime_)
 
 	UpdateProjectiles((f32)tdelta);
 	UpdateRemotes((f32)tdelta);
+	UpdateUltimateGauges((f32)tdelta);
 
 	// execute skill programs
 	for(auto it = skillProgramList.begin(); it != skillProgramList.end(); ) {
@@ -661,10 +662,10 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 
 	proj.range = graph ? (reliable ? MIN(distance, WEAPON_SHOT_MAX_DISTANCE) : classRange) : remoteRange;
 	proj.graph = graph;
-	proj.halfWidth = remote ? (remote->boundType == Remote::BoundType::E_BOUND_SPHERE ? remote->boundSize[0] : remote->boundSize[0] * 0.5f) : 20.0f;
+	proj.halfWidth = remote ? remote->boundSize[0] * 0.5f : 20.0f;
 	proj.hitsLeft = remote ? MAX(remote->activateCount, 1) : 1;
 	proj.forwardReach = (remote && remote->boundType == Remote::BoundType::E_BOUND_BOX) ? MAX(remote->boundSize[1] + 120.0f, PROJECTILE_TARGET_RADIUS) : PROJECTILE_TARGET_RADIUS;
-	proj.aoeRadius = bomb ? (f32)bomb->boundSize[0] : 0;
+	proj.aoeRadius = bomb ? bomb->boundSize[0] * 0.5f : 0;
 
 	proj.remoteDoc = remote ? remote->ID : RemoteIdx::INVALID;
 	proj.pendingAdvance = player.shotLeadSec * proj.speed;
@@ -855,6 +856,23 @@ void World::OnWeaponAimPacket(Player& player, f32 aimYaw)
 	player.pendingAimTime = localTime;
 }
 
+static const f32 ULTIMATE_GAUGE_MAX = 100.0f;
+static const f32 ULTIMATE_RECHARGE_SEC = 45.0f;
+
+void World::UpdateUltimateGauges(f32 delta)
+{
+	foreach(it, players) {
+		if(it->clientHd == ClientHandle::INVALID) continue;
+		it->ultGauge = MIN(it->ultGauge + ULTIMATE_GAUGE_MAX / ULTIMATE_RECHARGE_SEC * delta, ULTIMATE_GAUGE_MAX);
+		if(localTime < it->tNextUltSend) continue;
+		it->tNextUltSend = TimeAdd(localTime, TimeMsToTime(1000));
+		it->ultGaugeSent = it->ultGauge;
+		foreach(c, it->characters) {
+			replication->SendStatToAll((*c)->UID, (i32)StatType::STAT_TYPE_ULTIMATE, it->ultGauge, ULTIMATE_GAUGE_MAX);
+		}
+	}
+}
+
 bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle)
 {
 	const auto& content = GetGameXmlContent();
@@ -869,6 +887,15 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	}
 	player.lastComboSkill = anim == 0 ? skillID : SkillID::INVALID;
 	player.lastComboTime = localTime;
+
+	{
+		SkillNormalModel& skillModel = const_cast<SkillNormalModel&>(skill);
+		const f32 consumeUG = skillModel.getSkillNormalLevelByIndex(0)->getConsumeUG();
+		if(consumeUG > 0) {
+			player.ultGauge = 0.0f;
+			player.tNextUltSend = Time::ZERO;
+		}
+	}
 
 	const u32 castID = nextCastID++;
 	const i32 damage = (i32)SkillDamage(skillID);
@@ -902,7 +929,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	return scheduled;
 }
 
-void World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage)
+void World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast)
 {
 	const Remote* remote = GetGameXmlContent().FindRemote(idx);
 	if(!remote || remoteInsts.full()) return;
@@ -924,6 +951,18 @@ void World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const ve
 	inst.target = target;
 	inst.hitsLeft = MAX(remote->activateCount, 1);
 	inst.areaDone = false;
+
+	if(broadcast) {
+		const u32 seed = nextRemoteSeed;
+		nextRemoteSeed += 2;
+		inst.clientRemoteID = seed + 1;
+		vec3 targetPos = pos + vec3(dir * (inst.range > 0 ? inst.range : 1000.0f), 0);
+		const ActorMaster* targetMaster = target != ActorUID::INVALID ? FindMasterActor(target) : nullptr;
+		if(targetMaster) targetPos = targetMaster->parent->body->GetWorldPos();
+		const f32 sendYaw = atan2f(dir.y, dir.x) + (inst.speed <= 0 && remote->boundType == Remote::BoundType::E_BOUND_BOX ? PI : 0.0f);
+		replication->SendRemoteCreateToAll(players[ownerIndex].Main().UID, seed, idx, pos, sendYaw, targetPos, targetMaster ? target : ActorUID::INVALID);
+	}
+
 	remoteInsts.push_back(inst);
 
 	LOG("Remote :: spawn %d at (%.0f, %.0f) dir=(%.2f, %.2f) speed=%.0f range=%.0f", (i32)idx, pos.x, pos.y, dir.x, dir.y, inst.speed, inst.range);
@@ -937,6 +976,10 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	Player& owner = players[inst.ownerIndex];
 	if(target.team == owner.team || target.dead) return;
 
+	const i32 damage = (i32)(inst.damage * remote.attackMultiplier);
+	if(remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;
+	if(damage <= 0) return;
+
 	foreach(h, castHits) {
 		if(h->castID == inst.castID && h->playerIndex == target.index && localTime < h->until) return;
 	}
@@ -948,27 +991,24 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 		castHits.push_back(h);
 	}
 
-	if(remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;
-
-	const i32 damage = (i32)(inst.damage * remote.attackMultiplier);
-	if(damage > 0) {
-		DamagePlayer(owner, target, inst.skillID, damage);
-	}
+	DamagePlayer(owner, target, inst.skillID, damage);
 }
 
 void World::RemoteApplyArea(RemoteInst& inst)
 {
 	const Remote& remote = *inst.remote;
 	if(remote.boundType == Remote::BoundType::E_BOUND_SPHERE) {
-		const f32 radius = remote.boundSize[0];
+		const bool cone = remote.angle > 0;
+		const f32 radius = remote.boundSize[0] * 0.5f;
+		const f32 margin = WEAPON_TARGET_RADIUS;
 		foreach(it, players) {
 			const vec3 pos = it->body->GetWorldPos();
 			if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 			const vec2 rel = LagClosestPos(*it, vec2(inst.pos)) - vec2(inst.pos);
 			const f32 dist = glm::length(rel);
-			if(dist > radius + WEAPON_TARGET_RADIUS + WEAPON_HIT_TOLERANCE) continue;
+			if(dist > radius + margin) continue;
 			if(remote.angle > 0 && dist > WEAPON_TARGET_RADIUS) {
-				if(glm::dot(rel / dist, inst.dir) < cosf(remote.angle * 0.5f * PI / 180.0f)) continue;
+				if(glm::dot(rel / dist, inst.dir) < cosf(MIN(remote.angle * 0.5f + 15.0f, 180.0f) * PI / 180.0f)) continue;
 			}
 			RemoteHit(inst, *it);
 		}
@@ -1002,7 +1042,7 @@ void World::UpdateRemotes(f32 delta)
 		const vec2 dir = vec2(cosf(pr->angle), sinf(pr->angle));
 		const Remote* remote = GetGameXmlContent().FindRemote(pr->idx);
 		const f32 offsetY = remote ? remote->offsetY : 0;
-		vec3 pos = owner.body->GetWorldPos() + vec3(dir * offsetY, 0);
+		vec3 pos = owner.body->GetWorldPos() + vec3(dir * offsetY, 158.0f);
 
 		switch((ActionCommand::TargetPreset)pr->preset) {
 			case ActionCommand::TargetPreset::POS_FFF:
@@ -1015,7 +1055,7 @@ void World::UpdateRemotes(f32 delta)
 		}
 
 		if(!owner.dead) {
-			SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage);
+			SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true);
 		}
 		pr = pendingRemotes.erase_unsorted(pr);
 	}
@@ -1040,7 +1080,7 @@ void World::UpdateRemotes(f32 delta)
 				const vec2 rel = vec2(tpos - inst.pos);
 				const f32 dist = glm::length(rel);
 				const f32 step = (inst.speed > 0 ? inst.speed : 3000.0f) * delta;
-				if(dist <= step + remote.boundSize[0] + WEAPON_TARGET_RADIUS) {
+				if(dist <= step + remote.boundSize[0] * 0.5f + WEAPON_TARGET_RADIUS) {
 					inst.pos = vec3(vec2(tpos), inst.pos.z);
 					RemoteHit(inst, target);
 					destroyed = true;
@@ -1063,7 +1103,7 @@ void World::UpdateRemotes(f32 delta)
 					const f32 step = inst.range > 0 ? MIN(inst.speed * delta, inst.range - inst.travelled) : inst.speed * delta;
 					const vec2 from = vec2(inst.pos);
 					const vec2 to = from + inst.dir * step;
-					const f32 halfWidth = remote.boundType == Remote::BoundType::E_BOUND_SPHERE ? remote.boundSize[0] : remote.boundSize[0] * 0.5f;
+					const f32 halfWidth = remote.boundSize[0] * 0.5f;
 					if(remote.damageGroup != Remote::DamageGroup::eNONE) {
 						foreach(it, players) {
 							if(it->team == players[inst.ownerIndex].team || it->dead) continue;
@@ -1073,6 +1113,8 @@ void World::UpdateRemotes(f32 delta)
 							RemoteHit(inst, *it);
 							inst.hitsLeft--;
 							if(inst.hitsLeft <= 0) {
+								if(inst.clientRemoteID != 0) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
+								inst.destroyedByHit = true;
 								inst.pos = vec3(vec2(pos), inst.pos.z);
 								destroyed = true;
 								break;
@@ -1095,6 +1137,17 @@ void World::UpdateRemotes(f32 delta)
 		if(!destroyed && remote.lifeTime > 0 && elapsed >= remote.lifeTime) destroyed = true;
 		if(!destroyed && remote.lifeTime <= 0 && inst.speed <= 0 && inst.areaDone) destroyed = true;
 
+		if(destroyed && inst.speed > 0) {
+			f32 nearest = 999999.0f;
+			const Player* nearestPlayer = nullptr;
+			foreach_const(it, players) {
+				if(it->team == players[inst.ownerIndex].team || it->dead) continue;
+				const f32 d = glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos));
+				if(d < nearest) { nearest = d; nearestPlayer = &*it; }
+			}
+			LOG("SkillRemoteEnd :: %d travelled=%.0f hitsLeft=%d nearest=%ls dist=%.0f", (i32)remote.ID, inst.travelled, inst.hitsLeft, nearestPlayer ? nearestPlayer->name.data() : L"-", nearest);
+		}
+
 		if(destroyed) {
 			const RemoteIdx next = remote.destroyCreateRemote;
 			const RemoteInst copy = inst;
@@ -1102,7 +1155,7 @@ void World::UpdateRemotes(f32 delta)
 			if(next != RemoteIdx::INVALID) {
 				const Remote* nextRemote = GetGameXmlContent().FindRemote(next);
 				const f32 nextOffset = nextRemote ? nextRemote->offsetY : 0;
-				SpawnRemote(copy.ownerIndex, next, copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage);
+				SpawnRemote(copy.ownerIndex, next, copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.destroyedByHit && copy.clientRemoteID != 0);
 			}
 		}
 		else {

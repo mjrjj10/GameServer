@@ -948,6 +948,100 @@ void Replication::SendRemoteDamageToAll(u32 remoteID, RemoteIdx remoteDoc, Actor
 	SendHpToAll(targetUID, hp, hpMax);
 }
 
+void Replication::RelayRemoteCreateDoc(ClientHandle senderHd, const u8* packetData, i32 packetSize)
+{
+	const i32 nameOffset = 12 + 12 + 6 + 12;
+	if(packetSize < nameOffset + 2) return;
+	const u16 nameLen = *(const u16*)(packetData + nameOffset);
+	const i32 tailOffset = nameOffset + 2 + nameLen * 2;
+	const i32 relaySize = tailOffset + 2 + 4 + 4 + 4 + 4 + 1;
+	if(packetSize < relaySize || relaySize > 512) return;
+
+	const ActorUID parentUID = GetWorldActorUID(senderHd, *(const LocalActorID*)(packetData + 0));
+	const ActorUID ownerUID = GetWorldActorUID(senderHd, *(const LocalActorID*)(packetData + 4));
+	const LocalActorID targetLocal = *(const LocalActorID*)(packetData + tailOffset + 2 + 12);
+	const ActorUID targetUID = targetLocal != LocalActorID::INVALID && (u32)targetLocal != 0 ? GetWorldActorUID(senderHd, targetLocal) : ActorUID::INVALID;
+	if(parentUID == ActorUID::INVALID || ownerUID == ActorUID::INVALID) return;
+
+	NT_LOG("[client%x] RemoteCreateDoc :: doc=%u name_len=%u", senderHd, *(const u32*)(packetData + tailOffset + 2 + 8), nameLen);
+
+	u8 buff[512];
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		if(clientHd == senderHd) continue;
+
+		const LocalActorID parentLocal = GetLocalActorID(clientHd, parentUID);
+		const LocalActorID ownerLocal = GetLocalActorID(clientHd, ownerUID);
+		if(parentLocal == LocalActorID::INVALID || ownerLocal == LocalActorID::INVALID) continue;
+
+		memmove(buff, packetData, relaySize);
+		*(LocalActorID*)(buff + 0) = parentLocal;
+		*(LocalActorID*)(buff + 4) = ownerLocal;
+		*(u32*)(buff + tailOffset + 2 + 12) = targetUID != ActorUID::INVALID ? (u32)GetLocalActorID(clientHd, targetUID) : 0;
+		SendPacketData<Sv::SN_RemoteSyncCreateFromRemoteDoc>(clientHd, (u16)relaySize, buff);
+	}
+}
+
+void Replication::RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetData, i32 packetSize)
+{
+	if(packetSize < 21) return;
+	const u8 bits = packetData[0];
+	const i32 relaySize = (bits & 8) ? 21 : 33;
+	if(packetSize < relaySize) return;
+
+	const LocalActorID targetLocal = *(const LocalActorID*)(packetData + 5);
+	const ActorUID targetUID = (u32)targetLocal != 0 ? GetWorldActorUID(senderHd, targetLocal) : ActorUID::INVALID;
+
+	u8 buff[64];
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		if(clientHd == senderHd) continue;
+
+		memmove(buff, packetData, relaySize);
+		*(u32*)(buff + 5) = targetUID != ActorUID::INVALID ? (u32)GetLocalActorID(clientHd, targetUID) : 0;
+		SendPacketData<Sv::SN_RemoteSyncTarget>(clientHd, (u16)relaySize, buff);
+	}
+}
+
+void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID)
+{
+	f32 yawDeg = 90.0f - worldYaw * 180.0f / PI;
+	while(yawDeg > 180.0f) yawDeg -= 360.0f;
+	while(yawDeg < -180.0f) yawDeg += 360.0f;
+	const wchar* fireObject = L"Scene Root";
+	const u16 fireObjectLen = 10;
+
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+
+		const LocalActorID ownerLocal = GetLocalActorID(clientHd, ownerUID);
+		if(ownerLocal == LocalActorID::INVALID) continue;
+		const LocalActorID targetLocal = targetUID != ActorUID::INVALID ? GetLocalActorID(clientHd, targetUID) : LocalActorID::INVALID;
+
+		PacketWriter<Sv::SN_RemoteSyncCreateFromRemoteDoc,512> packet;
+		packet.Write<u32>((u32)ownerLocal);
+		packet.Write<u32>((u32)ownerLocal);
+		packet.Write<u32>(seed);
+		packet.Write<float3>(v2f(firePos));
+		packet.Write<i16>(0);
+		packet.Write<i16>(0);
+		packet.Write<i16>((i16)(yawDeg * 100.0f));
+		packet.Write<float3>(v2f(targetPos));
+		packet.Write<u16>(fireObjectLen);
+		packet.WriteRaw(fireObject, fireObjectLen * sizeof(wchar));
+		packet.Write<u16>(100);
+		packet.Write<f32>(0);
+		packet.Write<u32>(0);
+		packet.Write<u32>((u32)doc);
+		packet.Write<u32>(targetLocal != LocalActorID::INVALID ? (u32)targetLocal : 0);
+		packet.Write<u8>(0);
+		SendPacket(clientHd, packet);
+	}
+}
+
 void Replication::SendDestroyRemoteToAll(u32 remoteID)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
@@ -978,6 +1072,25 @@ void Replication::SendAttackActionToOthers(ClientHandle senderHd, ActorUID actor
 		packet.upperRotate = mxmYaw;
 		packet.graphMove.bApply = 0;
 		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 max)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+
+		Sv::SN_UpdateStat stat;
+		stat.characterID = (u32)localID;
+		stat._STAT_TYPE = (u32)statType;
+		stat._CUR = cur;
+		stat._MAX = max;
+		stat._ReasonCode = 0;
+		SendPacket(clientHd, stat);
 	}
 }
 
@@ -1799,7 +1912,7 @@ void Replication::SendMasterSkillSlots(ClientHandle clientHd, const Replication:
 			packet.Write<u32>(0);
 			packet.Write<u8>(1);
 			packet.Write<u16>(0);
-			packet.Write<u8>(master.skillUnlocked[i]);
+			packet.Write<u8>(1);
 			packet.Write<u8>(1);
 		}
 

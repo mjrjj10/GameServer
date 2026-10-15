@@ -103,6 +103,9 @@ struct World
 		PhysicsDynamicBody* body = nullptr;
 
 		bool weaponFired = false;
+		f32 ultGauge = 100.0f;
+		f32 ultGaugeSent = -1.0f;
+		Time tNextUltSend = Time::ZERO;
 		f32 shotLeadSec = 0;
 		f32 weaponAimYaw = 0;
 		i32 kills = 0;
@@ -322,6 +325,8 @@ struct World
 		ActorUID target;
 		i32 hitsLeft;
 		bool areaDone;
+		u32 clientRemoteID = 0;
+		bool destroyedByHit = false;
 	};
 
 	struct CastHit
@@ -335,6 +340,7 @@ struct World
 	eastl::fixed_vector<RemoteInst,256,false> remoteInsts;
 	eastl::fixed_vector<CastHit,512,false> castHits;
 	u32 nextCastID = 1;
+	u32 nextRemoteSeed = 0x40000000;
 
 	u32 nextActorUID;
 	Time localTime = Time::ZERO;
@@ -372,8 +378,9 @@ private:
 	void Explode(Player& owner, const vec3& center, f32 radius, i32 damage);
 	void RespawnPlayer(Player& player);
 	bool ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle);
-	void SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage);
+	void SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast = false);
 	void UpdateRemotes(f32 delta);
+	void UpdateUltimateGauges(f32 delta);
 	void RemoteApplyArea(RemoteInst& inst);
 	f32 LagDistToSegment(const Player& p, const vec2& a, const vec2& b) const;
 	bool LagSegmentHits(const Player& p, const vec2& a, const vec2& b, f32 lateral, f32 forwardReach) const;
