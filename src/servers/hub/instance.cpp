@@ -69,19 +69,22 @@ const i32 MATCH_WAIT_TIME = 10;
 #include <EASTL/hash_set.h>
 
 static std::mutex g_sentToGameMutex;
-static eastl::hash_set<u64> g_sentToGame;
+static eastl::fixed_vector<WideString,64,true> g_sentToGame;
 
-void MarkAccountSentToGame(AccountUID accountUID)
+void MarkAccountSentToGame(const WideString& nickname)
 {
 	std::lock_guard<std::mutex> lock(g_sentToGameMutex);
-	g_sentToGame.insert((u64)accountUID);
-	LOG("[Room] account %llu sent to a game server", (u64)accountUID);
+	if(eastl::find(g_sentToGame.begin(), g_sentToGame.end(), nickname) == g_sentToGame.end()) g_sentToGame.push_back(nickname);
+	LOG("[Room] %ls sent to a game server", nickname.data());
 }
 
-bool TakeAccountReturningFromGame(AccountUID accountUID)
+bool TakeAccountReturningFromGame(const WideString& nickname)
 {
 	std::lock_guard<std::mutex> lock(g_sentToGameMutex);
-	return g_sentToGame.erase((u64)accountUID) > 0;
+	auto it = eastl::find(g_sentToGame.begin(), g_sentToGame.end(), nickname);
+	if(it == g_sentToGame.end()) return false;
+	g_sentToGame.erase(it);
+	return true;
 }
 
 void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 userCount)
@@ -446,7 +449,7 @@ void RoomInstance::Update(Time localTime_)
 				packet.WriteStringObj(user.name.data(), user.name.size());
 				packet.Write<u32>(In::ProduceInstantKey(user.accountUID, sortieUID));
 				SendPacket(user.clientHd, packet);
-				MarkAccountSentToGame(user.accountUID);
+				MarkAccountSentToGame(user.name);
 			}
 		}
 

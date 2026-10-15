@@ -140,7 +140,7 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 	replication.OnPlayerConnect(clientHd);
 
 	LOG("[client%x] HubGame :: account %llu connected (%ls)", clientHd, (u64)accountData->UID, accountData->nickname.data());
-	if(TakeAccountReturningFromGame(accountData->UID)) {
+	if(TakeAccountReturningFromGame(accountData->nickname)) {
 		LOG("[client%x] HubGame :: back from a game, loading the lobby", clientHd);
 		replication.SendLoadLobby(clientHd, MapIndex::LOBBY_NORMAL);
 	}
