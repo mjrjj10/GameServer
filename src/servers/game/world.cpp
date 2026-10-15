@@ -1185,7 +1185,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	f32 duration = durationOverride > 0 ? durationOverride : (info && info->durationSec > 0 ? info->durationSec : 1.0f);
 
 	const bool displacement = info && (info->type == "STATUS_TYPE_PUSH" || info->type == "STATUS_TYPE_FORCEBACK" ||
-		info->type == "STATUS_TYPE_KNOCKDOWN" || info->type == "STATUS_TYPE_AIRBORNE" || info->type == "STATUS_TYPE_DRAGGED");
+		info->type == "STATUS_TYPE_KNOCKDOWN" || info->type == "STATUS_TYPE_AIRBORNE" || info->type == "STATUS_TYPE_FLY" || info->type == "STATUS_TYPE_DRAGGED");
 	if(displacement && HasStatusType(target, "STATUS_TYPE_SUPERARMOR")) {
 		LOG("Status :: %ls resisted %d (superarmor)", target.name.data(), statusID);
 		return;
@@ -1229,7 +1229,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 
 	if(info && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT)) {
 		Time ccEnd = st.until;
-		if(info->type == "STATUS_TYPE_AIRBORNE" || info->type == "STATUS_TYPE_KNOCKDOWN") {
+		if(info->type == "STATUS_TYPE_AIRBORNE" || info->type == "STATUS_TYPE_FLY" || info->type == "STATUS_TYPE_KNOCKDOWN") {
 			// lying on the ground (_LyingTime) then the stand-up animation (AniLength LIE_END)
 			const auto& content = GetGameXmlContent();
 			const f32 recover = info->lyingTime + content.GetLieEndTime(content.GetMaster(target.Main().classType).className.c_str());
@@ -1241,7 +1241,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	const vec3 from = target.body->GetWorldPos();
 	vec3 to = from;
 	const f32 graphDuration = duration * (info && info->timeRatio > 0 ? info->timeRatio : 1.0f);
-	if(info && displacement && info->type != "STATUS_TYPE_AIRBORNE") {
+	if(info && displacement && info->type != "STATUS_TYPE_AIRBORNE" && info->type != "STATUS_TYPE_FLY") {
 		vec2 dir = vec2(from - caster.body->GetWorldPos());
 		const f32 len = glm::length(dir);
 		dir = len > 1.0f ? dir / len : vec2(1, 0);

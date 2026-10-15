@@ -1969,7 +1969,7 @@ bool GameXmlContent::LoadStatusData()
 		if(type) st.type = type;
 
 		static const char* hardCC[] = { "STATUS_TYPE_STUN", "STATUS_TYPE_PUSH", "STATUS_TYPE_KNOCKDOWN", "STATUS_TYPE_AIRBORNE",
-			"STATUS_TYPE_FEAR", "STATUS_TYPE_FORCEBACK", "STATUS_TYPE_DRAGGED", "STATUS_TYPE_SHOCKED", "STATUS_TYPE_ACTIONBLOCK" };
+			"STATUS_TYPE_FEAR", "STATUS_TYPE_FORCEBACK", "STATUS_TYPE_DRAGGED", "STATUS_TYPE_SHOCKED", "STATUS_TYPE_ACTIONBLOCK", "STATUS_TYPE_FLY" };
 		for(const char* t : hardCC) if(type && EA::StdC::Strcmp(type, t) == 0) st.kind = StatusInfo::Kind::HARD_CC;
 		if(type && EA::StdC::Strcmp(type, "STATUS_TYPE_ROOT") == 0) st.kind = StatusInfo::Kind::ROOT;
 		if(type && EA::StdC::Strcmp(type, "STATUS_TYPE_SLOW") == 0) st.kind = StatusInfo::Kind::SLOW;
