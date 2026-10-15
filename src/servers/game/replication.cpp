@@ -818,6 +818,24 @@ void Replication::SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, Skil
 	SendHpToAll(targetUID, hp, hpMax);
 }
 
+void Replication::SendDoConnectChannel(ClientHandle clientHd, const wchar* nickname, const i32 hubIP[4], u16 hubPort)
+{
+	// same redirection the login server uses to send the client to the hub (channel) server
+	PacketWriter<Sv::SN_DoConnectChannelServer,256> packet;
+	packet.Write<u16>(1); // addresses count
+	const u8 ip[4] = { (u8)hubIP[0], (u8)hubIP[1], (u8)hubIP[2], (u8)hubIP[3] };
+	packet.Write<u8[4]>(ip);
+	packet.Write<u16>(hubPort);
+	const wchar* serverName = L"XMX_SERVER";
+	packet.Write<u16>(10);
+	packet.WriteRaw(serverName, 10 * sizeof(wchar));
+	packet.WriteStringObj(nickname, (i32)EA::StdC::Strlen(nickname));
+	packet.Write<i32>(536); // instantKey
+	packet.Write<i32>(1);   // reasonCode
+	LOG("[client%x] Replication :: SendDoConnectChannel (return to bridge)", clientHd);
+	SendPacket(clientHd, packet);
+}
+
 void Replication::SendGaugeToAll(UserID userID, u8 updateType, bool overheated, f32 overheatTime, u16 gauge, u16 maxGauge)
 {
 	PacketWriter<Sv::SN_Gauge> packet;

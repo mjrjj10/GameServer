@@ -607,6 +607,16 @@ void Game::OnPlayerTag(ClientHandle clientHd, ActorUID actorUID)
 	player.input.tag = 1;
 }
 
+void Game::OnPlayerReturnToChannel(ClientHandle clientHd)
+{
+	auto found = playerMap.find(clientHd);
+	if(found == playerMap.end()) return;
+	World::Player& player = world.GetPlayer(found->second->playerIndex);
+	i32 hubIP[4] = { Config().HostIP[0], Config().HostIP[1], Config().HostIP[2], Config().HostIP[3] };
+	if(hubIP[0] == 0) { hubIP[0] = 127; hubIP[3] = 1; }
+	replication.SendDoConnectChannel(clientHd, player.name.data(), hubIP, 11900);
+}
+
 void Game::OnPlayerJump(ClientHandle clientHd, ActorUID actorUID, f32 rotate, f32 moveDirX, f32 moveDirY, i32 actionID)
 {
 	Player& p = *playerMap.at(clientHd);

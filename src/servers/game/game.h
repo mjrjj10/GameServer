@@ -103,6 +103,7 @@ struct Game
 	void OnPlayerGameIsReady(ClientHandle clientHd);
 	void OnPlayerGameMapLoaded(ClientHandle clientHd);
 	void OnPlayerTag(ClientHandle clientHd, ActorUID actorUID);
+	void OnPlayerReturnToChannel(ClientHandle clientHd);
 	void OnPlayerJump(ClientHandle clientHd, ActorUID actorUID, f32 rotate, f32 moveDirX, f32 moveDirY, i32 actionID = 0);
 	void OnPlayerWeaponFire(ClientHandle clientHd, f32 aimYaw);
 	void OnPlayerWeaponStateRelay(ClientHandle clientHd, ActorUID ownerUID, i32 state, u8 chargeLevel, u8 firingCombo);

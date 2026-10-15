@@ -66,6 +66,11 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 		CASE(CQ_WeaponState);
 		CASE(CQ_GamePlayerSyncPhy);
 
+		case 60027: { // CQ_HandoverToChannel: "return to bridge"
+			NT_LOG("[client%x] Client :: CQ_HandoverToChannel", clientHd);
+			game->OnPlayerReturnToChannel(clientHd);
+		} break;
+
 		case 60196: {
 			NT_LOG("[client%x] Client :: RemoteCreateDoc (60196) size=%d", clientHd, packetSize);
 			replication->RelayRemoteCreateDoc(clientHd, packetData, packetSize);
