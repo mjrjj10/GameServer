@@ -425,6 +425,7 @@ struct GameXmlContent
 					ActionCommand::TargetPreset targetPreset;
 					f32 offsetSide;
 					f32 offsetFront;
+					u8 stopAtTarget; // Param2 DestroyAwayTarget: ends at the aimed point instead of max range
 				} remote;
 
 				struct {

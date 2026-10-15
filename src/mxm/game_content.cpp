@@ -1361,6 +1361,11 @@ bool GameXmlContent::LoadAnimationData()
 				cmd.remote.targetPreset = TargetPreset ? ActionCommand::TargetPresetFromString(TargetPreset) : ActionCommand::TargetPreset::CURRENT_FFF;
 				cmd.remote.offsetSide = 0;
 				cmd.remote.offsetFront = 0;
+				{
+					const char* P2 = nullptr;
+					pActionBase->QueryStringAttribute("Param2", &P2);
+					cmd.remote.stopAtTarget = P2 && EA::StdC::Strstr(P2, "DestroyAwayTarget") ? 1 : 0;
+				}
 				const char* TargetParam = nullptr;
 				pActionBase->QueryStringAttribute("TargetParam", &TargetParam);
 				if(TargetParam) {

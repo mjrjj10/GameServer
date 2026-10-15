@@ -1655,6 +1655,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.angle = angle;
 			pr.target = cmd->remote.targetPreset == ActionCommand::TargetPreset::MEMORIZED_TFT ? player.memorizedTarget : currentTarget;
 			pr.atTarget = cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET;
+			pr.stopAtTarget = cmd->remote.stopAtTarget != 0;
 			pr.nodeName = cmd->nodeName;
 			pendingRemotes.push_back(pr);
 			scheduled = true;
@@ -1699,7 +1700,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	return scheduled;
 }
 
-World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast, const vec3* aimPos, u16 nodeName, bool casterCreatesLocally)
+World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast, const vec3* aimPos, u16 nodeName, bool casterCreatesLocally, bool stopAtTarget)
 {
 	const Remote* remote = GetGameXmlContent().FindRemote(idx);
 	if(!remote || remoteInsts.full()) return nullptr;
@@ -1723,6 +1724,11 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		inst.range = inst.range > 0 ? MIN(aimDist, inst.range) : aimDist;
 		inst.landZ = aimPos->z;
 		inst.hasLandZ = true;
+	}
+	else if(stopAtTarget && aimPos && glm::length(vec2(*aimPos)) > 1.0f && inst.speed > 0) {
+		// DestroyAwayTarget: the remote ends at the aimed point
+		const f32 aimDist = glm::length(vec2(*aimPos) - vec2(pos));
+		inst.range = inst.range > 0 ? MIN(aimDist, inst.range) : aimDist;
 	}
 	inst.spawnTime = localTime;
 	inst.target = target;
@@ -2027,7 +2033,7 @@ void World::UpdateRemotes(f32 delta)
 					t = *e ? e + 1 : e;
 				}
 			}
-			SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, casterLocal);
+			SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, casterLocal, pr->stopAtTarget);
 		}
 		pr = pendingRemotes.erase_unsorted(pr);
 	}
