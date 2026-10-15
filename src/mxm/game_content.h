@@ -178,6 +178,30 @@ struct StatusInfo
 	f32 targetingRange = 0;             // _TargetingRange
 	NextCondition nextCondition = NextCondition::NONE;
 	eastl::fixed_string<char,40,false> type;
+
+	// passives
+	bool permanent = false;             // _Passive without duration: stays until consumed (or chained)
+	i32 customInit = 0;                 // _InitCustomValue
+	i32 customMax = 0;                  // _MaxCustomValue: counter (skills used, weapon hits)
+	i32 hitEffectStatus = 0;            // _HITEFFECT _StatusDocIndex
+	f32 hitEffectValue = 0;             // _HITEFFECT _AddValue
+	f32 costRatioMP = 0;                // STATUS_TYPE_NOCOST _AddRatioCostMP (%)
+	eastl::fixed_vector<i32,8,false> costSkills; // STATUS_TYPE_NOCOST _SkillList
+	i32 stackStatus = 0;                // _ICEQUEEN _Index: stacking status put by the master's hits
+	i32 stackFullStatus = 0;            // _ICEQUEEN _FreezeStatusIndex: applied when the stack is full
+	i32 casterStatus = 0;               // _CasterStatusIndex: applied to the caster when this status is applied
+};
+
+// FIRING_METHOD RemoteFactoryComData: the remote a weapon shot creates
+struct WeaponFiring
+{
+	RemoteIdx base = RemoteIdx::INVALID;              // _Remote _RemoteIndex (first combo step, no charge)
+	eastl::fixed_vector<RemoteIdx,4,false> combo;     // _COMBO _Index: following firing combo steps
+	eastl::fixed_vector<RemoteIdx,4,false> charge;    // _CHARGINGREMOTE _Index: charge levels 1..n
+	i32 countRate = 0;                                // _FIRINGCOUNT _Rate: every Nth shot uses countRemote
+	RemoteIdx countRemote = RemoteIdx::INVALID;
+	i32 replaceStatus = 0;                            // _STATUS _OwnerStatusToCheck
+	RemoteIdx replaceRemote = RemoteIdx::INVALID;     // _RemoteIndexToReplace (the status is consumed)
 };
 
 struct Remote
@@ -556,6 +580,8 @@ struct GameXmlContent
 	const wchar* GetNodeName(u16 idx) const { return idx < nodeNames.size() ? nodeNames[idx].c_str() : L"Scene Root"; }
 	const StatusInfo* FindStatus(i32 statusID) const;
 	f32 GetWeaponFireDelay(i32 weaponID) const { auto f = weaponFireDelay.find(weaponID); return f == weaponFireDelay.end() ? 0 : f->second; }
+	const WeaponFiring* FindWeaponFiring(i32 weaponID) const { auto f = weaponFiring.find(weaponID); return f == weaponFiring.end() ? nullptr : &f->second; }
+	const eastl::fixed_vector<i32,4,false>* FindPassiveStatuses(ClassType c) const { auto f = passiveStatuses.find((i32)c); return f == passiveStatuses.end() ? nullptr : &f->second; }
 	const WeaponHeatInfo* FindWeaponHeat(i32 weaponID) const { auto f = weaponHeat.find(weaponID); return f == weaponHeat.end() ? nullptr : &f->second; }
 	f32 GetSkillBaseDamage(i32 skillID) const { auto f = skillBaseDamage.find(skillID); return f == skillBaseDamage.end() ? 0 : f->second; }
 	// index: 0 EP (energy), 1 RP (rage), 2 BB (charges), 3 HP
@@ -632,6 +658,8 @@ private:
 	eastl::hash_map<i32, i32> skillHitEventRemote;
 	eastl::hash_map<i32, WeaponHeatInfo> weaponHeat;
 	eastl::hash_map<i32, f32> weaponFireDelay; // weapon -> FIRING_METHOD _FIREINFO _FireDelayTime
+	eastl::hash_map<i32, WeaponFiring> weaponFiring; // weapon -> default firing method remotes
+	eastl::hash_map<i32, eastl::fixed_vector<i32,4,false>> passiveStatuses; // class -> SKILL_TYPE_PASSIVE _Status
 	eastl::hash_map<i32, f32> skillConsumeStamina; // SKILL.xml _ConsumeStamina (dodge)
 	eastl::hash_map<i32, f32> skillConsumeMP;      // SKILL.xml _ConsumeMP
 	eastl::hash_map<i32, eastl::array<f32,4>> skillConsumeRes; // SKILL.xml _ConsumeEP, _ConsumeRP, _ConsumeBB, _ConsumeHP

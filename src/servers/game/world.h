@@ -107,6 +107,10 @@ struct World
 		PhysicsDynamicBody* body = nullptr;
 
 		bool weaponFired = false;
+		u8 firingCombo = 0;       // CQ_WeaponState: current firing combo step / charge level
+		u8 chargeLevel = 0;
+		eastl::array<i32,2> shotCount = { 0, 0 }; // weapon shots per master (_FIRINGCOUNT)
+		bool passivesApplied = false;
 		f32 ultGauge = -1.0f; // initialised to the master's max on first update
 		f32 stamina = -1.0f;
 		f32 mana = -1.0f;
@@ -397,6 +401,7 @@ struct World
 		i32 healTicksDone;
 		Time nextAuraPulse = Time::ZERO;
 		bool removeOnHit = false; // marked when its target got hit (E_NEXT_STATUS_CONDITION_REMOVE_ONHIT)
+		i32 custom = 0;           // passive counter (_InitCustomValue .. _MaxCustomValue)
 	};
 	eastl::fixed_vector<ActiveStatus,512,false> activeStatuses;
 
@@ -497,6 +502,16 @@ private:
 	void UpdateRemotes(f32 delta);
 	void UpdateUltimateGauges(f32 delta);
 	void ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power = 0, f32 durationOverride = -1);
+	ActiveStatus* FindActiveStatus(u32 targetIndex, i32 statusID);
+	void ConsumeStatus(u32 targetIndex, i32 statusID);
+public:
+	void ApplyPassives(Player& player);
+	void ApplyAllPassives();
+private:
+	void PassiveOnSkillCast(Player& player, i32 skillID);
+	void PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj);
+	void PassiveOnSkillHit(Player& attacker, Player& target);
+	f32 PassiveWeaponDamageMul(Player& attacker, Player& target);
 	bool HasStatusType(const Player& p, const char* type) const;
 	f32 StatusModSum(const Player& p, i32 stat) const;
 	f32 StatusModMulSum(const Player& p, i32 stat) const;

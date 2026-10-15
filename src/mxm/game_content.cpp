@@ -1976,6 +1976,33 @@ bool GameXmlContent::LoadStatusData()
 		pCommon->QueryStringAttribute("_Type", &type);
 		if(type) st.type = type;
 
+		{
+			const char* pas = nullptr;
+			pCommon->QueryStringAttribute("_Passive", &pas);
+			st.permanent = durationMs <= 0 && pas && EA::StdC::Stricmp(pas, "true") == 0;
+			pCommon->QueryAttribute("_InitCustomValue", &st.customInit);
+			pCommon->QueryAttribute("_MaxCustomValue", &st.customMax);
+			pCommon->QueryAttribute("_CasterStatusIndex", &st.casterStatus);
+			if(XMLElement* pHit = pCommon->FirstChildElement("_HITEFFECT")) {
+				pHit->QueryAttribute("_StatusDocIndex", &st.hitEffectStatus);
+				pHit->QueryFloatAttribute("_AddValue", &st.hitEffectValue);
+			}
+			if(XMLElement* pIce = pCommon->FirstChildElement("_ICEQUEEN")) {
+				pIce->QueryAttribute("_Index", &st.stackStatus);
+				pIce->QueryAttribute("_FreezeStatusIndex", &st.stackFullStatus);
+			}
+			if(type && EA::StdC::Strcmp(type, "STATUS_TYPE_NOCOST") == 0) {
+				if(XMLElement* pCost = pCommon->FirstChildElement("_DOUBLEGUN")) {
+					pCost->QueryFloatAttribute("_AddRatioCostMP", &st.costRatioMP);
+					for(XMLElement* pS = pCost->FirstChildElement("_SkillList"); pS; pS = pS->NextSiblingElement("_SkillList")) {
+						i32 v = 0;
+						pS->QueryAttribute("DATA", &v);
+						if(v && !st.costSkills.full()) st.costSkills.push_back(v);
+					}
+				}
+			}
+		}
+
 		static const char* hardCC[] = { "STATUS_TYPE_STUN", "STATUS_TYPE_PUSH", "STATUS_TYPE_KNOCKDOWN", "STATUS_TYPE_AIRBORNE",
 			"STATUS_TYPE_FEAR", "STATUS_TYPE_FORCEBACK", "STATUS_TYPE_DRAGGED", "STATUS_TYPE_SHOCKED", "STATUS_TYPE_ACTIONBLOCK", "STATUS_TYPE_FLY" };
 		for(const char* t : hardCC) if(type && EA::StdC::Strcmp(type, t) == 0) st.kind = StatusInfo::Kind::HARD_CC;
@@ -2260,6 +2287,7 @@ bool GameXmlContent::LoadStatusData()
 	if(LoadXMLFile(L"/client/FIRING_METHOD.xml", xmlFiring) && LoadXMLFile(L"/client/WEAPON.xml", xmlWeapon)) {
 		eastl::hash_map<i32, WeaponHeatInfo> byFiring;
 		eastl::hash_map<i32, f32> delayByFiring;
+		eastl::hash_map<i32, WeaponFiring> firingRemotes;
 		for(XMLElement* pInfo = xmlFiring.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
 			i32 id = 0;
 			pInfo->QueryAttribute("ID", &id);
@@ -2269,6 +2297,45 @@ bool GameXmlContent::LoadStatusData()
 				f32 delay = 0;
 				pFire->QueryFloatAttribute("_FireDelayTime", &delay);
 				if(delay > 0) delayByFiring[id] = delay;
+			}
+			{
+				WeaponFiring wf;
+				XMLElement* pFactory = pInfo->FirstChildElement("RemoteFactoryComData");
+				XMLElement* pCreate = pFactory ? pFactory->FirstChildElement("_Create") : nullptr;
+				XMLElement* pDef = pCreate ? pCreate->FirstChildElement("_Default") : nullptr;
+				XMLElement* pRem = pDef ? pDef->FirstChildElement("_Remote") : nullptr;
+				if(pRem) {
+					i32 v = 0;
+					pRem->QueryAttribute("_RemoteIndex", &v);
+					wf.base = (RemoteIdx)v;
+					for(XMLElement* pE = pRem->FirstChildElement(); pE; pE = pE->NextSiblingElement()) {
+						i32 idx = 0;
+						if(EA::StdC::Strcmp(pE->Name(), "_COMBO") == 0) {
+							pE->QueryAttribute("_Index", &idx);
+							if(idx && !wf.combo.full()) wf.combo.push_back((RemoteIdx)idx);
+						}
+						else if(EA::StdC::Strcmp(pE->Name(), "_CHARGINGREMOTE") == 0) {
+							pE->QueryAttribute("_Index", &idx);
+							if(idx && !wf.charge.full()) wf.charge.push_back((RemoteIdx)idx);
+						}
+						else if(EA::StdC::Strcmp(pE->Name(), "_FIRINGCOUNT") == 0) {
+							pE->QueryAttribute("_Rate", &wf.countRate);
+							pE->QueryAttribute("_Index", &idx);
+							wf.countRemote = (RemoteIdx)idx;
+						}
+						else if(EA::StdC::Strcmp(pE->Name(), "_STATUS") == 0) {
+							pE->QueryAttribute("_OwnerStatusToCheck", &wf.replaceStatus);
+							pE->QueryAttribute("_RemoteIndexToReplace", &idx);
+							wf.replaceRemote = (RemoteIdx)idx;
+						}
+					}
+				}
+				else if(XMLElement* pRad = pCreate ? pCreate->FirstChildElement("_Radiate") : nullptr) {
+					i32 v = 0;
+					pRad->QueryAttribute("_Index", &v);
+					wf.base = (RemoteIdx)v;
+				}
+				if(wf.base != RemoteIdx::INVALID) firingRemotes[id] = wf;
 			}
 			XMLElement* pGauge = pData ? pData->FirstChildElement("_GAUGE") : nullptr;
 			if(!pGauge) continue;
@@ -2295,10 +2362,34 @@ bool GameXmlContent::LoadStatusData()
 				if(f != byFiring.end()) weaponHeat[id] = f->second;
 				auto d = delayByFiring.find(firing);
 				if(d != delayByFiring.end()) weaponFireDelay[id] = d->second;
+				auto r = firingRemotes.find(firing);
+				if(r != firingRemotes.end()) weaponFiring[id] = r->second;
 				break;
 			}
 		}
-		LOG("Loaded %d weapon overheat gauges", (i32)weaponHeat.size());
+		LOG("Loaded %d weapon overheat gauges, %d weapon firing remotes", (i32)weaponHeat.size(), (i32)weaponFiring.size());
+	}
+
+	// passive skills: SKILL_TYPE_PASSIVE _Status per _RequireClass
+	XMLDocument xmlSkillP;
+	if(LoadXMLFile(L"/client/SKILL.xml", xmlSkillP)) {
+		i32 count = 0;
+		for(XMLElement* pInfo = xmlSkillP.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+			XMLElement* pSk = pInfo->FirstChildElement("ST_COMMONSKILL");
+			if(!pSk) continue;
+			const char* type = nullptr;
+			const char* cls = nullptr;
+			i32 status = 0;
+			pSk->QueryStringAttribute("_Type", &type);
+			pSk->QueryStringAttribute("_RequireClass", &cls);
+			pSk->QueryAttribute("_Status", &status);
+			if(!type || !cls || !status || EA::StdC::Strcmp(type, "SKILL_TYPE_PASSIVE") != 0) continue;
+			auto found = masterClassStringMap.find(strHash(cls));
+			if(found == masterClassStringMap.end()) continue;
+			auto& list = passiveStatuses[(i32)found->second->classType];
+			if(!list.full()) { list.push_back(status); count++; }
+		}
+		LOG("Loaded %d passive statuses", count);
 	}
 	return true;
 }

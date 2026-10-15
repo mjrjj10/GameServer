@@ -600,6 +600,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 		}
 	}
 	if(!PlayerPaySkillCost(player, (i32)skillID)) return;
+	PassiveOnSkillCast(player, (i32)skillID);
 
 	const f32 angle = player.input.rot.upperYaw;
 	const vec2 dir = vec2(cosf(angle), sinf(angle));
@@ -724,6 +725,28 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	const auto& content = GetGameXmlContent();
 	const Remote* remote = content.FindRemote(RemoteIdx(1430000000 + (i32)classType * 10000 + 10));
 
+	// FIRING_METHOD of the active weapon: combo step / charge level / every Nth shot / status replacement
+	{
+		const u32 m = player.mainCharaID & 1;
+		const WeaponIndex weapon = m == 0 ? player.mainWeapon : player.subWeapon;
+		const WeaponFiring* wf = content.FindWeaponFiring((i32)weapon);
+		if(wf) {
+			RemoteIdx idx = wf->base;
+			if(player.chargeLevel > 0 && player.chargeLevel <= wf->charge.size()) idx = wf->charge[player.chargeLevel - 1];
+			else if(player.firingCombo > 0 && player.firingCombo <= wf->combo.size()) idx = wf->combo[player.firingCombo - 1];
+			player.shotCount[m]++;
+			if(wf->countRate > 0 && wf->countRemote != RemoteIdx::INVALID && player.shotCount[m] % wf->countRate == 0) idx = wf->countRemote;
+			if(wf->replaceStatus != 0 && wf->replaceRemote != RemoteIdx::INVALID && FindActiveStatus(player.index, wf->replaceStatus)) {
+				idx = wf->replaceRemote;
+				ConsumeStatus(player.index, wf->replaceStatus);
+				LOG("Passive :: %ls weapon status %d used -> remote %d", player.name.data(), wf->replaceStatus, (i32)idx);
+			}
+			const Remote* r = content.FindRemote(idx);
+			if(r) remote = r;
+			LOG("Shot :: %ls firing remote %d (combo %d charge %d count %d)", player.name.data(), (i32)idx, player.firingCombo, player.chargeLevel, player.shotCount[m]);
+		}
+	}
+
 	// the client picks the weapon remote itself (firing combo step, charge level, status replacement such as
 	// passives or stances): look for a weapon remote document index in the fire packet after the fire node name
 	if(player.pendingShotRawSize > 44) {
@@ -835,7 +858,8 @@ void World::UpdateProjectiles(f32 delta)
 				if(!LagSegmentHits(*it, from, to, proj->halfWidth + PROJECTILE_TARGET_RADIUS + PROJECTILE_HIT_TOLERANCE, lastStep ? proj->forwardReach : PROJECTILE_TARGET_RADIUS)) continue;
 
 				if(!proj->hitList.full()) proj->hitList.push_back(it->index);
-				DamagePlayer(owner, *it, SkillID::INVALID, proj->damage, &*proj);
+				DamagePlayer(owner, *it, SkillID::INVALID, (i32)(proj->damage * PassiveWeaponDamageMul(owner, *it)), &*proj);
+				PassiveOnWeaponHit(owner, *it, *proj);
 				proj->hitsLeft--;
 				if(proj->hitsLeft <= 0) {
 					if(proj->remoteID != 0) replication->SendDestroyRemoteToAll(proj->remoteID);
@@ -1128,7 +1152,16 @@ bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 {
 	// base costs from SKILL.xml: _ConsumeMP (mana), _ConsumeUG (ultimate gauge), _ConsumeStamina (dodge)
 	const auto& content = GetGameXmlContent();
-	const f32 mp = content.GetSkillConsumeMP(skillID);
+	f32 mp = content.GetSkillConsumeMP(skillID);
+	// STATUS_TYPE_NOCOST: the listed skills cost _AddRatioCostMP % more (-100 = free), then the status is used up
+	foreach(it, activeStatuses) {
+		if(it->targetIndex != player.index || !it->info || it->info->type != "STATUS_TYPE_NOCOST" || it->until <= localTime) continue;
+		if(eastl::find(it->info->costSkills.begin(), it->info->costSkills.end(), skillID) == it->info->costSkills.end()) continue;
+		mp = MAX(mp * (1.0f + it->info->costRatioMP / 100.0f), 0.0f);
+		it->until = localTime;
+		LOG("Passive :: %ls skill %d mana cost %.0f (status %d used)", player.name.data(), skillID, mp, it->statusID);
+		break;
+	}
 	const f32 ug = content.GetSkillConsumeUG(skillID);
 	const f32 st = content.GetSkillConsumeStamina(skillID);
 	const f32 resCost[3] = { content.GetSkillConsume(skillID, 0), content.GetSkillConsume(skillID, 1), content.GetSkillConsume(skillID, 2) };
@@ -1202,11 +1235,163 @@ bool World::RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includ
 	return friendContact;
 }
 
+World::ActiveStatus* World::FindActiveStatus(u32 targetIndex, i32 statusID)
+{
+	foreach(it, activeStatuses) {
+		if(it->targetIndex == targetIndex && it->statusID == statusID && it->until > localTime) return &*it;
+	}
+	return nullptr;
+}
+
+// ends a status now: the status update removes it and runs its _NextStatusIndex chain
+void World::ConsumeStatus(u32 targetIndex, i32 statusID)
+{
+	ActiveStatus* st = FindActiveStatus(targetIndex, statusID);
+	if(st) st->until = localTime;
+}
+
+// SKILL_TYPE_PASSIVE _Status of both masters
+void World::ApplyPassives(Player& player)
+{
+	if(player.dead) return;
+	const auto& content = GetGameXmlContent();
+	foreach(c, player.characters) {
+		const auto* list = content.FindPassiveStatuses((*c)->classType);
+		if(!list) continue;
+		for(i32 id : *list) {
+			if(FindActiveStatus(player.index, id)) continue;
+			ApplyStatus(player, player, id);
+			ActiveStatus* st = FindActiveStatus(player.index, id);
+			if(st && st->info) st->custom = st->info->customInit;
+			LOG("Passive :: %ls status %d", player.name.data(), id);
+		}
+	}
+	player.passivesApplied = true;
+}
+
+void World::ApplyAllPassives()
+{
+	foreach(it, players) ApplyPassives(*it);
+}
+
+// is this passive status one of the active master's passives
+static bool PassiveOfActiveMaster(const World::Player& player, i32 statusID)
+{
+	const auto* list = GetGameXmlContent().FindPassiveStatuses(player.Main().classType);
+	return list && eastl::find(list->begin(), list->end(), statusID) != list->end();
+}
+
+void World::PassiveOnSkillCast(Player& player, i32 skillID)
+{
+	if(GetGameXmlContent().GetSkillConsumeStamina(skillID) > 0) return; // dodges are not skills here
+	eastl::fixed_vector<i32,4,false> toApply;
+	foreach(it, activeStatuses) {
+		if(it->targetIndex != player.index || !it->info || it->info->customMax <= 0) continue;
+		if(!PassiveOfActiveMaster(player, it->statusID)) continue;
+		// skills used counter: STATUS_TYPE_SKILLSTATUS applies _AuraStatusIndex on the max
+		if(it->info->type == "STATUS_TYPE_SKILLSTATUS") {
+			it->custom++;
+			LOG("Passive :: %ls skill counter %d/%d", player.name.data(), it->custom, it->info->customMax);
+			if(it->custom >= it->info->customMax) {
+				it->custom = it->info->customInit;
+				if(it->info->auraStatus != 0 && !toApply.full()) toApply.push_back(it->info->auraStatus);
+			}
+		}
+	}
+	foreach_const(id, toApply) {
+		LOG("Passive :: %ls counter full -> status %d", player.name.data(), *id);
+		ApplyStatus(player, player, *id);
+	}
+}
+
+void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj)
+{
+	// statuses of the weapon remote itself
+	if(proj.remoteDoc != RemoteIdx::INVALID && !target.dead) {
+		const Remote* remote = GetGameXmlContent().FindRemote(proj.remoteDoc);
+		if(remote) {
+			foreach_const(st, remote->statuses) {
+				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(attacker, target, st->statusID);
+			}
+		}
+	}
+
+	eastl::fixed_vector<i32,4,false> toApply;
+	foreach(it, activeStatuses) {
+		if(it->targetIndex != attacker.index || !it->info) continue;
+		if(!PassiveOfActiveMaster(attacker, it->statusID)) continue;
+		const StatusInfo& info = *it->info;
+		// every Nth weapon hit (STATUS_TYPE_HIT_PLAGUE): _HITEFFECT status on the target
+		if(info.type == "STATUS_TYPE_HIT_PLAGUE" && info.customMax > 0) {
+			it->custom++;
+			if(it->custom >= info.customMax) {
+				it->custom = info.customInit;
+				if(info.hitEffectStatus && !toApply.full()) toApply.push_back(info.hitEffectStatus);
+			}
+		}
+		// STATUS_TYPE_KROMEDE: weapon hits on stunned, bound or shocked targets apply _HITEFFECT
+		else if(info.type == "STATUS_TYPE_KROMEDE" && info.hitEffectStatus) {
+			if(HasStatusType(target, "STATUS_TYPE_STUN") || HasStatusType(target, "STATUS_TYPE_ROOT") || HasStatusType(target, "STATUS_TYPE_SHOCKED")) {
+				if(!toApply.full()) toApply.push_back(info.hitEffectStatus);
+			}
+		}
+		// STATUS_TYPE_MANABURN: a weapon hit on a target marked by a skill steals _AddValue mana
+		else if(info.type == "STATUS_TYPE_MANABURN" && info.hitEffectStatus) {
+			if(FindActiveStatus(target.index, info.hitEffectStatus)) {
+				ConsumeStatus(target.index, info.hitEffectStatus);
+				f32 stolen = info.hitEffectValue;
+				if(target.mana >= 0) { stolen = MIN(stolen, target.mana); target.mana -= stolen; target.tNextManaSend = Time::ZERO; }
+				if(attacker.mana >= 0) { attacker.mana += stolen; attacker.tNextManaSend = Time::ZERO; }
+				LOG("Passive :: %ls drained %.0f mana from %ls", attacker.name.data(), stolen, target.name.data());
+			}
+		}
+	}
+	foreach_const(id, toApply) {
+		LOG("Passive :: %ls weapon hit -> status %d on %ls", attacker.name.data(), *id, target.name.data());
+		ApplyStatus(attacker, target, *id);
+	}
+}
+
+void World::PassiveOnSkillHit(Player& attacker, Player& target)
+{
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex != attacker.index || !it->info) continue;
+		// STATUS_TYPE_MANABURN: skill hits mark the target (_HITEFFECT _StatusDocIndex)
+		if(it->info->type == "STATUS_TYPE_MANABURN" && it->info->hitEffectStatus && PassiveOfActiveMaster(attacker, it->statusID)) {
+			const i32 mark = it->info->hitEffectStatus;
+			ApplyStatus(attacker, target, mark);
+			return;
+		}
+	}
+}
+
+f32 World::PassiveWeaponDamageMul(Player& attacker, Player& target)
+{
+	f32 mul = 1.0f;
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex != attacker.index || !it->info) continue;
+		// STATUS_TYPE_GHOSTWIDOW: weapon damage +_AddValue per debuff on the target
+		if(it->info->type == "STATUS_TYPE_GHOSTWIDOW" && PassiveOfActiveMaster(attacker, it->statusID)) {
+			i32 debuffs = 0;
+			foreach_const(d, activeStatuses) {
+				if(d->targetIndex == target.index && d->info && d->info->isDebuff && d->until > localTime) debuffs++;
+			}
+			mul *= 1.0f + it->info->hitEffectValue * debuffs;
+		}
+	}
+	return mul;
+}
+
 void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power, f32 durationOverride)
 {
 	if(target.dead) return;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
 	f32 duration = durationOverride > 0 ? durationOverride : (info && info->durationSec > 0 ? info->durationSec : 1.0f);
+	// passives without duration stay until consumed; clients get the data's "infinite" value (-1)
+	const bool permanent = info && info->permanent && durationOverride <= 0;
+	if(permanent) duration = 1000000.0f;
+	const f32 sentDuration = permanent ? -1.0f : duration;
+	if(info && info->casterStatus != 0 && info->casterStatus != statusID && !caster.dead) ApplyStatus(caster, caster, info->casterStatus);
 
 	const bool displacement = info && (info->type == "STATUS_TYPE_PUSH" || info->type == "STATUS_TYPE_FORCEBACK" ||
 		info->type == "STATUS_TYPE_KNOCKDOWN" || info->type == "STATUS_TYPE_AIRBORNE" || info->type == "STATUS_TYPE_FLY" || info->type == "STATUS_TYPE_DRAGGED");
@@ -1222,7 +1407,18 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			if(info && it->overlap < info->maxOverlap) it->overlap++;
 			LOG("Status :: %ls -> %ls status=%d refreshed overlap=%d", caster.name.data(), target.name.data(), statusID, it->overlap);
 			const vec3 pos = target.body->GetWorldPos();
-			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, duration, pos, pos, 0);
+			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, sentDuration, pos, pos, 0);
+			// stacking passive (_ICEQUEEN): full stack -> remove it and apply the burst status
+			if(info && it->overlap >= info->maxOverlap && info->maxOverlap > 1) {
+				foreach_const(ps, activeStatuses) {
+					if(ps->targetIndex != caster.index || !ps->info || ps->info->stackStatus != statusID || ps->info->stackFullStatus == 0) continue;
+					const i32 full = ps->info->stackFullStatus;
+					it->until = localTime;
+					LOG("Passive :: %ls full stack of %d on %ls -> %d", caster.name.data(), statusID, target.name.data(), full);
+					ApplyStatus(caster, target, full);
+					break;
+				}
+			}
 			return;
 		}
 	}
@@ -1296,7 +1492,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	}
 
 	LOG("Status :: %ls -> %ls status=%d type=%s duration=%.2f shield=%.0f", caster.name.data(), target.name.data(), statusID, info ? info->type.c_str() : "?", duration, st.shieldHP);
-	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, duration, from, to, graphDuration);
+	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, to, graphDuration);
 }
 
 bool World::IsBlocked(const Player& p, bool attack, bool skill, bool shirk) const
@@ -1884,6 +2080,7 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	}
 
 	if(amount > 0) {
+		if(enemy && inst.skillID != SkillID::INVALID) PassiveOnSkillHit(owner, target);
 		if(enemy) DamagePlayer(owner, target, inst.skillID, amount, nullptr, inst.clientRemoteID, remote.ID, inst.dir);
 		else if(remote.damageGroup == Remote::DamageGroup::eFRIEND) HealPlayer(owner, target, amount);
 	}
@@ -2427,6 +2624,7 @@ void World::RespawnPlayer(Player& player)
 	foreach(c, player.characters) {
 		replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax);
 	}
+	if(player.passivesApplied) ApplyPassives(player);
 }
 
 void World::ExecuteSkillProgram(SkillProgram& prog)

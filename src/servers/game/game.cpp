@@ -173,6 +173,7 @@ void Game::Update(Time localTime_)
 					replication.SendGameStart(p->clientHd);
 				}
 				tGameStarted = localTime;
+				world.ApplyAllPassives();
 			}
 		} break;
 
@@ -676,6 +677,8 @@ void Game::OnPlayerWeaponStateRelay(ClientHandle clientHd, ActorUID ownerUID, i3
 	ASSERT(player.clientHd == clientHd);
 
 	if(ownerUID == ActorUID::INVALID) ownerUID = player.Main().UID;
+	player.firingCombo = firingCombo;
+	player.chargeLevel = chargeLevel;
 	const WeaponIndex weapon = player.mainCharaID == 0 ? player.mainWeapon : player.subWeapon;
 	replication.RelayWeaponState(clientHd, ownerUID, (i32)weapon, state, chargeLevel, firingCombo);
 }
