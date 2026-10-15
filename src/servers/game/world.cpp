@@ -1381,7 +1381,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	bool scheduled = false;
 	f32 t = 0;
 	foreach_const(cmd, action.commands) {
-		if(cmd->animIndex != anim) continue;
+		if(cmd->animIndex != anim && cmd->animIndex != -1) continue; // -1: command shared by every animation
 		if((cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) && !pendingRemotes.full()) {
 			PendingRemote pr;
 			pr.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
