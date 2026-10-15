@@ -2445,6 +2445,8 @@ bool GameXmlContent::LoadStatusData()
 				pInfo->QueryAttribute("ID", &skillID);
 				f32 cd = 0;
 				if(pSk->QueryFloatAttribute("_CoolTime", &cd) == XML_SUCCESS) skillCoolTime[skillID] = cd;
+				f32 rx = 0;
+				if(pSk->QueryFloatAttribute("_SkillRangeLengthX", &rx) == XML_SUCCESS && rx > 0) skillRangeX[skillID] = rx;
 				if(XMLElement* pT = pSk->FirstChildElement("_Target")) {
 					f32 d = 0;
 					if(pT->QueryFloatAttribute("_BotSkillMaxDistance", &d) == XML_SUCCESS && d > 0) botSkillMaxDistance[skillID] = d;

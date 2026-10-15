@@ -1779,16 +1779,37 @@ void World::UpdateShowcase()
 	if(!human || bots.size() < 2) return;
 
 	if(!showcase.started) {
+		vec3 sum[2] = { vec3(0), vec3(0) };
+		i32 cnt[2] = { 0, 0 };
+		f32 topZ = -1e9f;
+		foreach_const(it, players) {
+			sum[it->team & 1] += it->spawnPos; cnt[it->team & 1]++;
+			topZ = MAX(topZ, it->spawnPos.z);
+		}
+		if(cnt[0] == 0 || cnt[1] == 0) return;
+		const vec3 mid = (sum[0] / (f32)cnt[0] + sum[1] / (f32)cnt[1]) * 0.5f;
+		showcase.mid = vec3(mid.x, mid.y, topZ + 300.0f);
 		showcase.started = true;
-		showcase.anchor = human->body->GetWorldPos() + vec3(250, 250, 0);
+		showcase.phase = 0;
 		showcase.yaw = 0;
 		showcase.dummySlot = (i32)bots.size() - 1;
-		showcase.next = TimeAdd(localTime, TimeMsToTime(4000));
+		TeleportPlayer(players[bots[0]], showcase.mid, 0);
+		showcase.next = TimeAdd(localTime, TimeMsToTime(2500));
+		LOG("Showcase :: start wall=%lld bots=%d probe=(%.0f, %.0f, %.0f)", ShowcaseWallMs(), (i32)bots.size(), showcase.mid.x, showcase.mid.y, showcase.mid.z);
+		return;
+	}
+	if(showcase.phase == 0) {
+		const vec3 ground = players[bots[0]].body->GetWorldPos();
+		showcase.anchor = vec3(showcase.mid.x - 300.0f, showcase.mid.y, ground.z);
+		showcase.phase = 1;
 		foreach(it, players) {
-			if(it->clientHd != ClientHandle::INVALID) continue;
-			TeleportPlayer(*it, it->spawnPos, 0);
+			if(it->clientHd == ClientHandle::INVALID) TeleportPlayer(*it, it->spawnPos, 0);
 		}
-		LOG("Showcase :: start wall=%lld bots=%d", ShowcaseWallMs(), (i32)bots.size());
+		const vec3 humanPos = showcase.anchor + vec3(-250, -250, 0);
+		TeleportPlayer(*human, humanPos, 0);
+		replication->SendReviveToAll(human->userID, human->Main().UID, human->Sub().UID, humanPos);
+		LOG("Showcase :: ground z=%.0f anchor=(%.0f, %.0f, %.0f)", ground.z, showcase.anchor.x, showcase.anchor.y, showcase.anchor.z);
+		showcase.next = TimeAdd(localTime, TimeMsToTime(2000));
 		return;
 	}
 
@@ -1809,7 +1830,7 @@ void World::UpdateShowcase()
 	Player& caster = players[bots[showcase.casterSlot]];
 	Player& dummy = players[bots[showcase.dummySlot]];
 	const vec3 casterPos = showcase.anchor;
-	const vec3 dummyPos = showcase.anchor + vec3(650, 0, 0);
+	vec3 dummyPos = showcase.anchor + vec3(650, 0, 0);
 
 	if(caster.dead || dummy.dead) {
 		if(caster.dead) RespawnPlayer(caster);
@@ -1850,7 +1871,16 @@ void World::UpdateShowcase()
 		}
 	}
 
-	LOG("Showcase :: wall=%lld master=%d slot=%s skill=%d caster=%ls", ShowcaseWallMs(), (i32)cls, slotNames[step], skill, caster.name.data());
+	f32 range = 0;
+	if(skill != 0) {
+		range = content.GetSkillRange(skill);
+		if(range <= 0) range = content.GetBotSkillMaxDistance(skill);
+		if(range <= 0) range = 600.0f;
+		static const f32 ratios[3] = { 0.3f, 0.65f, 1.0f };
+		dummyPos = showcase.anchor + vec3(MAX(range * ratios[showcase.rangeIdx], 150.0f), 0, 0);
+		TeleportPlayer(dummy, dummyPos, PI);
+	}
+	LOG("Showcase :: wall=%lld master=%d slot=%s skill=%d caster=%ls range=%.0f dist=%.0f", ShowcaseWallMs(), (i32)cls, slotNames[step], skill, caster.name.data(), range, glm::length(vec2(dummyPos) - vec2(casterPos)));
 	const ActorUID targetUID = dummy.Main().UID;
 	if(step == 0) {
 		for(int k = 0; k < 3; k++) PlayerWeaponShot(caster, casterPos, vec2(1, 0), 650);
@@ -1862,7 +1892,8 @@ void World::UpdateShowcase()
 		caster.input.tag = true;
 	}
 
-	showcase.step++;
+	if(skill != 0 && step >= 1 && step <= 6 && showcase.rangeIdx < 2) showcase.rangeIdx++;
+	else { showcase.rangeIdx = 0; showcase.step++; }
 	f32 wait = step == 7 ? 2.0f : 3.5f;
 	if(step >= 1 && step <= 6 && skill == 0) wait = 0.2f;
 	if(showcase.step > 7) {

@@ -501,6 +501,9 @@ struct World
 		i32 dummySlot = -1;
 		i32 masterPass = 0;
 		i32 step = 0;
+		i32 rangeIdx = 0;
+		i32 phase = 0;
+		vec3 mid = vec3(0);
 		vec3 anchor = vec3(0);
 		f32 yaw = 0;
 	} showcase;
