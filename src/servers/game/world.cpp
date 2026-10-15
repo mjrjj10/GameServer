@@ -1160,8 +1160,15 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	}
 	activeStatuses.push_back(st);
 
-	if(info && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT) && st.until > target.ccUntil) {
-		target.ccUntil = st.until;
+	if(info && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT)) {
+		Time ccEnd = st.until;
+		if(info->type == "STATUS_TYPE_AIRBORNE" || info->type == "STATUS_TYPE_KNOCKDOWN") {
+			// lying on the ground (_LyingTime) then the stand-up animation (AniLength LIE_END)
+			const auto& content = GetGameXmlContent();
+			const f32 recover = info->lyingTime + content.GetLieEndTime(content.GetMaster(target.Main().classType).className.c_str());
+			ccEnd = TimeAdd(ccEnd, TimeMsToTime(recover * 1000.0));
+		}
+		if(ccEnd > target.ccUntil) target.ccUntil = ccEnd;
 	}
 
 	const vec3 from = target.body->GetWorldPos();

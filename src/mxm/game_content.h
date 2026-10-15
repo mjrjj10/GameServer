@@ -155,6 +155,7 @@ struct StatusInfo
 	f32 distanceRatio = 0;
 	f32 timeRatio = 0;
 	f32 heightRatio = 0;
+	f32 lyingTime = 0;    // _LyingTime: time spent on the ground after an airborne/knockdown
 	f32 dotDamage = 0;
 	f32 intervalSec = 0;
 	f32 distance = 0;
@@ -545,6 +546,13 @@ struct GameXmlContent
 	f32 GetSkillConsumeMP(i32 skillID) const { auto f = skillConsumeMP.find(skillID); return f == skillConsumeMP.end() ? 0 : f->second; }
 	f32 GetSkillConsumeUG(i32 skillID) const { auto f = skillConsumeUG.find(skillID); return f == skillConsumeUG.end() ? 0 : f->second; }
 	f32 GetSkillConsumeStamina(i32 skillID) const { auto f = skillConsumeStamina.find(skillID); return f == skillConsumeStamina.end() ? 0 : f->second; }
+	// stand-up animation length of a master (AniLength LIE_END, entity key = class name without CLASS_TYPE_)
+	f32 GetLieEndTime(const char* className) const
+	{
+		const char* key = EA::StdC::Strncmp(className, "CLASS_TYPE_", 11) == 0 ? className + 11 : className;
+		auto f = lieEndTime.find(eastl::fixed_string<char,48,false>(key));
+		return f == lieEndTime.end() ? 0 : f->second;
+	}
 	const SummonInfo* FindSummon(i32 creatureID) const { auto f = summonMap.find(creatureID); return f == summonMap.end() ? nullptr : &f->second; }
 	i32 GetCreatureElement(i32 creatureID) const { auto f = creatureElement.find(creatureID); return f == creatureElement.end() ? 0 : f->second; }
 	i32 FindSkillHitEventRemote(i32 skillID) const { auto f = skillHitEventRemote.find(skillID); return f == skillHitEventRemote.end() ? 0 : f->second; }
@@ -600,6 +608,7 @@ private:
 	eastl::hash_map<i32, f32> skillConsumeMP;      // SKILL.xml _ConsumeMP
 	eastl::hash_map<i32, f32> skillConsumeUG;      // SKILL.xml _ConsumeUG
 	eastl::hash_map<i32, SummonInfo> summonMap;
+	eastl::hash_map<eastl::fixed_string<char,48,false>, f32> lieEndTime; // AniLength.xml PC LIE_END per entity key
 	eastl::hash_map<i32, i32> creatureElement; // CREATURE_CHARACTER _ElementType: 0 none, 1 red, 2 green, 3 blue
 	bool LoadStatusData();
 };

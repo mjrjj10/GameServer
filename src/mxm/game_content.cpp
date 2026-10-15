@@ -1902,6 +1902,7 @@ bool GameXmlContent::LoadStatusData()
 		pCommon->QueryFloatAttribute("_DistanceRatio", &st.distanceRatio);
 		pCommon->QueryFloatAttribute("_TimeRatio", &st.timeRatio);
 		pCommon->QueryFloatAttribute("_HeightRatio", &st.heightRatio);
+		pCommon->QueryFloatAttribute("_LyingTime", &st.lyingTime);
 		pCommon->QueryFloatAttribute("_DotBaseDamage", &st.dotDamage);
 		f32 intervalMs = 0;
 		pCommon->QueryFloatAttribute("_Interval", &intervalMs);
@@ -2075,6 +2076,29 @@ bool GameXmlContent::LoadStatusData()
 			summonMap[id] = si;
 		}
 		LOG("Loaded %d summon creatures", (i32)summonMap.size());
+
+		XMLDocument xmlAni;
+		if(LoadXMLFile(L"/client/AniLength.xml", xmlAni)) {
+			for(XMLElement* pType = xmlAni.FirstChildElement()->FirstChildElement("EntityType"); pType; pType = pType->NextSiblingElement("EntityType")) {
+				const char* t = nullptr;
+				pType->QueryStringAttribute("_Type", &t);
+				if(!t || EA::StdC::Strcmp(t, "PC") != 0) continue;
+				for(XMLElement* pEnt = pType->FirstChildElement("Entity"); pEnt; pEnt = pEnt->NextSiblingElement("Entity")) {
+					const char* key = nullptr;
+					pEnt->QueryStringAttribute("_Key", &key);
+					if(!key) continue;
+					for(XMLElement* pAni = pEnt->FirstChildElement("AnimationInfo"); pAni; pAni = pAni->NextSiblingElement("AnimationInfo")) {
+						const char* name = nullptr;
+						pAni->QueryStringAttribute("_AnimationName", &name);
+						if(!name || EA::StdC::Strcmp(name, "LIE_END") != 0) continue;
+						f32 len = 0;
+						pAni->QueryFloatAttribute("_SeqTime", &len);
+						lieEndTime[eastl::fixed_string<char,48,false>(key)] = len;
+					}
+				}
+			}
+			LOG("Loaded %d stand-up animation lengths", (i32)lieEndTime.size());
+		}
 
 		XMLDocument xmlMobActions;
 		if(LoadXMLFile(L"/client/ActionBase_Monster_MOB_PvP.xml", xmlMobActions)) {
