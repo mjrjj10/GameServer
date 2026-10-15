@@ -2617,6 +2617,17 @@ inline const char* PacketSerialize<Sv::SN_SkillSelect>(const void* packetData, c
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SA_ReturnToCity>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SA_ReturnToCity(%d, %d) :: {", Sv::SA_ReturnToCity::NET_ID, packetSize);
+	SER("	errcode=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_Gauge>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();
