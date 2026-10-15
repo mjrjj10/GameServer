@@ -1084,6 +1084,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.angle = angle;
 			pr.target = cmd->remote.targetPreset == ActionCommand::TargetPreset::MEMORIZED_TFT ? player.memorizedTarget : currentTarget;
 			pr.atTarget = cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET;
+			pr.nodeName = cmd->nodeName;
 			pendingRemotes.push_back(pr);
 			scheduled = true;
 		}
@@ -1107,7 +1108,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	return scheduled;
 }
 
-World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast, const vec3* aimPos)
+World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast, const vec3* aimPos, u16 nodeName)
 {
 	const Remote* remote = GetGameXmlContent().FindRemote(idx);
 	if(!remote || remoteInsts.full()) return nullptr;
@@ -1146,8 +1147,10 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		vec3 targetPos = pos + vec3(dir * (inst.range > 0 ? inst.range : 1000.0f), 0);
 		const ActorMaster* targetMaster = target != ActorUID::INVALID ? FindMasterActor(target) : nullptr;
 		if(targetMaster) targetPos = targetMaster->parent->body->GetWorldPos();
-		const f32 sendYaw = atan2f(dir.y, dir.x) + (inst.speed <= 0 && remote->boundType == Remote::BoundType::E_BOUND_BOX ? PI : 0.0f);
-		replication->SendRemoteCreateToAll(players[ownerIndex].Main().UID, seed, idx, pos, sendYaw, targetPos, targetMaster ? target : ActorUID::INVALID);
+		// the client draws plain (non-fan) static boxes facing the opposite way of their rotation
+		const bool plainStaticBox = inst.speed <= 0 && remote->boundType == Remote::BoundType::E_BOUND_BOX && remote->angle <= 0;
+		const f32 sendYaw = atan2f(dir.y, dir.x) + (plainStaticBox ? PI : 0.0f);
+		replication->SendRemoteCreateToAll(players[ownerIndex].Main().UID, seed, idx, pos, sendYaw, targetPos, targetMaster ? target : ActorUID::INVALID, GetGameXmlContent().GetNodeName(nodeName));
 	}
 
 	remoteInsts.push_back(inst);
@@ -1218,12 +1221,15 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	if(enemy && remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;
 	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty()) return;
 
+	// damaging hits share one hit window per cast (a target takes a skill's damage once per window),
+	// effect-only hits keep a window per remote so lingering zones keep applying their effects
+	const RemoteIdx hitKey = amount > 0 ? RemoteIdx::INVALID : remote.ID;
 	foreach(h, castHits) {
-		if(h->castID == inst.castID && h->remoteID == remote.ID && h->playerIndex == target.index && localTime < h->until) return;
+		if(h->castID == inst.castID && h->remoteID == hitKey && h->playerIndex == target.index && localTime < h->until) return;
 	}
 	if(!castHits.full()) {
 		CastHit h;
-		h.remoteID = remote.ID;
+		h.remoteID = hitKey;
 		h.castID = inst.castID;
 		h.playerIndex = target.index;
 		h.until = TimeAdd(localTime, TimeMsToTime(MAX(remote.hitInvalidTime, 0.1f) * 1000.0));
@@ -1377,7 +1383,7 @@ void World::UpdateRemotes(f32 delta)
 		}
 
 		if(!owner.dead) {
-			SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos);
+			SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName);
 		}
 		pr = pendingRemotes.erase_unsorted(pr);
 	}

@@ -301,7 +301,7 @@ struct Replication
 	void SendRemoteDamageToAll(u32 remoteID, RemoteIdx remoteDoc, ActorUID attackerUID, ActorUID targetUID, const vec3& hitPos, const vec2& hitDir, i32 damage, i32 hp, i32 hpMax);
 	void SendAttackActionToOthers(ClientHandle senderHd, ActorUID actorUID, f32 mxmYaw);
 	void SendDestroyRemoteToAll(u32 remoteID);
-	void SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID);
+	void SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject = L"Scene Root");
 	void RelayRemoteCreateDoc(ClientHandle senderHd, const u8* packetData, i32 packetSize);
 	void RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetData, i32 packetSize);
 	void RelayRemoteCreate(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, f32 lifeTime, RemoteIdx remoteDoc);

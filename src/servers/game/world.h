@@ -316,6 +316,7 @@ struct World
 		f32 angle;
 		ActorUID target;
 		bool atTarget = false;
+		u16 nodeName = 0;
 	};
 
 	struct RemoteInst
@@ -420,7 +421,7 @@ private:
 	void Explode(Player& owner, const vec3& center, f32 radius, i32 damage);
 	void RespawnPlayer(Player& player);
 	bool ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle, i32 forceAnim = -1);
-	RemoteInst* SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast = false, const vec3* aimPos = nullptr);
+	RemoteInst* SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast = false, const vec3* aimPos = nullptr, u16 nodeName = 0);
 	void UpdateRemotes(f32 delta);
 	void UpdateUltimateGauges(f32 delta);
 	void ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power = 0, f32 durationOverride = -1);

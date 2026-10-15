@@ -1005,13 +1005,13 @@ void Replication::RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetD
 	}
 }
 
-void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID)
+void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject)
 {
 	f32 yawDeg = 90.0f - worldYaw * 180.0f / PI;
 	while(yawDeg > 180.0f) yawDeg -= 360.0f;
 	while(yawDeg < -180.0f) yawDeg += 360.0f;
-	const wchar* fireObject = L"Scene Root";
-	const u16 fireObjectLen = 10;
+	if(!fireObject || !fireObject[0]) fireObject = L"Scene Root";
+	const u16 fireObjectLen = (u16)EA::StdC::Strlen(fireObject);
 
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;

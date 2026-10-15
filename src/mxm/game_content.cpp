@@ -1164,6 +1164,19 @@ bool GameXmlContent::LoadCollisionMeshes()
 	return true;
 }
 
+u16 GameXmlContent::InternNodeName(const char* name)
+{
+	if(nodeNames.empty()) nodeNames.push_back(L"Scene Root");
+	if(!name || !name[0]) return 0;
+	eastl::fixed_string<wchar,48,false> w;
+	for(const char* c = name; *c && w.size() < 47; c++) w.push_back((wchar)*c);
+	for(u16 i = 0; i < (u16)nodeNames.size(); i++) {
+		if(nodeNames[i] == w) return i;
+	}
+	nodeNames.push_back(w);
+	return (u16)(nodeNames.size() - 1);
+}
+
 bool GameXmlContent::LoadAnimationData()
 {
 	XMLDocument xmlAniLength;
@@ -1297,6 +1310,14 @@ bool GameXmlContent::LoadAnimationData()
 		Action::Command cmd;
 		cmd.type = ActionCommand::TypeFromString(CommandType);
 		pActionBase->QueryAttribute("AnimationIndex", &cmd.animIndex);
+		{
+			const char* NodeName = nullptr;
+			pActionBase->QueryStringAttribute("NodeName", &NodeName);
+			cmd.nodeName = InternNodeName(NodeName);
+			const char* P2 = nullptr;
+			pActionBase->QueryStringAttribute("Param2", &P2);
+			cmd.byDummyDir = P2 && EA::StdC::Strstr(P2, "ByDummyDir") ? 1 : 0;
+		}
 		if(pActionBase->QueryAttribute("Delay", &cmd.delay) != XMLError::XML_SUCCESS) {
 			cmd.delay = 0.0f;
 		}

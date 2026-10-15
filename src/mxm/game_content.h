@@ -332,6 +332,8 @@ struct GameXmlContent
 			f32 delay;
 			f32 relativeEndTimeFromStart;
 			i32 animIndex = 0;
+			u16 nodeName = 0; // index in GameXmlContent::nodeNames, 0 = Scene Root
+			u8 byDummyDir = 0;
 
 			union {
 				struct {
@@ -468,6 +470,9 @@ struct GameXmlContent
 	const Action& GetSkillAction(ClassType classType, ActionStateID actionID) const;
 	const Remote& GetRemote(RemoteIdx remoteID) const;
 	const Remote* FindRemote(RemoteIdx remoteID) const;
+	eastl::fixed_vector<eastl::fixed_string<wchar,48,false>,512,true> nodeNames;
+	u16 InternNodeName(const char* name);
+	const wchar* GetNodeName(u16 idx) const { return idx < nodeNames.size() ? nodeNames[idx].c_str() : L"Scene Root"; }
 	const StatusInfo* FindStatus(i32 statusID) const;
 	i32 FindSkillHitEventRemote(i32 skillID) const { auto f = skillHitEventRemote.find(skillID); return f == skillHitEventRemote.end() ? 0 : f->second; }
 
