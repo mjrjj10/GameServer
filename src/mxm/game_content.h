@@ -588,6 +588,7 @@ struct GameXmlContent
 	const StatusInfo* FindStatus(i32 statusID) const;
 	f32 GetWeaponFireDelay(i32 weaponID) const { auto f = weaponFireDelay.find(weaponID); return f == weaponFireDelay.end() ? 0 : f->second; }
 	f32 GetSkillCoolTime(i32 skill) const { auto f = skillCoolTime.find(skill); return f == skillCoolTime.end() ? 0 : f->second; }
+	f32 GetSkillTargetRange(i32 skill) const { auto f = skillTargetRangeX.find(skill); return f == skillTargetRangeX.end() ? 0 : f->second; }
 	f32 GetSkillRange(i32 skill) const { auto f = skillRangeX.find(skill); return f == skillRangeX.end() ? 0 : f->second; }
 	f32 GetBotSkillMaxDistance(i32 skill) const { auto f = botSkillMaxDistance.find(skill); return f == botSkillMaxDistance.end() ? 0 : f->second; }
 	f32 BotNormalSkillCoolTime() const { return botNormalSkillCoolTime; }
@@ -680,6 +681,7 @@ private:
 	eastl::hash_map<i32, f32> skillCoolTime;              // _CoolTime (s)
 	eastl::hash_map<i32, f32> botSkillMaxDistance;        // _Target _BotSkillMaxDistance
 	eastl::hash_map<i32, f32> skillRangeX;
+	eastl::hash_map<i32, f32> skillTargetRangeX;
 	f32 botNormalSkillCoolTime = 0;                       // BOTLOGIC_STAGELEVEL_KEY_NORMALSKILL_COOLTIME
 	f32 botUgSkillCoolTime = 0;                           // BOTLOGIC_STAGELEVEL_KEY_UGSKILL_COOLTIME
 	f32 botAfterSkillDelay = 0;                           // BOTLOGIC_STAGELEVEL_KEY_AFTER_SKILL_DELAY

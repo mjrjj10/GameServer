@@ -1839,6 +1839,17 @@ void World::UpdateShowcase()
 		return;
 	}
 
+	if(showcase.pendingResult) {
+		showcase.pendingResult = false;
+		const Player& pd = players[showcase.prevDummy];
+		bool hit = pd.Main().hp < showcase.lastDummyHp || pd.dead;
+		foreach_const(it, activeStatuses) {
+			if(it->targetIndex == showcase.prevDummy && it->casterIndex == showcase.prevCaster) hit = true;
+		}
+		const bool ok = showcase.prevExpect < 0 || (showcase.prevExpect == 1) == hit;
+		LOG("Showcase :: result hit=%d expect=%d %s damage=%d", hit ? 1 : 0, showcase.prevExpect, ok ? "OK" : "MISMATCH", showcase.lastDummyHp - pd.Main().hp);
+	}
+
 	const ClassType cls = caster.Main().classType;
 	static const char* slotNames[] = { "WEAPON", "SKILL_1", "SKILL_2", "SKILL_3", "SKILL_4", "ULTIMATE", "SHIRK", "TAG" };
 	const i32 step = showcase.step;
@@ -1872,27 +1883,87 @@ void World::UpdateShowcase()
 	}
 
 	f32 range = 0;
+	vec3 castPos = dummyPos;
+	const char* testName = "-";
+	i32 expect = -1;
+	showcase.testCount = 1;
 	if(skill != 0) {
 		range = content.GetSkillRange(skill);
-		if(range <= 0) range = content.GetBotSkillMaxDistance(skill);
-		if(range <= 0) range = 600.0f;
-		static const f32 ratios[3] = { 0.3f, 0.65f, 1.0f };
-		dummyPos = showcase.anchor + vec3(MAX(range * ratios[showcase.rangeIdx], 150.0f), 0, 0);
+		const f32 zone = content.GetSkillTargetRange(skill) * 0.5f;
+		struct T { f32 dist; f32 side; const char* name; i32 expect; };
+		eastl::fixed_vector<T,8,false> tests;
+		if(range > 0) {
+			tests.push_back({ MAX(range * 0.3f, 150.0f), 0, "near", 1 });
+			tests.push_back({ range - 40.0f, 0, "range_in", 1 });
+			tests.push_back({ range + 60.0f, 0, "range_out", 0 });
+		}
+		else {
+			tests.push_back({ 300.0f, 0, "near", -1 });
+		}
+		if(zone > 0) {
+			const f32 d = range > 0 ? range * 0.65f : 300.0f;
+			tests.push_back({ d, zone - 40.0f, "zone_in", 1 });
+			tests.push_back({ d, zone + 60.0f, "zone_out", 0 });
+		}
+		showcase.testCount = (i32)tests.size();
+		const T& t = tests[MIN(showcase.rangeIdx, (i32)tests.size() - 1)];
+		dummyPos = showcase.anchor + vec3(t.dist, 0, 0);
+		castPos = dummyPos + vec3(0, t.side, 0);
+		testName = t.name;
+		expect = t.expect;
 		TeleportPlayer(dummy, dummyPos, PI);
 	}
-	LOG("Showcase :: wall=%lld master=%d slot=%s skill=%d caster=%ls range=%.0f dist=%.0f", ShowcaseWallMs(), (i32)cls, slotNames[step], skill, caster.name.data(), range, glm::length(vec2(dummyPos) - vec2(casterPos)));
+	else if(step == 0) {
+		const u32 wm = caster.mainCharaID & 1;
+		const WeaponIndex weapon = wm == 0 ? caster.mainWeapon : caster.subWeapon;
+		const WeaponFiring* wf = content.FindWeaponFiring((i32)weapon);
+		const Remote* wr = wf ? content.FindRemote(wf->base) : nullptr;
+		const f32 wrange = wr ? (wr->maxDistance > 0 ? wr->maxDistance : wr->lifeTime * wr->maxSpeed) : 0;
+		const Remote* bomb = wr ? content.FindRemote(wr->destroyCreateRemote) : nullptr;
+		const f32 splash = bomb ? bomb->boundSize[0] * 0.5f : 0;
+		range = wrange;
+		struct T { f32 dist; f32 side; const char* name; i32 expect; };
+		eastl::fixed_vector<T,8,false> tests;
+		if(wrange > 0) {
+			tests.push_back({ wrange - 40.0f, 0, "range_in", 1 });
+			tests.push_back({ wrange + 60.0f, 0, "range_out", 0 });
+		}
+		else tests.push_back({ 300.0f, 0, "near", -1 });
+		if(splash > 0) {
+			const f32 d = wrange > 0 ? wrange * 0.6f : 300.0f;
+			tests.push_back({ d, splash - 40.0f, "splash_in", 1 });
+			tests.push_back({ d, splash + 60.0f, "splash_out", 0 });
+		}
+		showcase.testCount = (i32)tests.size();
+		const T& t = tests[MIN(showcase.rangeIdx, (i32)tests.size() - 1)];
+		dummyPos = showcase.anchor + vec3(t.dist, 0, 0);
+		castPos = dummyPos + vec3(0, t.side, 0);
+		testName = t.name;
+		expect = t.expect;
+		TeleportPlayer(dummy, dummyPos, PI);
+	}
+	showcase.lastDummyHp = dummy.Main().hp;
+	showcase.pendingResult = step <= 6 && (step == 0 || skill != 0);
+	showcase.prevExpect = expect;
+	showcase.prevDummy = dummy.index;
+	showcase.prevCaster = caster.index;
+	LOG("Showcase :: wall=%lld master=%d slot=%s skill=%d caster=%ls range=%.0f dist=%.0f test=%s expect=%d", ShowcaseWallMs(), (i32)cls, slotNames[step], skill, caster.name.data(), range, glm::length(vec2(dummyPos) - vec2(casterPos)), testName, expect);
 	const ActorUID targetUID = dummy.Main().UID;
 	if(step == 0) {
-		for(int k = 0; k < 3; k++) PlayerWeaponShot(caster, casterPos, vec2(1, 0), 650);
+		const vec2 rel = vec2(castPos) - vec2(casterPos);
+		const f32 len = glm::length(rel);
+		const vec2 dir = len > 1.0f ? rel / len : vec2(1, 0);
+		caster.weaponAimYaw = atan2f(dir.y, dir.x);
+		PlayerWeaponShot(caster, casterPos, dir, len);
 	}
 	else if(step >= 1 && step <= 6) {
-		if(skill != 0) PlayerCastSkill(caster, SkillID(skill), dummyPos, Slice<const ActorUID>(&targetUID, 1), 0);
+		if(skill != 0) PlayerCastSkill(caster, SkillID(skill), castPos, Slice<const ActorUID>(&targetUID, 1), 0);
 	}
 	else {
 		caster.input.tag = true;
 	}
 
-	if(skill != 0 && step >= 1 && step <= 6 && showcase.rangeIdx < 2) showcase.rangeIdx++;
+	if((step == 0 || (skill != 0 && step <= 6)) && showcase.rangeIdx < showcase.testCount - 1) showcase.rangeIdx++;
 	else { showcase.rangeIdx = 0; showcase.step++; }
 	f32 wait = step == 7 ? 2.0f : 3.5f;
 	if(step >= 1 && step <= 6 && skill == 0) wait = 0.2f;

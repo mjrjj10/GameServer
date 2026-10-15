@@ -502,6 +502,12 @@ struct World
 		i32 masterPass = 0;
 		i32 step = 0;
 		i32 rangeIdx = 0;
+		i32 testCount = 1;
+		i32 lastDummyHp = 0;
+		bool pendingResult = false;
+		i32 prevExpect = -1;
+		u32 prevDummy = 0;
+		u32 prevCaster = 0;
 		i32 phase = 0;
 		vec3 mid = vec3(0);
 		vec3 anchor = vec3(0);
