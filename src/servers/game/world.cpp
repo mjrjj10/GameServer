@@ -761,7 +761,8 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		const vec3 target = firePos + vec3(proj.dir * proj.range, 0);
 		replication->SendRemoteCreateToAll(player.Main().UID, seed, remote->ID, firePos, atan2f(proj.dir.y, proj.dir.x), target, ActorUID::INVALID, L"Attack_Fire_Dummy");
 	}
-	proj.damage = WEAPON_HIT_DAMAGE;
+	// weapon damage scales with attack: percent attack modifiers of active statuses (skilltt STAT_TYPE_ATTACK MUL)
+	proj.damage = (i32)(WEAPON_HIT_DAMAGE * MAX(1.0f + StatusModMulSum(player, StatusMod::ATTACK) / 100.0f, 0.0f));
 	LOG("Shot :: %ls class=%d remote=%d graph=%d reliable=%d dist=%.0f range=%.0f speed=%.0f width=%.0f hits=%d aoe=%.0f", player.name.data(), (i32)classType, remote ? (i32)remote->ID : -1, graph, reliable, distance, proj.range, proj.speed, proj.halfWidth, proj.hitsLeft, proj.aoeRadius);
 	projectileList.push_back(proj);
 }
@@ -1215,6 +1216,18 @@ bool World::IsBlocked(const Player& p, bool attack, bool skill, bool shirk) cons
 		if((attack && it->info->blockAttack) || (skill && it->info->blockSkill) || (shirk && it->info->blockShirk)) return true;
 	}
 	return false;
+}
+
+f32 World::StatusModMulSum(const Player& p, i32 stat) const
+{
+	f32 sum = 0;
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex != p.index || !it->info || localTime >= it->until) continue;
+		foreach_const(m, it->info->mods) {
+			if((i32)m->stat == stat && !m->regen && m->mul) sum += m->value * it->overlap;
+		}
+	}
+	return sum;
 }
 
 f32 World::StatusModSum(const Player& p, i32 stat) const

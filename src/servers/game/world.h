@@ -488,6 +488,7 @@ private:
 	void ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power = 0, f32 durationOverride = -1);
 	bool HasStatusType(const Player& p, const char* type) const;
 	f32 StatusModSum(const Player& p, i32 stat) const;
+	f32 StatusModMulSum(const Player& p, i32 stat) const;
 	bool IsBlocked(const Player& p, bool attack, bool skill, bool shirk) const;
 	void HealPlayer(Player& healer, Player& target, i32 amount);
 	bool RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const;

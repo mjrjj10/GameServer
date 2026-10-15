@@ -2,9 +2,11 @@
 #include <EAStdC/EAString.h>
 #include <EAStdC/EASprintf.h>
 #include <tinyxml2.h>
+#include <EASTL/hash_set.h>
 
 #include "core.h"
 #include "game_content.h"
+#include <EASTL/hash_set.h>
 
 using namespace tinyxml2;
 constexpr eastl::hash<const char*> strHash;
@@ -1965,22 +1967,36 @@ bool GameXmlContent::LoadStatusData()
 	XMLDocument xmlTT;
 	if(LoadXMLFile(L"/client/skilltt.xml", xmlTT)) {
 		i32 modCount = 0;
+		eastl::hash_set<i32> touched; // statuses already filled (first skill describing them wins)
 		for(XMLElement* pMaster = xmlTT.FirstChildElement()->FirstChildElement(); pMaster; pMaster = pMaster->NextSiblingElement()) {
 			for(XMLElement* pSkill = pMaster->FirstChildElement("data"); pSkill; pSkill = pSkill->NextSiblingElement("data")) {
 				XMLElement* pBase = pSkill->FirstChildElement("data");
 				if(!pBase) continue;
-				i32 statusID = 0;
+				// attrMap: key -> status (TTATTR_STATUS_DELIGATE = main status, TTATTR_STATUS_DEFINE_n = other statuses of the skill)
+				eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,40,false>, i32>,16,false> keyStatus;
+				i32 delegateID = 0;
 				for(XMLElement* pAttr = pBase->FirstChildElement("attrMap"); pAttr; pAttr = pAttr->NextSiblingElement("attrMap")) {
 					const char* key = nullptr;
+					i32 data = 0;
 					pAttr->QueryStringAttribute("DATAKEY", &key);
-					if(key && EA::StdC::Strcmp(key, "TTATTR_STATUS_DELIGATE") == 0) pAttr->QueryAttribute("DATA", &statusID);
+					pAttr->QueryAttribute("DATA", &data);
+					if(!key) continue;
+					if(EA::StdC::Strcmp(key, "TTATTR_STATUS_DELIGATE") == 0) delegateID = data;
+					if(!keyStatus.full()) keyStatus.push_back(eastl::make_pair(eastl::fixed_string<char,40,false>(key), data));
 				}
-				auto found = statusMap.find(statusID);
-				if(found == statusMap.end() || !found->second.mods.empty()) continue;
 				for(XMLElement* pT = pBase->FirstChildElement("tableDatas"); pT; pT = pT->NextSiblingElement("tableDatas")) {
-					const char* attrType = nullptr; const char* proc = nullptr; const char* apply = nullptr; const char* stat = nullptr;
+					const char* attrType = nullptr; const char* attrKey = nullptr; const char* proc = nullptr; const char* apply = nullptr; const char* stat = nullptr;
 					pT->QueryStringAttribute("attrType", &attrType);
 					if(!attrType || EA::StdC::Strcmp(attrType, "TTATTR_STATUS_STAT") != 0) continue;
+					pT->QueryStringAttribute("attrKey", &attrKey);
+					i32 statusID = delegateID;
+					if(attrKey) {
+						foreach_const(k, keyStatus) {
+							if(k->first == attrKey) statusID = k->second;
+						}
+					}
+					auto found = statusMap.find(statusID);
+					if(found == statusMap.end() || found->second.modsFromTT) continue;
 					pT->QueryStringAttribute("proc", &proc);
 					pT->QueryStringAttribute("apply", &apply);
 					pT->QueryStringAttribute("stat", &stat);
@@ -1995,9 +2011,15 @@ bool GameXmlContent::LoadStatusData()
 					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_SKILLPOWER") == 0) mod.stat = StatusMod::SKILLPOWER;
 					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_CRITICALRATE") == 0) mod.stat = StatusMod::CRITICALRATE;
 					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_SKILL_CRITICALRATE") == 0) mod.stat = StatusMod::SKILL_CRITICALRATE;
+					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_ATTACK") == 0) mod.stat = StatusMod::ATTACK;
 					if(!found->second.mods.full()) { found->second.mods.push_back(mod); modCount++; }
+					touched.insert(statusID);
 				}
 			}
+		}
+		foreach(t, touched) {
+			auto f = statusMap.find(*t);
+			if(f != statusMap.end()) f->second.modsFromTT = true;
 		}
 		LOG("Loaded %d status stat modifiers from skilltt", modCount);
 	}

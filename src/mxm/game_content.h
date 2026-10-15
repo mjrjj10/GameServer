@@ -133,7 +133,7 @@ struct SummonInfo
 
 struct StatusMod
 {
-	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE };
+	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE, ATTACK };
 	Stat stat = OTHER;
 	bool regen = false;  // STATPROC_REGEN: applied every tick (value_2 = tick count)
 	bool mul = false;    // STATAPPLY_MUL: percent
@@ -164,6 +164,7 @@ struct StatusInfo
 	i32 maxOverlap = 1;
 	Kind kind = Kind::OTHER;
 	eastl::fixed_vector<StatusMod,6,false> mods;
+	bool modsFromTT = false;
 	enum class NextCondition: u8 { NONE = 0, ALL, TIMEOVER, REMOVE_ONHIT };
 	i32 nextStatus = 0;                 // _NextStatusIndex
 	// _INPUT_STATE_BLOCK
