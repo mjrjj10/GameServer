@@ -209,6 +209,7 @@ struct WeaponFiring
 	RemoteIdx countRemote = RemoteIdx::INVALID;
 	i32 replaceStatus = 0;                            // _STATUS _OwnerStatusToCheck
 	RemoteIdx replaceRemote = RemoteIdx::INVALID;     // _RemoteIndexToReplace (the status is consumed)
+	f32 maxDistance = 0;
 };
 
 struct Remote

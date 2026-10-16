@@ -2350,6 +2350,8 @@ bool GameXmlContent::LoadStatusData()
 			pInfo->QueryAttribute("ID", &id);
 			XMLElement* pData = pInfo->FirstChildElement("FiringMethodData");
 			XMLElement* pFire = pData ? pData->FirstChildElement("_FIREINFO") : nullptr;
+			f32 fireMaxDistance = 0;
+			if(pFire) pFire->QueryFloatAttribute("_MaxDistance", &fireMaxDistance);
 			if(pFire) {
 				f32 delay = 0;
 				pFire->QueryFloatAttribute("_FireDelayTime", &delay);
@@ -2392,6 +2394,7 @@ bool GameXmlContent::LoadStatusData()
 					pRad->QueryAttribute("_Index", &v);
 					wf.base = (RemoteIdx)v;
 				}
+				wf.maxDistance = fireMaxDistance;
 				if(wf.base != RemoteIdx::INVALID) firingRemotes[id] = wf;
 			}
 			XMLElement* pGauge = pData ? pData->FirstChildElement("_GAUGE") : nullptr;

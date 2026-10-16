@@ -744,12 +744,14 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	const auto& content = GetGameXmlContent();
 	const Remote* remote = content.FindRemote(RemoteIdx(1430000000 + (i32)classType * 10000 + 10));
 
+	f32 aimMax = WEAPON_SHOT_MAX_DISTANCE;
 	// FIRING_METHOD of the active weapon: combo step / charge level / every Nth shot / status replacement
 	{
 		const u32 m = player.mainCharaID & 1;
 		const WeaponIndex weapon = m == 0 ? player.mainWeapon : player.subWeapon;
 		const WeaponFiring* wf = content.FindWeaponFiring((i32)weapon);
 		if(wf) {
+			if(wf->maxDistance > 0) aimMax = wf->maxDistance;
 			RemoteIdx idx = wf->base;
 			if(player.chargeLevel > 0 && player.chargeLevel <= wf->charge.size()) idx = wf->charge[player.chargeLevel - 1];
 			else if(player.firingCombo > 0 && player.firingCombo <= wf->combo.size()) idx = wf->combo[player.firingCombo - 1];
@@ -809,7 +811,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 
 	if(remote && remote->maxDistance > 0) remoteRange *= 1.05f;
 
-	proj.range = graph ? (reliable ? MIN(distance, WEAPON_SHOT_MAX_DISTANCE) : classRange) : remoteRange;
+	proj.range = graph ? (reliable ? MIN(distance, aimMax) : classRange) : remoteRange;
 	proj.graph = graph;
 	proj.halfWidth = remote ? remote->boundSize[0] * 0.5f : 20.0f;
 	proj.hitsLeft = remote ? MAX(remote->activateCount, 1) : 1;
@@ -1799,7 +1801,8 @@ void World::UpdateShowcase()
 		return;
 	}
 	static const vec2 probeDirs[4] = { vec2(1, 0), vec2(-1, 0), vec2(0, 1), vec2(0, -1) };
-	static const f32 probeDist[4] = { 400.0f, 800.0f, 1200.0f, 1600.0f };
+	static const f32 probeDist[4] = { 600.0f, 1200.0f, 1800.0f, 2400.0f };
+	const f32 flatLen = 2400.0f;
 	const i32 probes = MIN((i32)bots.size(), 4);
 	if(showcase.phase == 0) {
 		if(showcase.candidates.empty()) showcase.candidates.push_back(vec2(showcase.mid));
@@ -1947,7 +1950,7 @@ void World::UpdateShowcase()
 		if(range > 0) {
 			tests.push_back({ MAX(range * 0.3f, 150.0f), 0, "near", 1 });
 			tests.push_back({ range - 40.0f, 0, "range_in", 1 });
-			tests.push_back({ range + 60.0f, 0, "range_out", 0 });
+			tests.push_back({ range + zone + 60.0f, 0, "range_out", 0 });
 		}
 		else {
 			tests.push_back({ 300.0f, 0, "near", -1 });
@@ -1959,10 +1962,15 @@ void World::UpdateShowcase()
 		}
 		showcase.testCount = (i32)tests.size();
 		const T& t = tests[MIN(showcase.rangeIdx, (i32)tests.size() - 1)];
-		dummyPos = showcase.anchor + vec3(showcase.dir * t.dist, 0);
+		dummyPos = showcase.anchor + vec3(showcase.dir * MIN(t.dist, flatLen), 0);
 		castPos = dummyPos + vec3(vec2(-showcase.dir.y, showcase.dir.x) * t.side, 0);
-		testName = t.name;
-		expect = t.expect;
+		if(range > 0) {
+			const vec2 rel = vec2(castPos) - vec2(casterPos);
+			const f32 len = glm::length(rel);
+			if(len > range) castPos = vec3(vec2(casterPos) + rel / len * range, castPos.z);
+		}
+		testName = t.dist > flatLen ? "skip_beyond_flat" : t.name;
+		expect = t.dist > flatLen ? -1 : t.expect;
 		TeleportPlayer(dummy, dummyPos, faceCaster);
 	}
 	else if(step == 0) {
@@ -1970,7 +1978,8 @@ void World::UpdateShowcase()
 		const WeaponIndex weapon = wm == 0 ? caster.mainWeapon : caster.subWeapon;
 		const WeaponFiring* wf = content.FindWeaponFiring((i32)weapon);
 		const Remote* wr = wf ? content.FindRemote(wf->base) : nullptr;
-		const f32 wrange = wr ? (wr->maxDistance > 0 ? wr->maxDistance : wr->lifeTime * wr->maxSpeed) : 0;
+		f32 wrange = wr ? (wr->maxDistance > 0 ? wr->maxDistance : wr->lifeTime * wr->maxSpeed) : 0;
+		if(wf && wf->maxDistance > 0 && wr && wr->behaviorType == Remote::BehaviorType::GRAPH) wrange = wf->maxDistance;
 		const Remote* bomb = wr ? content.FindRemote(wr->destroyCreateRemote) : nullptr;
 		const f32 splash = bomb ? bomb->boundSize[0] * 0.5f : 0;
 		range = wrange;
@@ -1988,10 +1997,10 @@ void World::UpdateShowcase()
 		}
 		showcase.testCount = (i32)tests.size();
 		const T& t = tests[MIN(showcase.rangeIdx, (i32)tests.size() - 1)];
-		dummyPos = showcase.anchor + vec3(showcase.dir * t.dist, 0);
+		dummyPos = showcase.anchor + vec3(showcase.dir * MIN(t.dist, flatLen), 0);
 		castPos = dummyPos + vec3(vec2(-showcase.dir.y, showcase.dir.x) * t.side, 0);
-		testName = t.name;
-		expect = t.expect;
+		testName = t.dist > flatLen ? "skip_beyond_flat" : t.name;
+		expect = t.dist > flatLen ? -1 : t.expect;
 		TeleportPlayer(dummy, dummyPos, faceCaster);
 	}
 	showcase.lastDummyHp = dummy.Main().hp;
