@@ -306,7 +306,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 	}
 
 	if(Config().DevShowcase) {
-		static i32 showcaseNext = 0;
+		static i32 showcaseNext = Config().DevShowcaseStart;
 		eastl::fixed_vector<ClassType,100,false> all;
 		foreach_const(it, allowedMastersSet) all.push_back(*it);
 		eastl::sort(all.begin(), all.end());
