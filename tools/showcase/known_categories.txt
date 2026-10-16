@@ -1,8 +1,10 @@
 Blocked
 ComboHit
+Cost
 Damage
 Explosion
 Heal
+OnPlayerCastSkill
 Passive
 ProjectileEnd
 Remote

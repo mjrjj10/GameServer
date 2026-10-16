@@ -296,9 +296,16 @@ PhysicsDynamicBody* PhysicsScene::CreateDynamicBody(f32 radius, f32 height, cons
 	return &colliderList.back();
 }
 
+struct IgnoreOtherCharacters: PxControllerFilterCallback
+{
+	bool filter(const PxController&, const PxController&) override { return false; }
+};
+
 vec3 PhysicsScene::Move(PhysicsDynamicBody* body, const vec3& disp, f32 time)
 {
+	static IgnoreOtherCharacters ignoreCharacters;
 	PxControllerFilters filter;
+	filter.mCCTFilterCallback = &ignoreCharacters;
 	//filter.mFilterFlags = PxQueryFlag::eSTATIC; // only collide with static colliders
 	PxControllerCollisionFlags collisionFlags = body->collider->move(PxVec3(disp.x, disp.y, disp.z), 0, time, filter, nullptr /* obstacles? */);
 	return body->GetWorldPos();
