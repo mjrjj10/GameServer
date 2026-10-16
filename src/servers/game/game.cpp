@@ -499,6 +499,11 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 	prevBodyPos = player.body->GetWorldPos();
 
 
+	if(world.localTime < player.dashUntil) {
+		player.body->collider->setFootPosition(PxExtendedVec3(pos.x, pos.y, pos.z));
+		player.body->vel = vec3(0);
+	}
+
 	// TODO: check for movement hacking
 	if(dir.x == 0 && dir.y == 0) {
 		player.input.moveTo = pos;

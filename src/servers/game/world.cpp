@@ -749,6 +749,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 	eastl::copy(targets.begin(), targets.end(), eastl::back_inserter(rpExec.targetList));
 
 	rpExec.moveDuration = moveDuration;
+	rpExec.casterClientHd = player.clientHd;
 	rpExec.startPos = player.body->GetWorldPos();
 	rpExec.moveDir = dir;
 	rpExec.rot = { angle, 0, angle };
@@ -2948,7 +2949,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		// the client draws plain (non-fan) static boxes facing the opposite way of their rotation
 		const bool plainStaticBox = inst.speed <= 0 && remote->boundType == Remote::BoundType::E_BOUND_BOX && remote->angle <= 0;
 		const bool chained = remote->destroyCreateRemote != RemoteIdx::INVALID || !remote->onDestroy.empty() || !remote->onTime.empty() || !remote->onActivate.empty();
-		const bool flip = plainStaticBox && chained;
+		const bool flip = plainStaticBox && (chained || nodeName == 0);
 		const f32 sendYaw = atan2f(dir.y, dir.x) + (flip ? PI : 0.0f);
 		// the client adds the remote's _OffsetZ to the fire position: compensate so the remote shows at the
 		// height the server simulates (weapon fire height), not under the ground
@@ -3727,6 +3728,9 @@ void World::ExecuteSkillProgram(SkillProgram& prog)
 			} break;
 		}
 
+		if(distance != 0 && caster->parent->clientHd != ClientHandle::INVALID) {
+			caster->parent->dashUntil = TimeAdd(localTime, TimeMsToTime(MAX(moveDuration, 0.05f) * 1000.0));
+		}
 		if(distance != 0 && caster->parent->clientHd == ClientHandle::INVALID) {
 			Player& mover = *caster->parent;
 			const vec2 from = vec2(mover.body->GetWorldPos());

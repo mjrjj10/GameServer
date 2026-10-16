@@ -1790,7 +1790,7 @@ void Replication::FrameDifference()
 
 				packet.Write<f32>(0); // fSkillChargeDamageMultiplier
 
-				if(exec.moveDuration != 0) {
+				if(exec.moveDuration != 0 && clientHd != exec.casterClientHd) {
 					// graphMove
 					packet.Write<u8>(1); // bApply
 					packet.Write<float3>(v2f(exec.startPos)); // startPos

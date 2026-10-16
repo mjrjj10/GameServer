@@ -166,6 +166,7 @@ struct Replication
 		RotationHumanoid rot;
 		f32 speed;
 		f32 moveDuration;
+		ClientHandle casterClientHd = ClientHandle::INVALID;
 	};
 
 	struct Frame
