@@ -814,7 +814,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	proj.graph = graph;
 	proj.halfWidth = remote ? remote->boundSize[0] * 0.5f : 20.0f;
 	proj.hitsLeft = remote ? MAX(remote->activateCount, 1) : 1;
-	proj.forwardReach = (remote && remote->boundType == Remote::BoundType::E_BOUND_BOX) ? (f32)remote->boundSize[1] : 0.0f;
+	proj.forwardReach = (remote && remote->boundType == Remote::BoundType::E_BOUND_BOX) ? MAX(remote->offsetY + remote->boundSize[1] * 0.5f, 0.0f) : 0.0f;
 	proj.aoeRadius = bomb ? bomb->boundSize[0] * 0.5f : 0;
 
 	proj.remoteDoc = remote ? remote->ID : RemoteIdx::INVALID;
@@ -1788,6 +1788,39 @@ static f32 RemoteDamageRadius(const GameXmlContent& content, RemoteIdx idx, i32 
 	return radius;
 }
 
+static f32 RemoteReach(const GameXmlContent& content, RemoteIdx idx, i32 depth)
+{
+	const Remote* r = content.FindRemote(idx);
+	if(!r || depth > 5) return 0;
+	const f32 travel = r->maxDistance > 0 ? r->maxDistance : (r->maxSpeed > 0 ? r->lifeTime * r->maxSpeed : 0.0f);
+	const bool vsEnemy = r->damageGroup == Remote::DamageGroup::eENEMY || r->damageGroup == Remote::DamageGroup::eALL;
+	const bool offensive = vsEnemy && (r->attackMultiplier > 0 || !r->statuses.empty() || r->changeCasterAction != ActionStateID::INVALID);
+	f32 front = 0;
+	if(offensive) front = r->boundType == Remote::BoundType::E_BOUND_BOX ? MAX(r->offsetY + r->boundSize[1] * 0.5f, r->boundSize[0] * 0.5f) : r->boundSize[0] * 0.5f;
+	f32 children = 0;
+	const Remote::SpawnRules* lists[4] = { &r->onDestroy, &r->onTime, &r->onActivate, &r->onHitCharacter };
+	for(const Remote::SpawnRules* l : lists) {
+		for(const Remote::SpawnRule& rule : *l) children = MAX(children, RemoteReach(content, rule.idx, depth + 1));
+	}
+	const f32 own = MAX(front, children);
+	return own > 0 ? travel + own : 0.0f;
+}
+
+static f32 SkillReach(const GameXmlContent& content, ClassType cls, SkillID skillID)
+{
+	auto f = content.skillMap.find(skillID);
+	if(f == content.skillMap.end()) return 0;
+	const auto& action = content.GetSkillAction(cls, f->second.action);
+	f32 reach = 0;
+	foreach_const(cmd, action.commands) {
+		const bool atCaster = cmd->remote.targetPreset == ActionCommand::TargetPreset::SELF_FFF || cmd->remote.targetPreset == ActionCommand::TargetPreset::SELF_FFF_1 ||
+			cmd->remote.targetPreset == ActionCommand::TargetPreset::SELF_TFF || cmd->remote.targetPreset == ActionCommand::TargetPreset::SELF_TTF || cmd->remote.targetPreset == ActionCommand::TargetPreset::SELF_TTT;
+		if((cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) && cmd->remote.idx != RemoteIdx::INVALID && atCaster)
+			reach = MAX(reach, RemoteReach(content, cmd->remote.idx, 0));
+	}
+	return reach;
+}
+
 static f32 SkillDamageRadius(const GameXmlContent& content, ClassType cls, SkillID skillID)
 {
 	auto f = content.skillMap.find(skillID);
@@ -1952,10 +1985,7 @@ void World::UpdateShowcase()
 		const i32 dealt = pd.damageTaken - showcase.lastDummyHp;
 		const i32 hits = pd.hitsTaken - showcase.lastDummyHits;
 		const i32 statusHits = pd.statusesTaken - showcase.lastDummyStatuses;
-		bool hit = hits > 0 || statusHits > 0;
-		foreach_const(it, activeStatuses) {
-			if(it->targetIndex == showcase.prevDummy && it->casterIndex == showcase.prevCaster) hit = true;
-		}
+		const bool hit = hits > 0 || statusHits > 0;
 		const bool ok = showcase.prevExpect < 0 || (showcase.prevExpect == 1) == hit;
 		LOG("Showcase :: result hit=%d expect=%d %s damage=%d hits=%d dummyZ=%.0f groundZ=%.0f", hit ? 1 : 0, showcase.prevExpect, ok ? "OK" : "MISMATCH", dealt, hits, pd.body->GetWorldPos().z, showcase.groundZ);
 	}
@@ -2016,12 +2046,13 @@ void World::UpdateShowcase()
 		range = content.GetSkillRange(skill);
 		const f32 zone = content.GetSkillTargetRange(skill) * 0.5f;
 		const f32 effect = SkillDamageRadius(content, cls, SkillID(skill));
+		const f32 reach = SkillReach(content, cls, SkillID(skill));
 		struct T { f32 dist; f32 side; const char* name; i32 expect; };
 		eastl::fixed_vector<T,8,false> tests;
 		if(range > 0) {
 			tests.push_back({ MAX(range * 0.3f, 150.0f), 0, "near", 1 });
 			tests.push_back({ range - 40.0f, 0, "range_in", 1 });
-			tests.push_back({ range + MAX(zone, effect) + dummyRadius + 60.0f, 0, "range_out", 0 });
+			tests.push_back({ MAX(range + MAX(zone, effect), reach) + dummyRadius + 60.0f, 0, "range_out", 0 });
 		}
 		else {
 			tests.push_back({ 300.0f, 0, "near", -1 });
@@ -2054,12 +2085,13 @@ void World::UpdateShowcase()
 		if(wf && wf->maxDistance > 0 && wr && wr->behaviorType == Remote::BehaviorType::GRAPH) wrange = wf->maxDistance;
 		const Remote* bomb = wr ? content.FindRemote(wr->destroyCreateRemote) : nullptr;
 		const f32 splash = bomb ? bomb->boundSize[0] * 0.5f : 0;
+		const f32 front = (wr && wr->boundType == Remote::BoundType::E_BOUND_BOX) ? MAX(wr->offsetY + wr->boundSize[1] * 0.5f, 0.0f) : 0.0f;
 		range = wrange;
 		struct T { f32 dist; f32 side; const char* name; i32 expect; };
 		eastl::fixed_vector<T,8,false> tests;
 		if(wrange > 0) {
 			tests.push_back({ wrange - 40.0f, 0, "range_in", 1 });
-			tests.push_back({ wrange + dummyRadius + 60.0f, 0, "range_out", 0 });
+			tests.push_back({ wrange + MAX(front, splash) + dummyRadius + 60.0f, 0, "range_out", 0 });
 		}
 		else tests.push_back({ 300.0f, 0, "near", -1 });
 		if(splash > 0) {
