@@ -1429,7 +1429,11 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	const bool permanent = info && info->permanent && durationOverride <= 0;
 	if(permanent) duration = 1000000.0f;
 	const f32 sentDuration = permanent ? -1.0f : duration;
-	if(info && info->casterStatus != 0 && info->casterStatus != statusID && !caster.dead) ApplyStatus(caster, caster, info->casterStatus);
+	if(info && info->casterStatus != 0 && info->casterStatus != statusID && !caster.dead && !applyingCasterStatus) {
+		applyingCasterStatus = true;
+		ApplyStatus(caster, caster, info->casterStatus);
+		applyingCasterStatus = false;
+	}
 
 	const bool displacement = info && (info->type == "STATUS_TYPE_PUSH" || info->type == "STATUS_TYPE_FORCEBACK" ||
 		info->type == "STATUS_TYPE_KNOCKDOWN" || info->type == "STATUS_TYPE_AIRBORNE" || info->type == "STATUS_TYPE_FLY" || info->type == "STATUS_TYPE_DRAGGED");
@@ -1953,6 +1957,10 @@ void World::UpdateShowcase()
 	foreach(c, dummy.characters) { (*c)->hp = (*c)->hpMax; replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax); }
 	const f32 faceCaster = atan2f(-showcase.dir.y, -showcase.dir.x);
 	const f32 faceDummy = atan2f(showcase.dir.y, showcase.dir.x);
+	foreach(it, players) {
+		if(it->index == dummy.index || it->index == caster.index || it->clientHd != ClientHandle::INVALID) continue;
+		if(glm::length(vec2(it->body->GetWorldPos()) - vec2(it->spawnPos)) > 50.0f) TeleportPlayer(*it, it->spawnPos, 0);
+	}
 	TeleportPlayer(dummy, dummyPos, faceCaster);
 	TeleportPlayer(caster, casterPos, faceDummy);
 	foreach(it, activeStatuses) {

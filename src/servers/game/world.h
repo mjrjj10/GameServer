@@ -496,6 +496,7 @@ struct World
 	void UpdateBotSkills();
 	void UpdateSummonAi(f32 delta);
 	void UpdateShowcase();
+	bool applyingCasterStatus = false;
 	void TeleportPlayer(Player& p, const vec3& pos, f32 yaw);
 	struct Showcase
 	{
