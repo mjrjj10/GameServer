@@ -1871,17 +1871,13 @@ void World::UpdateShowcase()
 		LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
 		return;
 	}
-	if(showcase.casterSlot == showcase.dummySlot) {
-		if(showcase.dummySlot == (i32)bots.size() - 1) {
-			showcase.dummySlot = 0;
-			showcase.casterSlot = (i32)bots.size() - 1;
-		}
-		else { showcase.casterSlot++; }
-		return;
-	}
 
 	Player& caster = players[bots[showcase.casterSlot]];
-	Player& dummy = players[bots[showcase.dummySlot]];
+	u32 dummyIndex = bots[showcase.dummySlot];
+	foreach_const(b, bots) {
+		if(*b != caster.index && players[*b].team != caster.team) { dummyIndex = *b; break; }
+	}
+	Player& dummy = players[dummyIndex];
 	const vec3 casterPos = showcase.anchor;
 	vec3 dummyPos = showcase.anchor + vec3(showcase.dir * 650.0f, 0);
 
@@ -1895,12 +1891,14 @@ void World::UpdateShowcase()
 	if(showcase.pendingResult) {
 		showcase.pendingResult = false;
 		const Player& pd = players[showcase.prevDummy];
-		bool hit = pd.Main().hp < showcase.lastDummyHp || pd.dead;
+		const i32 dealt = pd.damageTaken - showcase.lastDummyHp;
+		const i32 hits = pd.hitsTaken - showcase.lastDummyHits;
+		bool hit = hits > 0;
 		foreach_const(it, activeStatuses) {
 			if(it->targetIndex == showcase.prevDummy && it->casterIndex == showcase.prevCaster) hit = true;
 		}
 		const bool ok = showcase.prevExpect < 0 || (showcase.prevExpect == 1) == hit;
-		LOG("Showcase :: result hit=%d expect=%d %s damage=%d dummyZ=%.0f groundZ=%.0f", hit ? 1 : 0, showcase.prevExpect, ok ? "OK" : "MISMATCH", showcase.lastDummyHp - pd.Main().hp, pd.body->GetWorldPos().z, showcase.groundZ);
+		LOG("Showcase :: result hit=%d expect=%d %s damage=%d hits=%d dummyZ=%.0f groundZ=%.0f", hit ? 1 : 0, showcase.prevExpect, ok ? "OK" : "MISMATCH", dealt, hits, pd.body->GetWorldPos().z, showcase.groundZ);
 	}
 
 	const ClassType cls = caster.Main().classType;
@@ -2003,7 +2001,8 @@ void World::UpdateShowcase()
 		expect = t.dist > flatLen ? -1 : t.expect;
 		TeleportPlayer(dummy, dummyPos, faceCaster);
 	}
-	showcase.lastDummyHp = dummy.Main().hp;
+	showcase.lastDummyHp = dummy.damageTaken;
+	showcase.lastDummyHits = dummy.hitsTaken;
 	showcase.pendingResult = step <= 6 && (step == 0 || skill != 0);
 	showcase.prevExpect = expect;
 	showcase.prevDummy = dummy.index;
@@ -2033,8 +2032,7 @@ void World::UpdateShowcase()
 		showcase.masterPass++;
 		if(showcase.masterPass >= 2) {
 			showcase.masterPass = 0;
-			if(showcase.casterSlot == (i32)bots.size() - 1 && showcase.dummySlot == 0) showcase.casterSlot = (i32)bots.size();
-			else showcase.casterSlot++;
+			showcase.casterSlot++;
 		}
 	}
 	showcase.next = TimeAdd(localTime, TimeMsToTime(wait * 1000.0));
@@ -3100,7 +3098,10 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	if(damage <= 0) return;
 
 	ActorMaster& chara = target.Main();
-	chara.hp = MAX(chara.hp - damage, HasStatusType(target, "STATUS_TYPE_NEARLY_IMMORTAL") ? 1 : 0);
+	target.damageTaken += damage;
+	target.hitsTaken++;
+	const bool showcaseDummy = Config().DevShowcase && target.clientHd == ClientHandle::INVALID;
+	chara.hp = MAX(chara.hp - damage, (showcaseDummy || HasStatusType(target, "STATUS_TYPE_NEARLY_IMMORTAL")) ? 1 : 0);
 
 	// rage: STAT_TYPE_RAGE_ATTACK_RECOVERY_VALUE per landed hit
 	if(attacker.res[1] >= 0) {

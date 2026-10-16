@@ -111,6 +111,8 @@ struct World
 		u8 chargeLevel = 0;
 		eastl::array<i32,2> shotCount = { 0, 0 }; // weapon shots per master (_FIRINGCOUNT)
 		bool passivesApplied = false;
+		i32 damageTaken = 0;
+		i32 hitsTaken = 0;
 		i32 pendingChildSkill = 0;
 		Time pendingChildSkillUntil = Time::ZERO;
 		eastl::array<Time,5> botSkillReady = { Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO };
@@ -504,6 +506,7 @@ struct World
 		i32 rangeIdx = 0;
 		i32 testCount = 1;
 		i32 lastDummyHp = 0;
+		i32 lastDummyHits = 0;
 		bool pendingResult = false;
 		i32 prevExpect = -1;
 		u32 prevDummy = 0;
