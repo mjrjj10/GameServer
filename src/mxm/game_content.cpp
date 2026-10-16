@@ -2049,7 +2049,7 @@ bool GameXmlContent::LoadStatusData()
 		for(XMLElement* pChild = pInfo->FirstChildElement(); pChild; pChild = pChild->NextSiblingElement()) {
 			for(const XMLAttribute* a = pChild->FirstAttribute(); a; a = a->Next()) {
 				f64 v = 0;
-				if(a->QueryDoubleValue(&v) != XML_SUCCESS || st.params.full()) continue;
+				if(a->QueryDoubleValue(&v) != XML_SUCCESS || st.params.full() || EA::StdC::Strlen(a->Name()) >= 31) continue;
 				StatusInfo::NamedValue nv;
 				nv.name = a->Name();
 				nv.value = v;

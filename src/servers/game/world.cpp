@@ -66,6 +66,41 @@ static const f32 WEAPON_TARGET_RADIUS = 110.0f;
 static const f32 WEAPON_HIT_TOLERANCE = 50.0f;
 static const f32 PROJECTILE_TARGET_RADIUS = 70.0f;
 static const f32 PROJECTILE_HIT_TOLERANCE = 20.0f;
+static const i32 CLASS_NUM_LILU = 22;
+static const i32 CLASS_NUM_ANDROB = 30;
+static const i32 CLASS_NUM_ATTACKER = 31;
+static const i32 CLASS_NUM_BOXER = 32;
+static const i32 CLASS_NUM_SHUGOTRADER = 33;
+static const i32 CLASS_NUM_STATESMAN = 36;
+static const f32 TOOLTIP_DEFENDER_CC_IMMUNE_SEC = 1.0f;
+static const f32 TOOLTIP_DEATHKNIGHT_REVIVE_HP = 0.30f;
+static const i32 TOOLTIP_LILU_EVERY_N = 4;
+static const i32 TOOLTIP_ANDROB_HEAL = 250;
+static const f32 TOOLTIP_ANDROB_RANGE = 800.0f;
+static const f32 TOOLTIP_ATTACKER_WEAPON_MUL = 1.10f;
+static const f32 TOOLTIP_BOXER_MARK_SEC = 1.5f;
+static const f32 TOOLTIP_BOXER_WEAPON_MUL = 1.15f;
+static const i32 TOOLTIP_SHUGO_EVERY_N = 6;
+static const f32 TOOLTIP_SHUGO_WEAPON_MUL = 1.80f;
+static const f32 TOOLTIP_STATESMAN_CC_MUL = 0.75f;
+static const i32 CLASS_NUM_ELECTRO = 4;
+static const i32 CLASS_NUM_PHOTOG = 15;
+static const i32 CLASS_NUM_EFREET = 23;
+static const i32 CLASS_NUM_SHADOWHUNTER = 24;
+static const i32 CLASS_NUM_RYTLOCK = 25;
+static const i32 CLASS_NUM_CATTHECAT = 26;
+static const i32 CLASS_NUM_ANDROA = 29;
+static const i32 STATUS_ELECTRO_PASSIVE_BUFF_MPREGEN = 1230040011;
+static const i32 STATUS_PHOTOG_PASSIVE_MOVESPEED = 1230150010;
+static const i32 STATUS_EFREET_PASSIVE_DOT_FIRE = 1230230001;
+static const i32 STATUS_SHADOWHUNTER_HIDE = 1230240000;
+static const i32 STATUS_SHADOWHUNTER_COOLDOWN = 1230240001;
+static const i32 STATUS_RYTLOCK_ATTACK_BLEEDING = 1230250002;
+static const i32 STATUS_THECAT_PASSIVE_FIREDELAY1 = 1230260000;
+static const i32 STATUS_ANDROIDA_PASSIVE_ATTACKSPEED = 1230290001;
+static const i32 STATUS_SHUGOTRADER_PASSIVE_REMOTE = 1230330000;
+static const i32 TOOLTIP_RYTLOCK_CHAIN = 3;
+static const f32 TOOLTIP_RYTLOCK_THIRD_MUL = 1.20f;
 static const f32 WEAPON_AOE_RADIUS = 250.0f;
 static const f32 WEAPON_SHOT_RELIABLE_DISTANCE = 100.0f;
 static const f32 WEAPON_SHOT_MAX_DISTANCE = 2500.0f;
@@ -1300,6 +1335,7 @@ void World::HealPlayer(Player& healer, Player& target, i32 amount)
 	ActorMaster& chara = target.Main();
 	chara.hp = MIN(chara.hp + amount, chara.hpMax);
 	LOG("Heal :: %ls -> %ls amount=%d hp=%d/%d", healer.name.data(), target.name.data(), amount, chara.hp, chara.hpMax);
+	if(healer.index != target.index && (i32)healer.Main().classType == CLASS_NUM_ELECTRO && FindPassiveOfType(healer, "STATUS_TYPE_ELECTRO")) ApplyStatus(healer, healer, STATUS_ELECTRO_PASSIVE_BUFF_MPREGEN);
 	replication->SendHpToAll(chara.UID, chara.hp, chara.hpMax);
 }
 
@@ -1388,23 +1424,6 @@ static bool PassiveOfActiveMaster(const World::Player& player, i32 statusID)
 	return list && eastl::find(list->begin(), list->end(), statusID) != list->end();
 }
 
-static const i32 CLASS_NUM_LILU = 22;
-static const i32 CLASS_NUM_ANDROB = 30;
-static const i32 CLASS_NUM_ATTACKER = 31;
-static const i32 CLASS_NUM_BOXER = 32;
-static const i32 CLASS_NUM_SHUGOTRADER = 33;
-static const i32 CLASS_NUM_STATESMAN = 36;
-static const f32 TOOLTIP_DEFENDER_CC_IMMUNE_SEC = 1.0f;
-static const f32 TOOLTIP_DEATHKNIGHT_REVIVE_HP = 0.30f;
-static const i32 TOOLTIP_LILU_EVERY_N = 4;
-static const i32 TOOLTIP_ANDROB_HEAL = 250;
-static const f32 TOOLTIP_ANDROB_RANGE = 800.0f;
-static const f32 TOOLTIP_ATTACKER_WEAPON_MUL = 1.10f;
-static const f32 TOOLTIP_BOXER_MARK_SEC = 1.5f;
-static const f32 TOOLTIP_BOXER_WEAPON_MUL = 1.15f;
-static const i32 TOOLTIP_SHUGO_EVERY_N = 6;
-static const f32 TOOLTIP_SHUGO_WEAPON_MUL = 1.80f;
-static const f32 TOOLTIP_STATESMAN_CC_MUL = 0.75f;
 
 const World::ActiveStatus* World::FindPassiveOfType(const Player& p, const char* type) const
 {
@@ -1536,6 +1555,8 @@ void World::PassiveOnSkillCast(Player& player, i32 skillID)
 			player.ccImmuneUntil = TimeAdd(localTime, TimeMsToTime(TOOLTIP_DEFENDER_CC_IMMUNE_SEC * 1000.0));
 		}
 	}
+	if((i32)player.Main().classType == CLASS_NUM_CATTHECAT) ApplyStatus(player, player, STATUS_THECAT_PASSIVE_FIREDELAY1);
+	if((i32)player.Main().classType == CLASS_NUM_ANDROA) ApplyStatus(player, player, STATUS_ANDROIDA_PASSIVE_ATTACKSPEED);
 	if((i32)player.Main().classType == CLASS_NUM_ANDROB) {
 		Player* lowest = nullptr;
 		foreach(it, players) {
@@ -1595,6 +1616,10 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 		ApplyStatus(attacker, target, *id);
 	}
 
+	if((i32)attacker.Main().classType == CLASS_NUM_RYTLOCK && !target.dead) {
+		attacker.weaponHitCounter = attacker.weaponHitCounter % TOOLTIP_RYTLOCK_CHAIN + 1;
+		if(attacker.weaponHitCounter < TOOLTIP_RYTLOCK_CHAIN) ApplyStatus(attacker, target, STATUS_RYTLOCK_ATTACK_BLEEDING);
+	}
 	if((i32)attacker.Main().classType == CLASS_NUM_LILU && !target.dead) {
 		attacker.weaponHitCounter++;
 		if(attacker.weaponHitCounter >= TOOLTIP_LILU_EVERY_N) {
@@ -1607,9 +1632,16 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 
 void World::PassiveOnSkillHit(Player& attacker, Player& target)
 {
-	if((i32)attacker.Main().classType == CLASS_NUM_BOXER) {
+	const i32 skillCls = (i32)attacker.Main().classType;
+	if(skillCls == CLASS_NUM_BOXER) {
 		target.skillMarkBy = attacker.index;
 		target.skillMarkUntil = TimeAdd(localTime, TimeMsToTime(TOOLTIP_BOXER_MARK_SEC * 1000.0));
+	}
+	if(skillCls == CLASS_NUM_PHOTOG) ApplyStatus(attacker, attacker, STATUS_PHOTOG_PASSIVE_MOVESPEED);
+	if(skillCls == CLASS_NUM_EFREET) ApplyStatus(attacker, target, STATUS_EFREET_PASSIVE_DOT_FIRE);
+	if(skillCls == CLASS_NUM_SHADOWHUNTER && !FindActiveStatus(attacker.index, STATUS_SHADOWHUNTER_COOLDOWN)) {
+		ApplyStatus(attacker, attacker, STATUS_SHADOWHUNTER_HIDE);
+		ApplyStatus(attacker, attacker, STATUS_SHADOWHUNTER_COOLDOWN);
 	}
 	foreach_const(it, activeStatuses) {
 		if(it->targetIndex != attacker.index || !it->info) continue;
@@ -1647,8 +1679,10 @@ f32 World::PassiveWeaponDamageMul(Player& attacker, Player& target)
 		if(attacker.weaponHitCounter >= TOOLTIP_SHUGO_EVERY_N) {
 			attacker.weaponHitCounter = 0;
 			mul *= TOOLTIP_SHUGO_WEAPON_MUL;
+			ApplyStatus(attacker, target, STATUS_SHUGOTRADER_PASSIVE_REMOTE);
 		}
 	}
+	if(cls == CLASS_NUM_RYTLOCK && attacker.weaponHitCounter + 1 == TOOLTIP_RYTLOCK_CHAIN) mul *= TOOLTIP_RYTLOCK_THIRD_MUL;
 	return mul;
 }
 
