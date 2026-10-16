@@ -361,6 +361,23 @@ void GameXmlContent::LoadAllSkills()
 			pNodeCommonSkill->QueryIntAttribute("_BaseComboSkill", &baseCombo);
 			if(baseCombo != 0 && type == SkillType::COMBO && firstComboSkill.find(baseCombo) == firstComboSkill.end()) firstComboSkill[baseCombo] = skillID;
 		}
+		{
+			SkillInput in;
+			const char* smart = nullptr;
+			const char* ux = nullptr;
+			pNodeCommonSkill->QueryStringAttribute("_SmartCast", &smart);
+			if(XMLElement* pTarget = pNodeCommonSkill->FirstChildElement("_Target")) {
+				pTarget->QueryStringAttribute("_UXType", &ux);
+				pTarget->QueryFloatAttribute("_MinDistance", &in.minDistance);
+				pTarget->QueryFloatAttribute("_MaxDistance", &in.maxDistance);
+			}
+			const bool self = !ux || EA::StdC::Strcmp(ux, "SKILL_CAST_MY_POSITION") == 0;
+			const bool smartCast = smart && EA::StdC::Strcmp(smart, "SKILL_SMARTCAST_TRUE") == 0;
+			in.needsClick = !self && !smartCast;
+			pNodeCommonSkill->QueryIntAttribute("_CoolTimeID", &in.coolTimeID);
+			pNodeCommonSkill->QueryFloatAttribute("_CoolTime", &in.coolTime);
+			skillInput[skillID] = in;
+		}
 		if(XMLElement* pCast = pNodeCommonSkill->FirstChildElement("_Cast")) {
 			const char* castType = nullptr;
 			const char* castAction = nullptr;

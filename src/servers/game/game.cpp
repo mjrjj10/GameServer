@@ -730,6 +730,15 @@ void Game::OnPlayerCastSkill(ClientHandle clientHd, ActorUID actorUID, const Pla
 	LOG("OnPlayerCastSkill :: (%f, %f, %f)", cast.pos.x, cast.pos.y, cast.pos.z);
 }
 
+void Game::OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID)
+{
+	Player& p = *playerMap.at(clientHd);
+	World::Player& player = world.GetPlayer(p.playerIndex);
+	LOG("Cast :: %ls execute request skill=%d (casting %d)", player.name.data(), (i32)skillID, (i32)player.casting.skillID);
+	replication.SendExecuteSkillAck(clientHd, player.Main().UID, skillID);
+	if(player.casting.skillID == skillID) world.ReleaseCast(player);
+}
+
 void Game::OnPlayerGameIsReady(ClientHandle clientHd)
 {
 	const i32 READY_WAIT = 3000;

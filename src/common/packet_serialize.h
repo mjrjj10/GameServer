@@ -2814,6 +2814,38 @@ inline const char* PacketSerialize<Sv::SN_UpdateStat>(const void* packetData, co
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_NotifyCooltime>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_NotifyCooltime(%d, %d) :: {", Sv::SN_NotifyCooltime::NET_ID, packetSize);
+	SER("	characterID=0x%08x", buff.Read<u32>());
+	const u16 count = buff.Read<u16>();
+	for(int i = 0; i < count; i++) {
+		const u32 type = buff.Read<u32>();
+		const u32 id = buff.Read<u32>();
+		const u32 left = buff.Read<u32>();
+		const u32 total = buff.Read<u32>();
+		SER("	type=%u id=%u left=%u total=%u", type, id, left, total);
+	}
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SA_ExecuteSkill>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SA_ExecuteSkill(%d, %d) :: {", Sv::SA_ExecuteSkill::NET_ID, packetSize);
+	SER("	entity=0x%08x", buff.Read<u32>());
+	SER("	ret=%u", buff.Read<u32>());
+	SER("	skillIndex=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_SyncStanceType>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

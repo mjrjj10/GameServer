@@ -1314,6 +1314,29 @@ void Replication::SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 ma
 	}
 }
 
+void Replication::SendCooltimeReset(ClientHandle clientHd, ActorUID characterUID, Slice<const i32> coolTimeIDs)
+{
+	PacketWriter<Sv::SN_NotifyCooltime,256> packet;
+	packet.Write<u32>((u32)GetLocalActorID(clientHd, characterUID));
+	packet.Write<u16>((u16)coolTimeIDs.size());
+	foreach_const(id, coolTimeIDs) {
+		packet.Write<u32>(1);
+		packet.Write<u32>((u32)*id);
+		packet.Write<u32>(0);
+		packet.Write<u32>(0);
+	}
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendExecuteSkillAck(ClientHandle clientHd, ActorUID casterUID, SkillID skillID)
+{
+	Sv::SA_ExecuteSkill ack;
+	ack.entity = (u32)GetLocalActorID(clientHd, casterUID);
+	ack.ret = 0;
+	ack.skillIndex = (u32)skillID;
+	SendPacket(clientHd, ack);
+}
+
 void Replication::SendStanceToAll(ActorUID actorUID, i32 stance, f32 durationSec)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
@@ -1751,7 +1774,7 @@ void Replication::FrameDifference()
 				packet.Write<i32>(0); // ret
 				packet.Write<SkillID>(cast.skillID);
 				packet.Write<u8>(0); // costLevel
-				packet.Write<ActionStateID>(ActionStateID::INVALID); // TODO: is it always invalid?
+				packet.Write<ActionStateID>(cast.sendAction ? cast.actionID : ActionStateID::INVALID);
 				packet.Write<float3>(v2f(cast.castPos));
 
 				packet.Write<u16>(cast.targetList.size()); // targetList_count
@@ -1807,7 +1830,7 @@ void Replication::FrameDifference()
 
 				packet.Write<f32>(0); // fSkillChargeDamageMultiplier
 
-				if(exec.moveDuration != 0 && clientHd != exec.casterClientHd) {
+				if(exec.moveDuration != 0) {
 					// graphMove
 					packet.Write<u8>(1); // bApply
 					packet.Write<float3>(v2f(exec.startPos)); // startPos

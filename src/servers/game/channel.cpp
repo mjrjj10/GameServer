@@ -72,6 +72,15 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 			game->OnPlayerReturnToChannel(clientHd);
 		} break;
 
+		case 60039:
+		case 60041: {
+			eastl::fixed_string<char,512,true> hex;
+			for(int i = 0; i < packetSize && i < 120; i++) hex.append_sprintf("%02x ", packetData[i]);
+			NT_LOG("[client%x] Client :: %s size=%d :: %s", clientHd, header.netID == 60041 ? "CQ_ExecuteSkill" : "CQ_PreCastSkill", packetSize, hex.data());
+			LOG("Cast :: client%x %s size=%d", clientHd, header.netID == 60041 ? "CQ_ExecuteSkill" : "CQ_PreCastSkill", packetSize);
+			if(header.netID == 60041 && packetSize >= 8) game->OnPlayerExecuteSkill(clientHd, SkillID(*(const u32*)(packetData + 4)));
+		} break;
+
 		case 60196: {
 			NT_LOG("[client%x] Client :: RemoteCreateDoc (60196) size=%d", clientHd, packetSize);
 			replication->RelayRemoteCreateDoc(clientHd, packetData, packetSize);

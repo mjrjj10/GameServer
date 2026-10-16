@@ -29,6 +29,8 @@ bool CConfigHub::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "TraceNetwork=%d", &TraceNetwork) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcase=%d", &DevShowcase) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcaseStart=%d", &DevShowcaseStart) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevMirror=%d", &DevMirror) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevMirrorPass=%d", &DevMirrorPass) == 1) return true;
 	if(EA::StdC::Sscanf(line, "LobbyMap=%d", &LobbyMap) == 1) return true;
 	if(ParseIdList(line, "RegionBanMaster=", regionBanMaster)) return true;
 	if(ParseIdList(line, "DevShowcaseList=", devShowcaseList)) return true;

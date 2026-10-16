@@ -143,6 +143,7 @@ struct Replication
 		ActorUID casterUID;
 		SkillID skillID;
 		ActionStateID actionID;
+		bool sendAction = false;
 		vec3 castPos;
 		vec3 casterPos;
 		vec2 casterMoveDir;
@@ -313,6 +314,8 @@ struct Replication
 	void SendGaugeToAll(UserID userID, u8 updateType, bool overheated, f32 overheatTime, u16 gauge, u16 maxGauge);
 	void SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 max);
 	void SendStanceToAll(ActorUID actorUID, i32 stance, f32 durationSec);
+	void SendExecuteSkillAck(ClientHandle clientHd, ActorUID casterUID, SkillID skillID);
+	void SendCooltimeReset(ClientHandle clientHd, ActorUID characterUID, Slice<const i32> coolTimeIDs);
 	void SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap = 1);
 	void SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID);
 	void SendRemoteDamageToAll(u32 remoteID, RemoteIdx remoteDoc, ActorUID attackerUID, ActorUID targetUID, const vec3& hitPos, const vec2& hitDir, i32 damage, i32 hp, i32 hpMax, u32 damageType = 0);

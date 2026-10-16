@@ -315,7 +315,30 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 			foreach_const(it, allowedMastersSet) all.push_back(*it);
 			eastl::sort(all.begin(), all.end());
 		}
+		i32 humanTeam = -1;
+		foreach_const(u, userList) if(!u->isBot) humanTeam = (i32)u->team;
+		bool mirrorBotDone = false;
 		foreach(u, userList) {
+			const bool mirrorBot = u->isBot && (i32)u->team == humanTeam && !mirrorBotDone;
+			const bool mirror = Config().DevMirror && all.size() >= 2 && (!u->isBot || mirrorBot);
+			if(mirror && mirrorBot) mirrorBotDone = true;
+			if(mirror && u->Main().classType == ClassType::NONE) {
+				TryPickMaster(u, all[0]);
+				TryPickMaster(u, all[1]);
+				const GameXmlContent& content = GetGameXmlContent();
+				for(int mi = 0; mi < 2; mi++) {
+					if(u->masters[mi].classType == ClassType::NONE) continue;
+					const auto& ids = content.masterClassTypeMap.at(u->masters[mi].classType)->skillIDs;
+					const i32 first = Config().DevMirrorPass ? 2 : 0;
+					if((i32)ids.size() > first + 1) {
+						u->masters[mi].skills[0] = ids[first];
+						u->masters[mi].skills[1] = ids[first + 1];
+					}
+				}
+				u->replicate.masterPick = true;
+				LOG("[Room] mirror %s masters %d %d skills %d %d", u->isBot ? "bot" : "human", (i32)u->Main().classType, (i32)u->Sub().classType, (i32)u->Main().skills[0], (i32)u->Main().skills[1]);
+				continue;
+			}
 			if(!u->isBot && u->Main().classType == ClassType::NONE) {
 				TryPickMaster(u, ClassType::STRIKER);
 				TryPickMaster(u, ClassType::LAUNCHER);

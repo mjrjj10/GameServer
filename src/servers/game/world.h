@@ -567,6 +567,8 @@ struct World
 		f32 bestZ = 0;
 		i32 comboSkill = 0;
 		bool settled = false;
+		bool humanTurn = false;
+		bool castSeen = false;
 		i32 mastersDone = 0;
 		vec2 casterStart = vec2(0);
 		vec2 dummyStart = vec2(0);
@@ -617,6 +619,7 @@ private:
 public:
 	void ApplyPassives(Player& player);
 	void ApplyAllPassives();
+	void ReleaseCast(Player& player);
 private:
 	void PassiveOnSkillCast(Player& player, i32 skillID);
 	void PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj);
@@ -630,7 +633,6 @@ private:
 	void SetStance(ActorMaster& master, i8 stance, f32 duration, i32 weaponFireCount, bool cancelByDefeat);
 	void StanceWeaponUse(Player& player);
 	void UpdateStances();
-	void ReleaseCast(Player& player);
 	void CancelCast(Player& player, const char* reason);
 	void UpdateCasts();
 	bool HasStatusType(const Player& p, const char* type) const;

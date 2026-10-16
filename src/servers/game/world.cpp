@@ -185,7 +185,7 @@ void World::Update(Time localTime_)
 
 		p.movement.rot = p.input.rot;
 
-		if(!p.dead && p.clientHd == ClientHandle::INVALID && p.dashDone < p.dashDist) {
+		if(!p.dead && p.dashDone < p.dashDist) {
 			const f32 total = (f32)TimeDiffSec(TimeDiff(p.dashStartAt, p.dashUntil));
 			const f32 frac = total > 0 ? MIN((f32)TimeDiffSec(TimeDiff(p.dashStartAt, localTime)) / total, 1.0f) : 1.0f;
 			const f32 target = p.dashDist * frac * frac;
@@ -672,8 +672,21 @@ static f32 SkillMoveDuration(const GameXmlContent& content, ClassType cls, const
 	return action.seqLength;
 }
 
-void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 clientTime, ActionStateID forcedAction)
+void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPosIn, Slice<const ActorUID> targets, f32 clientTime, ActionStateID forcedAction)
 {
+	vec3 castPos = castPosIn;
+	if(player.clientHd == ClientHandle::INVALID && forcedAction == ActionStateID::INVALID && glm::length(vec2(castPos)) > 1.0f) {
+		const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput((i32)skillID);
+		const vec2 from = vec2(player.body->GetWorldPos());
+		const vec2 rel = vec2(castPos) - from;
+		const f32 len = glm::length(rel);
+		if(in && len > 1.0f) {
+			f32 clamped = len;
+			if(in->minDistance > 0) clamped = MAX(clamped, in->minDistance);
+			if(in->maxDistance > 0) clamped = MIN(clamped, in->maxDistance);
+			if(clamped != len) castPos = vec3(from + rel / len * clamped, castPos.z);
+		}
+	}
 	if(frozen) return;
 	// TODO: check if can cast
 
@@ -686,6 +699,10 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 	}
 	const auto& skill = skillFound->second;
 	const bool followUp = forcedAction != ActionStateID::INVALID;
+	if(Config().DevMirror && !followUp && player.clientHd != ClientHandle::INVALID && player.index == showcase.prevCaster && !showcase.castSeen) {
+		showcase.castSeen = true;
+		showcase.castAt = localTime;
+	}
 	if(!followUp && player.casting.skillID == skillID) {
 		ReleaseCast(player);
 		return;
@@ -716,6 +733,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 	rpCast.skillID = skillID;
 	rpCast.castPos = castPos;
 	rpCast.actionID = actionState;
+	rpCast.sendAction = cast != nullptr;
 
 	rpCast.casterPos = player.body->GetWorldPos();
 	rpCast.casterMoveDir = dir;
@@ -798,7 +816,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 	if(cast) {
 		const bool bot = player.clientHd == ClientHandle::INVALID;
 		f32 wait = cast->time;
-		if(bot && cast->type != GameXmlContent::SkillCast::DELAY && action.seqLength > 0) wait = MIN(wait, action.seqLength);
+		if(bot && cast->type != GameXmlContent::SkillCast::DELAY) wait = MIN(wait, action.seqLength);
 		player.casting.skillID = skillID;
 		player.casting.castPos = castPos;
 		player.casting.target = targets.size() > 0 ? targets[0] : ActorUID::INVALID;
@@ -834,6 +852,14 @@ void World::PlayerWeaponFire(Player& player)
 	const vec2 dir = vec2(cosf(player.weaponAimYaw), sinf(player.weaponAimYaw));
 	const vec3 origin = player.body->GetWorldPos();
 
+	if(Config().DevMirror && player.clientHd != ClientHandle::INVALID && player.index == showcase.prevCaster && !showcase.castSeen) {
+		showcase.castSeen = true;
+		showcase.castAt = localTime;
+	}
+	if(player.clientHd != ClientHandle::INVALID && player.casting.skillID != SkillID::INVALID && player.casting.type == GameXmlContent::SkillCast::LIMIT) {
+		ReleaseCast(player);
+		return;
+	}
 	if(WeaponIsMelee(player)) {
 		StanceWeaponUse(player);
 		foreach(it, players) {
@@ -857,6 +883,14 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	if(player.dead) return;
 	const ClassType classType = player.Main().classType;
 	if(WeaponIsMelee(player)) return;
+	if(player.clientHd != ClientHandle::INVALID && player.casting.skillID != SkillID::INVALID && player.casting.type == GameXmlContent::SkillCast::LIMIT) {
+		ReleaseCast(player);
+		return;
+	}
+	if(Config().DevMirror && player.clientHd != ClientHandle::INVALID && player.index == showcase.prevCaster && !showcase.castSeen) {
+		showcase.castSeen = true;
+		showcase.castAt = localTime;
+	}
 	StanceWeaponUse(player);
 	if(projectileList.full()) return;
 
@@ -2365,10 +2399,18 @@ void World::UpdateShowcase()
 		return;
 	}
 
-	Player& caster = players[bots[showcase.casterSlot]];
+	const bool mirror = Config().DevMirror != 0;
+	u32 botCasterIndex = bots[showcase.casterSlot];
+	if(mirror) {
+		foreach_const(b, bots) {
+			if(players[*b].team == human->team) { botCasterIndex = *b; break; }
+		}
+	}
+	Player& botCaster = players[botCasterIndex];
+	Player& caster = mirror && showcase.humanTurn ? *human : botCaster;
 	u32 dummyIndex = bots[showcase.dummySlot];
 	foreach_const(b, bots) {
-		if(*b != caster.index && players[*b].team != caster.team) { dummyIndex = *b; break; }
+		if(*b != botCaster.index && players[*b].team != botCaster.team) { dummyIndex = *b; break; }
 	}
 	Player& dummy = players[dummyIndex];
 	const vec3 casterPos = showcase.anchor;
@@ -2422,6 +2464,10 @@ void World::UpdateShowcase()
 	}
 	TeleportPlayer(dummy, dummyPos, faceCaster);
 	TeleportPlayer(caster, casterPos, faceDummy);
+	if(&caster == human) {
+		replication->SendReviveToAll(human->userID, human->Main().UID, human->Sub().UID, casterPos);
+		foreach(c, human->characters) { (*c)->hp = (*c)->hpMax; replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax); }
+	}
 	foreach(it, activeStatuses) {
 		if(it->targetIndex == dummy.index || it->targetIndex == caster.index) {
 			if(!it->info || !it->info->permanent) it->until = localTime;
@@ -2530,7 +2576,8 @@ void World::UpdateShowcase()
 		expect = t.dist > flatLen ? -1 : t.expect;
 		TeleportPlayer(dummy, dummyPos, faceCaster);
 	}
-	{
+	if(&caster == human) human->untargetable = false;
+	else {
 		human->untargetable = true;
 		const vec3 viewPos = vec3((vec2(casterPos) + vec2(dummyPos)) * 0.5f + Perp(showcase.dir) * 400.0f, showcase.anchor.z);
 		if(glm::length(vec2(viewPos) - vec2(human->body->GetWorldPos())) > 50.0f) {
@@ -2552,6 +2599,7 @@ void World::UpdateShowcase()
 	showcase.casterStart = vec2(caster.body->GetWorldPos());
 	showcase.dummyStart = vec2(dummy.body->GetWorldPos());
 	showcase.castAt = localTime;
+	showcase.castSeen = false;
 	showcase.firstHitMs = -1;
 	showcase.firstHitDamage = 0;
 	showcase.statusesSeen.clear();
@@ -2563,7 +2611,33 @@ void World::UpdateShowcase()
 	showcase.prevCaster = caster.index;
 	LOG("Showcase :: wall=%lld master=%d slot=%s skill=%d caster=%ls range=%.0f dist=%.0f test=%s expect=%d", ShowcaseWallMs(), (i32)cls, slotNames[step], skill, caster.name.data(), range, glm::length(vec2(dummyPos) - vec2(casterPos)), testName, expect);
 	const ActorUID targetUID = dummy.Main().UID;
-	if(step == 0) {
+	const char* mirrorKey = nullptr;
+	if(mirror) {
+		const i32 base = (i32)human->mainCharaID * 2;
+		if(step == 0) mirrorKey = "lmb";
+		else if(step == 5 && skill != 0) mirrorKey = "r";
+		else if(step >= 1 && step <= 4 && skill != 0 && (i32)human->skills[base] == skill) mirrorKey = "q";
+		else if(step >= 1 && step <= 4 && skill != 0 && (i32)human->skills[base + 1] == skill) mirrorKey = "e";
+		else if(step == 6 && skill != 0) mirrorKey = "rmb";
+		else if(step == 7) mirrorKey = "wheel";
+	}
+	if(&caster == human) {
+		const ClassType hc = human->Main().classType;
+		human->mana = MasterStat(hc, STAT_MANA);
+		human->stamina = MasterStat(hc, STAT_STAMINA);
+		human->ultGauge = MasterStat(hc, STAT_ULTIMATE);
+		eastl::fixed_vector<i32,8,false> cools;
+		foreach_const(sid, content.GetMaster(hc).skillIDs) {
+			const GameXmlContent::SkillInput* in = content.FindSkillInput((i32)*sid);
+			if(in && in->coolTimeID != 0 && !cools.full()) cools.push_back(in->coolTimeID);
+		}
+		replication->SendCooltimeReset(human->clientHd, human->Main().UID, Slice<const i32>(cools.data(), cools.size()));
+		const GameXmlContent::SkillInput* in = skill != 0 ? content.FindSkillInput(skill) : nullptr;
+		const i32 combo = skill != 0 ? content.GetFirstComboSkill(skill) : 0;
+		LOG("Mirror :: prompt wall=%lld key=%s click=%d combo=%d skill=%d test=%s dist=%.0f aim=(%.0f, %.0f)", ShowcaseWallMs(), mirrorKey ? mirrorKey : "none",
+			in && in->needsClick ? 1 : 0, combo != 0 ? 1 : 0, skill, testName, glm::length(vec2(dummyPos) - vec2(casterPos)), castPos.x - casterPos.x, castPos.y - casterPos.y);
+	}
+	else if(step == 0) {
 		const vec2 rel = vec2(castPos) - vec2(casterPos);
 		const f32 len = glm::length(rel);
 		const vec2 dir = len > 1.0f ? rel / len : vec2(1, 0);
@@ -2595,9 +2669,15 @@ void World::UpdateShowcase()
 		caster.input.tag = true;
 	}
 
-	if((step == 0 || (skill != 0 && step <= 6)) && showcase.rangeIdx < showcase.testCount - 1) showcase.rangeIdx++;
-	else { showcase.rangeIdx = 0; showcase.step++; }
+	const bool humanNext = mirror && !showcase.humanTurn && mirrorKey != nullptr;
+	if(humanNext) showcase.humanTurn = true;
+	else {
+		showcase.humanTurn = false;
+		if((step == 0 || (skill != 0 && step <= 6)) && showcase.rangeIdx < showcase.testCount - 1) showcase.rangeIdx++;
+		else { showcase.rangeIdx = 0; showcase.step++; }
+	}
 	f32 wait = step == 7 ? 2.0f : 3.5f;
+	if(mirror && step != 7) wait = 5.0f;
 	if(step >= 1 && step <= 6 && skill == 0) wait = 0.2f;
 	if(showcase.step > 7) {
 		showcase.step = 0;
@@ -3865,10 +3945,7 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 		} break;
 	}
 
-	if(distance != 0 && caster->parent->clientHd != ClientHandle::INVALID) {
-		caster->parent->dashUntil = TimeAdd(localTime, TimeMsToTime(MAX(moveDuration, 0.05f) * 1000.0));
-	}
-	if(distance != 0 && caster->parent->clientHd == ClientHandle::INVALID) {
+	if(distance != 0) {
 		Player& mover = *caster->parent;
 		const vec2 from = vec2(mover.body->GetWorldPos());
 		vec2 moveDir = distance < 0 ? -dir : dir;
