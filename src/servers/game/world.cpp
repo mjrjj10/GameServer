@@ -1827,7 +1827,7 @@ void World::UpdateShowcase()
 		for(int k = 0; k < probes; k++) {
 			const vec3 lp = players[bots[k]].body->GetWorldPos();
 			dev = MAX(dev, fabsf(lp.z - showcase.groundZ));
-			if(lp.z < showcase.groundZ - 50.0f && !showcase.candidates.full()) showcase.candidates.push_back(vec2(lp));
+			if(lp.z < showcase.groundZ - 50.0f && lp.z > showcase.groundZ - 400.0f && !showcase.candidates.full()) showcase.candidates.push_back(vec2(lp));
 		}
 		LOG("Showcase :: probe from (%.0f, %.0f) z=%.0f dir=(%.0f, %.0f) max deviation=%.0f", c.x, c.y, showcase.groundZ, probeDirs[showcase.probeDir].x, probeDirs[showcase.probeDir].y, dev);
 		if(dev > 15.0f) {
