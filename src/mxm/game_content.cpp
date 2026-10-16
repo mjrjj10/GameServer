@@ -1308,9 +1308,26 @@ bool GameXmlContent::LoadAnimationData()
 			}
 		}
 
+		{
+			i32 animIndex = 0, animId = 0, animLoop = 1;
+			pActionBase->QueryAttribute("AnimationIndex", &animIndex);
+			pActionBase->QueryAttribute("AnimationId", &animId);
+			pActionBase->QueryAttribute("AnimationLoop", &animLoop);
+			if(animIndex >= 0 && animId > 0) {
+				Action::AnimStep* known = nullptr;
+				for(auto& a : curAction->anims) if(a.index == animIndex) known = &a;
+				if(!known && !curAction->anims.full()) {
+					curAction->anims.push_back();
+					known = &curAction->anims.back();
+					known->index = animIndex;
+					known->animationId = animId;
+				}
+				if(known && animLoop > known->loop) known->loop = animLoop;
+			}
+		}
+
 		const char* CommandType = nullptr;
 		if(pActionBase->QueryStringAttribute("CommandType", &CommandType) != XMLError::XML_SUCCESS) {
-			// FIXME: handle this case, it has AnimationLoop?
 			continue;
 		}
 
@@ -1586,6 +1603,7 @@ bool GameXmlContent::LoadRemoteData()
 					if(st.statusID != 0 && !remote.friendlyStatuses.full()) remote.friendlyStatuses.push_back(st);
 				}
 				remote.attachFireObject = XmlAttrTrue(pComp, "_AttachFireObject");
+				remote.attachTargetObject = XmlAttrTrue(pComp, "_AttachTargetObject");
 				pComp->QueryFloatAttribute("_CriticalRate", &remote.criticalRate);
 				pComp->QueryAttribute("_OnHitOwnerStatusIndex", &remote.onHitOwnerStatus);
 				remote.activateCount = _ActivateCount;
@@ -1655,7 +1673,8 @@ bool GameXmlContent::LoadRemoteData()
 					pTime->QueryFloatAttribute("_Time", &remote.timeEventDelay);
 					remote.timeEventRecycle = XmlAttrTrue(pTime, "_Recycle");
 					ParseRemoteSpawnRules(pTime, remote.onTime);
-					if(remote.onTime.empty()) remote.timeEventDelay = -1;
+					if(XMLElement* pCs = pTime->FirstChildElement("_ChangeMaxSpeed")) pCs->QueryFloatAttribute("_Speed", &remote.timeChangeSpeed);
+					if(remote.onTime.empty() && remote.timeChangeSpeed <= 0) remote.timeEventDelay = -1;
 				}
 				ParseRemoteSpawnRules(pComp->FirstChildElement("_Activate"), remote.onActivate);
 				if(XMLElement* pAct = pComp->FirstChildElement("_Activate")) {
@@ -2468,6 +2487,12 @@ bool GameXmlContent::LoadStatusData()
 				if(pSk->QueryFloatAttribute("_CoolTime", &cd) == XML_SUCCESS) skillCoolTime[skillID] = cd;
 				f32 rx = 0;
 				if(pSk->QueryFloatAttribute("_SkillRangeLengthX", &rx) == XML_SUCCESS && rx > 0) skillRangeX[skillID] = rx;
+				{
+					const char* sfx = nullptr;
+					f32 ry = 0;
+					pSk->QueryStringAttribute("_SkillRangeSFX", &sfx);
+					if(sfx && EA::StdC::Strstr(sfx, "Box") && pSk->QueryFloatAttribute("_SkillRangeLengthY", &ry) == XML_SUCCESS && ry > 0) skillRangeX[skillID] = ry;
+				}
 				f32 trx = 0;
 				if(pSk->QueryFloatAttribute("_TargetRangeLengthX", &trx) == XML_SUCCESS && trx > 0) skillTargetRangeX[skillID] = trx;
 				if(XMLElement* pT = pSk->FirstChildElement("_Target")) {

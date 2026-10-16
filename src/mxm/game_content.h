@@ -337,6 +337,8 @@ struct Remote
 	bool vsOwner = false;
 	bool attachFireObject = false;
 	bool ignoreGround = false;
+	bool attachTargetObject = false;
+	f32 timeChangeSpeed = 0;
 	ActionStateID changeCasterAction = ActionStateID::INVALID;
 	f32 sight = 0;
 	f32 criticalRate = 0; // extra crit chance % (RemoteComData2 _CriticalRate)
@@ -490,6 +492,8 @@ struct GameXmlContent
 
 		ActionStateID ID;
 		f32 seqLength = 0.0f; // seconds
+		struct AnimStep { i32 index = 0; i32 animationId = 0; i32 loop = 1; };
+		eastl::fixed_vector<AnimStep,8,false> anims;
 		eastl::fixed_vector<Command,16,false> commands;
 	};
 

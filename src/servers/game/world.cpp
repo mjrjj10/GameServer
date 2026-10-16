@@ -148,6 +148,11 @@ void World::Update(Time localTime_)
 
 		p.movement.rot = p.input.rot;
 
+		if(!p.dead && p.clientHd == ClientHandle::INVALID && localTime < p.dashUntil) {
+			physics.Move(&body, vec3(p.dashDir * p.dashSpeed * (f32)tdelta, 0), (f32)tdelta);
+			p.input.moveTo = body.GetWorldPos();
+		}
+
 		if(!p.dead && p.clientHd == ClientHandle::INVALID && localTime < p.ccUntil) {
 			const ActiveStatus* fear = nullptr;
 			foreach_const(st, activeStatuses) {
@@ -210,7 +215,7 @@ void World::Update(Time localTime_)
 
 		if(p.weaponFired) {
 			p.weaponFired = false;
-			if(ClassIsMelee(p.Main().classType) && localTime > p.tNextWeaponHit) {
+			if(WeaponIsMelee(p) && localTime > p.tNextWeaponHit) {
 				p.tNextWeaponHit = TimeAdd(localTime, TimeMsToTime(WEAPON_HIT_INTERVAL_MS));
 				PlayerWeaponFire(p);
 			}
@@ -737,7 +742,7 @@ void World::PlayerWeaponFire(Player& player)
 	const vec2 dir = vec2(cosf(player.weaponAimYaw), sinf(player.weaponAimYaw));
 	const vec3 origin = player.body->GetWorldPos();
 
-	if(ClassIsMelee(player.Main().classType)) {
+	if(WeaponIsMelee(player)) {
 		foreach(it, players) {
 			if(it->team == player.team || it->dead || it->untargetable) continue;
 			const vec3 pos = it->body->GetWorldPos();
@@ -758,7 +763,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 {
 	if(player.dead) return;
 	const ClassType classType = player.Main().classType;
-	if(ClassIsMelee(classType)) return;
+	if(WeaponIsMelee(player)) return;
 	if(projectileList.full()) return;
 
 	const auto& content = GetGameXmlContent();
@@ -944,6 +949,9 @@ void World::UpdateProjectiles(f32 delta)
 			}
 			if(proj->aoeRadius > 0) {
 				Explode(owner, proj->pos, proj->aoeRadius, proj->damage);
+			}
+			else if(proj->graph && proj->hitsLeft > 0) {
+				Explode(owner, proj->pos, proj->halfWidth, proj->damage);
 			}
 			proj = projectileList.erase_unsorted(proj);
 		}
@@ -1289,6 +1297,16 @@ f32 World::HitRadius(const Player& p) const
 {
 	if(p.Main().classType == ClassType::NONE) return 0;
 	return (f32)GetGameXmlContent().GetMaster(p.Main().classType).character.getColliderRadius();
+}
+
+bool World::WeaponIsMelee(const Player& p) const
+{
+	const auto& content = GetGameXmlContent();
+	const WeaponIndex weapon = (p.mainCharaID & 1) == 0 ? p.mainWeapon : p.subWeapon;
+	const WeaponFiring* wf = content.FindWeaponFiring((i32)weapon);
+	const Remote* wr = wf ? content.FindRemote(wf->base) : nullptr;
+	if(wr && wr->maxSpeed > 0) return false;
+	return ClassIsMelee(p.Main().classType);
 }
 
 f32 World::BodyMidHeight(const Player& p) const
@@ -1817,7 +1835,8 @@ static f32 RemoteDamageRadius(const GameXmlContent& content, RemoteIdx idx, i32 
 	const Remote* r = content.FindRemote(idx);
 	if(!r || depth > 5) return 0;
 	const bool vsEnemy = r->damageGroup == Remote::DamageGroup::eENEMY || r->damageGroup == Remote::DamageGroup::eALL;
-	f32 radius = (vsEnemy && (r->attackMultiplier > 0 || !r->statuses.empty() || r->changeCasterAction != ActionStateID::INVALID)) ? r->boundSize[0] * 0.5f : 0;
+	const f32 extent = r->boundType == Remote::BoundType::E_BOUND_BOX ? MAX(r->boundSize[0], r->boundSize[1]) * 0.5f : r->boundSize[0] * 0.5f;
+	f32 radius = (vsEnemy && (r->attackMultiplier > 0 || !r->statuses.empty() || r->changeCasterAction != ActionStateID::INVALID)) ? extent : 0;
 	const Remote::SpawnRules* lists[4] = { &r->onDestroy, &r->onTime, &r->onActivate, &r->onHitCharacter };
 	for(const Remote::SpawnRules* l : lists) {
 		for(const Remote::SpawnRule& rule : *l) radius = MAX(radius, RemoteDamageRadius(content, rule.idx, depth + 1));
@@ -2173,7 +2192,7 @@ void World::UpdateShowcase()
 		const f32 len = glm::length(rel);
 		const vec2 dir = len > 1.0f ? rel / len : vec2(1, 0);
 		caster.weaponAimYaw = atan2f(dir.y, dir.x);
-		if(ClassIsMelee(cls)) PlayerWeaponFire(caster);
+		if(WeaponIsMelee(caster)) PlayerWeaponFire(caster);
 		else PlayerWeaponShot(caster, casterPos, dir, len);
 	}
 	else if(step >= 1 && step <= 6) {
@@ -2216,7 +2235,7 @@ void World::UpdateBotCombat()
 		if(localTime < bot.tNextBotShot || localTime < bot.ccUntil) continue;
 		if(IsBlocked(bot, true, false, false)) continue;
 		const ClassType cls = bot.Main().classType;
-		if(ClassIsMelee(cls)) continue;
+		if(WeaponIsMelee(bot)) continue;
 
 		const Remote* remote = content.FindRemote(RemoteIdx(1430000000 + (i32)cls * 10000 + 10));
 		f32 range = ClassAttackRange(cls) * WEAPON_RANGE_SCALE;
@@ -2535,37 +2554,44 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	bool scheduled = false;
 	// animation 0 without any action and no hit-event combo: animation 1 is its continuation,
 	// played once animation 0 is over (AniLength of its AnimationId)
-	f32 tStart = 0;
-	f32 continuationAt = -1.0f;
+	struct AnimPass { i32 index; f32 start; };
+	eastl::fixed_vector<AnimPass,8,false> animPasses;
 	if(anim == 0 && forceAnim < 0 && GetGameXmlContent().FindSkillHitEventRemote((i32)skillID) == 0) {
-		bool anim0Acts = false, anim1Acts = false, regCombo = false;
-		i32 anim0Id = 0;
+		bool regCombo = false;
+		bool acts[8] = {};
 		foreach_const(cmd, action.commands) {
 			if(cmd->type == ActionCommand::Type::REGCOMBO) regCombo = true;
-			bool acts = cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET ||
+			bool a = cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET ||
 				cmd->type == ActionCommand::Type::STATUS || cmd->type == ActionCommand::Type::ENTITY;
 			if(cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) {
 				const Remote* r = content.FindRemote(cmd->remote.idx);
 				const bool visualOnly = r && r->boundType == Remote::BoundType::E_BOUND_NONE && r->onDestroy.empty() && r->onTime.empty() && r->onActivate.empty() &&
 					(r->damageGroup == Remote::DamageGroup::eNONE || r->damageGroup == Remote::DamageGroup::INVALID);
-				if(visualOnly) acts = false;
+				if(visualOnly) a = false;
 			}
-			if(cmd->animIndex == 0) { anim0Acts |= acts; if(!anim0Id) anim0Id = cmd->animationId; }
-			if(cmd->animIndex == 1) anim1Acts |= acts;
+			if(cmd->animIndex >= 0 && cmd->animIndex < 8) acts[cmd->animIndex] |= a;
 		}
-		if(!anim0Acts && anim1Acts) {
-			anim = 1;
-			tStart = content.GetAniSeqTime(content.GetMaster(player.Main().classType).className.c_str(), anim0Id);
-		}
-		else if(anim0Acts && anim1Acts && !regCombo) {
-			continuationAt = content.GetAniSeqTime(content.GetMaster(player.Main().classType).className.c_str(), anim0Id);
+		const char* className = content.GetMaster(player.Main().classType).className.c_str();
+		i32 lastActing = -1;
+		for(i32 i = 0; i < 8; i++) if(acts[i]) lastActing = i;
+		if(!regCombo || !acts[0]) {
+			f32 start = 0;
+			for(i32 i = 0; i <= lastActing && (!regCombo || i <= 1); i++) {
+				if(acts[i] && !animPasses.full()) animPasses.push_back({ i, start });
+				i32 animId = 0, loop = 1;
+				foreach_const(st, action.anims) if(st->index == i) { animId = st->animationId; loop = MAX(st->loop, 1); }
+				start += content.GetAniSeqTime(className, animId) * (f32)loop;
+				if(regCombo && acts[i]) break;
+			}
 		}
 	}
+	if(animPasses.empty()) animPasses.push_back({ anim, 0.0f });
+	anim = animPasses[0].index;
 
-	const i32 passes = continuationAt >= 0 ? 2 : 1;
+	const i32 passes = (i32)animPasses.size();
 	for(i32 pass = 0; pass < passes; pass++) {
-	const i32 curAnim = pass == 0 ? anim : 1;
-	f32 t = pass == 0 ? tStart : continuationAt;
+	const i32 curAnim = animPasses[pass].index;
+	f32 t = animPasses[pass].start;
 	foreach_const(cmd, action.commands) {
 		if(cmd->animIndex != curAnim && (cmd->animIndex != -1 || pass > 0)) continue; // -1: command shared by every animation
 		if((cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) && !pendingRemotes.full()) {
@@ -2920,7 +2946,7 @@ void World::RemoteApplyArea(RemoteInst& inst)
 		foreach(it, players) {
 			const vec3 pos = it->body->GetWorldPos();
 			if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
-			const f32 back = inst.centeredBox ? length * 0.5f : 0.0f;
+			const f32 back = length * 0.5f;
 			const vec2 center = vec2(inst.pos) + inst.dir * (length * 0.5f - back);
 			const vec2 rel = LagClosestPos(*it, center) - vec2(inst.pos) + inst.dir * back;
 			const f32 along = glm::dot(rel, inst.dir);
@@ -2955,6 +2981,10 @@ void World::UpdateRemotes(f32 delta)
 				atAimedPoint = glm::length(vec2(pr->castPos)) > 1.0f;
 				const vec3 base = glm::length(vec2(pr->castPos)) > 1.0f ? pr->castPos : owner.body->GetWorldPos();
 				pos = vec3(vec2(base) + dir * pr->offsetFront + Perp(dir) * pr->offsetSide, owner.body->GetWorldPos().z);
+			} break;
+			case ActionCommand::TargetPreset::CURRENT_FFF: {
+				const ActorMaster* targetMaster = pr->target != ActorUID::INVALID ? FindMasterActor(pr->target) : nullptr;
+				if(targetMaster) pos = targetMaster->parent->body->GetWorldPos();
 			} break;
 		}
 		if(pr->atTarget) {
@@ -2991,6 +3021,11 @@ void World::UpdateRemotes(f32 delta)
 		bool destroyed = false;
 		Player& instOwner = players[inst.ownerIndex];
 
+		if(remote.attachTargetObject && inst.target != ActorUID::INVALID) {
+			const ActorMaster* targetMaster = FindMasterActor(inst.target);
+			if(!targetMaster || targetMaster->parent->dead) destroyed = true;
+			else inst.pos = vec3(vec2(targetMaster->parent->body->GetWorldPos()), inst.pos.z);
+		}
 		const bool attached = remote.attachFireObject || remote.behaviorType == Remote::BehaviorType::ORBIT ||
 			remote.behaviorType == Remote::BehaviorType::CASTER_TARGET || remote.behaviorType == Remote::BehaviorType::BEAM;
 		if(attached) {
@@ -3007,6 +3042,10 @@ void World::UpdateRemotes(f32 delta)
 		if(!destroyed && inst.timeEventActive && localTime >= inst.nextTimeEvent) {
 			if(remote.timeEventRecycle && remote.timeEventDelay > 0.01f) inst.nextTimeEvent = TimeAdd(inst.nextTimeEvent, TimeMsToTime(remote.timeEventDelay * 1000.0));
 			else inst.timeEventActive = false;
+			if(remote.timeChangeSpeed > 0) {
+				inst.speed = remote.timeChangeSpeed;
+				if(remote.maxDistance <= 0 && remote.lifeTime > 0) inst.range = inst.travelled + MAX(remote.lifeTime - elapsed, 0.0f) * inst.speed;
+			}
 			const RemoteInst copy = inst;
 			SpawnRemoteRules(*this, copy, remote.onTime, copy.pos, copy.excludeIndex, RemoteIdx::INVALID);
 		}
@@ -3427,14 +3466,57 @@ void World::ExecuteSkillProgram(SkillProgram& prog)
 						distance = (f32)cmd.move.param2;
 						moveDuration = 0.01f; // warping
 					} break;
+					case ActionCommand::MovePreset::TARGET_POS:
+					case ActionCommand::MovePreset::TARGET_POS_LEAP:
+					case ActionCommand::MovePreset::GOTO_CURRENT_TARGET:
+					case ActionCommand::MovePreset::GOTO_CURRENT_TARGET_CHASE:
+					case ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH:
+					case ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE: {
+						bool graphMove = false;
+						foreach_const(c2, action.commands) if(c2->type == ActionCommand::Type::GRAPH_MOVE_HORZ) graphMove = true;
+						if(!graphMove) {
+							distance = 999999.0f;
+							moveDuration = action.seqLength;
+						}
+					} break;
 				}
 			} break;
 		}
 
 		if(distance != 0 && caster->parent->clientHd == ClientHandle::INVALID) {
-			caster->parent->input.moveTo = caster->parent->body->GetWorldPos() + vec3(dir * distance, 0);
-			caster->parent->body->vel = vec3(0);
-			physics.Move(caster->parent->body, vec3(dir * distance, 0), moveDuration);
+			Player& mover = *caster->parent;
+			const vec2 from = vec2(mover.body->GetWorldPos());
+			vec2 moveDir = distance < 0 ? -dir : dir;
+			f32 moveDist = fabsf(distance);
+			foreach_const(c2, action.commands) {
+				if(c2->type != ActionCommand::Type::MOVE) continue;
+				const auto preset = c2->move.preset;
+				if((preset == ActionCommand::MovePreset::TARGET_POS || preset == ActionCommand::MovePreset::TARGET_POS_LEAP) && glm::length(vec2(prog.castPos)) > 1.0f) {
+					moveDist = MIN(moveDist, glm::length(vec2(prog.castPos) - from));
+				}
+				const bool gotoTarget = preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET || preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_CHASE ||
+					preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH || preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE;
+				if(gotoTarget && !prog.targetList.empty()) {
+					const ActorMaster* tm = FindMasterActor(prog.targetList[0]);
+					if(tm) {
+						const vec2 rel = vec2(tm->parent->body->GetWorldPos()) - from;
+						const f32 len = glm::length(rel);
+						if(len > 1.0f) moveDir = rel / len;
+						const bool through = preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH || preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE;
+						if(!through) moveDist = MIN(moveDist, MAX(len - HitRadius(*tm->parent) - HitRadius(mover), 0.0f));
+						else if(moveDist > 999990.0f) moveDist = len;
+					}
+				}
+			}
+			if(moveDist > 999990.0f) moveDist = 0;
+			mover.input.moveTo = mover.body->GetWorldPos();
+			mover.body->vel = vec3(0);
+			if(moveDuration <= 0.02f) physics.Move(mover.body, vec3(moveDir * moveDist, 0), moveDuration);
+			else {
+				mover.dashDir = moveDir;
+				mover.dashSpeed = moveDist / moveDuration;
+				mover.dashUntil = TimeAdd(localTime, TimeMsToTime(moveDuration * 1000.0));
+			}
 		}
 
 		if(cmd.delay == 0) {

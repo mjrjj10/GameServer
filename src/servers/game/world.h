@@ -151,6 +151,9 @@ struct World
 		f32 pushSpeed = 0;
 		Time pushUntil = Time::ZERO;
 		Time fearNextTurn = Time::ZERO;
+		Time dashUntil = Time::ZERO;
+		vec2 dashDir = vec2(1, 0);
+		f32 dashSpeed = 0;
 		vec2 fearDir = vec2(1, 0);
 		Time tRespawn = Time::ZERO;
 		ActorUID memorizedTarget = ActorUID::INVALID;
@@ -587,6 +590,7 @@ private:
 	bool RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const;
 	f32 HitRadius(const Player& p) const;
 	f32 BodyMidHeight(const Player& p) const;
+	bool WeaponIsMelee(const Player& p) const;
 	void RemoteApplyShape(RemoteInst& inst);
 	void RemoteHitAlongPath(RemoteInst& inst);
 	void UpdateStatuses();
