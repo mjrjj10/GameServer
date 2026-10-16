@@ -2083,6 +2083,12 @@ void World::UpdateShowcase()
 			replication->SendReviveToAll(human->userID, human->Main().UID, human->Sub().UID, viewPos);
 		}
 	}
+	if(!showcase.settled) {
+		showcase.settled = true;
+		showcase.next = TimeAdd(localTime, TimeMsToTime(500));
+		return;
+	}
+	showcase.settled = false;
 	LOG("Showcase :: placement caster=%ls (%.0f, %.0f) dummy=%ls (%.0f, %.0f) player=(%.0f, %.0f) cast=(%.0f, %.0f)", caster.name.data(), casterPos.x, casterPos.y, dummy.name.data(), dummyPos.x, dummyPos.y, human->body->GetWorldPos().x, human->body->GetWorldPos().y, castPos.x, castPos.y);
 	showcase.lastDummyHp = dummy.damageTaken;
 	showcase.lastDummyHits = dummy.hitsTaken;

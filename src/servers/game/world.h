@@ -529,6 +529,7 @@ struct World
 		vec2 bestCenter = vec2(0);
 		f32 bestZ = 0;
 		i32 comboSkill = 0;
+		bool settled = false;
 		Time comboAt = Time::ZERO;
 		vec3 comboPos = vec3(0);
 		i32 comboCaster = -1;
