@@ -1803,7 +1803,7 @@ void World::UpdateShowcase()
 	}
 	static const vec2 probeDirs[4] = { vec2(1, 0), vec2(-1, 0), vec2(0, 1), vec2(0, -1) };
 	static const f32 probeDist[4] = { 600.0f, 1200.0f, 1800.0f, 2400.0f };
-	const f32 flatLen = 2400.0f;
+	const f32 flatLen = 2050.0f;
 	const i32 probes = MIN((i32)bots.size(), 4);
 	if(showcase.phase == 0) {
 		if(showcase.candidates.empty()) showcase.candidates.push_back(vec2(showcase.mid));
@@ -1853,7 +1853,7 @@ void World::UpdateShowcase()
 	}
 	if(showcase.phase == 0) {
 		const vec3 ground = vec3(0, 0, showcase.groundZ);
-		showcase.anchor = vec3(vec2(showcase.mid), ground.z);
+		showcase.anchor = vec3(vec2(showcase.mid) + showcase.dir * 350.0f, ground.z);
 		showcase.phase = 1;
 		foreach(it, players) {
 			if(it->clientHd == ClientHandle::INVALID) TeleportPlayer(*it, it->spawnPos, 0);
@@ -2004,9 +2004,7 @@ void World::UpdateShowcase()
 		TeleportPlayer(dummy, dummyPos, faceCaster);
 	}
 	{
-		const vec2 perp = vec2(-showcase.dir.y, showcase.dir.x);
-		const vec3 mid = (casterPos + dummyPos) * 0.5f;
-		const vec3 viewPos = vec3(vec2(mid) - perp * 450.0f, showcase.anchor.z);
+		const vec3 viewPos = vec3(vec2(casterPos) - showcase.dir * 350.0f, showcase.anchor.z);
 		if(glm::length(vec2(viewPos) - vec2(human->body->GetWorldPos())) > 50.0f) {
 			TeleportPlayer(*human, viewPos, 0);
 			replication->SendReviveToAll(human->userID, human->Main().UID, human->Sub().UID, viewPos);
