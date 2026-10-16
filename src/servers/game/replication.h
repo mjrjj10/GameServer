@@ -96,6 +96,7 @@ struct Replication
 		i32 actionParam2;
 
 		u8 taggedOut = false;
+		bool skillMoving = false;
 	};
 
 	struct ActorNpc: Actor<ActorType::Npc>

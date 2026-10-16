@@ -418,6 +418,7 @@ void World::Replicate()
 			rch.moveDir = player.movement.moveDir;
 			rch.speed = player.input.speed;
 			rch.rotation = player.movement.rot;
+			rch.skillMoving = localTime < player.dashUntil;
 
 			rch.actionState = chara.actionState;
 			rch.actionParam1 = chara.actionParam1;

@@ -1622,13 +1622,13 @@ void Replication::FrameDifference()
 		const f32 posEpsilon = 0.5f;
 		const f32 dirEpsilon = 0.001f;
 		const f32 speedEpsilon = 0.001f;
-		if(!positionUpdated &&
-		   fabs(cur.pos.x - prev.pos.x) > posEpsilon ||
+		if(!positionUpdated && !cur.skillMoving &&
+		   (fabs(cur.pos.x - prev.pos.x) > posEpsilon ||
 		   fabs(cur.pos.y - prev.pos.y) > posEpsilon ||
 		   fabs(cur.pos.z - prev.pos.z) > posEpsilon ||
 		   fabs(cur.moveDir.x - prev.moveDir.x) > dirEpsilon ||
 		   fabs(cur.moveDir.y - prev.moveDir.y) > dirEpsilon ||
-		   fabs(cur.speed - prev.speed) > speedEpsilon)
+		   fabs(cur.speed - prev.speed) > speedEpsilon))
 		{
 			ActionStateID action = cur.actionState;
 			if(action == ActionStateID::INVALID) {
