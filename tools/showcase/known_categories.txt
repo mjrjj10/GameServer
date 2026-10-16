@@ -13,5 +13,6 @@ Showcase
 Skill
 SkillRemoteEnd
 Spawn
+Stance
 Status
 Summon
