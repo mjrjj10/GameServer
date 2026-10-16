@@ -1693,6 +1693,8 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
 	f32 duration = durationOverride > 0 ? durationOverride : (info && info->durationSec > 0 ? info->durationSec : 1.0f);
 	if(info && caster.team != target.team && PassiveBlocksCC(target, *info, &duration)) return;
+	if(Config().DevShowcase && target.index == showcase.prevDummy && caster.team != target.team && !showcase.statusesSeen.full() &&
+	   eastl::find(showcase.statusesSeen.begin(), showcase.statusesSeen.end(), statusID) == showcase.statusesSeen.end()) showcase.statusesSeen.push_back(statusID);
 	// passives without duration stay until consumed; clients get the data's "infinite" value (-1)
 	const bool permanent = info && info->permanent && durationOverride <= 0;
 	if(permanent) duration = 1000000.0f;
@@ -2253,6 +2255,15 @@ void World::UpdateShowcase()
 		const bool hit = hits > 0 || statusHits > 0;
 		const bool ok = showcase.prevExpect < 0 || (showcase.prevExpect == 1) == hit;
 		LOG("Showcase :: result hit=%d expect=%d %s damage=%d hits=%d dummyZ=%.0f groundZ=%.0f", hit ? 1 : 0, showcase.prevExpect, ok ? "OK" : "MISMATCH", dealt, hits, pd.body->GetWorldPos().z, showcase.groundZ);
+		{
+			const Player& pc = players[showcase.prevCaster];
+			eastl::fixed_string<char,160,false> sts;
+			for(i32 id : showcase.statusesSeen) sts.append_sprintf("%d,", id);
+			LOG("Showcase :: measure casterMoved=%.0f dummyMoved=%.0f firstHitMs=%lld mana=%.0f stamina=%.0f statuses=%s",
+				glm::length(vec2(pc.body->GetWorldPos()) - showcase.casterStart), glm::length(vec2(pd.body->GetWorldPos()) - showcase.dummyStart),
+				showcase.firstHitMs, pc.mana >= 0 && showcase.casterMana0 >= 0 ? showcase.casterMana0 - pc.mana : 0.0f,
+				pc.stamina >= 0 && showcase.casterStamina0 >= 0 ? showcase.casterStamina0 - pc.stamina : 0.0f, sts.c_str());
+		}
 	}
 
 	const ClassType cls = caster.Main().classType;
@@ -2390,6 +2401,13 @@ void World::UpdateShowcase()
 	showcase.lastDummyHp = dummy.damageTaken;
 	showcase.lastDummyHits = dummy.hitsTaken;
 	showcase.lastDummyStatuses = dummy.statusesTaken;
+	showcase.casterStart = vec2(caster.body->GetWorldPos());
+	showcase.dummyStart = vec2(dummy.body->GetWorldPos());
+	showcase.castAt = localTime;
+	showcase.firstHitMs = -1;
+	showcase.statusesSeen.clear();
+	showcase.casterMana0 = caster.mana;
+	showcase.casterStamina0 = caster.stamina;
 	showcase.pendingResult = step <= 6 && (step == 0 || skill != 0);
 	showcase.prevExpect = expect;
 	showcase.prevDummy = dummy.index;
@@ -2928,14 +2946,12 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		}
 		// the client draws plain (non-fan) static boxes facing the opposite way of their rotation
 		const bool plainStaticBox = inst.speed <= 0 && remote->boundType == Remote::BoundType::E_BOUND_BOX && remote->angle <= 0;
-		const bool chained = remote->destroyCreateRemote != RemoteIdx::INVALID || !remote->onDestroy.empty() || !remote->onTime.empty() || !remote->onActivate.empty();
-		const bool flip = plainStaticBox && chained;
-		const f32 sendYaw = atan2f(dir.y, dir.x) + (flip ? PI : 0.0f);
+		const f32 sendYaw = atan2f(dir.y, dir.x);
 		// the client adds the remote's _OffsetZ to the fire position: compensate so the remote shows at the
 		// height the server simulates (weapon fire height), not under the ground
 		vec3 sendPos = pos - vec3(0, 0, remote->offsetZ);
 		const bool atAimedPoint = aimPos && glm::length(vec2(*aimPos)) > 1.0f && glm::length(vec2(pos) - vec2(*aimPos)) < 1.0f;
-		if(plainStaticBox && !flip && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY), 0);
+		if(plainStaticBox && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY), 0);
 		replication->SendRemoteCreateToAll(players[ownerIndex].Main().UID, seed, idx, sendPos, sendYaw, targetPos, targetMaster ? target : ActorUID::INVALID, GetGameXmlContent().GetNodeName(nodeName), casterCreatesLocally ? players[ownerIndex].clientHd : ClientHandle::INVALID);
 	}
 
@@ -3566,6 +3582,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	if(damage <= 0) return;
 
 	ActorMaster& chara = target.Main();
+	if(Config().DevShowcase && target.index == showcase.prevDummy && showcase.firstHitMs < 0) showcase.firstHitMs = (i64)(TimeDiffSec(TimeDiff(showcase.castAt, localTime)) * 1000.0);
 	target.damageTaken += damage;
 	target.hitsTaken++;
 	const bool showcaseDummy = Config().DevShowcase && target.clientHd == ClientHandle::INVALID;

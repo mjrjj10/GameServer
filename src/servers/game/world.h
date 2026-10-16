@@ -548,6 +548,13 @@ struct World
 		i32 comboSkill = 0;
 		bool settled = false;
 		i32 mastersDone = 0;
+		vec2 casterStart = vec2(0);
+		vec2 dummyStart = vec2(0);
+		Time castAt = Time::ZERO;
+		i64 firstHitMs = -1;
+		eastl::fixed_vector<i32,12,false> statusesSeen;
+		f32 casterMana0 = 0;
+		f32 casterStamina0 = 0;
 		Time comboAt = Time::ZERO;
 		vec3 comboPos = vec3(0);
 		i32 comboCaster = -1;

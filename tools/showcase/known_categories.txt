@@ -1,0 +1,15 @@
+Blocked
+ComboHit
+Damage
+Explosion
+Heal
+Passive
+ProjectileEnd
+Remote
+Shot
+Showcase
+Skill
+SkillRemoteEnd
+Spawn
+Status
+Summon

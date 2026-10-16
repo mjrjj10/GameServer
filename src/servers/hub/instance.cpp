@@ -328,6 +328,10 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 				TryPickMaster(u, c);
 			}
 			if(u->Sub().classType == ClassType::NONE) TryPickMaster(u, all[showcaseNext++ % all.size()]);
+			foreach_const(fallback, allowedMastersSet) {
+				if(u->Main().classType != ClassType::NONE && u->Sub().classType != ClassType::NONE) break;
+				TryPickMaster(u, *fallback);
+			}
 			u->replicate.masterPick = true;
 			LOG("[Room] showcase bot masters %d %d", (i32)u->Main().classType, (i32)u->Sub().classType);
 		}
