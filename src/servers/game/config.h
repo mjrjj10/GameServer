@@ -10,6 +10,7 @@ struct CConfigGame
 	i32 ShotLeadMs = 50;
 	i32 DevGameTimeSec = 0;
 	i32 DevShowcase = 0;
+	i32 DevShowcaseCount = 0;
 	i32 HostIP[4] = { 0, 0, 0, 0 };
 	i32 TraceNetwork = false;
 	i32 WindowWidth = 1280;

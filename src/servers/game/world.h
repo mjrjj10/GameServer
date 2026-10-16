@@ -547,6 +547,7 @@ struct World
 		f32 bestZ = 0;
 		i32 comboSkill = 0;
 		bool settled = false;
+		i32 mastersDone = 0;
 		Time comboAt = Time::ZERO;
 		vec3 comboPos = vec3(0);
 		i32 comboCaster = -1;

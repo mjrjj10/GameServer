@@ -2427,6 +2427,11 @@ void World::UpdateShowcase()
 	if(showcase.step > 7) {
 		showcase.step = 0;
 		showcase.masterPass++;
+		showcase.mastersDone++;
+		if(Config().DevShowcaseCount > 0 && showcase.mastersDone >= Config().DevShowcaseCount) {
+			showcase.done = true;
+			LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
+		}
 		if(showcase.masterPass >= 2) {
 			showcase.masterPass = 0;
 			showcase.casterSlot++;

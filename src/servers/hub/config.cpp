@@ -31,6 +31,7 @@ bool CConfigHub::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "DevShowcaseStart=%d", &DevShowcaseStart) == 1) return true;
 	if(EA::StdC::Sscanf(line, "LobbyMap=%d", &LobbyMap) == 1) return true;
 	if(ParseIdList(line, "RegionBanMaster=", regionBanMaster)) return true;
+	if(ParseIdList(line, "DevShowcaseList=", devShowcaseList)) return true;
 	if(ParseIdList(line, "RegionNewMaster=", regionNewMaster)) return true;
 	if(ParseIdList(line, "EventBanMaster=", eventBanMaster)) return true;
 	return false;

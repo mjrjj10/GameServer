@@ -308,8 +308,13 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 	if(Config().DevShowcase) {
 		static i32 showcaseNext = Config().DevShowcaseStart;
 		eastl::fixed_vector<ClassType,100,false> all;
-		foreach_const(it, allowedMastersSet) all.push_back(*it);
-		eastl::sort(all.begin(), all.end());
+		if(!Config().devShowcaseList.empty()) {
+			for(i32 c : Config().devShowcaseList) all.push_back((ClassType)c);
+		}
+		else {
+			foreach_const(it, allowedMastersSet) all.push_back(*it);
+			eastl::sort(all.begin(), all.end());
+		}
 		foreach(u, userList) {
 			if(!u->isBot && u->Main().classType == ClassType::NONE) {
 				TryPickMaster(u, ClassType::STRIKER);

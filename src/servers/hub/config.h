@@ -11,6 +11,7 @@ struct CConfigHub
 	i32 DevShowcaseStart = 0;
 	i32 LobbyMap = 160000042; // TODO: restore
 	eastl::fixed_vector<i32,16> regionBanMaster = {};
+	eastl::fixed_vector<i32,16> devShowcaseList = {};
 	eastl::fixed_vector<i32,16> regionNewMaster = {};
 	eastl::fixed_vector<i32,16> eventBanMaster = {};
 
