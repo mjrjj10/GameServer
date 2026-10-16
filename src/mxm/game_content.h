@@ -336,6 +336,7 @@ struct Remote
 	bool contactFriend = false;
 	bool vsOwner = false;
 	bool attachFireObject = false;
+	bool ignoreGround = false;
 	ActionStateID changeCasterAction = ActionStateID::INVALID;
 	f32 sight = 0;
 	f32 criticalRate = 0; // extra crit chance % (RemoteComData2 _CriticalRate)

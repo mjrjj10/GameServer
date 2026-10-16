@@ -1548,6 +1548,7 @@ bool GameXmlContent::LoadRemoteData()
 				pComp->QueryStringAttribute("_AddContactGroup", &_AddContactGroup);
 				remote.contactFriend = _AddContactGroup && (EA::StdC::Strcmp(_AddContactGroup, "eFRIEND") == 0 || EA::StdC::Strcmp(_AddContactGroup, "eALL") == 0);
 				remote.vsOwner = XmlAttrTrue(pComp, "_VsOwner");
+				remote.ignoreGround = XmlAttrTrue(pComp, "_IgnoreGround");
 				pComp->QueryFloatAttribute("_ActivateDelayTime", &remote.activateDelay);
 				remote.boundType = Remote::BoundTypeFromString(_Type);
 				remote.damageGroup = Remote::DamageGroupFromString(_DamageGroup);

@@ -312,6 +312,19 @@ vec3 PhysicsScene::FindMovePos(PhysicsDynamicBody* body, const vec3& disp, f32 t
 	return end;
 }
 
+bool PhysicsScene::RaycastStatic(const vec3& from, const vec3& to, f32* hitDist)
+{
+	const vec3 d = to - from;
+	const f32 len = glm::length(d);
+	if(len < 0.001f) return false;
+	PxRaycastBuffer hit;
+	const PxQueryFilterData filter(PxQueryFlag::eSTATIC);
+	if(!scene->raycast(PxVec3(from.x, from.y, from.z), PxVec3(d.x / len, d.y / len, d.z / len), len, hit, PxHitFlag::eDEFAULT, filter)) return false;
+	if(!hit.hasBlock) return false;
+	if(hitDist) *hitDist = hit.block.distance;
+	return true;
+}
+
 static PhysicsContext* g_Context;
 
 bool PhysicsInit()

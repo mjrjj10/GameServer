@@ -150,6 +150,8 @@ struct World
 		vec3 pushTarget = vec3(0);
 		f32 pushSpeed = 0;
 		Time pushUntil = Time::ZERO;
+		Time fearNextTurn = Time::ZERO;
+		vec2 fearDir = vec2(1, 0);
 		Time tRespawn = Time::ZERO;
 		ActorUID memorizedTarget = ActorUID::INVALID;
 		bool pendingShot = false;
@@ -333,6 +335,8 @@ struct World
 		vec3 start;
 		i32 hitsLeft;
 		bool graph;
+		bool ignoreWalls = true;
+		f32 wallZ = 0;
 		eastl::fixed_vector<u32,16,false> hitList;
 	};
 
@@ -387,6 +391,7 @@ struct World
 		vec2 graphDir = vec2(1, 0);
 		bool hasLandZ = false;
 		bool centeredBox = false;
+		f32 wallZ = 0;
 		bool actionChanged = false;
 	};
 
@@ -581,6 +586,7 @@ private:
 	void HealPlayer(Player& healer, Player& target, i32 amount);
 	bool RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const;
 	f32 HitRadius(const Player& p) const;
+	f32 BodyMidHeight(const Player& p) const;
 	void RemoteApplyShape(RemoteInst& inst);
 	void RemoteHitAlongPath(RemoteInst& inst);
 	void UpdateStatuses();

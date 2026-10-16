@@ -105,6 +105,7 @@ struct PhysicsScene
 	PhysicsDynamicBody* CreateDynamicBody(f32 radius, f32 height, const vec3& pos);
 	vec3 Move(PhysicsDynamicBody* body, const vec3& disp, f32 time /* seconds */);
 	vec3 FindMovePos(PhysicsDynamicBody* body, const vec3& disp, f32 time);
+	bool RaycastStatic(const vec3& from, const vec3& to, f32* hitDist);
 };
 
 struct PhysicsContext

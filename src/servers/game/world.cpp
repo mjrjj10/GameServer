@@ -149,9 +149,24 @@ void World::Update(Time localTime_)
 		p.movement.rot = p.input.rot;
 
 		if(!p.dead && p.clientHd == ClientHandle::INVALID && localTime < p.ccUntil) {
+			const ActiveStatus* fear = nullptr;
+			foreach_const(st, activeStatuses) {
+				if(st->targetIndex == p.index && st->info && localTime < st->until && st->info->type == "STATUS_TYPE_FEAR") { fear = &*st; break; }
+			}
 			if(localTime < p.pushUntil) {
 				p.input.moveTo = p.pushTarget;
 				p.input.speed = p.pushSpeed;
+			}
+			else if(fear) {
+				if(localTime >= p.fearNextTurn) {
+					const f32 a = (f32)(RandUint() % 3600) * PI / 1800.0f;
+					p.fearDir = vec2(cosf(a), sinf(a));
+					p.fearNextTurn = TimeAdd(localTime, TimeMsToTime(MAX(fear->info->intervalSec, 0.1f) * 1000.0));
+				}
+				p.input.moveTo = body.GetWorldPos() + vec3(p.fearDir * 500.0f, 0);
+				const f32 yaw = atan2f(p.fearDir.y, p.fearDir.x);
+				p.input.rot.upperYaw = yaw;
+				p.input.rot.bodyYaw = yaw;
 			}
 			else {
 				p.input.moveTo = body.GetWorldPos();
@@ -616,7 +631,11 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 		PassiveOnSkillCast(player, (i32)skillID);
 	}
 
-	const f32 angle = player.input.rot.upperYaw;
+	f32 angle = player.input.rot.upperYaw;
+	if(skill.type == SkillType::SHIRK) {
+		const vec2 moving = vec2(player.input.moveTo) - vec2(player.body->GetWorldPos());
+		if(glm::length(moving) > 10.0f) angle = atan2f(moving.y, moving.x);
+	}
 	const vec2 dir = vec2(cosf(angle), sinf(angle));
 
 	Replication::SkillCast rpCast;
@@ -812,6 +831,8 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 
 	proj.range = graph ? (reliable ? MIN(distance, aimMax) : classRange) : remoteRange;
 	proj.graph = graph;
+	proj.ignoreWalls = !remote || remote->ignoreGround;
+	proj.wallZ = player.body->GetWorldPos().z + BodyMidHeight(player);
 	proj.halfWidth = remote ? remote->boundSize[0] * 0.5f : 20.0f;
 	proj.hitsLeft = remote ? MAX(remote->activateCount, 1) : 1;
 	proj.forwardReach = (remote && remote->boundType == Remote::BoundType::E_BOUND_BOX) ? MAX(remote->offsetY + remote->boundSize[1] * 0.5f, 0.0f) : 0.0f;
@@ -860,9 +881,18 @@ void World::UpdateProjectiles(f32 delta)
 {
 	for(auto proj = projectileList.begin(); proj != projectileList.end(); ) {
 		Player& owner = players[proj->ownerIndex];
-		const f32 step = MIN(proj->speed * delta + proj->pendingAdvance, proj->range - proj->travelled);
+		f32 step = MIN(proj->speed * delta + proj->pendingAdvance, proj->range - proj->travelled);
 		proj->pendingAdvance = 0;
-		const bool lastStep = proj->travelled + step >= proj->range - 0.01f;
+		bool hitWall = false;
+		if(!proj->graph && !proj->ignoreWalls && step > 0) {
+			f32 wallDist = 0;
+			const vec2 a = vec2(proj->pos);
+			if(physics.RaycastStatic(vec3(a, proj->wallZ), vec3(a + proj->dir * step, proj->wallZ), &wallDist)) {
+				step = wallDist;
+				hitWall = true;
+			}
+		}
+		const bool lastStep = hitWall || proj->travelled + step >= proj->range - 0.01f;
 		const vec2 from = vec2(proj->pos);
 		const vec2 to = from + proj->dir * step;
 		bool destroyed = false;
@@ -893,7 +923,8 @@ void World::UpdateProjectiles(f32 delta)
 		if(!destroyed) {
 			proj->pos += vec3(proj->dir * step, 0);
 			proj->travelled += step;
-			destroyed = proj->travelled >= proj->range - 0.01f;
+			destroyed = hitWall || proj->travelled >= proj->range - 0.01f;
+			if(hitWall) LOG("Shot :: projectile stopped by a wall after %.0f", proj->travelled);
 		}
 
 		if(destroyed) {
@@ -1258,6 +1289,12 @@ f32 World::HitRadius(const Player& p) const
 {
 	if(p.Main().classType == ClassType::NONE) return 0;
 	return (f32)GetGameXmlContent().GetMaster(p.Main().classType).character.getColliderRadius();
+}
+
+f32 World::BodyMidHeight(const Player& p) const
+{
+	if(p.Main().classType == ClassType::NONE) return 0;
+	return (f32)GetGameXmlContent().GetMaster(p.Main().classType).character.getColliderHeight() * 0.5f;
 }
 
 bool World::RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const
@@ -2608,6 +2645,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	inst.pos = pos;
 	inst.dir = dir;
 	inst.travelled = 0;
+	inst.wallZ = players[ownerIndex].body->GetWorldPos().z + BodyMidHeight(players[ownerIndex]);
 	inst.speed = remote->maxSpeed;
 	inst.range = remote->maxDistance;
 	if(remote->behaviorType == Remote::BehaviorType::GRAPH && remote->fixedGraphLength > 0) inst.range = remote->fixedGraphLength;
@@ -3068,7 +3106,16 @@ void World::UpdateRemotes(f32 delta)
 
 			default: {
 				if(inst.speed > 0) {
-					const f32 step = inst.range > 0 ? MIN(inst.speed * delta, inst.range - inst.travelled) : inst.speed * delta;
+					f32 step = inst.range > 0 ? MIN(inst.speed * delta, inst.range - inst.travelled) : inst.speed * delta;
+					bool hitWall = false;
+					if(!remote.ignoreGround && !remote.attachFireObject && step > 0) {
+						f32 wallDist = 0;
+						const vec2 a = vec2(inst.pos);
+						if(physics.RaycastStatic(vec3(a, inst.wallZ), vec3(a + inst.dir * step, inst.wallZ), &wallDist)) {
+							step = wallDist;
+							hitWall = true;
+						}
+					}
 					const vec2 from = vec2(inst.pos);
 					const vec2 to = from + inst.dir * step;
 					const f32 halfWidth = remote.boundSize[0] * 0.5f;
@@ -3093,7 +3140,8 @@ void World::UpdateRemotes(f32 delta)
 					if(!destroyed) {
 						inst.pos += vec3(inst.dir * step, 0);
 						inst.travelled += step;
-						if(inst.range > 0 && inst.travelled >= inst.range - 0.01f) destroyed = true;
+						if(hitWall || (inst.range > 0 && inst.travelled >= inst.range - 0.01f)) destroyed = true;
+						if(hitWall) LOG("Remote :: %d stopped by a wall after %.0f", (i32)remote.ID, inst.travelled);
 					}
 				}
 				else if(!inst.areaDone) {
@@ -3383,7 +3431,7 @@ void World::ExecuteSkillProgram(SkillProgram& prog)
 			} break;
 		}
 
-		if(distance != 0) {
+		if(distance != 0 && caster->parent->clientHd == ClientHandle::INVALID) {
 			caster->parent->input.moveTo = caster->parent->body->GetWorldPos() + vec3(dir * distance, 0);
 			caster->parent->body->vel = vec3(0);
 			physics.Move(caster->parent->body, vec3(dir * distance, 0), moveDuration);
