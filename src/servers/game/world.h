@@ -113,6 +113,7 @@ struct World
 		bool passivesApplied = false;
 		i32 damageTaken = 0;
 		i32 hitsTaken = 0;
+		i32 statusesTaken = 0;
 		i32 pendingChildSkill = 0;
 		Time pendingChildSkillUntil = Time::ZERO;
 		eastl::array<Time,5> botSkillReady = { Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO };
@@ -507,6 +508,7 @@ struct World
 		i32 testCount = 1;
 		i32 lastDummyHp = 0;
 		i32 lastDummyHits = 0;
+		i32 lastDummyStatuses = 0;
 		bool pendingResult = false;
 		i32 prevExpect = -1;
 		u32 prevDummy = 0;

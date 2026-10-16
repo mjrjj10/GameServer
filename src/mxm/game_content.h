@@ -282,6 +282,7 @@ struct Remote
 	RemoteIdx destroyCreateRemote = RemoteIdx::INVALID;
 	f32 attackMultiplier = 0;
 	f32 offsetY = 0;
+	bool forceTargetDir = false;
 	f32 offsetZ = 0;     // RemoteComData2 _OffsetZ: height offset the client applies to the fire position
 	// close-range penalty: damage reduced by _DistPenaltyRate % when the target is within _PenaltyApplyDistance
 	// of the caster (guides: "-30% damage to enemies within 5 m", V-Merang ult "-40% until 8 m")

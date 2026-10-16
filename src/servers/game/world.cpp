@@ -1422,6 +1422,7 @@ f32 World::PassiveWeaponDamageMul(Player& attacker, Player& target)
 void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power, f32 durationOverride)
 {
 	if(target.dead) return;
+	if(caster.team != target.team) target.statusesTaken++;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
 	f32 duration = durationOverride > 0 ? durationOverride : (info && info->durationSec > 0 ? info->durationSec : 1.0f);
 	// passives without duration stay until consumed; clients get the data's "infinite" value (-1)
@@ -1893,7 +1894,8 @@ void World::UpdateShowcase()
 		const Player& pd = players[showcase.prevDummy];
 		const i32 dealt = pd.damageTaken - showcase.lastDummyHp;
 		const i32 hits = pd.hitsTaken - showcase.lastDummyHits;
-		bool hit = hits > 0;
+		const i32 statusHits = pd.statusesTaken - showcase.lastDummyStatuses;
+		bool hit = hits > 0 || statusHits > 0;
 		foreach_const(it, activeStatuses) {
 			if(it->targetIndex == showcase.prevDummy && it->casterIndex == showcase.prevCaster) hit = true;
 		}
@@ -2003,6 +2005,7 @@ void World::UpdateShowcase()
 	}
 	showcase.lastDummyHp = dummy.damageTaken;
 	showcase.lastDummyHits = dummy.hitsTaken;
+	showcase.lastDummyStatuses = dummy.statusesTaken;
 	showcase.pendingResult = step <= 6 && (step == 0 || skill != 0);
 	showcase.prevExpect = expect;
 	showcase.prevDummy = dummy.index;
@@ -2014,7 +2017,8 @@ void World::UpdateShowcase()
 		const f32 len = glm::length(rel);
 		const vec2 dir = len > 1.0f ? rel / len : vec2(1, 0);
 		caster.weaponAimYaw = atan2f(dir.y, dir.x);
-		PlayerWeaponShot(caster, casterPos, dir, len);
+		if(ClassIsMelee(cls)) PlayerWeaponFire(caster);
+		else PlayerWeaponShot(caster, casterPos, dir, len);
 	}
 	else if(step >= 1 && step <= 6) {
 		if(skill != 0) PlayerCastSkill(caster, SkillID(skill), castPos, Slice<const ActorUID>(&targetUID, 1), 0);
@@ -2749,7 +2753,7 @@ void World::UpdateRemotes(f32 delta)
 		Player& owner = players[pr->ownerIndex];
 		const vec2 dir = vec2(cosf(pr->angle), sinf(pr->angle));
 		const Remote* remote = GetGameXmlContent().FindRemote(pr->idx);
-		const f32 offsetY = remote ? remote->offsetY : 0;
+		const f32 offsetY = remote ? (remote->forceTargetDir ? -remote->offsetY : remote->offsetY) : 0;
 		vec3 pos = owner.body->GetWorldPos() + vec3(dir * offsetY, 158.0f);
 
 		switch((ActionCommand::TargetPreset)pr->preset) {

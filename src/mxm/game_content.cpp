@@ -1586,6 +1586,11 @@ bool GameXmlContent::LoadRemoteData()
 				remote.lifeTime = _LifeTime;
 				pComp->QueryFloatAttribute("_AttackMultiplier", &remote.attackMultiplier);
 				pComp->QueryFloatAttribute("_OffsetY", &remote.offsetY);
+				if(XMLElement* pFd = pComp->FirstChildElement("_ForceDir")) {
+					const char* fdType = nullptr;
+					pFd->QueryStringAttribute("_Type", &fdType);
+					remote.forceTargetDir = fdType && EA::StdC::Strcmp(fdType, "REMOTE_FORCE_DIRECTION_TYPE_TARGET_DIR") == 0;
+				}
 				pComp->QueryFloatAttribute("_OffsetZ", &remote.offsetZ);
 				pComp->QueryFloatAttribute("_DistPenaltyRate", &remote.distPenaltyRate);
 				pComp->QueryFloatAttribute("_PenaltyApplyDistance", &remote.penaltyApplyDistance);
