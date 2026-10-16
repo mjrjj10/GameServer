@@ -1714,12 +1714,13 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		if(it->statusID == statusID && it->targetIndex == target.index) {
 			const Time until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
 			if(until > it->until) it->until = until;
-			if(info && it->overlap < info->maxOverlap) it->overlap++;
+			const bool stacked = info && it->overlap < info->maxOverlap;
+			if(stacked) it->overlap++;
 			LOG("Status :: %ls -> %ls status=%d refreshed overlap=%d", caster.name.data(), target.name.data(), statusID, it->overlap);
 			const vec3 pos = target.body->GetWorldPos();
 			// clients add one instance per SN_AddStatus: drop the previous one first, otherwise the final remove
 			// leaves a copy (icon and effect) on screen
-			replication->SendRemoveStatusToAll(statusID, it->targetUID, it->casterUID);
+			if(!stacked) replication->SendRemoveStatusToAll(statusID, it->targetUID, it->casterUID);
 			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, sentDuration, pos, pos, 0);
 			// stacking passive (_ICEQUEEN): full stack -> remove it and apply the burst status
 			if(info && it->overlap >= info->maxOverlap && info->maxOverlap > 1) {
@@ -2691,7 +2692,7 @@ void World::UpdateStatuses()
 		const bool shieldBroken = it->info && it->info->type == "STATUS_TYPE_SHIELD" && it->shieldHP <= 0;
 		const bool timeOver = localTime >= it->until;
 		if(timeOver || target.dead || shieldBroken || it->removeOnHit) {
-			replication->SendRemoveStatusToAll(it->statusID, it->targetUID, it->casterUID);
+			for(i32 k = 0; k < MAX(it->overlap, 1); k++) replication->SendRemoveStatusToAll(it->statusID, it->targetUID, it->casterUID);
 			// next status chain (_NextStatusIndex / _NextStatusCondition)
 			i32 next = 0;
 			if(it->info && it->info->nextStatus != 0 && !target.dead) {
@@ -2922,10 +2923,14 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		}
 		// the client draws plain (non-fan) static boxes facing the opposite way of their rotation
 		const bool plainStaticBox = inst.speed <= 0 && remote->boundType == Remote::BoundType::E_BOUND_BOX && remote->angle <= 0;
-		const f32 sendYaw = atan2f(dir.y, dir.x) + (plainStaticBox ? PI : 0.0f);
+		const bool chained = remote->destroyCreateRemote != RemoteIdx::INVALID || !remote->onDestroy.empty() || !remote->onTime.empty() || !remote->onActivate.empty();
+		const bool flip = plainStaticBox && chained;
+		const f32 sendYaw = atan2f(dir.y, dir.x) + (flip ? PI : 0.0f);
 		// the client adds the remote's _OffsetZ to the fire position: compensate so the remote shows at the
 		// height the server simulates (weapon fire height), not under the ground
-		const vec3 sendPos = pos - vec3(0, 0, remote->offsetZ);
+		vec3 sendPos = pos - vec3(0, 0, remote->offsetZ);
+		const bool atAimedPoint = aimPos && glm::length(vec2(*aimPos)) > 1.0f && glm::length(vec2(pos) - vec2(*aimPos)) < 1.0f;
+		if(plainStaticBox && !flip && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY), 0);
 		replication->SendRemoteCreateToAll(players[ownerIndex].Main().UID, seed, idx, sendPos, sendYaw, targetPos, targetMaster ? target : ActorUID::INVALID, GetGameXmlContent().GetNodeName(nodeName), casterCreatesLocally ? players[ownerIndex].clientHd : ClientHandle::INVALID);
 	}
 
