@@ -719,7 +719,7 @@ void World::PlayerWeaponFire(Player& player)
 
 	if(ClassIsMelee(player.Main().classType)) {
 		foreach(it, players) {
-			if(it->team == player.team || it->dead) continue;
+			if(it->team == player.team || it->dead || it->untargetable) continue;
 			const vec3 pos = it->body->GetWorldPos();
 			if(fabsf(pos.z - origin.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 			const vec2 rel = LagClosestPos(*it, vec2(origin)) - vec2(origin);
@@ -849,7 +849,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage)
 {
 	LOG("Explosion :: at (%.0f, %.0f) radius=%.0f", center.x, center.y, radius);
 	foreach(it, players) {
-		if(it->team == owner.team || it->dead) continue;
+		if(it->team == owner.team || it->dead || it->untargetable) continue;
 		const vec3 pos = it->body->GetWorldPos();
 		if(fabsf(pos.z - center.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 		if(LagDistToPoint(*it, vec2(center)) > radius + WEAPON_TARGET_RADIUS * 0.5f + WEAPON_HIT_TOLERANCE) continue;
@@ -870,7 +870,7 @@ void World::UpdateProjectiles(f32 delta)
 
 		if(!proj->graph) {
 			foreach(it, players) {
-				if(it->team == owner.team || it->dead) continue;
+				if(it->team == owner.team || it->dead || it->untargetable) continue;
 				if(eastl::find(proj->hitList.begin(), proj->hitList.end(), it->index) != proj->hitList.end()) continue;
 				const vec3 pos = it->body->GetWorldPos();
 				const f32 lagDist = LagDistToSegment(*it, from, to);
@@ -901,7 +901,7 @@ void World::UpdateProjectiles(f32 delta)
 			const Player* nearPlayer = nullptr;
 			f32 nearDist = 999999.0f;
 			foreach_const(it, players) {
-				if(it->team == owner.team || it->dead) continue;
+				if(it->team == owner.team || it->dead || it->untargetable) continue;
 				const f32 d = SegmentPointDist2D(vec2(proj->start), vec2(proj->pos), vec2(it->body->GetWorldPos()));
 				if(d < nearDist) {
 					nearDist = d;
@@ -1257,7 +1257,7 @@ void World::HealPlayer(Player& healer, Player& target, i32 amount)
 
 bool World::RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const
 {
-	if(p.dead) return false;
+	if(p.dead || p.untargetable) return false;
 	if(inst.excludeIndex >= 0 && (i32)p.index == inst.excludeIndex) return false;
 	const Player& owner = players[inst.ownerIndex];
 	const Remote& remote = *inst.remote;
@@ -1421,7 +1421,7 @@ f32 World::PassiveWeaponDamageMul(Player& attacker, Player& target)
 
 void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power, f32 durationOverride)
 {
-	if(target.dead) return;
+	if(target.dead || target.untargetable) return;
 	if(caster.team != target.team) target.statusesTaken++;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
 	f32 duration = durationOverride > 0 ? durationOverride : (info && info->durationSec > 0 ? info->durationSec : 1.0f);
@@ -2004,7 +2004,8 @@ void World::UpdateShowcase()
 		TeleportPlayer(dummy, dummyPos, faceCaster);
 	}
 	{
-		const vec3 viewPos = vec3(vec2(casterPos) - showcase.dir * 350.0f, showcase.anchor.z);
+		human->untargetable = true;
+		const vec3 viewPos = vec3((vec2(casterPos) + vec2(dummyPos)) * 0.5f, showcase.anchor.z);
 		if(glm::length(vec2(viewPos) - vec2(human->body->GetWorldPos())) > 50.0f) {
 			TeleportPlayer(*human, viewPos, 0);
 			replication->SendReviveToAll(human->userID, human->Main().UID, human->Sub().UID, viewPos);
@@ -3031,7 +3032,7 @@ void World::PlayerSkillDamage(Player& player, SkillID skillID, const vec3& castP
 	const bool targetPosition = glm::length(castPos) > 1.0f;
 
 	foreach(it, players) {
-		if(it->team == player.team || it->dead) continue;
+		if(it->team == player.team || it->dead || it->untargetable) continue;
 		const vec3 pos = it->body->GetWorldPos();
 
 		bool hit = false;
@@ -3060,7 +3061,7 @@ void World::PlayerSkillDamage(Player& player, SkillID skillID, const vec3& castP
 
 void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 damage, const Projectile* proj, u32 remoteID, RemoteIdx remoteDoc, vec2 remoteDir)
 {
-	if(target.dead) return;
+	if(target.dead || target.untargetable) return;
 	if(HasStatusType(target, "STATUS_TYPE_GODMODE")) return;
 	if(HasStatusType(target, "STATUS_TYPE_EVADE") && attacker.team != target.team) {
 		LOG("Evade :: %ls evaded %ls", target.name.data(), attacker.name.data());

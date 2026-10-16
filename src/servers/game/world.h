@@ -114,6 +114,7 @@ struct World
 		i32 damageTaken = 0;
 		i32 hitsTaken = 0;
 		i32 statusesTaken = 0;
+		bool untargetable = false;
 		i32 pendingChildSkill = 0;
 		Time pendingChildSkillUntil = Time::ZERO;
 		eastl::array<Time,5> botSkillReady = { Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO };
