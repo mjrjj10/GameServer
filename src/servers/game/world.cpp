@@ -3158,12 +3158,13 @@ void World::UpdateRemotes(f32 delta)
 					const vec2 from = vec2(inst.pos);
 					const vec2 to = from + inst.dir * step;
 					const f32 halfWidth = remote.boundSize[0] * 0.5f;
+					const f32 boxFront = remote.boundType == Remote::BoundType::E_BOUND_BOX ? MAX(remote.offsetY + remote.boundSize[1] * 0.5f, 0.0f) : 0.0f;
 					if(remote.damageGroup != Remote::DamageGroup::eNONE && remote.damageGroup != Remote::DamageGroup::INVALID) {
 						foreach(it, players) {
 							if(!RemoteCanAffect(inst, *it, false)) continue;
 							const vec3 pos = it->body->GetWorldPos();
 							if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
-							if(!LagSegmentHits(*it, from, to, halfWidth + HitRadius(*it) + PROJECTILE_HIT_TOLERANCE, HitRadius(*it))) continue;
+							if(!LagSegmentHits(*it, from, to, halfWidth + HitRadius(*it) + PROJECTILE_HIT_TOLERANCE, boxFront + HitRadius(*it))) continue;
 							RemoteHit(inst, *it);
 							inst.hitsLeft--;
 							if(inst.stopAtFirstHit && it->team != players[inst.ownerIndex].team) inst.hitsLeft = 0;
