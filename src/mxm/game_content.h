@@ -581,6 +581,7 @@ struct GameXmlContent
 	bool LoadCharacterBaseStats();
 
 	const Master& GetMaster(ClassType classType) const;
+	i32 GetFirstComboSkill(i32 baseSkill) const { auto f = firstComboSkill.find(baseSkill); return f == firstComboSkill.end() ? 0 : f->second; }
 	i32 WeaponTypeOf(ClassType classType, WeaponIndex weaponIndex) const;
 	const Action& GetSkillAction(ClassType classType, ActionStateID actionID) const;
 	const Remote& GetRemote(RemoteIdx remoteID) const;
@@ -682,6 +683,7 @@ private:
 	// bots (BotBrainData.xml _SkillIndexData per master, E_BOT_STAGE_LEVEL_NORMAL constants; SKILL.xml)
 	eastl::hash_map<i32, eastl::array<i32,5>> botSkills;  // master creature -> _Skill0.._Skill3, _UgSkill
 	eastl::hash_map<i32, f32> skillCoolTime;              // _CoolTime (s)
+	eastl::hash_map<i32, i32> firstComboSkill;
 	eastl::hash_map<i32, f32> botSkillMaxDistance;        // _Target _BotSkillMaxDistance
 	eastl::hash_map<i32, f32> skillRangeX;
 	eastl::hash_map<i32, f32> skillTargetRangeX;

@@ -528,6 +528,11 @@ struct World
 		vec2 bestDir = vec2(1, 0);
 		vec2 bestCenter = vec2(0);
 		f32 bestZ = 0;
+		i32 comboSkill = 0;
+		Time comboAt = Time::ZERO;
+		vec3 comboPos = vec3(0);
+		i32 comboCaster = -1;
+		ActorUID comboTarget = ActorUID::INVALID;
 		f32 flatLen = 2050.0f;
 		vec3 anchor = vec3(0);
 		f32 yaw = 0;

@@ -356,6 +356,11 @@ void GameXmlContent::LoadAllSkills()
 		if(actionStr) {
 			skill.action = ActionStateFromString(actionStr);
 		}
+		{
+			i32 baseCombo = 0;
+			pNodeCommonSkill->QueryIntAttribute("_BaseComboSkill", &baseCombo);
+			if(baseCombo != 0 && type == SkillType::COMBO && firstComboSkill.find(baseCombo) == firstComboSkill.end()) firstComboSkill[baseCombo] = skillID;
+		}
 
 		for(int i = 0; i < 6; i++) {
 			SkillNormalLevelModel& _skillNormalLevelModel = *skill.getSkillNormalLevelByIndex(i);

@@ -1812,6 +1812,12 @@ static i64 ShowcaseWallMs()
 
 void World::UpdateShowcase()
 {
+	if(showcase.comboSkill != 0 && localTime >= showcase.comboAt) {
+		Player& comboCaster = players[showcase.comboCaster];
+		LOG("Showcase :: combo skill=%d", showcase.comboSkill);
+		if(!comboCaster.dead) PlayerCastSkill(comboCaster, SkillID(showcase.comboSkill), showcase.comboPos, Slice<const ActorUID>(&showcase.comboTarget, showcase.comboTarget != ActorUID::INVALID ? 1 : 0), 0);
+		showcase.comboSkill = 0;
+	}
 	if(showcase.done || localTime < showcase.next) return;
 	const auto& content = GetGameXmlContent();
 	eastl::fixed_vector<u32,16,false> bots;
@@ -2099,6 +2105,14 @@ void World::UpdateShowcase()
 	else if(step >= 1 && step <= 6) {
 		const bool targetInRange = range <= 0 || glm::length(vec2(dummyPos) - vec2(casterPos)) <= range;
 		if(skill != 0) PlayerCastSkill(caster, SkillID(skill), castPos, Slice<const ActorUID>(&targetUID, targetInRange ? 1 : 0), 0);
+		const i32 combo = skill != 0 ? content.GetFirstComboSkill(skill) : 0;
+		if(combo != 0) {
+			showcase.comboSkill = combo;
+			showcase.comboAt = TimeAdd(localTime, TimeMsToTime(700));
+			showcase.comboPos = castPos;
+			showcase.comboCaster = (i32)caster.index;
+			showcase.comboTarget = targetInRange ? targetUID : ActorUID::INVALID;
+		}
 	}
 	else {
 		caster.input.tag = true;
