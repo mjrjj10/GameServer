@@ -154,6 +154,9 @@ struct World
 		Time dashUntil = Time::ZERO;
 		vec2 dashDir = vec2(1, 0);
 		f32 dashSpeed = 0;
+		Time dashStartAt = Time::ZERO;
+		f32 dashDist = 0;
+		f32 dashDone = 0;
 		Time ccImmuneUntil = Time::ZERO;
 		i32 cleanseCharges = -1;
 		Time cleanseRefillAt = Time::ZERO;

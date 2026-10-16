@@ -183,8 +183,12 @@ void World::Update(Time localTime_)
 
 		p.movement.rot = p.input.rot;
 
-		if(!p.dead && p.clientHd == ClientHandle::INVALID && localTime < p.dashUntil) {
-			physics.Move(&body, vec3(p.dashDir * p.dashSpeed * (f32)tdelta, 0), (f32)tdelta);
+		if(!p.dead && p.clientHd == ClientHandle::INVALID && p.dashDone < p.dashDist) {
+			const f32 total = (f32)TimeDiffSec(TimeDiff(p.dashStartAt, p.dashUntil));
+			const f32 frac = total > 0 ? MIN((f32)TimeDiffSec(TimeDiff(p.dashStartAt, localTime)) / total, 1.0f) : 1.0f;
+			const f32 target = p.dashDist * frac * frac;
+			physics.Move(&body, vec3(p.dashDir * (target - p.dashDone), 0), (f32)tdelta);
+			p.dashDone = target;
 			p.input.moveTo = body.GetWorldPos();
 		}
 
@@ -2056,6 +2060,8 @@ void World::TeleportPlayer(Player& p, const vec3& pos, f32 yaw)
 	p.body->vel = vec3(0);
 	p.posHistoryCount = 0;
 	p.posHistoryHead = 0;
+	p.dashDone = p.dashDist;
+	p.dashUntil = Time::ZERO;
 	p.input.moveTo = pos;
 	p.input.rot.upperYaw = yaw;
 	p.input.rot.bodyYaw = yaw;
@@ -3754,6 +3760,9 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 		else {
 			mover.dashDir = moveDir;
 			mover.dashSpeed = moveDist / moveDuration;
+			mover.dashStartAt = localTime;
+			mover.dashDist = moveDist;
+			mover.dashDone = 0;
 			mover.dashUntil = TimeAdd(localTime, TimeMsToTime(moveDuration * 1000.0));
 		}
 	}
