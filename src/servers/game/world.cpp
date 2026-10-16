@@ -2374,7 +2374,7 @@ void World::UpdateShowcase()
 	}
 	{
 		human->untargetable = true;
-		const vec3 viewPos = vec3((vec2(casterPos) + vec2(dummyPos)) * 0.5f, showcase.anchor.z);
+		const vec3 viewPos = vec3((vec2(casterPos) + vec2(dummyPos)) * 0.5f + Perp(showcase.dir) * 400.0f, showcase.anchor.z);
 		if(glm::length(vec2(viewPos) - vec2(human->body->GetWorldPos())) > 50.0f) {
 			TeleportPlayer(*human, viewPos, 0);
 			replication->SendReviveToAll(human->userID, human->Main().UID, human->Sub().UID, viewPos);
