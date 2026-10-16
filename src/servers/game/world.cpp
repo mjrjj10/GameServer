@@ -2629,7 +2629,10 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, rule->idx, at + vec3(dir * child->offsetY, 0), dir, childTarget, parent.skillID, parent.castID, parent.damage,
 				// clients spawn the directed children (_CreateRemote) of a remote ending on their side themselves
 				parent.clientRemoteID != 0 && !(fromDestroy && rule->kind != Remote::SPAWN_SINGLE && !rule->targetOwner), parent.casterLocal); // returns to the caster are not spawned by clients
-			if(inst) inst->excludeIndex = excludeIndex;
+			if(inst) {
+				inst->excludeIndex = excludeIndex;
+				inst->centeredBox = parent.centeredBox;
+			}
 		}
 	}
 }
@@ -2785,8 +2788,9 @@ void World::RemoteApplyArea(RemoteInst& inst)
 		foreach(it, players) {
 			const vec3 pos = it->body->GetWorldPos();
 			if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
-			const vec2 center = vec2(inst.pos) + inst.dir * (remote.boundSize[1] * 0.5f);
-			const vec2 rel = LagClosestPos(*it, center) - vec2(inst.pos);
+			const f32 back = inst.centeredBox ? length * 0.5f : 0.0f;
+			const vec2 center = vec2(inst.pos) + inst.dir * (length * 0.5f - back);
+			const vec2 rel = LagClosestPos(*it, center) - vec2(inst.pos) + inst.dir * back;
 			const f32 along = glm::dot(rel, inst.dir);
 			const f32 side = fabsf(glm::dot(rel, Perp(inst.dir)));
 			if(along < -WEAPON_TARGET_RADIUS - WEAPON_HIT_TOLERANCE || along > length + WEAPON_TARGET_RADIUS + WEAPON_HIT_TOLERANCE) continue;
@@ -2810,11 +2814,13 @@ void World::UpdateRemotes(f32 delta)
 		const f32 offsetY = remote ? (remote->forceTargetDir ? -remote->offsetY : remote->offsetY) : 0;
 		vec3 pos = owner.body->GetWorldPos() + vec3(dir * offsetY, 158.0f);
 
+		bool atAimedPoint = pr->atTarget;
 		switch((ActionCommand::TargetPreset)pr->preset) {
 			case ActionCommand::TargetPreset::POS_FFF:
 			case ActionCommand::TargetPreset::POS_TFF:
 			case ActionCommand::TargetPreset::POS_TTT_1:
 			case ActionCommand::TargetPreset::POS_TFF_1_800_1000: {
+				atAimedPoint = glm::length(vec2(pr->castPos)) > 1.0f;
 				const vec3 base = glm::length(vec2(pr->castPos)) > 1.0f ? pr->castPos : owner.body->GetWorldPos();
 				pos = vec3(vec2(base) + dir * pr->offsetFront + Perp(dir) * pr->offsetSide, owner.body->GetWorldPos().z);
 			} break;
@@ -2840,7 +2846,8 @@ void World::UpdateRemotes(f32 delta)
 					t = *e ? e + 1 : e;
 				}
 			}
-			SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, casterLocal, pr->stopAtTarget);
+			RemoteInst* spawned = SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, casterLocal, pr->stopAtTarget);
+			if(spawned) spawned->centeredBox = atAimedPoint;
 		}
 		pr = pendingRemotes.erase_unsorted(pr);
 	}
@@ -3041,7 +3048,10 @@ void World::UpdateRemotes(f32 delta)
 					const Remote* nextRemote = GetGameXmlContent().FindRemote(next);
 					const f32 nextOffset = nextRemote ? nextRemote->offsetY : 0;
 					RemoteInst* child = SpawnRemote(copy.ownerIndex, next, copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, 0, copy.casterLocal);
-					if(child) child->excludeIndex = childExclude;
+					if(child) {
+						child->excludeIndex = childExclude;
+						child->centeredBox = copy.centeredBox;
+					}
 				}
 				SpawnRemoteRules(*this, copy, remote.onDestroy, copy.pos, childExclude, next, true);
 			}

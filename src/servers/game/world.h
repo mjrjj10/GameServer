@@ -386,6 +386,7 @@ struct World
 		bool stopAtFirstHit = false; // DestroyAwayTarget: ends on the first enemy hit (or at the aimed point)
 		vec2 graphDir = vec2(1, 0);
 		bool hasLandZ = false;
+		bool centeredBox = false;
 	};
 
 	struct CastHit
