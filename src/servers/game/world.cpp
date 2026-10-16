@@ -61,6 +61,8 @@ static const f64 WEAPON_HIT_INTERVAL_MS = 80.0;
 static const f32 WEAPON_PROJECTILE_SPEED = 4000.0f;
 static const f32 WEAPON_MELEE_MAX_RANGE = 600.0f;
 static const f32 WEAPON_MELEE_HALF_ANGLE = 1.05f;
+static const f32 WEAPON_NODE_MAX_FORWARD = 250.0f;
+static const f32 CAST_MOVE_TOLERANCE = 30.0f;
 static const f32 WEAPON_RANGE_SCALE = 1.1f;
 static const f32 WEAPON_TARGET_RADIUS = 110.0f;
 static const f32 WEAPON_HIT_TOLERANCE = 50.0f;
@@ -312,6 +314,7 @@ void World::Update(Time localTime_)
 	UpdateSummonAi((f32)tdelta);
 	if(!frozen) UpdatePassives();
 	if(!frozen) UpdateStances();
+	if(!frozen) UpdateCasts();
 	if(Config().DevShowcase) { if(!frozen) UpdateShowcase(); }
 	else {
 		if(!frozen) UpdateBotCombat();
@@ -683,7 +686,12 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 	}
 	const auto& skill = skillFound->second;
 	const bool followUp = forcedAction != ActionStateID::INVALID;
-	const ActionStateID actionState = followUp ? forcedAction : skill.action;
+	if(!followUp && player.casting.skillID == skillID) {
+		ReleaseCast(player);
+		return;
+	}
+	const GameXmlContent::SkillCast* cast = followUp ? nullptr : content.FindSkillCast((i32)skillID);
+	const ActionStateID actionState = followUp ? forcedAction : (cast ? cast->action : skill.action);
 
 	if(!followUp) {
 		const bool shirk = GetGameXmlContent().GetSkillConsumeStamina((i32)skillID) > 0;
@@ -786,9 +794,26 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 
 	replication->FramePushSkillExec(rpExec);
 
-	const bool remotesScheduled = ScheduleSkillRemotes(player, skillID, castPos, targets, angle, followUp ? 0 : -1, forcedAction);
+	const bool remotesScheduled = ScheduleSkillRemotes(player, skillID, castPos, targets, angle, followUp ? 0 : -1, cast ? cast->action : forcedAction);
+	if(cast) {
+		const bool bot = player.clientHd == ClientHandle::INVALID;
+		f32 wait = cast->time;
+		if(bot && cast->type != GameXmlContent::SkillCast::DELAY && action.seqLength > 0) wait = MIN(wait, action.seqLength);
+		player.casting.skillID = skillID;
+		player.casting.castPos = castPos;
+		player.casting.target = targets.size() > 0 ? targets[0] : ActorUID::INVALID;
+		player.casting.startPos = vec2(player.body->GetWorldPos());
+		player.casting.executeAt = TimeAdd(localTime, TimeMsToTime(wait * 1000.0));
+		player.casting.type = (u8)cast->type;
+		player.casting.interruptByMove = cast->interruptByMove;
+		LOG("Cast :: %ls skill=%d start action=%d type=%d wait=%.2f", player.name.data(), (i32)skillID, (i32)cast->action, (i32)cast->type, wait);
+	}
 	skillProgramList.back().passes = lastAnimPasses;
-	if(!remotesScheduled && !followUp) {
+	bool effectCommands = false;
+	foreach_const(cmd, action.commands) {
+		if(cmd->type == ActionCommand::Type::STATUS || cmd->type == ActionCommand::Type::STATUS_SKILL_TARGET || cmd->type == ActionCommand::Type::ENTITY) effectCommands = true;
+	}
+	if(!remotesScheduled && !followUp && !effectCommands && !cast) {
 		PlayerSkillDamage(player, skillID, castPos, targets, angle);
 	}
 
@@ -1543,6 +1568,35 @@ void World::StanceWeaponUse(Player& player)
 	if(--m.stanceShotsLeft == 0) SetStance(m, 0, 0, 0, false);
 }
 
+void World::ReleaseCast(Player& player)
+{
+	const Player::Casting c = player.casting;
+	player.casting.skillID = SkillID::INVALID;
+	auto f = GetGameXmlContent().skillMap.find(c.skillID);
+	if(f == GetGameXmlContent().skillMap.end() || player.dead) return;
+	LOG("Cast :: %ls skill=%d release", player.name.data(), (i32)c.skillID);
+	PlayerCastSkill(player, c.skillID, c.castPos, Slice<const ActorUID>(&c.target, c.target != ActorUID::INVALID ? 1 : 0), 0, f->second.action);
+}
+
+void World::CancelCast(Player& player, const char* reason)
+{
+	LOG("Cast :: %ls skill=%d cancelled (%s)", player.name.data(), (i32)player.casting.skillID, reason);
+	player.casting.skillID = SkillID::INVALID;
+}
+
+void World::UpdateCasts()
+{
+	foreach(it, players) {
+		if(it->casting.skillID == SkillID::INVALID || !it->body) continue;
+		if(it->dead) { CancelCast(*it, "dead"); continue; }
+		const bool bot = it->clientHd == ClientHandle::INVALID;
+		if(it->casting.interruptByMove && !bot && glm::length(vec2(it->body->GetWorldPos()) - it->casting.startPos) > CAST_MOVE_TOLERANCE) { CancelCast(*it, "moved"); continue; }
+		if(localTime < it->casting.executeAt) continue;
+		if(!bot && it->casting.type == GameXmlContent::SkillCast::LIMIT) CancelCast(*it, "window ended");
+		else ReleaseCast(*it);
+	}
+}
+
 void World::UpdateStances()
 {
 	foreach(it, players) {
@@ -1785,7 +1839,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			// clients add one instance per SN_AddStatus: drop the previous one first, otherwise the final remove
 			// leaves a copy (icon and effect) on screen
 			if(!stacked) replication->SendRemoveStatusToAll(statusID, it->targetUID, it->casterUID);
-			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, sentDuration, pos, pos, 0);
+			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, sentDuration, pos, pos, 0, it->overlap);
 			// stacking passive (_ICEQUEEN): full stack -> remove it and apply the burst status
 			if(info && it->overlap >= info->maxOverlap && info->maxOverlap > 1) {
 				foreach_const(ps, activeStatuses) {
@@ -2137,6 +2191,23 @@ static f32 RemoteReach(const GameXmlContent& content, RemoteIdx idx, i32 depth)
 	return own > 0 ? travel + own : 0.0f;
 }
 
+static f32 WeaponNodeForward(const GameXmlContent& content, ClassType cls, SkillID skillID, const Remote& remote, u16 nodeName)
+{
+	if(nodeName == 0 || remote.maxSpeed > 0 || remote.attachFireObject || remote.boundType != Remote::BoundType::E_BOUND_BOX) return 0;
+	auto f = content.skillMap.find(skillID);
+	if(f == content.skillMap.end()) return 0;
+	SkillNormalModel& skill = const_cast<SkillNormalModel&>(f->second);
+	const f32 indicator = skill.getSkillNormalLevelByIndex(0)->getSkillRangeLengthY();
+	if(indicator <= 0) return 0;
+	const auto& action = content.GetSkillAction(cls, skill.action);
+	foreach_const(cmd, action.commands) {
+		if(cmd->type == ActionCommand::Type::GRAPH_MOVE_HORZ && cmd->graphMoveHorz.distance > 0) return 0;
+		if(cmd->type == ActionCommand::Type::MOVE && cmd->move.preset != ActionCommand::MovePreset::MOVE_NONE) return 0;
+	}
+	const f32 forward = indicator - (remote.offsetY + remote.boundSize[1] * 0.5f);
+	return forward > 0 && forward <= WEAPON_NODE_MAX_FORWARD ? forward : 0;
+}
+
 static f32 SkillReach(const GameXmlContent& content, ClassType cls, SkillID skillID)
 {
 	auto f = content.skillMap.find(skillID);
@@ -2360,7 +2431,12 @@ void World::UpdateShowcase()
 	caster.ccUntil = Time::ZERO;
 
 	i32 skill = 0;
-	if(step >= 1 && step <= 6) {
+	if(step >= 1 && step <= 5) {
+		const i32 byID = 180000000 + (i32)cls * 10000 + step * 10;
+		auto f = content.skillMap.find(SkillID(byID));
+		if(f != content.skillMap.end() && f->second.type != SkillType::PASSIVE && f->second.type != SkillType::SHIRK) skill = byID;
+	}
+	if(skill == 0 && step >= 1 && step <= 6) {
 		const auto& master = content.GetMaster(cls);
 		foreach_const(sid, master.skillIDs) {
 			auto f = content.skillMap.find(*sid);
@@ -3325,7 +3401,14 @@ void World::UpdateRemotes(f32 delta)
 				}
 			}
 			RemoteInst* spawned = SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, casterLocal, pr->stopAtTarget);
-			if(spawned) spawned->centeredBox = atAimedPoint;
+			if(spawned) {
+				spawned->centeredBox = atAimedPoint;
+				const f32 nodeForward = atAimedPoint ? 0 : WeaponNodeForward(GetGameXmlContent(), owner.Main().classType, pr->skillID, *spawned->remote, pr->nodeName);
+				if(nodeForward > 0) {
+					spawned->pos += vec3(dir * nodeForward, 0);
+					LOG("Remote :: %d weapon node forward %.0f (skill indicator)", (i32)pr->idx, nodeForward);
+				}
+			}
 		}
 		pr = pendingRemotes.erase_unsorted(pr);
 	}

@@ -115,6 +115,15 @@ struct World
 		i32 hitsTaken = 0;
 		i32 statusesTaken = 0;
 		bool untargetable = false;
+		struct Casting {
+			SkillID skillID = SkillID::INVALID;
+			vec3 castPos;
+			ActorUID target = ActorUID::INVALID;
+			vec2 startPos;
+			Time executeAt = Time::ZERO;
+			u8 type = 0;
+			bool interruptByMove = false;
+		} casting;
 		i32 pendingChildSkill = 0;
 		Time pendingChildSkillUntil = Time::ZERO;
 		eastl::array<Time,5> botSkillReady = { Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO };
@@ -621,6 +630,9 @@ private:
 	void SetStance(ActorMaster& master, i8 stance, f32 duration, i32 weaponFireCount, bool cancelByDefeat);
 	void StanceWeaponUse(Player& player);
 	void UpdateStances();
+	void ReleaseCast(Player& player);
+	void CancelCast(Player& player, const char* reason);
+	void UpdateCasts();
 	bool HasStatusType(const Player& p, const char* type) const;
 	f32 StatusModSum(const Player& p, i32 stat) const;
 	f32 StatusModMulSum(const Player& p, i32 stat) const;

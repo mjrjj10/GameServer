@@ -361,6 +361,19 @@ void GameXmlContent::LoadAllSkills()
 			pNodeCommonSkill->QueryIntAttribute("_BaseComboSkill", &baseCombo);
 			if(baseCombo != 0 && type == SkillType::COMBO && firstComboSkill.find(baseCombo) == firstComboSkill.end()) firstComboSkill[baseCombo] = skillID;
 		}
+		if(XMLElement* pCast = pNodeCommonSkill->FirstChildElement("_Cast")) {
+			const char* castType = nullptr;
+			const char* castAction = nullptr;
+			pCast->QueryStringAttribute("_CastType", &castType);
+			pCast->QueryStringAttribute("_CastAction", &castAction);
+			SkillCast sc;
+			if(castType && EA::StdC::Strcmp(castType, "SKILL_CAST_TIME_LIMIT") == 0) sc.type = SkillCast::LIMIT;
+			else if(castType && EA::StdC::Strcmp(castType, "SKILL_CAST_TIME_CHARGING") == 0) sc.type = SkillCast::CHARGING;
+			pCast->QueryFloatAttribute("_CastTime", &sc.time);
+			pCast->QueryBoolAttribute("_InterruptByMove", &sc.interruptByMove);
+			sc.action = castAction ? ActionStateFromString(castAction) : ActionStateID::INVALID;
+			if(castType && sc.action != ActionStateID::INVALID && sc.time > 0) skillCast[skillID] = sc;
+		}
 		if(XMLElement* pStance = pNodeCommonSkill->FirstChildElement("_STANCE")) {
 			const char* stanceType = nullptr;
 			pStance->QueryStringAttribute("_Type", &stanceType);
