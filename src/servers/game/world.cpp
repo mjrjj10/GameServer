@@ -2003,6 +2003,16 @@ void World::UpdateShowcase()
 		expect = t.dist > flatLen ? -1 : t.expect;
 		TeleportPlayer(dummy, dummyPos, faceCaster);
 	}
+	{
+		const vec2 perp = vec2(-showcase.dir.y, showcase.dir.x);
+		const vec3 mid = (casterPos + dummyPos) * 0.5f;
+		const vec3 viewPos = vec3(vec2(mid) - perp * 450.0f, showcase.anchor.z);
+		if(glm::length(vec2(viewPos) - vec2(human->body->GetWorldPos())) > 50.0f) {
+			TeleportPlayer(*human, viewPos, 0);
+			replication->SendReviveToAll(human->userID, human->Main().UID, human->Sub().UID, viewPos);
+		}
+	}
+	LOG("Showcase :: placement caster=%ls (%.0f, %.0f) dummy=%ls (%.0f, %.0f) player=(%.0f, %.0f) cast=(%.0f, %.0f)", caster.name.data(), casterPos.x, casterPos.y, dummy.name.data(), dummyPos.x, dummyPos.y, human->body->GetWorldPos().x, human->body->GetWorldPos().y, castPos.x, castPos.y);
 	showcase.lastDummyHp = dummy.damageTaken;
 	showcase.lastDummyHits = dummy.hitsTaken;
 	showcase.lastDummyStatuses = dummy.statusesTaken;
