@@ -1652,6 +1652,13 @@ bool GameXmlContent::LoadRemoteData()
 					if(remote.onTime.empty()) remote.timeEventDelay = -1;
 				}
 				ParseRemoteSpawnRules(pComp->FirstChildElement("_Activate"), remote.onActivate);
+				if(XMLElement* pAct = pComp->FirstChildElement("_Activate")) {
+					if(XMLElement* pCca = pAct->FirstChildElement("_ChangeCasterActionState")) {
+						const char* state = nullptr;
+						pCca->QueryStringAttribute("_ActionState", &state);
+						if(state) remote.changeCasterAction = ActionStateFromString(state);
+					}
+				}
 				ParseRemoteSpawnRules(pComp->FirstChildElement("_ActivateOnNotGround"), remote.onHitCharacter);
 			}
 		}

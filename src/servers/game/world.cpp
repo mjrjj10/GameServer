@@ -590,7 +590,7 @@ World::ActorMasterHandle World::MasterInvalidHandle()
 	return actorMasterList.end();
 }
 
-void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 clientTime)
+void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 clientTime, ActionStateID forcedAction)
 {
 	if(frozen) return;
 	// TODO: check if can cast
@@ -603,17 +603,18 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 		return;
 	}
 	const auto& skill = skillFound->second;
-	const ActionStateID actionState = skill.action;
+	const bool followUp = forcedAction != ActionStateID::INVALID;
+	const ActionStateID actionState = followUp ? forcedAction : skill.action;
 
-	{
+	if(!followUp) {
 		const bool shirk = GetGameXmlContent().GetSkillConsumeStamina((i32)skillID) > 0;
 		if(IsBlocked(player, false, !shirk, shirk)) {
 			LOG("Blocked :: %ls skill=%d (input blocked by a status)", player.name.data(), (i32)skillID);
 			return;
 		}
+		if(!PlayerPaySkillCost(player, (i32)skillID)) return;
+		PassiveOnSkillCast(player, (i32)skillID);
 	}
-	if(!PlayerPaySkillCost(player, (i32)skillID)) return;
-	PassiveOnSkillCast(player, (i32)skillID);
 
 	const f32 angle = player.input.rot.upperYaw;
 	const vec2 dir = vec2(cosf(angle), sinf(angle));
@@ -700,7 +701,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 
 	replication->FramePushSkillExec(rpExec);
 
-	if(!ScheduleSkillRemotes(player, skillID, castPos, targets, angle)) {
+	if(!ScheduleSkillRemotes(player, skillID, castPos, targets, angle, followUp ? 0 : -1, forcedAction) && !followUp) {
 		PlayerSkillDamage(player, skillID, castPos, targets, angle);
 	}
 
@@ -1768,6 +1769,8 @@ void World::TeleportPlayer(Player& p, const vec3& pos, f32 yaw)
 {
 	p.body->collider->setFootPosition(PxExtendedVec3(pos.x, pos.y, pos.z));
 	p.body->vel = vec3(0);
+	p.posHistoryCount = 0;
+	p.posHistoryHead = 0;
 	p.input.moveTo = pos;
 	p.input.rot.upperYaw = yaw;
 	p.input.rot.bodyYaw = yaw;
@@ -1778,7 +1781,7 @@ static f32 RemoteDamageRadius(const GameXmlContent& content, RemoteIdx idx, i32 
 {
 	const Remote* r = content.FindRemote(idx);
 	if(!r || depth > 5) return 0;
-	f32 radius = (r->attackMultiplier > 0 || !r->statuses.empty()) ? r->boundSize[0] * 0.5f : 0;
+	f32 radius = (r->attackMultiplier > 0 || !r->statuses.empty() || r->changeCasterAction != ActionStateID::INVALID) ? r->boundSize[0] * 0.5f : 0;
 	const Remote::SpawnRules* lists[4] = { &r->onDestroy, &r->onTime, &r->onActivate, &r->onHitCharacter };
 	for(const Remote::SpawnRules* l : lists) {
 		for(const Remote::SpawnRule& rule : *l) radius = MAX(radius, RemoteDamageRadius(content, rule.idx, depth + 1));
@@ -1792,10 +1795,14 @@ static f32 SkillDamageRadius(const GameXmlContent& content, ClassType cls, Skill
 	if(f == content.skillMap.end()) return 0;
 	const auto& action = content.GetSkillAction(cls, f->second.action);
 	f32 radius = 0;
+	bool anyRemote = false;
 	foreach_const(cmd, action.commands) {
-		if((cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) && cmd->remote.idx != RemoteIdx::INVALID) radius = MAX(radius, RemoteDamageRadius(content, cmd->remote.idx, 0));
+		if((cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) && cmd->remote.idx != RemoteIdx::INVALID) {
+			anyRemote = true;
+			radius = MAX(radius, RemoteDamageRadius(content, cmd->remote.idx, 0));
+		}
 	}
-	return radius;
+	return anyRemote ? radius : -1.0f;
 }
 
 static i64 ShowcaseWallMs()
@@ -2028,8 +2035,9 @@ void World::UpdateShowcase()
 			const f32 len = glm::length(rel);
 			if(len > range) castPos = vec3(vec2(casterPos) + rel / len * range, castPos.z);
 		}
-		testName = t.dist > flatLen ? "skip_beyond_flat" : t.name;
-		expect = t.dist > flatLen ? -1 : t.expect;
+		const bool support = effect == 0;
+		testName = t.dist > flatLen ? "skip_beyond_flat" : (support ? "support" : t.name);
+		expect = (t.dist > flatLen || support) ? -1 : t.expect;
 		TeleportPlayer(dummy, dummyPos, faceCaster);
 	}
 	else if(step == 0) {
@@ -2396,13 +2404,13 @@ void World::UpdateStatuses()
 	}
 }
 
-bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle, i32 forceAnim)
+bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle, i32 forceAnim, ActionStateID forcedAction)
 {
 	const auto& content = GetGameXmlContent();
 	auto skillFound = content.skillMap.find(skillID);
 	if(skillFound == content.skillMap.end()) return false;
 	const auto& skill = skillFound->second;
-	const auto& action = content.GetSkillAction(player.Main().classType, skill.action);
+	const auto& action = content.GetSkillAction(player.Main().classType, forcedAction != ActionStateID::INVALID ? forcedAction : skill.action);
 
 	i32 anim = 0;
 	if(player.lastComboSkill == skillID && TimeDiffSec(TimeDiff(player.lastComboTime, localTime)) < 3.0) {
@@ -2444,8 +2452,14 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		bool anim0Acts = false, anim1Acts = false;
 		i32 anim0Id = 0;
 		foreach_const(cmd, action.commands) {
-			const bool acts = cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET ||
+			bool acts = cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET ||
 				cmd->type == ActionCommand::Type::STATUS || cmd->type == ActionCommand::Type::ENTITY;
+			if(cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) {
+				const Remote* r = content.FindRemote(cmd->remote.idx);
+				const bool visualOnly = r && r->boundType == Remote::BoundType::E_BOUND_NONE && r->onDestroy.empty() && r->onTime.empty() && r->onActivate.empty() &&
+					(r->damageGroup == Remote::DamageGroup::eNONE || r->damageGroup == Remote::DamageGroup::INVALID);
+				if(visualOnly) acts = false;
+			}
 			if(cmd->animIndex == 0) { anim0Acts |= acts; if(!anim0Id) anim0Id = cmd->animationId; }
 			if(cmd->animIndex == 1) anim1Acts |= acts;
 		}
@@ -2662,6 +2676,14 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 
 	const i32 amount = (i32)(inst.damage * remote.attackMultiplier);
 	if(enemy && remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;
+	if(enemy && remote.changeCasterAction != ActionStateID::INVALID && !inst.actionChanged && !owner.dead && owner.clientHd == ClientHandle::INVALID) {
+		inst.actionChanged = true;
+		inst.hitsLeft = 0;
+		const ActorUID targetUID = target.Main().UID;
+		LOG("Remote :: %ls hit %ls -> caster action %d", owner.name.data(), target.name.data(), (i32)remote.changeCasterAction);
+		PlayerCastSkill(owner, inst.skillID, target.body->GetWorldPos(), Slice<const ActorUID>(&targetUID, 1), 0, remote.changeCasterAction);
+		return;
+	}
 	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty()) return;
 
 	// damaging hits share one hit window per cast (a target takes a skill's damage once per window),

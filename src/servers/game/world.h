@@ -387,6 +387,7 @@ struct World
 		vec2 graphDir = vec2(1, 0);
 		bool hasLandZ = false;
 		bool centeredBox = false;
+		bool actionChanged = false;
 	};
 
 	struct CastHit
@@ -545,14 +546,14 @@ private:
 	ActorUID NewActorUID();
 	ActorMasterHandle MasterInvalidHandle();
 
-	void PlayerCastSkill(Player& player, SkillID skill, const vec3& castPos, Slice<const ActorUID> targets, f32 clientTime);
+	void PlayerCastSkill(Player& player, SkillID skill, const vec3& castPos, Slice<const ActorUID> targets, f32 clientTime, ActionStateID forcedAction = ActionStateID::INVALID);
 	void ExecuteSkillProgram(SkillProgram& prog);
 
 	void PlayerWeaponFire(Player& player);
 	void UpdateProjectiles(f32 delta);
 	void Explode(Player& owner, const vec3& center, f32 radius, i32 damage);
 	void RespawnPlayer(Player& player);
-	bool ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle, i32 forceAnim = -1);
+	bool ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle, i32 forceAnim = -1, ActionStateID forcedAction = ActionStateID::INVALID);
 	RemoteInst* SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast = false, const vec3* aimPos = nullptr, u16 nodeName = 0, bool casterCreatesLocally = false, bool stopAtTarget = false);
 	void UpdateRemotes(f32 delta);
 	void UpdateUltimateGauges(f32 delta);

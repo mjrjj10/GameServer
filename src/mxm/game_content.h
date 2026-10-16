@@ -336,6 +336,7 @@ struct Remote
 	bool contactFriend = false;
 	bool vsOwner = false;
 	bool attachFireObject = false;
+	ActionStateID changeCasterAction = ActionStateID::INVALID;
 	f32 sight = 0;
 	f32 criticalRate = 0; // extra crit chance % (RemoteComData2 _CriticalRate)
 	i32 onHitOwnerStatus = 0; // _OnHitOwnerStatusIndex: status applied to the caster when this remote hits
