@@ -194,6 +194,18 @@ struct StatusInfo
 	f32 hitEffectValue = 0;             // _HITEFFECT _AddValue
 	f32 costRatioMP = 0;                // STATUS_TYPE_NOCOST _AddRatioCostMP (%)
 	eastl::fixed_vector<i32,8,false> costSkills; // STATUS_TYPE_NOCOST _SkillList
+	struct NamedValue { eastl::fixed_string<char,32,false> name; f64 value; };
+	eastl::fixed_vector<NamedValue,16,false> params;
+	f32 Param(const char* name, f32 fallback = 0) const
+	{
+		for(const NamedValue& p : params) if(p.name == name) return (f32)p.value;
+		return fallback;
+	}
+	bool ListHas(const char* name, i32 value) const
+	{
+		for(const NamedValue& p : params) if(p.name == name && (i64)p.value == value) return true;
+		return false;
+	}
 	i32 stackStatus = 0;                // _ICEQUEEN _Index: stacking status put by the master's hits
 	i32 stackFullStatus = 0;            // _ICEQUEEN _FreezeStatusIndex: applied when the stack is full
 	i32 casterStatus = 0;               // _CasterStatusIndex: applied to the caster when this status is applied

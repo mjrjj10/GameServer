@@ -271,6 +271,7 @@ void World::Update(Time localTime_)
 	UpdateStatuses();
 	UpdateSummons();
 	UpdateSummonAi((f32)tdelta);
+	if(!frozen) UpdatePassives();
 	if(Config().DevShowcase) { if(!frozen) UpdateShowcase(); }
 	else {
 		if(!frozen) UpdateBotCombat();
@@ -873,12 +874,21 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage)
 {
 	LOG("Explosion :: at (%.0f, %.0f) radius=%.0f", center.x, center.y, radius);
+	i32 mastersHit = 0;
 	foreach(it, players) {
 		if(it->team == owner.team || it->dead || it->untargetable) continue;
 		const vec3 pos = it->body->GetWorldPos();
 		if(fabsf(pos.z - center.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 		if(LagDistToPoint(*it, vec2(center)) > radius + HitRadius(*it) + WEAPON_HIT_TOLERANCE) continue;
 		DamagePlayer(owner, *it, SkillID::INVALID, damage);
+		mastersHit++;
+	}
+	if(mastersHit >= 2 && owner.mana >= 0) {
+		if(const ActiveStatus* st = FindPassiveOfType(owner, "STATUS_TYPE_ARTILLERY")) {
+			owner.mana = MIN(owner.mana + st->info->Param("_AddValuePC"), MasterStat(owner.Main().classType, STAT_MANA));
+			owner.tNextManaSend = Time::ZERO;
+			LOG("Passive :: %ls hit %d masters -> mana %.0f", owner.name.data(), mastersHit, owner.mana);
+		}
 	}
 }
 
@@ -1378,6 +1388,113 @@ static bool PassiveOfActiveMaster(const World::Player& player, i32 statusID)
 	return list && eastl::find(list->begin(), list->end(), statusID) != list->end();
 }
 
+static const i32 CLASS_NUM_LILU = 22;
+static const i32 CLASS_NUM_ANDROB = 30;
+static const i32 CLASS_NUM_ATTACKER = 31;
+static const i32 CLASS_NUM_BOXER = 32;
+static const i32 CLASS_NUM_SHUGOTRADER = 33;
+static const i32 CLASS_NUM_STATESMAN = 36;
+static const f32 TOOLTIP_DEFENDER_CC_IMMUNE_SEC = 1.0f;
+static const f32 TOOLTIP_DEATHKNIGHT_REVIVE_HP = 0.30f;
+static const i32 TOOLTIP_LILU_EVERY_N = 4;
+static const i32 TOOLTIP_ANDROB_HEAL = 250;
+static const f32 TOOLTIP_ANDROB_RANGE = 800.0f;
+static const f32 TOOLTIP_ATTACKER_WEAPON_MUL = 1.10f;
+static const f32 TOOLTIP_BOXER_MARK_SEC = 1.5f;
+static const f32 TOOLTIP_BOXER_WEAPON_MUL = 1.15f;
+static const i32 TOOLTIP_SHUGO_EVERY_N = 6;
+static const f32 TOOLTIP_SHUGO_WEAPON_MUL = 1.80f;
+static const f32 TOOLTIP_STATESMAN_CC_MUL = 0.75f;
+
+const World::ActiveStatus* World::FindPassiveOfType(const Player& p, const char* type) const
+{
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex != p.index || !it->info || it->info->type != type) continue;
+		if(PassiveOfActiveMaster(p, it->statusID)) return &*it;
+	}
+	return nullptr;
+}
+
+bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* duration)
+{
+	if(info.kind != StatusInfo::Kind::HARD_CC && info.kind != StatusInfo::Kind::ROOT) return false;
+	if(localTime < target.ccImmuneUntil) {
+		LOG("Passive :: %ls immune to status %d", target.name.data(), info.ID);
+		return true;
+	}
+	if(const ActiveStatus* st = FindPassiveOfType(target, "STATUS_TYPE_UNSHAKABLE")) {
+		if(target.cleanseCharges < 0) target.cleanseCharges = st->info->customInit;
+		if(target.cleanseCharges > 0) {
+			target.cleanseCharges--;
+			if(target.cleanseRefillAt == Time::ZERO) target.cleanseRefillAt = TimeAdd(localTime, TimeMsToTime(st->info->Param("_RefillDuration")));
+			LOG("Passive :: %ls blocked status %d (charges left %d)", target.name.data(), info.ID, target.cleanseCharges);
+			return true;
+		}
+		target.cleanseCharges = MIN(target.cleanseCharges + 1, st->info->customMax);
+	}
+	if((i32)target.Main().classType == CLASS_NUM_STATESMAN && duration) *duration *= TOOLTIP_STATESMAN_CC_MUL;
+	return false;
+}
+
+bool World::PassiveOnLethal(Player& target)
+{
+	const ActiveStatus* st = FindPassiveOfType(target, "STATUS_TYPE_ACTIVATE_UNDEAD");
+	if(!st || localTime < target.reviveReadyAt) return false;
+	const i32 undead = (i32)st->info->Param("_UndeadStatusIndex");
+	const StatusInfo* undeadInfo = GetGameXmlContent().FindStatus(undead);
+	target.Main().hp = 1;
+	target.reviveReadyAt = TimeAdd(localTime, TimeMsToTime(st->info->Param("_DelayMS")));
+	target.reviveAt = TimeAdd(localTime, TimeMsToTime((undeadInfo ? undeadInfo->durationSec : 0.0f) * 1000.0));
+	target.reviveRatio = TOOLTIP_DEATHKNIGHT_REVIVE_HP;
+	ApplyStatus(target, target, undead);
+	LOG("Passive :: %ls cheated death (undead status %d)", target.name.data(), undead);
+	return true;
+}
+
+void World::PassiveOnDamaged(Player& target)
+{
+	if(target.dead) return;
+	const ActiveStatus* st = FindPassiveOfType(target, "STATUS_TYPE_HPTRIGGER");
+	if(!st) return;
+	const ActorMaster& chara = target.Main();
+	if(chara.hp * 100 >= chara.hpMax * st->info->Param("_CheckVal")) return;
+	const i32 buff = (i32)st->info->Param("_BuffStatus");
+	const i32 creature = (i32)st->info->Param("_SummonCreature");
+	if(creature == 0 || buff == 0 || FindActiveStatus(target.index, buff) || pendingSummons.full()) return;
+	ApplyStatus(target, target, buff);
+	PendingSummon ps;
+	ps.time = localTime;
+	ps.creature = creature;
+	ps.ownerIndex = target.index;
+	ps.pos = target.body->GetWorldPos();
+	ps.rot = vec3(0, 0, target.input.rot.upperYaw);
+	pendingSummons.push_back(ps);
+	LOG("Passive :: %ls low health -> summon %d", target.name.data(), creature);
+}
+
+void World::UpdatePassives()
+{
+	foreach(it, players) {
+		if(it->reviveAt != Time::ZERO && localTime >= it->reviveAt) {
+			it->reviveAt = Time::ZERO;
+			if(!it->dead) {
+				ActorMaster& chara = it->Main();
+				chara.hp = MAX(chara.hp, (i32)(chara.hpMax * it->reviveRatio));
+				replication->SendHpToAll(chara.UID, chara.hp, chara.hpMax);
+				LOG("Passive :: %ls revived at %d hp", it->name.data(), chara.hp);
+			}
+		}
+		if(it->cleanseRefillAt != Time::ZERO && localTime >= it->cleanseRefillAt) {
+			const ActiveStatus* st = FindPassiveOfType(*it, "STATUS_TYPE_UNSHAKABLE");
+			it->cleanseRefillAt = Time::ZERO;
+			if(st && it->cleanseCharges < st->info->customMax) {
+				it->cleanseCharges++;
+				if(it->cleanseCharges < st->info->customMax) it->cleanseRefillAt = TimeAdd(localTime, TimeMsToTime(st->info->Param("_RefillDuration")));
+			}
+		}
+	}
+}
+
 void World::PassiveOnSkillCast(Player& player, i32 skillID)
 {
 	if(GetGameXmlContent().GetSkillConsumeStamina(skillID) > 0) return; // dodges are not skills here
@@ -1398,6 +1515,36 @@ void World::PassiveOnSkillCast(Player& player, i32 skillID)
 	foreach_const(id, toApply) {
 		LOG("Passive :: %ls counter full -> status %d", player.name.data(), *id);
 		ApplyStatus(player, player, *id);
+	}
+
+	if(const ActiveStatus* st = FindPassiveOfType(player, "STATUS_TYPE_SKILLSTAMINA")) {
+		ActiveStatus& counter = const_cast<ActiveStatus&>(*st);
+		counter.custom++;
+		if(st->info->customMax > 0 && counter.custom >= st->info->customMax) {
+			counter.custom = 0;
+			const f32 staminaMax = MasterStat(player.Main().classType, STAT_STAMINA);
+			if(staminaMax > 0) {
+				player.stamina = staminaMax;
+				player.tNextStaminaSend = Time::ZERO;
+			}
+			LOG("Passive :: %ls stamina restored after %d skills", player.name.data(), st->info->customMax);
+		}
+	}
+	if(const ActiveStatus* st = FindPassiveOfType(player, "STATUS_TYPE_DEFENDER")) {
+		if(st->info->ListHas("DATA", skillID)) {
+			HealPlayer(player, player, (i32)(player.Main().hpMax * st->info->Param("_RecoveryFactorHP") / 100.0f));
+			player.ccImmuneUntil = TimeAdd(localTime, TimeMsToTime(TOOLTIP_DEFENDER_CC_IMMUNE_SEC * 1000.0));
+		}
+	}
+	if((i32)player.Main().classType == CLASS_NUM_ANDROB) {
+		Player* lowest = nullptr;
+		foreach(it, players) {
+			if(it->team != player.team || it->dead) continue;
+			if(glm::length(vec2(it->body->GetWorldPos()) - vec2(player.body->GetWorldPos())) > TOOLTIP_ANDROB_RANGE) continue;
+			const f32 ratio = (f32)it->Main().hp / MAX(it->Main().hpMax, 1);
+			if(!lowest || ratio < (f32)lowest->Main().hp / MAX(lowest->Main().hpMax, 1)) lowest = &*it;
+		}
+		if(lowest) HealPlayer(player, *lowest, TOOLTIP_ANDROB_HEAL);
 	}
 }
 
@@ -1447,10 +1594,23 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 		LOG("Passive :: %ls weapon hit -> status %d on %ls", attacker.name.data(), *id, target.name.data());
 		ApplyStatus(attacker, target, *id);
 	}
+
+	if((i32)attacker.Main().classType == CLASS_NUM_LILU && !target.dead) {
+		attacker.weaponHitCounter++;
+		if(attacker.weaponHitCounter >= TOOLTIP_LILU_EVERY_N) {
+			attacker.weaponHitCounter = 0;
+			LOG("Passive :: %ls extra weapon strike on %ls", attacker.name.data(), target.name.data());
+			DamagePlayer(attacker, target, SkillID::INVALID, proj.damage);
+		}
+	}
 }
 
 void World::PassiveOnSkillHit(Player& attacker, Player& target)
 {
+	if((i32)attacker.Main().classType == CLASS_NUM_BOXER) {
+		target.skillMarkBy = attacker.index;
+		target.skillMarkUntil = TimeAdd(localTime, TimeMsToTime(TOOLTIP_BOXER_MARK_SEC * 1000.0));
+	}
 	foreach_const(it, activeStatuses) {
 		if(it->targetIndex != attacker.index || !it->info) continue;
 		// STATUS_TYPE_MANABURN: skill hits mark the target (_HITEFFECT _StatusDocIndex)
@@ -1476,6 +1636,19 @@ f32 World::PassiveWeaponDamageMul(Player& attacker, Player& target)
 			mul *= 1.0f + it->info->hitEffectValue * debuffs;
 		}
 	}
+	const i32 cls = (i32)attacker.Main().classType;
+	if(cls == CLASS_NUM_ATTACKER) {
+		const ActiveStatus* st = FindPassiveOfType(attacker, "STATUS_TYPE_HPTRIGGER");
+		if(st && attacker.Main().hp * 100 < attacker.Main().hpMax * st->info->Param("_CheckVal")) mul *= TOOLTIP_ATTACKER_WEAPON_MUL;
+	}
+	if(cls == CLASS_NUM_BOXER && target.skillMarkBy == attacker.index && localTime < target.skillMarkUntil) mul *= TOOLTIP_BOXER_WEAPON_MUL;
+	if(cls == CLASS_NUM_SHUGOTRADER) {
+		attacker.weaponHitCounter++;
+		if(attacker.weaponHitCounter >= TOOLTIP_SHUGO_EVERY_N) {
+			attacker.weaponHitCounter = 0;
+			mul *= TOOLTIP_SHUGO_WEAPON_MUL;
+		}
+	}
 	return mul;
 }
 
@@ -1485,6 +1658,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	if(caster.team != target.team) target.statusesTaken++;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
 	f32 duration = durationOverride > 0 ? durationOverride : (info && info->durationSec > 0 ? info->durationSec : 1.0f);
+	if(info && caster.team != target.team && PassiveBlocksCC(target, *info, &duration)) return;
 	// passives without duration stay until consumed; clients get the data's "infinite" value (-1)
 	const bool permanent = info && info->permanent && durationOverride <= 0;
 	if(permanent) duration = 1000000.0f;
@@ -3351,7 +3525,8 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	target.damageTaken += damage;
 	target.hitsTaken++;
 	const bool showcaseDummy = Config().DevShowcase && target.clientHd == ClientHandle::INVALID;
-	chara.hp = MAX(chara.hp - damage, (showcaseDummy || HasStatusType(target, "STATUS_TYPE_NEARLY_IMMORTAL")) ? 1 : 0);
+	chara.hp = MAX(chara.hp - damage, (showcaseDummy || HasStatusType(target, "STATUS_TYPE_NEARLY_IMMORTAL") || HasStatusType(target, "STATUS_TYPE_UNDEAD")) ? 1 : 0);
+	if(chara.hp == 0) PassiveOnLethal(target);
 
 	// rage: STAT_TYPE_RAGE_ATTACK_RECOVERY_VALUE per landed hit
 	if(attacker.res[1] >= 0) {
@@ -3371,6 +3546,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		replication->SendDamageToAll(attacker.Main().UID, chara.UID, skillID, damage, chara.hp, chara.hpMax, damageType);
 	}
 
+	if(chara.hp > 0) PassiveOnDamaged(target);
 	if(chara.hp == 0) {
 		target.dead = true;
 		target.tRespawn = TimeAdd(localTime, TimeMsToTime(RESPAWN_DELAY_MS));

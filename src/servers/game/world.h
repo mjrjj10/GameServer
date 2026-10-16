@@ -154,6 +154,15 @@ struct World
 		Time dashUntil = Time::ZERO;
 		vec2 dashDir = vec2(1, 0);
 		f32 dashSpeed = 0;
+		Time ccImmuneUntil = Time::ZERO;
+		i32 cleanseCharges = -1;
+		Time cleanseRefillAt = Time::ZERO;
+		Time reviveReadyAt = Time::ZERO;
+		Time reviveAt = Time::ZERO;
+		f32 reviveRatio = 0;
+		i32 weaponHitCounter = 0;
+		u32 skillMarkBy = 0xFFFFFFFF;
+		Time skillMarkUntil = Time::ZERO;
 		vec2 fearDir = vec2(1, 0);
 		Time tRespawn = Time::ZERO;
 		ActorUID memorizedTarget = ActorUID::INVALID;
@@ -582,6 +591,11 @@ private:
 	void PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj);
 	void PassiveOnSkillHit(Player& attacker, Player& target);
 	f32 PassiveWeaponDamageMul(Player& attacker, Player& target);
+	const ActiveStatus* FindPassiveOfType(const Player& p, const char* type) const;
+	bool PassiveBlocksCC(Player& target, const StatusInfo& info, f32* duration);
+	void PassiveOnDamaged(Player& target);
+	bool PassiveOnLethal(Player& target);
+	void UpdatePassives();
 	bool HasStatusType(const Player& p, const char* type) const;
 	f32 StatusModSum(const Player& p, i32 stat) const;
 	f32 StatusModMulSum(const Player& p, i32 stat) const;

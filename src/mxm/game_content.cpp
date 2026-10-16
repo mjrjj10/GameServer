@@ -2046,6 +2046,17 @@ bool GameXmlContent::LoadStatusData()
 		if(type && EA::StdC::Strcmp(type, "STATUS_TYPE_ROOT") == 0) st.kind = StatusInfo::Kind::ROOT;
 		if(type && EA::StdC::Strcmp(type, "STATUS_TYPE_SLOW") == 0) st.kind = StatusInfo::Kind::SLOW;
 
+		for(XMLElement* pChild = pInfo->FirstChildElement(); pChild; pChild = pChild->NextSiblingElement()) {
+			for(const XMLAttribute* a = pChild->FirstAttribute(); a; a = a->Next()) {
+				f64 v = 0;
+				if(a->QueryDoubleValue(&v) != XML_SUCCESS || st.params.full()) continue;
+				StatusInfo::NamedValue nv;
+				nv.name = a->Name();
+				nv.value = v;
+				st.params.push_back(nv);
+			}
+		}
+
 		statusMap[st.ID] = st;
 	}
 
