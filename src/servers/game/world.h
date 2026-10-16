@@ -295,6 +295,7 @@ struct World
 		explicit ActorDynamic(ActorUID UID_): UID(UID_) {}
 	};
 
+	struct SkillAnimPass { i32 index; f32 start; };
 	struct SkillProgram
 	{
 		SkillID skillID = SkillID::INVALID;
@@ -305,6 +306,8 @@ struct World
 		eastl::fixed_vector<ActorUID,10,false> targetList;
 		Time startTime;
 		i32 commandID = 0;
+		u64 done = 0;
+		eastl::fixed_vector<SkillAnimPass,8,false> passes;
 
 		inline bool IsDoneExecuting() const { return skillID == SkillID::INVALID; }
 		inline void Finish() { skillID = SkillID::INVALID; }
@@ -580,6 +583,8 @@ private:
 
 	void PlayerCastSkill(Player& player, SkillID skill, const vec3& castPos, Slice<const ActorUID> targets, f32 clientTime, ActionStateID forcedAction = ActionStateID::INVALID);
 	void ExecuteSkillProgram(SkillProgram& prog);
+	void RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 cmdIndex, const vec2& dir);
+	eastl::fixed_vector<SkillAnimPass,8,false> lastAnimPasses;
 
 	void PlayerWeaponFire(Player& player);
 	void UpdateProjectiles(f32 delta);
