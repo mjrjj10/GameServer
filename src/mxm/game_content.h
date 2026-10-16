@@ -503,6 +503,7 @@ struct GameXmlContent
 		};
 
 		ActionStateID ID;
+		i8 stance = 0;
 		f32 seqLength = 0.0f; // seconds
 		struct AnimStep { i32 index = 0; i32 animationId = 0; i32 loop = 1; };
 		eastl::fixed_vector<AnimStep,8,false> anims;
@@ -600,7 +601,10 @@ struct GameXmlContent
 	const Master& GetMaster(ClassType classType) const;
 	i32 GetFirstComboSkill(i32 baseSkill) const { auto f = firstComboSkill.find(baseSkill); return f == firstComboSkill.end() ? 0 : f->second; }
 	i32 WeaponTypeOf(ClassType classType, WeaponIndex weaponIndex) const;
-	const Action& GetSkillAction(ClassType classType, ActionStateID actionID) const;
+	const Action& GetSkillAction(ClassType classType, ActionStateID actionID, i8 stance = 0) const;
+	struct SkillStance { i8 stance = 0; f32 duration = 0; i32 weaponFireCount = 0; bool cancelByDefeat = false; };
+	const SkillStance* FindSkillStance(i32 skillID) const { auto f = skillStance.find(skillID); return f == skillStance.end() ? nullptr : &f->second; }
+	static i8 StanceFromString(const char* str);
 	const Remote& GetRemote(RemoteIdx remoteID) const;
 	const Remote* FindRemote(RemoteIdx remoteID) const;
 	eastl::fixed_vector<eastl::fixed_string<wchar,48,false>,512,true> nodeNames;
@@ -701,6 +705,7 @@ private:
 	eastl::hash_map<i32, eastl::array<i32,5>> botSkills;  // master creature -> _Skill0.._Skill3, _UgSkill
 	eastl::hash_map<i32, f32> skillCoolTime;              // _CoolTime (s)
 	eastl::hash_map<i32, i32> firstComboSkill;
+	eastl::hash_map<i32, SkillStance> skillStance;
 	eastl::hash_map<i32, f32> botSkillMaxDistance;        // _Target _BotSkillMaxDistance
 	eastl::hash_map<i32, f32> skillRangeX;
 	eastl::hash_map<i32, f32> skillTargetRangeX;

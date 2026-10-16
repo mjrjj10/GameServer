@@ -243,6 +243,10 @@ struct World
 		ActionStateID actionState;
 		i32 actionParam1;
 		i32 actionParam2;
+		i8 stance = 0;
+		Time stanceUntil = Time::ZERO;
+		i32 stanceShotsLeft = -1;
+		bool stanceCancelByDefeat = false;
 
 		explicit ActorMaster(ActorUID UID_): UID(UID_) {}
 	};
@@ -303,6 +307,7 @@ struct World
 	{
 		SkillID skillID = SkillID::INVALID;
 		ActionStateID actionID;
+		i8 stance = 0;
 		vec3 castPos;
 		f32 castAngle;
 		ActorUID casterUID;
@@ -613,6 +618,9 @@ private:
 	void PassiveOnDamaged(Player& target);
 	bool PassiveOnLethal(Player& target);
 	void UpdatePassives();
+	void SetStance(ActorMaster& master, i8 stance, f32 duration, i32 weaponFireCount, bool cancelByDefeat);
+	void StanceWeaponUse(Player& player);
+	void UpdateStances();
 	bool HasStatusType(const Player& p, const char* type) const;
 	f32 StatusModSum(const Player& p, i32 stat) const;
 	f32 StatusModMulSum(const Player& p, i32 stat) const;

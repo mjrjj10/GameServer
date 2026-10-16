@@ -1314,6 +1314,23 @@ void Replication::SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 ma
 	}
 }
 
+void Replication::SendStanceToAll(ActorUID actorUID, i32 stance, f32 durationSec)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+
+		Sv::SN_SyncStanceType packet;
+		packet.entityID = (u32)localID;
+		packet.StanceType = (u32)stance;
+		packet.durationtimeSec = durationSec;
+		SendPacket(clientHd, packet);
+	}
+}
+
 void Replication::SendHpToAll(ActorUID actorUID, i32 hp, i32 hpMax)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {

@@ -361,6 +361,16 @@ void GameXmlContent::LoadAllSkills()
 			pNodeCommonSkill->QueryIntAttribute("_BaseComboSkill", &baseCombo);
 			if(baseCombo != 0 && type == SkillType::COMBO && firstComboSkill.find(baseCombo) == firstComboSkill.end()) firstComboSkill[baseCombo] = skillID;
 		}
+		if(XMLElement* pStance = pNodeCommonSkill->FirstChildElement("_STANCE")) {
+			const char* stanceType = nullptr;
+			pStance->QueryStringAttribute("_Type", &stanceType);
+			SkillStance st;
+			st.stance = StanceFromString(stanceType);
+			pStance->QueryFloatAttribute("_DurationTime", &st.duration);
+			pStance->QueryIntAttribute("_WeaponFireCount", &st.weaponFireCount);
+			pStance->QueryBoolAttribute("_CancelByDefeat", &st.cancelByDefeat);
+			if(st.stance > 0) skillStance[skillID] = st;
+		}
 
 		for(int i = 0; i < 6; i++) {
 			SkillNormalLevelModel& _skillNormalLevelModel = *skill.getSkillNormalLevelByIndex(i);
@@ -1237,6 +1247,7 @@ bool GameXmlContent::LoadAnimationData()
 
 	ClassType prevMasterClassType = ClassType::NONE;
 	ActionStateID prevActionID = ActionStateID::INVALID;
+	i8 prevStance = 0;
 	i32 actionSliceStart = 0;
 	i32 actionSliceCount = 0;
 	Action* curAction = nullptr;
@@ -1272,13 +1283,17 @@ bool GameXmlContent::LoadAnimationData()
 
 		const ActionStateID actionID = ActionStateFromString(BehaviorState);
 		ASSERT(actionID != ActionStateID::INVALID);
+		const char* StanceStr = nullptr;
+		pActionBase->QueryStringAttribute("Stance", &StanceStr);
+		const i8 stance = StanceFromString(StanceStr);
 
-		if(actionID != prevActionID) {
+		if(actionID != prevActionID || stance != prevStance) {
 			prevActionID = actionID;
+			prevStance = stance;
 
 			bool foundAction = false;
 			for(int i = actionSliceStart; i < actionSliceStart+actionSliceCount; i++) {
-				if(actionList[i].ID == actionID) {
+				if(actionList[i].ID == actionID && actionList[i].stance == stance) {
 					curAction = &actionList[i];
 					foundAction = true;
 					break;
@@ -1290,6 +1305,7 @@ bool GameXmlContent::LoadAnimationData()
 				curAction = &actionList.back();
 				actionSliceCount++;
 				curAction->ID = actionID;
+				curAction->stance = stance;
 				auto foundSeq = aniLenListMap.find(masterClassType);
 				if(foundSeq != aniLenListMap.end()) {
 					foreach_const(it, foundSeq->second) {
@@ -1926,7 +1942,14 @@ i32 GameXmlContent::WeaponTypeOf(ClassType classType, WeaponIndex weaponIndex) c
 	return 1;
 }
 
-const GameXmlContent::Action& GameXmlContent::GetSkillAction(ClassType classType, ActionStateID actionID) const
+i8 GameXmlContent::StanceFromString(const char* str)
+{
+	if(!str || EA::StdC::Strncmp(str, "STANCE_TYPE_", 12) != 0) return 0;
+	const char c = str[12];
+	return (c >= 'A' && c <= 'Z' && str[13] == 0) ? (i8)(c - 'A' + 1) : 0;
+}
+
+const GameXmlContent::Action& GameXmlContent::GetSkillAction(ClassType classType, ActionStateID actionID, i8 stance) const
 {
 	static const Action emptyAction = {};
 	auto found = actionListMap.find(classType);
@@ -1935,8 +1958,13 @@ const GameXmlContent::Action& GameXmlContent::GetSkillAction(ClassType classType
 		return emptyAction;
 	}
 
+	if(stance != 0) {
+		foreach_const(it, found->second) {
+			if(it->ID == actionID && it->stance == stance) return *it;
+		}
+	}
 	foreach_const(it, found->second) {
-		if(it->ID == actionID) {
+		if(it->ID == actionID && it->stance == 0) {
 			return *it;
 		}
 	}

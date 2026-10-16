@@ -91,14 +91,22 @@ def skill_expectations(sid):
     if combo is not None:
         act += actions.get((cls, combo.get('_Action')), [])
         family.add(combo_of[sid])
+    followup = []
+    for a in act:
+        if a.get('CommandType') in ('REMOTE', 'REMOTE_SKILL_TARGET') and a.get('RemoteIndex') in remotes:
+            for ch in remotes[a.get('RemoteIndex')].iter('_ChangeCasterActionState'):
+                followup += actions.get((cls, ch.get('_ActionState')), [])
+    follow_ids = {id(a) for a in followup}
+    act += followup
     exp = {'statuses': {}, 'allowed': set(), 'move': 0.0, 'mp': float(sk.get('_ConsumeMP') or 0), 'damage': base_damage.get(sid, 0.0), 'family': family}
+    moves = {}
     for a in act:
         t = a.get('CommandType')
         if t == 'MOVE' and any(k in (a.get('Param1') or '') for k in ('TARGET_POS', 'GOTO_CURRENT_TARGET')):
             exp['move'] = 1e9
         if t in ('REMOTE', 'REMOTE_SKILL_TARGET') and a.get('RemoteIndex'):
             for s, d in enemy_statuses(a.get('RemoteIndex')).items():
-                if d < 0:
+                if d < 0 or id(a) in follow_ids:
                     exp['allowed'].add(s)
                 else:
                     exp['statuses'].setdefault(s, d)
@@ -106,9 +114,12 @@ def skill_expectations(sid):
             exp['allowed'].add(a.get('StatusIndex'))
         if t == 'GRAPH_MOVE_HORZ':
             try:
-                exp['move'] = max(exp['move'], abs(float(a.get('Param1') or 0)))
+                key = a.get('BehaviorState')
+                moves[key] = max(moves.get(key, 0.0), abs(float(a.get('Param1') or 0)))
             except ValueError:
                 pass
+    if exp['move'] < 1e9:
+        exp['move'] = sum(moves.values())
     return exp
 
 
@@ -130,7 +141,7 @@ for path in sys.argv[1:]:
         m = re.search(r'Showcase :: wall=\d+ master=(\d+) slot=(\w+) skill=(\d+) caster=(\S+) range=(\d+) dist=(\d+) test=(\S+) expect=(-?\d)', line)
         if m:
             cur = {'master': int(m.group(1)), 'slot': m.group(2), 'skill': m.group(3), 'caster': m.group(4), 'dist': int(m.group(6)), 'test': m.group(7),
-                   'expect': int(m.group(8)), 'hitsLog': [], 'skillDamage': None, 'dummy': None}
+                   'expect': int(m.group(8)), 'hitsLog': [], 'skillDamage': None, 'dummy': None, 'blocked': set()}
             tests.append(cur)
             continue
         if cur is None:
@@ -142,6 +153,9 @@ for path in sys.argv[1:]:
         if dm and dm.group(1) == cur['caster'] and dm.group(2) != cur['caster']:
             cur['hitsLog'].append({'skill': dm.group(3), 'damage': int(dm.group(4)), 'crit': bool(dm.group(5)), 'in': int(dm.group(6)), 'remote': dm.group(7),
                                    'element': int(dm.group(8))})
+        bl = re.search(r'Passive :: \S+ blocked status (\d+)', line)
+        if bl:
+            cur['blocked'].add(bl.group(1))
         r = re.search(r'Showcase :: result hit=(\d) expect=(-?\d) (\w+) damage=(-?\d+) hits=(\d+)', line)
         if r:
             cur.update(hit=int(r.group(1)), verdict=r.group(3), damage=int(r.group(4)), hits=int(r.group(5)))
@@ -185,7 +199,9 @@ for master, lst in by_master.items():
             flags.append('HIT-EXPECTATION')
         if exp and t.get('hit') == 1:
             seen = t.get('seen', set())
-            missing = {s: d for s, d in exp['statuses'].items() if s not in seen}
+            missing = {s: d for s, d in exp['statuses'].items() if s not in seen and s not in t['blocked']}
+            if t['blocked']:
+                notes.append('blocked by passive ' + ','.join(sorted(t['blocked'])))
             direct = sorted(s for s, d in missing.items() if d == 0)
             chained = sorted(s for s, d in missing.items() if d > 0)
             if direct:

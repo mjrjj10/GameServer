@@ -2814,6 +2814,19 @@ inline const char* PacketSerialize<Sv::SN_UpdateStat>(const void* packetData, co
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_SyncStanceType>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_SyncStanceType(%d, %d) :: {", Sv::SN_SyncStanceType::NET_ID, packetSize);
+	SER("	entityID=0x%08x", buff.Read<u32>());
+	SER("	stanceType=%u", buff.Read<u32>());
+	SER("	durationtimeSec=%g", buff.Read<f32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_ScoreUpdate>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

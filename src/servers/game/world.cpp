@@ -311,6 +311,7 @@ void World::Update(Time localTime_)
 	UpdateSummons();
 	UpdateSummonAi((f32)tdelta);
 	if(!frozen) UpdatePassives();
+	if(!frozen) UpdateStances();
 	if(Config().DevShowcase) { if(!frozen) UpdateShowcase(); }
 	else {
 		if(!frozen) UpdateBotCombat();
@@ -731,6 +732,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 	SkillProgram prog;
 	prog.skillID = skillID;
 	prog.actionID = actionState;
+	prog.stance = player.Main().stance;
 	prog.castPos = castPos;
 	prog.castAngle = angle;
 	prog.casterUID = player.Main().UID;
@@ -743,7 +745,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 	f32 distance = 0;
 	f32 moveDuration = 0;
 
-	const auto& action = content.GetSkillAction(player.Main().classType, actionState);
+	const auto& action = content.GetSkillAction(player.Main().classType, actionState, player.Main().stance);
 
 	foreach_const(cmd, action.commands) {
 		switch(cmd->type) {
@@ -790,6 +792,10 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 		PlayerSkillDamage(player, skillID, castPos, targets, angle);
 	}
 
+	if(!followUp) {
+		if(const GameXmlContent::SkillStance* st = content.FindSkillStance((i32)skillID)) SetStance(player.Main(), st->stance, st->duration, st->weaponFireCount, st->cancelByDefeat);
+	}
+
 	const i32 child = content.GetChildSkill(player.Main().classType, actionState);
 	if(child > 0) {
 		player.pendingChildSkill = child;
@@ -804,6 +810,7 @@ void World::PlayerWeaponFire(Player& player)
 	const vec3 origin = player.body->GetWorldPos();
 
 	if(WeaponIsMelee(player)) {
+		StanceWeaponUse(player);
 		foreach(it, players) {
 			if(it->team == player.team || it->dead || it->untargetable) continue;
 			const vec3 pos = it->body->GetWorldPos();
@@ -825,6 +832,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	if(player.dead) return;
 	const ClassType classType = player.Main().classType;
 	if(WeaponIsMelee(player)) return;
+	StanceWeaponUse(player);
 	if(projectileList.full()) return;
 
 	const auto& content = GetGameXmlContent();
@@ -1462,6 +1470,7 @@ const World::ActiveStatus* World::FindPassiveOfType(const Player& p, const char*
 bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* duration)
 {
 	if(info.kind != StatusInfo::Kind::HARD_CC && info.kind != StatusInfo::Kind::ROOT) return false;
+	if(Config().DevShowcase && target.index == showcase.prevDummy) return false;
 	if(localTime < target.ccImmuneUntil) {
 		LOG("Passive :: %ls immune to status %d", target.name.data(), info.ID);
 		return true;
@@ -1498,6 +1507,7 @@ bool World::PassiveOnLethal(Player& target)
 void World::PassiveOnDamaged(Player& target)
 {
 	if(target.dead) return;
+	if(Config().DevShowcase && target.index == showcase.prevDummy) return;
 	const ActiveStatus* st = FindPassiveOfType(target, "STATUS_TYPE_HPTRIGGER");
 	if(!st) return;
 	const ActorMaster& chara = target.Main();
@@ -1514,6 +1524,33 @@ void World::PassiveOnDamaged(Player& target)
 	ps.rot = vec3(0, 0, target.input.rot.upperYaw);
 	pendingSummons.push_back(ps);
 	LOG("Passive :: %ls low health -> summon %d", target.name.data(), creature);
+}
+
+void World::SetStance(ActorMaster& master, i8 stance, f32 duration, i32 weaponFireCount, bool cancelByDefeat)
+{
+	master.stance = stance;
+	master.stanceUntil = stance != 0 && duration > 0 ? TimeAdd(localTime, TimeMsToTime((i64)(duration * 1000.0f))) : Time::ZERO;
+	master.stanceShotsLeft = stance != 0 && weaponFireCount > 0 ? weaponFireCount : -1;
+	master.stanceCancelByDefeat = stance != 0 && cancelByDefeat;
+	replication->SendStanceToAll(master.UID, stance, stance != 0 ? duration : 0.0f);
+	LOG("Stance :: %ls stance=%d duration=%.1f weaponFireCount=%d", master.parent ? master.parent->name.data() : L"?", (i32)stance, duration, weaponFireCount);
+}
+
+void World::StanceWeaponUse(Player& player)
+{
+	ActorMaster& m = player.Main();
+	if(m.stance == 0 || m.stanceShotsLeft <= 0) return;
+	if(--m.stanceShotsLeft == 0) SetStance(m, 0, 0, 0, false);
+}
+
+void World::UpdateStances()
+{
+	foreach(it, players) {
+		if(!it->body) continue;
+		ActorMaster& m = it->Main();
+		if(m.stance == 0) continue;
+		if((m.stanceUntil != Time::ZERO && localTime >= m.stanceUntil) || (it->dead && m.stanceCancelByDefeat)) SetStance(m, 0, 0, 0, false);
+	}
 }
 
 void World::UpdatePassives()
@@ -2335,7 +2372,14 @@ void World::UpdateShowcase()
 			}
 			eastl::fixed_string<char,48,false> name;
 			name.sprintf("SKILL_%d_BEHAVIORSTATE", step);
-			if(sk.type == SkillType::NORMAL && sk.action == ActionStateFromString(name.c_str())) { skill = (i32)*sid; break; }
+			if((sk.type == SkillType::NORMAL || sk.type == SkillType::STANCE) && sk.action == ActionStateFromString(name.c_str())) { skill = (i32)*sid; break; }
+		}
+		if(skill == 0 && step <= 5) {
+			foreach_const(sid, master.skillIDs) {
+				auto f = content.skillMap.find(*sid);
+				if(f == content.skillMap.end()) continue;
+				if(f->second.type == SkillType::STANCE && f->second.action == ActionStateID::STANCE_IN_BEHAVIORSTATE && ((i32)*sid / 10) % 10 == step) { skill = (i32)*sid; break; }
+			}
 		}
 	}
 
@@ -2424,6 +2468,7 @@ void World::UpdateShowcase()
 		return;
 	}
 	showcase.settled = false;
+	if(caster.Main().stance != 0) SetStance(caster.Main(), 0, 0, 0, false);
 	LOG("Showcase :: placement caster=%ls (%.0f, %.0f) dummy=%ls (%.0f, %.0f) player=(%.0f, %.0f) cast=(%.0f, %.0f)", caster.name.data(), casterPos.x, casterPos.y, dummy.name.data(), dummyPos.x, dummyPos.y, human->body->GetWorldPos().x, human->body->GetWorldPos().y, castPos.x, castPos.y);
 	showcase.lastDummyHp = dummy.damageTaken;
 	showcase.lastDummyHits = dummy.hitsTaken;
@@ -2453,10 +2498,18 @@ void World::UpdateShowcase()
 	else if(step >= 1 && step <= 6) {
 		const bool targetInRange = range <= 0 || glm::length(vec2(dummyPos) - vec2(casterPos)) <= range;
 		if(skill != 0) PlayerCastSkill(caster, SkillID(skill), castPos, Slice<const ActorUID>(&targetUID, targetInRange ? 1 : 0), 0);
-		const i32 combo = skill != 0 ? content.GetFirstComboSkill(skill) : 0;
+		i32 combo = skill != 0 ? content.GetFirstComboSkill(skill) : 0;
+		i32 comboDelayMs = 700;
+		if(const GameXmlContent::SkillStance* st = skill != 0 ? content.FindSkillStance(skill) : nullptr) {
+			foreach_const(sid, content.GetMaster(cls).skillIDs) {
+				auto f = content.skillMap.find(*sid);
+				if(f == content.skillMap.end() || f->second.type != SkillType::NORMAL) continue;
+				if(content.GetSkillAction(cls, f->second.action, st->stance).stance == st->stance) { combo = (i32)*sid; comboDelayMs = 1000; break; }
+			}
+		}
 		if(combo != 0) {
 			showcase.comboSkill = combo;
-			showcase.comboAt = TimeAdd(localTime, TimeMsToTime(700));
+			showcase.comboAt = TimeAdd(localTime, TimeMsToTime(comboDelayMs));
 			showcase.comboPos = castPos;
 			showcase.comboCaster = (i32)caster.index;
 			showcase.comboTarget = targetInRange ? targetUID : ActorUID::INVALID;
@@ -2777,7 +2830,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	auto skillFound = content.skillMap.find(skillID);
 	if(skillFound == content.skillMap.end()) return false;
 	const auto& skill = skillFound->second;
-	const auto& action = content.GetSkillAction(player.Main().classType, forcedAction != ActionStateID::INVALID ? forcedAction : skill.action);
+	const auto& action = content.GetSkillAction(player.Main().classType, forcedAction != ActionStateID::INVALID ? forcedAction : skill.action, player.Main().stance);
 
 	i32 anim = 0;
 	if(player.lastComboSkill == skillID && TimeDiffSec(TimeDiff(player.lastComboTime, localTime)) < 3.0) {
@@ -3563,6 +3616,8 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 {
 	if(target.dead || target.untargetable) return;
 	if(HasStatusType(target, "STATUS_TYPE_GODMODE")) return;
+	const i32 damageIn = damage;
+	f32 elementMul = 1.0f;
 	if(HasStatusType(target, "STATUS_TYPE_EVADE") && attacker.team != target.team) {
 		LOG("Evade :: %ls evaded %ls", target.name.data(), attacker.name.data());
 		return;
@@ -3583,6 +3638,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	if(proj || skillID != SkillID::INVALID) {
 		const f32 mul = ElementMultiplier(attacker, target, !proj);
 		if(mul != 1.0f) damage = (i32)(damage * mul);
+		elementMul = mul;
 
 		// critical hit: master crit stats (weapon or skill) + the remote's own _CriticalRate
 		const ClassType ac = attacker.Main().classType;
@@ -3628,7 +3684,8 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		if(rageMax > 0) attacker.res[1] = MIN(attacker.res[1] + MasterStat(ac, STAT_RAGE_ATTACK_RECOVERY_VALUE), rageMax);
 	}
 
-	LOG("Damage :: %ls -> %ls skill=%d damage=%d%s hp=%d/%d", attacker.name.data(), target.name.data(), (i32)skillID, damage, damageType == PACKET_DAMAGE_TYPE_CRITICAL ? " CRIT" : "", chara.hp, chara.hpMax);
+	LOG("Damage :: %ls -> %ls skill=%d damage=%d%s hp=%d/%d in=%d remote=%u element=%d", attacker.name.data(), target.name.data(), (i32)skillID, damage, damageType == PACKET_DAMAGE_TYPE_CRITICAL ? " CRIT" : "", chara.hp, chara.hpMax,
+		damageIn, (u32)(proj ? proj->remoteDoc : remoteDoc), (i32)(elementMul * 100.0f));
 	if(proj && proj->remoteID != 0) {
 		replication->SendRemoteDamageToAll(proj->remoteID, proj->remoteDoc, attacker.Main().UID, chara.UID, target.body->GetWorldPos(), proj->dir, damage, chara.hp, chara.hpMax, damageType);
 	}
@@ -3686,7 +3743,7 @@ void World::RespawnPlayer(Player& player)
 void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 cmdIndex, const vec2& dir)
 {
 	const auto& content = GetGameXmlContent();
-	const auto& action = content.GetSkillAction(caster->classType, prog.actionID);
+	const auto& action = content.GetSkillAction(caster->classType, prog.actionID, prog.stance);
 	const auto& cmd = action.commands[cmdIndex];
 	f32 distance = 0;
 	f32 moveDuration = 0;
@@ -3776,7 +3833,7 @@ void World::ExecuteSkillProgram(SkillProgram& prog)
 		return;
 	}
 	const vec2 dir = vec2(cosf(prog.castAngle), sinf(prog.castAngle));
-	const auto& action = GetGameXmlContent().GetSkillAction(caster->classType, prog.actionID);
+	const auto& action = GetGameXmlContent().GetSkillAction(caster->classType, prog.actionID, prog.stance);
 	const f32 elapsed = (f32)TimeDiffSec(TimeDiff(prog.startTime, localTime));
 	bool pending = false;
 	for(i32 i = 0; i < (i32)action.commands.size() && i < 64; i++) {
