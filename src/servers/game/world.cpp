@@ -1764,6 +1764,30 @@ void World::TeleportPlayer(Player& p, const vec3& pos, f32 yaw)
 	p.weaponAimYaw = yaw;
 }
 
+static f32 RemoteDamageRadius(const GameXmlContent& content, RemoteIdx idx, i32 depth)
+{
+	const Remote* r = content.FindRemote(idx);
+	if(!r || depth > 5) return 0;
+	f32 radius = (r->attackMultiplier > 0 || !r->statuses.empty()) ? r->boundSize[0] * 0.5f : 0;
+	const Remote::SpawnRules* lists[4] = { &r->onDestroy, &r->onTime, &r->onActivate, &r->onHitCharacter };
+	for(const Remote::SpawnRules* l : lists) {
+		for(const Remote::SpawnRule& rule : *l) radius = MAX(radius, RemoteDamageRadius(content, rule.idx, depth + 1));
+	}
+	return radius;
+}
+
+static f32 SkillDamageRadius(const GameXmlContent& content, ClassType cls, SkillID skillID)
+{
+	auto f = content.skillMap.find(skillID);
+	if(f == content.skillMap.end()) return 0;
+	const auto& action = content.GetSkillAction(cls, f->second.action);
+	f32 radius = 0;
+	foreach_const(cmd, action.commands) {
+		if((cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) && cmd->remote.idx != RemoteIdx::INVALID) radius = MAX(radius, RemoteDamageRadius(content, cmd->remote.idx, 0));
+	}
+	return radius;
+}
+
 static i64 ShowcaseWallMs()
 {
 	return (i64)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -1945,12 +1969,13 @@ void World::UpdateShowcase()
 	if(skill != 0) {
 		range = content.GetSkillRange(skill);
 		const f32 zone = content.GetSkillTargetRange(skill) * 0.5f;
+		const f32 effect = SkillDamageRadius(content, cls, SkillID(skill));
 		struct T { f32 dist; f32 side; const char* name; i32 expect; };
 		eastl::fixed_vector<T,8,false> tests;
 		if(range > 0) {
 			tests.push_back({ MAX(range * 0.3f, 150.0f), 0, "near", 1 });
 			tests.push_back({ range - 40.0f, 0, "range_in", 1 });
-			tests.push_back({ range + zone + 60.0f, 0, "range_out", 0 });
+			tests.push_back({ range + MAX(zone, effect) + 60.0f, 0, "range_out", 0 });
 		}
 		else {
 			tests.push_back({ 300.0f, 0, "near", -1 });
