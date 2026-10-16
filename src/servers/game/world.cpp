@@ -724,8 +724,8 @@ void World::PlayerWeaponFire(Player& player)
 			if(fabsf(pos.z - origin.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 			const vec2 rel = LagClosestPos(*it, vec2(origin)) - vec2(origin);
 			const f32 dist = glm::length(rel);
-			if(dist > range + WEAPON_TARGET_RADIUS + WEAPON_HIT_TOLERANCE) continue;
-			if(dist > WEAPON_TARGET_RADIUS) {
+			if(dist > range + HitRadius(*it) + WEAPON_HIT_TOLERANCE) continue;
+			if(dist > HitRadius(*it)) {
 				const f32 cosAngle = glm::dot(rel / dist, dir);
 				if(cosAngle < cosf(WEAPON_MELEE_HALF_ANGLE)) continue;
 			}
@@ -852,7 +852,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage)
 		if(it->team == owner.team || it->dead || it->untargetable) continue;
 		const vec3 pos = it->body->GetWorldPos();
 		if(fabsf(pos.z - center.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
-		if(LagDistToPoint(*it, vec2(center)) > radius + WEAPON_TARGET_RADIUS * 0.5f + WEAPON_HIT_TOLERANCE) continue;
+		if(LagDistToPoint(*it, vec2(center)) > radius + HitRadius(*it) + WEAPON_HIT_TOLERANCE) continue;
 		DamagePlayer(owner, *it, SkillID::INVALID, damage);
 	}
 }
@@ -876,7 +876,7 @@ void World::UpdateProjectiles(f32 delta)
 				const f32 lagDist = LagDistToSegment(*it, from, to);
 				proj->closest = MIN(proj->closest, lagDist);
 				if(fabsf(pos.z - proj->pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
-				if(!LagSegmentHits(*it, from, to, proj->halfWidth + PROJECTILE_TARGET_RADIUS + PROJECTILE_HIT_TOLERANCE, lastStep ? proj->forwardReach : PROJECTILE_TARGET_RADIUS)) continue;
+				if(!LagSegmentHits(*it, from, to, proj->halfWidth + HitRadius(*it) + PROJECTILE_HIT_TOLERANCE, lastStep ? proj->forwardReach : HitRadius(*it))) continue;
 
 				if(!proj->hitList.full()) proj->hitList.push_back(it->index);
 				DamagePlayer(owner, *it, SkillID::INVALID, (i32)(proj->damage * PassiveWeaponDamageMul(owner, *it)), &*proj);
@@ -1253,6 +1253,12 @@ void World::HealPlayer(Player& healer, Player& target, i32 amount)
 	chara.hp = MIN(chara.hp + amount, chara.hpMax);
 	LOG("Heal :: %ls -> %ls amount=%d hp=%d/%d", healer.name.data(), target.name.data(), amount, chara.hp, chara.hpMax);
 	replication->SendHpToAll(chara.UID, chara.hp, chara.hpMax);
+}
+
+f32 World::HitRadius(const Player& p) const
+{
+	if(p.Main().classType == ClassType::NONE) return 0;
+	return (f32)GetGameXmlContent().GetMaster(p.Main().classType).character.getColliderRadius();
 }
 
 bool World::RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const
@@ -1988,6 +1994,7 @@ void World::UpdateShowcase()
 		}
 	}
 
+	const f32 dummyRadius = HitRadius(dummy);
 	f32 range = 0;
 	vec3 castPos = dummyPos;
 	const char* testName = "-";
@@ -2002,7 +2009,7 @@ void World::UpdateShowcase()
 		if(range > 0) {
 			tests.push_back({ MAX(range * 0.3f, 150.0f), 0, "near", 1 });
 			tests.push_back({ range - 40.0f, 0, "range_in", 1 });
-			tests.push_back({ range + MAX(zone, effect) + 60.0f, 0, "range_out", 0 });
+			tests.push_back({ range + MAX(zone, effect) + dummyRadius + 60.0f, 0, "range_out", 0 });
 		}
 		else {
 			tests.push_back({ 300.0f, 0, "near", -1 });
@@ -2010,7 +2017,7 @@ void World::UpdateShowcase()
 		if(zone > 0) {
 			const f32 d = range > 0 ? range * 0.65f : 300.0f;
 			tests.push_back({ d, zone - 40.0f, "zone_in", 1 });
-			tests.push_back({ d, zone + 60.0f, "zone_out", 0 });
+			tests.push_back({ d, zone + dummyRadius + 60.0f, "zone_out", 0 });
 		}
 		showcase.testCount = (i32)tests.size();
 		const T& t = tests[MIN(showcase.rangeIdx, (i32)tests.size() - 1)];
@@ -2039,13 +2046,13 @@ void World::UpdateShowcase()
 		eastl::fixed_vector<T,8,false> tests;
 		if(wrange > 0) {
 			tests.push_back({ wrange - 40.0f, 0, "range_in", 1 });
-			tests.push_back({ wrange + 60.0f, 0, "range_out", 0 });
+			tests.push_back({ wrange + dummyRadius + 60.0f, 0, "range_out", 0 });
 		}
 		else tests.push_back({ 300.0f, 0, "near", -1 });
 		if(splash > 0) {
 			const f32 d = wrange > 0 ? wrange * 0.6f : 300.0f;
 			tests.push_back({ d, splash - 40.0f, "splash_in", 1 });
-			tests.push_back({ d, splash + 60.0f, "splash_out", 0 });
+			tests.push_back({ d, splash + dummyRadius + 60.0f, "splash_out", 0 });
 		}
 		showcase.testCount = (i32)tests.size();
 		const T& t = tests[MIN(showcase.rangeIdx, (i32)tests.size() - 1)];
@@ -2243,7 +2250,7 @@ void World::UpdateSummons()
 					if(p->dead) continue;
 					const bool ally = p->team == owner.team;
 					if(ally == child->isDebuff) continue;
-					if(glm::length(vec2(p->body->GetWorldPos()) - vec2(ga->pos)) > ga->range + WEAPON_TARGET_RADIUS) continue;
+					if(glm::length(vec2(p->body->GetWorldPos()) - vec2(ga->pos)) > ga->range + HitRadius(*p)) continue;
 					if(!pendingStatuses.full()) {
 						PendingStatus ps;
 						ps.time = localTime;
@@ -2343,7 +2350,7 @@ void World::UpdateStatuses()
 					if(p->dead) continue;
 					const bool ally = p->team == target.team;
 					if(ally == child->isDebuff) continue;
-					if(glm::length(vec2(p->body->GetWorldPos()) - center) > range + WEAPON_TARGET_RADIUS) continue;
+					if(glm::length(vec2(p->body->GetWorldPos()) - center) > range + HitRadius(*p)) continue;
 					if(!pendingStatuses.full()) {
 						PendingStatus ps;
 						ps.time = localTime;
@@ -2726,7 +2733,7 @@ void World::RemoteHitAlongPath(RemoteInst& inst)
 	foreach(it, players) {
 		if(!RemoteCanAffect(inst, *it, false)) continue;
 		if(it->team == players[inst.ownerIndex].team) continue; // on the way: enemies only
-		if(glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos)) > radius + WEAPON_TARGET_RADIUS) continue;
+		if(glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos)) > radius + HitRadius(*it)) continue;
 		RemoteHit(inst, *it);
 	}
 }
@@ -2760,8 +2767,8 @@ void World::RemoteApplyShape(RemoteInst& inst)
 		const vec2 rel = LagClosestPos(*it, center) - vec2(inst.pos);
 		const f32 along = glm::dot(rel, inst.dir);
 		const f32 side = fabsf(glm::dot(rel, Perp(inst.dir)));
-		if(along < start - WEAPON_TARGET_RADIUS || along > start + length + WEAPON_TARGET_RADIUS) continue;
-		if(side > halfWidth + WEAPON_TARGET_RADIUS) continue;
+		if(along < start - HitRadius(*it) || along > start + length + HitRadius(*it)) continue;
+		if(side > halfWidth + HitRadius(*it)) continue;
 		RemoteHit(inst, *it);
 	}
 }
@@ -2777,15 +2784,14 @@ void World::RemoteApplyArea(RemoteInst& inst)
 	if(remote.boundType == Remote::BoundType::E_BOUND_SPHERE || fanBox) {
 		const bool cone = remote.angle > 0;
 		const f32 radius = remote.boundSize[0] * 0.5f;
-		const f32 margin = WEAPON_TARGET_RADIUS;
 		foreach(it, players) {
 			const vec3 pos = it->body->GetWorldPos();
 			if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 			const vec2 rel = LagClosestPos(*it, vec2(inst.pos)) - vec2(inst.pos);
 			const f32 dist = glm::length(rel);
-			if(dist > radius + margin) continue;
-			if(remote.angle > 0 && dist > WEAPON_TARGET_RADIUS) {
-				if(glm::dot(rel / dist, inst.dir) < cosf(MIN(remote.angle * 0.5f + 15.0f, 180.0f) * PI / 180.0f)) continue;
+			if(dist > radius + HitRadius(*it)) continue;
+			if(remote.angle > 0 && dist > HitRadius(*it)) {
+				if(glm::dot(rel / dist, inst.dir) < cosf(MIN(remote.angle * 0.5f, 180.0f) * PI / 180.0f)) continue;
 			}
 			RemoteHit(inst, *it);
 		}
@@ -2801,8 +2807,8 @@ void World::RemoteApplyArea(RemoteInst& inst)
 			const vec2 rel = LagClosestPos(*it, center) - vec2(inst.pos) + inst.dir * back;
 			const f32 along = glm::dot(rel, inst.dir);
 			const f32 side = fabsf(glm::dot(rel, Perp(inst.dir)));
-			if(along < -WEAPON_TARGET_RADIUS - WEAPON_HIT_TOLERANCE || along > length + WEAPON_TARGET_RADIUS + WEAPON_HIT_TOLERANCE) continue;
-			if(side > halfWidth + WEAPON_TARGET_RADIUS + WEAPON_HIT_TOLERANCE) continue;
+			if(along < -HitRadius(*it) || along > length + HitRadius(*it)) continue;
+			if(side > halfWidth + HitRadius(*it)) continue;
 			RemoteHit(inst, *it);
 		}
 	}
@@ -2917,7 +2923,7 @@ void World::UpdateRemotes(f32 delta)
 				const f32 radius = remote.boundSize[0] * 0.5f + ORBIT_RADIUS;
 				foreach(it, players) {
 					if(!RemoteCanAffect(inst, *it, false)) continue;
-					if(glm::length(vec2(it->body->GetWorldPos()) - vec2(instOwner.body->GetWorldPos())) <= radius + WEAPON_TARGET_RADIUS) RemoteHit(inst, *it);
+					if(glm::length(vec2(it->body->GetWorldPos()) - vec2(instOwner.body->GetWorldPos())) <= radius + HitRadius(*it)) RemoteHit(inst, *it);
 				}
 			}
 			else if(remote.boundType != Remote::BoundType::E_BOUND_NONE && remote.damageGroup != Remote::DamageGroup::eNONE) {
@@ -2938,7 +2944,7 @@ void World::UpdateRemotes(f32 delta)
 				const vec2 rel = vec2(tpos - inst.pos);
 				const f32 dist = glm::length(rel);
 				const f32 step = (inst.speed > 0 ? inst.speed : 3000.0f) * delta;
-				if(dist <= step + remote.boundSize[0] * 0.5f + WEAPON_TARGET_RADIUS) {
+				if(dist <= step + remote.boundSize[0] * 0.5f + HitRadius(target)) {
 					inst.pos = vec3(vec2(tpos), inst.pos.z);
 					RemoteHit(inst, target);
 					destroyed = true;
@@ -2991,7 +2997,7 @@ void World::UpdateRemotes(f32 delta)
 							if(!RemoteCanAffect(inst, *it, false)) continue;
 							const vec3 pos = it->body->GetWorldPos();
 							if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
-							if(!LagSegmentHits(*it, from, to, halfWidth + PROJECTILE_TARGET_RADIUS + PROJECTILE_HIT_TOLERANCE, PROJECTILE_TARGET_RADIUS)) continue;
+							if(!LagSegmentHits(*it, from, to, halfWidth + HitRadius(*it) + PROJECTILE_HIT_TOLERANCE, HitRadius(*it))) continue;
 							RemoteHit(inst, *it);
 							inst.hitsLeft--;
 							if(inst.stopAtFirstHit && it->team != players[inst.ownerIndex].team) inst.hitsLeft = 0;

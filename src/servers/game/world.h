@@ -573,6 +573,7 @@ private:
 	bool IsBlocked(const Player& p, bool attack, bool skill, bool shirk) const;
 	void HealPlayer(Player& healer, Player& target, i32 amount);
 	bool RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const;
+	f32 HitRadius(const Player& p) const;
 	void RemoteApplyShape(RemoteInst& inst);
 	void RemoteHitAlongPath(RemoteInst& inst);
 	void UpdateStatuses();
