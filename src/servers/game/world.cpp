@@ -2259,10 +2259,10 @@ void World::UpdateShowcase()
 			const Player& pc = players[showcase.prevCaster];
 			eastl::fixed_string<char,160,false> sts;
 			for(i32 id : showcase.statusesSeen) sts.append_sprintf("%d,", id);
-			LOG("Showcase :: measure casterMoved=%.0f dummyMoved=%.0f firstHitMs=%lld mana=%.0f stamina=%.0f statuses=%s",
-				glm::length(vec2(pc.body->GetWorldPos()) - showcase.casterStart), glm::length(vec2(pd.body->GetWorldPos()) - showcase.dummyStart),
-				showcase.firstHitMs, pc.mana >= 0 && showcase.casterMana0 >= 0 ? showcase.casterMana0 - pc.mana : 0.0f,
-				pc.stamina >= 0 && showcase.casterStamina0 >= 0 ? showcase.casterStamina0 - pc.stamina : 0.0f, sts.c_str());
+			LOG("Showcase :: measure casterMoved=%d dummyMoved=%d firstHitMs=%lld firstDamage=%d mana=%d stamina=%d statuses=%s",
+				(i32)glm::length(vec2(pc.body->GetWorldPos()) - showcase.casterStart), (i32)glm::length(vec2(pd.body->GetWorldPos()) - showcase.dummyStart),
+				showcase.firstHitMs, showcase.firstHitDamage, (i32)(pc.mana >= 0 && showcase.casterMana0 >= 0 ? showcase.casterMana0 - pc.mana : 0.0f),
+				(i32)(pc.stamina >= 0 && showcase.casterStamina0 >= 0 ? showcase.casterStamina0 - pc.stamina : 0.0f), sts.c_str());
 		}
 	}
 
@@ -2405,6 +2405,7 @@ void World::UpdateShowcase()
 	showcase.dummyStart = vec2(dummy.body->GetWorldPos());
 	showcase.castAt = localTime;
 	showcase.firstHitMs = -1;
+	showcase.firstHitDamage = 0;
 	showcase.statusesSeen.clear();
 	showcase.casterMana0 = caster.mana;
 	showcase.casterStamina0 = caster.stamina;
@@ -2946,12 +2947,14 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		}
 		// the client draws plain (non-fan) static boxes facing the opposite way of their rotation
 		const bool plainStaticBox = inst.speed <= 0 && remote->boundType == Remote::BoundType::E_BOUND_BOX && remote->angle <= 0;
-		const f32 sendYaw = atan2f(dir.y, dir.x);
+		const bool chained = remote->destroyCreateRemote != RemoteIdx::INVALID || !remote->onDestroy.empty() || !remote->onTime.empty() || !remote->onActivate.empty();
+		const bool flip = plainStaticBox && chained;
+		const f32 sendYaw = atan2f(dir.y, dir.x) + (flip ? PI : 0.0f);
 		// the client adds the remote's _OffsetZ to the fire position: compensate so the remote shows at the
 		// height the server simulates (weapon fire height), not under the ground
 		vec3 sendPos = pos - vec3(0, 0, remote->offsetZ);
 		const bool atAimedPoint = aimPos && glm::length(vec2(*aimPos)) > 1.0f && glm::length(vec2(pos) - vec2(*aimPos)) < 1.0f;
-		if(plainStaticBox && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY), 0);
+		if(plainStaticBox && !flip && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY), 0);
 		replication->SendRemoteCreateToAll(players[ownerIndex].Main().UID, seed, idx, sendPos, sendYaw, targetPos, targetMaster ? target : ActorUID::INVALID, GetGameXmlContent().GetNodeName(nodeName), casterCreatesLocally ? players[ownerIndex].clientHd : ClientHandle::INVALID);
 	}
 
@@ -3582,7 +3585,10 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	if(damage <= 0) return;
 
 	ActorMaster& chara = target.Main();
-	if(Config().DevShowcase && target.index == showcase.prevDummy && showcase.firstHitMs < 0) showcase.firstHitMs = (i64)(TimeDiffSec(TimeDiff(showcase.castAt, localTime)) * 1000.0);
+	if(Config().DevShowcase && target.index == showcase.prevDummy && showcase.firstHitMs < 0) {
+		showcase.firstHitMs = (i64)(TimeDiffSec(TimeDiff(showcase.castAt, localTime)) * 1000.0);
+		showcase.firstHitDamage = damage;
+	}
 	target.damageTaken += damage;
 	target.hitsTaken++;
 	const bool showcaseDummy = Config().DevShowcase && target.clientHd == ClientHandle::INVALID;

@@ -552,6 +552,7 @@ struct World
 		vec2 dummyStart = vec2(0);
 		Time castAt = Time::ZERO;
 		i64 firstHitMs = -1;
+		i32 firstHitDamage = 0;
 		eastl::fixed_vector<i32,12,false> statusesSeen;
 		f32 casterMana0 = 0;
 		f32 casterStamina0 = 0;
