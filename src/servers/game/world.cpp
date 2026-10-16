@@ -810,13 +810,11 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	if(remote && remote->maxDistance > 0) remoteRange = remote->maxDistance;
 	else if(remote && remote->lifeTime > 0) remoteRange = remote->lifeTime * proj.speed;
 
-	if(remote && remote->maxDistance > 0) remoteRange *= 1.05f;
-
 	proj.range = graph ? (reliable ? MIN(distance, aimMax) : classRange) : remoteRange;
 	proj.graph = graph;
 	proj.halfWidth = remote ? remote->boundSize[0] * 0.5f : 20.0f;
 	proj.hitsLeft = remote ? MAX(remote->activateCount, 1) : 1;
-	proj.forwardReach = (remote && remote->boundType == Remote::BoundType::E_BOUND_BOX) ? MAX(remote->boundSize[1] + 120.0f, PROJECTILE_TARGET_RADIUS) : PROJECTILE_TARGET_RADIUS;
+	proj.forwardReach = (remote && remote->boundType == Remote::BoundType::E_BOUND_BOX) ? (f32)remote->boundSize[1] : 0.0f;
 	proj.aoeRadius = bomb ? bomb->boundSize[0] * 0.5f : 0;
 
 	proj.remoteDoc = remote ? remote->ID : RemoteIdx::INVALID;
@@ -877,7 +875,7 @@ void World::UpdateProjectiles(f32 delta)
 				const f32 lagDist = LagDistToSegment(*it, from, to);
 				proj->closest = MIN(proj->closest, lagDist);
 				if(fabsf(pos.z - proj->pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
-				if(!LagSegmentHits(*it, from, to, proj->halfWidth + HitRadius(*it) + PROJECTILE_HIT_TOLERANCE, lastStep ? proj->forwardReach : HitRadius(*it))) continue;
+				if(!LagSegmentHits(*it, from, to, proj->halfWidth + HitRadius(*it) + PROJECTILE_HIT_TOLERANCE, lastStep ? proj->forwardReach + HitRadius(*it) : HitRadius(*it))) continue;
 
 				if(!proj->hitList.full()) proj->hitList.push_back(it->index);
 				DamagePlayer(owner, *it, SkillID::INVALID, (i32)(proj->damage * PassiveWeaponDamageMul(owner, *it)), &*proj);
@@ -1781,7 +1779,8 @@ static f32 RemoteDamageRadius(const GameXmlContent& content, RemoteIdx idx, i32 
 {
 	const Remote* r = content.FindRemote(idx);
 	if(!r || depth > 5) return 0;
-	f32 radius = (r->attackMultiplier > 0 || !r->statuses.empty() || r->changeCasterAction != ActionStateID::INVALID) ? r->boundSize[0] * 0.5f : 0;
+	const bool vsEnemy = r->damageGroup == Remote::DamageGroup::eENEMY || r->damageGroup == Remote::DamageGroup::eALL;
+	f32 radius = (vsEnemy && (r->attackMultiplier > 0 || !r->statuses.empty() || r->changeCasterAction != ActionStateID::INVALID)) ? r->boundSize[0] * 0.5f : 0;
 	const Remote::SpawnRules* lists[4] = { &r->onDestroy, &r->onTime, &r->onActivate, &r->onHitCharacter };
 	for(const Remote::SpawnRules* l : lists) {
 		for(const Remote::SpawnRule& rule : *l) radius = MAX(radius, RemoteDamageRadius(content, rule.idx, depth + 1));
@@ -2462,10 +2461,12 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	// animation 0 without any action and no hit-event combo: animation 1 is its continuation,
 	// played once animation 0 is over (AniLength of its AnimationId)
 	f32 tStart = 0;
+	f32 continuationAt = -1.0f;
 	if(anim == 0 && forceAnim < 0 && GetGameXmlContent().FindSkillHitEventRemote((i32)skillID) == 0) {
-		bool anim0Acts = false, anim1Acts = false;
+		bool anim0Acts = false, anim1Acts = false, regCombo = false;
 		i32 anim0Id = 0;
 		foreach_const(cmd, action.commands) {
+			if(cmd->type == ActionCommand::Type::REGCOMBO) regCombo = true;
 			bool acts = cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET ||
 				cmd->type == ActionCommand::Type::STATUS || cmd->type == ActionCommand::Type::ENTITY;
 			if(cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) {
@@ -2481,11 +2482,17 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			anim = 1;
 			tStart = content.GetAniSeqTime(content.GetMaster(player.Main().classType).className.c_str(), anim0Id);
 		}
+		else if(anim0Acts && anim1Acts && !regCombo) {
+			continuationAt = content.GetAniSeqTime(content.GetMaster(player.Main().classType).className.c_str(), anim0Id);
+		}
 	}
 
-	f32 t = tStart;
+	const i32 passes = continuationAt >= 0 ? 2 : 1;
+	for(i32 pass = 0; pass < passes; pass++) {
+	const i32 curAnim = pass == 0 ? anim : 1;
+	f32 t = pass == 0 ? tStart : continuationAt;
 	foreach_const(cmd, action.commands) {
-		if(cmd->animIndex != anim && cmd->animIndex != -1) continue; // -1: command shared by every animation
+		if(cmd->animIndex != curAnim && (cmd->animIndex != -1 || pass > 0)) continue; // -1: command shared by every animation
 		if((cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) && !pendingRemotes.full()) {
 			PendingRemote pr;
 			pr.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
@@ -2543,8 +2550,9 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		}
 		t += cmd->delay;
 	}
+	}
 
-	LOG("Skill :: %ls skill=%d anim=%d scheduled=%d damage=%d castPos=(%.0f, %.0f)", player.name.data(), (i32)skillID, anim, scheduled, damage, castPos.x, castPos.y);
+	LOG("Skill :: %ls skill=%d anim=%d%s scheduled=%d damage=%d castPos=(%.0f, %.0f)", player.name.data(), (i32)skillID, anim, passes > 1 ? "+1" : "", scheduled, damage, castPos.x, castPos.y);
 	return scheduled;
 }
 
@@ -2692,11 +2700,9 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	if(enemy && remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;
 	if(enemy && remote.changeCasterAction != ActionStateID::INVALID && !inst.actionChanged && !owner.dead && owner.clientHd == ClientHandle::INVALID) {
 		inst.actionChanged = true;
-		inst.hitsLeft = 0;
 		const ActorUID targetUID = target.Main().UID;
 		LOG("Remote :: %ls hit %ls -> caster action %d", owner.name.data(), target.name.data(), (i32)remote.changeCasterAction);
 		PlayerCastSkill(owner, inst.skillID, target.body->GetWorldPos(), Slice<const ActorUID>(&targetUID, 1), 0, remote.changeCasterAction);
-		return;
 	}
 	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty()) return;
 
