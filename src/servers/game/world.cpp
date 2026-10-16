@@ -1825,9 +1825,10 @@ void World::UpdateShowcase()
 		LOG("Showcase :: start wall=%lld bots=%d probe=(%.0f, %.0f, %.0f)", ShowcaseWallMs(), (i32)bots.size(), showcase.mid.x, showcase.mid.y, showcase.mid.z);
 		return;
 	}
-	static const vec2 probeDirs[4] = { vec2(1, 0), vec2(-1, 0), vec2(0, 1), vec2(0, -1) };
+	static const f32 diag = 0.70710678f;
+	static const vec2 probeDirs[8] = { vec2(1, 0), vec2(-1, 0), vec2(0, 1), vec2(0, -1), vec2(diag, diag), vec2(-diag, diag), vec2(diag, -diag), vec2(-diag, -diag) };
 	static const f32 probeDist[4] = { 600.0f, 1200.0f, 1800.0f, 2400.0f };
-	const f32 flatLen = 2050.0f;
+	const f32 flatLen = showcase.flatLen;
 	const i32 probes = MIN((i32)bots.size(), 4);
 	if(showcase.phase == 0) {
 		if(showcase.candidates.empty()) showcase.candidates.push_back(vec2(showcase.mid));
@@ -1847,32 +1848,42 @@ void World::UpdateShowcase()
 	}
 	if(showcase.phase == 2) {
 		const vec2 c = showcase.candidates[showcase.candIdx];
-		f32 dev = 0;
+		i32 flatCount = 0;
+		bool broken = false;
 		for(int k = 0; k < probes; k++) {
 			const vec3 lp = players[bots[k]].body->GetWorldPos();
-			dev = MAX(dev, fabsf(lp.z - showcase.groundZ));
+			if(fabsf(lp.z - showcase.groundZ) <= 15.0f && !broken) flatCount++;
+			else broken = true;
 			if(lp.z < showcase.groundZ - 50.0f && lp.z > showcase.groundZ - 400.0f && !showcase.candidates.full()) showcase.candidates.push_back(vec2(lp));
 		}
-		LOG("Showcase :: probe from (%.0f, %.0f) z=%.0f dir=(%.0f, %.0f) max deviation=%.0f", c.x, c.y, showcase.groundZ, probeDirs[showcase.probeDir].x, probeDirs[showcase.probeDir].y, dev);
-		if(dev > 15.0f) {
-			if(showcase.probeDir < 3) {
+		const f32 len = flatCount > 0 ? probeDist[flatCount - 1] : 0.0f;
+		LOG("Showcase :: probe from (%.0f, %.0f) z=%.0f dir=(%.2f, %.2f) flat length=%.0f", c.x, c.y, showcase.groundZ, probeDirs[showcase.probeDir].x, probeDirs[showcase.probeDir].y, len);
+		if(len > showcase.bestLen) {
+			showcase.bestLen = len;
+			showcase.bestDir = probeDirs[showcase.probeDir];
+			showcase.bestCenter = c;
+			showcase.bestZ = showcase.groundZ;
+		}
+		if(flatCount < probes) {
+			if(showcase.probeDir < 7) {
 				showcase.probeDir++;
 				for(int k = 0; k < probes; k++) TeleportPlayer(players[bots[k]], vec3(c + probeDirs[showcase.probeDir] * probeDist[k], showcase.mid.z), 0);
 				showcase.next = TimeAdd(localTime, TimeMsToTime(2500));
 				return;
 			}
-			if(showcase.candIdx + 1 < (i32)showcase.candidates.size() && showcase.candIdx < 8) {
+			if(showcase.candIdx + 1 < (i32)showcase.candidates.size() && showcase.candIdx < 10) {
 				showcase.candIdx++;
-				showcase.phase = 0;
 				TeleportPlayer(players[bots[0]], vec3(showcase.candidates[showcase.candIdx], showcase.mid.z), 0);
 				showcase.phase = 3;
 				showcase.next = TimeAdd(localTime, TimeMsToTime(2500));
 				return;
 			}
-			LOG("Showcase :: no flat line found, using the last probe");
+			LOG("Showcase :: no full flat line, best length=%.0f", showcase.bestLen);
 		}
-		showcase.dir = probeDirs[showcase.probeDir];
-		showcase.mid = vec3(c, showcase.mid.z);
+		showcase.dir = showcase.bestDir;
+		showcase.groundZ = showcase.bestZ;
+		showcase.mid = vec3(showcase.bestCenter, showcase.mid.z);
+		showcase.flatLen = MAX(showcase.bestLen - 350.0f, 0.0f);
 		showcase.phase = 0;
 	}
 	if(showcase.phase == 0) {
@@ -1931,6 +1942,14 @@ void World::UpdateShowcase()
 	static const char* slotNames[] = { "WEAPON", "SKILL_1", "SKILL_2", "SKILL_3", "SKILL_4", "ULTIMATE", "SHIRK", "TAG" };
 	const i32 step = showcase.step;
 
+	foreach(r, remoteInsts) {
+		if(r->clientRemoteID != 0) replication->SendDestroyRemoteToAll(r->clientRemoteID);
+	}
+	remoteInsts.clear();
+	pendingRemotes.clear();
+	groundAuras.clear();
+	projectileList.clear();
+	pendingSummonCommands.clear();
 	foreach(c, dummy.characters) { (*c)->hp = (*c)->hpMax; replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax); }
 	const f32 faceCaster = atan2f(-showcase.dir.y, -showcase.dir.x);
 	const f32 faceDummy = atan2f(showcase.dir.y, showcase.dir.x);

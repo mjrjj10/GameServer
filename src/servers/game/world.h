@@ -521,6 +521,11 @@ struct World
 		f32 groundZ = 0;
 		eastl::fixed_vector<vec2,24,false> candidates;
 		i32 candIdx = 0;
+		f32 bestLen = 0;
+		vec2 bestDir = vec2(1, 0);
+		vec2 bestCenter = vec2(0);
+		f32 bestZ = 0;
+		f32 flatLen = 2050.0f;
 		vec3 anchor = vec3(0);
 		f32 yaw = 0;
 	} showcase;
