@@ -2055,7 +2055,8 @@ void World::UpdateShowcase()
 		else PlayerWeaponShot(caster, casterPos, dir, len);
 	}
 	else if(step >= 1 && step <= 6) {
-		if(skill != 0) PlayerCastSkill(caster, SkillID(skill), castPos, Slice<const ActorUID>(&targetUID, 1), 0);
+		const bool targetInRange = range <= 0 || glm::length(vec2(dummyPos) - vec2(casterPos)) <= range;
+		if(skill != 0) PlayerCastSkill(caster, SkillID(skill), castPos, Slice<const ActorUID>(&targetUID, targetInRange ? 1 : 0), 0);
 	}
 	else {
 		caster.input.tag = true;
@@ -2841,7 +2842,7 @@ void World::UpdateRemotes(f32 delta)
 			else {
 				const f32 yaw = instOwner.input.rot.upperYaw;
 				inst.dir = vec2(cosf(yaw), sinf(yaw));
-				inst.pos = instOwner.body->GetWorldPos() + vec3(inst.dir * remote.offsetY, 158.0f);
+				inst.pos = instOwner.body->GetWorldPos() + vec3(inst.dir * (remote.forceTargetDir ? -remote.offsetY : remote.offsetY), 158.0f);
 			}
 		}
 
