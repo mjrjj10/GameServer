@@ -150,6 +150,9 @@ struct World
 		Time tNextUltSend = Time::ZERO;
 		f32 shotLeadSec = 0;
 		f32 weaponAimYaw = 0;
+		vec3 lastClientPos = vec3(0);
+		vec3 placedAt = vec3(0);
+		i32 clientPosCount = 0;
 		i32 kills = 0;
 		eastl::array<f32,2> weaponMaxShotDistance = { 0, 0 };
 		i32 deaths = 0;

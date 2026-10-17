@@ -1332,6 +1332,20 @@ void Replication::SendCooltimeReset(ClientHandle clientHd, ActorUID characterUID
 	SendPacket(clientHd, packet);
 }
 
+void Replication::SendSelfTeleport(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, f32 worldYaw)
+{
+	Sv::SN_PlayerSyncMove sync;
+	sync.entityID = GetLocalActorID(clientHd, actorUID);
+	sync.DestPos = v2f(pos);
+	sync.MoveDir = { 0, 0 };
+	sync.UpperDir = { WorldYawToMxmYaw(worldYaw), 0 };
+	sync.nRotate = WorldYawToMxmYaw(worldYaw);
+	sync.nSpeed = 0;
+	sync.flags = 0;
+	sync.actionStateID = ActionStateID::NONE_BEHAVIORSTATE;
+	SendPacket(clientHd, sync);
+}
+
 void Replication::SendExecuteSkillAck(ClientHandle clientHd, ActorUID casterUID, SkillID skillID)
 {
 	Sv::SA_ExecuteSkill ack;

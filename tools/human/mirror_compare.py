@@ -8,6 +8,7 @@ SKILL = re.compile(r'Skill :: (\S+) skill=(\d+) anim=(\S+) scheduled=(\d)')
 REMOTE = re.compile(r'Remote :: spawn (\d+) ')
 CAST = re.compile(r'Cast :: (\S+) skill=(\d+) (start|release|cancelled)')
 TURN = re.compile(r'Mirror :: turn=(\d)')
+POSCHK = re.compile(r'Showcase :: position check caster=(\d+) dummy=(\d+) humanClient=(\d+)')
 DMG = re.compile(r'Damage :: (\S+) -> (\S+) skill=-?\d+ damage=(\d+)( CRIT)? hp=\S+ in=(\d+) remote=\d+ element=(\d+)')
 
 STYPE = {e.get('ID'): (e.find('ST_COMMONSTATUS').get('_Type') if e.find('ST_COMMONSTATUS') is not None else '') for e in ET.parse('D:/MxM/GameServer/gamedata/client/STATUS_PC.xml').getroot()}
@@ -30,6 +31,8 @@ for line in open(sys.argv[1], encoding='utf-8', errors='replace'):
         cur['base'] += int(r.group(5))
         cur['crit'] = cur['crit'] or bool(r.group(4))
         cur['elements'].add(int(r.group(6)))
+    if (r := POSCHK.search(line)):
+        cur['poscheck'] = (int(r.group(1)), int(r.group(2)), int(r.group(3)))
     if (r := TURN.search(line)):
         cur['turn'] = int(r.group(1))
     elif (r := RES.search(line)):
@@ -76,6 +79,10 @@ for (key, side), (b, h) in flat.items():
         print(f'-- {label} only {"bot" if b else "human"}')
         continue
     diffs = []
+    for nm, t in (('bot', b), (side, h)):
+        pc = t.get('poscheck') if t else None
+        if pc and max(pc) > 60:
+            diffs.append(f'{nm} misplaced caster={pc[0]} target={pc[1]} humanClient={pc[2]}')
     if side == 'human' and key[3] == 'skip_beyond_flat':
         print(f'ok {label}  target off screen for a human (bench only)')
         continue

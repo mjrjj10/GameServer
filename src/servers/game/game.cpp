@@ -499,6 +499,8 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 	prevBodyPos = player.body->GetWorldPos();
 
 
+	player.lastClientPos = pos;
+	player.clientPosCount++;
 	if(world.localTime < player.dashUntil) {
 		player.body->collider->setFootPosition(PxExtendedVec3(pos.x, pos.y, pos.z));
 		player.body->vel = vec3(0);

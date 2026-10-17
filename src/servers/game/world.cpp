@@ -2427,7 +2427,7 @@ void World::UpdateShowcase()
 		const vec2 perp = vec2(-showcase.dir.y, showcase.dir.x);
 		const vec3 humanPos = showcase.anchor + vec3(showcase.dir * -250.0f - perp * 250.0f, 0);
 		TeleportPlayer(*human, humanPos, 0);
-		replication->SendReviveToAll(human->userID, human->Main().UID, human->Sub().UID, humanPos);
+		replication->SendSelfTeleport(human->clientHd, human->Main().UID, humanPos, 0);
 		LOG("Showcase :: ground z=%.0f anchor=(%.0f, %.0f, %.0f)", ground.z, showcase.anchor.x, showcase.anchor.y, showcase.anchor.z);
 		showcase.next = TimeAdd(localTime, TimeMsToTime(2000));
 		return;
@@ -2472,6 +2472,11 @@ void World::UpdateShowcase()
 		const i32 statusHits = pd.statusesTaken - showcase.lastDummyStatuses;
 		const bool hit = hits > 0 || statusHits > 0;
 		const bool ok = showcase.prevExpect < 0 || (showcase.prevExpect == 1) == hit;
+		if(mirror && human->clientPosCount > 0 && glm::length(vec2(human->placedAt)) > 1.0f)
+			LOG("Mirror :: human placed=(%.0f, %.0f) client=(%.0f, %.0f, %.0f) server=(%.0f, %.0f) diff=%.0f updates=%d", human->placedAt.x, human->placedAt.y,
+				human->lastClientPos.x, human->lastClientPos.y, human->lastClientPos.z, human->body->GetWorldPos().x, human->body->GetWorldPos().y,
+				glm::length(vec2(human->lastClientPos) - vec2(human->placedAt)), human->clientPosCount);
+		human->placedAt = vec3(0);
 		LOG("Showcase :: result hit=%d expect=%d %s damage=%d hits=%d dummyZ=%.0f groundZ=%.0f", hit ? 1 : 0, showcase.prevExpect, ok ? "OK" : "MISMATCH", dealt, hits, pd.body->GetWorldPos().z, showcase.groundZ);
 		{
 			const Player& pc = players[showcase.prevCaster];
@@ -2507,7 +2512,9 @@ void World::UpdateShowcase()
 	TeleportPlayer(caster, casterPos, faceDummy);
 	if(&caster == human || &dummy == human) {
 		const vec3 humanAt = &caster == human ? casterPos : dummyPos;
-		replication->SendReviveToAll(human->userID, human->Main().UID, human->Sub().UID, humanAt);
+		human->placedAt = humanAt;
+		human->clientPosCount = 0;
+		replication->SendSelfTeleport(human->clientHd, human->Main().UID, humanAt, &caster == human ? faceDummy : faceCaster);
 		foreach(c, human->characters) { (*c)->hp = (*c)->hpMax; replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax); }
 	}
 	foreach(it, activeStatuses) {
@@ -2624,7 +2631,7 @@ void World::UpdateShowcase()
 		const vec3 viewPos = vec3((vec2(casterPos) + vec2(dummyPos)) * 0.5f + Perp(showcase.dir) * 900.0f, showcase.anchor.z);
 		if(glm::length(vec2(viewPos) - vec2(human->body->GetWorldPos())) > 50.0f) {
 			TeleportPlayer(*human, viewPos, 0);
-			replication->SendReviveToAll(human->userID, human->Main().UID, human->Sub().UID, viewPos);
+			replication->SendSelfTeleport(human->clientHd, human->Main().UID, viewPos, 0);
 		}
 	}
 	if(!showcase.settled) {
@@ -2634,6 +2641,12 @@ void World::UpdateShowcase()
 	}
 	showcase.settled = false;
 	if(caster.Main().stance != 0) SetStance(caster.Main(), 0, 0, 0, false);
+	{
+		const f32 cd = glm::length(vec2(caster.body->GetWorldPos()) - vec2(casterPos));
+		const f32 dd = glm::length(vec2(dummy.body->GetWorldPos()) - vec2(dummyPos));
+		const f32 hd = (&caster == human || &dummy == human) && human->clientPosCount > 0 ? glm::length(vec2(human->lastClientPos) - vec2(human->placedAt)) : 0.0f;
+		LOG("Showcase :: position check caster=%.0f dummy=%.0f humanClient=%.0f%s", cd, dd, hd, (cd > 60 || dd > 60 || hd > 60) ? " MISPLACED" : "");
+	}
 	LOG("Showcase :: placement caster=%ls (%.0f, %.0f) dummy=%ls (%.0f, %.0f) player=(%.0f, %.0f) cast=(%.0f, %.0f)", caster.name.data(), casterPos.x, casterPos.y, dummy.name.data(), dummyPos.x, dummyPos.y, human->body->GetWorldPos().x, human->body->GetWorldPos().y, castPos.x, castPos.y);
 	showcase.lastDummyHp = dummy.damageTaken;
 	showcase.lastDummyHits = dummy.hitsTaken;
