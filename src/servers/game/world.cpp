@@ -2566,8 +2566,19 @@ void World::UpdateShowcase()
 			else broken = true;
 			if(lp.z < showcase.groundZ - 50.0f && lp.z > showcase.groundZ - 400.0f && !showcase.candidates.full()) showcase.candidates.push_back(vec2(lp));
 		}
-		const f32 len = flatCount > 0 ? probeDist[flatCount - 1] : 0.0f;
-		LOG("Showcase :: probe from (%.0f, %.0f) z=%.0f dir=(%.2f, %.2f) flat length=%.0f", c.x, c.y, showcase.groundZ, probeDirs[showcase.probeDir].x, probeDirs[showcase.probeDir].y, len);
+		f32 len = flatCount > 0 ? probeDist[flatCount - 1] : 0.0f;
+		if(len > 0) {
+			const vec2 d = probeDirs[showcase.probeDir];
+			const vec2 side = vec2(-d.y, d.x);
+			for(f32 off : { 0.0f, -OBSTRUCT_SIDE, OBSTRUCT_SIDE }) {
+				for(f32 h : { OBSTRUCT_JUMPABLE_HEIGHT }) {
+					f32 hitDist = 0;
+					const vec2 from = c + side * off;
+					if(physics.RaycastStatic(vec3(from, showcase.groundZ + h), vec3(from + d * len, showcase.groundZ + h), &hitDist)) len = MIN(len, hitDist);
+				}
+			}
+		}
+		LOG("Showcase :: probe from (%.0f, %.0f) z=%.0f dir=(%.2f, %.2f) flat length=%.0f (ground %.0f)", c.x, c.y, showcase.groundZ, probeDirs[showcase.probeDir].x, probeDirs[showcase.probeDir].y, len, flatCount > 0 ? probeDist[flatCount - 1] : 0.0f);
 		if(len > showcase.bestLen) {
 			showcase.bestLen = len;
 			showcase.bestDir = probeDirs[showcase.probeDir];
@@ -2826,7 +2837,7 @@ void World::UpdateShowcase()
 		human->untargetable = true;
 		vec3 viewPos = vec3((vec2(casterPos) + vec2(dummyPos)) * 0.5f + Perp(showcase.dir) * 400.0f, showcase.anchor.z);
 		const vec2 mid = (vec2(casterPos) + vec2(dummyPos)) * 0.5f;
-		static const f32 viewOffsets[] = { 900.0f, -900.0f, 700.0f, -700.0f, 550.0f, -550.0f, 400.0f, -400.0f };
+		static const f32 viewOffsets[] = { 350.0f, -350.0f, 450.0f, -450.0f, 550.0f, -550.0f, 700.0f, -700.0f };
 		for(f32 off : viewOffsets) {
 			const vec3 c = vec3(mid + Perp(showcase.dir) * off, showcase.groundZ);
 			f32 hit = 0;
