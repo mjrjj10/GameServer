@@ -2639,7 +2639,17 @@ void World::UpdateShowcase()
 	if(&caster == human || &dummy == human) human->untargetable = false;
 	else {
 		human->untargetable = true;
-		const vec3 viewPos = vec3((vec2(casterPos) + vec2(dummyPos)) * 0.5f + Perp(showcase.dir) * 900.0f, showcase.anchor.z);
+		vec3 viewPos = vec3((vec2(casterPos) + vec2(dummyPos)) * 0.5f + Perp(showcase.dir) * 400.0f, showcase.anchor.z);
+		const vec2 mid = (vec2(casterPos) + vec2(dummyPos)) * 0.5f;
+		static const f32 viewOffsets[] = { 900.0f, -900.0f, 700.0f, -700.0f, 550.0f, -550.0f, 400.0f, -400.0f };
+		for(f32 off : viewOffsets) {
+			const vec3 c = vec3(mid + Perp(showcase.dir) * off, showcase.groundZ);
+			f32 hit = 0;
+			if(physics.RaycastStatic(c + vec3(0, 0, 300.0f), c - vec3(0, 0, 300.0f), &hit) && fabsf(300.0f - hit) < 60.0f && !physics.RaycastStatic(vec3(mid, showcase.groundZ + 100.0f), c + vec3(0, 0, 100.0f), nullptr)) {
+				viewPos = c;
+				break;
+			}
+		}
 		if(glm::length(vec2(viewPos) - vec2(human->body->GetWorldPos())) > 50.0f) {
 			TeleportPlayer(*human, viewPos, 0);
 			replication->SendSelfTeleport(human->clientHd, human->Main().UID, viewPos, 0);
