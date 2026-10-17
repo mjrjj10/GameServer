@@ -381,6 +381,7 @@ void GameXmlContent::LoadAllSkills()
 			const bool selectBefore = select && EA::StdC::Strcmp(select, "SKILL_TARGET_SELECT_STATE_BEFORECAST") == 0;
 			in.needsClick = (!self || selectBefore) && !smartCast;
 			in.directionOnly = ux && EA::StdC::Strcmp(ux, "SKILL_CAST_MY_POSITION_DIRECTION") == 0;
+			in.positionDirection = ux && EA::StdC::Strcmp(ux, "SKILL_CAST_TARGET_POSITION_DIRECTION") == 0;
 			pNodeCommonSkill->QueryIntAttribute("_CoolTimeID", &in.coolTimeID);
 			pNodeCommonSkill->QueryFloatAttribute("_CoolTime", &in.coolTime);
 			skillInput[skillID] = in;
@@ -2267,6 +2268,29 @@ bool GameXmlContent::LoadStatusData()
 				pCommon->QueryFloatAttribute("_ConsumeBB", &res[2]);
 				pCommon->QueryFloatAttribute("_ConsumeHP", &res[3]);
 				if(res[0] > 0 || res[1] > 0 || res[2] > 0 || res[3] > 0) skillConsumeRes[skillID] = res;
+				if(XMLElement* pCost = pCommon->FirstChildElement("_COST_PROPERTY")) {
+					for(XMLElement* pLvl = pCost->FirstChildElement("_PROPERTY_LEVEL"); pLvl; pLvl = pLvl->NextSiblingElement("_PROPERTY_LEVEL")) {
+						CostLevel lvl;
+						pLvl->QueryFloatAttribute("_ConsumeEP", &lvl.consume[0]);
+						pLvl->QueryFloatAttribute("_ConsumeRP", &lvl.consume[1]);
+						pLvl->QueryFloatAttribute("_ConsumeBB", &lvl.consume[2]);
+						if(const char* act = pLvl->Attribute("_Action")) lvl.action = ActionStateFromString(act);
+						for(XMLElement* pR = pLvl->FirstChildElement("_REMOTELIST"); pR; pR = pR->NextSiblingElement("_REMOTELIST")) {
+							i32 from = 0, to = 0;
+							pR->QueryAttribute("_RemoteIndex", &from);
+							pR->QueryAttribute("_ReplaceIndex", &to);
+							if(from != 0 && to != 0 && !lvl.remoteReplace.full()) lvl.remoteReplace.push_back({ from, to });
+						}
+						for(XMLElement* pS = pLvl->FirstChildElement("_STATUSLIST"); pS; pS = pS->NextSiblingElement("_STATUSLIST")) {
+							i32 from = 0, to = 0;
+							pS->QueryAttribute("_StatusIndex", &from);
+							pS->QueryAttribute("_ReplaceIndex", &to);
+							if(from != 0 && to != 0 && !lvl.statusReplace.full()) lvl.statusReplace.push_back({ from, to });
+						}
+						auto& levels = skillCostLevels[skillID];
+						if(!levels.full()) levels.push_back(lvl);
+					}
+				}
 			}
 			XMLElement* pEvent = pCommon ? pCommon->FirstChildElement("_HitEvent") : nullptr;
 			if(!pEvent) continue;

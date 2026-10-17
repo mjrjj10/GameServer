@@ -3,7 +3,7 @@ import numpy as np, cv2, mss
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import drive
 
-PROMPT = re.compile(r'Mirror :: prompt wall=(\d+) key=(\S+) click=(\d) combo=(\d) skill=(\d+) test=(\S+) dist=(\d+) aim=\((-?\d+), (-?\d+)\)(?: dironly=(\d))?')
+PROMPT = re.compile(r'Mirror :: prompt wall=(\d+) key=(\S+) click=(\d) combo=(\d) skill=(\d+) test=(\S+) dist=(\d+) aim=\((-?\d+), (-?\d+)\)(?: dironly=(\d))?(?: posdir=(\d))?')
 HUMAN_SCREEN = (960, 575)
 PX_PER_UNIT = (-0.577, -0.047)
 
@@ -54,6 +54,15 @@ def act(m, pid, out, f, dbgdir, follow='none'):
     if not tgt:
         cv2.imwrite(os.path.join(dbgdir, f'none_{m.group(1)}.jpg'), cv2.resize(img, (960, 540)))
     x, y = tgt if tgt else expect
+    if tgt:
+        ex, ey = expect[0] - HUMAN_SCREEN[0], expect[1] - HUMAN_SCREEN[1]
+        tx, ty = x - HUMAN_SCREEN[0], y - HUMAN_SCREEN[1]
+        el, tl = math.hypot(ex, ey), math.hypot(tx, ty)
+        if el > 1 and tl > 1:
+            cosang = (ex * tx + ey * ty) / (el * tl)
+            if cosang < math.cos(math.radians(20)):
+                x, y = HUMAN_SCREEN[0] + ex / el * tl, HUMAN_SCREEN[1] + ey / el * tl
+                out.write(f'aim corrected to expected direction ({x:.0f},{y:.0f})'+chr(10))
     if key == 'lmb':
         y -= 55
     dx, dy = x - HUMAN_SCREEN[0], y - HUMAN_SCREEN[1]
@@ -88,6 +97,14 @@ def act(m, pid, out, f, dbgdir, follow='none'):
         if click:
             time.sleep(0.25)
             drive.mouse(drive.MOUSEEVENTF_LEFTDOWN); time.sleep(0.05); drive.mouse(drive.MOUSEEVENTF_LEFTUP)
+            if m.group(11) == '1':
+                time.sleep(0.25)
+                vx, vy = x - HUMAN_SCREEN[0], y - HUMAN_SCREEN[1]
+                vl = max(math.hypot(vx, vy), 1.0)
+                drive.move(x + vx / vl * 150, y + vy / vl * 150)
+                time.sleep(0.15)
+                drive.mouse(drive.MOUSEEVENTF_LEFTDOWN); time.sleep(0.05); drive.mouse(drive.MOUSEEVENTF_LEFTUP)
+                out.write('posdir second click'+chr(10))
         skill_id = m.group(5)
         first_seen = False
         end = time.time() + 1.5

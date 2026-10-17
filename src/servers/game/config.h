@@ -12,6 +12,7 @@ struct CConfigGame
 	i32 DevShowcase = 0;
 	i32 DevShowcaseCount = 0;
 	i32 DevShowcaseSteps = 0;
+	i32 DevShowcaseFullRes = 0;
 	i32 DevMirror = 0;
 	i32 DevNoFireNode = 0;
 	i32 HostIP[4] = { 0, 0, 0, 0 };

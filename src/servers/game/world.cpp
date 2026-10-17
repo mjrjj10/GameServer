@@ -718,7 +718,17 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		return;
 	}
 	const GameXmlContent::SkillCast* cast = followUp ? nullptr : content.FindSkillCast((i32)skillID);
-	const ActionStateID actionState = followUp ? forcedAction : (cast ? cast->action : skill.action);
+	castCostLevel = nullptr;
+	if(!followUp) {
+		if(const auto* levels = content.FindSkillCostLevels((i32)skillID)) {
+			for(const GameXmlContent::CostLevel& lvl : *levels) {
+				bool affordable = lvl.consume[0] > 0 || lvl.consume[1] > 0 || lvl.consume[2] > 0;
+				for(i32 r = 0; r < 3; r++) if(lvl.consume[r] > 0 && player.res[r] < lvl.consume[r]) affordable = false;
+				if(affordable) castCostLevel = &lvl;
+			}
+		}
+	}
+	const ActionStateID actionState = followUp ? forcedAction : castCostLevel && castCostLevel->action != ActionStateID::INVALID ? castCostLevel->action : (cast ? cast->action : skill.action);
 
 	if(!followUp) {
 		const bool shirk = GetGameXmlContent().GetSkillConsumeStamina((i32)skillID) > 0;
@@ -727,6 +737,13 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 			return;
 		}
 		if(!PlayerPaySkillCost(player, (i32)skillID)) return;
+		if(castCostLevel) {
+			for(i32 r = 0; r < 3; r++) {
+				if(castCostLevel->consume[r] > 0 && player.res[r] >= 0) { player.res[r] -= castCostLevel->consume[r]; player.tNextResSend = Time::ZERO; }
+			}
+			LOG("Cost :: %ls skill=%d empowered level (consumed rp=%.0f bb=%.0f, %d remotes / %d statuses replaced)", player.name.data(), (i32)skillID,
+				castCostLevel->consume[1], castCostLevel->consume[2], (i32)castCostLevel->remoteReplace.size(), (i32)castCostLevel->statusReplace.size());
+		}
 		PassiveOnSkillCast(player, (i32)skillID);
 	}
 
@@ -840,6 +857,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	replication->FramePushSkillExec(rpExec);
 
 	const bool remotesScheduled = ScheduleSkillRemotes(player, skillID, castPos, targets, angle, followUp ? 0 : -1, cast ? cast->action : forcedAction);
+	castCostLevel = nullptr;
 	if(cast) {
 		const bool bot = player.clientHd == ClientHandle::INVALID;
 		f32 wait = cast->time;
@@ -1362,6 +1380,7 @@ void World::UpdateUltimateGauges(f32 delta)
 			if(resMax <= 0) continue;
 			if(it->res[r] < 0) it->res[r] = RESOURCES[r].startFull ? resMax : 0;
 			it->res[r] = MIN(MAX(it->res[r] + MasterStat(cls, RESOURCES[r].regenStat) * delta, 0.0f), resMax);
+			if(Config().DevMirror && Config().DevShowcaseFullRes && it->clientHd != ClientHandle::INVALID && it->index == showcase.prevCaster && !showcase.castSeen) it->res[r] = resMax;
 			if(fabsf(it->res[r] - it->resSent[r]) >= 0.01f) resChanged = true;
 		}
 		if(localTime >= it->tNextResRefresh) {
@@ -2675,7 +2694,9 @@ void World::UpdateShowcase()
 		struct T { f32 dist; f32 side; const char* name; i32 expect; };
 		eastl::fixed_vector<T,8,false> tests;
 		if(range > 0) {
-			tests.push_back({ MAX(range * 0.3f, 150.0f), 0, "near", 1 });
+			const GameXmlContent::SkillInput* nearIn = content.FindSkillInput(skill);
+			const f32 minDist = nearIn ? nearIn->minDistance : 0.0f;
+			tests.push_back({ MAX(MAX(range * 0.3f, 150.0f), minDist > 0 ? minDist + 40.0f : 0.0f), 0, "near", 1 });
 			tests.push_back({ range - 40.0f, 0, "range_in", 1 });
 			tests.push_back({ MAX(range + MAX(zone, effect), reach) + dummyRadius + 60.0f, 0, "range_out", 0 });
 		}
@@ -2763,6 +2784,11 @@ void World::UpdateShowcase()
 		replication->SendSelfTeleport(human->clientHd, human->Main().UID, settledPos, &caster == human ? faceDummy : faceCaster, &human->lastClientPos);
 	}
 	if(caster.Main().stance != 0) SetStance(caster.Main(), 0, 0, 0, false);
+	for(i32 r = 0; r < 3; r++) {
+		const f32 resMax = MasterStat(caster.Main().classType, RESOURCES[r].maxStat);
+		if(resMax > 0) caster.res[r] = Config().DevShowcaseFullRes != 0 || resMax <= 1.0f ? resMax : resMax - 1.0f;
+	}
+	caster.tNextResSend = Time::ZERO;
 	{
 		const f32 cd = glm::length(vec2(caster.body->GetWorldPos()) - vec2(casterPos));
 		const f32 dd = glm::length(vec2(dummy.body->GetWorldPos()) - vec2(dummyPos));
@@ -2805,6 +2831,7 @@ void World::UpdateShowcase()
 		human->mana = MasterStat(hc, STAT_MANA);
 		human->stamina = MasterStat(hc, STAT_STAMINA);
 		human->ultGauge = MasterStat(hc, STAT_ULTIMATE);
+
 		eastl::fixed_vector<i32,8,false> cools;
 		foreach_const(sid, content.GetMaster(hc).skillIDs) {
 			const GameXmlContent::SkillInput* in = content.FindSkillInput((i32)*sid);
@@ -2825,8 +2852,8 @@ void World::UpdateShowcase()
 			}
 		}
 		LOG("Mirror :: follow=%s", followKey);
-		LOG("Mirror :: prompt wall=%lld key=%s click=%d combo=%d skill=%d test=%s dist=%.0f aim=(%.0f, %.0f) dironly=%d", ShowcaseWallMs(), mirrorKey ? mirrorKey : "none",
-			in && in->needsClick ? 1 : 0, combo != 0 ? 1 : 0, skill, testName, glm::length(vec2(dummyPos) - vec2(casterPos)), castPos.x - casterPos.x, castPos.y - casterPos.y, in && in->directionOnly ? 1 : 0);
+		LOG("Mirror :: prompt wall=%lld key=%s click=%d combo=%d skill=%d test=%s dist=%.0f aim=(%.0f, %.0f) dironly=%d posdir=%d", ShowcaseWallMs(), mirrorKey ? mirrorKey : "none",
+			in && in->needsClick ? 1 : 0, combo != 0 ? 1 : 0, skill, testName, glm::length(vec2(dummyPos) - vec2(casterPos)), castPos.x - casterPos.x, castPos.y - casterPos.y, in && in->directionOnly ? 1 : 0, in && in->positionDirection ? 1 : 0);
 	}
 	else if(step == 0) {
 		const vec2 rel = vec2(castPos) - vec2(casterPos);
@@ -3308,6 +3335,10 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			PendingRemote pr;
 			pr.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
 			pr.idx = cmd->remote.idx;
+			pr.costLevel = castCostLevel;
+			if(castCostLevel) {
+				foreach_const(rr, castCostLevel->remoteReplace) if(rr->first == (i32)pr.idx) pr.idx = RemoteIdx(rr->second);
+			}
 			pr.preset = (i32)cmd->remote.targetPreset;
 			pr.offsetSide = cmd->remote.offsetSide;
 			pr.offsetFront = cmd->remote.offsetFront;
@@ -3547,7 +3578,11 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 		const bool friendGroup = remote.damageGroup == Remote::DamageGroup::eFRIEND;
 		if(enemy || friendGroup) {
 			foreach_const(st, remote.statuses) {
-				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) { statusCasterOverride = inst.sourceUID; ApplyStatus(owner, target, st->statusID, (f32)inst.damage); statusCasterOverride = ActorUID::INVALID; }
+				i32 statusID = st->statusID;
+				if(inst.costLevel) {
+					foreach_const(sr, inst.costLevel->statusReplace) if(sr->first == statusID) statusID = sr->second;
+				}
+				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) { statusCasterOverride = inst.sourceUID; ApplyStatus(owner, target, statusID, (f32)inst.damage); statusCasterOverride = ActorUID::INVALID; }
 			}
 		}
 		if(!enemy) {
@@ -3574,7 +3609,9 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 			const ActorUID targetUID = target.Main().UID;
 			const vec2 rel = vec2(target.body->GetWorldPos() - owner.body->GetWorldPos());
 			LOG("ComboHit :: %ls skill=%d remote=%d -> next part", owner.name.data(), (i32)inst.skillID, (i32)remote.ID);
+			castCostLevel = inst.costLevel;
 			ScheduleSkillRemotes(owner, inst.skillID, target.body->GetWorldPos(), Slice<const ActorUID>(&targetUID, 1), atan2f(rel.y, rel.x), 1);
+			castCostLevel = nullptr;
 		}
 	}
 }
@@ -3722,6 +3759,7 @@ void World::UpdateRemotes(f32 delta)
 			RemoteInst* spawned = SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, casterLocal, pr->stopAtTarget);
 			if(spawned) {
 				spawned->sourceUID = pr->sourceUID;
+				spawned->costLevel = pr->costLevel;
 				spawned->centeredBox = atAimedPoint;
 				const f32 nodeForward = atAimedPoint ? 0 : WeaponNodeForward(GetGameXmlContent(), owner.Main().classType, pr->skillID, *spawned->remote, pr->nodeName);
 				if(nodeForward > 0) {

@@ -3,6 +3,7 @@
 #include <common/network.h>
 #include <common/vector_math.h>
 #include <mxm/core.h>
+#include <mxm/game_content.h>
 
 #include <EASTL/array.h>
 #include <EASTL/fixed_list.h>
@@ -393,6 +394,7 @@ struct World
 	struct PendingRemote
 	{
 		ActorUID sourceUID = ActorUID::INVALID;
+		const GameXmlContent::CostLevel* costLevel = nullptr;
 		Time time;
 		RemoteIdx idx;
 		i32 preset;
@@ -413,6 +415,7 @@ struct World
 	struct RemoteInst
 	{
 		ActorUID sourceUID = ActorUID::INVALID;
+		const GameXmlContent::CostLevel* costLevel = nullptr;
 		const Remote* remote;
 		u32 ownerIndex;
 		SkillID skillID;
@@ -609,6 +612,7 @@ struct World
 	} showcase;
 	void RunSummonState(ActorNpc& npc, i32 state);
 	ActorUID statusCasterOverride = ActorUID::INVALID;
+	const GameXmlContent::CostLevel* castCostLevel = nullptr;
 	bool reflecting = false;
 	bool frozen = false; // game over: no more shots, skills or bot actions
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;
