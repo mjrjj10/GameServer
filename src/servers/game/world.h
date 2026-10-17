@@ -282,6 +282,11 @@ struct World
 		bool stuck = false;
 		u8 dieMode = 0;
 		Time nextMoveSync = Time::ZERO;
+		ActionStateID pendingMotion = ActionStateID::INVALID;
+		Time motionAt = Time::ZERO;
+		vec3 motionTarget = vec3(0);
+		ActorUID motionTargetUID = ActorUID::INVALID;
+		f32 motionYaw = 0;
 
 		vec3 pos;
 		vec3 rot;

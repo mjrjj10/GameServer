@@ -35,3 +35,4 @@ foreach ($start in $Starts) {
 Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile', '-Command', 'Stop-Process -Name MXMClient -Force' -Wait -ErrorAction SilentlyContinue
 (Get-Content "$b\game.cfg") -replace '^DevShowcase=1', 'DevShowcase=0' | Set-Content "$b\game.cfg" -Encoding ascii
 Set-Content -Path "$b\hub.cfg" -Value "DevShowcase=0`nDevShowcaseStart=0" -Encoding ascii -NoNewline
+Stop-Process -Name login_srv, hub_srv, game_srv, mm_srv -Force -ErrorAction SilentlyContinue

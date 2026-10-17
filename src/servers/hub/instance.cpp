@@ -343,8 +343,12 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 				continue;
 			}
 			if(!u->isBot && u->Main().classType == ClassType::NONE) {
-				TryPickMaster(u, ClassType::STRIKER);
-				TryPickMaster(u, ClassType::LAUNCHER);
+				if(!Config().devShowcaseList.empty()) {
+					TryPickMaster(u, all[0]);
+					if(all.size() > 1) TryPickMaster(u, all[1]);
+				}
+				if(u->Main().classType == ClassType::NONE) TryPickMaster(u, ClassType::STRIKER);
+				if(u->Sub().classType == ClassType::NONE) TryPickMaster(u, ClassType::LAUNCHER);
 				u->replicate.masterPick = true;
 			}
 			if(!u->isBot || all.empty()) continue;

@@ -8,6 +8,7 @@ SKILL = re.compile(r'Skill :: (\S+) skill=(\d+) anim=(\S+) scheduled=(\d)')
 REMOTE = re.compile(r'Remote :: spawn (\d+) ')
 CAST = re.compile(r'Cast :: (\S+) skill=(\d+) (start|release|cancelled)')
 TURN = re.compile(r'Mirror :: turn=(\d)')
+DMG = re.compile(r'Damage :: (\S+) -> (\S+) skill=-?\d+ damage=(\d+)( CRIT)? hp=\S+ in=(\d+) remote=\d+ element=(\d+)')
 
 STYPE = {e.get('ID'): (e.find('ST_COMMONSTATUS').get('_Type') if e.find('ST_COMMONSTATUS') is not None else '') for e in ET.parse('D:/MxM/GameServer/gamedata/client/STATUS_PC.xml').getroot()}
 LIMITS = {}
@@ -20,11 +21,15 @@ for line in open(sys.argv[1], encoding='utf-8', errors='replace'):
     m = WALL.search(line)
     if m:
         cur = dict(master=m.group(2), slot=m.group(3), skill=m.group(4), caster=m.group(5), dist=int(m.group(7)), test=m.group(8),
-                   skills=[], remotes=collections.Counter(), casts=[])
+                   skills=[], remotes=collections.Counter(), casts=[], base=0, crit=False, elements=set())
         tests.append(cur)
         continue
     if cur is None:
         continue
+    if (r := DMG.search(line)) and r.group(1) == cur['caster']:
+        cur['base'] += int(r.group(5))
+        cur['crit'] = cur['crit'] or bool(r.group(4))
+        cur['elements'].add(int(r.group(6)))
     if (r := TURN.search(line)):
         cur['turn'] = int(r.group(1))
     elif (r := RES.search(line)):
@@ -82,8 +87,13 @@ for (key, side), (b, h) in flat.items():
         diffs.append('human cast not received')
     if b.get('hit') != h.get('hit'):
         diffs.append(f'hit bot={b.get("hit")} human={h.get("hit")}')
-    if not tol(b.get('damage', 0), h.get('damage', 0), 30, 0.15):
+    if b['crit'] or h['crit']:
+        if not tol(b['base'], h['base'], 30, 0.15):
+            diffs.append(f'damage before crit bot={b["base"]} human={h["base"]}')
+    elif not tol(b.get('damage', 0), h.get('damage', 0), 30, 0.15):
         diffs.append(f'damage bot={b.get("damage")} human={h.get("damage")}')
+    if b['elements'] and h['elements'] and b['elements'] != h['elements']:
+        diffs.append(f'element bot={sorted(b["elements"])} human={sorted(h["elements"])}')
     if b.get('hits') != h.get('hits'):
         diffs.append(f'hits bot={b.get("hits")} human={h.get("hits")}')
     if not tol(b.get('moved', 0), h.get('moved', 0), 80, 0.2):

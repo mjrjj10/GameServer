@@ -2071,7 +2071,13 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 		name.sprintf("SKILL_%d_BEHAVIORSTATE", state);
 		const ActionStateID action = ActionStateFromString(name.c_str());
 		const vec3 targetPos = current ? current->body->GetWorldPos() : npc.pos;
-		if(action != ActionStateID::INVALID) replication->SendNpcBehaviorToAll(npc.UID, action, npc.pos, yaw, targetPos, current ? current->Main().UID : ActorUID::INVALID);
+		if(action != ActionStateID::INVALID) {
+			npc.pendingMotion = action;
+			npc.motionAt = TimeAdd(localTime, TimeMsToTime(50.0));
+			npc.motionTarget = targetPos;
+			npc.motionTargetUID = current ? current->Main().UID : ActorUID::INVALID;
+			npc.motionYaw = yaw;
+		}
 		LOG("Summon :: creature=%d plays %s", (i32)npc.docID, name.c_str());
 	}
 	f32 t = 0;
@@ -2126,6 +2132,10 @@ void World::UpdateSummonAi(f32 delta)
 	const auto& content = GetGameXmlContent();
 	foreach(it, actorNpcList) {
 		ActorNpc& npc = *it;
+		if(npc.pendingMotion != ActionStateID::INVALID && localTime >= npc.motionAt) {
+			replication->SendNpcBehaviorToAll(npc.UID, npc.pendingMotion, npc.pos, npc.motionYaw, npc.motionTarget, npc.motionTargetUID);
+			npc.pendingMotion = ActionStateID::INVALID;
+		}
 		if(npc.ai == SummonInfo::AI_NONE) continue;
 		if(npc.despawnAt != Time::ZERO && localTime >= npc.despawnAt) continue;
 		const SummonInfo* info = content.FindSummon((i32)npc.docID);
@@ -2590,7 +2600,7 @@ void World::UpdateShowcase()
 	if(&caster == human || &dummy == human) human->untargetable = false;
 	else {
 		human->untargetable = true;
-		const vec3 viewPos = vec3((vec2(casterPos) + vec2(dummyPos)) * 0.5f + Perp(showcase.dir) * 400.0f, showcase.anchor.z);
+		const vec3 viewPos = vec3((vec2(casterPos) + vec2(dummyPos)) * 0.5f + Perp(showcase.dir) * 900.0f, showcase.anchor.z);
 		if(glm::length(vec2(viewPos) - vec2(human->body->GetWorldPos())) > 50.0f) {
 			TeleportPlayer(*human, viewPos, 0);
 			replication->SendReviveToAll(human->userID, human->Main().UID, human->Sub().UID, viewPos);
@@ -3207,7 +3217,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		vec3 sendPos = pos - vec3(0, 0, remote->offsetZ);
 		const bool atAimedPoint = aimPos && glm::length(vec2(*aimPos)) > 1.0f && glm::length(vec2(pos) - vec2(*aimPos)) < 1.0f;
 		if(plainStaticBox && !flip && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY), 0);
-		replication->SendRemoteCreateToAll(players[ownerIndex].Main().UID, seed, idx, sendPos, sendYaw, targetPos, targetMaster ? target : ActorUID::INVALID, GetGameXmlContent().GetNodeName(nodeName), casterCreatesLocally ? players[ownerIndex].clientHd : ClientHandle::INVALID);
+		replication->SendRemoteCreateToAll(players[ownerIndex].Main().UID, seed, idx, sendPos, sendYaw, targetPos, targetMaster ? target : ActorUID::INVALID, Config().DevNoFireNode ? GetGameXmlContent().GetNodeName(0) : GetGameXmlContent().GetNodeName(nodeName), casterCreatesLocally ? players[ownerIndex].clientHd : ClientHandle::INVALID);
 	}
 
 	remoteInsts.push_back(inst);
@@ -3473,7 +3483,7 @@ void World::UpdateRemotes(f32 delta)
 			} break;
 			case ActionCommand::TargetPreset::CURRENT_FFF: {
 				const ActorMaster* targetMaster = pr->target != ActorUID::INVALID ? FindMasterActor(pr->target) : nullptr;
-				if(targetMaster) pos = targetMaster->parent->body->GetWorldPos();
+				if(targetMaster && (!remote || remote->maxSpeed <= 0)) pos = targetMaster->parent->body->GetWorldPos();
 			} break;
 		}
 		if(pr->atTarget) {
