@@ -37,7 +37,7 @@ def find_enemy(img, near=None):
     return (best[1], best[2]) if best else None
 
 
-def act(m, pid, out, f, dbgdir):
+def act(m, pid, out, f, dbgdir, follow='none'):
     key, click, combo, test = m.group(2), m.group(3) == '1', m.group(4) == '1', m.group(6)
     drive.focus(pid)
     time.sleep(1.0)
@@ -82,12 +82,38 @@ def act(m, pid, out, f, dbgdir):
             time.sleep(0.25)
             drive.mouse(drive.MOUSEEVENTF_LEFTDOWN); time.sleep(0.05); drive.mouse(drive.MOUSEEVENTF_LEFTUP)
         if combo:
-            time.sleep(0.7)
+            time.sleep(1.5)
+            mark = f.tell()
             drive.key(key, False); time.sleep(0.05); drive.key(key, True)
             if click:
                 time.sleep(0.25)
                 drive.mouse(drive.MOUSEEVENTF_LEFTDOWN); time.sleep(0.05); drive.mouse(drive.MOUSEEVENTF_LEFTUP)
+            time.sleep(1.0)
+            f.seek(mark)
+            if 'Skill :: alexis' not in f.read():
+                drive.key(key, False); time.sleep(0.05); drive.key(key, True)
+                out.write('combo not seen, closed targeting'+chr(10))
+    if follow in ('q', 'e'):
+        time.sleep(1.0)
+        drive.key(follow, False); time.sleep(0.05); drive.key(follow, True)
+        time.sleep(0.25)
+        drive.mouse(drive.MOUSEEVENTF_LEFTDOWN); time.sleep(0.05); drive.mouse(drive.MOUSEEVENTF_LEFTUP)
+        out.write(f'follow {follow}'+chr(10))
     skill = m.group(5)
+    if skill != '0' and key == 'rmb':
+        seen = False
+        end = time.time() + 1.2
+        while time.time() < end and not seen:
+            line = f.readline()
+            if not line:
+                time.sleep(0.05)
+                continue
+            seen = f'skill={skill}' in line and 'Skill :: ' in line
+        if not seen:
+            drive.move(x, y)
+            time.sleep(0.1)
+            drive.mouse(drive.MOUSEEVENTF_RIGHTDOWN); time.sleep(0.05); drive.mouse(drive.MOUSEEVENTF_RIGHTUP)
+            out.write('dodge retried'+chr(10))
     if skill != '0' and key in ('q', 'e', 'r'):
         seen = False
         end = time.time() + 1.5
@@ -112,6 +138,7 @@ def main():
     with open(outpath, 'a') as out, open(logpath, 'r', encoding='utf-8', errors='replace') as f:
         out.write(f'agent start pid={pid} t={int(time.time() * 1000)}\n')
         f.seek(0, 2)
+        follow = ['none']
         while time.time() < end:
             line = f.readline()
             if not line:
@@ -121,8 +148,12 @@ def main():
                 out.write('showcase done\n')
                 break
             m = PROMPT.search(line)
+            fm = re.search(r'Mirror :: follow=(\S+)', line)
+            if fm:
+                follow[0] = fm.group(1)
             if m:
-                act(m, pid, out, f, os.path.dirname(outpath))
+                act(m, pid, out, f, os.path.dirname(outpath), follow[0])
+                follow[0] = 'none'
 
 
 if __name__ == '__main__':

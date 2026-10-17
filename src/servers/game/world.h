@@ -151,6 +151,9 @@ struct World
 		f32 shotLeadSec = 0;
 		f32 weaponAimYaw = 0;
 		vec3 lastClientPos = vec3(0);
+		i32 comboSlot = -1;
+		SkillID comboBase = SkillID::INVALID;
+		Time comboUntil = Time::ZERO;
 		vec3 placedAt = vec3(0);
 		i32 clientPosCount = 0;
 		i32 kills = 0;
@@ -602,6 +605,7 @@ struct World
 	} showcase;
 	void RunSummonState(ActorNpc& npc, i32 state);
 	ActorUID statusCasterOverride = ActorUID::INVALID;
+	bool reflecting = false;
 	bool frozen = false; // game over: no more shots, skills or bot actions
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActor(ActorUID actorUID) const;

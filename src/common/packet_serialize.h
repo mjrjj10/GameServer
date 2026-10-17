@@ -2846,6 +2846,21 @@ inline const char* PacketSerialize<Sv::SA_ExecuteSkill>(const void* packetData, 
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_ChangeSkillSlot>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_ChangeSkillSlot(%d, %d) :: {", Sv::SN_ChangeSkillSlot::NET_ID, packetSize);
+	SER("	entity=0x%08x", buff.Read<u32>());
+	SER("	slotIndex=%u", buff.Read<u32>());
+	SER("	skillIndex=%u", buff.Read<u32>());
+	SER("	resetBaseComboCooltimeID=%u", buff.Read<u32>());
+	SER("	param=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_AiSyncBehaviorMotion>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

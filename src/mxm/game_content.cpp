@@ -2181,6 +2181,7 @@ bool GameXmlContent::LoadStatusData()
 					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_HEALTH") == 0) mod.stat = StatusMod::HEALTH;
 					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_SKILLPOWER") == 0) mod.stat = StatusMod::SKILLPOWER;
 					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_CRITICALRATE") == 0) mod.stat = StatusMod::CRITICALRATE;
+					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_REFLECT_DAMAGE_RATIO") == 0) mod.stat = StatusMod::REFLECT_DAMAGE_RATIO;
 					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_SKILL_CRITICALRATE") == 0) mod.stat = StatusMod::SKILL_CRITICALRATE;
 					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_ATTACK") == 0) mod.stat = StatusMod::ATTACK;
 					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_MOVESPEED") == 0) mod.stat = StatusMod::MOVESPEED;

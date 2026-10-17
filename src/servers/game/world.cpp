@@ -77,6 +77,7 @@ static const f32 TOOLTIP_DEFENDER_CC_IMMUNE_SEC = 1.0f;
 static const f32 TOOLTIP_DEATHKNIGHT_REVIVE_HP = 0.30f;
 static const i32 TOOLTIP_LILU_EVERY_N = 4;
 static const f32 TOOLTIP_SNIPER_CRIT_PER_MARK = 33.0f;
+static const f32 COMBO_SLOT_WINDOW_SEC = 5.0f;
 static const i32 TOOLTIP_ANDROB_HEAL = 250;
 static const f32 TOOLTIP_ANDROB_RANGE = 800.0f;
 static const f32 TOOLTIP_ATTACKER_WEAPON_MUL = 1.10f;
@@ -838,6 +839,28 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 		PlayerSkillDamage(player, skillID, castPos, targets, angle);
 	}
 
+	if(!followUp && player.clientHd != ClientHandle::INVALID) {
+		if(player.comboSlot >= 0 && skill.type == SkillType::COMBO) {
+			replication->SendChangeSkillSlot(player.clientHd, player.Main().UID, player.comboSlot, player.comboBase, 0);
+			LOG("Combo :: %ls slot %d back to %d", player.name.data(), player.comboSlot, (i32)player.comboBase);
+			player.comboSlot = -1;
+		}
+		const i32 combo = content.GetFirstComboSkill((i32)skillID);
+		if(combo != 0) {
+			const i32 base = (i32)player.mainCharaID * 2;
+			i32 slot = -1;
+			if(player.skills[base] == skillID) slot = 2;
+			else if(player.skills[base + 1] == skillID) slot = 3;
+			else if(((i32)skillID / 10) % 10 == 5 && (i32)skillID % 10 == 0) slot = 4;
+			if(slot >= 0) {
+				replication->SendChangeSkillSlot(player.clientHd, player.Main().UID, slot, SkillID(combo), 0);
+				player.comboSlot = slot;
+				player.comboBase = skillID;
+				player.comboUntil = TimeAdd(localTime, TimeMsToTime(COMBO_SLOT_WINDOW_SEC * 1000.0));
+				LOG("Combo :: %ls slot %d -> %d", player.name.data(), slot, combo);
+			}
+		}
+	}
 	if(!followUp) {
 		if(const GameXmlContent::SkillStance* st = content.FindSkillStance((i32)skillID)) SetStance(player.Main(), st->stance, st->duration, st->weaponFireCount, st->cancelByDefeat);
 	}
@@ -1624,6 +1647,11 @@ void World::CancelCast(Player& player, const char* reason)
 void World::UpdateCasts()
 {
 	foreach(it, players) {
+		if(it->comboSlot >= 0 && localTime >= it->comboUntil) {
+			replication->SendChangeSkillSlot(it->clientHd, it->Main().UID, it->comboSlot, it->comboBase, 0);
+			LOG("Combo :: %ls slot %d window ended", it->name.data(), it->comboSlot);
+			it->comboSlot = -1;
+		}
 		if(it->casting.skillID == SkillID::INVALID || !it->body) continue;
 		if(it->dead) { CancelCast(*it, "dead"); continue; }
 		const bool bot = it->clientHd == ClientHandle::INVALID;
@@ -2717,6 +2745,18 @@ void World::UpdateShowcase()
 		replication->SendCooltimeReset(human->clientHd, human->Main().UID, Slice<const i32>(cools.data(), cools.size()));
 		const GameXmlContent::SkillInput* in = skill != 0 ? content.FindSkillInput(skill) : nullptr;
 		const i32 combo = skill != 0 ? content.GetFirstComboSkill(skill) : 0;
+		const char* followKey = "none";
+		if(const GameXmlContent::SkillStance* st = skill != 0 ? content.FindSkillStance(skill) : nullptr) {
+			const i32 hb = (i32)human->mainCharaID * 2;
+			foreach_const(sid, content.GetMaster(hc).skillIDs) {
+				auto f = content.skillMap.find(*sid);
+				if(f == content.skillMap.end() || f->second.type != SkillType::NORMAL) continue;
+				if(content.GetSkillAction(hc, f->second.action, st->stance).stance != st->stance) continue;
+				if(human->skills[hb] == *sid) { followKey = "q"; break; }
+				if(human->skills[hb + 1] == *sid) { followKey = "e"; break; }
+			}
+		}
+		LOG("Mirror :: follow=%s", followKey);
 		LOG("Mirror :: prompt wall=%lld key=%s click=%d combo=%d skill=%d test=%s dist=%.0f aim=(%.0f, %.0f)", ShowcaseWallMs(), mirrorKey ? mirrorKey : "none",
 			in && in->needsClick ? 1 : 0, combo != 0 ? 1 : 0, skill, testName, glm::length(vec2(dummyPos) - vec2(casterPos)), castPos.x - casterPos.x, castPos.y - casterPos.y);
 	}
@@ -2734,9 +2774,11 @@ void World::UpdateShowcase()
 		i32 combo = skill != 0 ? content.GetFirstComboSkill(skill) : 0;
 		i32 comboDelayMs = 700;
 		if(const GameXmlContent::SkillStance* st = skill != 0 ? content.FindSkillStance(skill) : nullptr) {
+			const i32 hb = (i32)human->mainCharaID * 2;
 			foreach_const(sid, content.GetMaster(cls).skillIDs) {
 				auto f = content.skillMap.find(*sid);
 				if(f == content.skillMap.end() || f->second.type != SkillType::NORMAL) continue;
+				if(mirror && human->Main().classType == cls && human->skills[hb] != *sid && human->skills[hb + 1] != *sid) continue;
 				if(content.GetSkillAction(cls, f->second.action, st->stance).stance == st->stance) { combo = (i32)*sid; comboDelayMs = 1000; break; }
 			}
 		}
@@ -3955,6 +3997,15 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	const bool showcaseDummy = Config().DevShowcase && (target.clientHd == ClientHandle::INVALID || Config().DevMirror);
 	chara.hp = MAX(chara.hp - damage, (showcaseDummy || HasStatusType(target, "STATUS_TYPE_NEARLY_IMMORTAL") || HasStatusType(target, "STATUS_TYPE_UNDEAD")) ? 1 : 0);
 	if(chara.hp == 0) PassiveOnLethal(target);
+	if(!reflecting && attacker.team != target.team && attacker.index != target.index && (proj || skillID != SkillID::INVALID)) {
+		const f32 ratio = StatusModSum(target, StatusMod::REFLECT_DAMAGE_RATIO);
+		if(ratio > 0 && !attacker.dead) {
+			reflecting = true;
+			LOG("Status :: %ls reflects %d to %ls", target.name.data(), (i32)(damage * ratio / 100.0f), attacker.name.data());
+			DamagePlayer(target, attacker, SkillID::INVALID, (i32)(damage * ratio / 100.0f));
+			reflecting = false;
+		}
+	}
 
 	// rage: STAT_TYPE_RAGE_ATTACK_RECOVERY_VALUE per landed hit
 	if(attacker.res[1] >= 0) {

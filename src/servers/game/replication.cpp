@@ -1332,6 +1332,17 @@ void Replication::SendCooltimeReset(ClientHandle clientHd, ActorUID characterUID
 	SendPacket(clientHd, packet);
 }
 
+void Replication::SendChangeSkillSlot(ClientHandle clientHd, ActorUID actorUID, i32 slot, SkillID skill, i32 resetCooltimeID)
+{
+	Sv::SN_ChangeSkillSlot packet;
+	packet.entity = (u32)GetLocalActorID(clientHd, actorUID);
+	packet.slotIndex = (u32)slot;
+	packet.skillIndex = (u32)skill;
+	packet.resetBaseComboCooltimeID = (u32)resetCooltimeID;
+	packet.param = 0;
+	SendPacket(clientHd, packet);
+}
+
 static const f32 CLIENT_SELF_SNAP_DIST = 180.0f;
 
 void Replication::SendSelfTeleport(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, f32 worldYaw, const vec3* clientPos)
