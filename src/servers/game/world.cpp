@@ -2525,7 +2525,7 @@ void World::UpdateShowcase()
 		const vec3 humanAt = &caster == human ? casterPos : dummyPos;
 		human->placedAt = humanAt;
 		human->clientPosCount = 0;
-		replication->SendSelfTeleport(human->clientHd, human->Main().UID, humanAt, &caster == human ? faceDummy : faceCaster);
+		replication->SendSelfTeleport(human->clientHd, human->Main().UID, humanAt, &caster == human ? faceDummy : faceCaster, &human->lastClientPos);
 		foreach(c, human->characters) { (*c)->hp = (*c)->hpMax; replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax); }
 	}
 	foreach(it, activeStatuses) {
@@ -2652,7 +2652,7 @@ void World::UpdateShowcase()
 		}
 		if(glm::length(vec2(viewPos) - vec2(human->body->GetWorldPos())) > 50.0f) {
 			TeleportPlayer(*human, viewPos, 0);
-			replication->SendSelfTeleport(human->clientHd, human->Main().UID, viewPos, 0);
+			replication->SendSelfTeleport(human->clientHd, human->Main().UID, viewPos, 0, &human->lastClientPos);
 		}
 	}
 	if(!showcase.settled) {
@@ -2664,7 +2664,7 @@ void World::UpdateShowcase()
 	if(&caster == human || &dummy == human) {
 		const vec3 settledPos = human->body->GetWorldPos();
 		human->placedAt = settledPos;
-		replication->SendSelfTeleport(human->clientHd, human->Main().UID, settledPos, &caster == human ? faceDummy : faceCaster);
+		replication->SendSelfTeleport(human->clientHd, human->Main().UID, settledPos, &caster == human ? faceDummy : faceCaster, &human->lastClientPos);
 	}
 	if(caster.Main().stance != 0) SetStance(caster.Main(), 0, 0, 0, false);
 	{

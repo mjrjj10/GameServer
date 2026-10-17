@@ -1332,8 +1332,14 @@ void Replication::SendCooltimeReset(ClientHandle clientHd, ActorUID characterUID
 	SendPacket(clientHd, packet);
 }
 
-void Replication::SendSelfTeleport(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, f32 worldYaw)
+static const f32 CLIENT_SELF_SNAP_DIST = 180.0f;
+
+void Replication::SendSelfTeleport(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, f32 worldYaw, const vec3* clientPos)
 {
+	if(clientPos && glm::length(vec2(*clientPos) - vec2(pos)) <= CLIENT_SELF_SNAP_DIST + 40.0f) {
+		const vec3 detour = pos + vec3(CLIENT_SELF_SNAP_DIST * 2.2f, 0, 0);
+		SendSelfTeleport(clientHd, actorUID, detour, worldYaw, nullptr);
+	}
 	Sv::SN_PlayerSyncMove sync;
 	sync.entityID = GetLocalActorID(clientHd, actorUID);
 	sync.DestPos = v2f(pos);
