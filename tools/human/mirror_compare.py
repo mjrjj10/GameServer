@@ -90,6 +90,9 @@ for (key, side), (b, h) in flat.items():
     if side == 'human' and not h['skills'] and key[1] not in ('WEAPON', 'TAG') and ((lo > 0 and h['dist'] < lo) or (hi > 0 and h['dist'] > hi)):
         print(f'ok {label}  client refused outside [{lo:.0f}, {hi:.0f}] (bench bot casts anyway)')
         continue
+    if not h['skills'] and not b['skills'] and key[1] not in ('WEAPON', 'TAG') and key[2] != '0':
+        print(f'ok {label}  both refused the cast (obstacle or range)')
+        continue
     if side == 'human' and not h['skills'] and key[1] not in ('WEAPON', 'TAG'):
         diffs.append('human cast not received')
     if b.get('hit') != h.get('hit'):

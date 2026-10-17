@@ -372,6 +372,8 @@ void GameXmlContent::LoadAllSkills()
 				pTarget->QueryStringAttribute("_SelectStateType", &select);
 				const char* selectType = pTarget->Attribute("_SelectType");
 				in.teleportEntity = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_TELEPORT_ENTITY") == 0;
+				if(const char* om = pTarget->Attribute("_TestObstructMove")) in.obstructMove = EA::StdC::Strcmp(om, "SKILL_OBSTRUCTMOVE_TYPE_JUMPABLE") == 0 ? 1 : 2;
+				if(const char* os = pTarget->Attribute("_TestObstructSight")) in.obstructSight = EA::StdC::Strcmp(os, "SKILL_OBSTRUCTSIGHT_TYPE_ALL") == 0;
 				pTarget->QueryFloatAttribute("_MinDistance", &in.minDistance);
 				pTarget->QueryFloatAttribute("_MaxDistance", &in.maxDistance);
 				const char* friendly = pTarget->Attribute("_Friendly");

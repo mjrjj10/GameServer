@@ -79,6 +79,9 @@ static const i32 TOOLTIP_LILU_EVERY_N = 4;
 static const f32 TOOLTIP_SNIPER_CRIT_PER_MARK = 33.0f;
 static const f32 COMBO_SLOT_WINDOW_SEC = 5.0f;
 static const i32 SKILL_SLOT_ENUM_FIRST = 2;
+static const f32 OBSTRUCT_JUMPABLE_HEIGHT = 120.0f;
+static const f32 OBSTRUCT_LOW_HEIGHT = 30.0f;
+static const f32 OBSTRUCT_SIDE = 50.0f;
 static const i32 SKILL_SLOT_ENUM_UG = 6;
 static const i32 TOOLTIP_ANDROB_HEAL = 250;
 static const f32 TOOLTIP_ANDROB_RANGE = 800.0f;
@@ -740,6 +743,29 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 			LOG("Blocked :: %ls skill=%d (input blocked by a status)", player.name.data(), (i32)skillID);
 			return;
 		}
+		if(player.clientHd == ClientHandle::INVALID) {
+			const GameXmlContent::SkillInput* obIn = content.FindSkillInput((i32)skillID);
+			if(obIn && (obIn->obstructMove != 0 || obIn->obstructSight)) {
+				vec3 to = castPos;
+				if(targets.size() > 0) { if(const ActorMaster* tm = FindMasterActor(targets[0])) to = tm->parent->body->GetWorldPos(); }
+				const vec3 from = player.body->GetWorldPos();
+				if(glm::length(vec2(to)) > 1.0f && glm::length(vec2(to) - vec2(from)) > 1.0f) {
+					const f32 height = obIn->obstructMove == 1 ? OBSTRUCT_JUMPABLE_HEIGHT : OBSTRUCT_LOW_HEIGHT;
+					const vec2 along = glm::normalize(vec2(to) - vec2(from));
+					const vec2 side = vec2(-along.y, along.x);
+					bool blocked = false;
+					for(f32 off : { 0.0f, -OBSTRUCT_SIDE, OBSTRUCT_SIDE }) {
+						f32 hitDist = 0;
+						const bool hit = physics.RaycastStatic(vec3(vec2(from) + side * off, from.z + height), vec3(vec2(to) + side * off, from.z + height), &hitDist);
+						if(hit) blocked = true;
+					}
+					if(blocked) {
+						LOG("Blocked :: %ls skill=%d obstacle between caster and target", player.name.data(), (i32)skillID);
+						return;
+					}
+				}
+			}
+		}
 		if(!PlayerPaySkillCost(player, (i32)skillID)) return;
 		if(castCostLevel) {
 			for(i32 r = 0; r < 3; r++) {
@@ -819,14 +845,17 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 						moveDuration = 0.01f; // warping
 					} break;
 					case ActionCommand::MovePreset::GOTO_CURRENT_TARGET:
-					case ActionCommand::MovePreset::GOTO_CURRENT_TARGET_CHASE: {
+					case ActionCommand::MovePreset::GOTO_CURRENT_TARGET_CHASE:
+					case ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH:
+					case ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE: {
 						const ActorMaster* tm = targets.size() > 0 ? FindMasterActor(targets[0]) : nullptr;
 						if(tm && distance == 0) {
 							const vec2 rel = vec2(tm->parent->body->GetWorldPos()) - vec2(player.body->GetWorldPos());
 							const f32 len = glm::length(rel);
 							if(len > 1.0f) {
+								const bool through = cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH || cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE;
 								gotoDir = rel / len;
-								distance = MAX(len - HitRadius(*tm->parent) - HitRadius(player), 0.0f);
+								distance = through ? len : MAX(len - HitRadius(*tm->parent) - HitRadius(player), 0.0f);
 								moveDuration = action.seqLength;
 							}
 						}
@@ -851,6 +880,16 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	rpExec.rot = { angle, 0, angle };
 	rpExec.speed = player.input.speed; // FIXME: should not come from input
 
+	if(distance > 0 && glm::length(gotoDir) < 0.5f && glm::length(vec2(castPos)) > 1.0f) {
+		foreach_const(cmd, action.commands) {
+			if(cmd->type == ActionCommand::Type::MOVE && (cmd->move.preset == ActionCommand::MovePreset::TARGET_POS || cmd->move.preset == ActionCommand::MovePreset::TARGET_POS_LEAP)) {
+				const vec2 rel = vec2(castPos) - vec2(player.body->GetWorldPos());
+				const f32 len = glm::length(rel);
+				distance = MIN(distance, len);
+				if(len > 1.0f) gotoDir = rel / len;
+			}
+		}
+	}
 	if(distance != 0) {
 		const vec2 moveDir = glm::length(gotoDir) > 0.5f ? gotoDir : dir;
 		const vec3 endPos = physics.FindMovePos(player.body, vec3(moveDir * distance, 0), moveDuration);

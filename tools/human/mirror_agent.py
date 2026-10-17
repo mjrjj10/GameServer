@@ -108,6 +108,9 @@ def act(m, pid, out, f, dbgdir, follow='none'):
                 x, y = HUMAN_SCREEN[0] + ex / el * tl, HUMAN_SCREEN[1] + ey / el * tl
                 corrected = True
                 out.write(f'aim corrected to expected direction ({x:.0f},{y:.0f})'+chr(10))
+    if key in ('q', 'e', 'r') and click and m.group(10) != '1':
+        x, y = expect
+        out.write(f'ground click on computed point ({x:.0f},{y:.0f})'+chr(10))
     if key == 'lmb' and not corrected:
         y -= 55
     dx, dy = x - HUMAN_SCREEN[0], y - HUMAN_SCREEN[1]
