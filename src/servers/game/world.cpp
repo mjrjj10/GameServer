@@ -2066,6 +2066,14 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 		const vec2 rel = vec2(current->body->GetWorldPos()) - vec2(npc.pos);
 		if(glm::length(rel) > 1.0f) yaw = atan2f(rel.y, rel.x);
 	}
+	{
+		eastl::fixed_string<char,48,false> name;
+		name.sprintf("SKILL_%d_BEHAVIORSTATE", state);
+		const ActionStateID action = ActionStateFromString(name.c_str());
+		const vec3 targetPos = current ? current->body->GetWorldPos() : npc.pos;
+		if(action != ActionStateID::INVALID) replication->SendNpcBehaviorToAll(npc.UID, action, npc.pos, yaw, targetPos, current ? current->Main().UID : ActorUID::INVALID);
+		LOG("Summon :: creature=%d plays %s", (i32)npc.docID, name.c_str());
+	}
 	f32 t = 0;
 	foreach_const(c, info->skillStates[state]) {
 		t += c->delay;
@@ -2764,10 +2772,10 @@ void World::UpdateSummons()
 					if(&*other == &actor || other->ownerIndex != ps->ownerIndex || other->ai != SummonInfo::AI_RELAY) continue;
 					other->despawnAt = localTime;
 				}
-				if(owner.pendingChildSkill > 0 && localTime < owner.pendingChildSkillUntil) {
-					LOG("Summon :: %ls relay state SKILL_%d", owner.name.data(), owner.pendingChildSkill);
-					RunSummonState(actor, owner.pendingChildSkill);
-				}
+			}
+			if(info && owner.pendingChildSkill > 0 && localTime < owner.pendingChildSkillUntil) {
+				LOG("Summon :: %ls relay state SKILL_%d", owner.name.data(), owner.pendingChildSkill);
+				RunSummonState(actor, owner.pendingChildSkill);
 				owner.pendingChildSkill = 0;
 			}
 			if(info) {

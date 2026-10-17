@@ -1341,6 +1341,29 @@ void Replication::SendExecuteSkillAck(ClientHandle clientHd, ActorUID casterUID,
 	SendPacket(clientHd, ack);
 }
 
+void Replication::SendNpcBehaviorToAll(ActorUID actorUID, ActionStateID action, const vec3& pos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID)
+{
+	const float3 dir = v2f(vec3(cosf(worldYaw), sinf(worldYaw), 0));
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+		const LocalActorID targetLocal = targetUID != ActorUID::INVALID ? GetLocalActorID(clientHd, targetUID) : LocalActorID::INVALID;
+		PacketWriter<Sv::SN_AiSyncBehaviorMotion,128> packet;
+		packet.Write<u32>((u32)localID);
+		packet.Write<u32>((u32)action);
+		packet.Write<u8>(0);
+		packet.Write<float3>(v2f(pos));
+		packet.Write<float3>(dir);
+		packet.Write<float3>(dir);
+		packet.Write<float3>(v2f(targetPos));
+		packet.Write<u32>(1);
+		packet.Write<u32>(targetLocal != LocalActorID::INVALID ? (u32)targetLocal : 0);
+		SendPacket(clientHd, packet);
+	}
+}
+
 void Replication::SendStanceToAll(ActorUID actorUID, i32 stance, f32 durationSec)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {

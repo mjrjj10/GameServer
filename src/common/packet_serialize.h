@@ -2846,6 +2846,19 @@ inline const char* PacketSerialize<Sv::SA_ExecuteSkill>(const void* packetData, 
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_AiSyncBehaviorMotion>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_AiSyncBehaviorMotion(%d, %d) :: {", Sv::SN_AiSyncBehaviorMotion::NET_ID, packetSize);
+	SER("	entityID=0x%08x", buff.Read<u32>());
+	SER("	motionType=%u", buff.Read<u32>());
+	SER("	stance=%u", buff.Read<u8>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_SyncStanceType>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();
