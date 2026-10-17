@@ -729,7 +729,7 @@ void Game::OnPlayerCastSkill(ClientHandle clientHd, ActorUID actorUID, const Pla
 	// TODO: convert clientTime to localTime
 	OnPlayerUpdatePosition(clientHd, actorUID, f2v(posInfo.pos), f2v(posInfo.moveDir), rot, posInfo.speed, ActionStateID::INVALID, 0);
 
-	LOG("OnPlayerCastSkill :: (%f, %f, %f)", cast.pos.x, cast.pos.y, cast.pos.z);
+	LOG("OnPlayerCastSkill :: (%f, %f, %f) targets=%d", cast.pos.x, cast.pos.y, cast.pos.z, (i32)cast.targetList.size());
 }
 
 void Game::OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID)

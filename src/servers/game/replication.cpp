@@ -1318,7 +1318,7 @@ void Replication::SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 ma
 	}
 }
 
-void Replication::SendCooltimeReset(ClientHandle clientHd, ActorUID characterUID, Slice<const i32> coolTimeIDs)
+void Replication::SendCooltimeReset(ClientHandle clientHd, ActorUID characterUID, Slice<const i32> coolTimeIDs, u32 leftMs, u32 totalMs)
 {
 	PacketWriter<Sv::SN_NotifyCooltime,256> packet;
 	packet.Write<u32>((u32)GetLocalActorID(clientHd, characterUID));
@@ -1326,8 +1326,8 @@ void Replication::SendCooltimeReset(ClientHandle clientHd, ActorUID characterUID
 	foreach_const(id, coolTimeIDs) {
 		packet.Write<u32>(1);
 		packet.Write<u32>((u32)*id);
-		packet.Write<u32>(0);
-		packet.Write<u32>(0);
+		packet.Write<u32>(leftMs);
+		packet.Write<u32>(totalMs);
 	}
 	SendPacket(clientHd, packet);
 }
@@ -2242,7 +2242,12 @@ void Replication::SendMasterSkillSlots(ClientHandle clientHd, const Replication:
 		packet.Write<SkillID>(stageSkills[1]);
 		packet.Write<SkillID>(player.skills[skillOffset]);
 		packet.Write<SkillID>(player.skills[skillOffset + 1]);
-		packet.Write<SkillID>(master.skillIDs.back());
+		SkillID shirk = master.skillIDs.back();
+		foreach_const(sid, master.skillIDs) {
+			auto f = content.skillMap.find(*sid);
+			if(f != content.skillMap.end() && f->second.type == SkillType::SHIRK) { shirk = *sid; break; }
+		}
+		packet.Write<SkillID>(shirk);
 
 		SendPacket(clientHd, packet);
 	}

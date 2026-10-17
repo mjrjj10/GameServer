@@ -152,6 +152,10 @@ struct World
 		f32 weaponAimYaw = 0;
 		vec3 lastClientPos = vec3(0);
 		i32 comboSlot = -1;
+		SkillID comboPending = SkillID::INVALID;
+		SkillID comboSkill = SkillID::INVALID;
+		Time comboSendAt = Time::ZERO;
+		i32 comboResetCooltime = 0;
 		SkillID comboBase = SkillID::INVALID;
 		Time comboUntil = Time::ZERO;
 		vec3 placedAt = vec3(0);
@@ -639,6 +643,7 @@ public:
 	void ApplyPassives(Player& player);
 	void ApplyAllPassives();
 	void ReleaseCast(Player& player);
+	void ComboBaseCooldown(Player& player);
 private:
 	void PassiveOnSkillCast(Player& player, i32 skillID);
 	void PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj);

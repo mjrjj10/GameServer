@@ -78,6 +78,8 @@ static const f32 TOOLTIP_DEATHKNIGHT_REVIVE_HP = 0.30f;
 static const i32 TOOLTIP_LILU_EVERY_N = 4;
 static const f32 TOOLTIP_SNIPER_CRIT_PER_MARK = 33.0f;
 static const f32 COMBO_SLOT_WINDOW_SEC = 5.0f;
+static const i32 SKILL_SLOT_ENUM_FIRST = 2;
+static const i32 SKILL_SLOT_ENUM_UG = 6;
 static const i32 TOOLTIP_ANDROB_HEAL = 250;
 static const f32 TOOLTIP_ANDROB_RANGE = 800.0f;
 static const f32 TOOLTIP_ATTACKER_WEAPON_MUL = 1.10f;
@@ -675,8 +677,13 @@ static f32 SkillMoveDuration(const GameXmlContent& content, ClassType cls, const
 	return action.seqLength;
 }
 
-void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPosIn, Slice<const ActorUID> targets, f32 clientTime, ActionStateID forcedAction)
+void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPosIn, Slice<const ActorUID> targets, f32 clientTime, ActionStateID forcedAction)
 {
+	SkillID skillID = skillIn;
+	if(player.clientHd != ClientHandle::INVALID && forcedAction == ActionStateID::INVALID && player.comboSlot >= 0 && skillIn == player.comboBase && localTime < player.comboUntil && player.comboSkill != SkillID::INVALID) {
+		LOG("Combo :: %ls recast %d -> combo %d", player.name.data(), (i32)skillIn, (i32)player.comboSkill);
+		skillID = player.comboSkill;
+	}
 	vec3 castPos = castPosIn;
 	if(player.clientHd == ClientHandle::INVALID && forcedAction == ActionStateID::INVALID && glm::length(vec2(castPos)) > 1.0f) {
 		const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput((i32)skillID);
@@ -773,6 +780,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 	// go through the skill program to find out how much the master moves
 	f32 distance = 0;
 	f32 moveDuration = 0;
+	vec2 gotoDir = vec2(0);
 
 	const auto& action = content.GetSkillAction(player.Main().classType, actionState, player.Main().stance);
 
@@ -788,6 +796,19 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 					case ActionCommand::MovePreset::WARP: {
 						distance = (f32)cmd->move.param2;
 						moveDuration = 0.01f; // warping
+					} break;
+					case ActionCommand::MovePreset::GOTO_CURRENT_TARGET:
+					case ActionCommand::MovePreset::GOTO_CURRENT_TARGET_CHASE: {
+						const ActorMaster* tm = targets.size() > 0 ? FindMasterActor(targets[0]) : nullptr;
+						if(tm && distance == 0) {
+							const vec2 rel = vec2(tm->parent->body->GetWorldPos()) - vec2(player.body->GetWorldPos());
+							const f32 len = glm::length(rel);
+							if(len > 1.0f) {
+								gotoDir = rel / len;
+								distance = MAX(len - HitRadius(*tm->parent) - HitRadius(player), 0.0f);
+								moveDuration = action.seqLength;
+							}
+						}
 					} break;
 				}
 			} break;
@@ -810,7 +831,9 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 	rpExec.speed = player.input.speed; // FIXME: should not come from input
 
 	if(distance != 0) {
-		const vec3 endPos = physics.FindMovePos(player.body, vec3(dir * distance, 0), moveDuration);
+		const vec2 moveDir = glm::length(gotoDir) > 0.5f ? gotoDir : dir;
+		const vec3 endPos = physics.FindMovePos(player.body, vec3(moveDir * distance, 0), moveDuration);
+		rpExec.moveDir = moveDir;
 		rpExec.endPos = endPos;
 	}
 
@@ -842,6 +865,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 	if(!followUp && player.clientHd != ClientHandle::INVALID) {
 		if(player.comboSlot >= 0 && skill.type == SkillType::COMBO) {
 			replication->SendChangeSkillSlot(player.clientHd, player.Main().UID, player.comboSlot, player.comboBase, 0);
+			ComboBaseCooldown(player);
 			LOG("Combo :: %ls slot %d back to %d", player.name.data(), player.comboSlot, (i32)player.comboBase);
 			player.comboSlot = -1;
 		}
@@ -849,11 +873,15 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 		if(combo != 0) {
 			const i32 base = (i32)player.mainCharaID * 2;
 			i32 slot = -1;
-			if(player.skills[base] == skillID) slot = 2;
-			else if(player.skills[base + 1] == skillID) slot = 3;
-			else if(((i32)skillID / 10) % 10 == 5 && (i32)skillID % 10 == 0) slot = 4;
+			const i32 order = ((i32)skillID / 10) % 10;
+			if((player.skills[base] == skillID || player.skills[base + 1] == skillID) && order >= 1 && order <= 4) slot = SKILL_SLOT_ENUM_FIRST + order - 1;
+			else if(order == 5 && (i32)skillID % 10 == 0) slot = SKILL_SLOT_ENUM_UG;
 			if(slot >= 0) {
-				replication->SendChangeSkillSlot(player.clientHd, player.Main().UID, slot, SkillID(combo), 0);
+				const GameXmlContent::SkillInput* baseIn = content.FindSkillInput((i32)skillID);
+				player.comboPending = SkillID(combo);
+				player.comboSkill = SkillID(combo);
+				player.comboSendAt = TimeAdd(localTime, TimeMsToTime(50.0));
+				player.comboResetCooltime = baseIn ? baseIn->coolTimeID : 0;
 				player.comboSlot = slot;
 				player.comboBase = skillID;
 				player.comboUntil = TimeAdd(localTime, TimeMsToTime(COMBO_SLOT_WINDOW_SEC * 1000.0));
@@ -1436,7 +1464,7 @@ bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 	return true;
 }
 
-static const f32 STATUS_PUSH_BASE_DISTANCE = 400.0f;
+static const f32 STATUS_PUSH_BASE_DISTANCE = 500.0f;
 static const f32 ORBIT_RADIUS = 150.0f;
 
 bool World::HasStatusType(const Player& p, const char* type) const
@@ -1628,6 +1656,15 @@ void World::StanceWeaponUse(Player& player)
 	if(--m.stanceShotsLeft == 0) SetStance(m, 0, 0, 0, false);
 }
 
+void World::ComboBaseCooldown(Player& player)
+{
+	const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput((i32)player.comboBase);
+	if(!in || in->coolTimeID == 0 || in->coolTime <= 0) return;
+	const i32 id = in->coolTimeID;
+	const u32 ms = (u32)(in->coolTime * 1000.0f);
+	replication->SendCooltimeReset(player.clientHd, player.Main().UID, Slice<const i32>(&id, 1), ms, ms);
+}
+
 void World::ReleaseCast(Player& player)
 {
 	const Player::Casting c = player.casting;
@@ -1647,8 +1684,14 @@ void World::CancelCast(Player& player, const char* reason)
 void World::UpdateCasts()
 {
 	foreach(it, players) {
+		if(it->comboPending != SkillID::INVALID && it->comboSlot >= 0 && localTime >= it->comboSendAt) {
+			replication->SendChangeSkillSlot(it->clientHd, it->Main().UID, it->comboSlot, it->comboPending, it->comboResetCooltime);
+			if(it->comboResetCooltime != 0) replication->SendCooltimeReset(it->clientHd, it->Main().UID, Slice<const i32>(&it->comboResetCooltime, 1));
+			it->comboPending = SkillID::INVALID;
+		}
 		if(it->comboSlot >= 0 && localTime >= it->comboUntil) {
 			replication->SendChangeSkillSlot(it->clientHd, it->Main().UID, it->comboSlot, it->comboBase, 0);
+			ComboBaseCooldown(*it);
 			LOG("Combo :: %ls slot %d window ended", it->name.data(), it->comboSlot);
 			it->comboSlot = -1;
 		}
@@ -1970,7 +2013,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	if(info && displacement && info->type != "STATUS_TYPE_AIRBORNE" && info->type != "STATUS_TYPE_FLY") {
 		vec2 dir = vec2(from - caster.body->GetWorldPos());
 		const f32 len = glm::length(dir);
-		dir = len > 1.0f ? dir / len : vec2(1, 0);
+		dir = len > 1.0f ? dir / len : vec2(cosf(caster.input.rot.upperYaw), sinf(caster.input.rot.upperYaw));
 		if(info->type == "STATUS_TYPE_DRAGGED") {
 			to = caster.body->GetWorldPos() + vec3(dir * (info->dragOffset > 0 ? info->dragOffset : 200.0f), 0);
 		}
@@ -1979,6 +2022,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 				STATUS_PUSH_BASE_DISTANCE * (info->distanceRatio > 0 ? info->distanceRatio : 1.0f);
 			to = from + vec3(dir * dist, 0);
 		}
+		LOG("Push :: %ls -> %ls status=%d sep=%.0f dir=(%.2f, %.2f) to=(%.0f, %.0f)", caster.name.data(), target.name.data(), statusID, len, dir.x, dir.y, to.x, to.y);
 		if(target.clientHd == ClientHandle::INVALID && graphDuration > 0) {
 			target.pushTarget = to;
 			target.pushSpeed = glm::length(vec2(to - from)) / graphDuration;
