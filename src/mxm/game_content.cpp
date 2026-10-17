@@ -374,6 +374,7 @@ void GameXmlContent::LoadAllSkills()
 			const bool self = !ux || EA::StdC::Strcmp(ux, "SKILL_CAST_MY_POSITION") == 0;
 			const bool smartCast = smart && EA::StdC::Strcmp(smart, "SKILL_SMARTCAST_TRUE") == 0;
 			in.needsClick = !self && !smartCast;
+			in.directionOnly = ux && EA::StdC::Strcmp(ux, "SKILL_CAST_MY_POSITION_DIRECTION") == 0;
 			pNodeCommonSkill->QueryIntAttribute("_CoolTimeID", &in.coolTimeID);
 			pNodeCommonSkill->QueryFloatAttribute("_CoolTime", &in.coolTime);
 			skillInput[skillID] = in;

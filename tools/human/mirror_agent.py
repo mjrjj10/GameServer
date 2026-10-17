@@ -1,9 +1,9 @@
-import os, re, sys, time
+import math, os, re, sys, time
 import numpy as np, cv2, mss
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import drive
 
-PROMPT = re.compile(r'Mirror :: prompt wall=(\d+) key=(\S+) click=(\d) combo=(\d) skill=(\d+) test=(\S+) dist=(\d+) aim=\((-?\d+), (-?\d+)\)')
+PROMPT = re.compile(r'Mirror :: prompt wall=(\d+) key=(\S+) click=(\d) combo=(\d) skill=(\d+) test=(\S+) dist=(\d+) aim=\((-?\d+), (-?\d+)\)(?: dironly=(\d))?')
 HUMAN_SCREEN = (960, 575)
 PX_PER_UNIT = (-0.577, -0.047)
 
@@ -47,7 +47,7 @@ def act(m, pid, out, f, dbgdir, follow='none'):
     tgt = None
     for attempt in range(2):
         img = grab()
-        tgt = find_enemy(img, expect)
+        tgt = find_enemy(img, expect) or find_enemy(img, expect, 30)
         if tgt:
             break
         time.sleep(0.3)
@@ -56,14 +56,18 @@ def act(m, pid, out, f, dbgdir, follow='none'):
     x, y = tgt if tgt else expect
     if key == 'lmb':
         y -= 55
-    if key == 'rmb':
-        x, y = 2 * HUMAN_SCREEN[0] - x, 2 * HUMAN_SCREEN[1] - y
     dx, dy = x - HUMAN_SCREEN[0], y - HUMAN_SCREEN[1]
     k = 1.0
     for lim, v in ((HUMAN_SCREEN[0] - 60, -dx), (1920 - 60 - HUMAN_SCREEN[0], dx), (HUMAN_SCREEN[1] - 120, -dy), (1080 - 200 - HUMAN_SCREEN[1], dy)):
         if v > lim:
             k = min(k, lim / v)
     x, y = HUMAN_SCREEN[0] + dx * k, HUMAN_SCREEN[1] + dy * k
+    if m.group(10) == '1':
+        if math.hypot(expect[0] - HUMAN_SCREEN[0], expect[1] - HUMAN_SCREEN[1]) < 150:
+            x, y = expect
+        d = math.hypot(x - HUMAN_SCREEN[0], y - HUMAN_SCREEN[1])
+        if 1 < d < 350:
+            x, y = HUMAN_SCREEN[0] + (x - HUMAN_SCREEN[0]) * 350 / d, HUMAN_SCREEN[1] + (y - HUMAN_SCREEN[1]) * 350 / d
     out.write(f'prompt {m.group(1)} key={key} skill={m.group(5)} test={test} target={"found" if tgt else "none"} at=({x:.0f},{y:.0f}) t={int(time.time() * 1000)}\n')
     out.flush()
     drive.move(x, y)

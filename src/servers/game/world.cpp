@@ -1016,7 +1016,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	if(remote && remote->maxDistance > 0) remoteRange = remote->maxDistance;
 	else if(remote && remote->lifeTime > 0) remoteRange = remote->lifeTime * proj.speed;
 
-	proj.range = graph ? (reliable ? MIN(distance, aimMax) : classRange) : remoteRange;
+	proj.range = graph ? (reliable ? MIN(distance, aimMax) : MIN(classRange, aimMax)) : remoteRange;
 	proj.graph = graph;
 	proj.ignoreWalls = !remote || remote->ignoreGround;
 	proj.wallZ = player.body->GetWorldPos().z + BodyMidHeight(player);
@@ -2029,6 +2029,10 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			target.pushUntil = TimeAdd(localTime, TimeMsToTime(graphDuration * 1000.0));
 			if(target.pushUntil > target.ccUntil) target.ccUntil = target.pushUntil;
 		}
+		else if(target.clientHd != ClientHandle::INVALID && graphDuration > 0) {
+			const Time followUntil = TimeAdd(localTime, TimeMsToTime((graphDuration + 2.0f) * 1000.0));
+			if(followUntil > target.ccUntil) target.ccUntil = followUntil;
+		}
 	}
 
 	if(info && info->type == "STATUS_TYPE_DISPEL" && info->dispelEffect >= 0) {
@@ -2596,8 +2600,10 @@ void World::UpdateShowcase()
 	if(&caster == human || &dummy == human) {
 		const vec3 humanAt = &caster == human ? casterPos : dummyPos;
 		human->placedAt = humanAt;
-		human->clientPosCount = 0;
-		replication->SendSelfTeleport(human->clientHd, human->Main().UID, humanAt, &caster == human ? faceDummy : faceCaster, &human->lastClientPos);
+		if(&caster == human || !showcase.settled) {
+			human->clientPosCount = 0;
+			replication->SendSelfTeleport(human->clientHd, human->Main().UID, humanAt, &caster == human ? faceDummy : faceCaster, &human->lastClientPos);
+		}
 		foreach(c, human->characters) { (*c)->hp = (*c)->hpMax; replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax); }
 	}
 	foreach(it, activeStatuses) {
@@ -2729,11 +2735,11 @@ void World::UpdateShowcase()
 	}
 	if(!showcase.settled) {
 		showcase.settled = true;
-		showcase.next = TimeAdd(localTime, TimeMsToTime(500));
+		showcase.next = TimeAdd(localTime, TimeMsToTime(&dummy == human ? 1500 : 500));
 		return;
 	}
 	showcase.settled = false;
-	if(&caster == human || &dummy == human) {
+	if(&caster == human) {
 		const vec3 settledPos = human->body->GetWorldPos();
 		human->placedAt = settledPos;
 		replication->SendSelfTeleport(human->clientHd, human->Main().UID, settledPos, &caster == human ? faceDummy : faceCaster, &human->lastClientPos);
@@ -2801,8 +2807,8 @@ void World::UpdateShowcase()
 			}
 		}
 		LOG("Mirror :: follow=%s", followKey);
-		LOG("Mirror :: prompt wall=%lld key=%s click=%d combo=%d skill=%d test=%s dist=%.0f aim=(%.0f, %.0f)", ShowcaseWallMs(), mirrorKey ? mirrorKey : "none",
-			in && in->needsClick ? 1 : 0, combo != 0 ? 1 : 0, skill, testName, glm::length(vec2(dummyPos) - vec2(casterPos)), castPos.x - casterPos.x, castPos.y - casterPos.y);
+		LOG("Mirror :: prompt wall=%lld key=%s click=%d combo=%d skill=%d test=%s dist=%.0f aim=(%.0f, %.0f) dironly=%d", ShowcaseWallMs(), mirrorKey ? mirrorKey : "none",
+			in && in->needsClick ? 1 : 0, combo != 0 ? 1 : 0, skill, testName, glm::length(vec2(dummyPos) - vec2(casterPos)), castPos.x - casterPos.x, castPos.y - casterPos.y, in && in->directionOnly ? 1 : 0);
 	}
 	else if(step == 0) {
 		const vec2 rel = vec2(castPos) - vec2(casterPos);
