@@ -2440,7 +2440,7 @@ bool GameXmlContent::LoadStatusData()
 				if(skillState < 0 || skillState > 20) continue;
 				const char* p2 = nullptr;
 				pA->QueryStringAttribute("Param2", &p2);
-				if(p2 && EA::StdC::Strstr(p2, "Remove")) continue;
+				if(p2 && EA::StdC::Strcmp(p2, "Remove") == 0) continue;
 				SummonCommand cmd;
 				if(EA::StdC::Strcmp(type, "REMOTE") == 0) { cmd.kind = SummonCommand::REMOTE; pA->QueryAttribute("RemoteIndex", &cmd.index); }
 				else if(EA::StdC::Strcmp(type, "STATUS") == 0) { cmd.kind = SummonCommand::STATUS; pA->QueryAttribute("StatusIndex", &cmd.index); }

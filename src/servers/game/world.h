@@ -127,6 +127,7 @@ struct World
 		} casting;
 		i32 pendingChildSkill = 0;
 		Time pendingChildSkillUntil = Time::ZERO;
+		vec3 pendingChildPos = vec3(0);
 		eastl::array<Time,5> botSkillReady = { Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO };
 		Time tNextBotSkill = Time::ZERO;
 		f32 ultGauge = -1.0f; // initialised to the master's max on first update
@@ -296,6 +297,7 @@ struct World
 		u8 dieMode = 0;
 		Time nextMoveSync = Time::ZERO;
 		ActionStateID pendingMotion = ActionStateID::INVALID;
+		vec3 aimPos = vec3(0);
 		Time motionAt = Time::ZERO;
 		vec3 motionTarget = vec3(0);
 		ActorUID motionTargetUID = ActorUID::INVALID;
@@ -417,6 +419,7 @@ struct World
 	{
 		ActorUID sourceUID = ActorUID::INVALID;
 		const GameXmlContent::CostLevel* costLevel = nullptr;
+		f32 followDist = -1.0f;
 		const Remote* remote;
 		u32 ownerIndex;
 		SkillID skillID;
@@ -515,6 +518,7 @@ struct World
 		i32 skill;     // the summon's own skill (SkillComData), gives remote damage
 		ActorUID target = ActorUID::INVALID;
 		ActorUID source = ActorUID::INVALID;
+		vec3 aim = vec3(0);
 		Time until;    // summon end (auras stop with it)
 	};
 	eastl::fixed_vector<PendingSummonCommand,128,false> pendingSummonCommands;

@@ -84,6 +84,10 @@ static const f32 OBSTRUCT_LOW_HEIGHT = 30.0f;
 static const f32 OBSTRUCT_SIDE = 50.0f;
 static const f32 SHOWCASE_MIN_MEASURE_SEC = 2.5f;
 static const f32 SHOWCASE_QUIET_SEC = 0.5f;
+static const i32 RELAY_MODE_STATE_OFFSET = 9;
+static const i32 RELAY_IDS_PER_MODE = 3;
+static const i32 RELAY_ARTILLERY_MODE = 2;
+static const f32 RELAY_LEAP_SPEED = 2000.0f;
 static const i32 SKILL_SLOT_ENUM_UG = 6;
 static const i32 TOOLTIP_ANDROB_HEAL = 250;
 static const f32 TOOLTIP_ANDROB_RANGE = 800.0f;
@@ -961,6 +965,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	if(child > 0) {
 		player.pendingChildSkill = child;
 		player.pendingChildSkillUntil = TimeAdd(localTime, TimeMsToTime(2000));
+		player.pendingChildPos = castPos;
 	}
 }
 
@@ -2272,6 +2277,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			pc.until = npc.despawnAt;
 			pc.target = current && current != &owner ? current->Main().UID : ActorUID::INVALID;
 			pc.source = npc.UID;
+			pc.aim = npc.aimPos;
 			pendingSummonCommands.push_back(pc);
 		}
 		else if(c->kind == SummonCommand::STATUS) {
@@ -3080,8 +3086,25 @@ void World::UpdateSummons()
 				}
 			}
 			if(info && owner.pendingChildSkill > 0 && localTime < owner.pendingChildSkillUntil) {
-				LOG("Summon :: %ls relay state SKILL_%d", owner.name.data(), owner.pendingChildSkill);
-				RunSummonState(actor, owner.pendingChildSkill);
+				const i32 child = owner.pendingChildSkill;
+				const i32 modeState = child + RELAY_MODE_STATE_OFFSET;
+				if(info->ai == SummonInfo::AI_RELAY && modeState <= 20 && !info->skillStates[modeState].empty()) {
+					const i32 mode = (child - 1) / RELAY_IDS_PER_MODE;
+					const i32 activeState = mode * 2 + 2;
+					LOG("Summon :: %ls relay mode SKILL_%d then active SKILL_%d", owner.name.data(), modeState, activeState);
+					RunSummonState(actor, modeState);
+					actor.aimPos = owner.pendingChildPos;
+					if(mode != RELAY_ARTILLERY_MODE && glm::length(vec2(owner.pendingChildPos)) > 1.0f) {
+						const vec3 goal = vec3(vec2(owner.pendingChildPos), actor.pos.z);
+						replication->SendNpcMoveToAll(actor.UID, actor.pos, goal, atan2f(goal.y - actor.pos.y, goal.x - actor.pos.x), RELAY_LEAP_SPEED);
+						actor.pos = goal;
+					}
+					RunSummonState(actor, activeState);
+				}
+				else {
+					LOG("Summon :: %ls relay state SKILL_%d", owner.name.data(), child);
+					RunSummonState(actor, child);
+				}
 				owner.pendingChildSkill = 0;
 			}
 			if(info) {
@@ -3116,14 +3139,17 @@ void World::UpdateSummons()
 				pr.time = localTime;
 				pr.idx = RemoteIdx(pc->index);
 				pr.preset = (i32)ActionCommand::TargetPreset::POS_FFF; // fired from the summon's position
+				const Remote* summonRemote = GetGameXmlContent().FindRemote(RemoteIdx(pc->index));
+				const bool aimedGraph = summonRemote && summonRemote->behaviorType == Remote::BehaviorType::GRAPH && glm::length(vec2(pc->aim)) > 1.0f;
 				pr.offsetSide = 0;
 				pr.offsetFront = 0;
 				pr.ownerIndex = pc->ownerIndex;
 				pr.skillID = pc->skill != 0 ? SkillID(pc->skill) : SkillID::INVALID;
 				pr.castID = nextCastID++;
 				pr.damage = pc->skill != 0 ? (i32)SkillDamage(SkillID(pc->skill)) : 0;
-				pr.castPos = pc->pos;
-				pr.angle = pc->yaw;
+				pr.castPos = aimedGraph ? pc->aim : pc->pos;
+				pr.angle = aimedGraph ? atan2f(pc->aim.y - pc->pos.y, pc->aim.x - pc->pos.x) : pc->yaw;
+				if(aimedGraph) pr.preset = (i32)ActionCommand::TargetPreset::SELF_FFF;
 				pr.target = pc->target;
 				pr.sourceUID = pc->source;
 				pendingRemotes.push_back(pr);
@@ -3863,8 +3889,24 @@ void World::UpdateRemotes(f32 delta)
 			if(!targetMaster || targetMaster->parent->dead) destroyed = true;
 			else inst.pos = vec3(vec2(targetMaster->parent->body->GetWorldPos()), inst.pos.z);
 		}
+		if(remote.behaviorType == Remote::BehaviorType::CASTER_TARGET && !instOwner.dead) {
+			const vec2 ownerPos = vec2(instOwner.body->GetWorldPos());
+			if(inst.followDist < 0) inst.followDist = glm::length(vec2(inst.pos) - ownerPos);
+			vec2 desired;
+			const ActorMaster* tm = inst.target != ActorUID::INVALID ? FindMasterActor(inst.target) : nullptr;
+			if(instOwner.clientHd == ClientHandle::INVALID && tm && !tm->parent->dead) desired = vec2(tm->parent->body->GetWorldPos());
+			else {
+				const f32 yaw = instOwner.input.rot.upperYaw;
+				desired = ownerPos + vec2(cosf(yaw), sinf(yaw)) * inst.followDist;
+			}
+			const vec2 rel = desired - vec2(inst.pos);
+			const f32 len = glm::length(rel);
+			const f32 step = (remote.maxSpeed > 0 ? remote.maxSpeed : 600.0f) * delta;
+			if(len > 1.0f) inst.pos += vec3(rel / len * MIN(step, len), 0);
+			if(remote.boundType != Remote::BoundType::E_BOUND_NONE && remote.damageGroup != Remote::DamageGroup::eNONE) RemoteApplyArea(inst);
+		}
 		const bool attached = remote.attachFireObject || remote.behaviorType == Remote::BehaviorType::ORBIT ||
-			remote.behaviorType == Remote::BehaviorType::CASTER_TARGET || remote.behaviorType == Remote::BehaviorType::BEAM;
+			remote.behaviorType == Remote::BehaviorType::BEAM;
 		if(attached) {
 			if(instOwner.dead) {
 				destroyed = true;
@@ -3925,6 +3967,7 @@ void World::UpdateRemotes(f32 delta)
 			}
 		}
 		else switch(remote.behaviorType) {
+			case Remote::BehaviorType::CASTER_TARGET: break;
 			case Remote::BehaviorType::TARGET:
 			case Remote::BehaviorType::FOLLOW_TARGET:
 			case Remote::BehaviorType::HOMING: {
