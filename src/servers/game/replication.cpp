@@ -1332,6 +1332,15 @@ void Replication::SendCooltimeReset(ClientHandle clientHd, ActorUID characterUID
 	SendPacket(clientHd, packet);
 }
 
+void Replication::SendHideDetect(ClientHandle clientHd, ActorUID detectorUID, ActorUID targetUID, u8 flag)
+{
+	Sv::SN_HideDetect packet;
+	packet.hideDetectorOwner = (u32)GetLocalActorID(clientHd, detectorUID);
+	packet.targetID = (u32)GetLocalActorID(clientHd, targetUID);
+	packet.flag = flag;
+	SendPacket(clientHd, packet);
+}
+
 void Replication::SendChangeSkillSlot(ClientHandle clientHd, ActorUID actorUID, i32 slot, SkillID skill, i32 resetCooltimeID)
 {
 	Sv::SN_ChangeSkillSlot packet;

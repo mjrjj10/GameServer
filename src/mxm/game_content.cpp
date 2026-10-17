@@ -365,15 +365,21 @@ void GameXmlContent::LoadAllSkills()
 			SkillInput in;
 			const char* smart = nullptr;
 			const char* ux = nullptr;
+			const char* select = nullptr;
 			pNodeCommonSkill->QueryStringAttribute("_SmartCast", &smart);
 			if(XMLElement* pTarget = pNodeCommonSkill->FirstChildElement("_Target")) {
 				pTarget->QueryStringAttribute("_UXType", &ux);
+				pTarget->QueryStringAttribute("_SelectStateType", &select);
 				pTarget->QueryFloatAttribute("_MinDistance", &in.minDistance);
 				pTarget->QueryFloatAttribute("_MaxDistance", &in.maxDistance);
+				const char* friendly = pTarget->Attribute("_Friendly");
+				const char* unfriendly = pTarget->Attribute("_UnFriendly");
+				in.friendlyOnly = friendly && (friendly[0] == 'T' || friendly[0] == 't') && unfriendly && (unfriendly[0] == 'F' || unfriendly[0] == 'f');
 			}
 			const bool self = !ux || EA::StdC::Strcmp(ux, "SKILL_CAST_MY_POSITION") == 0;
 			const bool smartCast = smart && EA::StdC::Strcmp(smart, "SKILL_SMARTCAST_TRUE") == 0;
-			in.needsClick = !self && !smartCast;
+			const bool selectBefore = select && EA::StdC::Strcmp(select, "SKILL_TARGET_SELECT_STATE_BEFORECAST") == 0;
+			in.needsClick = (!self || selectBefore) && !smartCast;
 			in.directionOnly = ux && EA::StdC::Strcmp(ux, "SKILL_CAST_MY_POSITION_DIRECTION") == 0;
 			pNodeCommonSkill->QueryIntAttribute("_CoolTimeID", &in.coolTimeID);
 			pNodeCommonSkill->QueryFloatAttribute("_CoolTime", &in.coolTime);
@@ -2059,6 +2065,12 @@ bool GameXmlContent::LoadStatusData()
 			}
 			XMLElement* pAura = pCommon->FirstChildElement("_AuraStatusIndex");
 			if(pAura) pAura->QueryAttribute("DATA", &st.auraStatus);
+			XMLElement* pLink = pCommon->FirstChildElement("_LINK");
+			if(!pLink) pLink = pCommon->NextSiblingElement("_LINK");
+			if(pLink) {
+				pLink->QueryAttribute("_LINK_CASTER", &st.linkCasterStatus);
+				pLink->QueryAttribute("_LINK_TARGET", &st.linkTargetStatus);
+			}
 		}
 		{
 			const char* cond = nullptr;

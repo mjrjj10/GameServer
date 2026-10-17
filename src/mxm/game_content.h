@@ -184,6 +184,8 @@ struct StatusInfo
 	bool canDispel = false;             // _CanDispel
 	i8 dispelEffect = -1;               // STATUS_TYPE_DISPEL _DispelEffectType: 0 buffs, 1 debuffs
 	i32 auraStatus = 0;                 // STATUS_TYPE_AURA _AuraStatusIndex
+	i32 linkCasterStatus = 0;
+	i32 linkTargetStatus = 0;
 	f32 targetingRange = 0;             // _TargetingRange
 	NextCondition nextCondition = NextCondition::NONE;
 	eastl::fixed_string<char,40,false> type;
@@ -604,7 +606,7 @@ struct GameXmlContent
 	i32 GetFirstComboSkill(i32 baseSkill) const { auto f = firstComboSkill.find(baseSkill); return f == firstComboSkill.end() ? 0 : f->second; }
 	i32 WeaponTypeOf(ClassType classType, WeaponIndex weaponIndex) const;
 	const Action& GetSkillAction(ClassType classType, ActionStateID actionID, i8 stance = 0) const;
-	struct SkillInput { bool needsClick = false; bool directionOnly = false; i32 coolTimeID = 0; f32 coolTime = 0; f32 minDistance = 0; f32 maxDistance = 0; };
+	struct SkillInput { bool needsClick = false; bool directionOnly = false; bool friendlyOnly = false; i32 coolTimeID = 0; f32 coolTime = 0; f32 minDistance = 0; f32 maxDistance = 0; };
 	const SkillInput* FindSkillInput(i32 skillID) const { auto f = skillInput.find(skillID); return f == skillInput.end() ? nullptr : &f->second; }
 	struct SkillCast { enum Type: u8 { DELAY, LIMIT, CHARGING } type = DELAY; f32 time = 0; ActionStateID action = ActionStateID::INVALID; bool interruptByMove = false; };
 	const SkillCast* FindSkillCast(i32 skillID) const { auto f = skillCast.find(skillID); return f == skillCast.end() ? nullptr : &f->second; }

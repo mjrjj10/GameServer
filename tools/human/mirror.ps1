@@ -1,11 +1,11 @@
-param([string]$List = '7,35', [int]$Pass = 0, [string]$Tag = 'm', [string]$Work = 'D:\MxM\showcase_data\runs', [int]$Minutes = 40)
+param([string]$List = '7,35', [int]$Pass = 0, [string]$Tag = 'm', [string]$Work = 'D:\MxM\showcase_data\runs', [int]$Minutes = 40, [int]$Steps = 0, [int]$Count = 2)
 $b = 'D:\MxM\GameServer\build'
 $c = 'D:\MxM\Client\Client.Win32'
 $py = 'D:\MxM\showcase_data\venv\Scripts\python.exe'
 Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile', '-Command', 'Stop-Process -Name MXMClient -Force -ErrorAction SilentlyContinue; Get-Process python -ErrorAction SilentlyContinue | Where-Object { $_.Path -like ''*showcase_data*'' } | Stop-Process -Force' -Wait -ErrorAction SilentlyContinue
 Set-Content -Path "$b\hub.cfg" -Value "DevShowcase=1`nDevShowcaseStart=0`nDevShowcaseList=$List`nDevMirror=1`nDevMirrorPass=$Pass" -Encoding ascii -NoNewline
 $gc = (Get-Content "$b\game.cfg") | Where-Object { $_ -notmatch '^DevShowcase|^DevMirror' }
-$gc += 'DevShowcase=1', 'DevShowcaseCount=2', 'DevMirror=1'
+$gc += 'DevShowcase=1', "DevShowcaseCount=$Count", 'DevMirror=1', "DevShowcaseSteps=$Steps"
 $gc | Set-Content "$b\game.cfg" -Encoding ascii
 Stop-Process -Name login_srv, hub_srv, game_srv, mm_srv -Force -ErrorAction SilentlyContinue
 Start-Sleep 2

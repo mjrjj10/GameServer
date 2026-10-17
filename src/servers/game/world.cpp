@@ -1996,6 +1996,11 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	}
 	activeStatuses.push_back(st);
 
+	if(info && info->type == "STATUS_TYPE_LINK" && &caster != &target) {
+		if(info->linkCasterStatus != 0) ApplyStatus(caster, caster, info->linkCasterStatus, power);
+		if(info->linkTargetStatus != 0) ApplyStatus(caster, target, info->linkTargetStatus, power);
+	}
+
 	if(info && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT)) {
 		Time ccEnd = st.until;
 		if(info->type == "STATUS_TYPE_AIRBORNE" || info->type == "STATUS_TYPE_FLY" || info->type == "STATUS_TYPE_KNOCKDOWN") {
@@ -2508,6 +2513,9 @@ void World::UpdateShowcase()
 		const vec3 ground = vec3(0, 0, showcase.groundZ);
 		showcase.anchor = vec3(vec2(showcase.mid) + showcase.dir * 350.0f, ground.z);
 		showcase.phase = 1;
+		if(Config().DevShowcaseSteps != 0) {
+			while(showcase.step <= 7 && !(Config().DevShowcaseSteps & (1 << showcase.step))) showcase.step++;
+		}
 		foreach(it, players) {
 			if(it->clientHd == ClientHandle::INVALID) TeleportPlayer(*it, it->spawnPos, 0);
 		}
@@ -2540,7 +2548,17 @@ void World::UpdateShowcase()
 	}
 	const i32 turn = mirror ? showcase.mirrorTurn : 0;
 	Player& caster = turn == 1 ? *human : turn == 2 ? players[dummyIndex] : botCaster;
-	Player& dummy = turn == 2 ? *human : players[dummyIndex];
+	Player* dummyPtr = turn == 2 ? human : &players[dummyIndex];
+	{
+		const i32 stepNow = showcase.step;
+		const GameXmlContent::SkillInput* preIn = stepNow >= 1 && stepNow <= 5 ? GetGameXmlContent().FindSkillInput(180000000 + (i32)botCaster.Main().classType * 10000 + stepNow * 10) : nullptr;
+		if(mirror && preIn && preIn->friendlyOnly) {
+			foreach_const(b, bots) {
+				if(*b != caster.index && players[*b].team == caster.team) { dummyPtr = &players[*b]; break; }
+			}
+		}
+	}
+	Player& dummy = *dummyPtr;
 	const vec3 casterPos = showcase.anchor;
 	vec3 dummyPos = showcase.anchor + vec3(showcase.dir * 650.0f, 0);
 
@@ -2698,7 +2716,7 @@ void World::UpdateShowcase()
 		eastl::fixed_vector<T,8,false> tests;
 		if(wrange > 0) {
 			tests.push_back({ wrange - 40.0f, 0, "range_in", 1 });
-			tests.push_back({ wrange + MAX(front, splash) + dummyRadius + 60.0f, 0, "range_out", 0 });
+			tests.push_back({ wrange + MAX(front, splash) + dummyRadius + WEAPON_HIT_TOLERANCE + 60.0f, 0, "range_out", 0 });
 		}
 		else tests.push_back({ 300.0f, 0, "near", -1 });
 		if(splash > 0) {
@@ -2854,6 +2872,24 @@ void World::UpdateShowcase()
 	if(nextTurn == 0) {
 		if((step == 0 || (skill != 0 && step <= 6)) && showcase.rangeIdx < showcase.testCount - 1) showcase.rangeIdx++;
 		else { showcase.rangeIdx = 0; showcase.step++; }
+		const i32 stepMask = Config().DevShowcaseSteps;
+		if(stepMask != 0) {
+			while(showcase.step <= 7 && !(stepMask & (1 << showcase.step))) showcase.step++;
+			if(showcase.step > 7) {
+				showcase.step = 0;
+				while(showcase.step <= 7 && !(stepMask & (1 << showcase.step))) showcase.step++;
+				showcase.masterPass++;
+				showcase.mastersDone++;
+				if(Config().DevShowcaseCount > 0 && showcase.mastersDone >= Config().DevShowcaseCount) {
+					showcase.done = true;
+					LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
+				}
+				if(showcase.masterPass >= 2) {
+					showcase.masterPass = 0;
+					showcase.casterSlot++;
+				}
+			}
+		}
 	}
 	f32 wait = step == 7 ? 2.0f : 3.5f;
 	if(mirror && step != 7) wait = &caster == human ? 8.5f : 7.0f;
@@ -3150,6 +3186,7 @@ void World::UpdateStatuses()
 				const u32 casterIdx = it->casterIndex;
 				foreach(other, activeStatuses) {
 					if(other->targetIndex == target.index && other->casterIndex == casterIdx && other->info && other->info->skillIndex == skillIndex) other->until = localTime;
+					if(other->targetIndex == casterIdx && other->casterIndex == casterIdx && other->statusID == it->info->linkCasterStatus) other->until = localTime;
 				}
 			}
 		}
@@ -3314,7 +3351,8 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			const auto preset = cmd->status.targetPreset;
 			const bool self = preset == ActionCommand::TargetPreset::SELF_FFF || preset == ActionCommand::TargetPreset::SELF_FFF_1 ||
 				preset == ActionCommand::TargetPreset::SELF_TFF || preset == ActionCommand::TargetPreset::SELF_TTF || preset == ActionCommand::TargetPreset::SELF_TTT;
-			ps.targetUID = self ? player.Main().UID : currentTarget;
+			const bool lastChild = preset == ActionCommand::TargetPreset::LAST_CHILD_FFF || preset == ActionCommand::TargetPreset::LAST_CHILD_TFF;
+			ps.targetUID = lastChild ? ActorUID::INVALID : self ? player.Main().UID : currentTarget;
 			ps.duration = cmd->status.removeAtEnd ? MAX(action.seqLength - t, 0.3f) : -1.0f;
 			ps.power = (f32)damage;
 			if(ps.targetUID != ActorUID::INVALID) pendingStatuses.push_back(ps);

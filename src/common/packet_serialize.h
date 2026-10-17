@@ -2846,6 +2846,19 @@ inline const char* PacketSerialize<Sv::SA_ExecuteSkill>(const void* packetData, 
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_HideDetect>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_HideDetect(%d, %d) :: {", Sv::SN_HideDetect::NET_ID, packetSize);
+	SER("	hideDetectorOwner=0x%08x", buff.Read<u32>());
+	SER("	targetID=0x%08x", buff.Read<u32>());
+	SER("	flag=%u", buff.Read<u8>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_ChangeSkillSlot>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();
