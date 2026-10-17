@@ -169,6 +169,7 @@ struct Replication
 		f32 speed;
 		f32 moveDuration;
 		ClientHandle casterClientHd = ClientHandle::INVALID;
+		bool castStart = false;
 	};
 
 	struct Frame

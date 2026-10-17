@@ -1109,7 +1109,11 @@ void Replication::RelayRemoteCreateDoc(ClientHandle senderHd, const u8* packetDa
 	const ActorUID targetUID = targetLocal != LocalActorID::INVALID && (u32)targetLocal != 0 ? GetWorldActorUID(senderHd, targetLocal) : ActorUID::INVALID;
 	if(parentUID == ActorUID::INVALID || ownerUID == ActorUID::INVALID) return;
 
-	NT_LOG("[client%x] RemoteCreateDoc :: doc=%u name_len=%u", senderHd, *(const u32*)(packetData + tailOffset + 2 + 8), nameLen);
+	{
+		eastl::fixed_string<char,512,true> hex;
+		for(int i = 0; i < packetSize && i < 96; i++) hex.append_sprintf("%02x ", packetData[i]);
+		NT_LOG("[client%x] RemoteCreateDoc :: doc=%u name_len=%u size=%d :: %s", senderHd, *(const u32*)(packetData + tailOffset + 2 + 8), nameLen, packetSize, hex.data());
+	}
 
 	u8 buff[512];
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
@@ -1801,6 +1805,7 @@ void Replication::FrameDifference()
 		for(int pi = 0; pi < MAX_PLAYERS; pi++) {
 			if(playerState[pi].cur < PlayerState::IN_GAME) continue;
 			const ClientHandle clientHd = clientHandle[pi];
+			if(exec.castStart && clientHd == exec.casterClientHd) continue;
 
 			LocalActorID localCasterID = GetLocalActorID(clientHd, exec.casterUID);
 

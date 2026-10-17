@@ -567,7 +567,7 @@ struct World
 		f32 bestZ = 0;
 		i32 comboSkill = 0;
 		bool settled = false;
-		bool humanTurn = false;
+		i32 mirrorTurn = 0;
 		bool castSeen = false;
 		i32 mastersDone = 0;
 		vec2 casterStart = vec2(0);

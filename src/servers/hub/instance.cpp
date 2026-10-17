@@ -318,10 +318,13 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 		i32 humanTeam = -1;
 		foreach_const(u, userList) if(!u->isBot) humanTeam = (i32)u->team;
 		bool mirrorBotDone = false;
+		bool mirrorEnemyDone = false;
 		foreach(u, userList) {
 			const bool mirrorBot = u->isBot && (i32)u->team == humanTeam && !mirrorBotDone;
-			const bool mirror = Config().DevMirror && all.size() >= 2 && (!u->isBot || mirrorBot);
+			const bool mirrorEnemy = u->isBot && (i32)u->team != humanTeam && !mirrorEnemyDone;
+			const bool mirror = Config().DevMirror && all.size() >= 2 && (!u->isBot || mirrorBot || mirrorEnemy);
 			if(mirror && mirrorBot) mirrorBotDone = true;
+			if(mirror && mirrorEnemy) mirrorEnemyDone = true;
 			if(mirror && u->Main().classType == ClassType::NONE) {
 				TryPickMaster(u, all[0]);
 				TryPickMaster(u, all[1]);

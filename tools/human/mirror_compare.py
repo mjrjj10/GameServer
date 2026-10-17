@@ -7,7 +7,9 @@ MEAS = re.compile(r'Showcase :: measure casterMoved=(-?\d+) dummyMoved=(-?\d+) f
 SKILL = re.compile(r'Skill :: (\S+) skill=(\d+) anim=(\S+) scheduled=(\d)')
 REMOTE = re.compile(r'Remote :: spawn (\d+) ')
 CAST = re.compile(r'Cast :: (\S+) skill=(\d+) (start|release|cancelled)')
+TURN = re.compile(r'Mirror :: turn=(\d)')
 
+STYPE = {e.get('ID'): (e.find('ST_COMMONSTATUS').get('_Type') if e.find('ST_COMMONSTATUS') is not None else '') for e in ET.parse('D:/MxM/GameServer/gamedata/client/STATUS_PC.xml').getroot()}
 LIMITS = {}
 for info in ET.parse('D:/MxM/GameServer/gamedata/client/SKILL.xml').getroot():
     tgt = info[0].find('_Target')
@@ -23,7 +25,9 @@ for line in open(sys.argv[1], encoding='utf-8', errors='replace'):
         continue
     if cur is None:
         continue
-    if (r := RES.search(line)):
+    if (r := TURN.search(line)):
+        cur['turn'] = int(r.group(1))
+    elif (r := RES.search(line)):
         cur.update(hit=int(r.group(1)), damage=int(r.group(4)), hits=int(r.group(5)))
     elif (r := MEAS.search(line)):
         cur.update(moved=int(r.group(1)), pushed=int(r.group(2)), first=int(r.group(3)), mana=int(r.group(5)), stamina=int(r.group(6)),
@@ -38,7 +42,7 @@ for line in open(sys.argv[1], encoding='utf-8', errors='replace'):
 pairs = collections.OrderedDict()
 for t in tests:
     key = (t['master'], t['slot'], t['skill'], t['test'])
-    side = 'human' if t['caster'] == (sys.argv[2] if len(sys.argv) > 2 else 'alexis') else 'bot'
+    side = {0: 'bot', 1: 'human', 2: 'enemy'}.get(t['turn'], 'bot') if 'turn' in t else ('human' if t['caster'] == 'alexis' else 'bot')
     pairs.setdefault(key, {})[side] = t
 
 
@@ -47,18 +51,34 @@ def tol(a, b, abs_tol, rel):
 
 
 issues = 0
+def sides(p):
+    if 'human' in p:
+        yield 'human', p.get('bot'), p['human']
+    if 'enemy' in p:
+        yield 'enemy', p.get('bot'), p['enemy']
+
+
+flat = collections.OrderedDict()
 for key, p in pairs.items():
-    b, h = p.get('bot'), p.get('human')
-    label = f'{key[0]:>2} {key[1]:8} {key[2]:>9} {key[3]:16}'
+    if 'human' not in p and 'enemy' not in p:
+        flat[(key, 'human')] = (p.get('bot'), None)
+    for name, b, h in sides(p):
+        flat[(key, name)] = (b, h)
+
+for (key, side), (b, h) in flat.items():
+    label = f'{key[0]:>2} {key[1]:8} {key[2]:>9} {key[3]:16} {side:5}'
     if not b or not h:
         print(f'-- {label} only {"bot" if b else "human"}')
         continue
     diffs = []
+    if side == 'human' and key[3] == 'skip_beyond_flat':
+        print(f'ok {label}  target off screen for a human (bench only)')
+        continue
     lo, hi = LIMITS.get(key[2], (0, 0))
-    if not h['skills'] and key[1] not in ('WEAPON', 'TAG') and ((lo > 0 and h['dist'] < lo) or (hi > 0 and h['dist'] > hi)):
+    if side == 'human' and not h['skills'] and key[1] not in ('WEAPON', 'TAG') and ((lo > 0 and h['dist'] < lo) or (hi > 0 and h['dist'] > hi)):
         print(f'ok {label}  client refused outside [{lo:.0f}, {hi:.0f}] (bench bot casts anyway)')
         continue
-    if not h['skills'] and key[1] not in ('WEAPON', 'TAG'):
+    if side == 'human' and not h['skills'] and key[1] not in ('WEAPON', 'TAG'):
         diffs.append('human cast not received')
     if b.get('hit') != h.get('hit'):
         diffs.append(f'hit bot={b.get("hit")} human={h.get("hit")}')
@@ -68,11 +88,12 @@ for key, p in pairs.items():
         diffs.append(f'hits bot={b.get("hits")} human={h.get("hits")}')
     if not tol(b.get('moved', 0), h.get('moved', 0), 80, 0.2):
         diffs.append(f'casterMoved bot={b.get("moved")} human={h.get("moved")}')
-    if not tol(b.get('pushed', 0), h.get('pushed', 0), 80, 0.25):
+    feared = any(STYPE.get(x) == 'STATUS_TYPE_FEAR' for x in tuple(b.get('statuses', ())) + tuple(h.get('statuses', ())))
+    if not feared and not tol(b.get('pushed', 0), h.get('pushed', 0), 80, 0.25):
         diffs.append(f'dummyMoved bot={b.get("pushed")} human={h.get("pushed")}')
     if b.get('statuses') != h.get('statuses'):
         diffs.append(f'statuses bot={",".join(b.get("statuses", ()))} human={",".join(h.get("statuses", ()))}')
-    if b.get('first', -1) >= 0 and h.get('first', -1) >= 0 and not tol(b['first'], h['first'], 250, 0.3):
+    if 'release' not in h['casts'] and b.get('first', -1) >= 0 and h.get('first', -1) >= 0 and not tol(b['first'], h['first'], 250, 0.3):
         diffs.append(f'firstHitMs bot={b["first"]} human={h["first"]}')
     if b.get('mana', 0) != 0 and not tol(b.get('mana', 0), h.get('mana', 0), 5, 0.1):
         diffs.append(f'mana bot={b.get("mana")} human={h.get("mana")}')
@@ -82,4 +103,4 @@ for key, p in pairs.items():
         diffs.append(f'cast flow bot={b["casts"]} human={h["casts"]}')
     issues += 1 if diffs else 0
     print(('!! ' if diffs else 'OK ') + label + ('  ' + ' | '.join(diffs) if diffs else ''))
-print(f'== {len(pairs)} tests, {issues} with differences')
+print(f'== {len(flat)} comparisons, {issues} with differences')

@@ -62,7 +62,6 @@ static const f32 WEAPON_PROJECTILE_SPEED = 4000.0f;
 static const f32 WEAPON_MELEE_MAX_RANGE = 600.0f;
 static const f32 WEAPON_MELEE_HALF_ANGLE = 1.05f;
 static const f32 WEAPON_NODE_MAX_FORWARD = 250.0f;
-static const f32 CAST_MOVE_TOLERANCE = 30.0f;
 static const f32 WEAPON_RANGE_SCALE = 1.1f;
 static const f32 WEAPON_TARGET_RADIUS = 110.0f;
 static const f32 WEAPON_HIT_TOLERANCE = 50.0f;
@@ -210,6 +209,7 @@ void World::Update(Time localTime_)
 					p.fearNextTurn = TimeAdd(localTime, TimeMsToTime(MAX(fear->info->intervalSec, 0.1f) * 1000.0));
 				}
 				p.input.moveTo = body.GetWorldPos() + vec3(p.fearDir * 500.0f, 0);
+				p.input.speed = MasterStat(p.Main().classType, STAT_MOVESPEED);
 				const f32 yaw = atan2f(p.fearDir.y, p.fearDir.x);
 				p.input.rot.upperYaw = yaw;
 				p.input.rot.bodyYaw = yaw;
@@ -256,7 +256,8 @@ void World::Update(Time localTime_)
 
 		if(p.weaponFired) {
 			p.weaponFired = false;
-			if(WeaponIsMelee(p) && localTime > p.tNextWeaponHit) {
+			if(p.clientHd != ClientHandle::INVALID && p.casting.skillID != SkillID::INVALID && p.casting.type == GameXmlContent::SkillCast::LIMIT) ReleaseCast(p);
+			else if(WeaponIsMelee(p) && localTime > p.tNextWeaponHit) {
 				p.tNextWeaponHit = TimeAdd(localTime, TimeMsToTime(WEAPON_HIT_INTERVAL_MS));
 				PlayerWeaponFire(p);
 			}
@@ -800,6 +801,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillID, const vec3& castPos
 
 	rpExec.moveDuration = moveDuration;
 	rpExec.casterClientHd = player.clientHd;
+	rpExec.castStart = cast != nullptr;
 	rpExec.startPos = player.body->GetWorldPos();
 	rpExec.moveDir = dir;
 	rpExec.rot = { angle, 0, angle };
@@ -1624,7 +1626,6 @@ void World::UpdateCasts()
 		if(it->casting.skillID == SkillID::INVALID || !it->body) continue;
 		if(it->dead) { CancelCast(*it, "dead"); continue; }
 		const bool bot = it->clientHd == ClientHandle::INVALID;
-		if(it->casting.interruptByMove && !bot && glm::length(vec2(it->body->GetWorldPos()) - it->casting.startPos) > CAST_MOVE_TOLERANCE) { CancelCast(*it, "moved"); continue; }
 		if(localTime < it->casting.executeAt) continue;
 		if(!bot && it->casting.type == GameXmlContent::SkillCast::LIMIT) CancelCast(*it, "window ended");
 		else ReleaseCast(*it);
@@ -2407,12 +2408,13 @@ void World::UpdateShowcase()
 		}
 	}
 	Player& botCaster = players[botCasterIndex];
-	Player& caster = mirror && showcase.humanTurn ? *human : botCaster;
 	u32 dummyIndex = bots[showcase.dummySlot];
 	foreach_const(b, bots) {
 		if(*b != botCaster.index && players[*b].team != botCaster.team) { dummyIndex = *b; break; }
 	}
-	Player& dummy = players[dummyIndex];
+	const i32 turn = mirror ? showcase.mirrorTurn : 0;
+	Player& caster = turn == 1 ? *human : turn == 2 ? players[dummyIndex] : botCaster;
+	Player& dummy = turn == 2 ? *human : players[dummyIndex];
 	const vec3 casterPos = showcase.anchor;
 	vec3 dummyPos = showcase.anchor + vec3(showcase.dir * 650.0f, 0);
 
@@ -2464,8 +2466,9 @@ void World::UpdateShowcase()
 	}
 	TeleportPlayer(dummy, dummyPos, faceCaster);
 	TeleportPlayer(caster, casterPos, faceDummy);
-	if(&caster == human) {
-		replication->SendReviveToAll(human->userID, human->Main().UID, human->Sub().UID, casterPos);
+	if(&caster == human || &dummy == human) {
+		const vec3 humanAt = &caster == human ? casterPos : dummyPos;
+		replication->SendReviveToAll(human->userID, human->Main().UID, human->Sub().UID, humanAt);
 		foreach(c, human->characters) { (*c)->hp = (*c)->hpMax; replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax); }
 	}
 	foreach(it, activeStatuses) {
@@ -2576,7 +2579,7 @@ void World::UpdateShowcase()
 		expect = t.dist > flatLen ? -1 : t.expect;
 		TeleportPlayer(dummy, dummyPos, faceCaster);
 	}
-	if(&caster == human) human->untargetable = false;
+	if(&caster == human || &dummy == human) human->untargetable = false;
 	else {
 		human->untargetable = true;
 		const vec3 viewPos = vec3((vec2(casterPos) + vec2(dummyPos)) * 0.5f + Perp(showcase.dir) * 400.0f, showcase.anchor.z);
@@ -2610,6 +2613,7 @@ void World::UpdateShowcase()
 	showcase.prevDummy = dummy.index;
 	showcase.prevCaster = caster.index;
 	LOG("Showcase :: wall=%lld master=%d slot=%s skill=%d caster=%ls range=%.0f dist=%.0f test=%s expect=%d", ShowcaseWallMs(), (i32)cls, slotNames[step], skill, caster.name.data(), range, glm::length(vec2(dummyPos) - vec2(casterPos)), testName, expect);
+	if(mirror) LOG("Mirror :: turn=%d caster=%ls target=%ls", turn, caster.name.data(), dummy.name.data());
 	const ActorUID targetUID = dummy.Main().UID;
 	const char* mirrorKey = nullptr;
 	if(mirror) {
@@ -2620,6 +2624,7 @@ void World::UpdateShowcase()
 		else if(step >= 1 && step <= 4 && skill != 0 && (i32)human->skills[base + 1] == skill) mirrorKey = "e";
 		else if(step == 6 && skill != 0) mirrorKey = "rmb";
 		else if(step == 7) mirrorKey = "wheel";
+		if(step == 0 && EA::StdC::Strncmp(testName, "splash", 6) == 0) mirrorKey = nullptr;
 	}
 	if(&caster == human) {
 		const ClassType hc = human->Main().classType;
@@ -2669,15 +2674,19 @@ void World::UpdateShowcase()
 		caster.input.tag = true;
 	}
 
-	const bool humanNext = mirror && !showcase.humanTurn && mirrorKey != nullptr;
-	if(humanNext) showcase.humanTurn = true;
-	else {
-		showcase.humanTurn = false;
+	i32 nextTurn = 0;
+	if(mirror) {
+		const bool enemyTurn = EA::StdC::Strcmp(testName, "support") != 0 && !(step == 0 && EA::StdC::Strncmp(testName, "splash", 6) == 0) && (step == 0 || step == 7 || skill != 0);
+		if(turn == 0) nextTurn = mirrorKey ? 1 : enemyTurn ? 2 : 0;
+		else if(turn == 1) nextTurn = enemyTurn ? 2 : 0;
+	}
+	showcase.mirrorTurn = nextTurn;
+	if(nextTurn == 0) {
 		if((step == 0 || (skill != 0 && step <= 6)) && showcase.rangeIdx < showcase.testCount - 1) showcase.rangeIdx++;
 		else { showcase.rangeIdx = 0; showcase.step++; }
 	}
 	f32 wait = step == 7 ? 2.0f : 3.5f;
-	if(mirror && step != 7) wait = 5.0f;
+	if(mirror && step != 7) wait = &caster == human ? 6.5f : 5.0f;
 	if(step >= 1 && step <= 6 && skill == 0) wait = 0.2f;
 	if(showcase.step > 7) {
 		showcase.step = 0;
@@ -2901,7 +2910,7 @@ void World::UpdateStatuses()
 	for(auto it = activeStatuses.begin(); it != activeStatuses.end(); ) {
 		Player& target = players[it->targetIndex];
 		if(it->info && it->info->dotDamage > 0 && it->info->intervalSec > 0) {
-			while(localTime >= it->nextTick && localTime < it->until && !target.dead) {
+			while(localTime >= it->nextTick && it->nextTick <= it->until && !target.dead) {
 				it->nextTick = TimeAdd(it->nextTick, TimeMsToTime(it->info->intervalSec * 1000.0));
 				DamagePlayer(players[it->casterIndex], target, SkillID::INVALID, (i32)(it->info->dotDamage * it->overlap));
 			}
@@ -3836,7 +3845,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	}
 	target.damageTaken += damage;
 	target.hitsTaken++;
-	const bool showcaseDummy = Config().DevShowcase && target.clientHd == ClientHandle::INVALID;
+	const bool showcaseDummy = Config().DevShowcase && (target.clientHd == ClientHandle::INVALID || Config().DevMirror);
 	chara.hp = MAX(chara.hp - damage, (showcaseDummy || HasStatusType(target, "STATUS_TYPE_NEARLY_IMMORTAL") || HasStatusType(target, "STATUS_TYPE_UNDEAD")) ? 1 : 0);
 	if(chara.hp == 0) PassiveOnLethal(target);
 
