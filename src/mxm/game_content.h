@@ -164,6 +164,8 @@ struct StatusInfo
 	f32 heightRatio = 0;
 	f32 lyingTime = 0;    // _LyingTime: time spent on the ground after an airborne/knockdown
 	f32 dotDamage = 0;
+	f32 drainMultiplier = 0;
+	i32 skillIndex = 0;
 	f32 intervalSec = 0;
 	f32 distance = 0;
 	f32 paramRatio = 0;
@@ -615,6 +617,7 @@ struct GameXmlContent
 	u16 InternNodeName(const char* name);
 	const wchar* GetNodeName(u16 idx) const { return idx < nodeNames.size() ? nodeNames[idx].c_str() : L"Scene Root"; }
 	const StatusInfo* FindStatus(i32 statusID) const;
+	i32 FindSkillStatusOfType(i32 skillIndex, const char* type) const { foreach_const(it, statusMap) { if(it->second.skillIndex == skillIndex && it->second.type == type) return it->first; } return 0; }
 	f32 GetWeaponFireDelay(i32 weaponID) const { auto f = weaponFireDelay.find(weaponID); return f == weaponFireDelay.end() ? 0 : f->second; }
 	f32 GetSkillCoolTime(i32 skill) const { auto f = skillCoolTime.find(skill); return f == skillCoolTime.end() ? 0 : f->second; }
 	f32 GetSkillTargetRange(i32 skill) const { auto f = skillTargetRangeX.find(skill); return f == skillTargetRangeX.end() ? 0 : f->second; }

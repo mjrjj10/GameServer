@@ -2025,6 +2025,8 @@ bool GameXmlContent::LoadStatusData()
 		pCommon->QueryFloatAttribute("_HeightRatio", &st.heightRatio);
 		pCommon->QueryFloatAttribute("_LyingTime", &st.lyingTime);
 		pCommon->QueryFloatAttribute("_DotBaseDamage", &st.dotDamage);
+		pCommon->QueryFloatAttribute("_DotDrainMultiplier", &st.drainMultiplier);
+		pCommon->QueryIntAttribute("_SkillIndex", &st.skillIndex);
 		f32 intervalMs = 0;
 		pCommon->QueryFloatAttribute("_Interval", &intervalMs);
 		st.intervalSec = intervalMs / 1000.0f;

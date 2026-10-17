@@ -76,6 +76,7 @@ static const i32 CLASS_NUM_STATESMAN = 36;
 static const f32 TOOLTIP_DEFENDER_CC_IMMUNE_SEC = 1.0f;
 static const f32 TOOLTIP_DEATHKNIGHT_REVIVE_HP = 0.30f;
 static const i32 TOOLTIP_LILU_EVERY_N = 4;
+static const f32 TOOLTIP_SNIPER_CRIT_PER_MARK = 33.0f;
 static const i32 TOOLTIP_ANDROB_HEAL = 250;
 static const f32 TOOLTIP_ANDROB_RANGE = 800.0f;
 static const f32 TOOLTIP_ATTACKER_WEAPON_MUL = 1.10f;
@@ -1732,6 +1733,16 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 		}
 	}
 
+	if(const ActiveStatus* sniper = FindPassiveOfType(attacker, "STATUS_TYPE_SNIPER")) {
+		const i32 mark = GetGameXmlContent().FindSkillStatusOfType(sniper->info->skillIndex, "STATUS_TYPE_STACKBOMB");
+		if(mark != 0 && !target.dead && target.team != attacker.team) {
+			foreach(st, activeStatuses) {
+				if(st->statusID == mark && st->casterIndex == attacker.index && st->targetIndex != target.index) st->until = localTime;
+			}
+			ApplyStatus(attacker, target, mark);
+		}
+	}
+
 	eastl::fixed_vector<i32,4,false> toApply;
 	foreach(it, activeStatuses) {
 		if(it->targetIndex != attacker.index || !it->info) continue;
@@ -2640,6 +2651,11 @@ void World::UpdateShowcase()
 		return;
 	}
 	showcase.settled = false;
+	if(&caster == human || &dummy == human) {
+		const vec3 settledPos = human->body->GetWorldPos();
+		human->placedAt = settledPos;
+		replication->SendSelfTeleport(human->clientHd, human->Main().UID, settledPos, &caster == human ? faceDummy : faceCaster);
+	}
 	if(caster.Main().stance != 0) SetStance(caster.Main(), 0, 0, 0, false);
 	{
 		const f32 cd = glm::length(vec2(caster.body->GetWorldPos()) - vec2(casterPos));
@@ -2966,7 +2982,16 @@ void World::UpdateStatuses()
 		if(it->info && it->info->dotDamage > 0 && it->info->intervalSec > 0) {
 			while(localTime >= it->nextTick && it->nextTick <= it->until && !target.dead) {
 				it->nextTick = TimeAdd(it->nextTick, TimeMsToTime(it->info->intervalSec * 1000.0));
+				const i32 hpBefore = target.Main().hp;
 				DamagePlayer(players[it->casterIndex], target, SkillID::INVALID, (i32)(it->info->dotDamage * it->overlap));
+				Player& drainer = players[it->casterIndex];
+				const i32 drained = hpBefore - target.Main().hp;
+				if(it->info->drainMultiplier > 0 && drained > 0 && !drainer.dead) {
+					ActorMaster& dm = drainer.Main();
+					dm.hp = MIN(dm.hp + (i32)(drained * it->info->drainMultiplier), dm.hpMax);
+					replication->SendHpToAll(dm.UID, dm.hp, dm.hpMax);
+					LOG("Status :: %ls drains %d from %ls", drainer.name.data(), (i32)(drained * it->info->drainMultiplier), target.name.data());
+				}
 			}
 		}
 
@@ -2993,10 +3018,12 @@ void World::UpdateStatuses()
 				const i32 auraStatus = it->info->auraStatus;
 				const u32 casterIndex = it->casterIndex;
 				const vec2 center = vec2(target.body->GetWorldPos());
+				const u8 casterTeam = players[casterIndex].team;
 				foreach(p, players) {
 					if(p->dead) continue;
-					const bool ally = p->team == target.team;
-					if(ally == child->isDebuff) continue;
+					const bool casterAlly = p->team == casterTeam;
+					if(casterAlly == child->isDebuff) continue;
+					if(child->isDebuff && p->index == target.index && it->info->type == "STATUS_TYPE_DEFEAT_CASTER_AURA") continue;
 					if(glm::length(vec2(p->body->GetWorldPos()) - center) > range + HitRadius(*p)) continue;
 					if(!pendingStatuses.full()) {
 						PendingStatus ps;
@@ -3870,7 +3897,13 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		const Remote* critRemote = doc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(doc) : nullptr;
 		const f32 rate = MasterStat(ac, proj ? STAT_CRITICALRATE : STAT_SKILL_CRITICALRATE) + (critRemote ? critRemote->criticalRate : 0) +
 			StatusModSum(attacker, proj ? StatusMod::CRITICALRATE : StatusMod::SKILL_CRITICALRATE);
-		if(rate > 0 && (RandUint() % 10000) < (u32)(rate * 100.0f)) {
+		f32 bonus = 0;
+		foreach_const(st, activeStatuses) {
+			if(st->targetIndex != target.index || !st->info || localTime >= st->until) continue;
+			if(st->info->type == "STATUS_TYPE_WEAK_ON_CRITICAL" && attacker.team != target.team) bonus = 100.0f;
+			if(proj && st->info->type == "STATUS_TYPE_STACKBOMB" && st->casterIndex == attacker.index && FindPassiveOfType(attacker, "STATUS_TYPE_SNIPER")) bonus += TOOLTIP_SNIPER_CRIT_PER_MARK * st->overlap;
+		}
+		if(rate + bonus > 0 && (RandUint() % 10000) < (u32)((rate + bonus) * 100.0f)) {
 			const f32 critDamage = MasterStat(ac, proj ? STAT_CRITICALDAMAGE : STAT_SKILL_CRITICALDAMAGE);
 			damage = (i32)(damage * (critDamage > 0 ? critDamage : 100.0f) / 100.0f);
 			damageType = PACKET_DAMAGE_TYPE_CRITICAL;
