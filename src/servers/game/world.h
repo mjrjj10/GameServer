@@ -279,6 +279,7 @@ struct World
 		u32 ownerIndex = 0;
 		u8 ai = 0;
 		ActorUID chaseTarget = ActorUID::INVALID;
+		ActorUID skillTarget = ActorUID::INVALID;
 		bool stuck = false;
 		u8 dieMode = 0;
 		Time nextMoveSync = Time::ZERO;
@@ -381,6 +382,7 @@ struct World
 
 	struct PendingRemote
 	{
+		ActorUID sourceUID = ActorUID::INVALID;
 		Time time;
 		RemoteIdx idx;
 		i32 preset;
@@ -400,6 +402,7 @@ struct World
 
 	struct RemoteInst
 	{
+		ActorUID sourceUID = ActorUID::INVALID;
 		const Remote* remote;
 		u32 ownerIndex;
 		SkillID skillID;
@@ -482,6 +485,7 @@ struct World
 		u32 ownerIndex;
 		vec3 pos;
 		vec3 rot;
+		ActorUID target = ActorUID::INVALID;
 	};
 	eastl::fixed_vector<PendingSummon,64,false> pendingSummons;
 
@@ -495,6 +499,8 @@ struct World
 		vec3 pos;
 		f32 yaw;
 		i32 skill;     // the summon's own skill (SkillComData), gives remote damage
+		ActorUID target = ActorUID::INVALID;
+		ActorUID source = ActorUID::INVALID;
 		Time until;    // summon end (auras stop with it)
 	};
 	eastl::fixed_vector<PendingSummonCommand,128,false> pendingSummonCommands;
@@ -592,6 +598,7 @@ struct World
 		f32 yaw = 0;
 	} showcase;
 	void RunSummonState(ActorNpc& npc, i32 state);
+	ActorUID statusCasterOverride = ActorUID::INVALID;
 	bool frozen = false; // game over: no more shots, skills or bot actions
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActor(ActorUID actorUID) const;

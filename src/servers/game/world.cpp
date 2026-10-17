@@ -1897,7 +1897,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	st.targetIndex = target.index;
 	st.casterIndex = caster.index;
 	st.targetUID = target.Main().UID;
-	st.casterUID = caster.Main().UID;
+	st.casterUID = statusCasterOverride != ActorUID::INVALID ? statusCasterOverride : caster.Main().UID;
 	st.until = TimeAdd(localTime, TimeMsToTime(MAX(duration, 0.1f) * 1000.0));
 	st.nextTick = TimeAdd(localTime, TimeMsToTime((info && info->intervalSec > 0 ? info->intervalSec : 1.0f) * 1000.0));
 	st.overlap = 1;
@@ -2061,6 +2061,10 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 		ActorMaster* m = FindMasterActor(npc.chaseTarget);
 		current = m ? m->parent : nullptr;
 	}
+	else if(npc.skillTarget != ActorUID::INVALID) {
+		ActorMaster* m = FindMasterActor(npc.skillTarget);
+		if(m && !m->parent->dead) current = m->parent;
+	}
 	f32 yaw = owner.input.rot.upperYaw;
 	if(current && current != &owner) {
 		const vec2 rel = vec2(current->body->GetWorldPos()) - vec2(npc.pos);
@@ -2071,7 +2075,22 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 		name.sprintf("SKILL_%d_BEHAVIORSTATE", state);
 		const ActionStateID action = ActionStateFromString(name.c_str());
 		const vec3 targetPos = current ? current->body->GetWorldPos() : npc.pos;
+		if(npc.skillTarget != ActorUID::INVALID && current && current != &owner) {
+			f32 speed = 0;
+			foreach_const(c, info->skillStates[state]) {
+				if(c->kind != SummonCommand::REMOTE) continue;
+				const Remote* r = GetGameXmlContent().FindRemote(RemoteIdx(c->index));
+				if(r && r->behaviorType == Remote::BehaviorType::TARGET && r->maxSpeed > 0) speed = MAX(speed, r->maxSpeed);
+			}
+			if(speed > 0) {
+				const vec3 goal = current->body->GetWorldPos();
+				replication->SendNpcMoveToAll(npc.UID, npc.pos, goal, yaw, speed);
+				LOG("Summon :: creature=%d moves to its target at %.0f", (i32)npc.docID, speed);
+				npc.pos = goal;
+			}
+		}
 		if(action != ActionStateID::INVALID) {
+			npc.actionState = action;
 			npc.pendingMotion = action;
 			npc.motionAt = TimeAdd(localTime, TimeMsToTime(50.0));
 			npc.motionTarget = targetPos;
@@ -2094,6 +2113,8 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			pc.yaw = yaw;
 			pc.skill = info->skills.empty() ? 0 : info->skills[0];
 			pc.until = npc.despawnAt;
+			pc.target = current && current != &owner ? current->Main().UID : ActorUID::INVALID;
+			pc.source = npc.UID;
 			pendingSummonCommands.push_back(pc);
 		}
 		else if(c->kind == SummonCommand::STATUS) {
@@ -2777,6 +2798,7 @@ void World::UpdateSummons()
 			actor.despawnAt = TimeAdd(localTime, TimeMsToTime(life * 1000.0));
 			actor.ownerIndex = ps->ownerIndex;
 			actor.ai = info ? (u8)info->ai : 0;
+			actor.skillTarget = ps->target;
 			if(info && info->ai == SummonInfo::AI_RELAY) {
 				foreach(other, actorNpcList) {
 					if(&*other == &actor || other->ownerIndex != ps->ownerIndex || other->ai != SummonInfo::AI_RELAY) continue;
@@ -2828,7 +2850,8 @@ void World::UpdateSummons()
 				pr.damage = pc->skill != 0 ? (i32)SkillDamage(SkillID(pc->skill)) : 0;
 				pr.castPos = pc->pos;
 				pr.angle = pc->yaw;
-				pr.target = ActorUID::INVALID;
+				pr.target = pc->target;
+				pr.sourceUID = pc->source;
 				pendingRemotes.push_back(pr);
 			}
 		}
@@ -3123,12 +3146,9 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			   preset == ActionCommand::TargetPreset::POS_TTT_1 || preset == ActionCommand::TargetPreset::POS_TFF_1_800_1000) {
 				if(glm::length(vec2(castPos)) > 1.0f) pos = vec3(vec2(castPos), pos.z);
 			}
-			else if(preset == ActionCommand::TargetPreset::CURRENT_FFF && currentTarget != ActorUID::INVALID) {
-				const ActorMaster* tm = FindMasterActor(currentTarget);
-				if(tm) pos = tm->parent->body->GetWorldPos();
-			}
 			ps.pos = pos;
 			ps.rot = vec3(0, 0, angle);
+			if(preset == ActionCommand::TargetPreset::CURRENT_FFF) ps.target = currentTarget;
 			pendingSummons.push_back(ps);
 			scheduled = true;
 		}
@@ -3335,12 +3355,12 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 		const bool friendGroup = remote.damageGroup == Remote::DamageGroup::eFRIEND;
 		if(enemy || friendGroup) {
 			foreach_const(st, remote.statuses) {
-				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(owner, target, st->statusID, (f32)inst.damage);
+				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) { statusCasterOverride = inst.sourceUID; ApplyStatus(owner, target, st->statusID, (f32)inst.damage); statusCasterOverride = ActorUID::INVALID; }
 			}
 		}
 		if(!enemy) {
 			foreach_const(st, remote.friendlyStatuses) {
-				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(owner, target, st->statusID, (f32)inst.damage);
+				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) { statusCasterOverride = inst.sourceUID; ApplyStatus(owner, target, st->statusID, (f32)inst.damage); statusCasterOverride = ActorUID::INVALID; }
 			}
 		}
 	}
@@ -3509,6 +3529,7 @@ void World::UpdateRemotes(f32 delta)
 			}
 			RemoteInst* spawned = SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, casterLocal, pr->stopAtTarget);
 			if(spawned) {
+				spawned->sourceUID = pr->sourceUID;
 				spawned->centeredBox = atAimedPoint;
 				const f32 nodeForward = atAimedPoint ? 0 : WeaponNodeForward(GetGameXmlContent(), owner.Main().classType, pr->skillID, *spawned->remote, pr->nodeName);
 				if(nodeForward > 0) {
