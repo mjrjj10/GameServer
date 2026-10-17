@@ -2764,7 +2764,7 @@ void World::UpdateShowcase()
 		else { showcase.rangeIdx = 0; showcase.step++; }
 	}
 	f32 wait = step == 7 ? 2.0f : 3.5f;
-	if(mirror && step != 7) wait = &caster == human ? 6.5f : 5.0f;
+	if(mirror && step != 7) wait = &caster == human ? 8.5f : 7.0f;
 	if(step >= 1 && step <= 6 && skill == 0) wait = 0.2f;
 	if(showcase.step > 7) {
 		showcase.step = 0;
@@ -3049,6 +3049,18 @@ void World::UpdateStatuses()
 			}
 		}
 
+		if(it->info && it->info->type == "STATUS_TYPE_LINK" && localTime < it->until && it->casterIndex != it->targetIndex) {
+			const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput(it->info->skillIndex);
+			const Player& linker = players[it->casterIndex];
+			if(in && in->maxDistance > 0 && (linker.dead || glm::length(vec2(linker.body->GetWorldPos()) - vec2(target.body->GetWorldPos())) > in->maxDistance)) {
+				LOG("Status :: link %d between %ls and %ls snapped", it->statusID, linker.name.data(), target.name.data());
+				const i32 skillIndex = it->info->skillIndex;
+				const u32 casterIdx = it->casterIndex;
+				foreach(other, activeStatuses) {
+					if(other->targetIndex == target.index && other->casterIndex == casterIdx && other->info && other->info->skillIndex == skillIndex) other->until = localTime;
+				}
+			}
+		}
 		const bool shieldBroken = it->info && it->info->type == "STATUS_TYPE_SHIELD" && it->shieldHP <= 0;
 		const bool timeOver = localTime >= it->until;
 		if(timeOver || target.dead || shieldBroken || it->removeOnHit) {
