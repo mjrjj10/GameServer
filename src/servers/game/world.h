@@ -608,6 +608,8 @@ struct World
 		i32 comboCaster = -1;
 		ActorUID comboTarget = ActorUID::INVALID;
 		f32 flatLen = 2050.0f;
+		Time minNext = Time::ZERO;
+		Time quietSince = Time::ZERO;
 		vec3 anchor = vec3(0);
 		f32 yaw = 0;
 	} showcase;

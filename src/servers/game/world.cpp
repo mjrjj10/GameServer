@@ -82,6 +82,8 @@ static const i32 SKILL_SLOT_ENUM_FIRST = 2;
 static const f32 OBSTRUCT_JUMPABLE_HEIGHT = 120.0f;
 static const f32 OBSTRUCT_LOW_HEIGHT = 30.0f;
 static const f32 OBSTRUCT_SIDE = 50.0f;
+static const f32 SHOWCASE_MIN_MEASURE_SEC = 2.5f;
+static const f32 SHOWCASE_QUIET_SEC = 0.5f;
 static const i32 SKILL_SLOT_ENUM_UG = 6;
 static const i32 TOOLTIP_ANDROB_HEAL = 250;
 static const f32 TOOLTIP_ANDROB_RANGE = 800.0f;
@@ -2481,7 +2483,29 @@ void World::UpdateShowcase()
 		if(!comboCaster.dead) PlayerCastSkill(comboCaster, SkillID(showcase.comboSkill), showcase.comboPos, Slice<const ActorUID>(&showcase.comboTarget, showcase.comboTarget != ActorUID::INVALID ? 1 : 0), 0);
 		showcase.comboSkill = 0;
 	}
-	if(showcase.done || localTime < showcase.next) return;
+	if(showcase.done) return;
+	if(localTime < showcase.next) {
+		if(!Config().DevMirror || showcase.minNext == Time::ZERO || localTime < showcase.minNext) return;
+		bool quiet = remoteInsts.empty() && pendingRemotes.empty() && pendingStatuses.empty() && pendingSummons.empty() &&
+			pendingSummonCommands.empty() && skillProgramList.empty() && showcase.comboSkill == 0;
+		const Player& qc = players[showcase.prevCaster];
+		const Player& qd = players[showcase.prevDummy];
+		if(qc.clientHd != ClientHandle::INVALID && !showcase.castSeen) quiet = false;
+		if(qc.casting.skillID != SkillID::INVALID || localTime < qc.dashUntil || localTime < qd.pushUntil || localTime < qd.ccUntil) quiet = false;
+		foreach_const(npc, actorNpcList) {
+			if(npc->ownerIndex == qc.index && npc->despawnAt != Time::ZERO && localTime < npc->despawnAt) { quiet = false; break; }
+		}
+		foreach_const(st, activeStatuses) {
+			if(!quiet) break;
+			if((st->targetIndex == qc.index || st->targetIndex == qd.index) && st->info && !st->info->permanent && localTime < st->until) quiet = false;
+		}
+		if(!quiet) { showcase.quietSince = Time::ZERO; return; }
+		if(showcase.quietSince == Time::ZERO) { showcase.quietSince = localTime; return; }
+		if(TimeDiffSec(TimeDiff(showcase.quietSince, localTime)) < SHOWCASE_QUIET_SEC) return;
+		LOG("Showcase :: measure ended early (quiet)");
+	}
+	showcase.minNext = Time::ZERO;
+	showcase.quietSince = Time::ZERO;
 	const auto& content = GetGameXmlContent();
 	eastl::fixed_vector<u32,16,false> bots;
 	Player* human = nullptr;
@@ -2508,7 +2532,7 @@ void World::UpdateShowcase()
 		showcase.dummySlot = (i32)bots.size() - 1;
 		TeleportPlayer(players[bots[0]], showcase.mid, 0);
 		showcase.next = TimeAdd(localTime, TimeMsToTime(2500));
-		LOG("Showcase :: start wall=%lld bots=%d probe=(%.0f, %.0f, %.0f)", ShowcaseWallMs(), (i32)bots.size(), showcase.mid.x, showcase.mid.y, showcase.mid.z);
+		LOG("Showcase :: start wall=%lld bots=%d probe=(%.0f, %.0f, %.0f) human=%ls", ShowcaseWallMs(), (i32)bots.size(), showcase.mid.x, showcase.mid.y, showcase.mid.z, human->name.data());
 		return;
 	}
 	static const f32 diag = 0.70710678f;
@@ -2979,6 +3003,7 @@ void World::UpdateShowcase()
 		}
 	}
 	showcase.next = TimeAdd(localTime, TimeMsToTime(wait * 1000.0));
+	if(mirror && step != 7 && wait > SHOWCASE_MIN_MEASURE_SEC) showcase.minNext = TimeAdd(localTime, TimeMsToTime(SHOWCASE_MIN_MEASURE_SEC * 1000.0));
 }
 
 void World::UpdateBotCombat()

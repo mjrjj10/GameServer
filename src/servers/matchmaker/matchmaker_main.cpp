@@ -484,8 +484,16 @@ struct Matchmaker
 		foreach_const(puid, matchingPartyList) {
 			humanCount += partyMap.at(*puid)->memberList.size();
 		}
-		if(humanCount < 6 && TimeDiffSec(TimeDiff(matchingStartTime, now)) < MATCHING_WAIT_SEC) return;
+		if(!Config().SoloRooms && humanCount < 6 && TimeDiffSec(TimeDiff(matchingStartTime, now)) < MATCHING_WAIT_SEC) return;
 		matchingStartTime = Time::ZERO;
+		decltype(matchingPartyList) laterParties;
+		if(Config().SoloRooms) {
+			while(matchingPartyList.size() > 1) {
+				laterParties.push_back(matchingPartyList.back());
+				matchingPartyList.pop_back();
+			}
+			humanCount = (i32)partyMap.at(matchingPartyList.front())->memberList.size();
+		}
 
 		const Party& firstParty = *partyMap.at(matchingPartyList.front());
 
@@ -569,6 +577,10 @@ struct Matchmaker
 			}
 		}
 		matchingPartyList.clear();
+		while(!laterParties.empty()) {
+			matchingPartyList.push_back(laterParties.back());
+			laterParties.pop_back();
+		}
 	}
 
 	void UpdateRooms()
