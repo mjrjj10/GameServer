@@ -357,6 +357,8 @@ struct Remote
 	f32 timeChangeSpeed = 0;
 	ActionStateID changeCasterAction = ActionStateID::INVALID;
 	f32 sight = 0;
+	f32 homingLength = 0;  // _Homing _ReactionLength: a homing remote without target acquires the nearest enemy in range
+	f32 homingAngle = 0;   // _Homing _ReactionAngle (cone around the travel direction)
 	f32 criticalRate = 0; // extra crit chance % (RemoteComData2 _CriticalRate)
 	i32 onHitOwnerStatus = 0; // _OnHitOwnerStatusIndex: status applied to the caster when this remote hits
 	f32 activateDelay = 0;    // RemoteBoundComData2 _ActivateDelayTime: bound inactive for this long after spawn
@@ -606,7 +608,7 @@ struct GameXmlContent
 	i32 GetFirstComboSkill(i32 baseSkill) const { auto f = firstComboSkill.find(baseSkill); return f == firstComboSkill.end() ? 0 : f->second; }
 	i32 WeaponTypeOf(ClassType classType, WeaponIndex weaponIndex) const;
 	const Action& GetSkillAction(ClassType classType, ActionStateID actionID, i8 stance = 0) const;
-	struct SkillInput { bool needsClick = false; bool directionOnly = false; bool friendlyOnly = false; bool positionDirection = false; i32 coolTimeID = 0; f32 coolTime = 0; f32 minDistance = 0; f32 maxDistance = 0; };
+	struct SkillInput { bool needsClick = false; bool directionOnly = false; bool friendlyOnly = false; bool positionDirection = false; bool selfPosition = false; bool teleportEntity = false; i32 coolTimeID = 0; f32 coolTime = 0; f32 minDistance = 0; f32 maxDistance = 0; };
 	const SkillInput* FindSkillInput(i32 skillID) const { auto f = skillInput.find(skillID); return f == skillInput.end() ? nullptr : &f->second; }
 	struct SkillCast { enum Type: u8 { DELAY, LIMIT, CHARGING } type = DELAY; f32 time = 0; ActionStateID action = ActionStateID::INVALID; bool interruptByMove = false; };
 	const SkillCast* FindSkillCast(i32 skillID) const { auto f = skillCast.find(skillID); return f == skillCast.end() ? nullptr : &f->second; }

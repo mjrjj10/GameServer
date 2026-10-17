@@ -685,6 +685,10 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		skillID = player.comboSkill;
 	}
 	vec3 castPos = castPosIn;
+	if(player.clientHd != ClientHandle::INVALID && forcedAction == ActionStateID::INVALID && player.comboSlot >= 0 && skillID == player.comboSkill && glm::length(vec2(player.comboCastPos)) > 1.0f) {
+		const GameXmlContent::SkillInput* comboIn = GetGameXmlContent().FindSkillInput((i32)skillID);
+		if(comboIn && comboIn->selfPosition) castPos = player.comboCastPos;
+	}
 	if(player.clientHd == ClientHandle::INVALID && forcedAction == ActionStateID::INVALID && glm::length(vec2(castPos)) > 1.0f) {
 		const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput((i32)skillID);
 		const vec2 from = vec2(player.body->GetWorldPos());
@@ -902,6 +906,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 				player.comboResetCooltime = baseIn ? baseIn->coolTimeID : 0;
 				player.comboSlot = slot;
 				player.comboBase = skillID;
+				player.comboCastPos = castPos;
 				player.comboUntil = TimeAdd(localTime, TimeMsToTime(COMBO_SLOT_WINDOW_SEC * 1000.0));
 				LOG("Combo :: %ls slot %d -> %d", player.name.data(), slot, combo);
 			}
@@ -2852,8 +2857,8 @@ void World::UpdateShowcase()
 			}
 		}
 		LOG("Mirror :: follow=%s", followKey);
-		LOG("Mirror :: prompt wall=%lld key=%s click=%d combo=%d skill=%d test=%s dist=%.0f aim=(%.0f, %.0f) dironly=%d posdir=%d", ShowcaseWallMs(), mirrorKey ? mirrorKey : "none",
-			in && in->needsClick ? 1 : 0, combo != 0 ? 1 : 0, skill, testName, glm::length(vec2(dummyPos) - vec2(casterPos)), castPos.x - casterPos.x, castPos.y - casterPos.y, in && in->directionOnly ? 1 : 0, in && in->positionDirection ? 1 : 0);
+		LOG("Mirror :: prompt wall=%lld key=%s click=%d combo=%d skill=%d test=%s dist=%.0f aim=(%.0f, %.0f) dironly=%d posdir=%d comboclick=%d combotele=%d", ShowcaseWallMs(), mirrorKey ? mirrorKey : "none",
+			in && in->needsClick ? 1 : 0, combo != 0 ? 1 : 0, skill, testName, glm::length(vec2(dummyPos) - vec2(casterPos)), castPos.x - casterPos.x, castPos.y - casterPos.y, in && in->directionOnly ? 1 : 0, in && in->positionDirection ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->needsClick ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->teleportEntity ? 1 : 0);
 	}
 	else if(step == 0) {
 		const vec2 rel = vec2(castPos) - vec2(casterPos);
@@ -2919,7 +2924,7 @@ void World::UpdateShowcase()
 		}
 	}
 	f32 wait = step == 7 ? 2.0f : 3.5f;
-	if(mirror && step != 7) wait = &caster == human ? 8.5f : 7.0f;
+	if(mirror && step != 7) wait = &caster == human ? 10.0f : 8.0f;
 	if(step >= 1 && step <= 6 && skill == 0) wait = 0.2f;
 	if(showcase.step > 7) {
 		showcase.step = 0;
@@ -3848,6 +3853,20 @@ void World::UpdateRemotes(f32 delta)
 			case Remote::BehaviorType::TARGET:
 			case Remote::BehaviorType::FOLLOW_TARGET:
 			case Remote::BehaviorType::HOMING: {
+				if(inst.target == ActorUID::INVALID && remote.behaviorType == Remote::BehaviorType::HOMING && remote.homingLength > 0) {
+					f32 bestDist = remote.homingLength;
+					const f32 halfCos = cosf(remote.homingAngle * 0.5f * PI / 180.0f);
+					foreach(it, players) {
+						if(!RemoteCanAffect(inst, *it, false)) continue;
+						const vec2 rel = vec2(it->body->GetWorldPos() - inst.pos);
+						const f32 d = glm::length(rel);
+						if(d > bestDist) continue;
+						if(d > 1.0f && remote.homingAngle > 0 && remote.homingAngle < 360 && glm::dot(rel / d, inst.dir) < halfCos) continue;
+						bestDist = d;
+						inst.target = it->Main().UID;
+					}
+					if(inst.target != ActorUID::INVALID) LOG("Remote :: %d homing acquired a target at %.0f", (i32)remote.ID, bestDist);
+				}
 				const ActorMaster* targetMaster = inst.target != ActorUID::INVALID ? FindMasterActor(inst.target) : nullptr;
 				if(!targetMaster || targetMaster->parent->dead) {
 					destroyed = true;

@@ -3,7 +3,7 @@ import numpy as np, cv2, mss
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import drive
 
-PROMPT = re.compile(r'Mirror :: prompt wall=(\d+) key=(\S+) click=(\d) combo=(\d) skill=(\d+) test=(\S+) dist=(\d+) aim=\((-?\d+), (-?\d+)\)(?: dironly=(\d))?(?: posdir=(\d))?')
+PROMPT = re.compile(r'Mirror :: prompt wall=(\d+) key=(\S+) click=(\d) combo=(\d) skill=(\d+) test=(\S+) dist=(\d+) aim=\((-?\d+), (-?\d+)\)(?: dironly=(\d))?(?: posdir=(\d))?(?: comboclick=(\d))?(?: combotele=(\d))?')
 HUMAN_SCREEN = (960, 575)
 PX_PER_UNIT = (-0.577, -0.047)
 
@@ -37,6 +37,49 @@ def find_enemy(img, near=None, minw=100):
     return (best[1], best[2]) if best else None
 
 
+LAST_YAW = [None]
+
+
+def read_yaw(f):
+    pos = f.tell()
+    data = f.read()
+    vals = re.findall(r'Aim :: yaw=(-?[0-9.]+)', data)
+    if vals:
+        LAST_YAW[0] = float(vals[-1])
+    f.seek(pos)
+    return LAST_YAW[0]
+
+
+def wrap(a):
+    while a > math.pi: a -= 2 * math.pi
+    while a < -math.pi: a += 2 * math.pi
+    return a
+
+
+def aim_loop(f, out, x, y, target):
+    r = max(math.hypot(x - HUMAN_SCREEN[0], y - HUMAN_SCREEN[1]), 120.0)
+    s = math.atan2(y - HUMAN_SCREEN[1], x - HUMAN_SCREEN[0])
+    prev = None
+    k = -1.0
+    for it in range(7):
+        px, py = HUMAN_SCREEN[0] + r * math.cos(s), HUMAN_SCREEN[1] + r * math.sin(s)
+        drive.move(px, py)
+        time.sleep(0.4)
+        yaw = read_yaw(f)
+        if yaw is None:
+            return px, py
+        err = wrap(target - yaw)
+        if prev is not None and abs(s - prev[0]) > 1e-3:
+            dk = wrap(yaw - prev[1]) / (s - prev[0])
+            if abs(dk) > 0.2: k = dk
+        out.write(f'aim it={it} screen={math.degrees(s):.1f} yaw={math.degrees(yaw):.1f} target={math.degrees(target):.1f}'+chr(10))
+        if abs(err) < math.radians(5):
+            return px, py
+        prev = (s, yaw)
+        s = s + err / k
+    return px, py
+
+
 def act(m, pid, out, f, dbgdir, follow='none'):
     key, click, combo, test = m.group(2), m.group(3) == '1', m.group(4) == '1', m.group(6)
     drive.focus(pid)
@@ -54,16 +97,18 @@ def act(m, pid, out, f, dbgdir, follow='none'):
     if not tgt:
         cv2.imwrite(os.path.join(dbgdir, f'none_{m.group(1)}.jpg'), cv2.resize(img, (960, 540)))
     x, y = tgt if tgt else expect
+    corrected = False
     if tgt:
         ex, ey = expect[0] - HUMAN_SCREEN[0], expect[1] - HUMAN_SCREEN[1]
         tx, ty = x - HUMAN_SCREEN[0], y - HUMAN_SCREEN[1]
         el, tl = math.hypot(ex, ey), math.hypot(tx, ty)
         if el > 1 and tl > 1:
             cosang = (ex * tx + ey * ty) / (el * tl)
-            if cosang < math.cos(math.radians(20)):
+            if cosang < math.cos(math.radians(10)):
                 x, y = HUMAN_SCREEN[0] + ex / el * tl, HUMAN_SCREEN[1] + ey / el * tl
+                corrected = True
                 out.write(f'aim corrected to expected direction ({x:.0f},{y:.0f})'+chr(10))
-    if key == 'lmb':
+    if key == 'lmb' and not corrected:
         y -= 55
     dx, dy = x - HUMAN_SCREEN[0], y - HUMAN_SCREEN[1]
     k = 1.0
@@ -81,6 +126,8 @@ def act(m, pid, out, f, dbgdir, follow='none'):
     out.flush()
     drive.move(x, y)
     time.sleep(0.15)
+    if key == 'lmb' or m.group(10) == '1' or (key in ('q', 'e', 'r') and not click):
+        x, y = aim_loop(f, out, x, y, math.atan2(float(m.group(9)), float(m.group(8))))
     if key == 'none':
         return
     if key == 'lmb':
@@ -115,16 +162,28 @@ def act(m, pid, out, f, dbgdir, follow='none'):
         if not first_seen and skill_id != '0':
             drive.key(key, False); time.sleep(0.05); drive.key(key, True)
             out.write(f'cast not seen, closed targeting {m.group(1)}'+chr(10))
+        elif combo and m.group(12) == '0':
+            time.sleep(0.7)
+            mark = f.tell()
+            got = False
+            for attempt in range(10):
+                drive.key(key, False); time.sleep(0.05); drive.key(key, True)
+                time.sleep(0.25)
+                f.seek(mark)
+                if 'Skill :: alexis' in f.read():
+                    got = True
+                    break
+            out.write(f'fast combo {"seen" if got else "not seen"} after {attempt + 1} presses'+chr(10))
         elif combo:
             time.sleep(2.0)
-            again = find_enemy(grab(), None, 30)
+            again = (x, y) if m.group(13) == '1' else find_enemy(grab(), None, 30)
             if again:
                 drive.move(again[0], again[1])
                 time.sleep(0.15)
             out.write(f'combo aim {again}'+chr(10))
             mark = f.tell()
             drive.key(key, False); time.sleep(0.05); drive.key(key, True)
-            if click:
+            if m.group(12) == '1' or (m.group(12) is None and click):
                 time.sleep(0.25)
                 drive.mouse(drive.MOUSEEVENTF_LEFTDOWN); time.sleep(0.05); drive.mouse(drive.MOUSEEVENTF_LEFTUP)
             time.sleep(1.0)

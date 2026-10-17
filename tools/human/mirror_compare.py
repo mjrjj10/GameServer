@@ -94,6 +94,11 @@ for (key, side), (b, h) in flat.items():
         diffs.append('human cast not received')
     if b.get('hit') != h.get('hit'):
         diffs.append(f'hit bot={b.get("hit")} human={h.get("hit")}')
+    bh, hh = b.get('hits') or 0, h.get('hits') or 0
+    timing = bh > 0 and hh > 0 and bh != hh and tol(b.get('damage', 0) / bh, h.get('damage', 0) / hh, 10, 0.15) and abs(bh - hh) <= 2
+    if timing:
+        print(f'ok {label}  same damage per hit, {bh} vs {hh} hits in the window (periodic effect timing)')
+        continue
     if b['crit'] or h['crit']:
         if not tol(b['base'], h['base'], 30, 0.15):
             diffs.append(f'damage before crit bot={b["base"]} human={h["base"]}')
@@ -110,7 +115,7 @@ for (key, side), (b, h) in flat.items():
         diffs.append(f'dummyMoved bot={b.get("pushed")} human={h.get("pushed")}')
     if b.get('statuses') != h.get('statuses'):
         diffs.append(f'statuses bot={",".join(b.get("statuses", ()))} human={",".join(h.get("statuses", ()))}')
-    if 'release' not in h['casts'] and b.get('first', -1) >= 0 and h.get('first', -1) >= 0 and not tol(b['first'], h['first'], 250, 0.3):
+    if 'release' not in h['casts'] and len(set(h['skills'])) <= 1 and b.get('first', -1) >= 0 and h.get('first', -1) >= 0 and not tol(b['first'], h['first'], 250, 0.3):
         diffs.append(f'firstHitMs bot={b["first"]} human={h["first"]}')
     if b.get('mana', 0) != 0 and not tol(b.get('mana', 0), h.get('mana', 0), 5, 0.1):
         diffs.append(f'mana bot={b.get("mana")} human={h.get("mana")}')

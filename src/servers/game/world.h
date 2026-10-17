@@ -158,6 +158,7 @@ struct World
 		Time comboSendAt = Time::ZERO;
 		i32 comboResetCooltime = 0;
 		SkillID comboBase = SkillID::INVALID;
+		vec3 comboCastPos = vec3(0);
 		Time comboUntil = Time::ZERO;
 		vec3 placedAt = vec3(0);
 		i32 clientPosCount = 0;

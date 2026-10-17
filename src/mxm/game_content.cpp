@@ -370,6 +370,8 @@ void GameXmlContent::LoadAllSkills()
 			if(XMLElement* pTarget = pNodeCommonSkill->FirstChildElement("_Target")) {
 				pTarget->QueryStringAttribute("_UXType", &ux);
 				pTarget->QueryStringAttribute("_SelectStateType", &select);
+				const char* selectType = pTarget->Attribute("_SelectType");
+				in.teleportEntity = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_TELEPORT_ENTITY") == 0;
 				pTarget->QueryFloatAttribute("_MinDistance", &in.minDistance);
 				pTarget->QueryFloatAttribute("_MaxDistance", &in.maxDistance);
 				const char* friendly = pTarget->Attribute("_Friendly");
@@ -381,6 +383,7 @@ void GameXmlContent::LoadAllSkills()
 			const bool selectBefore = select && EA::StdC::Strcmp(select, "SKILL_TARGET_SELECT_STATE_BEFORECAST") == 0;
 			in.needsClick = (!self || selectBefore) && !smartCast;
 			in.directionOnly = ux && EA::StdC::Strcmp(ux, "SKILL_CAST_MY_POSITION_DIRECTION") == 0;
+			in.selfPosition = self;
 			in.positionDirection = ux && EA::StdC::Strcmp(ux, "SKILL_CAST_TARGET_POSITION_DIRECTION") == 0;
 			pNodeCommonSkill->QueryIntAttribute("_CoolTimeID", &in.coolTimeID);
 			pNodeCommonSkill->QueryFloatAttribute("_CoolTime", &in.coolTime);
@@ -1689,6 +1692,14 @@ bool GameXmlContent::LoadRemoteData()
 			else if((EA::StdC::Strcmp("RemoteTargetComData", compName) == 0)) {
 				pComp->QueryFloatAttribute("_HitInvalidTime", &remote.hitInvalidTime);
 				pComp->QueryFloatAttribute("_Sight", &remote.sight);
+				if(XMLElement* pHoming = pComp->FirstChildElement("_Homing")) {
+					pHoming->QueryFloatAttribute("_ReactionLength", &remote.homingLength);
+					pHoming->QueryFloatAttribute("_ReactionAngle", &remote.homingAngle);
+				}
+			}
+			else if((EA::StdC::Strcmp("_Homing", compName) == 0)) {
+				pComp->QueryFloatAttribute("_ReactionLength", &remote.homingLength);
+				pComp->QueryFloatAttribute("_ReactionAngle", &remote.homingAngle);
 			}
 
 			else if((EA::StdC::Strcmp("RemoteGraphComData", compName) == 0)) {

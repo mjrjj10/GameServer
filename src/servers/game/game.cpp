@@ -515,6 +515,7 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 	}
 	player.input.rot = rot;
 	player.input.speed = speed;
+	if(Config().DevMirror) LOG("Aim :: yaw=%.4f", rot.upperYaw);
 }
 
 void Game::OnPlayerUpdateRotation(ClientHandle clientHd, ActorUID actorUID, const RotationHumanoid& rot)
@@ -540,6 +541,7 @@ void Game::OnPlayerUpdateRotation(ClientHandle clientHd, ActorUID actorUID, cons
 	}
 
 	player.input.rot = rot;
+	if(Config().DevMirror) LOG("Aim :: yaw=%.4f", rot.upperYaw);
 }
 
 void Game::OnPlayerChatMessage(ClientHandle clientHd, i32 chatType, const wchar* msg, i32 msgLen)
@@ -729,7 +731,7 @@ void Game::OnPlayerCastSkill(ClientHandle clientHd, ActorUID actorUID, const Pla
 	// TODO: convert clientTime to localTime
 	OnPlayerUpdatePosition(clientHd, actorUID, f2v(posInfo.pos), f2v(posInfo.moveDir), rot, posInfo.speed, ActionStateID::INVALID, 0);
 
-	LOG("OnPlayerCastSkill :: (%f, %f, %f) targets=%d", cast.pos.x, cast.pos.y, cast.pos.z, (i32)cast.targetList.size());
+	LOG("OnPlayerCastSkill :: (%f, %f, %f) targets=%d rot=(%.3f, %.3f, %.3f) moveDir=(%.2f, %.2f)", cast.pos.x, cast.pos.y, cast.pos.z, (i32)cast.targetList.size(), posInfo.rot.x, posInfo.rot.y, posInfo.rot.z, posInfo.moveDir.x, posInfo.moveDir.y);
 }
 
 void Game::OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID)
