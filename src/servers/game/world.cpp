@@ -104,6 +104,8 @@ static const i32 RELAY_IDS_PER_MODE = 3;
 static const i32 RELAY_ARTILLERY_MODE = 2;
 static const f32 RELAY_LEAP_SPEED = 2000.0f;
 static const i32 RELAY_PRISM_MODE = 0;
+static const f32 WALL_HEIGHT = 300.0f;
+static const struct { i32 creature; f32 width; f32 depth; } WALL_FOOTPRINTS[] = { { 100033400, 300.0f, 80.0f }, { 100033401, 500.0f, 80.0f }, { 100033402, 500.0f, 80.0f } };
 static const i32 SHOWCASE_STANCE_SHOTS = 3;
 static const f32 SHOWCASE_STANCE_WINDOW_SEC = 4.0f;
 static const i32 SHOWCASE_STANCE_FIRST_SHOT_MS = 900;
@@ -1234,7 +1236,7 @@ void World::UpdateProjectiles(f32 delta)
 		if(!proj->graph && !proj->ignoreWalls && step > 0) {
 			f32 wallDist = 0;
 			const vec2 a = vec2(proj->pos);
-			if(physics.RaycastStatic(vec3(a, proj->wallZ), vec3(a + proj->dir * step, proj->wallZ), &wallDist)) {
+			if(physics.RaycastStatic(vec3(a, proj->wallZ), vec3(a + proj->dir * step, proj->wallZ), &wallDist, (i32)players[proj->ownerIndex].team)) {
 				step = wallDist;
 				hitWall = true;
 			}
@@ -3471,6 +3473,11 @@ void World::UpdateSummons()
 				actor.ownerIndex = ps->ownerIndex;
 				actor.ai = info ? (u8)info->ai : 0;
 				actor.ownerClass = (i32)owner.Main().classType;
+				for(const auto& w : WALL_FOOTPRINTS) {
+					if(w.creature != ps->creature) continue;
+					actor.wall = physics.CreateWall(actor.pos, w.width, w.depth, WALL_HEIGHT, actor.rot.z, (i32)owner.team);
+					LOG("Summon :: creature=%d is a wall %.0fx%.0f", ps->creature, w.width, w.depth);
+				}
 				actor.nextPassive = TimeAdd(localTime, TimeMsToTime(RELAY_PASSIVE_SEC * 1000.0));
 			}
 			actor.skillTarget = ps->target;
@@ -3583,6 +3590,8 @@ void World::UpdateSummons()
 	for(auto it = actorNpcList.begin(); it != actorNpcList.end(); ) {
 		if(it->despawnAt != Time::ZERO && localTime >= it->despawnAt) {
 			LOG("Summon :: creature=%d despawned", (i32)it->docID);
+			physics.RemoveWall(it->wall);
+			it->wall = nullptr;
 			const SummonInfo* info = GetGameXmlContent().FindSummon((i32)it->docID);
 			if(info) {
 				f32 t = 0;
@@ -4466,7 +4475,7 @@ void World::UpdateRemotes(f32 delta)
 					if(!remote.ignoreGround && !remote.attachFireObject && step > 0) {
 						f32 wallDist = 0;
 						const vec2 a = vec2(inst.pos);
-						if(physics.RaycastStatic(vec3(a, inst.wallZ), vec3(a + inst.dir * step, inst.wallZ), &wallDist)) {
+						if(physics.RaycastStatic(vec3(a, inst.wallZ), vec3(a + inst.dir * step, inst.wallZ), &wallDist, (i32)players[inst.ownerIndex].team)) {
 							step = wallDist;
 							hitWall = true;
 						}

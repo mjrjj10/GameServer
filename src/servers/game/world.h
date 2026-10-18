@@ -313,6 +313,7 @@ struct World
 		ActorUID motionTargetUID = ActorUID::INVALID;
 		f32 motionYaw = 0;
 		i32 relayMode = -1;
+		void* wall = nullptr;
 		i32 ownerClass = -1;
 		Time nextPassive = Time::ZERO;
 		Time passiveBlockedUntil = Time::ZERO;
