@@ -3158,8 +3158,8 @@ void World::UpdateShowcase()
 			}
 		}
 		LOG("Mirror :: follow=%s", followKey);
-		LOG("Mirror :: prompt wall=%lld key=%s click=%d combo=%d skill=%d test=%s dist=%.0f aim=(%.0f, %.0f) dironly=%d posdir=%d comboclick=%d combotele=%d", ShowcaseWallMs(), mirrorKey ? mirrorKey : "none",
-			in && in->needsClick ? 1 : 0, combo != 0 ? 1 : 0, skill, testName, glm::length(vec2(dummyPos) - vec2(casterPos)), castPos.x - casterPos.x, castPos.y - casterPos.y, in && in->directionOnly ? 1 : 0, in && in->positionDirection ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->needsClick ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->teleportEntity ? 1 : 0);
+		LOG("Mirror :: prompt wall=%lld key=%s click=%d combo=%d skill=%d test=%s dist=%.0f aim=(%.0f, %.0f) dironly=%d posdir=%d comboclick=%d combotele=%d pick=%d", ShowcaseWallMs(), mirrorKey ? mirrorKey : "none",
+			in && in->needsClick ? 1 : 0, combo != 0 ? 1 : 0, skill, testName, glm::length(vec2(dummyPos) - vec2(casterPos)), castPos.x - casterPos.x, castPos.y - casterPos.y, in && in->directionOnly ? 1 : 0, in && in->positionDirection ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->needsClick ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->teleportEntity ? 1 : 0, in && in->pickedEntity ? 1 : 0);
 	}
 	else if(step == 0) {
 		const vec2 rel = vec2(castPos) - vec2(casterPos);

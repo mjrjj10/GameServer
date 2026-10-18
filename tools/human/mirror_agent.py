@@ -3,7 +3,7 @@ import numpy as np, cv2, mss
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import drive
 
-PROMPT = re.compile(r'Mirror :: prompt wall=(\d+) key=(\S+) click=(\d) combo=(\d) skill=(\d+) test=(\S+) dist=(\d+) aim=\((-?\d+), (-?\d+)\)(?: dironly=(\d))?(?: posdir=(\d))?(?: comboclick=(\d))?(?: combotele=(\d))?')
+PROMPT = re.compile(r'Mirror :: prompt wall=(\d+) key=(\S+) click=(\d) combo=(\d) skill=(\d+) test=(\S+) dist=(\d+) aim=\((-?\d+), (-?\d+)\)(?: dironly=(\d))?(?: posdir=(\d))?(?: comboclick=(\d))?(?: combotele=(\d))?(?: pick=(\d))?')
 HUMAN_SCREEN = (960, 575)
 
 
@@ -117,7 +117,11 @@ def act(m, pid, out, f, dbgdir, follow='none'):
                 out.write(f'aim corrected to expected direction ({x:.0f},{y:.0f})'+chr(10))
     if key in ('q', 'e', 'r') and click and m.group(10) != '1':
         x, y = expect
-        out.write(f'ground click on computed point ({x:.0f},{y:.0f})'+chr(10))
+        if m.group(14) == '1' and tgt:
+            x, y = tgt[0], tgt[1] - 60
+            out.write(f'entity click on the detected target ({x:.0f},{y:.0f})'+chr(10))
+        else:
+            out.write(f'ground click on computed point ({x:.0f},{y:.0f})'+chr(10))
     if key == 'lmb' and not corrected:
         y -= 55
     dx, dy = x - HUMAN_SCREEN[0], y - HUMAN_SCREEN[1]
