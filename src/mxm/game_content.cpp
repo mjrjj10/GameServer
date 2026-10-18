@@ -2366,6 +2366,7 @@ bool GameXmlContent::LoadStatusData()
 							if(!spType || EA::StdC::Strcmp(spType, "E_SKILL_PROPERTY_DAMAGE") != 0 || pSP->IntAttribute("_SkillIndex") != skillID) continue;
 							XMLElement* pNormal = pSP->FirstChildElement("_PROPERTY_LEVEL");
 							XMLElement* pCostLevel = pSP->FirstChildElement("_COST_LEVEL");
+							for(u32 k = skillCostLevels[skillID].size(); pCostLevel && k > 0; k--) pCostLevel = pCostLevel->NextSiblingElement("_COST_LEVEL");
 							XMLElement* pEmpowered = pCostLevel ? pCostLevel->FirstChildElement("_PROPERTY_LEVEL") : nullptr;
 							if(!pNormal || !pEmpowered) continue;
 							const f32 normalBase = pNormal->FloatAttribute("_BaseDamage");
