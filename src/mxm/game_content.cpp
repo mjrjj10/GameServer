@@ -375,6 +375,7 @@ void GameXmlContent::LoadAllSkills()
 				in.allEnemies = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_ENEMY_PC_ALL") == 0;
 				in.pickedEntity = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_PICKED_ENTITY") == 0;
 				in.lockOn = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_MULTI_LOCKON") == 0;
+				if(selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_STATUS") == 0) pTarget->QueryAttribute("_CheckStatusIndex", &in.checkStatus);
 				if(const char* om = pTarget->Attribute("_TestObstructMove")) in.obstructMove = EA::StdC::Strcmp(om, "SKILL_OBSTRUCTMOVE_TYPE_JUMPABLE") == 0 ? 1 : 2;
 				if(const char* os = pTarget->Attribute("_TestObstructSight")) in.obstructSight = EA::StdC::Strcmp(os, "SKILL_OBSTRUCTSIGHT_TYPE_ALL") == 0;
 				pTarget->QueryFloatAttribute("_MinDistance", &in.minDistance);

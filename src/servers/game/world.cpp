@@ -3265,6 +3265,14 @@ void World::UpdateShowcase()
 	showcase.prevCaster = caster.index;
 	LOG("Showcase :: wall=%lld master=%d slot=%s skill=%d caster=%ls range=%.0f dist=%.0f test=%s expect=%d", ShowcaseWallMs(), (i32)cls, slotNames[step], skill, caster.name.data(), range, glm::length(vec2(dummyPos) - vec2(casterPos)), testName, expect);
 	if(mirror) LOG("Mirror :: turn=%d caster=%ls target=%ls", turn, caster.name.data(), dummy.name.data());
+	if(skill != 0) {
+		if(const GameXmlContent::SkillInput* need = content.FindSkillInput(skill)) {
+			if(need->checkStatus != 0) {
+				ApplyStatus(caster, dummy, need->checkStatus);
+				LOG("Showcase :: target marked with status %d required by the skill", need->checkStatus);
+			}
+		}
+	}
 	if(Config().DevShowcaseKeepSummons == 0) {
 		foreach(npc, actorNpcList) if(npc->ai == SummonInfo::AI_RELAY && npc->ownerIndex != caster.index && localTime < npc->despawnAt) npc->despawnAt = localTime;
 	}
