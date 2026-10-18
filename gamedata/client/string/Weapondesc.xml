@@ -1095,5 +1095,32 @@
     <StringData DATAKEY="STR_ITEM_DESC_131199812" data="For level testing" />
     <StringData DATAKEY="STR_ITEM_NAME_131199813" data="Nightmare x3 Power - Vonak" />
     <StringData DATAKEY="STR_ITEM_DESC_131199813" data="For level testing" />
+    <StringData DATAKEY="STR_ITEM_NAME_131141011" DocId="100000041" data="Weapon Damage" />
+    <StringData DATAKEY="STR_ITEM_DESC_131141011" DocId="100000041" data="{color:#edec72}[Upgrade Type: Damage]{color:end}\nIncreases Weapon Damage." />
+    <StringData DATAKEY="STR_ITEM_NAME_131141012" DocId="100000041" data="Weapon Damage" />
+    <StringData DATAKEY="STR_ITEM_DESC_131141012" DocId="100000041" data="{color:#edec72}[Upgrade Type: Damage]{color:end}\nIncreases Weapon Damage." />
+    <StringData DATAKEY="STR_ITEM_NAME_131141013" DocId="100000041" data="Weapon Damage" />
+    <StringData DATAKEY="STR_ITEM_DESC_131141013" DocId="100000041" data="{color:#edec72}[Upgrade Type: Damage]{color:end}\nIncreases Weapon Damage." />
+    <StringData DATAKEY="STR_ITEM_NAME_131141014" DocId="100000041" data="Weapon Damage" />
+    <StringData DATAKEY="STR_ITEM_DESC_131141014" DocId="100000041" data="{color:#edec72}[Upgrade Type: Damage]{color:end}\nIncreases Weapon Damage." />
+    <StringData DATAKEY="STR_ITEM_NAME_131141021" DocId="100000041" data="Range" />
+    <StringData DATAKEY="STR_ITEM_DESC_131141021" DocId="100000041" data="{color:#edec72}[Upgrade Type: Extension]{color:end}\nIncreases attack range." />
+    <StringData DATAKEY="STR_ITEM_NAME_131141022" DocId="100000041" data="Range" />
+    <StringData DATAKEY="STR_ITEM_DESC_131141022" DocId="100000041" data="{color:#edec72}[Upgrade Type: Extension]{color:end}\nIncreases attack range." />
+    <StringData DATAKEY="STR_ITEM_NAME_131141023" DocId="100000041" data="Range" />
+    <StringData DATAKEY="STR_ITEM_DESC_131141023" DocId="100000041" data="{color:#edec72}[Upgrade Type: Extension]{color:end}\nIncreases attack range." />
+    <StringData DATAKEY="STR_ITEM_NAME_131141024" DocId="100000041" data="Range" />
+    <StringData DATAKEY="STR_ITEM_DESC_131141024" DocId="100000041" data="{color:#edec72}[Upgrade Type: Extension]{color:end}\nIncreases attack range." />
+    <StringData DATAKEY="STR_ITEM_NAME_131141031" DocId="100000041" data="Fuel Recovery" />
+    <StringData DATAKEY="STR_ITEM_DESC_131141031" DocId="100000041" data="{color:#edec72}[Upgrade Type: Swift]{color:end}\nIncreases the Fuel recovered by charged attacks." />
+    <StringData DATAKEY="STR_ITEM_NAME_131141032" DocId="100000041" data="Fuel Recovery" />
+    <StringData DATAKEY="STR_ITEM_DESC_131141032" DocId="100000041" data="{color:#edec72}[Upgrade Type: Swift]{color:end}\nIncreases the Fuel recovered by charged attacks." />
+    <StringData DATAKEY="STR_ITEM_NAME_131141033" DocId="100000041" data="Fuel Recovery" />
+    <StringData DATAKEY="STR_ITEM_DESC_131141033" DocId="100000041" data="{color:#edec72}[Upgrade Type: Swift]{color:end}\nIncreases the Fuel recovered by charged attacks." />
+    <StringData DATAKEY="STR_ITEM_NAME_131141034" DocId="100000041" data="Fuel Recovery" />
+    <StringData DATAKEY="STR_ITEM_DESC_131141034" DocId="100000041" data="{color:#edec72}[Upgrade Type: Swift]{color:end}\nIncreases the Fuel recovered by charged attacks." />
+    <StringData DATAKEY="STR_ITEM_NAME_131141000" DocId="100000041" data="GX-T" />
+    <StringData DATAKEY="STR_ITEM_WEAPONDESC_131141000" DocId="100000041" data="Attacks in a cone in front." />
+    <StringData DATAKEY="STR_ITEM_DESC_131141000" DocId="100000041" data="A weapon specially mounted to protect passengers." />
   </StringTableData>
 </ENTITY_FILE>

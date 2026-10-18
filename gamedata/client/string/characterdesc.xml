@@ -361,5 +361,14 @@
     <StringData DATAKEY="STR_TOOLTIP_GHOSTWIDOW_ABILITY_02" DocId="100000040" data="Boost Skill Power" />
     <StringData DATAKEY="STR_TOOLTIP_GHOSTWIDOW_ABILITY_03" DocId="100000040" data="Boost Health" />
     <StringData DATAKEY="STR_TOOLTIP_GHOSTWIDOW_ABILITY_04" DocId="100000040" data="Boost Mobility" />
+    <StringData DATAKEY="STR_BASEFEATURE_SHUTTLE" DocId="100000041" data="Specialist" />
+    <StringData DATAKEY="STR_RANGEFEATURE_SHUTTLE" DocId="100000041" data="Melee" />
+    <StringData DATAKEY="STR_MASTER_SHUTTLE" DocId="100000041" data="GX-09 can carry a master and travel quickly, or summon allies from a distant location." />
+    <StringData DATAKEY="STR_STORYTITLE_SHUTTLE" DocId="100000041" data="Master Transport Robot" />
+    <StringData DATAKEY="STR_STORY_SHUTTLE" DocId="100000041" data="{color:#fbdc02}Origin{color:end}: Built on Earth, modified by the Dredgion\n{color:#fbdc02}Occupation{color:end}: Transport Master\n{color:#fbdc02}Personality{color:end}: Strong sense of duty, devoted to service.\n{color:#fbdc02}Note{color:end}: Very popular with children.\n\nBefore being converted into its current form, GX-09 was transport equipment used on Earth. It was loaded onto the Ark and drifted all the way to Anu, where it became part of the collection of the Dredgion's chief engineer, who has a hobby of collecting old items from Earth. While looking for parts for his own hobby, Moro happened to repair GX-09, and in the process it was revealed that, like MBA-07, GX-09 is an artificial intelligence that reacts to Sol. Moro and the chief engineer both claimed ownership of GX-09, but GX-09, regarding the transport duty it had carried out since Earth as its mission, volunteered as a Dredgion master to support other masters." />
+    <StringData DATAKEY="STR_TOOLTIP_SHUTTLE_ABILITY_01" DocId="100000041" data="Boost Weapon Damage" />
+    <StringData DATAKEY="STR_TOOLTIP_SHUTTLE_ABILITY_02" DocId="100000041" data="Boost Skill Power" />
+    <StringData DATAKEY="STR_TOOLTIP_SHUTTLE_ABILITY_03" DocId="100000041" data="Boost Health" />
+    <StringData DATAKEY="STR_TOOLTIP_SHUTTLE_ABILITY_04" DocId="100000041" data="Boost Mobility" />
   </StringTableData>
 </ENTITY_FILE>

@@ -9316,4 +9316,444 @@
       </_Create>
     </RemoteFactoryComData>
   </INFO>
+  <INFO ID="230411110" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="75" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410000" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410010">
+            <_COMBO _Index="1430410010" />
+            <_CHARGINGREMOTE _Index="1430410011" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411120" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="45" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410000" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410010">
+            <_COMBO _Index="1430410010" />
+            <_CHARGINGREMOTE _Index="1430410011" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411210" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="75" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410000" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410110">
+            <_COMBO _Index="1430410110" />
+            <_CHARGINGREMOTE _Index="1430410114" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411220" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="75" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410000" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410111">
+            <_COMBO _Index="1430410111" />
+            <_CHARGINGREMOTE _Index="1430410115" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411230" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="75" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410000" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410112">
+            <_COMBO _Index="1430410112" />
+            <_CHARGINGREMOTE _Index="1430410116" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411240" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="75" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410000" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410113">
+            <_COMBO _Index="1430410113" />
+            <_CHARGINGREMOTE _Index="1430410117" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411250" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="45" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410000" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410110">
+            <_COMBO _Index="1430410110" />
+            <_CHARGINGREMOTE _Index="1430410114" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411260" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="45" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410000" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410111">
+            <_COMBO _Index="1430410111" />
+            <_CHARGINGREMOTE _Index="1430410115" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411270" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="45" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410000" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410112">
+            <_COMBO _Index="1430410112" />
+            <_CHARGINGREMOTE _Index="1430410116" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411280" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="45" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410000" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410113">
+            <_COMBO _Index="1430410113" />
+            <_CHARGINGREMOTE _Index="1430410117" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411310" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="75" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410001" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410010">
+            <_COMBO _Index="1430410010" />
+            <_CHARGINGREMOTE _Index="1430410011" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411320" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="75" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410002" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410010">
+            <_COMBO _Index="1430410010" />
+            <_CHARGINGREMOTE _Index="1430410011" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411330" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="75" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410003" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410010">
+            <_COMBO _Index="1430410010" />
+            <_CHARGINGREMOTE _Index="1430410011" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411340" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="75" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410004" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410010">
+            <_COMBO _Index="1430410010" />
+            <_CHARGINGREMOTE _Index="1430410011" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411350" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="45" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410001" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410010">
+            <_COMBO _Index="1430410010" />
+            <_CHARGINGREMOTE _Index="1430410011" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411360" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="45" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410002" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410010">
+            <_COMBO _Index="1430410010" />
+            <_CHARGINGREMOTE _Index="1430410011" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411370" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="45" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410003" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410010">
+            <_COMBO _Index="1430410010" />
+            <_CHARGINGREMOTE _Index="1430410011" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411380" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="45" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410004" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410010">
+            <_COMBO _Index="1430410010" />
+            <_CHARGINGREMOTE _Index="1430410011" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411010" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="75" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410000" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410010">
+            <_COMBO _Index="1430410010" />
+            <_CHARGINGREMOTE _Index="1430410011" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
+  <INFO ID="230411020" _DocID="100000041">
+    <FiringMethodData _Animation="ATTACK_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_r" _PickHeight="45" _IsAimEntity="False" _AnimationRatio="1">
+      <_FIREINFO _FireDelayTime="0.7" />
+      <_COMBO>
+        <_LEVEL _FireDelayTime="0.6" _ValidTime="1" _Animation="ATTACK1_BEHAVIORSTATE" _FiringDummy="Attack_Fire_Dummy_l" />
+      </_COMBO>
+      <_CHARGE>
+        <_LEVEL _ChargingTime="1.4" _Animation="ATTACK2_BEHAVIORSTATE" _Status="1230410000" />
+      </_CHARGE>
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-999.999999999999" _AutoRegenInterval="0.1" _AutoRegenDelayTime="1" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="2" _OverHeatResetGauge="0" _GaugeStableRange="85" _Consumption="0" />
+    </FiringMethodData>
+    <RemoteFactoryComData>
+      <_Create>
+        <_Default>
+          <_Remote _RemoteIndex="1430410010">
+            <_COMBO _Index="1430410010" />
+            <_CHARGINGREMOTE _Index="1430410011" _FiringDummy="Charge_Fire_Dummy" />
+          </_Remote>
+        </_Default>
+      </_Create>
+    </RemoteFactoryComData>
+  </INFO>
 </ENTITY_FILE>

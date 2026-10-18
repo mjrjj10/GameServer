@@ -573,5 +573,18 @@
     <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1239100020" data="Mitigates Damage" />
     <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1239100021" data="Movespeed Increased." />
     <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1239100022" data="You are inspired by the Titan Incarnate's Cry.&#10;Weapon Damage, Skill Power, and Movespeed are increased by 20% for 10 seconds." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230410010" DocId="100000041" data="Movespeed decreased." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230410021" DocId="100000041" data="Feared." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230410040" DocId="100000041" data="Super Armor." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230410041" DocId="100000041" data="Movespeed increased." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230410042" DocId="100000041" data="Movespeed increased." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230410046" DocId="100000041" data="Riding GX-09." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230410049" DocId="100000041" data="Defense increased." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230410060" DocId="100000041" data="Super Armor." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230410061" DocId="100000041" data="Shield created." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230410012" DocId="100000041" data="Damage taken reduced." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230410023" DocId="100000041" data="Shock resistance." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230410054" DocId="100000041" data="Defense increased and shield created." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230410055" DocId="100000041" data="Defense increased and shield created." />
   </StringTableData>
 </ENTITY_FILE>

@@ -1,4 +1,4 @@
-param([string]$List = '7,35', [int]$Pass = 0, [string]$Tag = 'm', [string]$Work = 'D:\MxM\showcase_data\runs', [int]$Minutes = 40, [int]$Steps = 0, [int]$Count = 2, [int]$FullRes = 0, [int]$KeepSummons = 0)
+﻿param([string]$List = '7,35', [int]$Pass = 0, [string]$Tag = 'm', [string]$Work = 'D:\MxM\showcase_data\runs', [int]$Minutes = 40, [int]$Steps = 0, [int]$Count = 2, [int]$FullRes = 0, [int]$KeepSummons = 0, [int]$UsePakOnly = 1)
 $b = 'D:\MxM\GameServer\build'
 $c = 'D:\MxM\Client\Client.Win32'
 $py = 'D:\MxM\showcase_data\venv\Scripts\python.exe'
@@ -11,7 +11,7 @@ Stop-Process -Name login_srv, hub_srv, game_srv, mm_srv -Force -ErrorAction Sile
 Start-Sleep 2
 foreach ($s in 'mm_srv', 'hub_srv', 'game_srv', 'login_srv') { Start-Process "$b\$s.exe" -WorkingDirectory $b -WindowStyle Minimized; Start-Sleep 2 }
 Start-Sleep 3
-$cl = Start-Process "$c\MXMClient.exe" -ArgumentList '/LogEncryption', '/AuthMethod:local', '/Network:dev', '/PacketEncryption:0', '/AutoJoinGame', '/AutoLoginID:alexis' -WorkingDirectory $c -PassThru
+$cl = Start-Process "$c\MXMClient.exe" -ArgumentList '/LogEncryption', '/AuthMethod:local', '/Network:dev', '/PacketEncryption:0', '/AutoJoinGame', '/AutoLoginID:alexis', "/UsePakOnly:$UsePakOnly" -WorkingDirectory $c -PassThru
 Start-Sleep 20
 $clientPid = (Get-Process MXMClient | Sort-Object StartTime -Descending)[0].Id
 $agentLog = "$Work\$Tag`_agent.log"
