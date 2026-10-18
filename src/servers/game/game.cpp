@@ -519,7 +519,7 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 	}
 	player.input.rot = rot;
 	player.input.speed = speed;
-	if(Config().DevMirror) LOG("Aim :: yaw=%.4f", rot.upperYaw);
+	if(Config().DevMirror) LOG("Aim :: yaw=%.4f pitch=%.4f", rot.upperYaw, rot.upperPitch);
 }
 
 void Game::OnPlayerUpdateRotation(ClientHandle clientHd, ActorUID actorUID, const RotationHumanoid& rot)
@@ -545,7 +545,7 @@ void Game::OnPlayerUpdateRotation(ClientHandle clientHd, ActorUID actorUID, cons
 	}
 
 	player.input.rot = rot;
-	if(Config().DevMirror) LOG("Aim :: yaw=%.4f", rot.upperYaw);
+	if(Config().DevMirror) LOG("Aim :: yaw=%.4f pitch=%.4f", rot.upperYaw, rot.upperPitch);
 }
 
 void Game::OnPlayerChatMessage(ClientHandle clientHd, i32 chatType, const wchar* msg, i32 msgLen)

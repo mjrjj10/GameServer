@@ -7,6 +7,8 @@
 #include <mxm/game_content.h>
 #include "game.h"
 
+static const f32 SHOT_AIM_SCALE = 10.0f;
+
 bool GamePacketHandler::Init(Game* game_)
 {
 	game = game_;
@@ -390,10 +392,11 @@ void GamePacketHandler::HandlePacket_CQ_GamePlayerSyncPhy(ClientHandle clientHd,
 	buff.Read<u32>();
 	buff.Read<u32>();
 	const vec3 origin = f2v(buff.Read<float3>());
-	const i16 dirX = buff.Read<i16>();
-	const i16 dirY = buff.Read<i16>();
+	const i16 aimX = buff.Read<i16>();
+	const i16 aimY = buff.Read<i16>();
+	const i16 aimZ = buff.Read<i16>();
 	for(int i = 0; i < 6; i++) buff.Read<i16>();
-	const i16 distance = buff.Read<i16>();
+	const vec3 aimOffset = vec3((f32)aimX, (f32)aimY, (f32)aimZ) / SHOT_AIM_SCALE;
 
 	const u16 nameLen = buff.Read<u16>();
 	const wchar* name = (const wchar*)buff.ReadRaw(nameLen * sizeof(wchar));
@@ -403,10 +406,10 @@ void GamePacketHandler::HandlePacket_CQ_GamePlayerSyncPhy(ClientHandle clientHd,
 		return;
 	}
 
-	const vec2 dir = vec2((f32)dirX, (f32)dirY);
-	if(glm::length(dir) < 1.0f) return;
+	const vec2 dir = vec2(aimOffset);
+	if(glm::length(dir) < 0.1f) return;
 
-	game->OnPlayerWeaponShot(clientHd, origin, glm::normalize(dir), (f32)MAX(distance, (i16)0), packetData, packetSize);
+	game->OnPlayerWeaponShot(clientHd, origin, glm::normalize(dir), glm::length(dir), packetData, packetSize);
 }
 
 void GamePacketHandler::HandlePacket_CQ_PlayerCastSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
