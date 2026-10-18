@@ -1474,7 +1474,7 @@ bool GameXmlContent::LoadAnimationData()
 					const char* P2 = nullptr;
 					pActionBase->QueryStringAttribute("Param2", &P2);
 					cmd.remote.stopAtTarget = P2 && EA::StdC::Strstr(P2, "DestroyAwayTarget") ? 1 : 0;
-					cmd.remote.remove = P2 && EA::StdC::Strcmp(P2, "Remove") == 0 ? 1 : 0;
+					cmd.remote.remove = P2 && (EA::StdC::Strcmp(P2, "Remove") == 0 || EA::StdC::Strcmp(P2, "RemoveAll") == 0) ? 1 : 0;
 				}
 				const char* TargetParam = nullptr;
 				pActionBase->QueryStringAttribute("TargetParam", &TargetParam);

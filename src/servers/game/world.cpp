@@ -3596,7 +3596,8 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	// played once animation 0 is over (AniLength of its AnimationId)
 	eastl::fixed_vector<SkillAnimPass,8,false>& animPasses = lastAnimPasses;
 	animPasses.clear();
-	if(anim == 0 && forceAnim < 0 && GetGameXmlContent().FindSkillHitEventRemote((i32)skillID) == 0) {
+	if(anim == 0 && forceAnim < 0) {
+		const bool hitEventCombo = GetGameXmlContent().FindSkillHitEventRemote((i32)skillID) != 0;
 		bool regCombo = false;
 		bool acts[8] = {};
 		foreach_const(cmd, action.commands) {
@@ -3614,7 +3615,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		const char* className = content.GetMaster(player.Main().classType).className.c_str();
 		i32 lastActing = -1;
 		for(i32 i = 0; i < 8; i++) if(acts[i]) lastActing = i;
-		if(!regCombo || !acts[0]) {
+		if((!regCombo || !acts[0]) && (!hitEventCombo || !acts[0])) {
 			f32 start = 0;
 			for(i32 i = 0; i <= lastActing && (!regCombo || i <= 1); i++) {
 				if(acts[i] && !animPasses.full()) animPasses.push_back({ i, start });
@@ -3860,7 +3861,7 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 
 	const i32 amount = (i32)(inst.damage * remote.attackMultiplier);
 	if(enemy && remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;
-	if(enemy && remote.changeCasterAction != ActionStateID::INVALID && !inst.actionChanged && !owner.dead && owner.clientHd == ClientHandle::INVALID) {
+	if(enemy && remote.changeCasterAction != ActionStateID::INVALID && !inst.actionChanged && !owner.dead) {
 		inst.actionChanged = true;
 		const ActorUID targetUID = target.Main().UID;
 		LOG("Remote :: %ls hit %ls -> caster action %d", owner.name.data(), target.name.data(), (i32)remote.changeCasterAction);
