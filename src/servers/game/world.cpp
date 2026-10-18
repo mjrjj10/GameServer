@@ -818,8 +818,8 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 			for(i32 r = 0; r < 3; r++) {
 				if(castCostLevel->consume[r] > 0 && player.res[r] >= 0) { player.res[r] -= castCostLevel->consume[r]; player.tNextResSend = Time::ZERO; }
 			}
-			LOG("Cost :: %ls skill=%d empowered level (consumed rp=%.0f bb=%.0f, %d remotes / %d statuses replaced)", player.name.data(), (i32)skillID,
-				castCostLevel->consume[1], castCostLevel->consume[2], (i32)castCostLevel->remoteReplace.size(), (i32)castCostLevel->statusReplace.size());
+			LOG("Cost :: %ls skill=%d empowered level (consumed rp=%.0f bb=%.0f, %d remotes / %d statuses replaced, damage x%.3f)", player.name.data(), (i32)skillID,
+				castCostLevel->consume[1], castCostLevel->consume[2], (i32)castCostLevel->remoteReplace.size(), (i32)castCostLevel->statusReplace.size(), castCostLevel->damageRatio);
 		}
 		PassiveOnSkillCast(player, (i32)skillID);
 	}
@@ -2204,6 +2204,11 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		applyingCasterStatus = true;
 		ApplyStatus(caster, caster, info->casterStatus);
 		applyingCasterStatus = false;
+	}
+	if(info && info->staminaBurn && info->type == "STATUS_TYPE_HEAL" && target.stamina > 0) {
+		LOG("Status :: %ls stamina burned by %d (%.0f -> 0)", target.name.data(), statusID, target.stamina);
+		target.stamina = 0;
+		target.tNextStaminaSend = Time::ZERO;
 	}
 
 	const bool displacement = info && (info->type == "STATUS_TYPE_PUSH" || info->type == "STATUS_TYPE_FORCEBACK" ||
@@ -3844,7 +3849,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.ownerIndex = player.index;
 			pr.skillID = skillID;
 			pr.castID = castID;
-			pr.damage = damage;
+			pr.damage = castCostLevel ? (i32)(damage * castCostLevel->damageRatio) : damage;
 			pr.castPos = castPos;
 			pr.angle = angle;
 			pr.target = cmd->remote.targetPreset == ActionCommand::TargetPreset::MEMORIZED_TFT ? player.memorizedTarget : currentTarget;
@@ -3994,6 +3999,12 @@ struct WorldRemoteSpawner
 	}
 };
 
+static RemoteIdx CostReplacedRemote(const GameXmlContent::CostLevel* level, RemoteIdx idx)
+{
+	if(level) foreach_const(rr, level->remoteReplace) if(rr->first == (i32)idx) return RemoteIdx(rr->second);
+	return idx;
+}
+
 static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, const Remote::SpawnRules& rules, const vec3& pos, i32 excludeIndex, RemoteIdx skipFirst, bool fromDestroy = false)
 {
 	bool skipped = false;
@@ -4035,11 +4046,12 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 				const vec2 rel = vec2(owner.body->GetWorldPos()) - vec2(at);
 				if(glm::length(rel) > 1.0f) dir = glm::normalize(rel);
 			}
-			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, rule->idx, at + vec3(dir * child->offsetY, 0), dir, childTarget, parent.skillID, parent.castID, parent.damage,
+			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, CostReplacedRemote(parent.costLevel, rule->idx), at + vec3(dir * child->offsetY, 0), dir, childTarget, parent.skillID, parent.castID, parent.damage,
 				// clients spawn the directed children (_CreateRemote) of a remote ending on their side themselves
 				parent.clientRemoteID != 0 && !(fromDestroy && rule->kind != Remote::SPAWN_SINGLE && !rule->targetOwner), parent.casterLocal); // returns to the caster are not spawned by clients
 			if(inst) {
 				inst->excludeIndex = excludeIndex;
+				inst->costLevel = parent.costLevel;
 				inst->centeredBox = parent.centeredBox;
 			}
 		}
@@ -4563,9 +4575,10 @@ void World::UpdateRemotes(f32 delta)
 				if(next != RemoteIdx::INVALID) {
 					const Remote* nextRemote = GetGameXmlContent().FindRemote(next);
 					const f32 nextOffset = nextRemote ? nextRemote->offsetY : 0;
-					RemoteInst* child = SpawnRemote(copy.ownerIndex, next, copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, 0, copy.casterLocal);
+					RemoteInst* child = SpawnRemote(copy.ownerIndex, CostReplacedRemote(copy.costLevel, next), copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, 0, copy.casterLocal);
 					if(child) {
 						child->excludeIndex = childExclude;
+						child->costLevel = copy.costLevel;
 						child->centeredBox = copy.centeredBox;
 					}
 				}

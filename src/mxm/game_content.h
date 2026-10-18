@@ -218,6 +218,7 @@ struct StatusInfo
 	i32 stackStatus = 0;                // _ICEQUEEN _Index: stacking status put by the master's hits
 	i32 stackFullStatus = 0;            // _ICEQUEEN _FreezeStatusIndex: applied when the stack is full
 	i32 casterStatus = 0;               // _CasterStatusIndex: applied to the caster when this status is applied
+	bool staminaBurn = false;
 };
 
 // FIRING_METHOD RemoteFactoryComData: the remote a weapon shot creates
@@ -660,6 +661,7 @@ struct GameXmlContent
 		ActionStateID action = ActionStateID::INVALID;
 		eastl::fixed_vector<eastl::pair<i32,i32>,8,false> remoteReplace;
 		eastl::fixed_vector<eastl::pair<i32,i32>,8,false> statusReplace;
+		f32 damageRatio = 1.0f;
 	};
 	eastl::hash_map<i32, eastl::fixed_vector<CostLevel,4,false>> skillCostLevels; // SKILL.xml _COST_PROPERTY/_PROPERTY_LEVEL
 	const eastl::fixed_vector<CostLevel,4,false>* FindSkillCostLevels(i32 skillID) const { auto f = skillCostLevels.find(skillID); return f == skillCostLevels.end() ? nullptr : &f->second; }

@@ -2070,6 +2070,8 @@ bool GameXmlContent::LoadStatusData()
 		StatusInfo st;
 		pInfo->QueryAttribute("ID", &st.ID);
 		XMLElement* pCommon = pInfo->FirstChildElement("ST_COMMONSTATUS");
+		const char* statusKey = pInfo->Attribute("KEYNAME");
+		st.staminaBurn = statusKey && EA::StdC::Strstr(statusKey, "STAMINABURN") != nullptr;
 		if(!pCommon) continue;
 
 		f32 durationMs = 0;
@@ -2343,6 +2345,19 @@ bool GameXmlContent::LoadStatusData()
 							pS->QueryAttribute("_StatusIndex", &from);
 							pS->QueryAttribute("_ReplaceIndex", &to);
 							if(from != 0 && to != 0 && !lvl.statusReplace.full()) lvl.statusReplace.push_back({ from, to });
+						}
+						for(XMLElement* pP = xmlSKILLPROPERTY.FirstChildElement()->FirstChildElement(); pP; pP = pP->NextSiblingElement()) {
+							XMLElement* pSP = pP->FirstChildElement("ST_SKILL_PROPERTY");
+							const char* spType = pSP ? pSP->Attribute("_Type") : nullptr;
+							if(!spType || EA::StdC::Strcmp(spType, "E_SKILL_PROPERTY_DAMAGE") != 0 || pSP->IntAttribute("_SkillIndex") != skillID) continue;
+							XMLElement* pNormal = pSP->FirstChildElement("_PROPERTY_LEVEL");
+							XMLElement* pCostLevel = pSP->FirstChildElement("_COST_LEVEL");
+							XMLElement* pEmpowered = pCostLevel ? pCostLevel->FirstChildElement("_PROPERTY_LEVEL") : nullptr;
+							if(!pNormal || !pEmpowered) continue;
+							const f32 normalBase = pNormal->FloatAttribute("_BaseDamage");
+							const f32 empoweredBase = pEmpowered->FloatAttribute("_BaseDamage");
+							if(normalBase > 0 && empoweredBase > 0) lvl.damageRatio = empoweredBase / normalBase;
+							break;
 						}
 						auto& levels = skillCostLevels[skillID];
 						if(!levels.full()) levels.push_back(lvl);
