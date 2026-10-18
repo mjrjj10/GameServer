@@ -2271,11 +2271,23 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		}
 		else {
 			const f32 dist = info->type == "STATUS_TYPE_FORCEBACK" && info->distance > 0 ? info->distance :
-				STATUS_PUSH_BASE_DISTANCE * (info->distanceRatio > 0 ? info->distanceRatio : 1.0f);
+				STATUS_PUSH_BASE_DISTANCE * (info->distanceRatio != 0 ? info->distanceRatio : 1.0f);
 			to = from + vec3(dir * dist, 0);
 		}
 		LOG("Push :: %ls -> %ls status=%d sep=%.0f dir=(%.2f, %.2f) to=(%.0f, %.0f)", caster.name.data(), target.name.data(), statusID, len, dir.x, dir.y, to.x, to.y);
-		if(target.clientHd == ClientHandle::INVALID && graphDuration > 0) {
+		if(target.clientHd == ClientHandle::INVALID && graphDuration > 0 && &caster == &target) {
+			const vec2 rel = vec2(to - from);
+			const f32 rl = glm::length(rel);
+			if(rl > 1.0f) {
+				target.dashDir = rel / rl;
+				target.dashSpeed = rl / graphDuration;
+				target.dashStartAt = localTime;
+				target.dashDist = rl;
+				target.dashDone = 0;
+				target.dashUntil = TimeAdd(localTime, TimeMsToTime(graphDuration * 1000.0));
+			}
+		}
+		else if(target.clientHd == ClientHandle::INVALID && graphDuration > 0) {
 			target.pushTarget = to;
 			target.pushSpeed = glm::length(vec2(to - from)) / graphDuration;
 			target.pushUntil = TimeAdd(localTime, TimeMsToTime(graphDuration * 1000.0));
