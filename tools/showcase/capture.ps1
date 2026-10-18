@@ -12,5 +12,6 @@ while((Get-Date) -lt $end) {
   $small = New-Object System.Drawing.Bitmap $bmp, 1440, 810
   $small.Save((Join-Path $OutDir "$ms.jpg"), [System.Drawing.Imaging.ImageFormat]::Jpeg)
   $g.Dispose(); $bmp.Dispose(); $small.Dispose()
-  Start-Sleep -Milliseconds $IntervalMs
+  $left = $IntervalMs - ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() - $ms)
+  if($left -gt 0) { Start-Sleep -Milliseconds $left }
 }

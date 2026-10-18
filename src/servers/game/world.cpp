@@ -92,6 +92,8 @@ static const f32 OBSTRUCT_SIDE = 50.0f;
 static const f32 SHOWCASE_MIN_MEASURE_SEC = 2.5f;
 static const f32 SHOWCASE_QUIET_SEC = 0.5f;
 static const f32 MIRROR_POS_TOLERANCE = 60.0f;
+static const f64 MIRROR_STUCK_STATE_SEC = 3.0;
+static const f64 SELF_DRAG_LINK_SEC = 0.6;
 static const i32 MIRROR_POS_MAX_WAITS = 12;
 static const f64 MIRROR_POS_RETRY_MS = 400.0;
 static const i32 RELAY_MODE_STATE_OFFSET = 9;
@@ -1048,6 +1050,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	const Remote* remote = content.FindRemote(RemoteIdx(1430000000 + (i32)classType * 10000 + 10));
 
 	f32 aimMax = WEAPON_SHOT_MAX_DISTANCE;
+	bool spawnAtAim = false;
 	// FIRING_METHOD of the active weapon: combo step / charge level / every Nth shot / status replacement
 	{
 		const u32 m = player.mainCharaID & 1;
@@ -1055,6 +1058,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		const WeaponFiring* wf = content.FindWeaponFiring((i32)weapon);
 		if(wf) {
 			if(wf->maxDistance > 0) aimMax = wf->maxDistance;
+			spawnAtAim = wf->spawnAtAim;
 			RemoteIdx idx = wf->base;
 			if(player.chargeLevel > 0 && player.chargeLevel <= wf->charge.size()) idx = wf->charge[player.chargeLevel - 1];
 			else if(player.firingCombo > 0 && player.firingCombo <= wf->combo.size()) idx = wf->combo[player.firingCombo - 1];
@@ -1095,6 +1099,27 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		}
 	}
 	const Remote* bomb = remote ? content.FindRemote(remote->destroyCreateRemote) : nullptr;
+	if(spawnAtAim && remote) {
+		f32 reach = MIN(distance > 1.0f ? distance : ClassAttackRange(classType) * WEAPON_RANGE_SCALE, aimMax);
+		if(player.pendingShotRawSize > 0) {
+			static i32 aimDumps = 0;
+			if(aimDumps++ < 12) {
+				eastl::fixed_string<char,700,true> hex;
+				for(i32 k = 0; k < player.pendingShotRawSize && k < 300; k++) hex.append_sprintf("%02x", player.pendingShotRaw[k]);
+				LOG("Shot :: %ls aim-spawn packet origin=(%.0f, %.0f, %.0f) dist=%.0f raw=%s", player.name.data(), origin.x, origin.y, origin.z, distance, hex.c_str());
+			}
+		}
+		const vec3 aimPos = vec3(vec2(origin) + dir * reach, player.body->GetWorldPos().z);
+		replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(dir.y, dir.x)));
+		const bool bot = player.clientHd == ClientHandle::INVALID;
+		if(!bot && player.pendingShotRawSize > 0) {
+			replication->RelayRemoteCreate(player.clientHd, player.pendingShotRaw.data(), player.pendingShotRawSize, aimPos, remote->lifeTime, remote->ID);
+			player.pendingShotRawSize = 0;
+		}
+		SpawnRemote(player.index, remote->ID, aimPos, dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), bot);
+		LOG("Shot :: %ls class=%d remote=%d at aimed point (%.0f, %.0f) reach=%.0f", player.name.data(), (i32)classType, (i32)remote->ID, aimPos.x, aimPos.y, reach);
+		return;
+	}
 
 	const f32 classRange = ClassAttackRange(classType) * WEAPON_RANGE_SCALE;
 	const bool reliable = distance >= WEAPON_SHOT_RELIABLE_DISTANCE;
@@ -1885,6 +1910,7 @@ void World::ReleaseCast(Player& player)
 void World::CancelCast(Player& player, const char* reason)
 {
 	LOG("Cast :: %ls skill=%d cancelled (%s)", player.name.data(), (i32)player.casting.skillID, reason);
+	replication->SendCancelSkillToAll(player.Main().UID, player.casting.skillID);
 	player.casting.skillID = SkillID::INVALID;
 }
 
@@ -2188,6 +2214,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	st.targetUID = target.Main().UID;
 	st.casterUID = statusCasterOverride != ActorUID::INVALID ? statusCasterOverride : caster.Main().UID;
 	st.until = TimeAdd(localTime, TimeMsToTime(MAX(duration, 0.1f) * 1000.0));
+	st.appliedAt = localTime;
 	st.nextTick = TimeAdd(localTime, TimeMsToTime((info && info->intervalSec > 0 ? info->intervalSec : 1.0f) * 1000.0));
 	st.overlap = 1;
 	st.nextHealTick = localTime;
@@ -2222,11 +2249,24 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	const vec3 from = target.body->GetWorldPos();
 	vec3 to = from;
 	const f32 graphDuration = duration * (info && info->timeRatio > 0 ? info->timeRatio : 1.0f);
-	if(info && displacement && info->type != "STATUS_TYPE_AIRBORNE" && info->type != "STATUS_TYPE_FLY") {
+	const bool flyMove = info && info->type == "STATUS_TYPE_FLY" && info->distanceRatio != 0;
+	if(info && displacement && info->type != "STATUS_TYPE_AIRBORNE" && (info->type != "STATUS_TYPE_FLY" || flyMove)) {
 		vec2 dir = vec2(from - caster.body->GetWorldPos());
 		const f32 len = glm::length(dir);
 		dir = len > 1.0f ? dir / len : vec2(cosf(caster.input.rot.upperYaw), sinf(caster.input.rot.upperYaw));
-		if(info->type == "STATUS_TYPE_DRAGGED") {
+		if(info->type == "STATUS_TYPE_DRAGGED" && &caster == &target) {
+			const bool hooked = caster.lastHitTargetIndex >= 0 && caster.lastHitTargetIndex != (i32)caster.index && TimeDiffSec(TimeDiff(caster.lastHitAt, localTime)) <= SELF_DRAG_LINK_SEC;
+			if(hooked) {
+				const Player& hookedPlayer = players[caster.lastHitTargetIndex];
+				const vec3 hp = hookedPlayer.body->GetWorldPos();
+				const vec2 rel = vec2(hp - from);
+				const f32 rl = glm::length(rel);
+				if(rl > 1.0f) dir = rel / rl;
+				to = hp - vec3(dir * (info->dragOffset > 0 ? info->dragOffset : HitRadius(hookedPlayer) + HitRadius(target)), 0);
+			}
+			else to = from;
+		}
+		else if(info->type == "STATUS_TYPE_DRAGGED") {
 			to = caster.body->GetWorldPos() + vec3(dir * (info->dragOffset > 0 ? info->dragOffset : 200.0f), 0);
 		}
 		else {
@@ -2825,6 +2865,11 @@ void World::UpdateShowcase()
 		human->placedAt = vec3(0);
 		LOG("Showcase :: result hit=%d expect=%d %s damage=%d hits=%d dummyZ=%.0f groundZ=%.0f", hit ? 1 : 0, showcase.prevExpect, ok ? "OK" : "MISMATCH", dealt, hits, pd.body->GetWorldPos().z, showcase.groundZ);
 		foreach(tp, players) ToggleOff(*tp);
+		if(mirror && human->lastClientAction != ActionStateID::INVALID) {
+			const f64 held = TimeDiffSec(TimeDiff(human->lastClientActionSince, localTime));
+			const bool busy = GetGameXmlContent().IsCastAction(human->lastClientAction) && human->casting.skillID == SkillID::INVALID;
+			LOG("Mirror :: human client state=%s for %.1fs casting=%d%s", ActionStateToString(human->lastClientAction), held, (i32)human->casting.skillID, busy && held > MIRROR_STUCK_STATE_SEC ? " STUCK" : "");
+		}
 		{
 			const Player& pc = players[showcase.prevCaster];
 			eastl::fixed_string<char,160,false> sts;
@@ -3374,7 +3419,14 @@ void World::UpdateStatuses()
 		if(localTime < ps->time) { ++ps; continue; }
 		Player& caster = players[ps->casterIndex];
 		const ActorMaster* targetMaster = ps->targetUID != ActorUID::INVALID ? FindMasterActor(ps->targetUID) : nullptr;
-		if(!caster.dead && targetMaster) {
+		if(targetMaster && ps->remove) {
+			foreach(it, activeStatuses) {
+				if(it->targetIndex != targetMaster->parent->index || it->statusID != ps->statusID || localTime >= it->until) continue;
+				it->until = localTime;
+				LOG("Status :: %ls status=%d removed by action", targetMaster->parent->name.data(), ps->statusID);
+			}
+		}
+		else if(!caster.dead && targetMaster) {
 			ApplyStatus(caster, *targetMaster->parent, ps->statusID, ps->power, ps->duration);
 		}
 		ps = pendingStatuses.erase_unsorted(ps);
@@ -3602,6 +3654,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			ps.targetUID = lastChild ? ActorUID::INVALID : self ? player.Main().UID : currentTarget;
 			ps.duration = cmd->status.removeAtEnd ? MAX(action.seqLength - t, 0.3f) : -1.0f;
 			ps.power = (f32)damage;
+			ps.remove = cmd->status.remove != 0;
 			if(cmd->type == ActionCommand::Type::STATUS_SKILL_TARGET && targets.size() > 1) {
 				foreach_const(tg, targets) {
 					if(pendingStatuses.full()) break;
@@ -4314,6 +4367,10 @@ void World::PlayerSkillDamage(Player& player, SkillID skillID, const vec3& castP
 void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 damage, const Projectile* proj, u32 remoteID, RemoteIdx remoteDoc, vec2 remoteDir)
 {
 	if(target.dead || target.untargetable) return;
+	if(attacker.index != target.index) {
+		attacker.lastHitTargetIndex = (i32)target.index;
+		attacker.lastHitAt = localTime;
+	}
 	if(HasStatusType(target, "STATUS_TYPE_GODMODE")) return;
 	const i32 damageIn = damage;
 	f32 elementMul = 1.0f;

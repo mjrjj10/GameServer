@@ -1381,6 +1381,21 @@ void Replication::SendExecuteSkillAck(ClientHandle clientHd, ActorUID casterUID,
 	SendPacket(clientHd, ack);
 }
 
+void Replication::SendCancelSkillToAll(ActorUID casterUID, SkillID skillID)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, casterUID);
+		if(localID == LocalActorID::INVALID) continue;
+		Sv::SN_CancelSkill cancel;
+		cancel.entity = (u32)localID;
+		cancel.ret = 0;
+		cancel.skillIndex = (u32)skillID;
+		SendPacket(clientHd, cancel);
+	}
+}
+
 void Replication::SendNpcBehaviorToAll(ActorUID actorUID, ActionStateID action, const vec3& pos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID)
 {
 	const float3 dir = v2f(vec3(cosf(worldYaw), sinf(worldYaw), 0));

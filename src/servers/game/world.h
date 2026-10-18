@@ -156,6 +156,10 @@ struct World
 		f32 shotLeadSec = 0;
 		f32 weaponAimYaw = 0;
 		vec3 lastClientPos = vec3(0);
+		ActionStateID lastClientAction = ActionStateID::INVALID;
+		i32 lastHitTargetIndex = -1;
+		Time lastHitAt = Time::ZERO;
+		Time lastClientActionSince = Time::ZERO;
 		i32 comboSlot = -1;
 		SkillID comboPending = SkillID::INVALID;
 		SkillID comboSkill = SkillID::INVALID;
@@ -485,6 +489,7 @@ struct World
 		Time nextHealTick;
 		i32 healTicksDone;
 		Time nextAuraPulse = Time::ZERO;
+		Time appliedAt = Time::ZERO;
 		bool removeOnHit = false; // marked when its target got hit (E_NEXT_STATUS_CONDITION_REMOVE_ONHIT)
 		i32 custom = 0;           // passive counter (_InitCustomValue .. _MaxCustomValue)
 	};
@@ -498,6 +503,7 @@ struct World
 		ActorUID targetUID;
 		f32 duration;
 		f32 power;
+		bool remove = false;
 	};
 	eastl::fixed_vector<PendingStatus,256,false> pendingStatuses;
 

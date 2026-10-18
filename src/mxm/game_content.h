@@ -229,6 +229,7 @@ struct WeaponFiring
 	RemoteIdx replaceRemote = RemoteIdx::INVALID;     // _RemoteIndexToReplace (the status is consumed)
 	f32 maxDistance = 0;
 	eastl::fixed_string<char,32,false> fireDummy;     // FiringMethodData _FiringDummy
+	bool spawnAtAim = false;                          // _RemoteSpawnAimPosition: the remote appears at the aimed point
 };
 
 struct Remote
@@ -495,6 +496,7 @@ struct GameXmlContent
 					i32 statusIndex;
 					ActionCommand::TargetPreset targetPreset;
 					u8 removeAtEnd;
+					u8 remove;
 				} status;
 
 				struct {
@@ -616,6 +618,7 @@ struct GameXmlContent
 	const SkillInput* FindSkillInput(i32 skillID) const { auto f = skillInput.find(skillID); return f == skillInput.end() ? nullptr : &f->second; }
 	struct SkillCast { enum Type: u8 { DELAY, LIMIT, CHARGING } type = DELAY; f32 time = 0; ActionStateID action = ActionStateID::INVALID; bool interruptByMove = false; };
 	const SkillCast* FindSkillCast(i32 skillID) const { auto f = skillCast.find(skillID); return f == skillCast.end() ? nullptr : &f->second; }
+	bool IsCastAction(ActionStateID action) const { foreach_const(it, skillCast) if(it->second.action == action) return true; return false; }
 	// SKILL_TYPE_TOGGLE: on/off by recast; _RemoteList and _StatusList stay while on, _Toggle consumes a resource
 	struct SkillToggle { enum Consume: u8 { NONE, MANA, RAGE, STAMINA } consume = NONE; f32 interval = 0; f32 value = 0; eastl::fixed_vector<i32,4,false> remotes; eastl::fixed_vector<i32,6,false> statuses; };
 	const SkillToggle* FindSkillToggle(i32 skillID) const { auto f = skillToggle.find(skillID); return f == skillToggle.end() ? nullptr : &f->second; }

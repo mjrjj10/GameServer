@@ -2833,6 +2833,19 @@ inline const char* PacketSerialize<Sv::SN_NotifyCooltime>(const void* packetData
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_CancelSkill>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_CancelSkill(%d, %d) :: {", Sv::SN_CancelSkill::NET_ID, packetSize);
+	SER("	entity=0x%08x", buff.Read<u32>());
+	SER("	ret=%u", buff.Read<u32>());
+	SER("	skillIndex=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SA_ExecuteSkill>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

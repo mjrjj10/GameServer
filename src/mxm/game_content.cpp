@@ -1510,6 +1510,7 @@ bool GameXmlContent::LoadAnimationData()
 				const char* Param2 = nullptr;
 				pActionBase->QueryStringAttribute("Param2", &Param2);
 				cmd.status.removeAtEnd = Param2 && EA::StdC::Strstr(Param2, "RemoveWhenAniEnd") ? 1 : 0;
+				cmd.status.remove = Param2 && EA::StdC::Strcmp(Param2, "Remove") == 0 ? 1 : 0;
 			} break;
 
 			case ActionCommand::Type::ROTATESPEED: {
@@ -2556,6 +2557,7 @@ bool GameXmlContent::LoadStatusData()
 			{
 				WeaponFiring wf;
 				if(fireDummy) wf.fireDummy = fireDummy;
+				wf.spawnAtAim = pData && XmlAttrTrue(pData, "_RemoteSpawnAimPosition");
 				XMLElement* pFactory = pInfo->FirstChildElement("RemoteFactoryComData");
 				XMLElement* pCreate = pFactory ? pFactory->FirstChildElement("_Create") : nullptr;
 				XMLElement* pDef = pCreate ? pCreate->FirstChildElement("_Default") : nullptr;
