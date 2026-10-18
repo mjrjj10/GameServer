@@ -4,6 +4,7 @@
 #include <mxm/game_content.h>
 
 static const f32 COMBAT_ATTACK_STAT = 0.0f; // skill power only comes from in-game ability upgrades (CREATURE_CHARACTER _STAT_UP), none yet
+static const i32 STAT_HEALTH = 0;
 static const i32 STAT_STAMINA = 2;
 static const i32 STAT_STAMINAREGEN = 5;
 static const i32 STAT_CRITICALRATE = 9;
@@ -60,7 +61,8 @@ static const i32 WEAPON_HIT_DAMAGE = 120;
 static const i32 STAT_DEFENCE = 7;
 static const i32 STAT_DEFENCE_PENETRATION = 20;
 static const i32 STAT_SKILL_PENETRATION = 21;
-static const i32 STAT_SKILLDAMAGE_REDUCE_RATIO = 68;
+static const i32 STAT_SKILLDAMAGE_REDUCE_RATIO = 58;
+static const i32 STAT_TOUGHNESS = 65;
 static const f32 DEFENCE_SCALE = 100.0f;
 static const f32 PENETRATION_CAP = 50.0f;
 static const f32 SKILLDAMAGE_REDUCE_CAP = 80.0f;
@@ -79,7 +81,6 @@ static const i32 CLASS_NUM_ANDROB = 30;
 static const i32 CLASS_NUM_ATTACKER = 31;
 static const i32 CLASS_NUM_BOXER = 32;
 static const i32 CLASS_NUM_SHUGOTRADER = 33;
-static const i32 CLASS_NUM_STATESMAN = 36;
 static const f32 TOOLTIP_DEFENDER_CC_IMMUNE_SEC = 1.0f;
 static const f32 TOOLTIP_DEATHKNIGHT_REVIVE_HP = 0.30f;
 static const i32 TOOLTIP_LILU_EVERY_N = 4;
@@ -121,7 +122,6 @@ static const f32 TOOLTIP_BOXER_MARK_SEC = 1.5f;
 static const f32 TOOLTIP_BOXER_WEAPON_MUL = 1.15f;
 static const i32 TOOLTIP_SHUGO_EVERY_N = 6;
 static const f32 TOOLTIP_SHUGO_WEAPON_MUL = 1.80f;
-static const f32 TOOLTIP_STATESMAN_CC_MUL = 0.75f;
 static const i32 CLASS_NUM_ELECTRO = 4;
 static const i32 CLASS_NUM_PHOTOG = 15;
 static const i32 CLASS_NUM_EFREET = 23;
@@ -609,8 +609,8 @@ World::Player& World::CreatePlayer(const PlayerDescription& desc, const vec3& po
 	main.parent = &player;
 	main.classType = player.mainClass;
 	main.skinIndex = player.mainSkin;
-	main.hp = 2400;
-	main.hpMax = 2400;
+	main.hpMax = (i32)MasterStat(main.classType, STAT_HEALTH);
+	main.hp = main.hpMax;
 	main.seed = (i32)RandUint();
 
 
@@ -619,8 +619,9 @@ World::Player& World::CreatePlayer(const PlayerDescription& desc, const vec3& po
 	sub.parent = &player;
 	sub.classType = player.subClass;
 	sub.skinIndex = player.subSkin;
-	sub.hp = 2400;
-	sub.hpMax = 2400;
+	sub.hpMax = (i32)MasterStat(sub.classType, STAT_HEALTH);
+	sub.hp = sub.hpMax;
+	ASSERT(main.hpMax > 0 && sub.hpMax > 0);
 	sub.seed = (i32)RandUint();
 
 
@@ -1026,8 +1027,16 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	}
 }
 
+static void BotWeaponAnimation(const World::Player& player, Replication* replication)
+{
+	if(player.clientHd != ClientHandle::INVALID) return;
+	const WeaponIndex weapon = (player.mainCharaID & 1) == 0 ? player.mainWeapon : player.subWeapon;
+	replication->RelayWeaponState(ClientHandle::INVALID, player.Main().UID, (i32)weapon, 2, player.chargeLevel, player.firingCombo);
+}
+
 void World::PlayerWeaponFire(Player& player)
 {
+	BotWeaponAnimation(player, replication);
 	const f32 range = ClassAttackRange(player.Main().classType) * WEAPON_RANGE_SCALE;
 	const vec2 dir = vec2(cosf(player.weaponAimYaw), sinf(player.weaponAimYaw));
 	const vec3 origin = player.body->GetWorldPos();
@@ -1076,6 +1085,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	if(player.dead) return;
 	const ClassType classType = player.Main().classType;
 	if(WeaponIsMelee(player)) return;
+	BotWeaponAnimation(player, replication);
 	if(player.clientHd != ClientHandle::INVALID && player.casting.skillID != SkillID::INVALID && player.casting.type == GameXmlContent::SkillCast::LIMIT) {
 		ReleaseCast(player);
 		return;
@@ -1764,7 +1774,8 @@ bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* duratio
 		}
 		target.cleanseCharges = MIN(target.cleanseCharges + 1, st->info->customMax);
 	}
-	if((i32)target.Main().classType == CLASS_NUM_STATESMAN && duration) *duration *= TOOLTIP_STATESMAN_CC_MUL;
+	const f32 toughness = MasterStat(target.Main().classType, STAT_TOUGHNESS);
+	if(toughness > 0 && duration) *duration *= MAX(1.0f - toughness / 100.0f, 0.0f);
 	return false;
 }
 
