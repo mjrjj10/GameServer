@@ -3690,7 +3690,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			const auto preset = cmd->status.targetPreset;
 			const bool self = preset == ActionCommand::TargetPreset::SELF_FFF || preset == ActionCommand::TargetPreset::SELF_FFF_1 ||
 				preset == ActionCommand::TargetPreset::SELF_TFF || preset == ActionCommand::TargetPreset::SELF_TTF || preset == ActionCommand::TargetPreset::SELF_TTT;
-			const bool lastChild = preset == ActionCommand::TargetPreset::LAST_CHILD_FFF || preset == ActionCommand::TargetPreset::LAST_CHILD_TFF;
+			const bool lastChild = preset == ActionCommand::TargetPreset::LAST_CHILD_FFF || preset == ActionCommand::TargetPreset::LAST_CHILD_TFF || preset == ActionCommand::TargetPreset::CHILD_INDEX_FFF;
 			ps.targetUID = lastChild ? ActorUID::INVALID : self ? player.Main().UID : currentTarget;
 			ps.duration = cmd->status.removeAtEnd ? MAX(action.seqLength - t, 0.3f) : -1.0f;
 			ps.power = (f32)damage;
