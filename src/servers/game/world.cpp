@@ -221,7 +221,8 @@ void World::Update(Time localTime_)
 			const f32 total = (f32)TimeDiffSec(TimeDiff(p.dashStartAt, p.dashUntil));
 			const f32 frac = total > 0 ? MIN((f32)TimeDiffSec(TimeDiff(p.dashStartAt, localTime)) / total, 1.0f) : 1.0f;
 			const f32 target = p.dashDist * frac * frac;
-			physics.Move(&body, vec3(p.dashDir * (target - p.dashDone), 0), (f32)tdelta);
+			const f32 ahead = glm::dot(vec2(p.dashOrigin) + p.dashDir * target - vec2(body.GetWorldPos()), p.dashDir);
+			if(ahead > 0) physics.Move(&body, vec3(p.dashDir * ahead, 0), (f32)tdelta);
 			p.dashDone = target;
 			p.input.moveTo = body.GetWorldPos();
 		}
@@ -2296,6 +2297,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 				target.dashDir = rel / rl;
 				target.dashSpeed = rl / graphDuration;
 				target.dashStartAt = localTime;
+				target.dashOrigin = target.body->GetWorldPos();
 				target.dashDist = rl;
 				target.dashDone = 0;
 				target.dashUntil = TimeAdd(localTime, TimeMsToTime(graphDuration * 1000.0));
@@ -4741,6 +4743,7 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			mover.dashDir = moveDir;
 			mover.dashSpeed = moveDist / moveDuration;
 			mover.dashStartAt = localTime;
+			mover.dashOrigin = mover.body->GetWorldPos();
 			mover.dashDist = moveDist;
 			mover.dashDone = 0;
 			mover.dashUntil = TimeAdd(localTime, TimeMsToTime(moveDuration * 1000.0));

@@ -185,6 +185,7 @@ struct World
 		vec2 dashDir = vec2(1, 0);
 		f32 dashSpeed = 0;
 		Time dashStartAt = Time::ZERO;
+		vec3 dashOrigin = vec3(0);
 		f32 dashDist = 0;
 		f32 dashDone = 0;
 		Time ccImmuneUntil = Time::ZERO;

@@ -331,7 +331,12 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 				const GameXmlContent& content = GetGameXmlContent();
 				for(int mi = 0; mi < 2; mi++) {
 					if(u->masters[mi].classType == ClassType::NONE) continue;
-					const auto& ids = content.masterClassTypeMap.at(u->masters[mi].classType)->skillIDs;
+					eastl::fixed_vector<SkillID,8,true> ids;
+					foreach_const(sid, content.masterClassTypeMap.at(u->masters[mi].classType)->skillIDs) {
+						const i32 slot = (i32)*sid % 100;
+						if(slot == 10 || slot == 20 || slot == 30 || slot == 40) ids.push_back(*sid);
+					}
+					eastl::sort(ids.begin(), ids.end());
 					const i32 first = Config().DevMirrorPass ? 2 : 0;
 					if((i32)ids.size() > first + 1) {
 						u->masters[mi].skills[0] = ids[first];
