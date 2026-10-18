@@ -476,6 +476,8 @@ struct World
 	eastl::fixed_vector<PendingRemote,256,false> pendingRemotes;
 	eastl::fixed_vector<RemoteInst,256,false> remoteInsts;
 	eastl::fixed_vector<CastHit,512,false> castHits;
+	struct RepeatHit { u32 castID; u32 targetIndex; i32 count; Time at; };
+	eastl::fixed_vector<RepeatHit,64,true> repeatHits;
 
 	struct ActiveStatus
 	{
@@ -543,7 +545,7 @@ struct World
 	struct GroundAura
 	{
 		u32 ownerIndex;
-		i32 auraStatus;  // the aura status itself (its _AuraStatusIndex children are given)
+		i32 auraStatus;
 		f32 range;
 		vec3 pos;
 		Time until;

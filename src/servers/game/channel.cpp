@@ -79,7 +79,6 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 			NT_LOG("[client%x] Client :: %s size=%d :: %s", clientHd, header.netID == 60041 ? "CQ_ExecuteSkill" : "CQ_PreCastSkill", packetSize, hex.data());
 			LOG("Cast :: client%x %s size=%d", clientHd, header.netID == 60041 ? "CQ_ExecuteSkill" : "CQ_PreCastSkill", packetSize);
 			if(header.netID == 60041 && packetSize >= 8) {
-				// CQ_ExecuteSkill: u32 actor, u32 skill, float3 pos, u16 target count, u32 targets (picked after the cast started)
 				const float3* pos = packetSize >= 20 ? (const float3*)(packetData + 8) : nullptr;
 				LocalActorID target = LocalActorID::INVALID;
 				if(packetSize >= 26 && *(const u16*)(packetData + 20) > 0) target = (LocalActorID)*(const u32*)(packetData + 22);

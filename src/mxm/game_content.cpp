@@ -2275,6 +2275,7 @@ bool GameXmlContent::LoadStatusData()
 				pS->QueryStringAttribute("DATAKEY", &key);
 				pS->QueryStringAttribute("data", &text);
 				if(!key || !text || EA::StdC::Strncmp(key, "STR_SKILL_DESC_", 15) != 0) continue;
+				if(EA::StdC::Stristr(text, "can be struck multiple times") || EA::StdC::Stristr(text, "can hit the same target")) repeatHitReduced.insert(EA::StdC::AtoI32(key + 15));
 				if(!EA::StdC::Stristr(text, "movespeed") && !EA::StdC::Stristr(text, "movement speed")) continue;
 				const char* ph = EA::StdC::Strstr(text, ":status:stat:mul:");
 				if(!ph) continue;

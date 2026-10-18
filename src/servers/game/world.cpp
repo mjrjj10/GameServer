@@ -56,14 +56,14 @@ static f32 ElementMultiplier(const World::Player& attacker, const World::Player&
 	return 1.0f;
 }
 
-static const i32 WEAPON_HIT_DAMAGE = 120;              // fallback when the weapon has no _PvPAttack
+static const i32 WEAPON_HIT_DAMAGE = 120;
 static const i32 STAT_DEFENCE = 7;
 static const i32 STAT_DEFENCE_PENETRATION = 20;
 static const i32 STAT_SKILL_PENETRATION = 21;
 static const i32 STAT_SKILLDAMAGE_REDUCE_RATIO = 68;
-static const f32 DEFENCE_SCALE = 100.0f;             // client Defense tooltip: received = 100 / (100 + DEF)
-static const f32 PENETRATION_CAP = 50.0f;            // stat tooltip: cannot exceed 50%
-static const f32 SKILLDAMAGE_REDUCE_CAP = 80.0f;     // stat tooltip: cannot exceed 80%
+static const f32 DEFENCE_SCALE = 100.0f;
+static const f32 PENETRATION_CAP = 50.0f;
+static const f32 SKILLDAMAGE_REDUCE_CAP = 80.0f;
 static const f64 WEAPON_HIT_INTERVAL_MS = 80.0;
 static const f32 WEAPON_PROJECTILE_SPEED = 4000.0f;
 static const f32 WEAPON_MELEE_MAX_RANGE = 600.0f;
@@ -95,6 +95,8 @@ static const f32 MIRROR_POS_TOLERANCE = 60.0f;
 static const f64 MIRROR_STUCK_STATE_SEC = 3.0;
 static const f64 SELF_DRAG_LINK_SEC = 0.6;
 static const i32 ULTIMATE_SKILL_SUFFIX = 50;
+static const f32 REPEAT_HIT_REDUCTION = 0.1f;
+static const f32 REPEAT_HIT_REDUCTION_CAP = 0.4f;
 static const i32 MIRROR_POS_MAX_WAITS = 12;
 static const f64 MIRROR_POS_RETRY_MS = 400.0;
 static const i32 RELAY_MODE_STATE_OFFSET = 9;
@@ -3870,7 +3872,6 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	}
 	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty()) return;
 
-	// _HitInvalidTime belongs to each remote instance: one instance hits a target once per window
 	foreach(h, castHits) {
 		if(h->instID == inst.instID && h->playerIndex == target.index && localTime < h->until) return;
 	}
@@ -3894,7 +3895,19 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 					stackBonus += (i32)(st->info->additionalDamageByCaster * MAX(st->overlap, 1));
 			}
 		}
-		if(enemy) DamagePlayer(owner, target, inst.skillID, amount + stackBonus, nullptr, inst.clientRemoteID, remote.ID, inst.dir);
+		i32 dealt = amount + stackBonus;
+		if(enemy && GetGameXmlContent().IsRepeatHitReduced((i32)inst.skillID)) {
+			RepeatHit* rh = nullptr;
+			foreach(r, repeatHits) if(r->castID == inst.castID && r->targetIndex == target.index) rh = &*r;
+			if(!rh) {
+				repeatHits.push_back({ inst.castID, target.index, 0, localTime });
+				rh = &repeatHits.back();
+			}
+			dealt = (i32)(dealt * MAX(1.0f - REPEAT_HIT_REDUCTION * rh->count, 1.0f - REPEAT_HIT_REDUCTION_CAP));
+			rh->count++;
+			rh->at = localTime;
+		}
+		if(enemy) DamagePlayer(owner, target, inst.skillID, dealt, nullptr, inst.clientRemoteID, remote.ID, inst.dir);
 		else if(remote.damageGroup == Remote::DamageGroup::eFRIEND) HealPlayer(owner, target, amount);
 	}
 
@@ -4371,6 +4384,10 @@ void World::UpdateRemotes(f32 delta)
 		}
 	}
 
+	for(auto r = repeatHits.begin(); r != repeatHits.end(); ) {
+		if(TimeDiffSec(TimeDiff(r->at, localTime)) > 10.0) r = repeatHits.erase_unsorted(r);
+		else ++r;
+	}
 	for(auto h = castHits.begin(); h != castHits.end(); ) {
 		if(localTime >= h->until) h = castHits.erase_unsorted(h);
 		else ++h;
@@ -4449,7 +4466,6 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		}
 	}
 
-	// defence (client Defense tooltip) reduced by the attacker's penetration; skills also take Skill Defense
 	if(Config().DamageFormula && attacker.index != target.index) {
 		const bool skillHit = !proj && skillID != SkillID::INVALID;
 		const f32 def = MasterStat(target.Main().classType, STAT_DEFENCE) * MAX(1.0f + StatusModMulSum(target, StatusMod::DEFENCE) / 100.0f, 0.0f);
