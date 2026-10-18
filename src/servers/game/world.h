@@ -505,6 +505,7 @@ struct World
 		f32 absorbed = 0;
 		bool removeOnHit = false; // marked when its target got hit (E_NEXT_STATUS_CONDITION_REMOVE_ONHIT)
 		i32 custom = 0;           // passive counter (_InitCustomValue .. _MaxCustomValue)
+		i32 damageAtStart = 0;
 	};
 	eastl::fixed_vector<ActiveStatus,512,false> activeStatuses;
 

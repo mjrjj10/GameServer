@@ -2248,6 +2248,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	st.casterIndex = caster.index;
 	st.targetUID = target.Main().UID;
 	st.casterUID = statusCasterOverride != ActorUID::INVALID ? statusCasterOverride : caster.Main().UID;
+	st.damageAtStart = target.damageTaken;
 	st.until = TimeAdd(localTime, TimeMsToTime(MAX(duration, 0.1f) * 1000.0));
 	st.appliedAt = localTime;
 	st.nextTick = TimeAdd(localTime, TimeMsToTime((info && info->intervalSec > 0 ? info->intervalSec : 1.0f) * 1000.0));
@@ -3699,6 +3700,13 @@ void World::UpdateStatuses()
 		const bool shieldBroken = it->info && ((it->info->type == "STATUS_TYPE_SHIELD" && it->shieldHP <= 0) || (shieldBomb && it->shieldHP <= 0 && it->absorbed > 0));
 		const bool timeOver = localTime >= it->until;
 		if(timeOver || target.dead || shieldBroken || it->removeOnHit) {
+			if(timeOver && !target.dead && it->info && it->info->type == "STATUS_TYPE_NEARLY_IMMORTAL" && it->info->paramRatio > 0) {
+				const i32 taken = MAX(target.damageTaken - it->damageAtStart, 0);
+				const i32 extra = (i32)MIN(taken * it->info->Param("_RecoveryFactorHP") / 100.0f, it->info->Param("_MaxRecoverHP"));
+				const i32 heal = (i32)(target.Main().hpMax * it->info->paramRatio) + extra;
+				LOG("Status :: %ls undying %d ends: heal %d (+%d from %d taken)", target.name.data(), it->statusID, heal, extra, taken);
+				HealPlayer(players[it->casterIndex], target, heal);
+			}
 			if(shieldBomb && !target.dead && it->info->targetingRange > 0) {
 				const i32 boom = (i32)(it->info->explodeDamage + it->absorbed * it->info->paramRatio);
 				const SkillID bombSkill = SkillID(it->info->skillIndex);
