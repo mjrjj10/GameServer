@@ -103,6 +103,11 @@ static const i32 RELAY_MODE_STATE_OFFSET = 9;
 static const i32 RELAY_IDS_PER_MODE = 3;
 static const i32 RELAY_ARTILLERY_MODE = 2;
 static const f32 RELAY_LEAP_SPEED = 2000.0f;
+static const i32 RELAY_PRISM_MODE = 0;
+static const i32 RELAY_BRUISER_MODE = 1;
+static const f32 RELAY_LIFE_SEC = 3600.0f;
+static const f32 RELAY_PASSIVE_SEC = 3.2f;
+static const i32 RELAY_STEALTH_STATUS = 1230210030;
 static const i32 SKILL_SLOT_ENUM_UG = 6;
 static const i32 TOOLTIP_ANDROB_HEAL = 250;
 static const f32 TOOLTIP_ANDROB_RANGE = 800.0f;
@@ -2511,6 +2516,44 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 	}
 }
 
+void World::RelayWarp(ActorNpc& npc, const vec3& to)
+{
+	LOG("Summon :: relay robot warps from (%.0f, %.0f) to (%.0f, %.0f)", npc.pos.x, npc.pos.y, to.x, to.y);
+	replication->SendNpcBehaviorToAll(npc.UID, ActionStateID::EXTRAMOTION_2_BEHAVIORSTATE, npc.pos, npc.rot.z, to, ActorUID::INVALID);
+	npc.pos = to;
+}
+
+void World::RelayPassive(ActorNpc& npc, const SummonInfo& info, Player& owner)
+{
+	const i32 state = npc.relayMode * 2 + 1;
+	if(state > 20 || info.skillStates[state].empty()) return;
+	f32 reach = info.perception;
+	bool needsEnemy = false;
+	foreach_const(c, info.skillStates[state]) {
+		if(c->kind != SummonCommand::REMOTE) continue;
+		needsEnemy = true;
+		const Remote* r = GetGameXmlContent().FindRemote(RemoteIdx(c->index));
+		if(r && r->maxDistance > 0) reach = MIN(reach, r->maxDistance);
+	}
+	npc.skillTarget = ActorUID::INVALID;
+	npc.aimPos = vec3(0);
+	if(needsEnemy) {
+		Player* target = nullptr;
+		f32 best = reach;
+		foreach(e, players) {
+			if(e->dead || e->team == owner.team) continue;
+			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(npc.pos));
+			if(d < best) { best = d; target = &*e; }
+		}
+		if(!target) return;
+		npc.aimPos = target->body->GetWorldPos();
+		if(npc.relayMode == RELAY_BRUISER_MODE) npc.skillTarget = target->Main().UID;
+	}
+	LOG("Summon :: relay robot of %ls passive SKILL_%d", owner.name.data(), state);
+	RunSummonState(npc, state);
+	npc.skillTarget = ActorUID::INVALID;
+}
+
 void World::UpdateSummonAi(f32 delta)
 {
 	const auto& content = GetGameXmlContent();
@@ -2529,9 +2572,18 @@ void World::UpdateSummonAi(f32 delta)
 		f32 stopDist = 0;
 
 		if(npc.ai == SummonInfo::AI_RELAY) {
-			if(owner.dead) continue;
+			if(owner.dead || (i32)owner.Main().classType != npc.ownerClass) {
+				LOG("Summon :: relay robot of %ls leaves with its master", owner.name.data());
+				npc.despawnAt = localTime;
+				continue;
+			}
 			goal = owner.body->GetWorldPos();
 			stopDist = info->aiDistance;
+			if(info->perception > 0 && glm::length(vec2(goal) - vec2(npc.pos)) > info->perception) RelayWarp(npc, goal);
+			if(npc.relayMode >= 0 && localTime >= npc.nextPassive && localTime >= npc.passiveBlockedUntil) {
+				npc.nextPassive = TimeAdd(localTime, TimeMsToTime(RELAY_PASSIVE_SEC * 1000.0));
+				RelayPassive(npc, *info, owner);
+			}
 		}
 		else {
 			ActorMaster* tm = FindMasterActor(npc.chaseTarget);
@@ -2701,7 +2753,7 @@ void World::UpdateShowcase()
 		foreach_const(pj, projectileList) if(pj->ownerIndex == qc.index) quiet = false;
 		foreach_const(ri, remoteInsts) if(ri->ownerIndex == qc.index && ri->remote && (ri->remote->damageGroup == Remote::DamageGroup::eENEMY || !ri->remote->onDestroy.empty() || !ri->remote->onTime.empty() || ri->remote->destroyCreateRemote != RemoteIdx::INVALID)) quiet = false;
 		foreach_const(npc, actorNpcList) {
-			if(npc->ownerIndex == qc.index && npc->despawnAt != Time::ZERO && localTime < npc->despawnAt) { quiet = false; break; }
+			if(npc->ownerIndex == qc.index && npc->ai != SummonInfo::AI_RELAY && npc->despawnAt != Time::ZERO && localTime < npc->despawnAt) { quiet = false; break; }
 		}
 		foreach_const(st, activeStatuses) {
 			if(!quiet) break;
@@ -3120,6 +3172,9 @@ void World::UpdateShowcase()
 	showcase.prevCaster = caster.index;
 	LOG("Showcase :: wall=%lld master=%d slot=%s skill=%d caster=%ls range=%.0f dist=%.0f test=%s expect=%d", ShowcaseWallMs(), (i32)cls, slotNames[step], skill, caster.name.data(), range, glm::length(vec2(dummyPos) - vec2(casterPos)), testName, expect);
 	if(mirror) LOG("Mirror :: turn=%d caster=%ls target=%ls", turn, caster.name.data(), dummy.name.data());
+	if(Config().DevShowcaseKeepSummons == 0) {
+		foreach(npc, actorNpcList) if(npc->ai == SummonInfo::AI_RELAY && npc->ownerIndex != caster.index && localTime < npc->despawnAt) npc->despawnAt = localTime;
+	}
 	const ActorUID targetUID = dummy.Main().UID;
 	const char* mirrorKey = nullptr;
 	if(mirror) {
@@ -3289,30 +3344,42 @@ void World::UpdateSummons()
 		Player& owner = players[ps->ownerIndex];
 		const SummonInfo* info = GetGameXmlContent().FindSummon(ps->creature);
 		if(!owner.dead) {
-			ActorNpc& actor = SpawnNpcActor(CreatureIndex(ps->creature), nextSummonLocalID++);
-			actor.pos = ps->pos;
-			actor.rot = ps->rot;
-			actor.faction = owner.team == 0 ? Faction::RED : Faction::BLUE;
-			actor.ownerUID = owner.Main().UID;
-			actor.seed = (i32)RandUint();
-			const f32 life = info && info->lifeTime > 0 ? info->lifeTime : 5.0f;
-			actor.despawnAt = TimeAdd(localTime, TimeMsToTime(life * 1000.0));
-			actor.ownerIndex = ps->ownerIndex;
-			actor.ai = info ? (u8)info->ai : 0;
-			actor.skillTarget = ps->target;
-			if(info && info->ai == SummonInfo::AI_RELAY) {
+			const bool relay = info && info->ai == SummonInfo::AI_RELAY;
+			ActorNpc* reuse = nullptr;
+			if(relay) {
 				foreach(other, actorNpcList) {
-					if(&*other == &actor || other->ownerIndex != ps->ownerIndex || other->ai != SummonInfo::AI_RELAY) continue;
-					other->despawnAt = localTime;
+					if(other->ownerIndex == ps->ownerIndex && other->ai == SummonInfo::AI_RELAY && localTime < other->despawnAt) reuse = &*other;
 				}
 			}
+			ActorNpc& actor = reuse ? *reuse : SpawnNpcActor(CreatureIndex(ps->creature), nextSummonLocalID++);
+			const f32 life = relay ? RELAY_LIFE_SEC : info && info->lifeTime > 0 ? info->lifeTime : 5.0f;
+			if(!reuse) {
+				actor.pos = ps->pos;
+				actor.rot = ps->rot;
+				actor.faction = owner.team == 0 ? Faction::RED : Faction::BLUE;
+				actor.ownerUID = owner.Main().UID;
+				actor.seed = (i32)RandUint();
+				actor.despawnAt = TimeAdd(localTime, TimeMsToTime(life * 1000.0));
+				actor.ownerIndex = ps->ownerIndex;
+				actor.ai = info ? (u8)info->ai : 0;
+				actor.ownerClass = (i32)owner.Main().classType;
+				actor.nextPassive = TimeAdd(localTime, TimeMsToTime(RELAY_PASSIVE_SEC * 1000.0));
+			}
+			actor.skillTarget = ps->target;
+			if(reuse && info->perception > 0 && glm::length(vec2(ps->pos) - vec2(actor.pos)) > info->perception) RelayWarp(actor, ps->pos);
 			if(info && owner.pendingChildSkill > 0 && localTime < owner.pendingChildSkillUntil) {
 				const i32 child = owner.pendingChildSkill;
 				const i32 modeState = child + RELAY_MODE_STATE_OFFSET;
 				if(info->ai == SummonInfo::AI_RELAY && modeState <= 20 && !info->skillStates[modeState].empty()) {
 					const i32 mode = (child - 1) / RELAY_IDS_PER_MODE;
 					const i32 activeState = mode * 2 + 2;
-					LOG("Summon :: %ls relay mode SKILL_%d then active SKILL_%d", owner.name.data(), modeState, activeState);
+					LOG("Summon :: %ls relay mode SKILL_%d then active SKILL_%d%s", owner.name.data(), modeState, activeState, reuse ? " (same robot)" : "");
+					actor.relayMode = mode;
+					actor.nextPassive = TimeAdd(localTime, TimeMsToTime(RELAY_PASSIVE_SEC * 1000.0));
+					if(mode == RELAY_PRISM_MODE) {
+						const StatusInfo* hide = GetGameXmlContent().FindStatus(RELAY_STEALTH_STATUS);
+						actor.passiveBlockedUntil = TimeAdd(localTime, TimeMsToTime((hide ? hide->durationSec : 0.0f) * 1000.0));
+					}
 					RunSummonState(actor, modeState);
 					actor.aimPos = owner.pendingChildPos;
 					if(mode != RELAY_ARTILLERY_MODE && glm::length(vec2(owner.pendingChildPos)) > 1.0f) {
@@ -3329,7 +3396,7 @@ void World::UpdateSummons()
 				}
 				owner.pendingChildSkill = 0;
 			}
-			if(info) {
+			if(info && !reuse) {
 				f32 t = 0;
 				foreach_const(c, info->onSpawn) {
 					if(!pendingSummonCommands.full()) {

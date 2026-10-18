@@ -310,6 +310,10 @@ struct World
 		vec3 motionTarget = vec3(0);
 		ActorUID motionTargetUID = ActorUID::INVALID;
 		f32 motionYaw = 0;
+		i32 relayMode = -1;
+		i32 ownerClass = -1;
+		Time nextPassive = Time::ZERO;
+		Time passiveBlockedUntil = Time::ZERO;
 
 		vec3 pos;
 		vec3 rot;
@@ -637,6 +641,8 @@ struct World
 		f32 yaw = 0;
 	} showcase;
 	void RunSummonState(ActorNpc& npc, i32 state);
+	void RelayPassive(ActorNpc& npc, const SummonInfo& info, Player& owner);
+	void RelayWarp(ActorNpc& npc, const vec3& to);
 	ActorUID statusCasterOverride = ActorUID::INVALID;
 	bool statusFromBehind = false;
 	const GameXmlContent::CostLevel* castCostLevel = nullptr;
