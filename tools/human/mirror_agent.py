@@ -5,12 +5,15 @@ import drive
 
 PROMPT = re.compile(r'Mirror :: prompt wall=(\d+) key=(\S+) click=(\d) combo=(\d) skill=(\d+) test=(\S+) dist=(\d+) aim=\((-?\d+), (-?\d+)\)(?: dironly=(\d))?(?: posdir=(\d))?(?: comboclick=(\d))?(?: combotele=(\d))?')
 HUMAN_SCREEN = (960, 575)
-WORLD_X_PX = (0.390, -0.253)
-WORLD_Y_PX = (-0.379, -0.286)
+
+
+WORLD_TO_SCREEN_H = ((0.432787797, -0.368195785, 3.85857082), (-0.255139072, -0.265550233, -12.8246199), (-0.000100763313, -0.0000256688599, 1.0))
 
 
 def world_to_screen(ax, ay):
-    return (HUMAN_SCREEN[0] + ax * WORLD_X_PX[0] + ay * WORLD_Y_PX[0], HUMAN_SCREEN[1] + ax * WORLD_X_PX[1] + ay * WORLD_Y_PX[1])
+    h = WORLD_TO_SCREEN_H
+    w = h[2][0] * ax + h[2][1] * ay + h[2][2]
+    return (HUMAN_SCREEN[0] + (h[0][0] * ax + h[0][1] * ay + h[0][2]) / w, HUMAN_SCREEN[1] + (h[1][0] * ax + h[1][1] * ay + h[1][2]) / w)
 
 
 def grab():
@@ -136,7 +139,7 @@ def act(m, pid, out, f, dbgdir, follow='none'):
     if key == 'lmb' or m.group(10) == '1' or key in ('q', 'e', 'r'):
         x0, y0 = x, y
         x, y = aim_loop(f, out, x, y, math.atan2(float(m.group(9)), float(m.group(8))))
-        if key in ('q', 'e', 'r') and click:
+        if key in ('q', 'e', 'r') and click and m.group(10) != '1':
             x, y = x0, y0
             drive.move(x, y)
             time.sleep(0.15)
