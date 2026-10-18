@@ -174,7 +174,7 @@ def act(m, pid, out, f, dbgdir, follow='none'):
         if not first_seen and skill_id != '0':
             drive.key(key, False); time.sleep(0.05); drive.key(key, True)
             out.write(f'cast not seen, closed targeting {m.group(1)}'+chr(10))
-        elif combo and m.group(12) == '0':
+        elif combo and m.group(12) == '0' and m.group(13) != '1':
             time.sleep(0.7)
             mark = f.tell()
             got = False
