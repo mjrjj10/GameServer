@@ -137,6 +137,7 @@ struct SummonInfo
 	i32 variation = 0;
 	f32 aiDistance = 0;
 	eastl::array<eastl::fixed_vector<SummonCommand,12,false>,21> skillStates;
+	eastl::array<i32,21> stateAnim = {};
 };
 
 struct StatusMod

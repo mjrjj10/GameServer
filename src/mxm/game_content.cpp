@@ -2481,7 +2481,8 @@ bool GameXmlContent::LoadStatusData()
 			for(XMLElement* pType = xmlAni.FirstChildElement()->FirstChildElement("EntityType"); pType; pType = pType->NextSiblingElement("EntityType")) {
 				const char* t = nullptr;
 				pType->QueryStringAttribute("_Type", &t);
-				if(!t || EA::StdC::Strcmp(t, "PC") != 0) continue;
+				if(!t) continue;
+				const bool pcType = EA::StdC::Strcmp(t, "PC") == 0;
 				for(XMLElement* pEnt = pType->FirstChildElement("Entity"); pEnt; pEnt = pEnt->NextSiblingElement("Entity")) {
 					const char* key = nullptr;
 					pEnt->QueryStringAttribute("_Key", &key);
@@ -2491,7 +2492,8 @@ bool GameXmlContent::LoadStatusData()
 						f32 seqTime = 0;
 						pAni->QueryAttribute("_SeqID", &seqID);
 						pAni->QueryFloatAttribute("_SeqTime", &seqTime);
-						if(seqID != 0) aniSeqTime[AniKey(key, seqID)] = seqTime;
+						if(seqID != 0 && (pcType || aniSeqTime.find(AniKey(key, seqID)) == aniSeqTime.end())) aniSeqTime[AniKey(key, seqID)] = seqTime;
+						if(!pcType) continue;
 						const char* name = nullptr;
 						pAni->QueryStringAttribute("_AnimationName", &name);
 						if(!name || EA::StdC::Strcmp(name, "LIE_END") != 0) continue;
@@ -2518,6 +2520,11 @@ bool GameXmlContent::LoadStatusData()
 				i32 skillState = 0;
 				if(!spawn && !die && EA::StdC::Sscanf(state, "SKILL_%d_BEHAVIORSTATE", &skillState) != 1) continue;
 				if(skillState < 0 || skillState > 20) continue;
+				i32 stateAnimId = 0;
+				pA->QueryAttribute("AnimationId", &stateAnimId);
+				if(!spawn && !die && stateAnimId != 0) {
+					foreach(it, summonMap) if(it->second.className == cls && it->second.stateAnim[skillState] == 0) it->second.stateAnim[skillState] = stateAnimId;
+				}
 				const char* p2 = nullptr;
 				pA->QueryStringAttribute("Param2", &p2);
 				if(p2 && EA::StdC::Strcmp(p2, "Remove") == 0) continue;

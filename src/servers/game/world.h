@@ -314,6 +314,9 @@ struct World
 		ActorUID motionTargetUID = ActorUID::INVALID;
 		f32 motionYaw = 0;
 		i32 relayMode = -1;
+		i32 queuedState = -1;
+		Time queuedStateAt = Time::ZERO;
+		vec3 queuedGoal = vec3(0);
 		void* wall = nullptr;
 		i32 ownerClass = -1;
 		Time nextPassive = Time::ZERO;

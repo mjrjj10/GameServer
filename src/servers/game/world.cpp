@@ -2660,6 +2660,15 @@ void World::UpdateSummonAi(f32 delta)
 			replication->SendNpcBehaviorToAll(npc.UID, npc.pendingMotion, npc.pos, npc.motionYaw, npc.motionTarget, npc.motionTargetUID);
 			npc.pendingMotion = ActionStateID::INVALID;
 		}
+		if(npc.queuedState >= 0 && localTime >= npc.queuedStateAt && npc.pendingMotion == ActionStateID::INVALID) {
+			if(glm::length(vec2(npc.queuedGoal)) > 1.0f) {
+				replication->SendNpcMoveToAll(npc.UID, npc.pos, npc.queuedGoal, atan2f(npc.queuedGoal.y - npc.pos.y, npc.queuedGoal.x - npc.pos.x), RELAY_LEAP_SPEED);
+				npc.pos = npc.queuedGoal;
+			}
+			const i32 state = npc.queuedState;
+			npc.queuedState = -1;
+			RunSummonState(npc, state);
+		}
 		if(npc.ai == SummonInfo::AI_NONE) continue;
 		if(npc.despawnAt != Time::ZERO && localTime >= npc.despawnAt) continue;
 		const SummonInfo* info = content.FindSummon((i32)npc.docID);
@@ -3522,12 +3531,11 @@ void World::UpdateSummons()
 					}
 					RunSummonState(actor, modeState);
 					actor.aimPos = owner.pendingChildPos;
-					if(mode != RELAY_ARTILLERY_MODE && glm::length(vec2(owner.pendingChildPos)) > 1.0f) {
-						const vec3 goal = vec3(vec2(owner.pendingChildPos), actor.pos.z);
-						replication->SendNpcMoveToAll(actor.UID, actor.pos, goal, atan2f(goal.y - actor.pos.y, goal.x - actor.pos.x), RELAY_LEAP_SPEED);
-						actor.pos = goal;
-					}
-					RunSummonState(actor, activeState);
+					actor.queuedGoal = mode != RELAY_ARTILLERY_MODE && glm::length(vec2(owner.pendingChildPos)) > 1.0f ? vec3(vec2(owner.pendingChildPos), actor.pos.z) : vec3(0);
+					const f32 modeSec = GetGameXmlContent().GetAniSeqTime(info->className.c_str(), info->stateAnim[modeState]);
+					actor.queuedState = activeState;
+					actor.queuedStateAt = TimeAdd(localTime, TimeMsToTime((f64)modeSec * 1000.0 + 60.0));
+					LOG("Summon :: relay mode animation %d lasts %.2fs", info->stateAnim[modeState], modeSec);
 				}
 				else {
 					LOG("Summon :: %ls relay state SKILL_%d", owner.name.data(), child);
