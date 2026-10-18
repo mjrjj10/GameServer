@@ -131,6 +131,7 @@ struct World
 		i32 pendingChildSkill = 0;
 		Time pendingChildSkillUntil = Time::ZERO;
 		vec3 pendingChildPos = vec3(0);
+		ActorUID pendingChildTarget = ActorUID::INVALID;
 		eastl::array<Time,5> botSkillReady = { Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO };
 		Time tNextBotSkill = Time::ZERO;
 		f32 ultGauge = -1.0f; // initialised to the master's max on first update

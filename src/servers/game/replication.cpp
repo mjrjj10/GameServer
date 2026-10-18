@@ -1381,6 +1381,27 @@ void Replication::SendExecuteSkillAck(ClientHandle clientHd, ActorUID casterUID,
 	SendPacket(clientHd, ack);
 }
 
+void Replication::SendToggleSkill(ActorUID casterUID, ClientHandle casterHd, SkillID skillID, bool on, ActionStateID action)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, casterUID);
+		if(localID == LocalActorID::INVALID) continue;
+		u8 buf[24] = {};
+		u32 words[3] = { (u32)localID, 0, (u32)skillID };
+		memcpy(buf, words, sizeof(words));
+		if(clientHd == casterHd) {
+			const u32 act = (u32)action;
+			memcpy(buf + 12, &act, 4);
+			if(on) SendPacketData<Sv::SA_SwitchOnToggleSkill>(clientHd, 16, buf);
+			else SendPacketData<Sv::SA_SwitchOffToggleSkill>(clientHd, 16, buf);
+		}
+		else if(on) SendPacketData<Sv::SN_SwitchOnToggleSkill>(clientHd, 18, buf);
+		else SendPacketData<Sv::SN_SwitchOffToggleSkill>(clientHd, 16, buf);
+	}
+}
+
 void Replication::SendCancelSkillToAll(ActorUID casterUID, SkillID skillID)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {

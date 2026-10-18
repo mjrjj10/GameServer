@@ -707,6 +707,16 @@ void Game::OnPlayerWeaponStateRelay(ClientHandle clientHd, ActorUID ownerUID, i3
 	replication.RelayWeaponState(clientHd, ownerUID, (i32)weapon, state, chargeLevel, firingCombo);
 }
 
+void Game::OnPlayerToggleSkill(ClientHandle clientHd, SkillID skillID, bool on)
+{
+	auto found = playerMap.find(clientHd);
+	if(found == playerMap.end()) return;
+	World::Player& player = world.GetPlayer(found->second->playerIndex);
+	LOG("Toggle :: %ls request skill=%d %s", player.name.data(), (i32)skillID, on ? "on" : "off");
+	if(on) world.ToggleOn(player, skillID, player.body->GetWorldPos());
+	else world.ToggleOff(player);
+}
+
 bool Game::IsWeaponFireObject(ClientHandle clientHd, const wchar* name, u16 len)
 {
 	auto found = playerMap.find(clientHd);

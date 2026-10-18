@@ -995,6 +995,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		player.pendingChildSkill = child;
 		player.pendingChildSkillUntil = TimeAdd(localTime, TimeMsToTime(2000));
 		player.pendingChildPos = castPos;
+		player.pendingChildTarget = targets.size() > 0 ? targets[0] : ActorUID::INVALID;
 	}
 }
 
@@ -1838,10 +1839,12 @@ void World::ToggleOn(Player& player, SkillID skillID, const vec3& castPos)
 	const vec3 pos = player.body->GetWorldPos();
 	const f32 yaw = player.input.rot.upperYaw;
 	foreach_const(id, tg->remotes) {
-		SpawnRemote(player.index, RemoteIdx(*id), pos, vec2(cosf(yaw), sinf(yaw)), ActorUID::INVALID, skillID, player.toggleCastID, (i32)SkillDamage(skillID), true);
+		SpawnRemote(player.index, RemoteIdx(*id), pos, vec2(cosf(yaw), sinf(yaw)), ActorUID::INVALID, skillID, player.toggleCastID, (i32)SkillDamage(skillID), true, nullptr, 0, player.clientHd != ClientHandle::INVALID);
 	}
 	foreach_const(id, tg->statuses) ApplyStatus(player, player, *id);
 	LOG("Toggle :: %ls skill=%d on (%d remotes, %d statuses)", player.name.data(), (i32)skillID, (i32)tg->remotes.size(), (i32)tg->statuses.size());
+	auto sk = GetGameXmlContent().skillMap.find(skillID);
+	replication->SendToggleSkill(player.Main().UID, player.clientHd, skillID, true, sk != GetGameXmlContent().skillMap.end() ? sk->second.action : ActionStateID::INVALID);
 }
 
 void World::ToggleOff(Player& player)
@@ -1863,6 +1866,7 @@ void World::ToggleOff(Player& player)
 		}
 	}
 	LOG("Toggle :: %ls skill=%d off", player.name.data(), (i32)player.toggleSkill);
+	replication->SendToggleSkill(player.Main().UID, player.clientHd, player.toggleSkill, false, ActionStateID::INVALID);
 	player.toggleSkill = SkillID::INVALID;
 }
 
@@ -3316,6 +3320,7 @@ void World::UpdateSummons()
 				}
 				else {
 					LOG("Summon :: %ls relay state SKILL_%d", owner.name.data(), child);
+					if(owner.pendingChildTarget != ActorUID::INVALID) actor.skillTarget = owner.pendingChildTarget;
 					RunSummonState(actor, child);
 				}
 				owner.pendingChildSkill = 0;

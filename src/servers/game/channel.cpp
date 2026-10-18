@@ -87,6 +87,14 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 			}
 		} break;
 
+		case 60042:
+		case 60043: {
+			eastl::fixed_string<char,64,true> hex;
+			for(int i = 0; i < packetSize && i < 16; i++) hex.append_sprintf("%02x ", packetData[i]);
+			NT_LOG("[client%x] Client :: %s size=%d :: %s", clientHd, header.netID == 60042 ? "CQ_SwitchOnToggleSkill" : "CQ_SwitchOffToggleSkill", packetSize, hex.data());
+			if(packetSize >= 8) game->OnPlayerToggleSkill(clientHd, SkillID(*(const u32*)(packetData + 4)), header.netID == 60042);
+		} break;
+
 		case 60196: {
 			NT_LOG("[client%x] Client :: RemoteCreateDoc (60196) size=%d", clientHd, packetSize);
 			replication->RelayRemoteCreateDoc(clientHd, packetData, packetSize);
