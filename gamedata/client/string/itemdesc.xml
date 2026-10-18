@@ -1509,5 +1509,8 @@
     <StringData DATAKEY="STR_ITEM_DESC_130100067" data="Immediately recover 10% of max HP." />
     <StringData DATAKEY="STR_ITEM_NAME_130100068" data="Trainee Speed Improvement Potion" />
     <StringData DATAKEY="STR_ITEM_DESC_130100068" data="Increases Movespeed by 20% when acquired" />
+    <StringData DATAKEY="STR_ITEM_NAME_17000041" DocId="100000041" data="GX-09" />
+    <StringData DATAKEY="STR_ITEM_NAME_17104101" DocId="100000041" data="안전운전 GX-09" />
+    <StringData DATAKEY="STR_ITEM_NAME_17104102" DocId="100000041" data="캠핑카 GX-09" />
   </StringTableData>
 </ENTITY_FILE>

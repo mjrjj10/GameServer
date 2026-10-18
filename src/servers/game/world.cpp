@@ -139,6 +139,12 @@ static const i32 STATUS_THECAT_PASSIVE_FIREDELAY1 = 1230260000;
 static const i32 STATUS_ANDROIDA_PASSIVE_ATTACKSPEED = 1230290001;
 static const i32 STATUS_SHUGOTRADER_PASSIVE_REMOTE = 1230330000;
 static const i32 TOOLTIP_RYTLOCK_CHAIN = 3;
+static const i32 CLASS_NUM_SHUTTLE = 41;
+static const i32 WEAPON_STATE_CHARGE = 7;
+static const i32 REMOTE_SHUTTLE_DODGE = 1440410000;
+static const f32 TOOLTIP_SHUTTLE_CHARGED_FUEL = 20.0f;
+static const f32 TOOLTIP_SHUTTLE_CHARGING_FUEL_SEC = 5.0f;
+static const f32 TOOLTIP_SHUTTLE_DODGE_FUEL = 22.0f;
 static const f32 TOOLTIP_RYTLOCK_THIRD_MUL = 1.20f;
 static const f32 WEAPON_AOE_RADIUS = 250.0f;
 static const f32 WEAPON_SHOT_RELIABLE_DISTANCE = 100.0f;
@@ -1086,6 +1092,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	const ClassType classType = player.Main().classType;
 	if(WeaponIsMelee(player)) return;
 	BotWeaponAnimation(player, replication);
+	if((i32)classType == CLASS_NUM_SHUTTLE && player.chargeLevel > 0) AddFuel(player, TOOLTIP_SHUTTLE_CHARGED_FUEL);
 	if(player.clientHd != ClientHandle::INVALID && player.casting.skillID != SkillID::INVALID && player.casting.type == GameXmlContent::SkillCast::LIMIT) {
 		ReleaseCast(player);
 		return;
@@ -1536,7 +1543,8 @@ void World::UpdateUltimateGauges(f32 delta)
 			const f32 resMax = MasterStat(cls, RESOURCES[r].maxStat);
 			if(resMax <= 0) continue;
 			if(it->res[r] < 0) it->res[r] = RESOURCES[r].startFull ? resMax : 0;
-			it->res[r] = MIN(MAX(it->res[r] + MasterStat(cls, RESOURCES[r].regenStat) * delta, 0.0f), resMax);
+			const f32 chargingFuel = r == 1 && (i32)cls == CLASS_NUM_SHUTTLE && it->weaponState == WEAPON_STATE_CHARGE ? TOOLTIP_SHUTTLE_CHARGING_FUEL_SEC : 0.0f;
+			it->res[r] = MIN(MAX(it->res[r] + (MasterStat(cls, RESOURCES[r].regenStat) + chargingFuel) * delta, 0.0f), resMax);
 			if(Config().DevMirror && Config().DevShowcaseFullRes && it->clientHd != ClientHandle::INVALID && it->index == showcase.prevCaster && !showcase.castSeen) it->res[r] = resMax;
 			if(fabsf(it->res[r] - it->resSent[r]) >= 0.01f) resChanged = true;
 		}
@@ -1962,7 +1970,10 @@ void World::ReleaseCast(Player& player)
 	auto f = GetGameXmlContent().skillMap.find(c.skillID);
 	if(f == GetGameXmlContent().skillMap.end() || player.dead) return;
 	LOG("Cast :: %ls skill=%d release", player.name.data(), (i32)c.skillID);
-	PlayerCastSkill(player, c.skillID, c.castPos, Slice<const ActorUID>(&c.target, c.target != ActorUID::INVALID ? 1 : 0), 0, f->second.action);
+	const GameXmlContent::SkillCast* cast = GetGameXmlContent().FindSkillCast((i32)c.skillID);
+	const ActionStateID release = f->second.action != ActionStateID::INVALID ? f->second.action : (cast ? cast->action : ActionStateID::INVALID);
+	ASSERT(release != ActionStateID::INVALID);
+	PlayerCastSkill(player, c.skillID, c.castPos, Slice<const ActorUID>(&c.target, c.target != ActorUID::INVALID ? 1 : 0), 0, release);
 }
 
 void World::CancelCast(Player& player, const char* reason)
@@ -4096,6 +4107,15 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 	}
 }
 
+void World::AddFuel(Player& player, f32 amount)
+{
+	const f32 resMax = MasterStat(player.Main().classType, RESOURCES[1].maxStat);
+	if(resMax <= 0) return;
+	player.res[1] = MIN(MAX(player.res[1], 0.0f) + amount, resMax);
+	player.tNextResSend = Time::ZERO;
+	LOG("Passive :: %ls fuel +%.0f -> %.0f", player.name.data(), amount, player.res[1]);
+}
+
 void World::RemoteHit(RemoteInst& inst, Player& target)
 {
 	const Remote& remote = *inst.remote;
@@ -4103,6 +4123,16 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	if(!RemoteCanAffect(inst, target, true)) return;
 	if(remote.activateDelay > 0 && TimeDiffSec(TimeDiff(inst.spawnTime, localTime)) < remote.activateDelay) return;
 	const bool enemy = target.team != owner.team;
+	if(enemy && (i32)remote.ID == REMOTE_SHUTTLE_DODGE && (i32)owner.Main().classType == CLASS_NUM_SHUTTLE) {
+		if(owner.fuelDodgeCast != inst.castID) {
+			owner.fuelDodgeCast = inst.castID;
+			owner.fuelDodgeTargets.clear();
+		}
+		if(eastl::find(owner.fuelDodgeTargets.begin(), owner.fuelDodgeTargets.end(), target.index) == owner.fuelDodgeTargets.end() && !owner.fuelDodgeTargets.full()) {
+			owner.fuelDodgeTargets.push_back(target.index);
+			AddFuel(owner, TOOLTIP_SHUTTLE_DODGE_FUEL);
+		}
+	}
 
 	const i32 amount = (i32)(inst.damage * remote.attackMultiplier);
 	if(enemy && remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;

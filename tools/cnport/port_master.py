@@ -103,7 +103,7 @@ def main():
                 if ident in picked or (kind != 'class' and (kind, key) in eu_keys[low]) or (kind == 'class' and (kind, key) in eu_keys[low] and key != seed_class):
                     continue
                 hit = (kind == 'id' and key in want_ids) or (kind == 'name' and key in want_names) or \
-                      (kind == 'class' and key in want_classes) or (kind == 'str' and key in want_strs) or \
+                      (kind == 'class' and key in want_classes) or (kind == 'str' and (key in want_strs or (low in ('skindesc.xml', 'itemdesc.xml', 'characterdesc.xml') and ('DocId="%d"' % seed_doc) in body))) or \
                       (kind == 'skin' and want_skin_class in body) or \
                       (kind == 'id' and low == 'skill_property.xml' and any(m in want_ids for m in BACKREF_RE.findall(body)))
                 if not hit:

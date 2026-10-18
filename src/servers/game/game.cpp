@@ -703,6 +703,7 @@ void Game::OnPlayerWeaponStateRelay(ClientHandle clientHd, ActorUID ownerUID, i3
 	if(ownerUID == ActorUID::INVALID) ownerUID = player.Main().UID;
 	player.firingCombo = firingCombo;
 	player.chargeLevel = chargeLevel;
+	player.weaponState = state;
 	const WeaponIndex weapon = player.mainCharaID == 0 ? player.mainWeapon : player.subWeapon;
 	replication.RelayWeaponState(clientHd, ownerUID, (i32)weapon, state, chargeLevel, firingCombo);
 }

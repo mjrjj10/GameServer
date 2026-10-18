@@ -68,5 +68,9 @@
  "STR_ITEM_NAME_131141034": "Fuel Recovery",
  "STR_ITEM_DESC_131141034": "{color:#edec72}[Upgrade Type: Swift]{color:end}\\nIncreases the Fuel recovered by charged attacks.",
  "STR_ITEM_WEAPONDESC_131141000": "Attacks in a cone in front.",
- "STR_ITEM_DESC_131141000": "A weapon specially mounted to protect passengers."
+ "STR_ITEM_DESC_131141000": "A weapon specially mounted to protect passengers.",
+ "STR_SKIN_SHUTTLE_01": "GX-09",
+ "STR_SKIN_SHUTTLE_02": "Safe Driver GX-09",
+ "STR_SKIN_SHUTTLE_03": "Camper GX-09",
+ "STR_ITEM_NAME_17000041": "GX-09"
 }

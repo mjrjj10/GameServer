@@ -110,6 +110,9 @@ struct World
 		bool weaponFired = false;
 		u8 firingCombo = 0;       // CQ_WeaponState: current firing combo step / charge level
 		u8 chargeLevel = 0;
+		i32 weaponState = 0;
+		u32 fuelDodgeCast = 0;
+		eastl::fixed_vector<u32,10,false> fuelDodgeTargets;
 		eastl::array<i32,2> shotCount = { 0, 0 }; // weapon shots per master (_FIRINGCOUNT)
 		bool passivesApplied = false;
 		i32 damageTaken = 0;
@@ -665,6 +668,7 @@ struct World
 	ActorNpc* FindNpcActorByCreatureID(CreatureIndex docID); // Warning: slow!
 
 	void PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir, f32 distance);
+	void AddFuel(Player& player, f32 amount);
 	void OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize);
 	void OnWeaponAimPacket(Player& player, f32 aimYaw);
 
