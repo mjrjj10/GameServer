@@ -2523,9 +2523,20 @@ bool GameXmlContent::LoadStatusData()
 
 		XMLDocument xmlChild;
 		if(LoadXMLFile(L"/ActionBase.xml", xmlChild)) {
+			eastl::hash_set<u32> spawningStates;
 			for(XMLElement* pA = xmlChild.FirstChildElement()->FirstChildElement(); pA; pA = pA->NextSiblingElement()) {
 				const char* type = nullptr;
 				pA->QueryStringAttribute("CommandType", &type);
+				if(type && EA::StdC::Strcmp(type, "ENTITY") == 0) {
+					const char* cls = nullptr; const char* state = nullptr;
+					pA->QueryStringAttribute("Class", &cls);
+					pA->QueryStringAttribute("BehaviorState", &state);
+					if(!cls || !state) continue;
+					eastl::fixed_string<char,64,false> c = cls;
+					c.make_upper();
+					spawningStates.insert(((u32)ClassTypeFromString(c.data()) << 16) | ((u32)ActionStateFromString(state) & 0xFFFF));
+					continue;
+				}
 				if(!type || EA::StdC::Strcmp(type, "CALL_CHILD_SKILL") != 0) continue;
 				const char* cls = nullptr; const char* state = nullptr; const char* p1 = nullptr;
 				pA->QueryStringAttribute("Class", &cls);
@@ -2539,7 +2550,8 @@ bool GameXmlContent::LoadStatusData()
 				const ActionStateID as = ActionStateFromString(state);
 				childSkill[((u32)ct << 16) | ((u32)as & 0xFFFF)] = n;
 			}
-			LOG("Loaded %d child skill calls", (i32)childSkill.size());
+			foreach_const(cs, childSkill) if(spawningStates.find(cs->first) == spawningStates.end()) childOnExisting.insert(cs->first);
+			LOG("Loaded %d child skill calls (%d to an existing creature)", (i32)childSkill.size(), (i32)childOnExisting.size());
 		}
 	}
 

@@ -1000,7 +1000,10 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	}
 
 	const i32 child = content.GetChildSkill(player.Main().classType, actionState);
-	if(child > 0) {
+	if(child > 0 && content.IsChildOnExisting(player.Main().classType, actionState)) {
+		ChildSkillOnExisting(player, child, castPos);
+	}
+	else if(child > 0) {
 		player.pendingChildSkill = child;
 		player.pendingChildSkillUntil = TimeAdd(localTime, TimeMsToTime(2000));
 		player.pendingChildPos = castPos;
@@ -2518,6 +2521,45 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			npc.dieMode = c->dieMode;
 		}
 	}
+}
+
+void World::ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos)
+{
+	ActorNpc* npc = nullptr;
+	const SummonInfo* info = nullptr;
+	foreach(it, actorNpcList) {
+		if(it->ownerIndex != owner.index || (it->despawnAt != Time::ZERO && localTime >= it->despawnAt)) continue;
+		const SummonInfo* si = GetGameXmlContent().FindSummon((i32)it->docID);
+		if(si && child <= 20 && !si->skillStates[child].empty()) { npc = &*it; info = si; }
+	}
+	if(!npc) {
+		LOG("Summon :: %ls child SKILL_%d has no creature to run it", owner.name.data(), child);
+		return;
+	}
+	f32 travel = 0;
+	foreach_const(c, info->skillStates[child]) if(c->kind == SummonCommand::REMOTE) { travel = c->delay; break; }
+	const vec3 goal = vec3(vec2(pos), npc->pos.z);
+	const f32 dist = glm::length(vec2(goal) - vec2(npc->pos));
+	LOG("Summon :: %ls child SKILL_%d on its creature=%d, flies %.0f in %.2fs", owner.name.data(), child, (i32)npc->docID, dist, travel);
+	if(dist > 1.0f) replication->SendNpcMoveToAll(npc->UID, npc->pos, goal, atan2f(goal.y - npc->pos.y, goal.x - npc->pos.x), travel > 0 ? dist / travel : dist);
+	foreach(st, activeStatuses) {
+		if(st->casterIndex != owner.index || !st->info || st->info->type != "STATUS_TYPE_TARGET" || localTime >= st->until) continue;
+		Player& carried = players[st->targetIndex];
+		const Time drop = TimeAdd(localTime, TimeMsToTime(travel * 1000.0));
+		foreach(with, activeStatuses) {
+			if(with->targetIndex == st->targetIndex && with->casterIndex == owner.index && with->appliedAt == st->appliedAt && with->until > drop) with->until = drop;
+		}
+		if(carried.clientHd == ClientHandle::INVALID && !carried.dead) {
+			carried.pushTarget = vec3(vec2(pos), carried.body->GetWorldPos().z);
+			carried.pushUntil = drop;
+			carried.pushSpeed = glm::length(vec2(pos) - vec2(carried.body->GetWorldPos())) / MAX(travel, 0.05f);
+			if(drop > carried.ccUntil) carried.ccUntil = drop;
+		}
+		LOG("Summon :: %ls carried to (%.0f, %.0f)", carried.name.data(), pos.x, pos.y);
+	}
+	npc->pos = goal;
+	npc->aimPos = pos;
+	RunSummonState(*npc, child);
 }
 
 void World::RelayWarp(ActorNpc& npc, const vec3& to)

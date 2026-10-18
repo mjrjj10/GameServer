@@ -645,6 +645,7 @@ struct World
 	void RunSummonState(ActorNpc& npc, i32 state);
 	void RelayPassive(ActorNpc& npc, const SummonInfo& info, Player& owner);
 	void RelayWarp(ActorNpc& npc, const vec3& to);
+	void ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos);
 	ActorUID statusCasterOverride = ActorUID::INVALID;
 	bool statusFromBehind = false;
 	const GameXmlContent::CostLevel* castCostLevel = nullptr;

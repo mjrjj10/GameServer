@@ -644,6 +644,7 @@ struct GameXmlContent
 	f32 BotUgSkillCoolTime() const { return botUgSkillCoolTime; }
 	f32 BotAfterSkillDelay() const { return botAfterSkillDelay; }
 	const eastl::array<i32,5>* FindBotSkills(i32 creature) const { auto f = botSkills.find(creature); return f == botSkills.end() ? nullptr : &f->second; }
+	bool IsChildOnExisting(ClassType c, ActionStateID a) const { return childOnExisting.find(((u32)c << 16) | ((u32)a & 0xFFFF)) != childOnExisting.end(); }
 	i32 GetChildSkill(ClassType c, ActionStateID a) const { auto f = childSkill.find(((u32)c << 16) | ((u32)a & 0xFFFF)); return f == childSkill.end() ? 0 : f->second; }
 	const WeaponFiring* FindWeaponFiring(i32 weaponID) const { auto f = weaponFiring.find(weaponID); return f == weaponFiring.end() ? nullptr : &f->second; }
 	bool IsRepeatHitReduced(i32 skillID) const { return repeatHitReduced.find(skillID) != repeatHitReduced.end(); }
@@ -737,6 +738,7 @@ private:
 	eastl::hash_map<i32, f32> weaponAttack;
 	eastl::hash_set<i32> repeatHitReduced;
 	eastl::hash_map<u32, i32> childSkill;
+	eastl::hash_set<u32> childOnExisting;
 	// bots (BotBrainData.xml _SkillIndexData per master, E_BOT_STAGE_LEVEL_NORMAL constants; SKILL.xml)
 	eastl::hash_map<i32, eastl::array<i32,5>> botSkills;  // master creature -> _Skill0.._Skill3, _UgSkill
 	eastl::hash_map<i32, f32> skillCoolTime;              // _CoolTime (s)
