@@ -94,6 +94,7 @@ static const f32 SHOWCASE_QUIET_SEC = 0.5f;
 static const f32 MIRROR_POS_TOLERANCE = 60.0f;
 static const f64 MIRROR_STUCK_STATE_SEC = 3.0;
 static const f64 SELF_DRAG_LINK_SEC = 0.6;
+static const i32 ULTIMATE_SKILL_SUFFIX = 50;
 static const i32 MIRROR_POS_MAX_WAITS = 12;
 static const f64 MIRROR_POS_RETRY_MS = 400.0;
 static const i32 RELAY_MODE_STATE_OFFSET = 9;
@@ -3884,7 +3885,14 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 
 	if(amount > 0) {
 		if(enemy && inst.skillID != SkillID::INVALID) PassiveOnSkillHit(owner, target);
-		if(enemy) DamagePlayer(owner, target, inst.skillID, amount, nullptr, inst.clientRemoteID, remote.ID, inst.dir);
+		i32 stackBonus = 0;
+		if(enemy && (i32)inst.skillID % 100 == ULTIMATE_SKILL_SUFFIX) {
+			foreach_const(st, activeStatuses) {
+				if(st->targetIndex == target.index && st->casterIndex == owner.index && st->info && st->info->additionalDamageByCaster > 0 && localTime < st->until)
+					stackBonus += (i32)(st->info->additionalDamageByCaster * MAX(st->overlap, 1));
+			}
+		}
+		if(enemy) DamagePlayer(owner, target, inst.skillID, amount + stackBonus, nullptr, inst.clientRemoteID, remote.ID, inst.dir);
 		else if(remote.damageGroup == Remote::DamageGroup::eFRIEND) HealPlayer(owner, target, amount);
 	}
 

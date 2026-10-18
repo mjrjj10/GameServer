@@ -190,6 +190,7 @@ struct StatusInfo
 	i32 linkTargetStatus = 0;
 	f32 targetingRange = 0;             // _TargetingRange
 	f32 explodeDamage = 0;              // STATUS_TYPE_SHIELDBOMB _DEFENDER _ExplodeDmg
+	f32 additionalDamageByCaster = 0;   // _AdditionalDamageByCaster: bonus per stack to the caster's ultimate
 	NextCondition nextCondition = NextCondition::NONE;
 	eastl::fixed_string<char,40,false> type;
 

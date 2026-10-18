@@ -2089,6 +2089,7 @@ bool GameXmlContent::LoadStatusData()
 		pCommon->QueryAttribute("_NextStatusIndex", &st.nextStatus);
 		pCommon->QueryFloatAttribute("_TargetingRange", &st.targetingRange);
 		if(XMLElement* pDef = pCommon->FirstChildElement("_DEFENDER")) pDef->QueryFloatAttribute("_ExplodeDmg", &st.explodeDamage);
+		pCommon->QueryFloatAttribute("_AdditionalDamageByCaster", &st.additionalDamageByCaster);
 		{
 			const char* eff = nullptr;
 			pCommon->QueryStringAttribute("_EffectType", &eff);
