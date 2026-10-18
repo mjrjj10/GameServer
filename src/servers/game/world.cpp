@@ -2246,7 +2246,8 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		if(ccEnd > target.ccUntil) target.ccUntil = ccEnd;
 	}
 
-	const vec3 from = target.body->GetWorldPos();
+	const bool chainedPush = target.clientHd == ClientHandle::INVALID && localTime < target.pushUntil;
+	const vec3 from = chainedPush ? vec3(vec2(target.pushTarget), target.body->GetWorldPos().z) : target.body->GetWorldPos();
 	vec3 to = from;
 	const f32 graphDuration = duration * (info && info->timeRatio > 0 ? info->timeRatio : 1.0f);
 	const bool flyMove = info && info->type == "STATUS_TYPE_FLY" && info->distanceRatio != 0;
@@ -2288,9 +2289,11 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			}
 		}
 		else if(target.clientHd == ClientHandle::INVALID && graphDuration > 0) {
+			const Time prevUntil = chainedPush ? target.pushUntil : localTime;
+			const Time newUntil = TimeAdd(localTime, TimeMsToTime(graphDuration * 1000.0));
+			target.pushUntil = newUntil > prevUntil ? newUntil : prevUntil;
 			target.pushTarget = to;
-			target.pushSpeed = glm::length(vec2(to - from)) / graphDuration;
-			target.pushUntil = TimeAdd(localTime, TimeMsToTime(graphDuration * 1000.0));
+			target.pushSpeed = glm::length(vec2(to - target.body->GetWorldPos())) / MAX((f32)TimeDiffSec(TimeDiff(localTime, target.pushUntil)), 0.05f);
 			if(target.pushUntil > target.ccUntil) target.ccUntil = target.pushUntil;
 		}
 		else if(target.clientHd != ClientHandle::INVALID && graphDuration > 0) {

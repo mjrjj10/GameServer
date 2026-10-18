@@ -5,8 +5,8 @@ import drive
 
 PROMPT = re.compile(r'Mirror :: prompt wall=(\d+) key=(\S+) click=(\d) combo=(\d) skill=(\d+) test=(\S+) dist=(\d+) aim=\((-?\d+), (-?\d+)\)(?: dironly=(\d))?(?: posdir=(\d))?(?: comboclick=(\d))?(?: combotele=(\d))?')
 HUMAN_SCREEN = (960, 575)
-WORLD_X_PX = (0.456, -0.234)
-WORLD_Y_PX = (-0.36, -0.30)
+WORLD_X_PX = (0.390, -0.253)
+WORLD_Y_PX = (-0.379, -0.286)
 
 
 def world_to_screen(ax, ay):
@@ -133,7 +133,7 @@ def act(m, pid, out, f, dbgdir, follow='none'):
     out.flush()
     drive.move(x, y)
     time.sleep(0.15)
-    if key == 'lmb' or m.group(10) == '1' or (key in ('q', 'e', 'r') and not click):
+    if key == 'lmb' or m.group(10) == '1' or key in ('q', 'e', 'r'):
         x, y = aim_loop(f, out, x, y, math.atan2(float(m.group(9)), float(m.group(8))))
     if key == 'none':
         return
