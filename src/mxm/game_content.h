@@ -219,6 +219,7 @@ struct StatusInfo
 	i32 stackFullStatus = 0;            // _ICEQUEEN _FreezeStatusIndex: applied when the stack is full
 	i32 casterStatus = 0;               // _CasterStatusIndex: applied to the caster when this status is applied
 	bool staminaBurn = false;
+	f32 descDefenceDown = 0;
 };
 
 // FIRING_METHOD RemoteFactoryComData: the remote a weapon shot creates

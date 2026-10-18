@@ -2072,6 +2072,9 @@ bool GameXmlContent::LoadStatusData()
 		XMLElement* pCommon = pInfo->FirstChildElement("ST_COMMONSTATUS");
 		const char* statusKey = pInfo->Attribute("KEYNAME");
 		st.staminaBurn = statusKey && EA::StdC::Strstr(statusKey, "STAMINABURN") != nullptr;
+		const char* statusDesc = pCommon ? pCommon->Attribute("_Description") : nullptr;
+		const char* defenceDown = statusKey && statusDesc && EA::StdC::Strstr(statusKey, "DEFENCEDOWN") ? EA::StdC::Strstr(statusDesc, "-") : nullptr;
+		if(defenceDown && EA::StdC::Strchr(defenceDown, '%')) st.descDefenceDown = (f32)EA::StdC::AtoI32(defenceDown + 1);
 		if(!pCommon) continue;
 
 		f32 durationMs = 0;
@@ -2266,6 +2269,17 @@ bool GameXmlContent::LoadStatusData()
 		foreach(t, touched) {
 			auto f = statusMap.find(*t);
 			if(f != statusMap.end()) f->second.modsFromTT = true;
+		}
+		foreach(it, statusMap) {
+			StatusInfo& st = it->second;
+			if(st.descDefenceDown <= 0 || !st.mods.empty() || st.type != "STATUS_TYPE_STAT") continue;
+			StatusMod mod;
+			mod.stat = StatusMod::DEFENCE;
+			mod.mul = true;
+			mod.value = -st.descDefenceDown;
+			mod.count = 1;
+			st.mods.push_back(mod);
+			modCount++;
 		}
 		LOG("Loaded %d status stat modifiers from skilltt", modCount);
 
