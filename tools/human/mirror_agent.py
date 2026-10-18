@@ -186,7 +186,9 @@ def act(m, pid, out, f, dbgdir, follow='none'):
             out.write(f'cast not seen, closed targeting {m.group(1)}'+chr(10))
         elif m.group(15) == '1':
             time.sleep(0.9)
-            drive.move(x, y)
+            seen = find_enemy(grab(), None, 30)
+            drive.move(*(seen if seen else (x, y)))
+            out.write(f'stance aim {"detected " + str(seen) if seen else "computed"}'+chr(10))
             for shot in range(STANCE_SHOTS):
                 drive.mouse(drive.MOUSEEVENTF_LEFTDOWN); time.sleep(0.05); drive.mouse(drive.MOUSEEVENTF_LEFTUP)
                 time.sleep(STANCE_SHOT_GAP)

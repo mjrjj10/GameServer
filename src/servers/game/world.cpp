@@ -1092,6 +1092,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	const Remote* remote = content.FindRemote(RemoteIdx(1430000000 + (i32)classType * 10000 + 10));
 
 	f32 aimMax = WEAPON_SHOT_MAX_DISTANCE;
+	f32 aimMin = 0;
 	bool spawnAtAim = false;
 	// FIRING_METHOD of the active weapon: combo step / charge level / every Nth shot / status replacement
 	{
@@ -1100,6 +1101,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		const WeaponFiring* wf = content.FindWeaponFiring((i32)weapon, shotStance);
 		if(wf) {
 			if(wf->maxDistance > 0) aimMax = wf->maxDistance;
+			aimMin = wf->minDistance;
 			spawnAtAim = wf->spawnAtAim;
 			RemoteIdx idx = wf->base;
 			if(player.chargeLevel > 0 && player.chargeLevel <= wf->charge.size()) idx = wf->charge[player.chargeLevel - 1];
@@ -1142,7 +1144,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	}
 	const Remote* bomb = remote ? content.FindRemote(remote->destroyCreateRemote) : nullptr;
 	if(spawnAtAim && remote) {
-		f32 reach = MIN(distance > 1.0f ? distance : ClassAttackRange(classType) * WEAPON_RANGE_SCALE, aimMax);
+		f32 reach = MAX(MIN(distance > 1.0f ? distance : ClassAttackRange(classType) * WEAPON_RANGE_SCALE, aimMax), aimMin);
 		if(player.pendingShotRawSize > 0) {
 			static i32 aimDumps = 0;
 			if(aimDumps++ < 12) {
@@ -3340,7 +3342,7 @@ void World::UpdateShowcase()
 		}
 		LOG("Mirror :: follow=%s", followKey);
 		LOG("Mirror :: prompt wall=%lld key=%s click=%d combo=%d skill=%d test=%s dist=%.0f aim=(%.0f, %.0f) dironly=%d posdir=%d comboclick=%d combotele=%d pick=%d stance=%d", ShowcaseWallMs(), mirrorKey ? mirrorKey : "none",
-			in && in->needsClick ? 1 : 0, combo != 0 ? 1 : 0, skill, testName, glm::length(vec2(dummyPos) - vec2(casterPos)), castPos.x - casterPos.x, castPos.y - casterPos.y, in && in->directionOnly ? 1 : 0, in && in->positionDirection ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->needsClick ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->teleportEntity ? 1 : 0, in && in->pickedEntity ? 1 : 0, skill != 0 && content.FindSkillStance(skill) ? 1 : 0);
+			in && in->needsClick ? 1 : 0, combo != 0 && content.GetComboAutoCastMs(combo) == 0 ? 1 : 0, skill, testName, glm::length(vec2(dummyPos) - vec2(casterPos)), castPos.x - casterPos.x, castPos.y - casterPos.y, in && in->directionOnly ? 1 : 0, in && in->positionDirection ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->needsClick ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->teleportEntity ? 1 : 0, in && in->pickedEntity ? 1 : 0, skill != 0 && content.FindSkillStance(skill) ? 1 : 0);
 	}
 	else if(step == 0) {
 		const vec2 rel = vec2(castPos) - vec2(casterPos);

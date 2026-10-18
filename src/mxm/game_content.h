@@ -233,6 +233,7 @@ struct WeaponFiring
 	i32 replaceStatus = 0;                            // _STATUS _OwnerStatusToCheck
 	RemoteIdx replaceRemote = RemoteIdx::INVALID;     // _RemoteIndexToReplace (the status is consumed)
 	f32 maxDistance = 0;
+	f32 minDistance = 0;
 	eastl::fixed_string<char,32,false> fireDummy;
 	bool spawnAtAim = false;
 };
