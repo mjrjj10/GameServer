@@ -17,7 +17,7 @@ $clientPid = (Get-Process MXMClient | Sort-Object StartTime -Descending)[0].Id
 $agentLog = "$Work\$Tag`_agent.log"
 Start-Process $py -Verb RunAs -WindowStyle Hidden -ArgumentList '-I', "`"$PSScriptRoot\mirror_agent.py`"", $clientPid, "`"$b\game_server.log`"", "`"$agentLog`"", ($Minutes * 60)
 $cap = "$Work\cap_$Tag"
-$job = Start-Job -ScriptBlock { param($f, $o, $s) powershell -ExecutionPolicy Bypass -File $f -OutDir $o -Seconds $s -IntervalMs 400 } -ArgumentList "D:\MxM\GameServer\tools\showcase\capture.ps1", $cap, ($Minutes * 60)
+$job = Start-Job -ScriptBlock { param($f, $o, $s) powershell -ExecutionPolicy Bypass -File $f -OutDir $o -Seconds $s -IntervalMs 100 } -ArgumentList "D:\MxM\GameServer\tools\showcase\capture.ps1", $cap, ($Minutes * 60)
 $t0 = Get-Date
 while ($true) {
     if (Select-String -Path "$b\game_server.log" -Pattern 'Showcase :: done' -Quiet -ErrorAction SilentlyContinue) { $status = 'done'; break }

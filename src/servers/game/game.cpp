@@ -703,6 +703,18 @@ void Game::OnPlayerWeaponStateRelay(ClientHandle clientHd, ActorUID ownerUID, i3
 	replication.RelayWeaponState(clientHd, ownerUID, (i32)weapon, state, chargeLevel, firingCombo);
 }
 
+bool Game::IsWeaponFireObject(ClientHandle clientHd, const wchar* name, u16 len)
+{
+	auto found = playerMap.find(clientHd);
+	if(found == playerMap.end()) return false;
+	const World::Player& player = world.GetPlayer(found->second->playerIndex);
+	const WeaponIndex weapon = (player.mainCharaID & 1) == 0 ? player.mainWeapon : player.subWeapon;
+	const WeaponFiring* wf = GetGameXmlContent().FindWeaponFiring((i32)weapon);
+	if(!wf || wf->fireDummy.empty() || wf->fireDummy.size() != len) return false;
+	for(u16 i = 0; i < len; i++) if((wchar)wf->fireDummy[i] != name[i]) return false;
+	return true;
+}
+
 void Game::OnPlayerWeaponShot(ClientHandle clientHd, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize)
 {
 	Player& p = *playerMap.at(clientHd);
@@ -734,11 +746,18 @@ void Game::OnPlayerCastSkill(ClientHandle clientHd, ActorUID actorUID, const Pla
 	LOG("OnPlayerCastSkill :: (%f, %f, %f) targets=%d rot=(%.3f, %.3f, %.3f) moveDir=(%.2f, %.2f)", cast.pos.x, cast.pos.y, cast.pos.z, (i32)cast.targetList.size(), posInfo.rot.x, posInfo.rot.y, posInfo.rot.z, posInfo.moveDir.x, posInfo.moveDir.y);
 }
 
-void Game::OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID)
+void Game::OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID, const float3* pos, LocalActorID target)
 {
 	Player& p = *playerMap.at(clientHd);
 	World::Player& player = world.GetPlayer(p.playerIndex);
-	LOG("Cast :: %ls execute request skill=%d (casting %d)", player.name.data(), (i32)skillID, (i32)player.casting.skillID);
+	if(player.casting.skillID == skillID) {
+		if(pos && (pos->x != 0 || pos->y != 0)) player.casting.castPos = f2v(*pos);
+		if(target != LocalActorID::INVALID) {
+			const ActorUID uid = replication.GetWorldActorUID(clientHd, target);
+			if(uid != ActorUID::INVALID) player.casting.target = uid;
+		}
+	}
+	LOG("Cast :: %ls execute request skill=%d (casting %d) pos=(%.0f, %.0f) target=%d", player.name.data(), (i32)skillID, (i32)player.casting.skillID, pos ? pos->x : 0.0f, pos ? pos->y : 0.0f, (i32)player.casting.target);
 	replication.SendExecuteSkillAck(clientHd, player.Main().UID, skillID);
 	if(player.casting.skillID == skillID) world.ReleaseCast(player);
 }

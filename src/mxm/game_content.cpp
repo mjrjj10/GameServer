@@ -372,6 +372,7 @@ void GameXmlContent::LoadAllSkills()
 				pTarget->QueryStringAttribute("_SelectStateType", &select);
 				const char* selectType = pTarget->Attribute("_SelectType");
 				in.teleportEntity = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_TELEPORT_ENTITY") == 0;
+				in.allEnemies = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_ENEMY_PC_ALL") == 0;
 				if(const char* om = pTarget->Attribute("_TestObstructMove")) in.obstructMove = EA::StdC::Strcmp(om, "SKILL_OBSTRUCTMOVE_TYPE_JUMPABLE") == 0 ? 1 : 2;
 				if(const char* os = pTarget->Attribute("_TestObstructSight")) in.obstructSight = EA::StdC::Strcmp(os, "SKILL_OBSTRUCTSIGHT_TYPE_ALL") == 0;
 				pTarget->QueryFloatAttribute("_MinDistance", &in.minDistance);
@@ -403,6 +404,33 @@ void GameXmlContent::LoadAllSkills()
 			pCast->QueryBoolAttribute("_InterruptByMove", &sc.interruptByMove);
 			sc.action = castAction ? ActionStateFromString(castAction) : ActionStateID::INVALID;
 			if(castType && sc.action != ActionStateID::INVALID && sc.time > 0) skillCast[skillID] = sc;
+			if(type == SkillType::TOGGLE && skill.action == ActionStateID::INVALID) skill.action = sc.action;
+		}
+		if(type == SkillType::TOGGLE) {
+			SkillToggle tg;
+			if(XMLElement* pToggle = pNodeCommonSkill->FirstChildElement("_Toggle")) {
+				f32 intervalMs = 0;
+				pToggle->QueryFloatAttribute("_ConsumeInterval", &intervalMs);
+				tg.interval = intervalMs / 1000.0f;
+				pToggle->QueryFloatAttribute("_ConsumeValue", &tg.value);
+				const char* ct = pToggle->Attribute("_ConsumeType");
+				if(ct && EA::StdC::Strcmp(ct, "STAT_TYPE_MANA") == 0) tg.consume = SkillToggle::MANA;
+				else if(ct && EA::StdC::Strcmp(ct, "STAT_TYPE_RAGE") == 0) tg.consume = SkillToggle::RAGE;
+				else if(ct && EA::StdC::Strcmp(ct, "STAT_TYPE_STAMINA") == 0) tg.consume = SkillToggle::STAMINA;
+			}
+			XMLElement* pLists = pNodeCommonSkill->FirstChildElement("_Toggle");
+			if(!pLists) pLists = pNodeCommonSkill;
+			for(XMLElement* p = pLists->FirstChildElement("_RemoteList"); p; p = p->NextSiblingElement("_RemoteList")) {
+				i32 id = 0;
+				p->QueryAttribute("DATA", &id);
+				if(id > 0 && !tg.remotes.full()) tg.remotes.push_back(id);
+			}
+			for(XMLElement* p = pLists->FirstChildElement("_StatusList"); p; p = p->NextSiblingElement("_StatusList")) {
+				i32 id = 0;
+				p->QueryAttribute("DATA", &id);
+				if(id > 0 && !tg.statuses.full()) tg.statuses.push_back(id);
+			}
+			skillToggle[skillID] = tg;
 		}
 		if(XMLElement* pStance = pNodeCommonSkill->FirstChildElement("_STANCE")) {
 			const char* stanceType = nullptr;
@@ -1527,8 +1555,9 @@ static void ParseRemoteSpawnRules(XMLElement* pEvent, Remote::SpawnRules& out)
 			Remote::SpawnRule rule;
 			i32 idx = -1;
 			pAct->QueryAttribute("_RemoteIndex", &idx);
-			if(idx <= 0 || out.full()) continue;
-			rule.idx = RemoteIdx(idx);
+			pAct->QueryAttribute("_CreatureIndex", &rule.creature);
+			if((idx <= 0 && rule.creature <= 0) || out.full()) continue;
+			if(idx > 0) rule.idx = RemoteIdx(idx);
 			out.push_back(rule);
 		}
 		else if(EA::StdC::Strcmp(pAct->Name(), "_CreateRemote") == 0) {
@@ -2077,8 +2106,14 @@ bool GameXmlContent::LoadStatusData()
 				pBlock->QueryAttribute("_StandingShirk", &s2);
 				st.blockShirk = m != 0 || s2 != 0;
 			}
-			XMLElement* pAura = pCommon->FirstChildElement("_AuraStatusIndex");
-			if(pAura) pAura->QueryAttribute("DATA", &st.auraStatus);
+			for(XMLElement* pAura = pCommon->FirstChildElement("_AuraStatusIndex"); pAura; pAura = pAura->NextSiblingElement("_AuraStatusIndex")) {
+				i32 id = 0;
+				pAura->QueryAttribute("DATA", &id);
+				if(id == 0) continue;
+				if(st.auraStatus == 0) st.auraStatus = id;
+				if(!st.auraStatuses.full()) st.auraStatuses.push_back(id);
+			}
+			st.auraAll = eff && EA::StdC::Strcmp(eff, "STATUS_EFFECT_UNKNOWN") == 0;
 			XMLElement* pLink = pCommon->FirstChildElement("_LINK");
 			if(!pLink) pLink = pCommon->NextSiblingElement("_LINK");
 			if(pLink) {
@@ -2212,6 +2247,7 @@ bool GameXmlContent::LoadStatusData()
 					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_SKILL_CRITICALRATE") == 0) mod.stat = StatusMod::SKILL_CRITICALRATE;
 					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_ATTACK") == 0) mod.stat = StatusMod::ATTACK;
 					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_MOVESPEED") == 0) mod.stat = StatusMod::MOVESPEED;
+					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_DEFENCE") == 0) mod.stat = StatusMod::DEFENCE;
 					if(mod.mul && mod.stat != StatusMod::OTHER && !skillMulStats.full()) skillMulStats.push_back({ skillID, statusID, (u8)mod.stat, mod.value });
 					if(!found->second.mods.full()) { found->second.mods.push_back(mod); modCount++; }
 					touched.insert(statusID);
@@ -2509,6 +2545,7 @@ bool GameXmlContent::LoadStatusData()
 			pInfo->QueryAttribute("ID", &id);
 			XMLElement* pData = pInfo->FirstChildElement("FiringMethodData");
 			XMLElement* pFire = pData ? pData->FirstChildElement("_FIREINFO") : nullptr;
+			const char* fireDummy = pData ? pData->Attribute("_FiringDummy") : nullptr;
 			f32 fireMaxDistance = 0;
 			if(pFire) pFire->QueryFloatAttribute("_MaxDistance", &fireMaxDistance);
 			if(pFire) {
@@ -2518,6 +2555,7 @@ bool GameXmlContent::LoadStatusData()
 			}
 			{
 				WeaponFiring wf;
+				if(fireDummy) wf.fireDummy = fireDummy;
 				XMLElement* pFactory = pInfo->FirstChildElement("RemoteFactoryComData");
 				XMLElement* pCreate = pFactory ? pFactory->FirstChildElement("_Create") : nullptr;
 				XMLElement* pDef = pCreate ? pCreate->FirstChildElement("_Default") : nullptr;
@@ -2577,6 +2615,8 @@ bool GameXmlContent::LoadStatusData()
 			for(XMLElement* pComp = pInfo->FirstChildElement(); pComp; pComp = pComp->NextSiblingElement()) {
 				i32 firing = 0;
 				if(pComp->QueryAttribute("_DefaultFiringIndex", &firing) != XML_SUCCESS) continue;
+				f32 pvpAttack = 0;
+				if(pComp->QueryFloatAttribute("_PvPAttack", &pvpAttack) == XML_SUCCESS && pvpAttack > 0) weaponAttack[id] = pvpAttack;
 				auto f = byFiring.find(firing);
 				if(f != byFiring.end()) weaponHeat[id] = f->second;
 				auto d = delayByFiring.find(firing);

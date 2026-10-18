@@ -23,7 +23,7 @@ for ($i = 0; $i -lt $Clients; $i++) {
 }
 Start-Sleep 15
 $cap = "$Work\cap_$Tag"
-$capProc = Start-Process $py -ArgumentList '-I', "`"$PSScriptRoot\wingrid.py`"", ($pids -join ','), "`"$cap`"", ($Minutes * 60), 2 -PassThru -WindowStyle Hidden
+$capProc = Start-Process $py -ArgumentList '-I', "`"$PSScriptRoot\wingrid.py`"", ($pids -join ','), "`"$cap`"", ($Minutes * 60), 0.15 -PassThru -WindowStyle Hidden
 $t0 = Get-Date
 while ($true) {
     $done = (Select-String -Path "$b\game_server.log" -Pattern 'Showcase :: done' -ErrorAction SilentlyContinue | Measure-Object).Count

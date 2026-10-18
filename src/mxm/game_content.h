@@ -140,7 +140,7 @@ struct SummonInfo
 
 struct StatusMod
 {
-	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE, ATTACK, MOVESPEED, REFLECT_DAMAGE_RATIO };
+	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE, ATTACK, MOVESPEED, REFLECT_DAMAGE_RATIO, DEFENCE };
 	Stat stat = OTHER;
 	bool regen = false;  // STATPROC_REGEN: applied every tick (value_2 = tick count)
 	bool mul = false;    // STATAPPLY_MUL: percent
@@ -183,7 +183,9 @@ struct StatusInfo
 	bool isDebuff = false;              // _EffectType STATUS_EFFECT_DEBUFF
 	bool canDispel = false;             // _CanDispel
 	i8 dispelEffect = -1;               // STATUS_TYPE_DISPEL _DispelEffectType: 0 buffs, 1 debuffs
-	i32 auraStatus = 0;                 // STATUS_TYPE_AURA _AuraStatusIndex
+	i32 auraStatus = 0;                 // STATUS_TYPE_AURA _AuraStatusIndex (first)
+	eastl::fixed_vector<i32,8,false> auraStatuses; // every _AuraStatusIndex
+	bool auraAll = false;               // aura with _EffectType UNKNOWN: its buffs reach enemies too
 	i32 linkCasterStatus = 0;
 	i32 linkTargetStatus = 0;
 	f32 targetingRange = 0;             // _TargetingRange
@@ -226,6 +228,7 @@ struct WeaponFiring
 	i32 replaceStatus = 0;                            // _STATUS _OwnerStatusToCheck
 	RemoteIdx replaceRemote = RemoteIdx::INVALID;     // _RemoteIndexToReplace (the status is consumed)
 	f32 maxDistance = 0;
+	eastl::fixed_string<char,32,false> fireDummy;     // FiringMethodData _FiringDummy
 };
 
 struct Remote
@@ -334,6 +337,7 @@ struct Remote
 	struct SpawnRule
 	{
 		RemoteIdx idx = RemoteIdx::INVALID;
+		i32 creature = 0;         // _CreateEntity _CreatureIndex: spawns a creature (summon) instead of a remote
 		u8 kind = SPAWN_SINGLE;
 		i32 maxNum = 1;
 		f32 maxAngle = 0;
@@ -608,10 +612,13 @@ struct GameXmlContent
 	i32 GetFirstComboSkill(i32 baseSkill) const { auto f = firstComboSkill.find(baseSkill); return f == firstComboSkill.end() ? 0 : f->second; }
 	i32 WeaponTypeOf(ClassType classType, WeaponIndex weaponIndex) const;
 	const Action& GetSkillAction(ClassType classType, ActionStateID actionID, i8 stance = 0) const;
-	struct SkillInput { bool needsClick = false; bool directionOnly = false; bool friendlyOnly = false; bool positionDirection = false; bool selfPosition = false; bool teleportEntity = false; u8 obstructMove = 0; bool obstructSight = false; i32 coolTimeID = 0; f32 coolTime = 0; f32 minDistance = 0; f32 maxDistance = 0; };
+	struct SkillInput { bool needsClick = false; bool directionOnly = false; bool friendlyOnly = false; bool positionDirection = false; bool selfPosition = false; bool teleportEntity = false; bool allEnemies = false; u8 obstructMove = 0; bool obstructSight = false; i32 coolTimeID = 0; f32 coolTime = 0; f32 minDistance = 0; f32 maxDistance = 0; };
 	const SkillInput* FindSkillInput(i32 skillID) const { auto f = skillInput.find(skillID); return f == skillInput.end() ? nullptr : &f->second; }
 	struct SkillCast { enum Type: u8 { DELAY, LIMIT, CHARGING } type = DELAY; f32 time = 0; ActionStateID action = ActionStateID::INVALID; bool interruptByMove = false; };
 	const SkillCast* FindSkillCast(i32 skillID) const { auto f = skillCast.find(skillID); return f == skillCast.end() ? nullptr : &f->second; }
+	// SKILL_TYPE_TOGGLE: on/off by recast; _RemoteList and _StatusList stay while on, _Toggle consumes a resource
+	struct SkillToggle { enum Consume: u8 { NONE, MANA, RAGE, STAMINA } consume = NONE; f32 interval = 0; f32 value = 0; eastl::fixed_vector<i32,4,false> remotes; eastl::fixed_vector<i32,6,false> statuses; };
+	const SkillToggle* FindSkillToggle(i32 skillID) const { auto f = skillToggle.find(skillID); return f == skillToggle.end() ? nullptr : &f->second; }
 	struct SkillStance { i8 stance = 0; f32 duration = 0; i32 weaponFireCount = 0; bool cancelByDefeat = false; };
 	const SkillStance* FindSkillStance(i32 skillID) const { auto f = skillStance.find(skillID); return f == skillStance.end() ? nullptr : &f->second; }
 	static i8 StanceFromString(const char* str);
@@ -633,6 +640,7 @@ struct GameXmlContent
 	const eastl::array<i32,5>* FindBotSkills(i32 creature) const { auto f = botSkills.find(creature); return f == botSkills.end() ? nullptr : &f->second; }
 	i32 GetChildSkill(ClassType c, ActionStateID a) const { auto f = childSkill.find(((u32)c << 16) | ((u32)a & 0xFFFF)); return f == childSkill.end() ? 0 : f->second; }
 	const WeaponFiring* FindWeaponFiring(i32 weaponID) const { auto f = weaponFiring.find(weaponID); return f == weaponFiring.end() ? nullptr : &f->second; }
+	f32 GetWeaponAttack(i32 weaponID) const { auto f = weaponAttack.find(weaponID); return f == weaponAttack.end() ? 0.0f : f->second; }
 	const eastl::fixed_vector<i32,4,false>* FindPassiveStatuses(ClassType c) const { auto f = passiveStatuses.find((i32)c); return f == passiveStatuses.end() ? nullptr : &f->second; }
 	const WeaponHeatInfo* FindWeaponHeat(i32 weaponID) const { auto f = weaponHeat.find(weaponID); return f == weaponHeat.end() ? nullptr : &f->second; }
 	f32 GetSkillBaseDamage(i32 skillID) const { auto f = skillBaseDamage.find(skillID); return f == skillBaseDamage.end() ? 0 : f->second; }
@@ -719,6 +727,7 @@ private:
 	eastl::hash_map<i32, WeaponHeatInfo> weaponHeat;
 	eastl::hash_map<i32, f32> weaponFireDelay; // weapon -> FIRING_METHOD _FIREINFO _FireDelayTime
 	eastl::hash_map<i32, WeaponFiring> weaponFiring; // weapon -> default firing method remotes
+	eastl::hash_map<i32, f32> weaponAttack;          // weapon -> WeaponComData _PvPAttack
 	eastl::hash_map<u32, i32> childSkill;
 	// bots (BotBrainData.xml _SkillIndexData per master, E_BOT_STAGE_LEVEL_NORMAL constants; SKILL.xml)
 	eastl::hash_map<i32, eastl::array<i32,5>> botSkills;  // master creature -> _Skill0.._Skill3, _UgSkill
@@ -726,6 +735,7 @@ private:
 	eastl::hash_map<i32, i32> firstComboSkill;
 	eastl::hash_map<i32, SkillStance> skillStance;
 	eastl::hash_map<i32, SkillCast> skillCast;
+	eastl::hash_map<i32, SkillToggle> skillToggle;
 	eastl::hash_map<i32, SkillInput> skillInput;
 	eastl::hash_map<i32, f32> botSkillMaxDistance;        // _Target _BotSkillMaxDistance
 	eastl::hash_map<i32, f32> skillRangeX;

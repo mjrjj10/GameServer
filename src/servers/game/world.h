@@ -125,6 +125,9 @@ struct World
 			u8 type = 0;
 			bool interruptByMove = false;
 		} casting;
+		SkillID toggleSkill = SkillID::INVALID;
+		u32 toggleCastID = 0;
+		Time toggleNext = Time::ZERO;
 		i32 pendingChildSkill = 0;
 		Time pendingChildSkillUntil = Time::ZERO;
 		vec3 pendingChildPos = vec3(0);
@@ -420,6 +423,7 @@ struct World
 		ActorUID sourceUID = ActorUID::INVALID;
 		const GameXmlContent::CostLevel* costLevel = nullptr;
 		f32 followDist = -1.0f;
+		u32 instID = 0;
 		const Remote* remote;
 		u32 ownerIndex;
 		SkillID skillID;
@@ -454,12 +458,14 @@ struct World
 
 	struct CastHit
 	{
+		u32 instID = 0;
 		RemoteIdx remoteID;
 		u32 castID;
 		u32 playerIndex;
 		Time until;
 	};
 
+	u32 nextRemoteInstID = 1;
 	eastl::fixed_vector<PendingRemote,256,false> pendingRemotes;
 	eastl::fixed_vector<RemoteInst,256,false> remoteInsts;
 	eastl::fixed_vector<CastHit,512,false> castHits;
@@ -527,7 +533,7 @@ struct World
 	struct GroundAura
 	{
 		u32 ownerIndex;
-		i32 auraStatus;
+		i32 auraStatus;  // the aura status itself (its _AuraStatusIndex children are given)
 		f32 range;
 		vec3 pos;
 		Time until;
@@ -614,6 +620,7 @@ struct World
 		f32 flatLen = 2050.0f;
 		Time minNext = Time::ZERO;
 		Time quietSince = Time::ZERO;
+		i32 posWaits = 0;
 		vec3 anchor = vec3(0);
 		f32 yaw = 0;
 	} showcase;
@@ -655,6 +662,12 @@ public:
 	void ApplyAllPassives();
 	void ReleaseCast(Player& player);
 	void ComboBaseCooldown(Player& player);
+	void ToggleOn(Player& player, SkillID skillID, const vec3& castPos);
+	void ToggleOff(Player& player);
+	void UpdateToggles();
+	void SpawnCreatureFromRemote(const RemoteInst& parent, i32 creature, const vec3& pos);
+	f32 WeaponHitDamage(const Player& player, const Remote* remote) const;
+	void PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& center, f32 range, i32 skipDebuffIndex);
 private:
 	void PassiveOnSkillCast(Player& player, i32 skillID);
 	void PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj);

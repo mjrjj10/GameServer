@@ -56,7 +56,14 @@ static f32 ElementMultiplier(const World::Player& attacker, const World::Player&
 	return 1.0f;
 }
 
-static const i32 WEAPON_HIT_DAMAGE = 120;
+static const i32 WEAPON_HIT_DAMAGE = 120;              // fallback when the weapon has no _PvPAttack
+static const i32 STAT_DEFENCE = 7;
+static const i32 STAT_DEFENCE_PENETRATION = 20;
+static const i32 STAT_SKILL_PENETRATION = 21;
+static const i32 STAT_SKILLDAMAGE_REDUCE_RATIO = 68;
+static const f32 DEFENCE_SCALE = 100.0f;             // client Defense tooltip: received = 100 / (100 + DEF)
+static const f32 PENETRATION_CAP = 50.0f;            // stat tooltip: cannot exceed 50%
+static const f32 SKILLDAMAGE_REDUCE_CAP = 80.0f;     // stat tooltip: cannot exceed 80%
 static const f64 WEAPON_HIT_INTERVAL_MS = 80.0;
 static const f32 WEAPON_PROJECTILE_SPEED = 4000.0f;
 static const f32 WEAPON_MELEE_MAX_RANGE = 600.0f;
@@ -84,6 +91,9 @@ static const f32 OBSTRUCT_LOW_HEIGHT = 30.0f;
 static const f32 OBSTRUCT_SIDE = 50.0f;
 static const f32 SHOWCASE_MIN_MEASURE_SEC = 2.5f;
 static const f32 SHOWCASE_QUIET_SEC = 0.5f;
+static const f32 MIRROR_POS_TOLERANCE = 60.0f;
+static const i32 MIRROR_POS_MAX_WAITS = 12;
+static const f64 MIRROR_POS_RETRY_MS = 400.0;
 static const i32 RELAY_MODE_STATE_OFFSET = 9;
 static const i32 RELAY_IDS_PER_MODE = 3;
 static const i32 RELAY_ARTILLERY_MODE = 2;
@@ -324,6 +334,7 @@ void World::Update(Time localTime_)
 	UpdateRemotes((f32)tdelta);
 	UpdateUltimateGauges((f32)tdelta);
 	UpdateStatuses();
+	UpdateToggles();
 	UpdateSummons();
 	UpdateSummonAi((f32)tdelta);
 	if(!frozen) UpdatePassives();
@@ -711,6 +722,13 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		}
 	}
 	if(frozen) return;
+	eastl::fixed_vector<ActorUID,10,false> allEnemyTargets;
+	if(const GameXmlContent::SkillInput* selIn = GetGameXmlContent().FindSkillInput((i32)skillID)) {
+		if(selIn->allEnemies) {
+			foreach_const(e, players) if(e->team != player.team && !e->dead) allEnemyTargets.push_back(e->Main().UID);
+			targets = Slice<const ActorUID>(allEnemyTargets.data(), allEnemyTargets.size());
+		}
+	}
 	// TODO: check if can cast
 
 	// access method is kinda convoluted
@@ -725,6 +743,13 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	if(Config().DevMirror && !followUp && player.clientHd != ClientHandle::INVALID && player.index == showcase.prevCaster && !showcase.castSeen) {
 		showcase.castSeen = true;
 		showcase.castAt = localTime;
+	}
+	if(!followUp && content.FindSkillToggle((i32)skillID)) {
+		if(player.toggleSkill == skillID) {
+			ToggleOff(player);
+			return;
+		}
+		ToggleOn(player, skillID, castPos);
 	}
 	if(!followUp && player.casting.skillID == skillID) {
 		ReleaseCast(player);
@@ -905,7 +930,9 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 
 	replication->FramePushSkillExec(rpExec);
 
-	const bool remotesScheduled = ScheduleSkillRemotes(player, skillID, castPos, targets, angle, followUp ? 0 : -1, cast ? cast->action : forcedAction);
+	const bool castRelease = followUp && forcedAction == skill.action;
+	if(castRelease && player.lastComboSkill == skillID) player.lastComboSkill = SkillID::INVALID;
+	const bool remotesScheduled = ScheduleSkillRemotes(player, skillID, castPos, targets, angle, followUp && !castRelease ? 0 : -1, cast ? cast->action : forcedAction);
 	castCostLevel = nullptr;
 	if(cast) {
 		const bool bot = player.clientHd == ClientHandle::INVALID;
@@ -996,7 +1023,7 @@ void World::PlayerWeaponFire(Player& player)
 				const f32 cosAngle = glm::dot(rel / dist, dir);
 				if(cosAngle < cosf(WEAPON_MELEE_HALF_ANGLE)) continue;
 			}
-			DamagePlayer(player, *it, SkillID::INVALID, WEAPON_HIT_DAMAGE);
+			DamagePlayer(player, *it, SkillID::INVALID, (i32)WeaponHitDamage(player, nullptr));
 		}
 	}
 }
@@ -1116,7 +1143,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		replication->SendRemoteCreateToAll(player.Main().UID, seed, remote->ID, firePos, atan2f(proj.dir.y, proj.dir.x), target, ActorUID::INVALID, L"Attack_Fire_Dummy");
 	}
 	// weapon damage scales with attack: percent attack modifiers of active statuses (skilltt STAT_TYPE_ATTACK MUL)
-	proj.damage = (i32)(WEAPON_HIT_DAMAGE * MAX(1.0f + StatusModMulSum(player, StatusMod::ATTACK) / 100.0f, 0.0f));
+	proj.damage = (i32)WeaponHitDamage(player, remote);
 	LOG("Shot :: %ls class=%d remote=%d graph=%d reliable=%d dist=%.0f range=%.0f speed=%.0f width=%.0f hits=%d aoe=%.0f", player.name.data(), (i32)classType, remote ? (i32)remote->ID : -1, graph, reliable, distance, proj.range, proj.speed, proj.halfWidth, proj.hitsLeft, proj.aoeRadius);
 	projectileList.push_back(proj);
 }
@@ -1726,6 +1753,116 @@ void World::StanceWeaponUse(Player& player)
 	if(--m.stanceShotsLeft == 0) SetStance(m, 0, 0, 0, false);
 }
 
+f32 World::WeaponHitDamage(const Player& player, const Remote* remote) const
+{
+	const u32 m = player.mainCharaID & 1;
+	const WeaponIndex weapon = m == 0 ? player.mainWeapon : player.subWeapon;
+	const f32 base = Config().DamageFormula ? GetGameXmlContent().GetWeaponAttack((i32)weapon) : 0.0f;
+	const f32 attack = base > 0 ? base : (f32)WEAPON_HIT_DAMAGE;
+	const f32 mult = Config().DamageFormula && remote && remote->attackMultiplier > 0 ? remote->attackMultiplier : 1.0f;
+	return attack * mult * MAX(1.0f + StatusModMulSum(player, StatusMod::ATTACK) / 100.0f, 0.0f);
+}
+
+void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& center, f32 range, i32 skipDebuffIndex)
+{
+	const u8 casterTeam = players[casterIndex].team;
+	foreach_const(id, aura.auraStatuses) {
+		const StatusInfo* child = GetGameXmlContent().FindStatus(*id);
+		if(!child) continue;
+		foreach(p, players) {
+			if(p->dead) continue;
+			const bool casterAlly = p->team == casterTeam;
+			if(child->isDebuff ? casterAlly : (!casterAlly && !aura.auraAll)) continue;
+			if(child->isDebuff && (i32)p->index == skipDebuffIndex) continue;
+			if(glm::length(vec2(p->body->GetWorldPos()) - center) > range + HitRadius(*p)) continue;
+			if(pendingStatuses.full()) return;
+			PendingStatus ps;
+			ps.time = localTime;
+			ps.statusID = *id;
+			ps.casterIndex = casterIndex;
+			ps.targetUID = p->Main().UID;
+			ps.duration = child->durationSec > 0 ? child->durationSec : 1.0f;
+			ps.power = 0;
+			pendingStatuses.push_back(ps);
+		}
+	}
+}
+
+void World::SpawnCreatureFromRemote(const RemoteInst& parent, i32 creature, const vec3& pos)
+{
+	if(pendingSummons.full() || parent.ownerIndex >= (u32)players.size()) return;
+	PendingSummon ps;
+	ps.time = localTime;
+	ps.creature = creature;
+	ps.ownerIndex = parent.ownerIndex;
+	ps.pos = vec3(vec2(pos), players[parent.ownerIndex].body->GetWorldPos().z);
+	ps.rot = vec3(0, 0, atan2f(parent.dir.y, parent.dir.x));
+	ps.target = parent.target;
+	pendingSummons.push_back(ps);
+	LOG("Remote :: %d creates creature %d at (%.0f, %.0f)", (i32)parent.remote->ID, creature, pos.x, pos.y);
+}
+
+void World::ToggleOn(Player& player, SkillID skillID, const vec3& castPos)
+{
+	const GameXmlContent::SkillToggle* tg = GetGameXmlContent().FindSkillToggle((i32)skillID);
+	if(!tg) return;
+	if(player.toggleSkill != SkillID::INVALID) ToggleOff(player);
+	player.toggleSkill = skillID;
+	player.toggleCastID = nextCastID++;
+	player.toggleNext = TimeAdd(localTime, TimeMsToTime(tg->interval * 1000.0));
+	const vec3 pos = player.body->GetWorldPos();
+	const f32 yaw = player.input.rot.upperYaw;
+	foreach_const(id, tg->remotes) {
+		SpawnRemote(player.index, RemoteIdx(*id), pos, vec2(cosf(yaw), sinf(yaw)), ActorUID::INVALID, skillID, player.toggleCastID, (i32)SkillDamage(skillID), true);
+	}
+	foreach_const(id, tg->statuses) ApplyStatus(player, player, *id);
+	LOG("Toggle :: %ls skill=%d on (%d remotes, %d statuses)", player.name.data(), (i32)skillID, (i32)tg->remotes.size(), (i32)tg->statuses.size());
+}
+
+void World::ToggleOff(Player& player)
+{
+	if(player.toggleSkill == SkillID::INVALID) return;
+	const GameXmlContent::SkillToggle* tg = GetGameXmlContent().FindSkillToggle((i32)player.toggleSkill);
+	for(int i = 0; i < (i32)remoteInsts.size(); ) {
+		RemoteInst& inst = remoteInsts[i];
+		if(inst.ownerIndex == player.index && inst.castID == player.toggleCastID) {
+			if(inst.clientRemoteID != 0) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
+			remoteInsts.erase_unsorted(remoteInsts.begin() + i);
+		}
+		else i++;
+	}
+	if(tg) {
+		foreach(it, activeStatuses) {
+			if(it->targetIndex != player.index) continue;
+			if(eastl::find(tg->statuses.begin(), tg->statuses.end(), it->statusID) != tg->statuses.end()) it->until = localTime;
+		}
+	}
+	LOG("Toggle :: %ls skill=%d off", player.name.data(), (i32)player.toggleSkill);
+	player.toggleSkill = SkillID::INVALID;
+}
+
+void World::UpdateToggles()
+{
+	foreach(it, players) {
+		Player& p = *it;
+		if(p.toggleSkill == SkillID::INVALID) continue;
+		if(p.dead) { ToggleOff(p); continue; }
+		const GameXmlContent::SkillToggle* tg = GetGameXmlContent().FindSkillToggle((i32)p.toggleSkill);
+		if(!tg || tg->interval <= 0 || localTime < p.toggleNext) continue;
+		p.toggleNext = TimeAdd(p.toggleNext, TimeMsToTime(tg->interval * 1000.0));
+		f32* pool = nullptr;
+		if(tg->consume == GameXmlContent::SkillToggle::MANA) pool = &p.mana;
+		else if(tg->consume == GameXmlContent::SkillToggle::RAGE) pool = &p.res[1];
+		else if(tg->consume == GameXmlContent::SkillToggle::STAMINA) pool = &p.stamina;
+		if(!pool || *pool < 0) continue;
+		if(*pool < tg->value) { ToggleOff(p); continue; }
+		*pool -= tg->value;
+		p.tNextManaSend = Time::ZERO;
+		p.tNextResSend = Time::ZERO;
+		p.tNextStaminaSend = Time::ZERO;
+	}
+}
+
 void World::ComboBaseCooldown(Player& player)
 {
 	const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput((i32)player.comboBase);
@@ -1820,7 +1957,7 @@ void World::PassiveOnSkillCast(Player& player, i32 skillID)
 			LOG("Passive :: %ls skill counter %d/%d", player.name.data(), it->custom, it->info->customMax);
 			if(it->custom >= it->info->customMax) {
 				it->custom = it->info->customInit;
-				if(it->info->auraStatus != 0 && !toApply.full()) toApply.push_back(it->info->auraStatus);
+				foreach_const(id, it->info->auraStatuses) if(!toApply.full()) toApply.push_back(*id);
 			}
 		}
 	}
@@ -2297,7 +2434,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			if(st->auraStatus != 0 && st->targetingRange > 0 && !groundAuras.full()) {
 				GroundAura ga;
 				ga.ownerIndex = npc.ownerIndex;
-				ga.auraStatus = st->auraStatus;
+				ga.auraStatus = st->ID;
 				ga.range = st->targetingRange;
 				ga.pos = npc.pos;
 				ga.until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
@@ -2491,7 +2628,7 @@ void World::UpdateShowcase()
 	}
 	if(showcase.done) return;
 	if(localTime < showcase.next) {
-		if(!Config().DevMirror || showcase.minNext == Time::ZERO || localTime < showcase.minNext) return;
+		if(showcase.minNext == Time::ZERO || localTime < showcase.minNext) return;
 		bool quiet = remoteInsts.empty() && pendingRemotes.empty() && pendingStatuses.empty() && pendingSummons.empty() &&
 			pendingSummonCommands.empty() && skillProgramList.empty() && showcase.comboSkill == 0;
 		const Player& qc = players[showcase.prevCaster];
@@ -2687,6 +2824,7 @@ void World::UpdateShowcase()
 				glm::length(vec2(human->lastClientPos) - vec2(human->placedAt)), human->clientPosCount);
 		human->placedAt = vec3(0);
 		LOG("Showcase :: result hit=%d expect=%d %s damage=%d hits=%d dummyZ=%.0f groundZ=%.0f", hit ? 1 : 0, showcase.prevExpect, ok ? "OK" : "MISMATCH", dealt, hits, pd.body->GetWorldPos().z, showcase.groundZ);
+		foreach(tp, players) ToggleOff(*tp);
 		{
 			const Player& pc = players[showcase.prevCaster];
 			eastl::fixed_string<char,160,false> sts;
@@ -2860,8 +2998,21 @@ void World::UpdateShowcase()
 	if(!showcase.settled) {
 		showcase.settled = true;
 		showcase.next = TimeAdd(localTime, TimeMsToTime(&dummy == human ? 1500 : 500));
+		showcase.posWaits = 0;
 		return;
 	}
+	if((&caster == human || &dummy == human) && human->clientPosCount > 0 && showcase.posWaits < MIRROR_POS_MAX_WAITS) {
+		const vec3 want = human->body->GetWorldPos();
+		const f32 off = glm::length(vec2(human->lastClientPos) - vec2(want));
+		if(off > MIRROR_POS_TOLERANCE) {
+			showcase.posWaits++;
+			LOG("Mirror :: waiting for the client at its test spot (%.0f away, try %d)", off, showcase.posWaits);
+			replication->SendSelfTeleport(human->clientHd, human->Main().UID, want, &caster == human ? faceDummy : faceCaster, &human->lastClientPos);
+			showcase.next = TimeAdd(localTime, TimeMsToTime(MIRROR_POS_RETRY_MS));
+			return;
+		}
+	}
+	if(&dummy == human) human->placedAt = human->body->GetWorldPos();
 	showcase.settled = false;
 	if(&caster == human) {
 		const vec3 settledPos = human->body->GetWorldPos();
@@ -3003,7 +3154,7 @@ void World::UpdateShowcase()
 			}
 		}
 	}
-	f32 wait = step == 7 ? 2.0f : 3.5f;
+	f32 wait = step == 7 ? 2.0f : 9.0f;
 	if(mirror && step != 7) wait = &caster == human ? 10.0f : 8.0f;
 	if(step >= 1 && step <= 6 && skill == 0) wait = 0.2f;
 	if(showcase.step > 7) {
@@ -3020,7 +3171,7 @@ void World::UpdateShowcase()
 		}
 	}
 	showcase.next = TimeAdd(localTime, TimeMsToTime(wait * 1000.0));
-	if(mirror && step != 7 && wait > SHOWCASE_MIN_MEASURE_SEC) showcase.minNext = TimeAdd(localTime, TimeMsToTime(SHOWCASE_MIN_MEASURE_SEC * 1000.0));
+	if(step != 7 && wait > SHOWCASE_MIN_MEASURE_SEC) showcase.minNext = TimeAdd(localTime, TimeMsToTime(SHOWCASE_MIN_MEASURE_SEC * 1000.0));
 }
 
 void World::UpdateBotCombat()
@@ -3160,14 +3311,14 @@ void World::UpdateSummons()
 			if(st && st->auraStatus != 0 && !groundAuras.full()) {
 				GroundAura ga;
 				ga.ownerIndex = pc->ownerIndex;
-				ga.auraStatus = st->auraStatus;
+				ga.auraStatus = st->ID;
 				ga.range = st->targetingRange;
 				ga.pos = pc->pos;
 				const Time statusEnd = st->durationSec > 0 ? TimeAdd(localTime, TimeMsToTime(st->durationSec * 1000.0)) : pc->until;
 				ga.until = pc->until < statusEnd ? pc->until : statusEnd;
 				ga.nextPulse = localTime;
 				groundAuras.push_back(ga);
-				LOG("Summon :: %ls aura %d (gives %d within %.0f)", owner.name.data(), pc->index, st->auraStatus, st->targetingRange);
+				LOG("Summon :: %ls aura %d (gives %d statuses within %.0f%s)", owner.name.data(), pc->index, (i32)st->auraStatuses.size(), st->targetingRange, st->auraAll ? ", everyone" : "");
 			}
 		}
 		pc = pendingSummonCommands.erase_unsorted(pc);
@@ -3177,27 +3328,8 @@ void World::UpdateSummons()
 		if(localTime >= ga->until) { ga = groundAuras.erase_unsorted(ga); continue; }
 		if(localTime >= ga->nextPulse) {
 			ga->nextPulse = TimeAdd(localTime, TimeMsToTime(500));
-			const StatusInfo* child = GetGameXmlContent().FindStatus(ga->auraStatus);
-			const Player& owner = players[ga->ownerIndex];
-			if(child && ga->range > 0) {
-				foreach(p, players) {
-					if(p->dead) continue;
-					const bool ally = p->team == owner.team;
-					if(ally == child->isDebuff) continue;
-					if(glm::length(vec2(p->body->GetWorldPos()) - vec2(ga->pos)) > ga->range + HitRadius(*p)) continue;
-					if(!pendingStatuses.full()) {
-						PendingStatus ps;
-						ps.time = localTime;
-						ps.statusID = ga->auraStatus;
-						ps.casterIndex = ga->ownerIndex;
-						ps.targetUID = p->Main().UID;
-						// short-lived so it fades once out of the aura
-						ps.duration = child->durationSec > 0 ? child->durationSec : 1.0f;
-						ps.power = 0;
-						pendingStatuses.push_back(ps);
-					}
-				}
-			}
+			const StatusInfo* aura = GetGameXmlContent().FindStatus(ga->auraStatus);
+			if(aura && ga->range > 0) PulseAura(ga->ownerIndex, *aura, vec2(ga->pos), ga->range, -1);
 		}
 		++ga;
 	}
@@ -3285,29 +3417,7 @@ void World::UpdateStatuses()
 			it->nextAuraPulse = TimeAdd(localTime, TimeMsToTime(500));
 			const StatusInfo* child = GetGameXmlContent().FindStatus(it->info->auraStatus);
 			const f32 range = it->info->targetingRange > 0 ? it->info->targetingRange : (child ? child->targetingRange : 0);
-			if(child && range > 0) {
-				const i32 auraStatus = it->info->auraStatus;
-				const u32 casterIndex = it->casterIndex;
-				const vec2 center = vec2(target.body->GetWorldPos());
-				const u8 casterTeam = players[casterIndex].team;
-				foreach(p, players) {
-					if(p->dead) continue;
-					const bool casterAlly = p->team == casterTeam;
-					if(casterAlly == child->isDebuff) continue;
-					if(child->isDebuff && p->index == target.index && it->info->type == "STATUS_TYPE_DEFEAT_CASTER_AURA") continue;
-					if(glm::length(vec2(p->body->GetWorldPos()) - center) > range + HitRadius(*p)) continue;
-					if(!pendingStatuses.full()) {
-						PendingStatus ps;
-						ps.time = localTime;
-						ps.statusID = auraStatus;
-						ps.casterIndex = casterIndex;
-						ps.targetUID = p->Main().UID;
-						ps.duration = child->durationSec > 0 ? child->durationSec : 1.0f;
-						ps.power = 0;
-						pendingStatuses.push_back(ps);
-					}
-				}
-			}
+			if(child && range > 0) PulseAura(it->casterIndex, *it->info, vec2(target.body->GetWorldPos()), range, it->info->type == "STATUS_TYPE_DEFEAT_CASTER_AURA" ? (i32)target.index : -1);
 		}
 
 		if(it->info && it->info->type == "STATUS_TYPE_LINK" && localTime < it->until && it->casterIndex != it->targetIndex) {
@@ -3405,7 +3515,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		foreach_const(cmd, action.commands) {
 			if(cmd->type == ActionCommand::Type::REGCOMBO) regCombo = true;
 			bool a = cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET ||
-				cmd->type == ActionCommand::Type::STATUS || cmd->type == ActionCommand::Type::ENTITY;
+				cmd->type == ActionCommand::Type::STATUS || cmd->type == ActionCommand::Type::STATUS_SKILL_TARGET || cmd->type == ActionCommand::Type::ENTITY;
 			if(cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) {
 				const Remote* r = content.FindRemote(cmd->remote.idx);
 				const bool visualOnly = r && r->boundType == Remote::BoundType::E_BOUND_NONE && r->onDestroy.empty() && r->onTime.empty() && r->onActivate.empty() &&
@@ -3492,7 +3602,14 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			ps.targetUID = lastChild ? ActorUID::INVALID : self ? player.Main().UID : currentTarget;
 			ps.duration = cmd->status.removeAtEnd ? MAX(action.seqLength - t, 0.3f) : -1.0f;
 			ps.power = (f32)damage;
-			if(ps.targetUID != ActorUID::INVALID) pendingStatuses.push_back(ps);
+			if(cmd->type == ActionCommand::Type::STATUS_SKILL_TARGET && targets.size() > 1) {
+				foreach_const(tg, targets) {
+					if(pendingStatuses.full()) break;
+					ps.targetUID = *tg;
+					pendingStatuses.push_back(ps);
+				}
+			}
+			else if(ps.targetUID != ActorUID::INVALID) pendingStatuses.push_back(ps);
 		}
 	}
 	}
@@ -3507,6 +3624,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	if(!remote || remoteInsts.full()) return nullptr;
 
 	RemoteInst inst;
+	inst.instID = nextRemoteInstID++;
 	inst.remote = remote;
 	inst.ownerIndex = ownerIndex;
 	inst.skillID = skillID;
@@ -3594,8 +3712,12 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 {
 	bool skipped = false;
 	foreach_const(rule, rules) {
-		if(!skipped && rule->kind == Remote::SPAWN_SINGLE && rule->idx == skipFirst) {
+		if(!skipped && rule->creature <= 0 && rule->kind == Remote::SPAWN_SINGLE && rule->idx == skipFirst) {
 			skipped = true;
+			continue;
+		}
+		if(rule->creature > 0) {
+			world.SpawnCreatureFromRemote(parent, rule->creature, pos);
 			continue;
 		}
 		const Remote* child = GetGameXmlContent().FindRemote(rule->idx);
@@ -3656,16 +3778,15 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	}
 	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty()) return;
 
-	// damaging hits share one hit window per cast (a target takes a skill's damage once per window),
-	// effect-only hits keep a window per remote so lingering zones keep applying their effects
-	const RemoteIdx hitKey = amount > 0 ? RemoteIdx::INVALID : remote.ID;
+	// _HitInvalidTime belongs to each remote instance: one instance hits a target once per window
 	foreach(h, castHits) {
-		if(h->castID == inst.castID && h->remoteID == hitKey && h->playerIndex == target.index && localTime < h->until) return;
+		if(h->instID == inst.instID && h->playerIndex == target.index && localTime < h->until) return;
 	}
 	if(inst.speed <= 0 && enemy) inst.hitsLeft--;
 	if(!castHits.full()) {
 		CastHit h;
-		h.remoteID = hitKey;
+		h.instID = inst.instID;
+		h.remoteID = remote.ID;
 		h.castID = inst.castID;
 		h.playerIndex = target.index;
 		h.until = TimeAdd(localTime, TimeMsToTime(MAX(remote.hitInvalidTime, 0.1f) * 1000.0));
@@ -4209,6 +4330,16 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		   glm::length(vec2(target.body->GetWorldPos()) - vec2(attacker.body->GetWorldPos())) < pr->penaltyApplyDistance) {
 			damage = (i32)(damage * (1.0f - pr->distPenaltyRate / 100.0f));
 		}
+	}
+
+	// defence (client Defense tooltip) reduced by the attacker's penetration; skills also take Skill Defense
+	if(Config().DamageFormula && attacker.index != target.index) {
+		const bool skillHit = !proj && skillID != SkillID::INVALID;
+		const f32 def = MasterStat(target.Main().classType, STAT_DEFENCE) * MAX(1.0f + StatusModMulSum(target, StatusMod::DEFENCE) / 100.0f, 0.0f);
+		const f32 pen = MIN(MAX(MasterStat(attacker.Main().classType, skillHit ? STAT_SKILL_PENETRATION : STAT_DEFENCE_PENETRATION), 0.0f), PENETRATION_CAP) / 100.0f;
+		f32 mul = DEFENCE_SCALE / (DEFENCE_SCALE + MAX(def * (1.0f - pen), 0.0f));
+		if(skillHit) mul *= 1.0f - MIN(MAX(MasterStat(target.Main().classType, STAT_SKILLDAMAGE_REDUCE_RATIO), 0.0f), SKILLDAMAGE_REDUCE_CAP) / 100.0f;
+		damage = MAX((i32)(damage * mul + 0.5f), damage > 0 ? 1 : 0);
 	}
 
 	// element advantage: weapon shots use the weapon bonus, skills the skill bonus, DoTs none

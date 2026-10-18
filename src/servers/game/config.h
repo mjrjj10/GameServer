@@ -13,6 +13,7 @@ struct CConfigGame
 	i32 DevShowcaseCount = 0;
 	i32 DevShowcaseSteps = 0;
 	i32 DevShowcaseFullRes = 0;
+	i32 DamageFormula = 1;   // 1: defence + weapon _PvPAttack (damage_formula.md), 0: legacy flat values
 	i32 DevMirror = 0;
 	i32 DevNoFireNode = 0;
 	i32 HostIP[4] = { 0, 0, 0, 0 };

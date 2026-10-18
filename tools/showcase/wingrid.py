@@ -79,4 +79,4 @@ if __name__ == '__main__':
     pids = [int(p) for p in sys.argv[1].split(',')]
     base = sys.argv[2]
     seconds = float(sys.argv[3])
-    capture(pids, [f'{base}_g{i}' for i in range(len(pids))], seconds, 0.4)
+    capture(pids, [f'{base}_g{i}' for i in range(len(pids))], seconds, float(sys.argv[4]) if len(sys.argv) > 4 else 0.4)

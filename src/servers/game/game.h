@@ -114,7 +114,8 @@ struct Game
 	void OnPlayerWeaponStateRelay(ClientHandle clientHd, ActorUID ownerUID, i32 state, u8 chargeLevel, u8 firingCombo);
 	void OnPlayerWeaponShot(ClientHandle clientHd, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize);
 	void OnPlayerCastSkill(ClientHandle clientHd, ActorUID actorUID, const PlayerInputCastSkill& cast, const Cl::CQ_PlayerCastSkill::PosStruct& posInfo);
-	void OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID);
+	bool IsWeaponFireObject(ClientHandle clientHd, const wchar* name, u16 len);
+	void OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID, const float3* pos, LocalActorID target);
 
 	bool ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 len);
 	void SendDbgMsg(ClientHandle clientHd, const wchar* msg);

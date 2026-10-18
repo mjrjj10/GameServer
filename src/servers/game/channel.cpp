@@ -78,7 +78,13 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 			for(int i = 0; i < packetSize && i < 120; i++) hex.append_sprintf("%02x ", packetData[i]);
 			NT_LOG("[client%x] Client :: %s size=%d :: %s", clientHd, header.netID == 60041 ? "CQ_ExecuteSkill" : "CQ_PreCastSkill", packetSize, hex.data());
 			LOG("Cast :: client%x %s size=%d", clientHd, header.netID == 60041 ? "CQ_ExecuteSkill" : "CQ_PreCastSkill", packetSize);
-			if(header.netID == 60041 && packetSize >= 8) game->OnPlayerExecuteSkill(clientHd, SkillID(*(const u32*)(packetData + 4)));
+			if(header.netID == 60041 && packetSize >= 8) {
+				// CQ_ExecuteSkill: u32 actor, u32 skill, float3 pos, u16 target count, u32 targets (picked after the cast started)
+				const float3* pos = packetSize >= 20 ? (const float3*)(packetData + 8) : nullptr;
+				LocalActorID target = LocalActorID::INVALID;
+				if(packetSize >= 26 && *(const u16*)(packetData + 20) > 0) target = (LocalActorID)*(const u32*)(packetData + 22);
+				game->OnPlayerExecuteSkill(clientHd, SkillID(*(const u32*)(packetData + 4)), pos, target);
+			}
 		} break;
 
 		case 60196: {
@@ -384,7 +390,7 @@ void GamePacketHandler::HandlePacket_CQ_GamePlayerSyncPhy(ClientHandle clientHd,
 
 	const u16 nameLen = buff.Read<u16>();
 	const wchar* name = (const wchar*)buff.ReadRaw(nameLen * sizeof(wchar));
-	const bool isWeapon = nameLen >= 6 && EA::StdC::Strncmp(name, L"Attack", 6) == 0;
+	const bool isWeapon = (nameLen >= 6 && EA::StdC::Strncmp(name, L"Attack", 6) == 0) || game->IsWeaponFireObject(clientHd, name, nameLen);
 	if(!isWeapon) {
 		NT_LOG("[client%x] SyncPhy :: non-weapon fire object '%.*ls'", clientHd, nameLen, name);
 		return;

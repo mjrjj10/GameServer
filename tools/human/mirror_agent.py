@@ -5,7 +5,12 @@ import drive
 
 PROMPT = re.compile(r'Mirror :: prompt wall=(\d+) key=(\S+) click=(\d) combo=(\d) skill=(\d+) test=(\S+) dist=(\d+) aim=\((-?\d+), (-?\d+)\)(?: dironly=(\d))?(?: posdir=(\d))?(?: comboclick=(\d))?(?: combotele=(\d))?')
 HUMAN_SCREEN = (960, 575)
-PX_PER_UNIT = (-0.577, -0.047)
+WORLD_X_PX = (0.456, -0.234)
+WORLD_Y_PX = (-0.36, -0.30)
+
+
+def world_to_screen(ax, ay):
+    return (HUMAN_SCREEN[0] + ax * WORLD_X_PX[0] + ay * WORLD_Y_PX[0], HUMAN_SCREEN[1] + ax * WORLD_X_PX[1] + ay * WORLD_Y_PX[1])
 
 
 def grab():
@@ -85,8 +90,7 @@ def act(m, pid, out, f, dbgdir, follow='none'):
     drive.focus(pid)
     time.sleep(1.0)
     ax, ay = float(m.group(8)), float(m.group(9))
-    along = (ay - ax) * 0.7071
-    expect = (HUMAN_SCREEN[0] + along * PX_PER_UNIT[0], HUMAN_SCREEN[1] + along * PX_PER_UNIT[1])
+    expect = world_to_screen(ax, ay)
     tgt = None
     for attempt in range(2):
         img = grab()
