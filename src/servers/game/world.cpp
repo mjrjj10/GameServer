@@ -3033,6 +3033,7 @@ void World::UpdateShowcase()
 	showcase.testCount = 1;
 	if(skill != 0) {
 		range = content.GetSkillRange(skill);
+		if(const GameXmlContent::SkillInput* lock = content.FindSkillInput(skill)) if(lock->lockOn && lock->maxDistance > 0) range = lock->maxDistance;
 		const f32 zone = content.GetSkillTargetRange(skill) * 0.5f;
 		const f32 effect = SkillDamageRadius(content, cls, SkillID(skill));
 		const f32 reach = SkillReach(content, cls, SkillID(skill));

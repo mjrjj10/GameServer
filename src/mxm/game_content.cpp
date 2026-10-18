@@ -374,6 +374,7 @@ void GameXmlContent::LoadAllSkills()
 				in.teleportEntity = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_TELEPORT_ENTITY") == 0;
 				in.allEnemies = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_ENEMY_PC_ALL") == 0;
 				in.pickedEntity = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_PICKED_ENTITY") == 0;
+				in.lockOn = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_MULTI_LOCKON") == 0;
 				if(const char* om = pTarget->Attribute("_TestObstructMove")) in.obstructMove = EA::StdC::Strcmp(om, "SKILL_OBSTRUCTMOVE_TYPE_JUMPABLE") == 0 ? 1 : 2;
 				if(const char* os = pTarget->Attribute("_TestObstructSight")) in.obstructSight = EA::StdC::Strcmp(os, "SKILL_OBSTRUCTSIGHT_TYPE_ALL") == 0;
 				pTarget->QueryFloatAttribute("_MinDistance", &in.minDistance);
@@ -2276,7 +2277,7 @@ bool GameXmlContent::LoadStatusData()
 				pS->QueryStringAttribute("DATAKEY", &key);
 				pS->QueryStringAttribute("data", &text);
 				if(!key || !text || EA::StdC::Strncmp(key, "STR_SKILL_DESC_", 15) != 0) continue;
-				if(EA::StdC::Stristr(text, "can be struck multiple times") || EA::StdC::Stristr(text, "can hit the same target")) repeatHitReduced.insert(EA::StdC::AtoI32(key + 15));
+				if(EA::StdC::Stristr(text, "can be struck multiple times") || EA::StdC::Stristr(text, "can hit the same target") || EA::StdC::Stristr(text, "strike the same target")) repeatHitReduced.insert(EA::StdC::AtoI32(key + 15));
 				if(!EA::StdC::Stristr(text, "movespeed") && !EA::StdC::Stristr(text, "movement speed")) continue;
 				const char* ph = EA::StdC::Strstr(text, ":status:stat:mul:");
 				if(!ph) continue;
