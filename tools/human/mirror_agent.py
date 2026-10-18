@@ -134,7 +134,12 @@ def act(m, pid, out, f, dbgdir, follow='none'):
     drive.move(x, y)
     time.sleep(0.15)
     if key == 'lmb' or m.group(10) == '1' or key in ('q', 'e', 'r'):
+        x0, y0 = x, y
         x, y = aim_loop(f, out, x, y, math.atan2(float(m.group(9)), float(m.group(8))))
+        if key in ('q', 'e', 'r') and click:
+            x, y = x0, y0
+            drive.move(x, y)
+            time.sleep(0.15)
     if key == 'none':
         return
     if key == 'lmb':

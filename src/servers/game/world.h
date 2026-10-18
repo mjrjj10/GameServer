@@ -490,6 +490,7 @@ struct World
 		i32 healTicksDone;
 		Time nextAuraPulse = Time::ZERO;
 		Time appliedAt = Time::ZERO;
+		f32 absorbed = 0;
 		bool removeOnHit = false; // marked when its target got hit (E_NEXT_STATUS_CONDITION_REMOVE_ONHIT)
 		i32 custom = 0;           // passive counter (_InitCustomValue .. _MaxCustomValue)
 	};

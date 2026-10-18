@@ -2220,7 +2220,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	st.nextHealTick = localTime;
 	st.healTicksDone = 0;
 	st.shieldHP = 0;
-	if(info && info->type == "STATUS_TYPE_SHIELD") {
+	if(info && (info->type == "STATUS_TYPE_SHIELD" || info->type == "STATUS_TYPE_SHIELDBOMB")) {
 		f32 dataShield = 0;
 		foreach_const(m, info->mods) {
 			if(m->stat == StatusMod::SHIELD_DEFENCE && !m->mul) dataShield += m->value;
@@ -3500,9 +3500,21 @@ void World::UpdateStatuses()
 				}
 			}
 		}
-		const bool shieldBroken = it->info && it->info->type == "STATUS_TYPE_SHIELD" && it->shieldHP <= 0;
+		const bool shieldBomb = it->info && it->info->type == "STATUS_TYPE_SHIELDBOMB";
+		const bool shieldBroken = it->info && ((it->info->type == "STATUS_TYPE_SHIELD" && it->shieldHP <= 0) || (shieldBomb && it->shieldHP <= 0 && it->absorbed > 0));
 		const bool timeOver = localTime >= it->until;
 		if(timeOver || target.dead || shieldBroken || it->removeOnHit) {
+			if(shieldBomb && !target.dead && it->info->targetingRange > 0) {
+				const i32 boom = (i32)(it->info->explodeDamage + it->absorbed * it->info->paramRatio);
+				const SkillID bombSkill = SkillID(it->info->skillIndex);
+				Player& owner = players[it->casterIndex];
+				LOG("Status :: %ls shield bomb %d explodes (absorbed %.0f) for %d within %.0f", target.name.data(), it->statusID, it->absorbed, boom, it->info->targetingRange);
+				foreach(e, players) {
+					if(e->dead || e->team == target.team) continue;
+					if(glm::length(vec2(e->body->GetWorldPos()) - vec2(target.body->GetWorldPos())) > it->info->targetingRange + HitRadius(*e)) continue;
+					DamagePlayer(owner, *e, bombSkill, boom);
+				}
+			}
 			for(i32 k = 0; k < MAX(it->overlap, 1); k++) replication->SendRemoveStatusToAll(it->statusID, it->targetUID, it->casterUID);
 			// next status chain (_NextStatusIndex / _NextStatusCondition)
 			i32 next = 0;
@@ -4450,6 +4462,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		if(it->targetIndex != target.index || it->shieldHP <= 0) continue;
 		const f32 absorbed = MIN(it->shieldHP, (f32)damage);
 		it->shieldHP -= absorbed;
+		it->absorbed += absorbed;
 		damage -= (i32)absorbed;
 	}
 	if(damage <= 0) return;

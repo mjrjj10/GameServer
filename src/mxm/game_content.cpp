@@ -2087,6 +2087,7 @@ bool GameXmlContent::LoadStatusData()
 		pCommon->QueryAttribute("_MaxOverlapCount", &st.maxOverlap);
 		pCommon->QueryAttribute("_NextStatusIndex", &st.nextStatus);
 		pCommon->QueryFloatAttribute("_TargetingRange", &st.targetingRange);
+		if(XMLElement* pDef = pCommon->FirstChildElement("_DEFENDER")) pDef->QueryFloatAttribute("_ExplodeDmg", &st.explodeDamage);
 		{
 			const char* eff = nullptr;
 			pCommon->QueryStringAttribute("_EffectType", &eff);
