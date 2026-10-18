@@ -636,6 +636,7 @@ struct World
 	} showcase;
 	void RunSummonState(ActorNpc& npc, i32 state);
 	ActorUID statusCasterOverride = ActorUID::INVALID;
+	bool statusFromBehind = false;
 	const GameXmlContent::CostLevel* castCostLevel = nullptr;
 	bool reflecting = false;
 	bool frozen = false; // game over: no more shots, skills or bot actions

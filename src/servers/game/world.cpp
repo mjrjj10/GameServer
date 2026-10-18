@@ -2260,6 +2260,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		vec2 dir = vec2(from - caster.body->GetWorldPos());
 		const f32 len = glm::length(dir);
 		dir = len > 1.0f ? dir / len : vec2(cosf(caster.input.rot.upperYaw), sinf(caster.input.rot.upperYaw));
+		if(info->type == "STATUS_TYPE_FLY" && statusFromBehind) dir = -dir;
 		if(info->type == "STATUS_TYPE_DRAGGED" && &caster == &target) {
 			const bool hooked = caster.lastHitTargetIndex >= 0 && caster.lastHitTargetIndex != (i32)caster.index && TimeDiffSec(TimeDiff(caster.lastHitAt, localTime)) <= SELF_DRAG_LINK_SEC;
 			if(hooked) {
@@ -3898,6 +3899,7 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	}
 
 	inst.lastHitIndex = (i32)target.index;
+	statusFromBehind = remote.offsetY < 0;
 	if(enemy && remote.onHitOwnerStatus != 0 && !owner.dead) ApplyStatus(owner, owner, remote.onHitOwnerStatus);
 	if(!target.dead) {
 		const bool friendGroup = remote.damageGroup == Remote::DamageGroup::eFRIEND;
@@ -3939,6 +3941,7 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 			castCostLevel = nullptr;
 		}
 	}
+	statusFromBehind = false;
 }
 
 void World::RemoteHitAlongPath(RemoteInst& inst)
