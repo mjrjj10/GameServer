@@ -1005,6 +1005,8 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 				player.comboCastPos = castPos;
 				player.comboUntil = TimeAdd(localTime, TimeMsToTime(COMBO_SLOT_WINDOW_SEC * 1000.0));
 				LOG("Combo :: %ls slot %d -> %d", player.name.data(), slot, combo);
+				const i32 autoMs = content.GetComboAutoCastMs(combo);
+				player.comboAutoAt = autoMs > 0 ? TimeAdd(localTime, TimeMsToTime((f64)autoMs)) : Time::ZERO;
 			}
 		}
 	}
@@ -1964,6 +1966,13 @@ void World::UpdateCasts()
 			replication->SendChangeSkillSlot(it->clientHd, it->Main().UID, it->comboSlot, it->comboPending, it->comboResetCooltime);
 			if(it->comboResetCooltime != 0) replication->SendCooltimeReset(it->clientHd, it->Main().UID, Slice<const i32>(&it->comboResetCooltime, 1));
 			it->comboPending = SkillID::INVALID;
+		}
+		if(it->comboAutoAt != Time::ZERO && localTime >= it->comboAutoAt) {
+			it->comboAutoAt = Time::ZERO;
+			if(it->comboSlot >= 0 && it->comboSkill != SkillID::INVALID && !it->dead) {
+				LOG("Combo :: %ls auto-cast %d", it->name.data(), (i32)it->comboSkill);
+				PlayerCastSkill(*it, it->comboSkill, it->comboCastPos, Slice<const ActorUID>(), 0);
+			}
 		}
 		if(it->comboSlot >= 0 && localTime >= it->comboUntil) {
 			replication->SendChangeSkillSlot(it->clientHd, it->Main().UID, it->comboSlot, it->comboBase, 0);

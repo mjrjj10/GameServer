@@ -169,6 +169,7 @@ struct World
 		SkillID comboBase = SkillID::INVALID;
 		vec3 comboCastPos = vec3(0);
 		Time comboUntil = Time::ZERO;
+		Time comboAutoAt = Time::ZERO;
 		vec3 placedAt = vec3(0);
 		i32 clientPosCount = 0;
 		i32 kills = 0;

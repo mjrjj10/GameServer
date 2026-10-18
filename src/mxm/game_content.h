@@ -667,6 +667,8 @@ struct GameXmlContent
 	eastl::hash_map<i32, eastl::fixed_vector<CostLevel,4,false>> skillCostLevels; // SKILL.xml _COST_PROPERTY/_PROPERTY_LEVEL
 	const eastl::fixed_vector<CostLevel,4,false>* FindSkillCostLevels(i32 skillID) const { auto f = skillCostLevels.find(skillID); return f == skillCostLevels.end() ? nullptr : &f->second; }
 	f32 GetSkillConsume(i32 skillID, i32 index) const { auto f = skillConsumeRes.find(skillID); return f == skillConsumeRes.end() ? 0 : f->second[index]; }
+	eastl::hash_map<i32, i32> comboAutoCastMs;
+	i32 GetComboAutoCastMs(i32 skillID) const { auto f = comboAutoCastMs.find(skillID); return f == comboAutoCastMs.end() ? 0 : f->second; }
 	f32 GetSkillConsumeMP(i32 skillID) const { auto f = skillConsumeMP.find(skillID); return f == skillConsumeMP.end() ? 0 : f->second; }
 	f32 GetSkillConsumeUG(i32 skillID) const { auto f = skillConsumeUG.find(skillID); return f == skillConsumeUG.end() ? 0 : f->second; }
 	f32 GetSkillConsumeStamina(i32 skillID) const { auto f = skillConsumeStamina.find(skillID); return f == skillConsumeStamina.end() ? 0 : f->second; }

@@ -2341,6 +2341,12 @@ bool GameXmlContent::LoadStatusData()
 				pCommon->QueryFloatAttribute("_ConsumeBB", &res[2]);
 				pCommon->QueryFloatAttribute("_ConsumeHP", &res[3]);
 				if(res[0] > 0 || res[1] > 0 || res[2] > 0 || res[3] > 0) skillConsumeRes[skillID] = res;
+				if(XMLElement* pCombo = pCommon->FirstChildElement("_SKILLCOMBO")) {
+					XMLElement* pComboTarget = pCommon->FirstChildElement("_Target");
+					const char* selectState = pComboTarget ? pComboTarget->Attribute("_SelectStateType") : nullptr;
+					const bool afterCast = selectState && EA::StdC::Strcmp(selectState, "SKILL_TARGET_SELECT_STATE_AFTERCAST") == 0;
+					if(afterCast && pCombo->BoolAttribute("_AutoCasting")) comboAutoCastMs[skillID] = MAX(pCombo->IntAttribute("_ExecuteTimeMS"), 1);
+				}
 				if(XMLElement* pCost = pCommon->FirstChildElement("_COST_PROPERTY")) {
 					for(XMLElement* pLvl = pCost->FirstChildElement("_PROPERTY_LEVEL"); pLvl; pLvl = pLvl->NextSiblingElement("_PROPERTY_LEVEL")) {
 						CostLevel lvl;
