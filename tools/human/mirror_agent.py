@@ -3,7 +3,9 @@ import numpy as np, cv2, mss
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import drive
 
-PROMPT = re.compile(r'Mirror :: prompt wall=(\d+) key=(\S+) click=(\d) combo=(\d) skill=(\d+) test=(\S+) dist=(\d+) aim=\((-?\d+), (-?\d+)\)(?: dironly=(\d))?(?: posdir=(\d))?(?: comboclick=(\d))?(?: combotele=(\d))?(?: pick=(\d))?')
+STANCE_SHOTS = 3
+STANCE_SHOT_GAP = 0.8
+PROMPT = re.compile(r'Mirror :: prompt wall=(\d+) key=(\S+) click=(\d) combo=(\d) skill=(\d+) test=(\S+) dist=(\d+) aim=\((-?\d+), (-?\d+)\)(?: dironly=(\d))?(?: posdir=(\d))?(?: comboclick=(\d))?(?: combotele=(\d))?(?: pick=(\d))?(?: stance=(\d))?')
 HUMAN_SCREEN = (960, 575)
 
 
@@ -181,6 +183,13 @@ def act(m, pid, out, f, dbgdir, follow='none'):
         if not first_seen and skill_id != '0':
             drive.key(key, False); time.sleep(0.05); drive.key(key, True)
             out.write(f'cast not seen, closed targeting {m.group(1)}'+chr(10))
+        elif m.group(15) == '1':
+            time.sleep(0.9)
+            drive.move(x, y)
+            for shot in range(STANCE_SHOTS):
+                drive.mouse(drive.MOUSEEVENTF_LEFTDOWN); time.sleep(0.05); drive.mouse(drive.MOUSEEVENTF_LEFTUP)
+                time.sleep(STANCE_SHOT_GAP)
+            out.write(f'stance weapon shots {STANCE_SHOTS}'+chr(10))
         elif combo and m.group(12) == '0' and m.group(13) != '1':
             time.sleep(0.7)
             mark = f.tell()

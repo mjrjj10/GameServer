@@ -647,6 +647,8 @@ struct GameXmlContent
 	bool IsChildOnExisting(ClassType c, ActionStateID a) const { return childOnExisting.find(((u32)c << 16) | ((u32)a & 0xFFFF)) != childOnExisting.end(); }
 	i32 GetChildSkill(ClassType c, ActionStateID a) const { auto f = childSkill.find(((u32)c << 16) | ((u32)a & 0xFFFF)); return f == childSkill.end() ? 0 : f->second; }
 	const WeaponFiring* FindWeaponFiring(i32 weaponID) const { auto f = weaponFiring.find(weaponID); return f == weaponFiring.end() ? nullptr : &f->second; }
+	const WeaponFiring* FindWeaponFiring(i32 weaponID, i8 stance) const { if(stance > 0) { auto f = weaponStanceFiring.find(((u32)weaponID << 4) | (u32)stance); if(f != weaponStanceFiring.end()) return &f->second; } return FindWeaponFiring(weaponID); }
+	f32 GetWeaponStanceFireDelay(i32 weaponID, i8 stance) const { auto f = weaponStanceFireDelay.find(((u32)weaponID << 4) | (u32)stance); return f == weaponStanceFireDelay.end() ? 0.0f : f->second; }
 	bool IsRepeatHitReduced(i32 skillID) const { return repeatHitReduced.find(skillID) != repeatHitReduced.end(); }
 	f32 GetWeaponAttack(i32 weaponID) const { auto f = weaponAttack.find(weaponID); return f == weaponAttack.end() ? 0.0f : f->second; }
 	const eastl::fixed_vector<i32,4,false>* FindPassiveStatuses(ClassType c) const { auto f = passiveStatuses.find((i32)c); return f == passiveStatuses.end() ? nullptr : &f->second; }
@@ -735,6 +737,8 @@ private:
 	eastl::hash_map<i32, WeaponHeatInfo> weaponHeat;
 	eastl::hash_map<i32, f32> weaponFireDelay; // weapon -> FIRING_METHOD _FIREINFO _FireDelayTime
 	eastl::hash_map<i32, WeaponFiring> weaponFiring; // weapon -> default firing method remotes
+	eastl::hash_map<u32, WeaponFiring> weaponStanceFiring;
+	eastl::hash_map<u32, f32> weaponStanceFireDelay;
 	eastl::hash_map<i32, f32> weaponAttack;
 	eastl::hash_set<i32> repeatHitReduced;
 	eastl::hash_map<u32, i32> childSkill;

@@ -723,7 +723,7 @@ bool Game::IsWeaponFireObject(ClientHandle clientHd, const wchar* name, u16 len)
 	if(found == playerMap.end()) return false;
 	const World::Player& player = world.GetPlayer(found->second->playerIndex);
 	const WeaponIndex weapon = (player.mainCharaID & 1) == 0 ? player.mainWeapon : player.subWeapon;
-	const WeaponFiring* wf = GetGameXmlContent().FindWeaponFiring((i32)weapon);
+	const WeaponFiring* wf = GetGameXmlContent().FindWeaponFiring((i32)weapon, player.Main().stance);
 	if(!wf || wf->fireDummy.empty() || wf->fireDummy.size() != len) return false;
 	for(u16 i = 0; i < len; i++) if((wchar)wf->fireDummy[i] != name[i]) return false;
 	return true;

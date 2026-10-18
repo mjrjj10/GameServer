@@ -632,6 +632,9 @@ struct World
 		f32 casterMana0 = 0;
 		f32 casterStamina0 = 0;
 		Time comboAt = Time::ZERO;
+		i32 stanceShots = 0;
+		Time stanceShotAt = Time::ZERO;
+		i32 stanceShooter = -1;
 		vec3 comboPos = vec3(0);
 		i32 comboCaster = -1;
 		ActorUID comboTarget = ActorUID::INVALID;

@@ -2644,10 +2644,22 @@ bool GameXmlContent::LoadStatusData()
 				if(d != delayByFiring.end()) weaponFireDelay[id] = d->second;
 				auto r = firingRemotes.find(firing);
 				if(r != firingRemotes.end()) weaponFiring[id] = r->second;
+				if(XMLElement* pStances = pComp->FirstChildElement("_STANCE_FIRINGMETHOD")) {
+					for(XMLElement* pSt = pStances->FirstChildElement("_STANCE"); pSt; pSt = pSt->NextSiblingElement("_STANCE")) {
+						const i8 stance = StanceFromString(pSt->Attribute("DATAKEY"));
+						i32 stanceFiring = 0;
+						pSt->QueryAttribute("DATA", &stanceFiring);
+						auto sr = firingRemotes.find(stanceFiring);
+						if(stance <= 0 || sr == firingRemotes.end()) continue;
+						weaponStanceFiring[((u32)id << 4) | (u32)stance] = sr->second;
+						auto sd = delayByFiring.find(stanceFiring);
+						if(sd != delayByFiring.end()) weaponStanceFireDelay[((u32)id << 4) | (u32)stance] = sd->second;
+					}
+				}
 				break;
 			}
 		}
-		LOG("Loaded %d weapon overheat gauges, %d weapon firing remotes", (i32)weaponHeat.size(), (i32)weaponFiring.size());
+		LOG("Loaded %d weapon overheat gauges, %d weapon firing remotes, %d stance firing methods", (i32)weaponHeat.size(), (i32)weaponFiring.size(), (i32)weaponStanceFiring.size());
 	}
 
 	// passive skills: SKILL_TYPE_PASSIVE _Status per _RequireClass

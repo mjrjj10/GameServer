@@ -104,6 +104,9 @@ static const i32 RELAY_IDS_PER_MODE = 3;
 static const i32 RELAY_ARTILLERY_MODE = 2;
 static const f32 RELAY_LEAP_SPEED = 2000.0f;
 static const i32 RELAY_PRISM_MODE = 0;
+static const i32 SHOWCASE_STANCE_SHOTS = 3;
+static const f32 SHOWCASE_STANCE_WINDOW_SEC = 4.0f;
+static const i32 SHOWCASE_STANCE_FIRST_SHOT_MS = 900;
 static const i32 RELAY_BRUISER_MODE = 1;
 static const f32 RELAY_LIFE_SEC = 3600.0f;
 static const f32 RELAY_PASSIVE_SEC = 3.2f;
@@ -1026,7 +1029,20 @@ void World::PlayerWeaponFire(Player& player)
 		return;
 	}
 	if(WeaponIsMelee(player)) {
+		const i8 swingStance = player.Main().stance;
 		StanceWeaponUse(player);
+		const auto& content = GetGameXmlContent();
+		const u32 m = player.mainCharaID & 1;
+		const WeaponIndex weapon = m == 0 ? player.mainWeapon : player.subWeapon;
+		const WeaponFiring* wf = content.FindWeaponFiring((i32)weapon, swingStance);
+		RemoteIdx swing = wf ? wf->base : RemoteIdx::INVALID;
+		if(wf && player.firingCombo > 0 && player.firingCombo <= wf->combo.size()) swing = wf->combo[player.firingCombo - 1];
+		const Remote* swingRemote = content.FindRemote(swing);
+		if(swingRemote && swingRemote->boundType != Remote::BoundType::E_BOUND_NONE) {
+			LOG("Shot :: %ls melee swing remote %d (stance %d)", player.name.data(), (i32)swing, (i32)swingStance);
+			SpawnRemote(player.index, swing, origin + vec3(dir * swingRemote->offsetY, 0), dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), true, nullptr, 0, player.clientHd != ClientHandle::INVALID);
+			return;
+		}
 		foreach(it, players) {
 			if(it->team == player.team || it->dead || it->untargetable) continue;
 			const vec3 pos = it->body->GetWorldPos();
@@ -1056,6 +1072,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		showcase.castSeen = true;
 		showcase.castAt = localTime;
 	}
+	const i8 shotStance = player.Main().stance;
 	StanceWeaponUse(player);
 	if(projectileList.full()) return;
 
@@ -1068,7 +1085,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	{
 		const u32 m = player.mainCharaID & 1;
 		const WeaponIndex weapon = m == 0 ? player.mainWeapon : player.subWeapon;
-		const WeaponFiring* wf = content.FindWeaponFiring((i32)weapon);
+		const WeaponFiring* wf = content.FindWeaponFiring((i32)weapon, shotStance);
 		if(wf) {
 			if(wf->maxDistance > 0) aimMax = wf->maxDistance;
 			spawnAtAim = wf->spawnAtAim;
@@ -1630,7 +1647,7 @@ bool World::WeaponIsMelee(const Player& p) const
 {
 	const auto& content = GetGameXmlContent();
 	const WeaponIndex weapon = (p.mainCharaID & 1) == 0 ? p.mainWeapon : p.subWeapon;
-	const WeaponFiring* wf = content.FindWeaponFiring((i32)weapon);
+	const WeaponFiring* wf = content.FindWeaponFiring((i32)weapon, p.Main().stance);
 	const Remote* wr = wf ? content.FindRemote(wf->base) : nullptr;
 	if(wr && wr->maxSpeed > 0) return false;
 	return ClassIsMelee(p.Main().classType);
@@ -2787,15 +2804,37 @@ void World::UpdateShowcase()
 		if(!comboCaster.dead) PlayerCastSkill(comboCaster, SkillID(showcase.comboSkill), showcase.comboPos, Slice<const ActorUID>(&showcase.comboTarget, showcase.comboTarget != ActorUID::INVALID ? 1 : 0), 0);
 		showcase.comboSkill = 0;
 	}
+	if(showcase.stanceShots > 0 && localTime >= showcase.stanceShotAt && showcase.stanceShooter >= 0) {
+		Player& shooter = players[showcase.stanceShooter];
+		const Player& aimAt = players[showcase.prevDummy];
+		if(shooter.dead || shooter.Main().stance == 0) showcase.stanceShots = 0;
+		else {
+			const vec3 from = shooter.body->GetWorldPos();
+			const vec2 rel = vec2(aimAt.body->GetWorldPos()) - vec2(from);
+			const f32 len = glm::length(rel);
+			const vec2 dir = len > 1.0f ? rel / len : vec2(cosf(shooter.input.rot.upperYaw), sinf(shooter.input.rot.upperYaw));
+			shooter.weaponAimYaw = atan2f(dir.y, dir.x);
+			LOG("Showcase :: stance %d weapon shot (%d left)", (i32)shooter.Main().stance, showcase.stanceShots - 1);
+			if(WeaponIsMelee(shooter)) PlayerWeaponFire(shooter);
+			else PlayerWeaponShot(shooter, from, dir, len);
+			const u32 wm = shooter.mainCharaID & 1;
+			const WeaponIndex weapon = wm == 0 ? shooter.mainWeapon : shooter.subWeapon;
+			const f32 stanceDelay = GetGameXmlContent().GetWeaponStanceFireDelay((i32)weapon, shooter.Main().stance);
+			const f32 delay = MAX(stanceDelay > 0 ? stanceDelay : GetGameXmlContent().GetWeaponFireDelay((i32)weapon), 0.3f);
+			showcase.stanceShotAt = TimeAdd(localTime, TimeMsToTime(delay * 1000.0));
+			showcase.stanceShots--;
+		}
+	}
 	if(showcase.done) return;
 	if(localTime < showcase.next) {
 		if(showcase.minNext == Time::ZERO || localTime < showcase.minNext) return;
 		bool quiet = remoteInsts.empty() && pendingRemotes.empty() && pendingStatuses.empty() && pendingSummons.empty() &&
-			pendingSummonCommands.empty() && skillProgramList.empty() && showcase.comboSkill == 0;
+			pendingSummonCommands.empty() && skillProgramList.empty() && showcase.comboSkill == 0 && showcase.stanceShots == 0;
 		const Player& qc = players[showcase.prevCaster];
 		const Player& qd = players[showcase.prevDummy];
 		if(qc.clientHd != ClientHandle::INVALID && !showcase.castSeen) quiet = false;
 		if(qc.casting.skillID != SkillID::INVALID || localTime < qc.dashUntil || localTime < qd.pushUntil || localTime < qd.ccUntil) quiet = false;
+		if(qc.Main().stance != 0 && TimeDiffSec(TimeDiff(showcase.castAt, localTime)) < SHOWCASE_STANCE_WINDOW_SEC) quiet = false;
 		foreach_const(pj, projectileList) if(pj->ownerIndex == qc.index) quiet = false;
 		foreach_const(ri, remoteInsts) if(ri->ownerIndex == qc.index && ri->remote && (ri->remote->damageGroup == Remote::DamageGroup::eENEMY || !ri->remote->onDestroy.empty() || !ri->remote->onTime.empty() || ri->remote->destroyCreateRemote != RemoteIdx::INVALID)) quiet = false;
 		foreach_const(npc, actorNpcList) {
@@ -3260,8 +3299,8 @@ void World::UpdateShowcase()
 			}
 		}
 		LOG("Mirror :: follow=%s", followKey);
-		LOG("Mirror :: prompt wall=%lld key=%s click=%d combo=%d skill=%d test=%s dist=%.0f aim=(%.0f, %.0f) dironly=%d posdir=%d comboclick=%d combotele=%d pick=%d", ShowcaseWallMs(), mirrorKey ? mirrorKey : "none",
-			in && in->needsClick ? 1 : 0, combo != 0 ? 1 : 0, skill, testName, glm::length(vec2(dummyPos) - vec2(casterPos)), castPos.x - casterPos.x, castPos.y - casterPos.y, in && in->directionOnly ? 1 : 0, in && in->positionDirection ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->needsClick ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->teleportEntity ? 1 : 0, in && in->pickedEntity ? 1 : 0);
+		LOG("Mirror :: prompt wall=%lld key=%s click=%d combo=%d skill=%d test=%s dist=%.0f aim=(%.0f, %.0f) dironly=%d posdir=%d comboclick=%d combotele=%d pick=%d stance=%d", ShowcaseWallMs(), mirrorKey ? mirrorKey : "none",
+			in && in->needsClick ? 1 : 0, combo != 0 ? 1 : 0, skill, testName, glm::length(vec2(dummyPos) - vec2(casterPos)), castPos.x - casterPos.x, castPos.y - casterPos.y, in && in->directionOnly ? 1 : 0, in && in->positionDirection ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->needsClick ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->teleportEntity ? 1 : 0, in && in->pickedEntity ? 1 : 0, skill != 0 && content.FindSkillStance(skill) ? 1 : 0);
 	}
 	else if(step == 0) {
 		const vec2 rel = vec2(castPos) - vec2(casterPos);
@@ -3274,6 +3313,12 @@ void World::UpdateShowcase()
 	else if(step >= 1 && step <= 6) {
 		const bool targetInRange = range <= 0 || glm::length(vec2(dummyPos) - vec2(casterPos)) <= range;
 		if(skill != 0) PlayerCastSkill(caster, SkillID(skill), castPos, Slice<const ActorUID>(&targetUID, targetInRange ? 1 : 0), 0);
+		showcase.stanceShots = 0;
+		if(skill != 0 && caster.clientHd == ClientHandle::INVALID && content.FindSkillStance(skill) && caster.Main().stance != 0) {
+			showcase.stanceShots = SHOWCASE_STANCE_SHOTS;
+			showcase.stanceShotAt = TimeAdd(localTime, TimeMsToTime(SHOWCASE_STANCE_FIRST_SHOT_MS));
+			showcase.stanceShooter = (i32)caster.index;
+		}
 		i32 combo = skill != 0 ? content.GetFirstComboSkill(skill) : 0;
 		i32 comboDelayMs = 700;
 		if(const GameXmlContent::SkillStance* st = skill != 0 ? content.FindSkillStance(skill) : nullptr) {
@@ -3372,7 +3417,8 @@ void World::UpdateBotCombat()
 		}
 		const u32 m = bot.mainCharaID & 1;
 		const WeaponIndex weapon = m == 0 ? bot.mainWeapon : bot.subWeapon;
-		const f32 delay = MAX(content.GetWeaponFireDelay((i32)weapon), 0.15f);
+		const f32 stanceDelay = content.GetWeaponStanceFireDelay((i32)weapon, bot.Main().stance);
+		const f32 delay = MAX(stanceDelay > 0 ? stanceDelay : content.GetWeaponFireDelay((i32)weapon), 0.15f);
 		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(delay * 1000.0));
 		if(!target) continue;
 
