@@ -2350,6 +2350,13 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	}
 
 	LOG("Status :: %ls -> %ls status=%d type=%s duration=%.2f shield=%.0f", caster.name.data(), target.name.data(), statusID, info ? info->type.c_str() : "?", duration, st.shieldHP);
+	if(info && info->type == "STATUS_TYPE_HIDE" && Config().DevHideDetectFlag >= 0) {
+		foreach(viewer, players) {
+			if(viewer->clientHd == ClientHandle::INVALID || viewer->team == target.team) continue;
+			replication->SendHideDetect(viewer->clientHd, viewer->Main().UID, target.Main().UID, (u8)Config().DevHideDetectFlag);
+			LOG("Hide :: sent HideDetect flag=%d about %ls to %ls", Config().DevHideDetectFlag, target.name.data(), viewer->name.data());
+		}
+	}
 	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, to, graphDuration);
 }
 
