@@ -738,6 +738,14 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		}
 	}
 	if(frozen) return;
+	if(player.Main().classType == ClassType::SLIME && targets.size() > 0) {
+		const GameXmlContent::SkillInput* pickIn = GetGameXmlContent().FindSkillInput((i32)skillID);
+		const ActorMaster* picked = pickIn && pickIn->pickedEntity ? FindMasterActor(targets[0]) : nullptr;
+		if(picked && picked->parent != &player && picked->classType == ClassType::SLIME) {
+			LOG("Skill :: %ls skill=%d refused: cannot cling to another Bumaro (ERROR_TYPE_SKILL_CANT_USE_SAME_MASTER)", player.name.data(), (i32)skillID);
+			return;
+		}
+	}
 	eastl::fixed_vector<ActorUID,10,false> allEnemyTargets;
 	if(const GameXmlContent::SkillInput* selIn = GetGameXmlContent().FindSkillInput((i32)skillID)) {
 		if(selIn->allEnemies) {
