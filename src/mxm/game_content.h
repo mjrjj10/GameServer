@@ -491,6 +491,7 @@ struct GameXmlContent
 					f32 offsetSide;
 					f32 offsetFront;
 					u8 stopAtTarget; // Param2 DestroyAwayTarget: ends at the aimed point instead of max range
+					u8 remove;       // Param2 Remove: ends the caster's live remote of this index (its destroy rules fire)
 				} remote;
 
 				struct {

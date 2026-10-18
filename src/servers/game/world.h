@@ -403,6 +403,7 @@ struct World
 
 	struct PendingRemote
 	{
+		bool remove = false;
 		ActorUID sourceUID = ActorUID::INVALID;
 		const GameXmlContent::CostLevel* costLevel = nullptr;
 		Time time;
@@ -428,6 +429,7 @@ struct World
 		const GameXmlContent::CostLevel* costLevel = nullptr;
 		f32 followDist = -1.0f;
 		u32 instID = 0;
+		bool killNow = false;
 		const Remote* remote;
 		u32 ownerIndex;
 		SkillID skillID;

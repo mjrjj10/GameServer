@@ -2690,6 +2690,8 @@ void World::UpdateShowcase()
 		const Player& qd = players[showcase.prevDummy];
 		if(qc.clientHd != ClientHandle::INVALID && !showcase.castSeen) quiet = false;
 		if(qc.casting.skillID != SkillID::INVALID || localTime < qc.dashUntil || localTime < qd.pushUntil || localTime < qd.ccUntil) quiet = false;
+		foreach_const(pj, projectileList) if(pj->ownerIndex == qc.index) quiet = false;
+		foreach_const(ri, remoteInsts) if(ri->ownerIndex == qc.index && ri->remote && (ri->remote->damageGroup == Remote::DamageGroup::eENEMY || !ri->remote->onDestroy.empty() || !ri->remote->onTime.empty() || ri->remote->destroyCreateRemote != RemoteIdx::INVALID)) quiet = false;
 		foreach_const(npc, actorNpcList) {
 			if(npc->ownerIndex == qc.index && npc->despawnAt != Time::ZERO && localTime < npc->despawnAt) { quiet = false; break; }
 		}
@@ -3648,6 +3650,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			// DestroyAwayTarget: the remote ends at the aimed point. Client RE: ActionBase Param2 flag 0x20 passed to
 			// the remote creation; every PC skill using it is aimed with a ground cursor (SKILL_CAST_TARGET_POSITION*)
 			pr.stopAtTarget = cmd->remote.stopAtTarget;
+			pr.remove = cmd->remote.remove != 0;
 			pr.nodeName = cmd->nodeName;
 			pendingRemotes.push_back(pr);
 			scheduled = true;
@@ -4023,6 +4026,15 @@ void World::UpdateRemotes(f32 delta)
 		}
 
 		Player& owner = players[pr->ownerIndex];
+		if(pr->remove) {
+			bool ended = false;
+			foreach(ri, remoteInsts) {
+				if(ri->ownerIndex == pr->ownerIndex && ri->remote && ri->remote->ID == pr->idx && !ri->killNow) { ri->killNow = true; ended = true; }
+			}
+			if(ended) LOG("Remote :: %ls ends live remote %d (action Remove)", owner.name.data(), (i32)pr->idx);
+			pr = pendingRemotes.erase_unsorted(pr);
+			continue;
+		}
 		const vec2 dir = vec2(cosf(pr->angle), sinf(pr->angle));
 		const Remote* remote = GetGameXmlContent().FindRemote(pr->idx);
 		const f32 offsetY = remote ? (remote->forceTargetDir ? -remote->offsetY : remote->offsetY) : 0;
@@ -4083,7 +4095,7 @@ void World::UpdateRemotes(f32 delta)
 		RemoteInst& inst = remoteInsts[i];
 		const Remote& remote = *inst.remote;
 		const f32 elapsed = (f32)TimeDiffSec(TimeDiff(inst.spawnTime, localTime));
-		bool destroyed = false;
+		bool destroyed = inst.killNow;
 		Player& instOwner = players[inst.ownerIndex];
 
 		if(remote.attachTargetObject && inst.target != ActorUID::INVALID) {
@@ -4315,7 +4327,7 @@ void World::UpdateRemotes(f32 delta)
 
 		if(destroyed && inst.hasLandZ) inst.pos.z = inst.landZ;
 		// tell clients a moving remote ended here (otherwise they let it fly on, e.g. a boomerang curve past its target)
-		if(destroyed && !inst.destroyedByHit && inst.clientRemoteID != 0 && inst.speed > 0) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
+		if(destroyed && !inst.destroyedByHit && inst.clientRemoteID != 0 && (inst.speed > 0 || inst.killNow)) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
 		if(destroyed) {
 			const RemoteIdx next = remote.destroyCreateRemote;
 			const RemoteInst copy = inst;
