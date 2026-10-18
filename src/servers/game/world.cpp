@@ -3752,6 +3752,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		vec3 sendPos = pos - vec3(0, 0, remote->offsetZ);
 		const bool atAimedPoint = aimPos && glm::length(vec2(*aimPos)) > 1.0f && glm::length(vec2(pos) - vec2(*aimPos)) < 1.0f;
 		if(plainStaticBox && !flip && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY), 0);
+		else if(plainStaticBox && flip && !atAimedPoint) sendPos += vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY), 0);
 		replication->SendRemoteCreateToAll(players[ownerIndex].Main().UID, seed, idx, sendPos, sendYaw, targetPos, targetMaster ? target : ActorUID::INVALID, Config().DevNoFireNode ? GetGameXmlContent().GetNodeName(0) : GetGameXmlContent().GetNodeName(nodeName), casterCreatesLocally ? players[ownerIndex].clientHd : ClientHandle::INVALID);
 	}
 

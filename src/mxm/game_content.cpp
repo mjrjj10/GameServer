@@ -2505,6 +2505,7 @@ bool GameXmlContent::LoadStatusData()
 					else if(var) {
 						i32 v = -1;
 						if(EA::StdC::Sscanf(var, "STATS_VARIATION_TYPE_%d", &v) == 1) { if(v != it->second.variation) continue; }
+						else if(EA::StdC::Sscanf(var, "SPAWN_VARIATION_TYPE_%d", &v) == 1) { if(v != 0) continue; }
 						else if(EA::StdC::Strcmp(var, "STANCE_TYPE_DEFAULT") != 0) continue;
 					}
 					auto& list = spawn ? it->second.onSpawn : (die ? it->second.onDie : it->second.skillStates[skillState]);

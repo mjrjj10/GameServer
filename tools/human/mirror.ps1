@@ -2,7 +2,7 @@ param([string]$List = '7,35', [int]$Pass = 0, [string]$Tag = 'm', [string]$Work 
 $b = 'D:\MxM\GameServer\build'
 $c = 'D:\MxM\Client\Client.Win32'
 $py = 'D:\MxM\showcase_data\venv\Scripts\python.exe'
-Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile', '-Command', 'Stop-Process -Name MXMClient -Force -ErrorAction SilentlyContinue; Get-Process python -ErrorAction SilentlyContinue | Where-Object { $_.Path -like ''*showcase_data*'' } | Stop-Process -Force' -Wait -ErrorAction SilentlyContinue
+Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile', '-Command', 'Stop-Process -Name MXMClient -Force -ErrorAction SilentlyContinue; Get-CimInstance Win32_Process | Where-Object { $_.Name -eq ''python.exe'' -and $_.CommandLine -match ''mirror_agent'' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }' -Wait -ErrorAction SilentlyContinue
 Set-Content -Path "$b\hub.cfg" -Value "DevShowcase=1`nDevShowcaseStart=0`nDevShowcaseList=$List`nDevMirror=1`nDevMirrorPass=$Pass" -Encoding ascii -NoNewline
 $gc = (Get-Content "$b\game.cfg") | Where-Object { $_ -notmatch '^DevShowcase|^DevMirror' }
 $gc += 'DevShowcase=1', "DevShowcaseCount=$Count", 'DevMirror=1', "DevShowcaseSteps=$Steps", "DevShowcaseFullRes=$FullRes"
@@ -27,7 +27,7 @@ while ($true) {
 }
 Copy-Item "$b\game_server.log" "$Work\$Tag.log"
 Stop-Job $job -ErrorAction SilentlyContinue; Remove-Job $job -Force -ErrorAction SilentlyContinue
-Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile', '-Command', 'Stop-Process -Name MXMClient -Force; Get-Process python -ErrorAction SilentlyContinue | Where-Object { $_.Path -like ''*showcase_data*'' } | Stop-Process -Force' -Wait -ErrorAction SilentlyContinue
+Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile', '-Command', 'Stop-Process -Name MXMClient -Force; Get-CimInstance Win32_Process | Where-Object { $_.Name -eq ''python.exe'' -and $_.CommandLine -match ''mirror_agent'' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }' -Wait -ErrorAction SilentlyContinue
 (Get-Content "$b\game.cfg") -replace '^DevShowcase=1', 'DevShowcase=0' -replace '^DevMirror=1', 'DevMirror=0' | Set-Content "$b\game.cfg" -Encoding ascii
 Set-Content -Path "$b\hub.cfg" -Value "DevShowcase=0`nDevShowcaseStart=0" -Encoding ascii -NoNewline
 Stop-Process -Name login_srv, hub_srv, game_srv, mm_srv -Force -ErrorAction SilentlyContinue
