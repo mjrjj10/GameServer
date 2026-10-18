@@ -186,6 +186,7 @@ struct World
 		f32 dashSpeed = 0;
 		Time dashStartAt = Time::ZERO;
 		vec3 dashOrigin = vec3(0);
+		Time clientPushUntil = Time::ZERO;
 		f32 dashDist = 0;
 		f32 dashDone = 0;
 		Time ccImmuneUntil = Time::ZERO;

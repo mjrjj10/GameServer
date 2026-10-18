@@ -2259,7 +2259,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		if(ccEnd > target.ccUntil) target.ccUntil = ccEnd;
 	}
 
-	const bool chainedPush = target.clientHd == ClientHandle::INVALID && localTime < target.pushUntil;
+	const bool chainedPush = target.clientHd == ClientHandle::INVALID ? localTime < target.pushUntil : localTime < target.clientPushUntil;
 	const vec3 from = chainedPush ? vec3(vec2(target.pushTarget), target.body->GetWorldPos().z) : target.body->GetWorldPos();
 	vec3 to = from;
 	const f32 graphDuration = duration * (info && info->timeRatio > 0 ? info->timeRatio : 1.0f);
@@ -2312,6 +2312,8 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			if(target.pushUntil > target.ccUntil) target.ccUntil = target.pushUntil;
 		}
 		else if(target.clientHd != ClientHandle::INVALID && graphDuration > 0) {
+			target.clientPushUntil = TimeAdd(localTime, TimeMsToTime(graphDuration * 1000.0));
+			target.pushTarget = to;
 			const Time followUntil = TimeAdd(localTime, TimeMsToTime((graphDuration + 2.0f) * 1000.0));
 			if(followUntil > target.ccUntil) target.ccUntil = followUntil;
 		}
