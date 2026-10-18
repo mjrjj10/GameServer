@@ -1658,6 +1658,7 @@ bool GameXmlContent::LoadRemoteData()
 				pComp->QueryStringAttribute("_AddContactGroup", &_AddContactGroup);
 				remote.contactFriend = _AddContactGroup && (EA::StdC::Strcmp(_AddContactGroup, "eFRIEND") == 0 || EA::StdC::Strcmp(_AddContactGroup, "eALL") == 0);
 				remote.vsOwner = XmlAttrTrue(pComp, "_VsOwner");
+				remote.monsterOnly = XmlAttrTrue(pComp, "_VsNPC_Monster") && !XmlAttrTrue(pComp, "_VsPC");
 				remote.ignoreGround = XmlAttrTrue(pComp, "_IgnoreGround");
 				pComp->QueryFloatAttribute("_ActivateDelayTime", &remote.activateDelay);
 				remote.boundType = Remote::BoundTypeFromString(_Type);
@@ -2181,13 +2182,15 @@ bool GameXmlContent::LoadStatusData()
 		if(type && EA::StdC::Strcmp(type, "STATUS_TYPE_SLOW") == 0) st.kind = StatusInfo::Kind::SLOW;
 
 		for(XMLElement* pChild = pInfo->FirstChildElement(); pChild; pChild = pChild->NextSiblingElement()) {
-			for(const XMLAttribute* a = pChild->FirstAttribute(); a; a = a->Next()) {
-				f64 v = 0;
-				if(a->QueryDoubleValue(&v) != XML_SUCCESS || st.params.full() || EA::StdC::Strlen(a->Name()) >= 31) continue;
-				StatusInfo::NamedValue nv;
-				nv.name = a->Name();
-				nv.value = v;
-				st.params.push_back(nv);
+			for(XMLElement* pNode = pChild; pNode; pNode = pNode == pChild ? pChild->FirstChildElement() : pNode->NextSiblingElement()) {
+				for(const XMLAttribute* a = pNode->FirstAttribute(); a; a = a->Next()) {
+					f64 v = 0;
+					if(a->QueryDoubleValue(&v) != XML_SUCCESS || st.params.full() || EA::StdC::Strlen(a->Name()) >= 31) continue;
+					StatusInfo::NamedValue nv;
+					nv.name = a->Name();
+					nv.value = v;
+					st.params.push_back(nv);
+				}
 			}
 		}
 

@@ -173,6 +173,8 @@ struct World
 		vec3 comboCastPos = vec3(0);
 		Time comboUntil = Time::ZERO;
 		Time comboAutoAt = Time::ZERO;
+		Time massTeleportAt = Time::ZERO;
+		vec3 massTeleportPos = vec3(0);
 		vec3 placedAt = vec3(0);
 		i32 clientPosCount = 0;
 		i32 kills = 0;
@@ -669,6 +671,7 @@ struct World
 
 	void PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir, f32 distance);
 	void AddFuel(Player& player, f32 amount);
+	void MassTeleport(Player& gx, const StatusInfo& passive);
 	void OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize);
 	void OnWeaponAimPacket(Player& player, f32 aimYaw);
 

@@ -1,0 +1,3 @@
+[
+ {"doc": "creature_character.xml", "id": "100000041", "after": "_class=\"CLASS_TYPE_SHUTTLE\"", "insert": " _ElementType=\"CELEMENT_TYPE_BLUE\""}
+]

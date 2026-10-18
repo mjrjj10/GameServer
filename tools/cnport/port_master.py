@@ -76,6 +76,7 @@ def main():
     seed_class = sys.argv[2] if len(sys.argv) > 2 else 'SHUTTLE'
     eu = eu_sources()
     tr = translations()
+    ps = patches()
     cn = cn_docs()
     eu_keys = {}
     cn_blocks = {}
@@ -103,7 +104,7 @@ def main():
                 if ident in picked or (kind != 'class' and (kind, key) in eu_keys[low]) or (kind == 'class' and (kind, key) in eu_keys[low] and key != seed_class):
                     continue
                 hit = (kind == 'id' and key in want_ids) or (kind == 'name' and key in want_names) or \
-                      (kind == 'class' and key in want_classes) or (kind == 'str' and (key in want_strs or (low in ('skindesc.xml', 'itemdesc.xml', 'characterdesc.xml') and ('DocId="%d"' % seed_doc) in body))) or \
+                      (kind == 'class' and key in want_classes) or (kind == 'str' and (key in want_strs or (low in ('skindesc.xml', 'itemdesc.xml', 'characterdesc.xml', 'string.xml') and ('DocId="%d"' % seed_doc) in body))) or \
                       (kind == 'skin' and want_skin_class in body) or \
                       (kind == 'id' and low == 'skill_property.xml' and any(m in want_ids for m in BACKREF_RE.findall(body)))
                 if not hit:
@@ -124,11 +125,16 @@ def main():
         by_doc.setdefault(low, []).append((kind, key, body))
     for low, items in sorted(by_doc.items()):
         sub, name, _ = cn[low]
-        text = read(eu[low])
-        for kind, key, body in items:
-            text = insert(text, kind, key, body, cn_blocks[low])
-        text = translate(text, tr)
         rel = os.path.join('Data', OVERLAY, sub, name)
+        existing = os.path.join(OUT, rel)
+        text = read(existing) if os.path.exists(existing) else read(eu[low])
+        have = set((k, v) for k, v, _ in blocks(text))
+        have_bodies = set(b.replace(chr(13), '').strip() for _, _, b in blocks(text))
+        for kind, key, body in items:
+            if (kind != 'class' and (kind, key) in have) or (kind == 'class' and body.replace(chr(13), '').strip() in have_bodies):
+                continue
+            text = insert(text, kind, key, body, cn_blocks[low])
+        text = patch(translate(text, tr), low, ps)
         dst = os.path.join(OUT, rel)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         with open(dst, 'w', encoding='utf-8-sig', newline='') as f:
@@ -148,14 +154,14 @@ def main():
                 bom = raw.startswith(b'\xef\xbb\xbf')
                 text = raw.decode('utf-8-sig')
                 have = set((k, v) for k, v, _ in blocks(text))
-                have_bodies = set(b for _, _, b in blocks(text))
+                have_bodies = set(b.replace(chr(13), '').strip() for _, _, b in blocks(text))
                 added = 0
                 for kind, key, body in by_doc[low]:
-                    if (kind != 'class' and (kind, key) in have) or (kind == 'class' and body in have_bodies):
+                    if (kind != 'class' and (kind, key) in have) or (kind == 'class' and body.replace(chr(13), '').strip() in have_bodies):
                         continue
                     text = insert(text, kind, key, body, cn_blocks[low])
                     added += 1
-                translated = translate(text, tr)
+                translated = patch(translate(text, tr), low, ps)
                 if added or translated != text:
                     text = translated
                     with open(path, 'w', encoding='utf-8-sig' if bom else 'utf-8', newline='') as f:
@@ -171,6 +177,26 @@ def translations():
             with open(a[5:], encoding='utf-8') as f:
                 return json.load(f)
     return {}
+
+
+def patches():
+    for a in sys.argv:
+        if a.startswith('--patch='):
+            with open(a[8:], encoding='utf-8') as f:
+                return json.load(f)
+    return []
+
+
+def patch(text, low, ps):
+    for pt in ps:
+        if pt['doc'] != low:
+            continue
+        m = re.search(r'<INFO ID="%s".*?</INFO>' % pt['id'], text, re.S)
+        if not m or pt['insert'].strip() in m.group(0):
+            continue
+        block = m.group(0).replace(pt['after'], pt['after'] + pt['insert'], 1)
+        text = text[:m.start()] + block + text[m.end():]
+    return text
 
 
 def translate(text, tr):

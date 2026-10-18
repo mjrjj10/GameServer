@@ -2531,7 +2531,7 @@
         <_QuickSlot DATAKEY="4" _Type="QUICK_SLOT_SKILL" _Data="180410050" />
       </_QuickSlotGroup>
     </QuickSlotComData>
-    <StatsComData _Team="TEAM_PLAYER" _class="CLASS_TYPE_SHUTTLE" _DestroyTime="5" _RankHitBonus="1" _AttackRangeMin="300" _RClickMoveAttackMoveSpeedRatio="1" _DefaultArtifact="360000006" _SkillStatType="STAT_TYPE_RAGE">
+    <StatsComData _Team="TEAM_PLAYER" _class="CLASS_TYPE_SHUTTLE" _ElementType="CELEMENT_TYPE_BLUE" _DestroyTime="5" _RankHitBonus="1" _AttackRangeMin="300" _RClickMoveAttackMoveSpeedRatio="1" _DefaultArtifact="360000006" _SkillStatType="STAT_TYPE_RAGE">
       <_STAT_INIT DATAKEY="STAT_TYPE_RAGE" DATA="100" />
       <_AbilityData DATAKEY="ABILITY_01" _StatUpCountLimit="12" _Tooltip="STR_TOOLTIP_SHUTTLE_ABILITY_01" _IconAlias="ability_weaponpower_01" />
       <_AbilityData DATAKEY="ABILITY_02" _StatUpCountLimit="12" _Tooltip="STR_TOOLTIP_SHUTTLE_ABILITY_02" _IconAlias="ability_skillpower_01" />

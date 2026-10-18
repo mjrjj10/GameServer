@@ -145,6 +145,13 @@ static const i32 REMOTE_SHUTTLE_DODGE = 1440410000;
 static const f32 TOOLTIP_SHUTTLE_CHARGED_FUEL = 20.0f;
 static const f32 TOOLTIP_SHUTTLE_CHARGING_FUEL_SEC = 5.0f;
 static const f32 TOOLTIP_SHUTTLE_DODGE_FUEL = 22.0f;
+static const f32 TOOLTIP_SHUTTLE_TELEPORT_SEC = 3.0f;
+static const i32 STATUS_SHUTTLE_TELEPORT_RESIST = 1230410053;
+static const i32 STATUS_SHUTTLE_EMP_DRAIN = 1230410020;
+static const i32 STATUS_SHUTTLE_SHOCKWAVE = 1230410030;
+static const i32 REMOTE_SHUTTLE_SHOCKWAVE = 1440410030;
+static const f32 TOOLTIP_SHUTTLE_EMP_DRAIN = 0.30f;
+static const f32 TELEPORT_SPREAD = 80.0f;
 static const f32 TOOLTIP_RYTLOCK_THIRD_MUL = 1.20f;
 static const f32 WEAPON_AOE_RADIUS = 250.0f;
 static const f32 WEAPON_SHOT_RELIABLE_DISTANCE = 100.0f;
@@ -977,6 +984,12 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		player.casting.type = (u8)cast->type;
 		player.casting.interruptByMove = cast->interruptByMove;
 		LOG("Cast :: %ls skill=%d start action=%d type=%d wait=%.2f", player.name.data(), (i32)skillID, (i32)cast->action, (i32)cast->type, wait);
+		if(const ActiveStatus* gx = FindPassiveOfType(player, "STATUS_TYPE_GX09")) {
+			if(gx->info->ParamInt("_MassiveTeleportIndex") == (i64)skillID) {
+				player.massTeleportAt = TimeAdd(localTime, TimeMsToTime(TOOLTIP_SHUTTLE_TELEPORT_SEC * 1000.0));
+				player.massTeleportPos = castPos;
+			}
+		}
 	}
 	skillProgramList.back().passes = lastAnimPasses;
 	bool effectCommands = false;
@@ -1694,6 +1707,7 @@ f32 World::BodyMidHeight(const Player& p) const
 bool World::RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const
 {
 	if(p.dead || p.untargetable) return false;
+	if(inst.remote->monsterOnly) return false;
 	if(inst.excludeIndex >= 0 && (i32)p.index == inst.excludeIndex) return false;
 	const Player& owner = players[inst.ownerIndex];
 	const Remote& remote = *inst.remote;
@@ -1791,7 +1805,7 @@ bool World::PassiveOnLethal(Player& target)
 {
 	const ActiveStatus* st = FindPassiveOfType(target, "STATUS_TYPE_ACTIVATE_UNDEAD");
 	if(!st || localTime < target.reviveReadyAt) return false;
-	const i32 undead = (i32)st->info->Param("_UndeadStatusIndex");
+	const i32 undead = (i32)st->info->ParamInt("_UndeadStatusIndex");
 	const StatusInfo* undeadInfo = GetGameXmlContent().FindStatus(undead);
 	target.Main().hp = 1;
 	target.reviveReadyAt = TimeAdd(localTime, TimeMsToTime(st->info->Param("_DelayMS")));
@@ -1810,8 +1824,8 @@ void World::PassiveOnDamaged(Player& target)
 	if(!st) return;
 	const ActorMaster& chara = target.Main();
 	if(chara.hp * 100 >= chara.hpMax * st->info->Param("_CheckVal")) return;
-	const i32 buff = (i32)st->info->Param("_BuffStatus");
-	const i32 creature = (i32)st->info->Param("_SummonCreature");
+	const i32 buff = (i32)st->info->ParamInt("_BuffStatus");
+	const i32 creature = (i32)st->info->ParamInt("_SummonCreature");
 	if(creature == 0 || buff == 0 || FindActiveStatus(target.index, buff) || pendingSummons.full()) return;
 	ApplyStatus(target, target, buff);
 	PendingSummon ps;
@@ -1970,10 +1984,8 @@ void World::ReleaseCast(Player& player)
 	auto f = GetGameXmlContent().skillMap.find(c.skillID);
 	if(f == GetGameXmlContent().skillMap.end() || player.dead) return;
 	LOG("Cast :: %ls skill=%d release", player.name.data(), (i32)c.skillID);
-	const GameXmlContent::SkillCast* cast = GetGameXmlContent().FindSkillCast((i32)c.skillID);
-	const ActionStateID release = f->second.action != ActionStateID::INVALID ? f->second.action : (cast ? cast->action : ActionStateID::INVALID);
-	ASSERT(release != ActionStateID::INVALID);
-	PlayerCastSkill(player, c.skillID, c.castPos, Slice<const ActorUID>(&c.target, c.target != ActorUID::INVALID ? 1 : 0), 0, release);
+	if(f->second.action == ActionStateID::INVALID) return;
+	PlayerCastSkill(player, c.skillID, c.castPos, Slice<const ActorUID>(&c.target, c.target != ActorUID::INVALID ? 1 : 0), 0, f->second.action);
 }
 
 void World::CancelCast(Player& player, const char* reason)
@@ -1981,6 +1993,7 @@ void World::CancelCast(Player& player, const char* reason)
 	LOG("Cast :: %ls skill=%d cancelled (%s)", player.name.data(), (i32)player.casting.skillID, reason);
 	replication->SendCancelSkillToAll(player.Main().UID, player.casting.skillID);
 	player.casting.skillID = SkillID::INVALID;
+	player.massTeleportAt = Time::ZERO;
 }
 
 void World::UpdateCasts()
@@ -1990,6 +2003,11 @@ void World::UpdateCasts()
 			replication->SendChangeSkillSlot(it->clientHd, it->Main().UID, it->comboSlot, it->comboPending, it->comboResetCooltime);
 			if(it->comboResetCooltime != 0) replication->SendCooltimeReset(it->clientHd, it->Main().UID, Slice<const i32>(&it->comboResetCooltime, 1));
 			it->comboPending = SkillID::INVALID;
+		}
+		if(it->massTeleportAt != Time::ZERO && localTime >= it->massTeleportAt) {
+			it->massTeleportAt = Time::ZERO;
+			const ActiveStatus* gx = FindPassiveOfType(*it, "STATUS_TYPE_GX09");
+			if(gx && !it->dead) MassTeleport(*it, *gx->info);
 		}
 		if(it->comboAutoAt != Time::ZERO && localTime >= it->comboAutoAt) {
 			it->comboAutoAt = Time::ZERO;
@@ -2246,7 +2264,15 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		ApplyStatus(caster, caster, info->casterStatus);
 		applyingCasterStatus = false;
 	}
-	if(info && info->staminaBurn && info->type == "STATUS_TYPE_HEAL" && target.stamina > 0) {
+	if(statusID == STATUS_SHUTTLE_EMP_DRAIN && caster.team != target.team) {
+		const f32 manaBefore = target.mana, energyBefore = target.res[0];
+		target.mana = MAX(target.mana, 0.0f) * (1.0f - TOOLTIP_SHUTTLE_EMP_DRAIN);
+		if(target.res[0] > 0) target.res[0] *= 1.0f - TOOLTIP_SHUTTLE_EMP_DRAIN;
+		target.tNextManaSend = Time::ZERO;
+		target.tNextResSend = Time::ZERO;
+		LOG("Status :: %ls drained by %d (mana %.0f -> %.0f, energy %.0f -> %.0f)", target.name.data(), statusID, manaBefore, target.mana, energyBefore, target.res[0]);
+	}
+	else if(info && info->staminaBurn && info->type == "STATUS_TYPE_HEAL" && target.stamina > 0) {
 		LOG("Status :: %ls stamina burned by %d (%.0f -> 0)", target.name.data(), statusID, target.stamina);
 		target.stamina = 0;
 		target.tNextStaminaSend = Time::ZERO;
@@ -2354,8 +2380,12 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			to = caster.body->GetWorldPos() + vec3(dir * (info->dragOffset > 0 ? info->dragOffset : 200.0f), 0);
 		}
 		else {
-			const f32 dist = info->type == "STATUS_TYPE_FORCEBACK" && info->distance > 0 ? info->distance :
+			f32 dist = info->type == "STATUS_TYPE_FORCEBACK" && info->distance > 0 ? info->distance :
 				STATUS_PUSH_BASE_DISTANCE * (info->distanceRatio != 0 ? info->distanceRatio : 1.0f);
+			if(statusID == STATUS_SHUTTLE_SHOCKWAVE) {
+				const Remote* wave = GetGameXmlContent().FindRemote(RemoteIdx(REMOTE_SHUTTLE_SHOCKWAVE));
+				dist = wave ? MAX(wave->boundSize[0] * 0.5f - len, 0.0f) : dist;
+			}
 			to = from + vec3(dir * dist, 0);
 		}
 		LOG("Push :: %ls -> %ls status=%d sep=%.0f dir=(%.2f, %.2f) to=(%.0f, %.0f)", caster.name.data(), target.name.data(), statusID, len, dir.x, dir.y, to.x, to.y);
@@ -4105,6 +4135,24 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 			}
 		}
 	}
+}
+
+void World::MassTeleport(Player& gx, const StatusInfo& passive)
+{
+	const f32 radius = passive.Param("_MassiveTeleportRadius");
+	const i32 effect = (i32)passive.ParamInt("_MassiveTeleportStatus");
+	const vec3 dest = gx.body->GetWorldPos();
+	i32 moved = 0;
+	foreach(it, players) {
+		if(it->index == gx.index || it->dead || it->team != gx.team) continue;
+		if(glm::length(vec2(it->body->GetWorldPos()) - vec2(gx.massTeleportPos)) > radius) continue;
+		if(FindActiveStatus(it->index, STATUS_SHUTTLE_TELEPORT_RESIST)) continue;
+		const f32 a = moved * PI * 2.0f / 5.0f;
+		if(effect != 0) ApplyStatus(gx, *it, effect);
+		TeleportPlayer(*it, dest + vec3(cosf(a) * TELEPORT_SPREAD, sinf(a) * TELEPORT_SPREAD, 0), it->input.rot.upperYaw);
+		moved++;
+	}
+	LOG("Passive :: %ls teleporter moved %d allies from (%.0f, %.0f) radius %.0f", gx.name.data(), moved, gx.massTeleportPos.x, gx.massTeleportPos.y, radius);
 }
 
 void World::AddFuel(Player& player, f32 amount)
