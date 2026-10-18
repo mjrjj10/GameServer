@@ -392,10 +392,10 @@ void GamePacketHandler::HandlePacket_CQ_GamePlayerSyncPhy(ClientHandle clientHd,
 	buff.Read<u32>();
 	buff.Read<u32>();
 	const vec3 origin = f2v(buff.Read<float3>());
+	for(int i = 0; i < 6; i++) buff.Read<i16>();
 	const i16 aimX = buff.Read<i16>();
 	const i16 aimY = buff.Read<i16>();
 	const i16 aimZ = buff.Read<i16>();
-	for(int i = 0; i < 6; i++) buff.Read<i16>();
 	const vec3 aimOffset = vec3((f32)aimX, (f32)aimY, (f32)aimZ) / SHOT_AIM_SCALE;
 
 	const u16 nameLen = buff.Read<u16>();

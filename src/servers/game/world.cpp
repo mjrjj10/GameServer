@@ -4078,6 +4078,7 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 				if(st->targetIndex == target.index && st->casterIndex == owner.index && st->info && st->info->additionalDamageByCaster > 0 && localTime < st->until)
 					stackBonus += (i32)(st->info->additionalDamageByCaster * MAX(st->overlap, 1));
 			}
+			if(stackBonus > 0) LOG("Passive :: %ls stack bonus +%d on %ls", owner.name.data(), stackBonus, target.name.data());
 		}
 		i32 dealt = amount + stackBonus;
 		if(enemy && GetGameXmlContent().IsRepeatHitReduced((i32)inst.skillID)) {
