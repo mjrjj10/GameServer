@@ -205,6 +205,7 @@ struct World
 		Time clientPushUntil = Time::ZERO;
 		f32 dashDist = 0;
 		f32 dashDone = 0;
+		const GameXmlContent::MoveCurve* dashCurve = nullptr;
 		Time ccImmuneUntil = Time::ZERO;
 		i32 cleanseCharges = -1;
 		Time cleanseRefillAt = Time::ZERO;

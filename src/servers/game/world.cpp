@@ -266,10 +266,10 @@ void World::Update(Time localTime_)
 		if(!p.dead && p.dashDone < p.dashDist) {
 			const f32 total = (f32)TimeDiffSec(TimeDiff(p.dashStartAt, p.dashUntil));
 			const f32 frac = total > 0 ? MIN((f32)TimeDiffSec(TimeDiff(p.dashStartAt, localTime)) / total, 1.0f) : 1.0f;
-			const f32 target = p.dashDist * frac * frac;
+			const f32 target = p.dashCurve ? p.dashDist * p.dashCurve->Eval(frac) : p.dashDist * frac * frac;
 			const f32 ahead = glm::dot(vec2(p.dashOrigin) + p.dashDir * target - vec2(body.GetWorldPos()), p.dashDir);
-			if(ahead > 0) physics.Move(&body, vec3(p.dashDir * ahead, 0), (f32)tdelta);
-			p.dashDone = target;
+			if(p.dashCurve ? fabsf(ahead) > 0.01f : ahead > 0) physics.Move(&body, vec3(p.dashDir * ahead, 0), (f32)tdelta);
+			p.dashDone = frac >= 1.0f ? p.dashDist : (p.dashCurve ? MIN(fabsf(target), p.dashDist - 0.01f) : target);
 			p.input.moveTo = body.GetWorldPos();
 		}
 
@@ -2528,6 +2528,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 				target.dashOrigin = target.body->GetWorldPos();
 				target.dashDist = rl;
 				target.dashDone = 0;
+				target.dashCurve = nullptr;
 				target.dashUntil = TimeAdd(localTime, TimeMsToTime(graphDuration * 1000.0));
 			}
 		}
@@ -5371,7 +5372,9 @@ void World::UpdateRemotes(f32 delta)
 				const f32 d = glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos));
 				if(d < nearest) { nearest = d; nearestPlayer = &*it; }
 			}
-			LOG("SkillRemoteEnd :: %d travelled=%.0f hitsLeft=%d nearest=%ls dist=%.0f", (i32)remote.ID, inst.travelled, inst.hitsLeft, nearestPlayer ? nearestPlayer->name.data() : L"-", nearest);
+			const vec2 nrel = nearestPlayer ? vec2(nearestPlayer->body->GetWorldPos()) - vec2(inst.pos) : vec2(0);
+			LOG("SkillRemoteEnd :: %d travelled=%.0f hitsLeft=%d nearest=%ls dist=%.0f along=%.0f side=%.0f dz=%.0f", (i32)remote.ID, inst.travelled, inst.hitsLeft, nearestPlayer ? nearestPlayer->name.data() : L"-", nearest,
+				glm::dot(nrel, inst.dir), inst.dir.x * nrel.y - inst.dir.y * nrel.x, nearestPlayer ? nearestPlayer->body->GetWorldPos().z - inst.pos.z : 0.0f);
 		}
 
 		if(destroyed && inst.hasLandZ) inst.pos.z = inst.landZ;
@@ -5622,6 +5625,7 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 	const auto& cmd = action.commands[cmdIndex];
 	f32 distance = 0;
 	f32 moveDuration = 0;
+	const GameXmlContent::MoveCurve* curve = nullptr;
 
 	switch(cmd.type) {
 		case ActionCommand::Type::STATE_BLOCK: {
@@ -5632,6 +5636,16 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 		case ActionCommand::Type::GRAPH_MOVE_HORZ: {
 			distance = cmd.graphMoveHorz.distance;
 			moveDuration = SkillMoveDuration(content, caster->classType, action, cmd.animIndex);
+			foreach_const(st, action.anims) {
+				if(st->index != cmd.animIndex) continue;
+				curve = content.GetMoveCurve(content.GetMaster(caster->classType).className.c_str(), st->animationId);
+				if(!curve) continue;
+				const f32 animLen = content.GetAniSeqTime(content.GetMaster(caster->classType).className.c_str(), st->animationId) * (f32)MAX(st->loop, 1);
+				const f32 curveTime = curve->time > 0 ? curve->time : animLen;
+				if(curveTime > 0) moveDuration = curveTime;
+				else curve = nullptr;
+				break;
+			}
 		} break;
 
 		case ActionCommand::Type::MOVE: {
@@ -5693,7 +5707,9 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			mover.dashOrigin = mover.body->GetWorldPos();
 			mover.dashDist = moveDist;
 			mover.dashDone = 0;
+			mover.dashCurve = curve;
 			mover.dashUntil = TimeAdd(localTime, TimeMsToTime(moveDuration * 1000.0));
+			if(curve) LOG("Dash :: %ls follows move graph over %.2fs for %.0f", mover.name.data(), moveDuration, moveDist);
 		}
 	}
 }

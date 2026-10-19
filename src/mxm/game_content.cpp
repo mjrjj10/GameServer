@@ -2541,6 +2541,33 @@ bool GameXmlContent::LoadStatusData()
 			LOG("Loaded %d stand-up animation lengths", (i32)lieEndTime.size());
 		}
 
+		XMLDocument xmlMoveGraph;
+		if(LoadXMLFile(L"/MoveGraph.xml", xmlMoveGraph)) {
+			for(XMLElement* pClass = xmlMoveGraph.FirstChildElement()->FirstChildElement("Class"); pClass; pClass = pClass->NextSiblingElement("Class")) {
+				const char* type = nullptr;
+				pClass->QueryStringAttribute("Type", &type);
+				if(!type) continue;
+				for(XMLElement* pAnim = pClass->FirstChildElement("Anim"); pAnim; pAnim = pAnim->NextSiblingElement("Anim")) {
+					i32 id = 0;
+					const char* h = nullptr;
+					MoveCurve curve;
+					pAnim->QueryAttribute("Id", &id);
+					pAnim->QueryFloatAttribute("Time", &curve.time);
+					pAnim->QueryStringAttribute("H", &h);
+					for(const char* c = h; c && *c && !curve.h.full(); ) {
+						char* end = nullptr;
+						const f32 v = EA::StdC::StrtoF32(c, &end);
+						if(end == c) break;
+						curve.h.push_back(v);
+						curve.maxAbs = MAX(curve.maxAbs, fabsf(v));
+						c = end;
+					}
+					if(id != 0 && !curve.h.empty()) moveCurves[AniKey(type, id)] = curve;
+				}
+			}
+			LOG("Loaded %d move graphs", (i32)moveCurves.size());
+		}
+
 		XMLDocument xmlMobActions;
 		if(LoadXMLFile(L"/client/ActionBase_Monster_MOB_PvP.xml", xmlMobActions)) {
 			i32 count = 0;

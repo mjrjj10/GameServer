@@ -700,6 +700,24 @@ struct GameXmlContent
 	eastl::hash_map<i32, f32> interactionActiveDistance;
 	f32 GetInteractionActiveDistance(i32 id) const { auto f = interactionActiveDistance.find(id); return f == interactionActiveDistance.end() ? 0 : f->second; }
 	f32 GetAniSeqTime(const char* className, i32 seqID) const { auto f = aniSeqTime.find(AniKey(className, seqID)); return f == aniSeqTime.end() ? 0 : f->second; }
+	struct MoveCurve
+	{
+		f32 time = 0;
+		f32 maxAbs = 0;
+		eastl::fixed_vector<f32,24,false> h;
+
+		f32 Eval(f32 u) const
+		{
+			const i32 n = (i32)h.size();
+			if(n == 0 || maxAbs <= 0) return 0;
+			if(n == 1) return h[0] / maxAbs;
+			const f32 x = MAX(MIN(u, 1.0f), 0.0f) * (f32)(n - 1);
+			const i32 i = MIN((i32)x, n - 1);
+			const i32 j = MIN(i + 1, n - 1);
+			return (h[i] + (x - (f32)i) * (h[j] - h[i])) / maxAbs;
+		}
+	};
+	const MoveCurve* GetMoveCurve(const char* className, i32 seqID) const { auto f = moveCurves.find(AniKey(className, seqID)); return f == moveCurves.end() ? nullptr : &f->second; }
 	// stand-up animation length of a master (AniLength LIE_END, entity key = class name without CLASS_TYPE_)
 	f32 GetLieEndTime(const char* className) const
 	{
@@ -790,6 +808,7 @@ private:
 	eastl::hash_map<i32, f32> skillConsumeUG;      // SKILL.xml _ConsumeUG
 	eastl::hash_map<i32, SummonInfo> summonMap;
 	eastl::hash_map<u64, f32> aniSeqTime; // AniLength.xml PC: (entity key hash, SeqID) -> length
+	eastl::hash_map<u64, MoveCurve> moveCurves;
 	eastl::hash_map<i32, f32> stageTimeLimit; // STAGELIST success condition TIME_COUNT (seconds)
 	eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,48,false>, f32>,128,true> lieEndTime; // AniLength.xml PC LIE_END per entity key
 	eastl::hash_map<i32, i32> creatureElement; // CREATURE_CHARACTER _ElementType: 0 none, 1 red, 2 green, 3 blue
