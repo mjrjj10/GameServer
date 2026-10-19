@@ -13,7 +13,7 @@ SEGMENTS = [
     ('take0', 'q', -1.0, 4.5, 'SKILL 1 - ANCHOR THROW', 'Steps back and hurls an anchor 15.75 m forward'),
     ('take0', 'e', -1.0, 4.0, 'SKILL 2 - BACK GRAB', 'Dashes through the target, then a burst that knocks enemies down'),
     ('take1', 'q', -1.0, 4.5, 'SKILL 3 - LEAP BARRAGE', 'Leaps and sprays a half circle 4 times - 4 hits slow by 50%'),
-    ('take1', 'e', -1.0, 5.5, 'SKILL 4 - HEAVY SNIPE', 'Locks onto an enemy - the explosion lands 3 s later within 6 m'),
+    ('take1', 'e', -1.0, 6.0, 'SKILL 4 - HEAVY SNIPE', 'Marks the target for 3 s - then an explosion within 6 m'),
     ('take0', 'r', -1.0, 6.5, 'ULTIMATE - HEAVY BARRAGE', 'Super Armor - fires all around every 0.4 s, pushing enemies out'),
 ]
 

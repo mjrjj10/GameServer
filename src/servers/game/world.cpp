@@ -4126,7 +4126,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 
 	remoteInsts.push_back(inst);
 
-	LOG("Remote :: spawn %d at (%.0f, %.0f) dir=(%.2f, %.2f) speed=%.0f range=%.0f", (i32)idx, pos.x, pos.y, dir.x, dir.y, inst.speed, inst.range);
+	LOG("Remote :: spawn %d at (%.0f, %.0f) dir=(%.2f, %.2f) speed=%.0f range=%.0f wall=%lld", (i32)idx, pos.x, pos.y, dir.x, dir.y, inst.speed, inst.range, ShowcaseWallMs());
 	return &remoteInsts.back();
 }
 
@@ -5069,6 +5069,7 @@ void World::UpdateRemotes(f32 delta)
 			case Remote::BehaviorType::TARGET:
 			case Remote::BehaviorType::FOLLOW_TARGET:
 			case Remote::BehaviorType::HOMING: {
+				if(remote.behaviorType == Remote::BehaviorType::TARGET && remote.attachTargetObject && inst.target != ActorUID::INVALID) break;
 				if(inst.target == ActorUID::INVALID && remote.behaviorType == Remote::BehaviorType::HOMING && remote.homingLength > 0) {
 					f32 bestDist = remote.homingLength;
 					const f32 halfCos = cosf(remote.homingAngle * 0.5f * PI / 180.0f);
