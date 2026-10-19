@@ -525,6 +525,10 @@ struct GameXmlContent
 				} graphMoveHorz;
 
 				struct {
+					u8 toLastChild;
+				} teleport;
+
+				struct {
 					i32 speed;
 				} rotateSpeed;
 			};

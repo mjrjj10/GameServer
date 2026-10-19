@@ -1495,6 +1495,15 @@ bool GameXmlContent::LoadAnimationData()
 				pActionBase->QueryAttribute("Param1", &cmd.graphMoveHorz.distance);
 			} break;
 
+			case ActionCommand::Type::TELEPORT: {
+				const char* Param1 = nullptr;
+				const char* TargetPreset = nullptr;
+				pActionBase->QueryStringAttribute("Param1", &Param1);
+				pActionBase->QueryStringAttribute("TargetPreset", &TargetPreset);
+				cmd.teleport.toLastChild = Param1 && TargetPreset && EA::StdC::Strcmp(Param1, "TELEPORT_TARGET_ENTITY") == 0 &&
+					ActionCommand::TargetPresetFromString(TargetPreset) == ActionCommand::TargetPreset::LAST_CHILD_FFF ? 1 : 0;
+			} break;
+
 			case ActionCommand::Type::ENTITY: {
 				cmd.entity.entityIndex = 0;
 				pActionBase->QueryAttribute("EntityIndex", &cmd.entity.entityIndex);

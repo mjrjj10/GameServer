@@ -217,6 +217,7 @@ struct World
 		vec2 fearDir = vec2(1, 0);
 		Time tRespawn = Time::ZERO;
 		ActorUID memorizedTarget = ActorUID::INVALID;
+		ActorUID lastChildUID = ActorUID::INVALID;
 		bool pendingShot = false;
 		vec3 pendingShotOrigin = vec3(0);
 		vec2 pendingShotDir = vec2(0);

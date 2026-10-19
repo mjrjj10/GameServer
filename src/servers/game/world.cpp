@@ -1016,7 +1016,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 			if(cmd->type == ActionCommand::Type::MOVE && (cmd->move.preset == ActionCommand::MovePreset::TARGET_POS || cmd->move.preset == ActionCommand::MovePreset::TARGET_POS_LEAP)) {
 				const vec2 rel = vec2(castPos) - vec2(player.body->GetWorldPos());
 				const f32 len = glm::length(rel);
-				distance = MIN(distance, len);
+				distance = len;
 				if(len > 1.0f) gotoDir = rel / len;
 			}
 		}
@@ -2958,6 +2958,12 @@ static f32 SkillReach(const GameXmlContent& content, ClassType cls, SkillID skil
 	return reach;
 }
 
+static bool IsSelfPreset(ActionCommand::TargetPreset p)
+{
+	return p == ActionCommand::TargetPreset::SELF_FFF || p == ActionCommand::TargetPreset::SELF_FFF_1 || p == ActionCommand::TargetPreset::SELF_TFF ||
+		p == ActionCommand::TargetPreset::SELF_TTF || p == ActionCommand::TargetPreset::SELF_TTT;
+}
+
 static f32 SkillDamageRadius(const GameXmlContent& content, ClassType cls, SkillID skillID)
 {
 	auto f = content.skillMap.find(skillID);
@@ -2965,12 +2971,17 @@ static f32 SkillDamageRadius(const GameXmlContent& content, ClassType cls, Skill
 	const auto& action = content.GetSkillAction(cls, f->second.action);
 	f32 radius = 0;
 	bool anyRemote = false;
+	bool selfOnly = true;
 	foreach_const(cmd, action.commands) {
 		if((cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) && cmd->remote.idx != RemoteIdx::INVALID) {
 			anyRemote = true;
 			radius = MAX(radius, RemoteDamageRadius(content, cmd->remote.idx, 0));
 		}
+		if(cmd->type == ActionCommand::Type::ENTITY || cmd->type == ActionCommand::Type::CALL_CHILD_SKILL || cmd->type == ActionCommand::Type::REGCOMBO ||
+		   cmd->type == ActionCommand::Type::AIOBJECT || cmd->type == ActionCommand::Type::STATUS_SKILL_TARGET) selfOnly = false;
+		if(cmd->type == ActionCommand::Type::STATUS && !IsSelfPreset(cmd->status.targetPreset)) selfOnly = false;
 	}
+	if(!anyRemote && selfOnly) return 0;
 	return anyRemote ? radius : -1.0f;
 }
 
@@ -3672,6 +3683,7 @@ void World::UpdateSummons()
 				actor.nextPassive = TimeAdd(localTime, TimeMsToTime(RELAY_PASSIVE_SEC * 1000.0));
 			}
 			actor.skillTarget = ps->target;
+			owner.lastChildUID = actor.UID;
 			if(reuse && info->perception > 0 && glm::length(vec2(ps->pos) - vec2(actor.pos)) > info->perception) RelayWarp(actor, ps->pos);
 			if(info && owner.pendingChildSkill > 0 && localTime < owner.pendingChildSkillUntil) {
 				const i32 child = owner.pendingChildSkill;
@@ -3976,6 +3988,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	const ActorUID currentTarget = targets.size() > 0 ? targets[0] : ActorUID::INVALID;
 
 	bool scheduled = false;
+	bool teleportToChild = false;
 	// animation 0 without any action and no hit-event combo: animation 1 is its continuation,
 	// played once animation 0 is over (AniLength of its AnimationId)
 	eastl::fixed_vector<SkillAnimPass,8,false>& animPasses = lastAnimPasses;
@@ -4046,6 +4059,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pendingRemotes.push_back(pr);
 			scheduled = true;
 		}
+		if(cmd->type == ActionCommand::Type::TELEPORT && cmd->teleport.toLastChild && t <= 0.001f) teleportToChild = true;
 		if(cmd->type == ActionCommand::Type::ENTITY && cmd->entity.entityIndex != 0 && !pendingSummons.full()) {
 			PendingSummon ps;
 			ps.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
@@ -4088,6 +4102,15 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	}
 	}
 
+	if(teleportToChild) {
+		const ActorNpc* child = FindNpcActor(player.lastChildUID);
+		if(child && localTime < child->despawnAt) {
+			const vec3 to = vec3(vec2(child->pos), player.body->GetWorldPos().z);
+			LOG("Teleport :: %ls to its last entity %d at (%.0f, %.0f)", player.name.data(), (i32)child->docID, to.x, to.y);
+			TeleportPlayer(player, to, player.input.rot.upperYaw);
+		}
+		else LOG("Teleport :: %ls has no live entity to teleport to", player.name.data());
+	}
 	LOG("Skill :: %ls skill=%d anim=%d%s scheduled=%d damage=%d castPos=(%.0f, %.0f)", player.name.data(), (i32)skillID, anim, passes > 1 ? "+1" : "", scheduled, damage, castPos.x, castPos.y);
 	return scheduled;
 }
@@ -5543,7 +5566,7 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			if(c2->type != ActionCommand::Type::MOVE) continue;
 			const auto preset = c2->move.preset;
 			if((preset == ActionCommand::MovePreset::TARGET_POS || preset == ActionCommand::MovePreset::TARGET_POS_LEAP) && glm::length(vec2(prog.castPos)) > 1.0f) {
-				moveDist = MIN(moveDist, glm::length(vec2(prog.castPos) - from));
+				moveDist = glm::length(vec2(prog.castPos) - from);
 			}
 			const bool gotoTarget = preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET || preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_CHASE ||
 				preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH || preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE;
