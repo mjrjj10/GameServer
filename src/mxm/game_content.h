@@ -799,6 +799,19 @@ private:
 	eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,48,false>, f32>,128,true> lieEndTime;
 	eastl::hash_map<i32, i32> creatureElement;
 	bool LoadStatusData();
+	bool LoadSkillTooltips();
+	bool LoadSkillCosts();
+	bool LoadCharacterElements();
+	bool LoadSummons();
+	bool LoadStageTimeLimits();
+	bool LoadAnimationSequenceTimes();
+	bool LoadMoveGraphs();
+	bool LoadSummonActions();
+	bool LoadChildSkills();
+	bool LoadWeaponFiring();
+	bool LoadSkillTargeting();
+	bool LoadInteractions();
+	bool LoadBotBrain();
 };
 
 bool GameXmlContentLoad();

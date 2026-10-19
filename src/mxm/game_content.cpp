@@ -1866,7 +1866,47 @@ bool GameXmlContent::Load()
 	r = LoadRemoteData();
 	if(!r) return false;
 
-	LoadStatusData();
+	r = LoadStatusData();
+	if(!r) return false;
+
+	r = LoadSkillTooltips();
+	if(!r) return false;
+
+	r = LoadSkillCosts();
+	if(!r) return false;
+
+	r = LoadCharacterElements();
+	if(!r) return false;
+
+	r = LoadSummons();
+	if(!r) return false;
+
+	r = LoadStageTimeLimits();
+	if(!r) return false;
+
+	r = LoadAnimationSequenceTimes();
+	if(!r) return false;
+
+	r = LoadMoveGraphs();
+	if(!r) return false;
+
+	r = LoadSummonActions();
+	if(!r) return false;
+
+	r = LoadChildSkills();
+	if(!r) return false;
+
+	r = LoadWeaponFiring();
+	if(!r) return false;
+
+	r = LoadSkillTargeting();
+	if(!r) return false;
+
+	r = LoadInteractions();
+	if(!r) return false;
+
+	r = LoadBotBrain();
+	if(!r) return false;
 
 	/*
 	LOG("Masters:");
@@ -2231,625 +2271,673 @@ bool GameXmlContent::LoadStatusData()
 
 	LOG("Loaded %d statuses", (i32)statusMap.size());
 
-	XMLDocument xmlTT;
-	if(LoadXMLFile(L"/client/skilltt.xml", xmlTT)) {
-		i32 modCount = 0;
-		eastl::hash_set<i32> touched;
-		struct SkillMulStat { i32 skill; i32 status; u8 stat; f32 value; };
-		eastl::fixed_vector<SkillMulStat,512,false> skillMulStats;
-		for(XMLElement* pMaster = xmlTT.FirstChildElement()->FirstChildElement(); pMaster; pMaster = pMaster->NextSiblingElement()) {
-			for(XMLElement* pSkill = pMaster->FirstChildElement("data"); pSkill; pSkill = pSkill->NextSiblingElement("data")) {
-				XMLElement* pBase = pSkill->FirstChildElement("data");
-				if(!pBase) continue;
-				i32 skillID = 0;
-				pSkill->QueryAttribute("DATAKEY", &skillID);
-				for(XMLElement* pT = pBase->FirstChildElement("tableDatas"); pT; pT = pT->NextSiblingElement("tableDatas")) {
-					const char* attrType = nullptr;
-					pT->QueryStringAttribute("attrType", &attrType);
-					if(!attrType || EA::StdC::Strcmp(attrType, "TTATTR_REMOTE_DAMAGE") != 0) continue;
-					f32 dmg = 0;
-					pT->QueryFloatAttribute("value_1", &dmg);
-					if(dmg > 0 && skillBaseDamage.find(skillID) == skillBaseDamage.end()) skillBaseDamage[skillID] = dmg;
-				}
-				eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,40,false>, i32>,16,false> keyStatus;
-				i32 delegateID = 0;
-				for(XMLElement* pAttr = pBase->FirstChildElement("attrMap"); pAttr; pAttr = pAttr->NextSiblingElement("attrMap")) {
-					const char* key = nullptr;
-					i32 data = 0;
-					pAttr->QueryStringAttribute("DATAKEY", &key);
-					pAttr->QueryAttribute("DATA", &data);
-					if(!key) continue;
-					if(EA::StdC::Strcmp(key, "TTATTR_STATUS_DELIGATE") == 0) delegateID = data;
-					if(!keyStatus.full()) keyStatus.push_back(eastl::make_pair(eastl::fixed_string<char,40,false>(key), data));
-				}
-				for(XMLElement* pT = pBase->FirstChildElement("tableDatas"); pT; pT = pT->NextSiblingElement("tableDatas")) {
-					const char* attrType = nullptr; const char* attrKey = nullptr; const char* proc = nullptr; const char* apply = nullptr; const char* stat = nullptr;
-					pT->QueryStringAttribute("attrType", &attrType);
-					if(!attrType || EA::StdC::Strcmp(attrType, "TTATTR_STATUS_STAT") != 0) continue;
-					pT->QueryStringAttribute("attrKey", &attrKey);
-					i32 statusID = delegateID;
-					if(attrKey) {
-						foreach_const(k, keyStatus) {
-							if(k->first == attrKey) statusID = k->second;
-						}
-					}
-					auto found = statusMap.find(statusID);
-					if(found == statusMap.end() || found->second.modsFromTT) continue;
-					pT->QueryStringAttribute("proc", &proc);
-					pT->QueryStringAttribute("apply", &apply);
-					pT->QueryStringAttribute("stat", &stat);
-					StatusMod mod;
-					pT->QueryFloatAttribute("value_1", &mod.value);
-					pT->QueryFloatAttribute("value_2", &mod.count);
-					if(mod.value == 0 || !stat) continue;
-					mod.regen = proc && EA::StdC::Strcmp(proc, "STATPROC_REGEN") == 0;
-					mod.mul = apply && EA::StdC::Strcmp(apply, "STATAPPLY_MUL") == 0;
-					if(EA::StdC::Strcmp(stat, "STAT_TYPE_SHIELD_DEFENCE") == 0) mod.stat = StatusMod::SHIELD_DEFENCE;
-					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_HEALTH") == 0) mod.stat = StatusMod::HEALTH;
-					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_SKILLPOWER") == 0) mod.stat = StatusMod::SKILLPOWER;
-					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_CRITICALRATE") == 0) mod.stat = StatusMod::CRITICALRATE;
-					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_REFLECT_DAMAGE_RATIO") == 0) mod.stat = StatusMod::REFLECT_DAMAGE_RATIO;
-					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_SKILL_CRITICALRATE") == 0) mod.stat = StatusMod::SKILL_CRITICALRATE;
-					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_ATTACK") == 0) mod.stat = StatusMod::ATTACK;
-					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_MOVESPEED") == 0) mod.stat = StatusMod::MOVESPEED;
-					else if(EA::StdC::Strcmp(stat, "STAT_TYPE_DEFENCE") == 0) mod.stat = StatusMod::DEFENCE;
-					if(mod.mul && mod.stat != StatusMod::OTHER && !skillMulStats.full()) skillMulStats.push_back({ skillID, statusID, (u8)mod.stat, mod.value });
-					if(!found->second.mods.full()) { found->second.mods.push_back(mod); modCount++; }
-					touched.insert(statusID);
-				}
-			}
-		}
-		foreach(t, touched) {
-			auto f = statusMap.find(*t);
-			if(f != statusMap.end()) f->second.modsFromTT = true;
-		}
-		foreach(it, statusMap) {
-			StatusInfo& st = it->second;
-			if(st.descDefenceDown <= 0 || !st.mods.empty() || st.type != "STATUS_TYPE_STAT") continue;
-			StatusMod mod;
-			mod.stat = StatusMod::DEFENCE;
-			mod.mul = true;
-			mod.value = -st.descDefenceDown;
-			mod.count = 1;
-			st.mods.push_back(mod);
-			modCount++;
-		}
-		LOG("Loaded %d status stat modifiers from skilltt", modCount);
 
-		XMLDocument xmlDesc;
-		if(LoadXMLFile(L"/client/string/skilldesc.xml", xmlDesc)) {
-			i32 added = 0;
-			XMLElement* pTable = xmlDesc.FirstChildElement()->FirstChildElement("StringTableData");
-			for(XMLElement* pS = pTable ? pTable->FirstChildElement("StringData") : nullptr; pS; pS = pS->NextSiblingElement("StringData")) {
-				const char* key = nullptr; const char* text = nullptr;
-				pS->QueryStringAttribute("DATAKEY", &key);
-				pS->QueryStringAttribute("data", &text);
-				if(!key || !text || EA::StdC::Strncmp(key, "STR_SKILL_DESC_", 15) != 0) continue;
-				if(EA::StdC::Stristr(text, "can be struck multiple times") || EA::StdC::Stristr(text, "can hit the same target") || EA::StdC::Stristr(text, "strike the same target")) repeatHitReduced.insert(EA::StdC::AtoI32(key + 15));
-				if(!EA::StdC::Stristr(text, "movespeed") && !EA::StdC::Stristr(text, "movement speed")) continue;
-				const char* ph = EA::StdC::Strstr(text, ":status:stat:mul:");
-				if(!ph) continue;
-				const char* statName = ph + 17;
-				StatusMod::Stat stat = StatusMod::OTHER;
-				if(EA::StdC::Strnicmp(statName, "attack:", 7) == 0) stat = StatusMod::ATTACK;
-				if(stat == StatusMod::OTHER) continue;
-				const i32 skillID = EA::StdC::AtoI32(key + 15);
-				foreach_const(sm, skillMulStats) {
-					if(sm->skill != skillID || sm->stat != (u8)stat) continue;
-					auto found = statusMap.find(sm->status);
-					if(found == statusMap.end()) continue;
-					bool hasMove = false;
-					foreach_const(m, found->second.mods) hasMove |= m->stat == StatusMod::MOVESPEED;
-					if(hasMove || found->second.mods.full()) continue;
-					StatusMod mod;
-					mod.stat = StatusMod::MOVESPEED;
-					mod.mul = true;
-					mod.value = sm->value;
-					mod.count = 1;
-					found->second.mods.push_back(mod);
-					added++;
-				}
+
+
+
+
+
+	return true;
+}
+
+bool GameXmlContent::LoadSkillTooltips()
+{
+	XMLDocument xmlTT;
+	if(!LoadXMLFile(L"/client/skilltt.xml", xmlTT)) return false;
+	i32 modCount = 0;
+	eastl::hash_set<i32> touched;
+	struct SkillMulStat { i32 skill; i32 status; u8 stat; f32 value; };
+	eastl::fixed_vector<SkillMulStat,512,false> skillMulStats;
+	for(XMLElement* pMaster = xmlTT.FirstChildElement()->FirstChildElement(); pMaster; pMaster = pMaster->NextSiblingElement()) {
+		for(XMLElement* pSkill = pMaster->FirstChildElement("data"); pSkill; pSkill = pSkill->NextSiblingElement("data")) {
+			XMLElement* pBase = pSkill->FirstChildElement("data");
+			if(!pBase) continue;
+			i32 skillID = 0;
+			pSkill->QueryAttribute("DATAKEY", &skillID);
+			for(XMLElement* pT = pBase->FirstChildElement("tableDatas"); pT; pT = pT->NextSiblingElement("tableDatas")) {
+				const char* attrType = nullptr;
+				pT->QueryStringAttribute("attrType", &attrType);
+				if(!attrType || EA::StdC::Strcmp(attrType, "TTATTR_REMOTE_DAMAGE") != 0) continue;
+				f32 dmg = 0;
+				pT->QueryFloatAttribute("value_1", &dmg);
+				if(dmg > 0 && skillBaseDamage.find(skillID) == skillBaseDamage.end()) skillBaseDamage[skillID] = dmg;
 			}
-			LOG("Loaded %d movespeed modifiers from skill descriptions", added);
+			eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,40,false>, i32>,16,false> keyStatus;
+			i32 delegateID = 0;
+			for(XMLElement* pAttr = pBase->FirstChildElement("attrMap"); pAttr; pAttr = pAttr->NextSiblingElement("attrMap")) {
+				const char* key = nullptr;
+				i32 data = 0;
+				pAttr->QueryStringAttribute("DATAKEY", &key);
+				pAttr->QueryAttribute("DATA", &data);
+				if(!key) continue;
+				if(EA::StdC::Strcmp(key, "TTATTR_STATUS_DELIGATE") == 0) delegateID = data;
+				if(!keyStatus.full()) keyStatus.push_back(eastl::make_pair(eastl::fixed_string<char,40,false>(key), data));
+			}
+			for(XMLElement* pT = pBase->FirstChildElement("tableDatas"); pT; pT = pT->NextSiblingElement("tableDatas")) {
+				const char* attrType = nullptr; const char* attrKey = nullptr; const char* proc = nullptr; const char* apply = nullptr; const char* stat = nullptr;
+				pT->QueryStringAttribute("attrType", &attrType);
+				if(!attrType || EA::StdC::Strcmp(attrType, "TTATTR_STATUS_STAT") != 0) continue;
+				pT->QueryStringAttribute("attrKey", &attrKey);
+				i32 statusID = delegateID;
+				if(attrKey) {
+					foreach_const(k, keyStatus) {
+						if(k->first == attrKey) statusID = k->second;
+					}
+				}
+				auto found = statusMap.find(statusID);
+				if(found == statusMap.end() || found->second.modsFromTT) continue;
+				pT->QueryStringAttribute("proc", &proc);
+				pT->QueryStringAttribute("apply", &apply);
+				pT->QueryStringAttribute("stat", &stat);
+				StatusMod mod;
+				pT->QueryFloatAttribute("value_1", &mod.value);
+				pT->QueryFloatAttribute("value_2", &mod.count);
+				if(mod.value == 0 || !stat) continue;
+				mod.regen = proc && EA::StdC::Strcmp(proc, "STATPROC_REGEN") == 0;
+				mod.mul = apply && EA::StdC::Strcmp(apply, "STATAPPLY_MUL") == 0;
+				if(EA::StdC::Strcmp(stat, "STAT_TYPE_SHIELD_DEFENCE") == 0) mod.stat = StatusMod::SHIELD_DEFENCE;
+				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_HEALTH") == 0) mod.stat = StatusMod::HEALTH;
+				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_SKILLPOWER") == 0) mod.stat = StatusMod::SKILLPOWER;
+				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_CRITICALRATE") == 0) mod.stat = StatusMod::CRITICALRATE;
+				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_REFLECT_DAMAGE_RATIO") == 0) mod.stat = StatusMod::REFLECT_DAMAGE_RATIO;
+				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_SKILL_CRITICALRATE") == 0) mod.stat = StatusMod::SKILL_CRITICALRATE;
+				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_ATTACK") == 0) mod.stat = StatusMod::ATTACK;
+				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_MOVESPEED") == 0) mod.stat = StatusMod::MOVESPEED;
+				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_DEFENCE") == 0) mod.stat = StatusMod::DEFENCE;
+				if(mod.mul && mod.stat != StatusMod::OTHER && !skillMulStats.full()) skillMulStats.push_back({ skillID, statusID, (u8)mod.stat, mod.value });
+				if(!found->second.mods.full()) { found->second.mods.push_back(mod); modCount++; }
+				touched.insert(statusID);
+			}
 		}
 	}
+	foreach(t, touched) {
+		auto f = statusMap.find(*t);
+		if(f != statusMap.end()) f->second.modsFromTT = true;
+	}
+	foreach(it, statusMap) {
+		StatusInfo& st = it->second;
+		if(st.descDefenceDown <= 0 || !st.mods.empty() || st.type != "STATUS_TYPE_STAT") continue;
+		StatusMod mod;
+		mod.stat = StatusMod::DEFENCE;
+		mod.mul = true;
+		mod.value = -st.descDefenceDown;
+		mod.count = 1;
+		st.mods.push_back(mod);
+		modCount++;
+	}
+	LOG("Loaded %d status stat modifiers from skilltt", modCount);
 
+	XMLDocument xmlDesc;
+	if(LoadXMLFile(L"/client/string/skilldesc.xml", xmlDesc)) {
+		i32 added = 0;
+		XMLElement* pTable = xmlDesc.FirstChildElement()->FirstChildElement("StringTableData");
+		for(XMLElement* pS = pTable ? pTable->FirstChildElement("StringData") : nullptr; pS; pS = pS->NextSiblingElement("StringData")) {
+			const char* key = nullptr; const char* text = nullptr;
+			pS->QueryStringAttribute("DATAKEY", &key);
+			pS->QueryStringAttribute("data", &text);
+			if(!key || !text || EA::StdC::Strncmp(key, "STR_SKILL_DESC_", 15) != 0) continue;
+			if(EA::StdC::Stristr(text, "can be struck multiple times") || EA::StdC::Stristr(text, "can hit the same target") || EA::StdC::Stristr(text, "strike the same target")) repeatHitReduced.insert(EA::StdC::AtoI32(key + 15));
+			if(!EA::StdC::Stristr(text, "movespeed") && !EA::StdC::Stristr(text, "movement speed")) continue;
+			const char* ph = EA::StdC::Strstr(text, ":status:stat:mul:");
+			if(!ph) continue;
+			const char* statName = ph + 17;
+			StatusMod::Stat stat = StatusMod::OTHER;
+			if(EA::StdC::Strnicmp(statName, "attack:", 7) == 0) stat = StatusMod::ATTACK;
+			if(stat == StatusMod::OTHER) continue;
+			const i32 skillID = EA::StdC::AtoI32(key + 15);
+			foreach_const(sm, skillMulStats) {
+				if(sm->skill != skillID || sm->stat != (u8)stat) continue;
+				auto found = statusMap.find(sm->status);
+				if(found == statusMap.end()) continue;
+				bool hasMove = false;
+				foreach_const(m, found->second.mods) hasMove |= m->stat == StatusMod::MOVESPEED;
+				if(hasMove || found->second.mods.full()) continue;
+				StatusMod mod;
+				mod.stat = StatusMod::MOVESPEED;
+				mod.mul = true;
+				mod.value = sm->value;
+				mod.count = 1;
+				found->second.mods.push_back(mod);
+				added++;
+			}
+		}
+		LOG("Loaded %d movespeed modifiers from skill descriptions", added);
+	}
+	return true;
+}
+
+bool GameXmlContent::LoadSkillCosts()
+{
 	XMLDocument xmlSkill;
-	if(LoadXMLFile(L"/SKILL.xml", xmlSkill)) {
-		for(XMLElement* pInfo = xmlSkill.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+	if(!LoadXMLFile(L"/SKILL.xml", xmlSkill)) return false;
+	for(XMLElement* pInfo = xmlSkill.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+		i32 skillID = 0;
+		pInfo->QueryAttribute("ID", &skillID);
+		XMLElement* pCommon = pInfo->FirstChildElement("ST_COMMONSKILL");
+		if(pCommon) {
+			f32 stamina = 0;
+			if(pCommon->QueryFloatAttribute("_ConsumeStamina", &stamina) == XML_SUCCESS && stamina > 0) skillConsumeStamina[skillID] = stamina;
+			f32 mp = 0, ug = 0;
+			if(pCommon->QueryFloatAttribute("_ConsumeMP", &mp) == XML_SUCCESS && mp > 0) skillConsumeMP[skillID] = mp;
+			if(pCommon->QueryFloatAttribute("_ConsumeUG", &ug) == XML_SUCCESS && ug > 0) skillConsumeUG[skillID] = ug;
+			eastl::array<f32,4> res = { 0, 0, 0, 0 };
+			pCommon->QueryFloatAttribute("_ConsumeEP", &res[0]);
+			pCommon->QueryFloatAttribute("_ConsumeRP", &res[1]);
+			pCommon->QueryFloatAttribute("_ConsumeBB", &res[2]);
+			pCommon->QueryFloatAttribute("_ConsumeHP", &res[3]);
+			if(res[0] > 0 || res[1] > 0 || res[2] > 0 || res[3] > 0) skillConsumeRes[skillID] = res;
+			if(XMLElement* pCombo = pCommon->FirstChildElement("_SKILLCOMBO")) {
+				XMLElement* pComboTarget = pCommon->FirstChildElement("_Target");
+				const char* selectState = pComboTarget ? pComboTarget->Attribute("_SelectStateType") : nullptr;
+				const bool afterCast = selectState && EA::StdC::Strcmp(selectState, "SKILL_TARGET_SELECT_STATE_AFTERCAST") == 0;
+				if(afterCast && pCombo->BoolAttribute("_AutoCasting")) comboAutoCastMs[skillID] = MAX(pCombo->IntAttribute("_ExecuteTimeMS"), 1);
+			}
+			if(XMLElement* pCost = pCommon->FirstChildElement("_COST_PROPERTY")) {
+				for(XMLElement* pLvl = pCost->FirstChildElement("_PROPERTY_LEVEL"); pLvl; pLvl = pLvl->NextSiblingElement("_PROPERTY_LEVEL")) {
+					CostLevel lvl;
+					pLvl->QueryFloatAttribute("_ConsumeEP", &lvl.consume[0]);
+					pLvl->QueryFloatAttribute("_ConsumeRP", &lvl.consume[1]);
+					pLvl->QueryFloatAttribute("_ConsumeBB", &lvl.consume[2]);
+					if(const char* act = pLvl->Attribute("_Action")) lvl.action = ActionStateFromString(act);
+					for(XMLElement* pR = pLvl->FirstChildElement("_REMOTELIST"); pR; pR = pR->NextSiblingElement("_REMOTELIST")) {
+						i32 from = 0, to = 0;
+						pR->QueryAttribute("_RemoteIndex", &from);
+						pR->QueryAttribute("_ReplaceIndex", &to);
+						if(from != 0 && to != 0 && !lvl.remoteReplace.full()) lvl.remoteReplace.push_back({ from, to });
+					}
+					for(XMLElement* pS = pLvl->FirstChildElement("_STATUSLIST"); pS; pS = pS->NextSiblingElement("_STATUSLIST")) {
+						i32 from = 0, to = 0;
+						pS->QueryAttribute("_StatusIndex", &from);
+						pS->QueryAttribute("_ReplaceIndex", &to);
+						if(from != 0 && to != 0 && !lvl.statusReplace.full()) lvl.statusReplace.push_back({ from, to });
+					}
+					for(XMLElement* pP = xmlSKILLPROPERTY.FirstChildElement()->FirstChildElement(); pP; pP = pP->NextSiblingElement()) {
+						XMLElement* pSP = pP->FirstChildElement("ST_SKILL_PROPERTY");
+						const char* spType = pSP ? pSP->Attribute("_Type") : nullptr;
+						if(!spType || EA::StdC::Strcmp(spType, "E_SKILL_PROPERTY_DAMAGE") != 0 || pSP->IntAttribute("_SkillIndex") != skillID) continue;
+						XMLElement* pNormal = pSP->FirstChildElement("_PROPERTY_LEVEL");
+						XMLElement* pCostLevel = pSP->FirstChildElement("_COST_LEVEL");
+						for(u32 k = skillCostLevels[skillID].size(); pCostLevel && k > 0; k--) pCostLevel = pCostLevel->NextSiblingElement("_COST_LEVEL");
+						XMLElement* pEmpowered = pCostLevel ? pCostLevel->FirstChildElement("_PROPERTY_LEVEL") : nullptr;
+						if(!pNormal || !pEmpowered) continue;
+						const f32 normalBase = pNormal->FloatAttribute("_BaseDamage");
+						const f32 empoweredBase = pEmpowered->FloatAttribute("_BaseDamage");
+						if(normalBase > 0 && empoweredBase > 0) lvl.damageRatio = empoweredBase / normalBase;
+						break;
+					}
+					auto& levels = skillCostLevels[skillID];
+					if(!levels.full()) levels.push_back(lvl);
+				}
+			}
+		}
+		XMLElement* pEvent = pCommon ? pCommon->FirstChildElement("_HitEvent") : nullptr;
+		if(!pEvent) continue;
+		const char* type = nullptr;
+		pEvent->QueryStringAttribute("_HIT_EVENT_TYPE", &type);
+		i32 remote = 0;
+		pEvent->QueryAttribute("_HIT_EVENT_CONDITION", &remote);
+		if(type && EA::StdC::Strstr(type, "ENABLE_NEXT_COMBO") && remote != 0) {
+			skillHitEventRemote[skillID] = remote;
+		}
+	}
+	LOG("Loaded %d skill hit events", (i32)skillHitEventRemote.size());
+	return true;
+}
+
+bool GameXmlContent::LoadCharacterElements()
+{
+	XMLDocument xmlChara;
+	if(!LoadXMLFile(L"/client/CREATURE_CHARACTER.xml", xmlChara)) return false;
+	for(XMLElement* pInfo = xmlChara.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+		i32 id = 0;
+		pInfo->QueryAttribute("ID", &id);
+		for(XMLElement* pComp = pInfo->FirstChildElement(); pComp; pComp = pComp->NextSiblingElement()) {
+			const char* el = nullptr;
+			if(pComp->QueryStringAttribute("_ElementType", &el) != XML_SUCCESS || !el) continue;
+			i32 e = 0;
+			if(EA::StdC::Strcmp(el, "CELEMENT_TYPE_RED") == 0) e = 1;
+			else if(EA::StdC::Strcmp(el, "CELEMENT_TYPE_GREEN") == 0) e = 2;
+			else if(EA::StdC::Strcmp(el, "CELEMENT_TYPE_BLUE") == 0) e = 3;
+			creatureElement[id] = e;
+			break;
+		}
+	}
+	LOG("Loaded %d character elements", (i32)creatureElement.size());
+	return true;
+}
+
+bool GameXmlContent::LoadSummons()
+{
+	XMLDocument xmlSummon;
+	if(!LoadXMLFile(L"/client/CREATURE_MONSTER_SUMMON.xml", xmlSummon)) return false;
+	for(XMLElement* pInfo = xmlSummon.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+		i32 id = 0;
+		pInfo->QueryAttribute("ID", &id);
+		SummonInfo si;
+		if(XMLElement* p = pInfo->FirstChildElement("EntityComData")) {
+			p->QueryFloatAttribute("_MoveSpeed", &si.moveSpeed);
+			const char* t = nullptr;
+			p->QueryStringAttribute("_IsTargetable", &t);
+			si.targetable = t && EA::StdC::Stricmp(t, "true") == 0;
+		}
+		if(XMLElement* p = pInfo->FirstChildElement("LifeTime_ComData")) p->QueryFloatAttribute("LifeTime", &si.lifeTime);
+		if(XMLElement* p = pInfo->FirstChildElement("Kfm_ComData")) {
+			const char* key = nullptr;
+			p->QueryStringAttribute("KeyName", &key);
+			if(key) si.className = key;
+		}
+		if(XMLElement* p = pInfo->FirstChildElement("Ai_ComData")) {
+			p->QueryFloatAttribute("_PerceptionLength", &si.perception);
+			const char* ai = nullptr;
+			p->QueryStringAttribute("_AiIndex", &ai);
+			if(ai && EA::StdC::Strcmp(ai, "AI_PC_MONDOZAX_ROBOT") == 0) si.ai = SummonInfo::AI_RELAY;
+			else if(ai && (EA::StdC::Strcmp(ai, "AI_PC_ARTILLERY_SPIDERMINE") == 0 || EA::StdC::Strcmp(ai, "AI_PC_SOULMASTER_SLOWSOUL") == 0 ||
+				EA::StdC::Strcmp(ai, "AI_PC_ELECTRO_ENERGYBALL") == 0)) si.ai = SummonInfo::AI_CHASE;
+		}
+		if(XMLElement* p = pInfo->FirstChildElement("MoveController_ComData")) p->QueryFloatAttribute("_AIDistanceWidth", &si.aiDistance);
+		if(XMLElement* p = pInfo->FirstChildElement("StatsComData")) p->QueryAttribute("_VariationType", &si.variation);
+		if(XMLElement* p = pInfo->FirstChildElement("SkillComData")) {
+			for(XMLElement* s = p->FirstChildElement("_SkillID"); s; s = s->NextSiblingElement("_SkillID")) {
+				i32 sk = 0;
+				s->QueryAttribute("_Index", &sk);
+				if(sk != 0 && !si.skills.full()) si.skills.push_back(sk);
+			}
+		}
+		summonMap[id] = si;
+	}
+	LOG("Loaded %d summon creatures", (i32)summonMap.size());
+	return true;
+}
+
+bool GameXmlContent::LoadStageTimeLimits()
+{
+	XMLDocument xmlStage;
+	if(!LoadXMLFile(L"/client/STAGELIST.xml", xmlStage)) return false;
+	for(XMLElement* pInfo = xmlStage.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+		i32 id = 0;
+		pInfo->QueryAttribute("ID", &id);
+		XMLElement* pStage = pInfo->FirstChildElement();
+		XMLElement* pList = pStage ? pStage->FirstChildElement("_SUCCESS_CONDITION_LIST") : nullptr;
+		XMLElement* pSet = pList ? pList->FirstChildElement("_MCASESET") : nullptr;
+		for(XMLElement* pC = pSet ? pSet->FirstChildElement("_MCONDITION") : nullptr; pC; pC = pC->NextSiblingElement("_MCONDITION")) {
+			const char* type = nullptr;
+			pC->QueryStringAttribute("_Type", &type);
+			if(!type || EA::StdC::Strcmp(type, "E_CONDITION_TYPE_TIME_COUNT") != 0) continue;
+			f32 v = 0;
+			pC->QueryFloatAttribute("_Value", &v);
+			if(v > 0) stageTimeLimit[id] = v;
+		}
+	}
+	LOG("Loaded %d stage time limits", (i32)stageTimeLimit.size());
+	return true;
+}
+
+bool GameXmlContent::LoadAnimationSequenceTimes()
+{
+	XMLDocument xmlAni;
+	if(!LoadXMLFile(L"/client/AniLength.xml", xmlAni)) return false;
+	for(XMLElement* pType = xmlAni.FirstChildElement()->FirstChildElement("EntityType"); pType; pType = pType->NextSiblingElement("EntityType")) {
+		const char* t = nullptr;
+		pType->QueryStringAttribute("_Type", &t);
+		if(!t) continue;
+		const bool pcType = EA::StdC::Strcmp(t, "PC") == 0;
+		for(XMLElement* pEnt = pType->FirstChildElement("Entity"); pEnt; pEnt = pEnt->NextSiblingElement("Entity")) {
+			const char* key = nullptr;
+			pEnt->QueryStringAttribute("_Key", &key);
+			if(!key) continue;
+			for(XMLElement* pAni = pEnt->FirstChildElement("AnimationInfo"); pAni; pAni = pAni->NextSiblingElement("AnimationInfo")) {
+				i32 seqID = 0;
+				f32 seqTime = 0;
+				pAni->QueryAttribute("_SeqID", &seqID);
+				pAni->QueryFloatAttribute("_SeqTime", &seqTime);
+				if(seqID != 0 && (pcType || aniSeqTime.find(AniKey(key, seqID)) == aniSeqTime.end())) aniSeqTime[AniKey(key, seqID)] = seqTime;
+				if(!pcType) continue;
+				const char* name = nullptr;
+				pAni->QueryStringAttribute("_AnimationName", &name);
+				if(!name || EA::StdC::Strcmp(name, "LIE_END") != 0) continue;
+				f32 len = 0;
+				pAni->QueryFloatAttribute("_SeqTime", &len);
+				lieEndTime.push_back(eastl::make_pair(eastl::fixed_string<char,48,false>(key), len));
+			}
+		}
+	}
+	LOG("Loaded %d stand-up animation lengths", (i32)lieEndTime.size());
+	return true;
+}
+
+bool GameXmlContent::LoadMoveGraphs()
+{
+	XMLDocument xmlMoveGraph;
+	if(!LoadXMLFile(L"/MoveGraph.xml", xmlMoveGraph)) return false;
+	for(XMLElement* pClass = xmlMoveGraph.FirstChildElement()->FirstChildElement("Class"); pClass; pClass = pClass->NextSiblingElement("Class")) {
+		const char* type = nullptr;
+		pClass->QueryStringAttribute("Type", &type);
+		if(!type) continue;
+		for(XMLElement* pAnim = pClass->FirstChildElement("Anim"); pAnim; pAnim = pAnim->NextSiblingElement("Anim")) {
+			i32 id = 0;
+			const char* h = nullptr;
+			MoveCurve curve;
+			pAnim->QueryAttribute("Id", &id);
+			pAnim->QueryFloatAttribute("Time", &curve.time);
+			pAnim->QueryStringAttribute("H", &h);
+			for(const char* c = h; c && *c && !curve.h.full(); ) {
+				char* end = nullptr;
+				const f32 v = EA::StdC::StrtoF32(c, &end);
+				if(end == c) break;
+				curve.h.push_back(v);
+				curve.maxAbs = MAX(curve.maxAbs, fabsf(v));
+				c = end;
+			}
+			if(id != 0 && !curve.h.empty()) moveCurves[AniKey(type, id)] = curve;
+		}
+	}
+	LOG("Loaded %d move graphs", (i32)moveCurves.size());
+	return true;
+}
+
+bool GameXmlContent::LoadSummonActions()
+{
+	XMLDocument xmlMobActions;
+	if(!LoadXMLFile(L"/client/ActionBase_Monster_MOB_PvP.xml", xmlMobActions)) return false;
+	i32 count = 0;
+	for(XMLElement* pA = xmlMobActions.FirstChildElement()->FirstChildElement(); pA; pA = pA->NextSiblingElement()) {
+		const char* cls = nullptr; const char* state = nullptr; const char* type = nullptr;
+		pA->QueryStringAttribute("Class", &cls);
+		pA->QueryStringAttribute("BehaviorState", &state);
+		pA->QueryStringAttribute("CommandType", &type);
+		if(!cls || !state || !type) continue;
+		const bool spawn = EA::StdC::Strcmp(state, "SPAWN_BEHAVIORSTATE") == 0;
+		const bool die = EA::StdC::Strcmp(state, "DIE_BEHAVIORSTATE") == 0;
+		i32 skillState = 0;
+		if(!spawn && !die && EA::StdC::Sscanf(state, "SKILL_%d_BEHAVIORSTATE", &skillState) != 1) continue;
+		if(skillState < 0 || skillState > 20) continue;
+		i32 stateAnimId = 0;
+		pA->QueryAttribute("AnimationId", &stateAnimId);
+		if(!spawn && !die && stateAnimId != 0) {
+			foreach(it, summonMap) if(it->second.className == cls && it->second.stateAnim[skillState] == 0) it->second.stateAnim[skillState] = stateAnimId;
+		}
+		const char* p2 = nullptr;
+		pA->QueryStringAttribute("Param2", &p2);
+		if(p2 && EA::StdC::Strcmp(p2, "Remove") == 0) continue;
+		SummonCommand cmd;
+		if(EA::StdC::Strcmp(type, "REMOTE") == 0) { cmd.kind = SummonCommand::REMOTE; pA->QueryAttribute("RemoteIndex", &cmd.index); }
+		else if(EA::StdC::Strcmp(type, "STATUS") == 0) { cmd.kind = SummonCommand::STATUS; pA->QueryAttribute("StatusIndex", &cmd.index); }
+		else if(EA::StdC::Strcmp(type, "DIE_MODE") == 0) {
+			cmd.kind = SummonCommand::DIE;
+			const char* p1 = nullptr;
+			pA->QueryStringAttribute("Param1", &p1);
+			i32 mode = 0;
+			if(p1 && EA::StdC::Sscanf(p1, "CUSTOM_DIE_MODE_%d", &mode) == 1) cmd.dieMode = (u8)mode;
+		}
+		else continue;
+		if(cmd.kind != SummonCommand::DIE && cmd.index == 0) continue;
+		pA->QueryFloatAttribute("Delay", &cmd.delay);
+		const char* preset = nullptr;
+		pA->QueryStringAttribute("TargetPreset", &preset);
+		cmd.onCurrent = preset && EA::StdC::Strstr(preset, "CURRENT");
+		const char* var = nullptr;
+		pA->QueryStringAttribute("VariationType", &var);
+		foreach(it, summonMap) {
+			if(it->second.className != cls) continue;
+			i32 dieMode = 0;
+			if(var && die && EA::StdC::Sscanf(var, "CUSTOM_DIE_MODE_%d", &dieMode) == 1) {
+				cmd.dieMode = (u8)dieMode;
+			}
+			else if(var) {
+				i32 v = -1;
+				if(EA::StdC::Sscanf(var, "STATS_VARIATION_TYPE_%d", &v) == 1) { if(v != it->second.variation) continue; }
+				else if(EA::StdC::Sscanf(var, "SPAWN_VARIATION_TYPE_%d", &v) == 1) { if(v != 0) continue; }
+				else if(EA::StdC::Strcmp(var, "STANCE_TYPE_DEFAULT") != 0) continue;
+			}
+			auto& list = spawn ? it->second.onSpawn : (die ? it->second.onDie : it->second.skillStates[skillState]);
+			if(!list.full()) { list.push_back(cmd); count++; }
+		}
+	}
+	LOG("Loaded %d summon spawn/die/skill commands", count);
+	return true;
+}
+
+bool GameXmlContent::LoadChildSkills()
+{
+	XMLDocument xmlChild;
+	if(!LoadXMLFile(L"/ActionBase.xml", xmlChild)) return false;
+	eastl::hash_set<u32> spawningStates;
+	for(XMLElement* pA = xmlChild.FirstChildElement()->FirstChildElement(); pA; pA = pA->NextSiblingElement()) {
+		const char* type = nullptr;
+		pA->QueryStringAttribute("CommandType", &type);
+		if(type && EA::StdC::Strcmp(type, "ENTITY") == 0) {
+			const char* cls = nullptr; const char* state = nullptr;
+			pA->QueryStringAttribute("Class", &cls);
+			pA->QueryStringAttribute("BehaviorState", &state);
+			if(!cls || !state) continue;
+			eastl::fixed_string<char,64,false> c = cls;
+			c.make_upper();
+			spawningStates.insert(((u32)ClassTypeFromString(c.data()) << 16) | ((u32)ActionStateFromString(state) & 0xFFFF));
+			continue;
+		}
+		if(!type || EA::StdC::Strcmp(type, "CALL_CHILD_SKILL") != 0) continue;
+		const char* cls = nullptr; const char* state = nullptr; const char* p1 = nullptr;
+		pA->QueryStringAttribute("Class", &cls);
+		pA->QueryStringAttribute("BehaviorState", &state);
+		pA->QueryStringAttribute("Param1", &p1);
+		i32 n = 0;
+		if(!cls || !state || !p1 || EA::StdC::Sscanf(p1, "MONSTER_SKILL_ID_%d", &n) != 1) continue;
+		eastl::fixed_string<char,64,false> c = cls;
+		c.make_upper();
+		const ClassType ct = ClassTypeFromString(c.data());
+		const ActionStateID as = ActionStateFromString(state);
+		childSkill[((u32)ct << 16) | ((u32)as & 0xFFFF)] = n;
+	}
+	foreach_const(cs, childSkill) if(spawningStates.find(cs->first) == spawningStates.end()) childOnExisting.insert(cs->first);
+	LOG("Loaded %d child skill calls (%d to an existing creature)", (i32)childSkill.size(), (i32)childOnExisting.size());
+	return true;
+}
+
+bool GameXmlContent::LoadWeaponFiring()
+{
+	XMLDocument xmlFiring, xmlWeapon;
+	if(!LoadXMLFile(L"/client/FIRING_METHOD.xml", xmlFiring)) return false;
+	if(!LoadXMLFile(L"/client/WEAPON.xml", xmlWeapon)) return false;
+	eastl::hash_map<i32, WeaponHeatInfo> byFiring;
+	eastl::hash_map<i32, f32> delayByFiring;
+	eastl::hash_map<i32, WeaponFiring> firingRemotes;
+	for(XMLElement* pInfo = xmlFiring.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+		i32 id = 0;
+		pInfo->QueryAttribute("ID", &id);
+		XMLElement* pData = pInfo->FirstChildElement("FiringMethodData");
+		XMLElement* pFire = pData ? pData->FirstChildElement("_FIREINFO") : nullptr;
+		const char* fireDummy = pData ? pData->Attribute("_FiringDummy") : nullptr;
+		f32 fireMaxDistance = 0;
+		if(pFire) pFire->QueryFloatAttribute("_MaxDistance", &fireMaxDistance);
+		f32 fireMinDistance = 0;
+		if(pFire) pFire->QueryFloatAttribute("_MinDistance", &fireMinDistance);
+		if(pFire) {
+			f32 delay = 0;
+			pFire->QueryFloatAttribute("_FireDelayTime", &delay);
+			if(delay > 0) delayByFiring[id] = delay;
+		}
+		{
+			WeaponFiring wf;
+			if(fireDummy) wf.fireDummy = fireDummy;
+			wf.spawnAtAim = pData && XmlAttrTrue(pData, "_RemoteSpawnAimPosition");
+			XMLElement* pFactory = pInfo->FirstChildElement("RemoteFactoryComData");
+			XMLElement* pCreate = pFactory ? pFactory->FirstChildElement("_Create") : nullptr;
+			XMLElement* pDef = pCreate ? pCreate->FirstChildElement("_Default") : nullptr;
+			XMLElement* pRem = pDef ? pDef->FirstChildElement("_Remote") : nullptr;
+			if(pRem) {
+				i32 v = 0;
+				pRem->QueryAttribute("_RemoteIndex", &v);
+				wf.base = (RemoteIdx)v;
+				for(XMLElement* pE = pRem->FirstChildElement(); pE; pE = pE->NextSiblingElement()) {
+					i32 idx = 0;
+					if(EA::StdC::Strcmp(pE->Name(), "_COMBO") == 0) {
+						pE->QueryAttribute("_Index", &idx);
+						if(idx && !wf.combo.full()) wf.combo.push_back((RemoteIdx)idx);
+					}
+					else if(EA::StdC::Strcmp(pE->Name(), "_CHARGINGREMOTE") == 0) {
+						pE->QueryAttribute("_Index", &idx);
+						if(idx && !wf.charge.full()) wf.charge.push_back((RemoteIdx)idx);
+					}
+					else if(EA::StdC::Strcmp(pE->Name(), "_FIRINGCOUNT") == 0) {
+						pE->QueryAttribute("_Rate", &wf.countRate);
+						pE->QueryAttribute("_Index", &idx);
+						wf.countRemote = (RemoteIdx)idx;
+					}
+					else if(EA::StdC::Strcmp(pE->Name(), "_STATUS") == 0) {
+						pE->QueryAttribute("_OwnerStatusToCheck", &wf.replaceStatus);
+						pE->QueryAttribute("_RemoteIndexToReplace", &idx);
+						wf.replaceRemote = (RemoteIdx)idx;
+					}
+				}
+			}
+			else if(XMLElement* pRad = pCreate ? pCreate->FirstChildElement("_Radiate") : nullptr) {
+				i32 v = 0;
+				pRad->QueryAttribute("_Index", &v);
+				wf.base = (RemoteIdx)v;
+			}
+			wf.maxDistance = fireMaxDistance;
+			wf.minDistance = fireMinDistance;
+			if(wf.base != RemoteIdx::INVALID) firingRemotes[id] = wf;
+		}
+		XMLElement* pGauge = pData ? pData->FirstChildElement("_GAUGE") : nullptr;
+		if(!pGauge) continue;
+		const char* type = nullptr;
+		pGauge->QueryStringAttribute("_Type", &type);
+		if(!type || EA::StdC::Strcmp(type, "WEAPON_GAUGE_TYPE_INCREASE") != 0) continue;
+		WeaponHeatInfo h;
+		pGauge->QueryFloatAttribute("_MaxGauge", &h.maxGauge);
+		pGauge->QueryFloatAttribute("_Consumption", &h.consumption);
+		pGauge->QueryFloatAttribute("_AutoRegen", &h.autoRegen);
+		pGauge->QueryFloatAttribute("_AutoRegenInterval", &h.autoRegenInterval);
+		pGauge->QueryFloatAttribute("_AutoRegenDelayTime", &h.autoRegenDelay);
+		pGauge->QueryFloatAttribute("_OverHeatDurationTime", &h.overheatDuration);
+		pGauge->QueryFloatAttribute("_OverHeatResetGauge", &h.overheatResetGauge);
+		if(h.maxGauge > 0 && h.consumption > 0) byFiring[id] = h;
+	}
+	for(XMLElement* pInfo = xmlWeapon.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+		i32 id = 0;
+		pInfo->QueryAttribute("ID", &id);
+		for(XMLElement* pComp = pInfo->FirstChildElement(); pComp; pComp = pComp->NextSiblingElement()) {
+			i32 firing = 0;
+			if(pComp->QueryAttribute("_DefaultFiringIndex", &firing) != XML_SUCCESS) continue;
+			f32 pvpAttack = 0;
+			if(pComp->QueryFloatAttribute("_PvPAttack", &pvpAttack) == XML_SUCCESS && pvpAttack > 0) weaponAttack[id] = pvpAttack;
+			auto f = byFiring.find(firing);
+			if(f != byFiring.end()) weaponHeat[id] = f->second;
+			auto d = delayByFiring.find(firing);
+			if(d != delayByFiring.end()) weaponFireDelay[id] = d->second;
+			auto r = firingRemotes.find(firing);
+			if(r != firingRemotes.end()) weaponFiring[id] = r->second;
+			if(XMLElement* pStances = pComp->FirstChildElement("_STANCE_FIRINGMETHOD")) {
+				for(XMLElement* pSt = pStances->FirstChildElement("_STANCE"); pSt; pSt = pSt->NextSiblingElement("_STANCE")) {
+					const i8 stance = StanceFromString(pSt->Attribute("DATAKEY"));
+					i32 stanceFiring = 0;
+					pSt->QueryAttribute("DATA", &stanceFiring);
+					auto sr = firingRemotes.find(stanceFiring);
+					if(stance <= 0 || sr == firingRemotes.end()) continue;
+					weaponStanceFiring[((u32)id << 4) | (u32)stance] = sr->second;
+					auto sd = delayByFiring.find(stanceFiring);
+					if(sd != delayByFiring.end()) weaponStanceFireDelay[((u32)id << 4) | (u32)stance] = sd->second;
+				}
+			}
+			break;
+		}
+	}
+	LOG("Loaded %d weapon overheat gauges, %d weapon firing remotes, %d stance firing methods", (i32)weaponHeat.size(), (i32)weaponFiring.size(), (i32)weaponStanceFiring.size());
+	return true;
+}
+
+bool GameXmlContent::LoadSkillTargeting()
+{
+	XMLDocument xmlSkillP;
+	if(!LoadXMLFile(L"/client/SKILL.xml", xmlSkillP)) return false;
+	i32 count = 0;
+	for(XMLElement* pInfo = xmlSkillP.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+		XMLElement* pSk = pInfo->FirstChildElement("ST_COMMONSKILL");
+		if(!pSk) continue;
+		const char* type = nullptr;
+		const char* cls = nullptr;
+		i32 status = 0;
+		pSk->QueryStringAttribute("_Type", &type);
+		pSk->QueryStringAttribute("_RequireClass", &cls);
+		pSk->QueryAttribute("_Status", &status);
+		{
 			i32 skillID = 0;
 			pInfo->QueryAttribute("ID", &skillID);
-			XMLElement* pCommon = pInfo->FirstChildElement("ST_COMMONSKILL");
-			if(pCommon) {
-				f32 stamina = 0;
-				if(pCommon->QueryFloatAttribute("_ConsumeStamina", &stamina) == XML_SUCCESS && stamina > 0) skillConsumeStamina[skillID] = stamina;
-				f32 mp = 0, ug = 0;
-				if(pCommon->QueryFloatAttribute("_ConsumeMP", &mp) == XML_SUCCESS && mp > 0) skillConsumeMP[skillID] = mp;
-				if(pCommon->QueryFloatAttribute("_ConsumeUG", &ug) == XML_SUCCESS && ug > 0) skillConsumeUG[skillID] = ug;
-				eastl::array<f32,4> res = { 0, 0, 0, 0 };
-				pCommon->QueryFloatAttribute("_ConsumeEP", &res[0]);
-				pCommon->QueryFloatAttribute("_ConsumeRP", &res[1]);
-				pCommon->QueryFloatAttribute("_ConsumeBB", &res[2]);
-				pCommon->QueryFloatAttribute("_ConsumeHP", &res[3]);
-				if(res[0] > 0 || res[1] > 0 || res[2] > 0 || res[3] > 0) skillConsumeRes[skillID] = res;
-				if(XMLElement* pCombo = pCommon->FirstChildElement("_SKILLCOMBO")) {
-					XMLElement* pComboTarget = pCommon->FirstChildElement("_Target");
-					const char* selectState = pComboTarget ? pComboTarget->Attribute("_SelectStateType") : nullptr;
-					const bool afterCast = selectState && EA::StdC::Strcmp(selectState, "SKILL_TARGET_SELECT_STATE_AFTERCAST") == 0;
-					if(afterCast && pCombo->BoolAttribute("_AutoCasting")) comboAutoCastMs[skillID] = MAX(pCombo->IntAttribute("_ExecuteTimeMS"), 1);
-				}
-				if(XMLElement* pCost = pCommon->FirstChildElement("_COST_PROPERTY")) {
-					for(XMLElement* pLvl = pCost->FirstChildElement("_PROPERTY_LEVEL"); pLvl; pLvl = pLvl->NextSiblingElement("_PROPERTY_LEVEL")) {
-						CostLevel lvl;
-						pLvl->QueryFloatAttribute("_ConsumeEP", &lvl.consume[0]);
-						pLvl->QueryFloatAttribute("_ConsumeRP", &lvl.consume[1]);
-						pLvl->QueryFloatAttribute("_ConsumeBB", &lvl.consume[2]);
-						if(const char* act = pLvl->Attribute("_Action")) lvl.action = ActionStateFromString(act);
-						for(XMLElement* pR = pLvl->FirstChildElement("_REMOTELIST"); pR; pR = pR->NextSiblingElement("_REMOTELIST")) {
-							i32 from = 0, to = 0;
-							pR->QueryAttribute("_RemoteIndex", &from);
-							pR->QueryAttribute("_ReplaceIndex", &to);
-							if(from != 0 && to != 0 && !lvl.remoteReplace.full()) lvl.remoteReplace.push_back({ from, to });
-						}
-						for(XMLElement* pS = pLvl->FirstChildElement("_STATUSLIST"); pS; pS = pS->NextSiblingElement("_STATUSLIST")) {
-							i32 from = 0, to = 0;
-							pS->QueryAttribute("_StatusIndex", &from);
-							pS->QueryAttribute("_ReplaceIndex", &to);
-							if(from != 0 && to != 0 && !lvl.statusReplace.full()) lvl.statusReplace.push_back({ from, to });
-						}
-						for(XMLElement* pP = xmlSKILLPROPERTY.FirstChildElement()->FirstChildElement(); pP; pP = pP->NextSiblingElement()) {
-							XMLElement* pSP = pP->FirstChildElement("ST_SKILL_PROPERTY");
-							const char* spType = pSP ? pSP->Attribute("_Type") : nullptr;
-							if(!spType || EA::StdC::Strcmp(spType, "E_SKILL_PROPERTY_DAMAGE") != 0 || pSP->IntAttribute("_SkillIndex") != skillID) continue;
-							XMLElement* pNormal = pSP->FirstChildElement("_PROPERTY_LEVEL");
-							XMLElement* pCostLevel = pSP->FirstChildElement("_COST_LEVEL");
-							for(u32 k = skillCostLevels[skillID].size(); pCostLevel && k > 0; k--) pCostLevel = pCostLevel->NextSiblingElement("_COST_LEVEL");
-							XMLElement* pEmpowered = pCostLevel ? pCostLevel->FirstChildElement("_PROPERTY_LEVEL") : nullptr;
-							if(!pNormal || !pEmpowered) continue;
-							const f32 normalBase = pNormal->FloatAttribute("_BaseDamage");
-							const f32 empoweredBase = pEmpowered->FloatAttribute("_BaseDamage");
-							if(normalBase > 0 && empoweredBase > 0) lvl.damageRatio = empoweredBase / normalBase;
-							break;
-						}
-						auto& levels = skillCostLevels[skillID];
-						if(!levels.full()) levels.push_back(lvl);
-					}
-				}
-			}
-			XMLElement* pEvent = pCommon ? pCommon->FirstChildElement("_HitEvent") : nullptr;
-			if(!pEvent) continue;
-			const char* type = nullptr;
-			pEvent->QueryStringAttribute("_HIT_EVENT_TYPE", &type);
-			i32 remote = 0;
-			pEvent->QueryAttribute("_HIT_EVENT_CONDITION", &remote);
-			if(type && EA::StdC::Strstr(type, "ENABLE_NEXT_COMBO") && remote != 0) {
-				skillHitEventRemote[skillID] = remote;
-			}
-		}
-		LOG("Loaded %d skill hit events", (i32)skillHitEventRemote.size());
-	}
-
-	XMLDocument xmlChara;
-	if(LoadXMLFile(L"/client/CREATURE_CHARACTER.xml", xmlChara)) {
-		for(XMLElement* pInfo = xmlChara.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
-			i32 id = 0;
-			pInfo->QueryAttribute("ID", &id);
-			for(XMLElement* pComp = pInfo->FirstChildElement(); pComp; pComp = pComp->NextSiblingElement()) {
-				const char* el = nullptr;
-				if(pComp->QueryStringAttribute("_ElementType", &el) != XML_SUCCESS || !el) continue;
-				i32 e = 0;
-				if(EA::StdC::Strcmp(el, "CELEMENT_TYPE_RED") == 0) e = 1;
-				else if(EA::StdC::Strcmp(el, "CELEMENT_TYPE_GREEN") == 0) e = 2;
-				else if(EA::StdC::Strcmp(el, "CELEMENT_TYPE_BLUE") == 0) e = 3;
-				creatureElement[id] = e;
-				break;
-			}
-		}
-		LOG("Loaded %d character elements", (i32)creatureElement.size());
-	}
-
-	XMLDocument xmlSummon;
-	if(LoadXMLFile(L"/client/CREATURE_MONSTER_SUMMON.xml", xmlSummon)) {
-		for(XMLElement* pInfo = xmlSummon.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
-			i32 id = 0;
-			pInfo->QueryAttribute("ID", &id);
-			SummonInfo si;
-			if(XMLElement* p = pInfo->FirstChildElement("EntityComData")) {
-				p->QueryFloatAttribute("_MoveSpeed", &si.moveSpeed);
-				const char* t = nullptr;
-				p->QueryStringAttribute("_IsTargetable", &t);
-				si.targetable = t && EA::StdC::Stricmp(t, "true") == 0;
-			}
-			if(XMLElement* p = pInfo->FirstChildElement("LifeTime_ComData")) p->QueryFloatAttribute("LifeTime", &si.lifeTime);
-			if(XMLElement* p = pInfo->FirstChildElement("Kfm_ComData")) {
-				const char* key = nullptr;
-				p->QueryStringAttribute("KeyName", &key);
-				if(key) si.className = key;
-			}
-			if(XMLElement* p = pInfo->FirstChildElement("Ai_ComData")) {
-				p->QueryFloatAttribute("_PerceptionLength", &si.perception);
-				const char* ai = nullptr;
-				p->QueryStringAttribute("_AiIndex", &ai);
-				if(ai && EA::StdC::Strcmp(ai, "AI_PC_MONDOZAX_ROBOT") == 0) si.ai = SummonInfo::AI_RELAY;
-				else if(ai && (EA::StdC::Strcmp(ai, "AI_PC_ARTILLERY_SPIDERMINE") == 0 || EA::StdC::Strcmp(ai, "AI_PC_SOULMASTER_SLOWSOUL") == 0 ||
-					EA::StdC::Strcmp(ai, "AI_PC_ELECTRO_ENERGYBALL") == 0)) si.ai = SummonInfo::AI_CHASE;
-			}
-			if(XMLElement* p = pInfo->FirstChildElement("MoveController_ComData")) p->QueryFloatAttribute("_AIDistanceWidth", &si.aiDistance);
-			if(XMLElement* p = pInfo->FirstChildElement("StatsComData")) p->QueryAttribute("_VariationType", &si.variation);
-			if(XMLElement* p = pInfo->FirstChildElement("SkillComData")) {
-				for(XMLElement* s = p->FirstChildElement("_SkillID"); s; s = s->NextSiblingElement("_SkillID")) {
-					i32 sk = 0;
-					s->QueryAttribute("_Index", &sk);
-					if(sk != 0 && !si.skills.full()) si.skills.push_back(sk);
-				}
-			}
-			summonMap[id] = si;
-		}
-		LOG("Loaded %d summon creatures", (i32)summonMap.size());
-
-		XMLDocument xmlStage;
-		if(LoadXMLFile(L"/client/STAGELIST.xml", xmlStage)) {
-			for(XMLElement* pInfo = xmlStage.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
-				i32 id = 0;
-				pInfo->QueryAttribute("ID", &id);
-				XMLElement* pStage = pInfo->FirstChildElement();
-				XMLElement* pList = pStage ? pStage->FirstChildElement("_SUCCESS_CONDITION_LIST") : nullptr;
-				XMLElement* pSet = pList ? pList->FirstChildElement("_MCASESET") : nullptr;
-				for(XMLElement* pC = pSet ? pSet->FirstChildElement("_MCONDITION") : nullptr; pC; pC = pC->NextSiblingElement("_MCONDITION")) {
-					const char* type = nullptr;
-					pC->QueryStringAttribute("_Type", &type);
-					if(!type || EA::StdC::Strcmp(type, "E_CONDITION_TYPE_TIME_COUNT") != 0) continue;
-					f32 v = 0;
-					pC->QueryFloatAttribute("_Value", &v);
-					if(v > 0) stageTimeLimit[id] = v;
-				}
-			}
-			LOG("Loaded %d stage time limits", (i32)stageTimeLimit.size());
-		}
-
-		XMLDocument xmlAni;
-		if(LoadXMLFile(L"/client/AniLength.xml", xmlAni)) {
-			for(XMLElement* pType = xmlAni.FirstChildElement()->FirstChildElement("EntityType"); pType; pType = pType->NextSiblingElement("EntityType")) {
-				const char* t = nullptr;
-				pType->QueryStringAttribute("_Type", &t);
-				if(!t) continue;
-				const bool pcType = EA::StdC::Strcmp(t, "PC") == 0;
-				for(XMLElement* pEnt = pType->FirstChildElement("Entity"); pEnt; pEnt = pEnt->NextSiblingElement("Entity")) {
-					const char* key = nullptr;
-					pEnt->QueryStringAttribute("_Key", &key);
-					if(!key) continue;
-					for(XMLElement* pAni = pEnt->FirstChildElement("AnimationInfo"); pAni; pAni = pAni->NextSiblingElement("AnimationInfo")) {
-						i32 seqID = 0;
-						f32 seqTime = 0;
-						pAni->QueryAttribute("_SeqID", &seqID);
-						pAni->QueryFloatAttribute("_SeqTime", &seqTime);
-						if(seqID != 0 && (pcType || aniSeqTime.find(AniKey(key, seqID)) == aniSeqTime.end())) aniSeqTime[AniKey(key, seqID)] = seqTime;
-						if(!pcType) continue;
-						const char* name = nullptr;
-						pAni->QueryStringAttribute("_AnimationName", &name);
-						if(!name || EA::StdC::Strcmp(name, "LIE_END") != 0) continue;
-						f32 len = 0;
-						pAni->QueryFloatAttribute("_SeqTime", &len);
-						lieEndTime.push_back(eastl::make_pair(eastl::fixed_string<char,48,false>(key), len));
-					}
-				}
-			}
-			LOG("Loaded %d stand-up animation lengths", (i32)lieEndTime.size());
-		}
-
-		XMLDocument xmlMoveGraph;
-		if(LoadXMLFile(L"/MoveGraph.xml", xmlMoveGraph)) {
-			for(XMLElement* pClass = xmlMoveGraph.FirstChildElement()->FirstChildElement("Class"); pClass; pClass = pClass->NextSiblingElement("Class")) {
-				const char* type = nullptr;
-				pClass->QueryStringAttribute("Type", &type);
-				if(!type) continue;
-				for(XMLElement* pAnim = pClass->FirstChildElement("Anim"); pAnim; pAnim = pAnim->NextSiblingElement("Anim")) {
-					i32 id = 0;
-					const char* h = nullptr;
-					MoveCurve curve;
-					pAnim->QueryAttribute("Id", &id);
-					pAnim->QueryFloatAttribute("Time", &curve.time);
-					pAnim->QueryStringAttribute("H", &h);
-					for(const char* c = h; c && *c && !curve.h.full(); ) {
-						char* end = nullptr;
-						const f32 v = EA::StdC::StrtoF32(c, &end);
-						if(end == c) break;
-						curve.h.push_back(v);
-						curve.maxAbs = MAX(curve.maxAbs, fabsf(v));
-						c = end;
-					}
-					if(id != 0 && !curve.h.empty()) moveCurves[AniKey(type, id)] = curve;
-				}
-			}
-			LOG("Loaded %d move graphs", (i32)moveCurves.size());
-		}
-
-		XMLDocument xmlMobActions;
-		if(LoadXMLFile(L"/client/ActionBase_Monster_MOB_PvP.xml", xmlMobActions)) {
-			i32 count = 0;
-			for(XMLElement* pA = xmlMobActions.FirstChildElement()->FirstChildElement(); pA; pA = pA->NextSiblingElement()) {
-				const char* cls = nullptr; const char* state = nullptr; const char* type = nullptr;
-				pA->QueryStringAttribute("Class", &cls);
-				pA->QueryStringAttribute("BehaviorState", &state);
-				pA->QueryStringAttribute("CommandType", &type);
-				if(!cls || !state || !type) continue;
-				const bool spawn = EA::StdC::Strcmp(state, "SPAWN_BEHAVIORSTATE") == 0;
-				const bool die = EA::StdC::Strcmp(state, "DIE_BEHAVIORSTATE") == 0;
-				i32 skillState = 0;
-				if(!spawn && !die && EA::StdC::Sscanf(state, "SKILL_%d_BEHAVIORSTATE", &skillState) != 1) continue;
-				if(skillState < 0 || skillState > 20) continue;
-				i32 stateAnimId = 0;
-				pA->QueryAttribute("AnimationId", &stateAnimId);
-				if(!spawn && !die && stateAnimId != 0) {
-					foreach(it, summonMap) if(it->second.className == cls && it->second.stateAnim[skillState] == 0) it->second.stateAnim[skillState] = stateAnimId;
-				}
-				const char* p2 = nullptr;
-				pA->QueryStringAttribute("Param2", &p2);
-				if(p2 && EA::StdC::Strcmp(p2, "Remove") == 0) continue;
-				SummonCommand cmd;
-				if(EA::StdC::Strcmp(type, "REMOTE") == 0) { cmd.kind = SummonCommand::REMOTE; pA->QueryAttribute("RemoteIndex", &cmd.index); }
-				else if(EA::StdC::Strcmp(type, "STATUS") == 0) { cmd.kind = SummonCommand::STATUS; pA->QueryAttribute("StatusIndex", &cmd.index); }
-				else if(EA::StdC::Strcmp(type, "DIE_MODE") == 0) {
-					cmd.kind = SummonCommand::DIE;
-					const char* p1 = nullptr;
-					pA->QueryStringAttribute("Param1", &p1);
-					i32 mode = 0;
-					if(p1 && EA::StdC::Sscanf(p1, "CUSTOM_DIE_MODE_%d", &mode) == 1) cmd.dieMode = (u8)mode;
-				}
-				else continue;
-				if(cmd.kind != SummonCommand::DIE && cmd.index == 0) continue;
-				pA->QueryFloatAttribute("Delay", &cmd.delay);
-				const char* preset = nullptr;
-				pA->QueryStringAttribute("TargetPreset", &preset);
-				cmd.onCurrent = preset && EA::StdC::Strstr(preset, "CURRENT");
-				const char* var = nullptr;
-				pA->QueryStringAttribute("VariationType", &var);
-				foreach(it, summonMap) {
-					if(it->second.className != cls) continue;
-					i32 dieMode = 0;
-					if(var && die && EA::StdC::Sscanf(var, "CUSTOM_DIE_MODE_%d", &dieMode) == 1) {
-						cmd.dieMode = (u8)dieMode;
-					}
-					else if(var) {
-						i32 v = -1;
-						if(EA::StdC::Sscanf(var, "STATS_VARIATION_TYPE_%d", &v) == 1) { if(v != it->second.variation) continue; }
-						else if(EA::StdC::Sscanf(var, "SPAWN_VARIATION_TYPE_%d", &v) == 1) { if(v != 0) continue; }
-						else if(EA::StdC::Strcmp(var, "STANCE_TYPE_DEFAULT") != 0) continue;
-					}
-					auto& list = spawn ? it->second.onSpawn : (die ? it->second.onDie : it->second.skillStates[skillState]);
-					if(!list.full()) { list.push_back(cmd); count++; }
-				}
-			}
-			LOG("Loaded %d summon spawn/die/skill commands", count);
-		}
-
-		XMLDocument xmlChild;
-		if(LoadXMLFile(L"/ActionBase.xml", xmlChild)) {
-			eastl::hash_set<u32> spawningStates;
-			for(XMLElement* pA = xmlChild.FirstChildElement()->FirstChildElement(); pA; pA = pA->NextSiblingElement()) {
-				const char* type = nullptr;
-				pA->QueryStringAttribute("CommandType", &type);
-				if(type && EA::StdC::Strcmp(type, "ENTITY") == 0) {
-					const char* cls = nullptr; const char* state = nullptr;
-					pA->QueryStringAttribute("Class", &cls);
-					pA->QueryStringAttribute("BehaviorState", &state);
-					if(!cls || !state) continue;
-					eastl::fixed_string<char,64,false> c = cls;
-					c.make_upper();
-					spawningStates.insert(((u32)ClassTypeFromString(c.data()) << 16) | ((u32)ActionStateFromString(state) & 0xFFFF));
-					continue;
-				}
-				if(!type || EA::StdC::Strcmp(type, "CALL_CHILD_SKILL") != 0) continue;
-				const char* cls = nullptr; const char* state = nullptr; const char* p1 = nullptr;
-				pA->QueryStringAttribute("Class", &cls);
-				pA->QueryStringAttribute("BehaviorState", &state);
-				pA->QueryStringAttribute("Param1", &p1);
-				i32 n = 0;
-				if(!cls || !state || !p1 || EA::StdC::Sscanf(p1, "MONSTER_SKILL_ID_%d", &n) != 1) continue;
-				eastl::fixed_string<char,64,false> c = cls;
-				c.make_upper();
-				const ClassType ct = ClassTypeFromString(c.data());
-				const ActionStateID as = ActionStateFromString(state);
-				childSkill[((u32)ct << 16) | ((u32)as & 0xFFFF)] = n;
-			}
-			foreach_const(cs, childSkill) if(spawningStates.find(cs->first) == spawningStates.end()) childOnExisting.insert(cs->first);
-			LOG("Loaded %d child skill calls (%d to an existing creature)", (i32)childSkill.size(), (i32)childOnExisting.size());
-		}
-	}
-
-	XMLDocument xmlFiring, xmlWeapon;
-	if(LoadXMLFile(L"/client/FIRING_METHOD.xml", xmlFiring) && LoadXMLFile(L"/client/WEAPON.xml", xmlWeapon)) {
-		eastl::hash_map<i32, WeaponHeatInfo> byFiring;
-		eastl::hash_map<i32, f32> delayByFiring;
-		eastl::hash_map<i32, WeaponFiring> firingRemotes;
-		for(XMLElement* pInfo = xmlFiring.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
-			i32 id = 0;
-			pInfo->QueryAttribute("ID", &id);
-			XMLElement* pData = pInfo->FirstChildElement("FiringMethodData");
-			XMLElement* pFire = pData ? pData->FirstChildElement("_FIREINFO") : nullptr;
-			const char* fireDummy = pData ? pData->Attribute("_FiringDummy") : nullptr;
-			f32 fireMaxDistance = 0;
-			if(pFire) pFire->QueryFloatAttribute("_MaxDistance", &fireMaxDistance);
-			f32 fireMinDistance = 0;
-			if(pFire) pFire->QueryFloatAttribute("_MinDistance", &fireMinDistance);
-			if(pFire) {
-				f32 delay = 0;
-				pFire->QueryFloatAttribute("_FireDelayTime", &delay);
-				if(delay > 0) delayByFiring[id] = delay;
-			}
+			f32 cd = 0;
+			if(pSk->QueryFloatAttribute("_CoolTime", &cd) == XML_SUCCESS) skillCoolTime[skillID] = cd;
+			f32 rx = 0;
+			if(pSk->QueryFloatAttribute("_SkillRangeLengthX", &rx) == XML_SUCCESS && rx > 0) skillRangeX[skillID] = rx;
 			{
-				WeaponFiring wf;
-				if(fireDummy) wf.fireDummy = fireDummy;
-				wf.spawnAtAim = pData && XmlAttrTrue(pData, "_RemoteSpawnAimPosition");
-				XMLElement* pFactory = pInfo->FirstChildElement("RemoteFactoryComData");
-				XMLElement* pCreate = pFactory ? pFactory->FirstChildElement("_Create") : nullptr;
-				XMLElement* pDef = pCreate ? pCreate->FirstChildElement("_Default") : nullptr;
-				XMLElement* pRem = pDef ? pDef->FirstChildElement("_Remote") : nullptr;
-				if(pRem) {
-					i32 v = 0;
-					pRem->QueryAttribute("_RemoteIndex", &v);
-					wf.base = (RemoteIdx)v;
-					for(XMLElement* pE = pRem->FirstChildElement(); pE; pE = pE->NextSiblingElement()) {
-						i32 idx = 0;
-						if(EA::StdC::Strcmp(pE->Name(), "_COMBO") == 0) {
-							pE->QueryAttribute("_Index", &idx);
-							if(idx && !wf.combo.full()) wf.combo.push_back((RemoteIdx)idx);
-						}
-						else if(EA::StdC::Strcmp(pE->Name(), "_CHARGINGREMOTE") == 0) {
-							pE->QueryAttribute("_Index", &idx);
-							if(idx && !wf.charge.full()) wf.charge.push_back((RemoteIdx)idx);
-						}
-						else if(EA::StdC::Strcmp(pE->Name(), "_FIRINGCOUNT") == 0) {
-							pE->QueryAttribute("_Rate", &wf.countRate);
-							pE->QueryAttribute("_Index", &idx);
-							wf.countRemote = (RemoteIdx)idx;
-						}
-						else if(EA::StdC::Strcmp(pE->Name(), "_STATUS") == 0) {
-							pE->QueryAttribute("_OwnerStatusToCheck", &wf.replaceStatus);
-							pE->QueryAttribute("_RemoteIndexToReplace", &idx);
-							wf.replaceRemote = (RemoteIdx)idx;
-						}
-					}
-				}
-				else if(XMLElement* pRad = pCreate ? pCreate->FirstChildElement("_Radiate") : nullptr) {
-					i32 v = 0;
-					pRad->QueryAttribute("_Index", &v);
-					wf.base = (RemoteIdx)v;
-				}
-				wf.maxDistance = fireMaxDistance;
-				wf.minDistance = fireMinDistance;
-				if(wf.base != RemoteIdx::INVALID) firingRemotes[id] = wf;
+				const char* sfx = nullptr;
+				f32 ry = 0;
+				pSk->QueryStringAttribute("_SkillRangeSFX", &sfx);
+				if(sfx && EA::StdC::Strstr(sfx, "Box") && pSk->QueryFloatAttribute("_SkillRangeLengthY", &ry) == XML_SUCCESS && ry > 0) skillRangeX[skillID] = ry;
 			}
-			XMLElement* pGauge = pData ? pData->FirstChildElement("_GAUGE") : nullptr;
-			if(!pGauge) continue;
-			const char* type = nullptr;
-			pGauge->QueryStringAttribute("_Type", &type);
-			if(!type || EA::StdC::Strcmp(type, "WEAPON_GAUGE_TYPE_INCREASE") != 0) continue;
-			WeaponHeatInfo h;
-			pGauge->QueryFloatAttribute("_MaxGauge", &h.maxGauge);
-			pGauge->QueryFloatAttribute("_Consumption", &h.consumption);
-			pGauge->QueryFloatAttribute("_AutoRegen", &h.autoRegen);
-			pGauge->QueryFloatAttribute("_AutoRegenInterval", &h.autoRegenInterval);
-			pGauge->QueryFloatAttribute("_AutoRegenDelayTime", &h.autoRegenDelay);
-			pGauge->QueryFloatAttribute("_OverHeatDurationTime", &h.overheatDuration);
-			pGauge->QueryFloatAttribute("_OverHeatResetGauge", &h.overheatResetGauge);
-			if(h.maxGauge > 0 && h.consumption > 0) byFiring[id] = h;
-		}
-		for(XMLElement* pInfo = xmlWeapon.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
-			i32 id = 0;
-			pInfo->QueryAttribute("ID", &id);
-			for(XMLElement* pComp = pInfo->FirstChildElement(); pComp; pComp = pComp->NextSiblingElement()) {
-				i32 firing = 0;
-				if(pComp->QueryAttribute("_DefaultFiringIndex", &firing) != XML_SUCCESS) continue;
-				f32 pvpAttack = 0;
-				if(pComp->QueryFloatAttribute("_PvPAttack", &pvpAttack) == XML_SUCCESS && pvpAttack > 0) weaponAttack[id] = pvpAttack;
-				auto f = byFiring.find(firing);
-				if(f != byFiring.end()) weaponHeat[id] = f->second;
-				auto d = delayByFiring.find(firing);
-				if(d != delayByFiring.end()) weaponFireDelay[id] = d->second;
-				auto r = firingRemotes.find(firing);
-				if(r != firingRemotes.end()) weaponFiring[id] = r->second;
-				if(XMLElement* pStances = pComp->FirstChildElement("_STANCE_FIRINGMETHOD")) {
-					for(XMLElement* pSt = pStances->FirstChildElement("_STANCE"); pSt; pSt = pSt->NextSiblingElement("_STANCE")) {
-						const i8 stance = StanceFromString(pSt->Attribute("DATAKEY"));
-						i32 stanceFiring = 0;
-						pSt->QueryAttribute("DATA", &stanceFiring);
-						auto sr = firingRemotes.find(stanceFiring);
-						if(stance <= 0 || sr == firingRemotes.end()) continue;
-						weaponStanceFiring[((u32)id << 4) | (u32)stance] = sr->second;
-						auto sd = delayByFiring.find(stanceFiring);
-						if(sd != delayByFiring.end()) weaponStanceFireDelay[((u32)id << 4) | (u32)stance] = sd->second;
-					}
-				}
-				break;
+			f32 trx = 0;
+			if(pSk->QueryFloatAttribute("_TargetRangeLengthX", &trx) == XML_SUCCESS && trx > 0) skillTargetRangeX[skillID] = trx;
+			if(XMLElement* pT = pSk->FirstChildElement("_Target")) {
+				f32 d = 0;
+				if(pT->QueryFloatAttribute("_BotSkillMaxDistance", &d) == XML_SUCCESS && d > 0) botSkillMaxDistance[skillID] = d;
 			}
 		}
-		LOG("Loaded %d weapon overheat gauges, %d weapon firing remotes, %d stance firing methods", (i32)weaponHeat.size(), (i32)weaponFiring.size(), (i32)weaponStanceFiring.size());
+		if(!type || !cls || !status || EA::StdC::Strcmp(type, "SKILL_TYPE_PASSIVE") != 0) continue;
+		auto found = masterClassStringMap.find(strHash(cls));
+		if(found == masterClassStringMap.end()) continue;
+		auto& list = passiveStatuses[(i32)found->second->classType];
+		if(!list.full()) { list.push_back(status); count++; }
 	}
+	LOG("Loaded %d passive statuses", count);
+	return true;
+}
 
-	XMLDocument xmlSkillP;
-	if(LoadXMLFile(L"/client/SKILL.xml", xmlSkillP)) {
-		i32 count = 0;
-		for(XMLElement* pInfo = xmlSkillP.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
-			XMLElement* pSk = pInfo->FirstChildElement("ST_COMMONSKILL");
-			if(!pSk) continue;
-			const char* type = nullptr;
-			const char* cls = nullptr;
-			i32 status = 0;
-			pSk->QueryStringAttribute("_Type", &type);
-			pSk->QueryStringAttribute("_RequireClass", &cls);
-			pSk->QueryAttribute("_Status", &status);
-			{
-				i32 skillID = 0;
-				pInfo->QueryAttribute("ID", &skillID);
-				f32 cd = 0;
-				if(pSk->QueryFloatAttribute("_CoolTime", &cd) == XML_SUCCESS) skillCoolTime[skillID] = cd;
-				f32 rx = 0;
-				if(pSk->QueryFloatAttribute("_SkillRangeLengthX", &rx) == XML_SUCCESS && rx > 0) skillRangeX[skillID] = rx;
-				{
-					const char* sfx = nullptr;
-					f32 ry = 0;
-					pSk->QueryStringAttribute("_SkillRangeSFX", &sfx);
-					if(sfx && EA::StdC::Strstr(sfx, "Box") && pSk->QueryFloatAttribute("_SkillRangeLengthY", &ry) == XML_SUCCESS && ry > 0) skillRangeX[skillID] = ry;
-				}
-				f32 trx = 0;
-				if(pSk->QueryFloatAttribute("_TargetRangeLengthX", &trx) == XML_SUCCESS && trx > 0) skillTargetRangeX[skillID] = trx;
-				if(XMLElement* pT = pSk->FirstChildElement("_Target")) {
-					f32 d = 0;
-					if(pT->QueryFloatAttribute("_BotSkillMaxDistance", &d) == XML_SUCCESS && d > 0) botSkillMaxDistance[skillID] = d;
-				}
-			}
-			if(!type || !cls || !status || EA::StdC::Strcmp(type, "SKILL_TYPE_PASSIVE") != 0) continue;
-			auto found = masterClassStringMap.find(strHash(cls));
-			if(found == masterClassStringMap.end()) continue;
-			auto& list = passiveStatuses[(i32)found->second->classType];
-			if(!list.full()) { list.push_back(status); count++; }
-		}
-		LOG("Loaded %d passive statuses", count);
-		XMLDocument xmlInteraction;
-		if(LoadXMLFile(L"/client/INTERACTION.xml", xmlInteraction)) {
-			for(XMLElement* pI = xmlInteraction.FirstChildElement()->FirstChildElement(); pI; pI = pI->NextSiblingElement()) {
-				XMLElement* pData = pI->FirstChildElement("ST_INTERACTION");
-				i32 id = 0;
-				f32 dist = 0;
-				if(!pData || pI->QueryAttribute("ID", &id) != XML_SUCCESS) continue;
-				pData->QueryFloatAttribute("_ActiveDistance", &dist);
-				interactionActiveDistance[id] = dist;
-			}
-		}
+bool GameXmlContent::LoadInteractions()
+{
+	XMLDocument xmlInteraction;
+	if(!LoadXMLFile(L"/client/INTERACTION.xml", xmlInteraction)) return false;
+	for(XMLElement* pI = xmlInteraction.FirstChildElement()->FirstChildElement(); pI; pI = pI->NextSiblingElement()) {
+		XMLElement* pData = pI->FirstChildElement("ST_INTERACTION");
+		i32 id = 0;
+		f32 dist = 0;
+		if(!pData || pI->QueryAttribute("ID", &id) != XML_SUCCESS) continue;
+		pData->QueryFloatAttribute("_ActiveDistance", &dist);
+		interactionActiveDistance[id] = dist;
 	}
+	return true;
+}
 
+bool GameXmlContent::LoadBotBrain()
+{
 	XMLDocument xmlBrain;
-	if(LoadXMLFile(L"/client/BotBrainData.xml", xmlBrain)) {
-		XMLElement* pRoot = xmlBrain.FirstChildElement()->FirstChildElement("ST_BOT_BRAIN_DATA");
-		for(XMLElement* p = pRoot ? pRoot->FirstChildElement("_SkillIndexData") : nullptr; p; p = p->NextSiblingElement("_SkillIndexData")) {
-			i32 creature = 0;
-			p->QueryAttribute("DATAKEY", &creature);
-			eastl::array<i32,5> s = { 0, 0, 0, 0, 0 };
-			p->QueryAttribute("_Skill0", &s[0]);
-			p->QueryAttribute("_Skill1", &s[1]);
-			p->QueryAttribute("_Skill2", &s[2]);
-			p->QueryAttribute("_Skill3", &s[3]);
-			p->QueryAttribute("_UgSkill", &s[4]);
-			botSkills[creature] = s;
-		}
-		for(XMLElement* p = pRoot ? pRoot->FirstChildElement("_StageLevelData") : nullptr; p; p = p->NextSiblingElement("_StageLevelData")) {
-			const char* key = nullptr;
-			p->QueryStringAttribute("DATAKEY", &key);
-			if(!key || EA::StdC::Strcmp(key, "E_BOT_STAGE_LEVEL_NORMAL") != 0) continue;
-			for(XMLElement* d = p->FirstChildElement("_Data"); d; d = d->NextSiblingElement("_Data")) {
-				const char* k = nullptr;
-				f32 v = 0;
-				d->QueryStringAttribute("DATAKEY", &k);
-				d->QueryFloatAttribute("DATA", &v);
-				if(!k) continue;
-				if(EA::StdC::Strcmp(k, "BOTLOGIC_STAGELEVEL_KEY_NORMALSKILL_COOLTIME") == 0) botNormalSkillCoolTime = v;
-				else if(EA::StdC::Strcmp(k, "BOTLOGIC_STAGELEVEL_KEY_UGSKILL_COOLTIME") == 0) botUgSkillCoolTime = v;
-				else if(EA::StdC::Strcmp(k, "BOTLOGIC_STAGELEVEL_KEY_AFTER_SKILL_DELAY") == 0) botAfterSkillDelay = v;
-			}
-		}
-		LOG("Loaded bot skills for %d masters (skill cd %.0f, ult cd %.0f, after skill %.1f)", (i32)botSkills.size(), botNormalSkillCoolTime, botUgSkillCoolTime, botAfterSkillDelay);
+	if(!LoadXMLFile(L"/client/BotBrainData.xml", xmlBrain)) return false;
+	XMLElement* pRoot = xmlBrain.FirstChildElement()->FirstChildElement("ST_BOT_BRAIN_DATA");
+	for(XMLElement* p = pRoot ? pRoot->FirstChildElement("_SkillIndexData") : nullptr; p; p = p->NextSiblingElement("_SkillIndexData")) {
+		i32 creature = 0;
+		p->QueryAttribute("DATAKEY", &creature);
+		eastl::array<i32,5> s = { 0, 0, 0, 0, 0 };
+		p->QueryAttribute("_Skill0", &s[0]);
+		p->QueryAttribute("_Skill1", &s[1]);
+		p->QueryAttribute("_Skill2", &s[2]);
+		p->QueryAttribute("_Skill3", &s[3]);
+		p->QueryAttribute("_UgSkill", &s[4]);
+		botSkills[creature] = s;
 	}
+	for(XMLElement* p = pRoot ? pRoot->FirstChildElement("_StageLevelData") : nullptr; p; p = p->NextSiblingElement("_StageLevelData")) {
+		const char* key = nullptr;
+		p->QueryStringAttribute("DATAKEY", &key);
+		if(!key || EA::StdC::Strcmp(key, "E_BOT_STAGE_LEVEL_NORMAL") != 0) continue;
+		for(XMLElement* d = p->FirstChildElement("_Data"); d; d = d->NextSiblingElement("_Data")) {
+			const char* k = nullptr;
+			f32 v = 0;
+			d->QueryStringAttribute("DATAKEY", &k);
+			d->QueryFloatAttribute("DATA", &v);
+			if(!k) continue;
+			if(EA::StdC::Strcmp(k, "BOTLOGIC_STAGELEVEL_KEY_NORMALSKILL_COOLTIME") == 0) botNormalSkillCoolTime = v;
+			else if(EA::StdC::Strcmp(k, "BOTLOGIC_STAGELEVEL_KEY_UGSKILL_COOLTIME") == 0) botUgSkillCoolTime = v;
+			else if(EA::StdC::Strcmp(k, "BOTLOGIC_STAGELEVEL_KEY_AFTER_SKILL_DELAY") == 0) botAfterSkillDelay = v;
+		}
+	}
+	LOG("Loaded bot skills for %d masters (skill cd %.0f, ult cd %.0f, after skill %.1f)", (i32)botSkills.size(), botNormalSkillCoolTime, botUgSkillCoolTime, botAfterSkillDelay);
 	return true;
 }
 
