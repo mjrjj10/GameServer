@@ -391,6 +391,63 @@ void World::RemoteApplyArea(RemoteInst& inst)
 
 void World::UpdateRemotes(f32 delta)
 {
+	SpawnPendingRemotes();
+
+	for(int i = 0; i < (i32)remoteInsts.size(); ) {
+		RemoteInst& inst = remoteInsts[i];
+		const Remote& remote = *inst.remote;
+		const f32 elapsed = (f32)TimeDiffSec(TimeDiff(inst.spawnTime, localTime));
+		bool destroyed = inst.killNow;
+		Player& instOwner = players[inst.ownerIndex];
+
+		if(remote.attachTargetObject && inst.target != ActorUID::INVALID) {
+			const ActorMaster* targetMaster = FindMasterActor(inst.target);
+			if(!targetMaster || targetMaster->parent->dead) destroyed = true;
+			else inst.pos = vec3(vec2(targetMaster->parent->body->GetWorldPos()), inst.pos.z);
+		}
+		if(remote.behaviorType == Remote::BehaviorType::CASTER_TARGET && !instOwner.dead) MoveCasterTargetRemote(inst, instOwner, delta);
+		const bool attached = remote.attachFireObject || remote.behaviorType == Remote::BehaviorType::ORBIT ||
+			remote.behaviorType == Remote::BehaviorType::BEAM;
+		if(attached) {
+			if(instOwner.dead) {
+				destroyed = true;
+			}
+			else {
+				const f32 yaw = instOwner.input.rot.upperYaw;
+				inst.dir = vec2(cosf(yaw), sinf(yaw));
+				inst.pos = instOwner.body->GetWorldPos() + vec3(inst.dir * (remote.forceTargetDir ? -remote.offsetY : remote.offsetY), 158.0f);
+			}
+		}
+
+		if(!destroyed && inst.timeEventActive && localTime >= inst.nextTimeEvent) RunRemoteTimeEvent(inst, elapsed);
+
+		if(!destroyed) {
+			if(remote.behaviorType == Remote::BehaviorType::CHAIN) destroyed = UpdateChainRemote(inst);
+			else if(attached) ApplyAttachedRemote(inst, instOwner);
+			else switch(remote.behaviorType) {
+				case Remote::BehaviorType::CASTER_TARGET: break;
+				case Remote::BehaviorType::TARGET:
+				case Remote::BehaviorType::FOLLOW_TARGET:
+				case Remote::BehaviorType::HOMING: destroyed = UpdateTargetRemote(inst, delta); break;
+				case Remote::BehaviorType::GRAPH: destroyed = UpdateGraphRemote(inst, delta); break;
+				default: destroyed = UpdateLinearRemote(inst, delta, elapsed); break;
+			}
+		}
+
+		if(!destroyed && remote.lifeTime > 0 && elapsed >= remote.lifeTime) destroyed = true;
+		if(!destroyed && remote.lifeTime <= 0 && inst.speed <= 0 && inst.areaDone) destroyed = true;
+
+		if(destroyed && inst.speed > 0) ShowcaseOnRemoteEnd(inst);
+
+		if(destroyed) DestroyRemote(i);
+		else i++;
+	}
+
+	ExpireHitRecords();
+}
+
+void World::SpawnPendingRemotes()
+{
 	for(auto pr = pendingRemotes.begin(); pr != pendingRemotes.end(); ) {
 		if(localTime < pr->time) {
 			++pr;
@@ -478,266 +535,242 @@ void World::UpdateRemotes(f32 delta)
 		}
 		pr = pendingRemotes.erase_unsorted(pr);
 	}
+}
 
-	for(int i = 0; i < (i32)remoteInsts.size(); ) {
-		RemoteInst& inst = remoteInsts[i];
-		const Remote& remote = *inst.remote;
-		const f32 elapsed = (f32)TimeDiffSec(TimeDiff(inst.spawnTime, localTime));
-		bool destroyed = inst.killNow;
-		Player& instOwner = players[inst.ownerIndex];
+void World::MoveCasterTargetRemote(RemoteInst& inst, Player& instOwner, f32 delta)
+{
+	const Remote& remote = *inst.remote;
+	const vec2 ownerPos = vec2(instOwner.body->GetWorldPos());
+	if(inst.followDist < 0) inst.followDist = glm::length(vec2(inst.pos) - ownerPos);
+	vec2 desired;
+	const ActorMaster* tm = inst.target != ActorUID::INVALID ? FindMasterActor(inst.target) : nullptr;
+	if(instOwner.clientHd == ClientHandle::INVALID && tm && !tm->parent->dead) desired = vec2(tm->parent->body->GetWorldPos());
+	else {
+		const f32 yaw = instOwner.input.rot.upperYaw;
+		desired = ownerPos + vec2(cosf(yaw), sinf(yaw)) * inst.followDist;
+	}
+	const vec2 rel = desired - vec2(inst.pos);
+	const f32 len = glm::length(rel);
+	const f32 step = (remote.maxSpeed > 0 ? remote.maxSpeed : 600.0f) * delta;
+	if(len > 1.0f) inst.pos += vec3(rel / len * MIN(step, len), 0);
+	if(remote.boundType != Remote::BoundType::E_BOUND_NONE && remote.damageGroup != Remote::DamageGroup::eNONE) RemoteApplyArea(inst);
+}
 
-		if(remote.attachTargetObject && inst.target != ActorUID::INVALID) {
-			const ActorMaster* targetMaster = FindMasterActor(inst.target);
-			if(!targetMaster || targetMaster->parent->dead) destroyed = true;
-			else inst.pos = vec3(vec2(targetMaster->parent->body->GetWorldPos()), inst.pos.z);
-		}
-		if(remote.behaviorType == Remote::BehaviorType::CASTER_TARGET && !instOwner.dead) {
-			const vec2 ownerPos = vec2(instOwner.body->GetWorldPos());
-			if(inst.followDist < 0) inst.followDist = glm::length(vec2(inst.pos) - ownerPos);
-			vec2 desired;
-			const ActorMaster* tm = inst.target != ActorUID::INVALID ? FindMasterActor(inst.target) : nullptr;
-			if(instOwner.clientHd == ClientHandle::INVALID && tm && !tm->parent->dead) desired = vec2(tm->parent->body->GetWorldPos());
-			else {
-				const f32 yaw = instOwner.input.rot.upperYaw;
-				desired = ownerPos + vec2(cosf(yaw), sinf(yaw)) * inst.followDist;
-			}
-			const vec2 rel = desired - vec2(inst.pos);
-			const f32 len = glm::length(rel);
-			const f32 step = (remote.maxSpeed > 0 ? remote.maxSpeed : 600.0f) * delta;
-			if(len > 1.0f) inst.pos += vec3(rel / len * MIN(step, len), 0);
-			if(remote.boundType != Remote::BoundType::E_BOUND_NONE && remote.damageGroup != Remote::DamageGroup::eNONE) RemoteApplyArea(inst);
-		}
-		const bool attached = remote.attachFireObject || remote.behaviorType == Remote::BehaviorType::ORBIT ||
-			remote.behaviorType == Remote::BehaviorType::BEAM;
-		if(attached) {
-			if(instOwner.dead) {
-				destroyed = true;
-			}
-			else {
-				const f32 yaw = instOwner.input.rot.upperYaw;
-				inst.dir = vec2(cosf(yaw), sinf(yaw));
-				inst.pos = instOwner.body->GetWorldPos() + vec3(inst.dir * (remote.forceTargetDir ? -remote.offsetY : remote.offsetY), 158.0f);
-			}
-		}
+void World::RunRemoteTimeEvent(RemoteInst& inst, f32 elapsed)
+{
+	const Remote& remote = *inst.remote;
+	if(remote.timeEventRecycle && remote.timeEventDelay > 0.01f) inst.nextTimeEvent = TimeAdd(inst.nextTimeEvent, TimeMsToTime(remote.timeEventDelay * 1000.0));
+	else inst.timeEventActive = false;
+	if(remote.timeChangeSpeed > 0) {
+		inst.speed = remote.timeChangeSpeed;
+		if(remote.maxDistance <= 0 && remote.lifeTime > 0) inst.range = inst.travelled + MAX(remote.lifeTime - elapsed, 0.0f) * inst.speed;
+	}
+	const RemoteInst copy = inst;
+	SpawnRemoteRules(*this, copy, remote.onTime, copy.pos, copy.excludeIndex, RemoteIdx::INVALID);
+}
 
-		if(!destroyed && inst.timeEventActive && localTime >= inst.nextTimeEvent) {
-			if(remote.timeEventRecycle && remote.timeEventDelay > 0.01f) inst.nextTimeEvent = TimeAdd(inst.nextTimeEvent, TimeMsToTime(remote.timeEventDelay * 1000.0));
-			else inst.timeEventActive = false;
-			if(remote.timeChangeSpeed > 0) {
-				inst.speed = remote.timeChangeSpeed;
-				if(remote.maxDistance <= 0 && remote.lifeTime > 0) inst.range = inst.travelled + MAX(remote.lifeTime - elapsed, 0.0f) * inst.speed;
-			}
-			const RemoteInst copy = inst;
-			SpawnRemoteRules(*this, copy, remote.onTime, copy.pos, copy.excludeIndex, RemoteIdx::INVALID);
+bool World::UpdateChainRemote(RemoteInst& inst)
+{
+	const Remote& remote = *inst.remote;
+	if(!inst.areaDone) {
+		inst.areaDone = true;
+		const f32 sight = remote.sight > 0 ? remote.sight : 1450.0f;
+		Player* best = nullptr;
+		f32 bestDist = sight + WEAPON_TARGET_RADIUS;
+		foreach(it, players) {
+			if(!RemoteCanAffect(inst, *it, remote.vsOwner)) continue;
+			const f32 d = glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos));
+			if(d < bestDist) { bestDist = d; best = &*it; }
 		}
+		if(best) {
+			inst.dir = glm::length(vec2(best->body->GetWorldPos() - inst.pos)) > 1.0f ? glm::normalize(vec2(best->body->GetWorldPos() - inst.pos)) : inst.dir;
+			inst.pos = vec3(vec2(best->body->GetWorldPos()), inst.pos.z);
+			RemoteHit(inst, *best);
+			inst.excludeIndex = (i32)best->index;
+		}
+		else {
+			inst.chainEnded = true;
+			return true;
+		}
+	}
+	return false;
+}
 
-		if(destroyed) {
+void World::ApplyAttachedRemote(RemoteInst& inst, Player& instOwner)
+{
+	const Remote& remote = *inst.remote;
+	if(remote.behaviorType == Remote::BehaviorType::ORBIT) {
+		const f32 radius = remote.boundSize[0] * 0.5f + ORBIT_RADIUS;
+		foreach(it, players) {
+			if(!RemoteCanAffect(inst, *it, false)) continue;
+			if(glm::length(vec2(it->body->GetWorldPos()) - vec2(instOwner.body->GetWorldPos())) <= radius + HitRadius(*it)) RemoteHit(inst, *it);
 		}
-		else if(remote.behaviorType == Remote::BehaviorType::CHAIN) {
-			if(!inst.areaDone) {
-				inst.areaDone = true;
-				const f32 sight = remote.sight > 0 ? remote.sight : 1450.0f;
-				Player* best = nullptr;
-				f32 bestDist = sight + WEAPON_TARGET_RADIUS;
-				foreach(it, players) {
-					if(!RemoteCanAffect(inst, *it, remote.vsOwner)) continue;
-					const f32 d = glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos));
-					if(d < bestDist) { bestDist = d; best = &*it; }
-				}
-				if(best) {
-					inst.dir = glm::length(vec2(best->body->GetWorldPos() - inst.pos)) > 1.0f ? glm::normalize(vec2(best->body->GetWorldPos() - inst.pos)) : inst.dir;
-					inst.pos = vec3(vec2(best->body->GetWorldPos()), inst.pos.z);
-					RemoteHit(inst, *best);
-					inst.excludeIndex = (i32)best->index;
-				}
-				else {
-					inst.chainEnded = true;
-					destroyed = true;
-				}
+	}
+	else if(remote.boundType != Remote::BoundType::E_BOUND_NONE && remote.damageGroup != Remote::DamageGroup::eNONE) {
+		RemoteApplyArea(inst);
+	}
+}
+
+bool World::UpdateTargetRemote(RemoteInst& inst, f32 delta)
+{
+	const Remote& remote = *inst.remote;
+	if(remote.behaviorType == Remote::BehaviorType::TARGET && remote.attachTargetObject && inst.target != ActorUID::INVALID) return false;
+	if(inst.target == ActorUID::INVALID && remote.behaviorType == Remote::BehaviorType::HOMING && remote.homingLength > 0) {
+		f32 bestDist = remote.homingLength;
+		const f32 halfCos = cosf(remote.homingAngle * 0.5f * PI / 180.0f);
+		foreach(it, players) {
+			if(!RemoteCanAffect(inst, *it, false)) continue;
+			const vec2 rel = vec2(it->body->GetWorldPos() - inst.pos);
+			const f32 d = glm::length(rel);
+			if(d > bestDist) continue;
+			if(d > 1.0f && remote.homingAngle > 0 && remote.homingAngle < 360 && glm::dot(rel / d, inst.dir) < halfCos) continue;
+			bestDist = d;
+			inst.target = it->Main().UID;
+		}
+		if(inst.target != ActorUID::INVALID) LOG("Remote :: %d homing acquired a target at %.0f", (i32)remote.ID, bestDist);
+	}
+	const ActorMaster* targetMaster = inst.target != ActorUID::INVALID ? FindMasterActor(inst.target) : nullptr;
+	if(!targetMaster || targetMaster->parent->dead) return true;
+	Player& target = *targetMaster->parent;
+	const vec3 tpos = target.body->GetWorldPos();
+	const vec2 rel = vec2(tpos - inst.pos);
+	const f32 dist = glm::length(rel);
+	const f32 step = (inst.speed > 0 ? inst.speed : 3000.0f) * delta;
+	if(dist <= step + remote.boundSize[0] * 0.5f + HitRadius(target)) {
+		inst.pos = vec3(vec2(tpos), inst.pos.z);
+		RemoteHit(inst, target);
+		return true;
+	}
+	else {
+		inst.dir = rel / dist;
+		inst.pos += vec3(inst.dir * step, 0);
+		RemoteHitAlongPath(inst);
+	}
+	return false;
+}
+
+bool World::UpdateGraphRemote(RemoteInst& inst, f32 delta)
+{
+	const Remote& remote = *inst.remote;
+	const f32 step = MIN(inst.speed * delta, inst.range - inst.travelled);
+	inst.travelled += step;
+	if(remote.bezier && inst.range > 0) {
+		const vec2 f = inst.graphDir;
+		const vec2 side = -Perp(f);
+		const vec2 p0 = vec2(inst.graphStart);
+		const vec2 p3 = p0 + f * inst.range;
+		vec2 c[2];
+		for(int k = 0; k < 2; k++) {
+			const f32 a = remote.bezierRotate[k] * PI / 180.0f;
+			c[k] = p0 + f * (inst.range * (k + 1) / 3.0f + remote.bezierFront[k]) + side * (remote.bezierUp[k] * sinf(a));
+		}
+		const f32 u = MIN(inst.travelled / inst.range, 1.0f);
+		const f32 v = 1.0f - u;
+		const vec2 p = p0 * (v * v * v) + c[0] * (3 * v * v * u) + c[1] * (3 * v * u * u) + p3 * (u * u * u);
+		const vec2 tangent = (c[0] - p0) * (3 * v * v) + (c[1] - c[0]) * (6 * v * u) + (p3 - c[1]) * (3 * u * u);
+		if(glm::length(tangent) > 0.001f) inst.dir = glm::normalize(tangent);
+		inst.pos = vec3(p, inst.pos.z);
+	}
+	else {
+		inst.pos += vec3(inst.dir * step, 0);
+	}
+	RemoteHitAlongPath(inst);
+	const bool arrived = inst.travelled >= inst.range - 0.01f;
+	if(arrived && inst.hasLandZ) inst.pos.z = inst.landZ;
+	return arrived;
+}
+
+bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
+{
+	const Remote& remote = *inst.remote;
+	bool destroyed = false;
+	if(inst.speed > 0) {
+		f32 step = inst.range > 0 ? MIN(inst.speed * delta, inst.range - inst.travelled) : inst.speed * delta;
+		bool hitWall = false;
+		if(!remote.ignoreGround && !remote.attachFireObject && step > 0) {
+			f32 wallDist = 0;
+			const vec2 a = vec2(inst.pos);
+			if(physics.RaycastStatic(vec3(a, inst.wallZ), vec3(a + inst.dir * step, inst.wallZ), &wallDist, (i32)players[inst.ownerIndex].team)) {
+				step = wallDist;
+				hitWall = true;
 			}
 		}
-		else if(attached) {
-			if(remote.behaviorType == Remote::BehaviorType::ORBIT) {
-				const f32 radius = remote.boundSize[0] * 0.5f + ORBIT_RADIUS;
-				foreach(it, players) {
-					if(!RemoteCanAffect(inst, *it, false)) continue;
-					if(glm::length(vec2(it->body->GetWorldPos()) - vec2(instOwner.body->GetWorldPos())) <= radius + HitRadius(*it)) RemoteHit(inst, *it);
-				}
-			}
-			else if(remote.boundType != Remote::BoundType::E_BOUND_NONE && remote.damageGroup != Remote::DamageGroup::eNONE) {
-				RemoteApplyArea(inst);
-			}
-		}
-		else switch(remote.behaviorType) {
-			case Remote::BehaviorType::CASTER_TARGET: break;
-			case Remote::BehaviorType::TARGET:
-			case Remote::BehaviorType::FOLLOW_TARGET:
-			case Remote::BehaviorType::HOMING: {
-				if(remote.behaviorType == Remote::BehaviorType::TARGET && remote.attachTargetObject && inst.target != ActorUID::INVALID) break;
-				if(inst.target == ActorUID::INVALID && remote.behaviorType == Remote::BehaviorType::HOMING && remote.homingLength > 0) {
-					f32 bestDist = remote.homingLength;
-					const f32 halfCos = cosf(remote.homingAngle * 0.5f * PI / 180.0f);
-					foreach(it, players) {
-						if(!RemoteCanAffect(inst, *it, false)) continue;
-						const vec2 rel = vec2(it->body->GetWorldPos() - inst.pos);
-						const f32 d = glm::length(rel);
-						if(d > bestDist) continue;
-						if(d > 1.0f && remote.homingAngle > 0 && remote.homingAngle < 360 && glm::dot(rel / d, inst.dir) < halfCos) continue;
-						bestDist = d;
-						inst.target = it->Main().UID;
-					}
-					if(inst.target != ActorUID::INVALID) LOG("Remote :: %d homing acquired a target at %.0f", (i32)remote.ID, bestDist);
-				}
-				const ActorMaster* targetMaster = inst.target != ActorUID::INVALID ? FindMasterActor(inst.target) : nullptr;
-				if(!targetMaster || targetMaster->parent->dead) {
+		const vec2 from = vec2(inst.pos);
+		const vec2 to = from + inst.dir * step;
+		const f32 halfWidth = remote.boundSize[0] * 0.5f;
+		const f32 boxFront = remote.boundType == Remote::BoundType::E_BOUND_BOX ? MAX(remote.offsetY + remote.boundSize[1] * 0.5f, 0.0f) : 0.0f;
+		if(remote.damageGroup != Remote::DamageGroup::eNONE && remote.damageGroup != Remote::DamageGroup::INVALID) {
+			foreach(it, players) {
+				if(!RemoteCanAffect(inst, *it, false)) continue;
+				const vec3 pos = it->body->GetWorldPos();
+				if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
+				if(!LagSegmentHits(*it, from, to, halfWidth + HitRadius(*it) + PROJECTILE_HIT_TOLERANCE, boxFront + HitRadius(*it))) continue;
+				RemoteHit(inst, *it);
+				inst.hitsLeft--;
+				if(inst.stopAtFirstHit && it->team != players[inst.ownerIndex].team) inst.hitsLeft = 0;
+				if(inst.hitsLeft <= 0) {
+					if(inst.clientRemoteID != 0) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
+					inst.destroyedByHit = true;
+					inst.pos = vec3(vec2(pos), inst.pos.z);
 					destroyed = true;
 					break;
 				}
-				Player& target = *targetMaster->parent;
-				const vec3 tpos = target.body->GetWorldPos();
-				const vec2 rel = vec2(tpos - inst.pos);
-				const f32 dist = glm::length(rel);
-				const f32 step = (inst.speed > 0 ? inst.speed : 3000.0f) * delta;
-				if(dist <= step + remote.boundSize[0] * 0.5f + HitRadius(target)) {
-					inst.pos = vec3(vec2(tpos), inst.pos.z);
-					RemoteHit(inst, target);
-					destroyed = true;
-				}
-				else {
-					inst.dir = rel / dist;
-					inst.pos += vec3(inst.dir * step, 0);
-					RemoteHitAlongPath(inst);
-				}
-			} break;
-
-			case Remote::BehaviorType::GRAPH: {
-				const f32 step = MIN(inst.speed * delta, inst.range - inst.travelled);
-				inst.travelled += step;
-				if(remote.bezier && inst.range > 0) {
-					const vec2 f = inst.graphDir;
-					const vec2 side = -Perp(f);
-					const vec2 p0 = vec2(inst.graphStart);
-					const vec2 p3 = p0 + f * inst.range;
-					vec2 c[2];
-					for(int k = 0; k < 2; k++) {
-						const f32 a = remote.bezierRotate[k] * PI / 180.0f;
-						c[k] = p0 + f * (inst.range * (k + 1) / 3.0f + remote.bezierFront[k]) + side * (remote.bezierUp[k] * sinf(a));
-					}
-					const f32 u = MIN(inst.travelled / inst.range, 1.0f);
-					const f32 v = 1.0f - u;
-					const vec2 p = p0 * (v * v * v) + c[0] * (3 * v * v * u) + c[1] * (3 * v * u * u) + p3 * (u * u * u);
-					const vec2 tangent = (c[0] - p0) * (3 * v * v) + (c[1] - c[0]) * (6 * v * u) + (p3 - c[1]) * (3 * u * u);
-					if(glm::length(tangent) > 0.001f) inst.dir = glm::normalize(tangent);
-					inst.pos = vec3(p, inst.pos.z);
-				}
-				else {
-					inst.pos += vec3(inst.dir * step, 0);
-				}
-				RemoteHitAlongPath(inst);
-				destroyed = inst.travelled >= inst.range - 0.01f;
-				if(destroyed && inst.hasLandZ) inst.pos.z = inst.landZ;
-			} break;
-
-			default: {
-				if(inst.speed > 0) {
-					f32 step = inst.range > 0 ? MIN(inst.speed * delta, inst.range - inst.travelled) : inst.speed * delta;
-					bool hitWall = false;
-					if(!remote.ignoreGround && !remote.attachFireObject && step > 0) {
-						f32 wallDist = 0;
-						const vec2 a = vec2(inst.pos);
-						if(physics.RaycastStatic(vec3(a, inst.wallZ), vec3(a + inst.dir * step, inst.wallZ), &wallDist, (i32)players[inst.ownerIndex].team)) {
-							step = wallDist;
-							hitWall = true;
-						}
-					}
-					const vec2 from = vec2(inst.pos);
-					const vec2 to = from + inst.dir * step;
-					const f32 halfWidth = remote.boundSize[0] * 0.5f;
-					const f32 boxFront = remote.boundType == Remote::BoundType::E_BOUND_BOX ? MAX(remote.offsetY + remote.boundSize[1] * 0.5f, 0.0f) : 0.0f;
-					if(remote.damageGroup != Remote::DamageGroup::eNONE && remote.damageGroup != Remote::DamageGroup::INVALID) {
-						foreach(it, players) {
-							if(!RemoteCanAffect(inst, *it, false)) continue;
-							const vec3 pos = it->body->GetWorldPos();
-							if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
-							if(!LagSegmentHits(*it, from, to, halfWidth + HitRadius(*it) + PROJECTILE_HIT_TOLERANCE, boxFront + HitRadius(*it))) continue;
-							RemoteHit(inst, *it);
-							inst.hitsLeft--;
-							if(inst.stopAtFirstHit && it->team != players[inst.ownerIndex].team) inst.hitsLeft = 0;
-							if(inst.hitsLeft <= 0) {
-								if(inst.clientRemoteID != 0) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
-								inst.destroyedByHit = true;
-								inst.pos = vec3(vec2(pos), inst.pos.z);
-								destroyed = true;
-								break;
-							}
-						}
-					}
-					if(!destroyed) {
-						inst.pos += vec3(inst.dir * step, 0);
-						inst.travelled += step;
-						if(hitWall || (inst.range > 0 && inst.travelled >= inst.range - 0.01f)) destroyed = true;
-						if(hitWall) LOG("Remote :: %d stopped by a wall after %.0f", (i32)remote.ID, inst.travelled);
-					}
-				}
-				else if(!inst.areaDone) {
-					if(remote.activateDelay <= 0 || elapsed >= remote.activateDelay) {
-						inst.areaDone = true;
-						RemoteApplyArea(inst);
-					}
-				}
-				else if(remote.lifeTime > 0 && inst.hitsLeft > 0) {
-					RemoteApplyArea(inst);
-				}
-				if(inst.hitsLeft <= 0 && remote.lifeTime > 0) {
-					if(inst.clientRemoteID != 0) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
-					inst.destroyedByHit = true;
-					destroyed = true;
-				}
-			} break;
-		}
-
-		if(!destroyed && remote.lifeTime > 0 && elapsed >= remote.lifeTime) destroyed = true;
-		if(!destroyed && remote.lifeTime <= 0 && inst.speed <= 0 && inst.areaDone) destroyed = true;
-
-		if(destroyed && inst.speed > 0) {
-			f32 nearest = 999999.0f;
-			const Player* nearestPlayer = nullptr;
-			foreach_const(it, players) {
-				if(it->team == players[inst.ownerIndex].team || it->dead) continue;
-				const f32 d = glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos));
-				if(d < nearest) { nearest = d; nearestPlayer = &*it; }
-			}
-			const vec2 nrel = nearestPlayer ? vec2(nearestPlayer->body->GetWorldPos()) - vec2(inst.pos) : vec2(0);
-			LOG("SkillRemoteEnd :: %d travelled=%.0f hitsLeft=%d nearest=%ls dist=%.0f along=%.0f side=%.0f dz=%.0f", (i32)remote.ID, inst.travelled, inst.hitsLeft, nearestPlayer ? nearestPlayer->name.data() : L"-", nearest,
-				glm::dot(nrel, inst.dir), inst.dir.x * nrel.y - inst.dir.y * nrel.x, nearestPlayer ? nearestPlayer->body->GetWorldPos().z - inst.pos.z : 0.0f);
-		}
-
-		if(destroyed && inst.hasLandZ) inst.pos.z = inst.landZ;
-		if(destroyed && !inst.destroyedByHit && inst.clientRemoteID != 0 && (inst.speed > 0 || inst.killNow)) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
-		if(destroyed) {
-			const RemoteIdx next = remote.destroyCreateRemote;
-			const RemoteInst copy = inst;
-			remoteInsts.erase_unsorted(remoteInsts.begin() + i);
-			if(!copy.chainEnded) {
-				const i32 childExclude = remote.behaviorType == Remote::BehaviorType::CHAIN ? copy.lastHitIndex : copy.excludeIndex;
-				if(next != RemoteIdx::INVALID) {
-					const Remote* nextRemote = GetGameXmlContent().FindRemote(next);
-					const f32 nextOffset = nextRemote ? nextRemote->offsetY : 0;
-					RemoteInst* child = SpawnRemote(copy.ownerIndex, CostReplacedRemote(copy.costLevel, next), copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, 0, copy.casterLocal);
-					if(child) {
-						child->excludeIndex = childExclude;
-						child->costLevel = copy.costLevel;
-						child->centeredBox = copy.centeredBox;
-					}
-				}
-				SpawnRemoteRules(*this, copy, remote.onDestroy, copy.pos, childExclude, next, true);
 			}
 		}
-		else {
-			i++;
+		if(!destroyed) {
+			inst.pos += vec3(inst.dir * step, 0);
+			inst.travelled += step;
+			if(hitWall || (inst.range > 0 && inst.travelled >= inst.range - 0.01f)) destroyed = true;
+			if(hitWall) LOG("Remote :: %d stopped by a wall after %.0f", (i32)remote.ID, inst.travelled);
 		}
 	}
+	else if(!inst.areaDone) {
+		if(remote.activateDelay <= 0 || elapsed >= remote.activateDelay) {
+			inst.areaDone = true;
+			RemoteApplyArea(inst);
+		}
+	}
+	else if(remote.lifeTime > 0 && inst.hitsLeft > 0) {
+		RemoteApplyArea(inst);
+	}
+	if(inst.hitsLeft <= 0 && remote.lifeTime > 0) {
+		if(inst.clientRemoteID != 0) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
+		inst.destroyedByHit = true;
+		destroyed = true;
+	}
+	return destroyed;
+}
 
+void World::DestroyRemote(i32 index)
+{
+	RemoteInst& inst = remoteInsts[index];
+	const Remote& remote = *inst.remote;
+	const i32 i = index;
+	if(inst.hasLandZ) inst.pos.z = inst.landZ;
+	if(!inst.destroyedByHit && inst.clientRemoteID != 0 && (inst.speed > 0 || inst.killNow)) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
+	{
+		const RemoteIdx next = remote.destroyCreateRemote;
+		const RemoteInst copy = inst;
+		remoteInsts.erase_unsorted(remoteInsts.begin() + i);
+		if(!copy.chainEnded) {
+			const i32 childExclude = remote.behaviorType == Remote::BehaviorType::CHAIN ? copy.lastHitIndex : copy.excludeIndex;
+			if(next != RemoteIdx::INVALID) {
+				const Remote* nextRemote = GetGameXmlContent().FindRemote(next);
+				const f32 nextOffset = nextRemote ? nextRemote->offsetY : 0;
+				RemoteInst* child = SpawnRemote(copy.ownerIndex, CostReplacedRemote(copy.costLevel, next), copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, 0, copy.casterLocal);
+				if(child) {
+					child->excludeIndex = childExclude;
+					child->costLevel = copy.costLevel;
+					child->centeredBox = copy.centeredBox;
+				}
+			}
+			SpawnRemoteRules(*this, copy, remote.onDestroy, copy.pos, childExclude, next, true);
+		}
+	}
+}
+
+void World::ExpireHitRecords()
+{
 	for(auto r = repeatHits.begin(); r != repeatHits.end(); ) {
 		if(TimeDiffSec(TimeDiff(r->at, localTime)) > 10.0) r = repeatHits.erase_unsorted(r);
 		else ++r;

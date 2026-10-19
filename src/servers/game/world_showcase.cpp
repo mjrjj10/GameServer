@@ -1206,3 +1206,19 @@ ShowcaseTickTimer::~ShowcaseTickTimer()
 	state.perfMaxUs = 0;
 	state.perfTicks = 0;
 }
+
+void World::ShowcaseOnRemoteEnd(const RemoteInst& inst)
+{
+	if(!Config().DevShowcase) return;
+	const Remote& remote = *inst.remote;
+	f32 nearest = 999999.0f;
+	const Player* nearestPlayer = nullptr;
+	foreach_const(it, players) {
+		if(it->team == players[inst.ownerIndex].team || it->dead) continue;
+		const f32 d = glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos));
+		if(d < nearest) { nearest = d; nearestPlayer = &*it; }
+	}
+	const vec2 nrel = nearestPlayer ? vec2(nearestPlayer->body->GetWorldPos()) - vec2(inst.pos) : vec2(0);
+	LOG("SkillRemoteEnd :: %d travelled=%.0f hitsLeft=%d nearest=%ls dist=%.0f along=%.0f side=%.0f dz=%.0f", (i32)remote.ID, inst.travelled, inst.hitsLeft, nearestPlayer ? nearestPlayer->name.data() : L"-", nearest,
+		glm::dot(nrel, inst.dir), inst.dir.x * nrel.y - inst.dir.y * nrel.x, nearestPlayer ? nearestPlayer->body->GetWorldPos().z - inst.pos.z : 0.0f);
+}

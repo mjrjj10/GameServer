@@ -619,6 +619,7 @@ struct World
 	void ShowcaseOnStatus(const Player& caster, const Player& target, i32 statusID);
 	void ShowcaseOnDamage(const Player& target, i32 damage);
 	bool ShowcaseKeepsAlive(const Player& target) const;
+	void ShowcaseOnRemoteEnd(const RemoteInst& inst);
 	bool applyingCasterStatus = false;
 	void TeleportPlayer(Player& p, const vec3& pos, f32 yaw);
 	void MovePlayer(Player& p, const vec3& pos, f32 yaw, bool snap);
@@ -645,6 +646,16 @@ struct World
 	ActorNpc* FindNpcActorByCreatureID(CreatureIndex docID); // Warning: slow!
 
 	void PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir, f32 distance);
+	void SpawnPendingRemotes();
+	void MoveCasterTargetRemote(RemoteInst& inst, Player& instOwner, f32 delta);
+	void RunRemoteTimeEvent(RemoteInst& inst, f32 elapsed);
+	bool UpdateChainRemote(RemoteInst& inst);
+	void ApplyAttachedRemote(RemoteInst& inst, Player& instOwner);
+	bool UpdateTargetRemote(RemoteInst& inst, f32 delta);
+	bool UpdateGraphRemote(RemoteInst& inst, f32 delta);
+	bool UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed);
+	void DestroyRemote(i32 index);
+	void ExpireHitRecords();
 	void GainResource(Player& player, i32 slot, f32 amount);
 	void ApplyResourceGain(Player& player, ResourceEvent event);
 	void ApplyRemoteHitResourceGain(Player& owner, RemoteIdx remote, u32 castID, u32 targetIndex);
