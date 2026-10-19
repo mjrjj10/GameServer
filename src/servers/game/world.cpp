@@ -378,7 +378,8 @@ void World::Update(Time localTime_)
 	foreach(it, players) {
 		if(it->pendingShot && TimeDiffSec(TimeDiff(it->pendingShotTime, localTime)) > 0.15) {
 			it->pendingShot = false;
-			PlayerWeaponShot(*it, it->pendingShotOrigin, it->pendingShotDir, it->pendingShotDistance);
+			const vec2 shotDir = glm::length(it->pendingShotDir) < 0.1f ? vec2(cosf(it->weaponAimYaw), sinf(it->weaponAimYaw)) : it->pendingShotDir;
+			PlayerWeaponShot(*it, it->pendingShotOrigin, shotDir, it->pendingShotDistance);
 		}
 		if(it->pendingAim && TimeDiffSec(TimeDiff(it->pendingAimTime, localTime)) > 0.15) {
 			it->pendingAim = false;

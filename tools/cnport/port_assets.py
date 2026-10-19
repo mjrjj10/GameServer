@@ -7,6 +7,7 @@ import shutil
 CN = r'D:\MxM\ClientCN\cn\Data'
 EU = r'D:\MxM\Client\Data'
 MOD = r'D:\MxM\ClientMod\Data'
+EU_ANILIST = r'D:\MxM\ClientEUdump\Graphic__Creature__AniList.xml'
 TEXTURE_RE = re.compile(rb'[\w\\/ .-]{3,120}\.(?:dds|tga|nif|kf|png)', re.I)
 
 
@@ -46,9 +47,30 @@ def main():
                 continue
             mod_names.add(n)
             copy(cn_index[n], shared)
+    anilist = merge_anilist(name)
     with open(os.path.join(os.path.dirname(MOD), 'assets_%s.json' % name), 'w', encoding='utf-8') as f:
-        json.dump({'own': copied, 'shared': shared}, f, indent=1)
-    print('%s: %d own files, %d shared textures' % (name, len(copied), len(shared)))
+        json.dump({'own': copied, 'shared': shared, 'anilist': anilist}, f, indent=1)
+    print('%s: %d own files, %d shared textures, %d action state lists' % (name, len(copied), len(shared), len(anilist)))
+
+
+def merge_anilist(name):
+    rel = os.path.join('Graphic', 'Creature', 'AniList.xml')
+    dst = os.path.join(MOD, rel)
+    text = open(dst if os.path.exists(dst) else EU_ANILIST, encoding='utf-8-sig').read()
+    have = set(t.lower() for t in re.findall(r'<Character [^>]*Type="([^"]+)"', text))
+    added = []
+    for m in re.finditer(r'<Character PC="True" Type="([^"]+)" FileName="([^"]+)"', open(os.path.join(CN, rel), encoding='utf-8-sig').read()):
+        if name not in m.group(2).lower() or m.group(1).lower() in have:
+            continue
+        line = '  <Character PC="True" Type="%s" FileName="%s" />\n' % (m.group(1), m.group(2))
+        close = text.rfind('</ROOT>')
+        text = text[:close] + line + text[close:]
+        added.append(m.group(1))
+    if added:
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        with open(dst, 'w', encoding='utf-8-sig', newline='') as f:
+            f.write(text)
+    return added
 
 
 if __name__ == '__main__':

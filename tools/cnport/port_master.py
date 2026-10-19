@@ -225,6 +225,9 @@ def patch(text, low, ps):
             block = block.replace(pt['after'], pt['after'] + pt['insert'], 1)
         for a, b in pt.get('replace', []):
             block = block.replace(a, b)
+        for a, b in pt.get('sub', []):
+            if pt.get('unless', '\0') not in block:
+                block = re.sub(a, lambda m: m.expand(b), block, count=1, flags=re.S)
         text = text[:m.start()] + block + text[m.end():]
     return text
 

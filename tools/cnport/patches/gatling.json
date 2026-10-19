@@ -50,5 +50,200 @@
   "datakey": "180430050",
   "after": "\t\t\t<data>",
   "insert": "\n\t\t\t\t<attrMap DATAKEY=\"TTATTR_STATUS_DEFINE_1\" DATA=\"1230430053\" />\n\t\t\t\t<tableDatas attrType=\"TTATTR_STATUS_STAT\" attrKey=\"TTATTR_STATUS_DEFINE_1\" proc=\"STATPROC_STAT\" apply=\"STATAPPLY_MUL\" stat=\"STAT_TYPE_DEFENCE\" value_1=\"100\" value_2=\"1\" />"
+ },
+ {
+  "doc": "weapon.xml",
+  "id": "131143000",
+  "unless": "<_Specification>",
+  "sub": [
+   [
+    "(<WeaponComData [^>]*?)\\s*/>",
+    "\\1>\n      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\n    </WeaponComData>"
+   ],
+   [
+    "(\\r?\\n)(    </WeaponComData>)",
+    "\\1      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\\1\\2"
+   ]
+  ]
+ },
+ {
+  "doc": "weapon.xml",
+  "id": "131143011",
+  "unless": "<_Specification>",
+  "sub": [
+   [
+    "(<WeaponComData [^>]*?)\\s*/>",
+    "\\1>\n      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\n    </WeaponComData>"
+   ],
+   [
+    "(\\r?\\n)(    </WeaponComData>)",
+    "\\1      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\\1\\2"
+   ]
+  ]
+ },
+ {
+  "doc": "weapon.xml",
+  "id": "131143012",
+  "unless": "<_Specification>",
+  "sub": [
+   [
+    "(<WeaponComData [^>]*?)\\s*/>",
+    "\\1>\n      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\n    </WeaponComData>"
+   ],
+   [
+    "(\\r?\\n)(    </WeaponComData>)",
+    "\\1      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\\1\\2"
+   ]
+  ]
+ },
+ {
+  "doc": "weapon.xml",
+  "id": "131143013",
+  "unless": "<_Specification>",
+  "sub": [
+   [
+    "(<WeaponComData [^>]*?)\\s*/>",
+    "\\1>\n      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\n    </WeaponComData>"
+   ],
+   [
+    "(\\r?\\n)(    </WeaponComData>)",
+    "\\1      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\\1\\2"
+   ]
+  ]
+ },
+ {
+  "doc": "weapon.xml",
+  "id": "131143014",
+  "unless": "<_Specification>",
+  "sub": [
+   [
+    "(<WeaponComData [^>]*?)\\s*/>",
+    "\\1>\n      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\n    </WeaponComData>"
+   ],
+   [
+    "(\\r?\\n)(    </WeaponComData>)",
+    "\\1      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\\1\\2"
+   ]
+  ]
+ },
+ {
+  "doc": "weapon.xml",
+  "id": "131143021",
+  "unless": "<_Specification>",
+  "sub": [
+   [
+    "(<WeaponComData [^>]*?)\\s*/>",
+    "\\1>\n      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\n    </WeaponComData>"
+   ],
+   [
+    "(\\r?\\n)(    </WeaponComData>)",
+    "\\1      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\\1\\2"
+   ]
+  ]
+ },
+ {
+  "doc": "weapon.xml",
+  "id": "131143022",
+  "unless": "<_Specification>",
+  "sub": [
+   [
+    "(<WeaponComData [^>]*?)\\s*/>",
+    "\\1>\n      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\n    </WeaponComData>"
+   ],
+   [
+    "(\\r?\\n)(    </WeaponComData>)",
+    "\\1      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\\1\\2"
+   ]
+  ]
+ },
+ {
+  "doc": "weapon.xml",
+  "id": "131143023",
+  "unless": "<_Specification>",
+  "sub": [
+   [
+    "(<WeaponComData [^>]*?)\\s*/>",
+    "\\1>\n      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\n    </WeaponComData>"
+   ],
+   [
+    "(\\r?\\n)(    </WeaponComData>)",
+    "\\1      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\\1\\2"
+   ]
+  ]
+ },
+ {
+  "doc": "weapon.xml",
+  "id": "131143024",
+  "unless": "<_Specification>",
+  "sub": [
+   [
+    "(<WeaponComData [^>]*?)\\s*/>",
+    "\\1>\n      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\n    </WeaponComData>"
+   ],
+   [
+    "(\\r?\\n)(    </WeaponComData>)",
+    "\\1      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\\1\\2"
+   ]
+  ]
+ },
+ {
+  "doc": "weapon.xml",
+  "id": "131143031",
+  "unless": "<_Specification>",
+  "sub": [
+   [
+    "(<WeaponComData [^>]*?)\\s*/>",
+    "\\1>\n      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\n    </WeaponComData>"
+   ],
+   [
+    "(\\r?\\n)(    </WeaponComData>)",
+    "\\1      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\\1\\2"
+   ]
+  ]
+ },
+ {
+  "doc": "weapon.xml",
+  "id": "131143032",
+  "unless": "<_Specification>",
+  "sub": [
+   [
+    "(<WeaponComData [^>]*?)\\s*/>",
+    "\\1>\n      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\n    </WeaponComData>"
+   ],
+   [
+    "(\\r?\\n)(    </WeaponComData>)",
+    "\\1      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\\1\\2"
+   ]
+  ]
+ },
+ {
+  "doc": "weapon.xml",
+  "id": "131143033",
+  "unless": "<_Specification>",
+  "sub": [
+   [
+    "(<WeaponComData [^>]*?)\\s*/>",
+    "\\1>\n      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\n    </WeaponComData>"
+   ],
+   [
+    "(\\r?\\n)(    </WeaponComData>)",
+    "\\1      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\\1\\2"
+   ]
+  ]
+ },
+ {
+  "doc": "weapon.xml",
+  "id": "131143034",
+  "unless": "<_Specification>",
+  "sub": [
+   [
+    "(<WeaponComData [^>]*?)\\s*/>",
+    "\\1>\n      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\n    </WeaponComData>"
+   ],
+   [
+    "(\\r?\\n)(    </WeaponComData>)",
+    "\\1      <_Specification>\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_DAMAGE\" _referenceRoute=\"WEAPONSPEC_ROUTE_WEAPON\" _referenceType=\"WEAPONSPEC_REF_ATTACK\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_ATTACK_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIREDELAY\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REMOTE_SPEED\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXSPEED\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_MAX_DISTANCE_OF_REMOTE\" _referenceRoute=\"WEAPONSPEC_ROUTE_RF_CREATE_DEFAULT1_REMOTE\" _referenceType=\"WEAPONSPEC_REF_REMOTE_MAXDISTANCE\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_OVERHEAT_GAUGE_INCREMENT\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_CONSUMPTION\" />\n        <_Spec DATAKEY=\"WEAPON_SPEC_REDUCE_MOVESPEED_AT_LAUNCH\" _referenceRoute=\"WEAPONSPEC_ROUTE_FIRINGMETHOD\" _referenceType=\"WEAPONSPEC_REF_FIRINGMETHOD_FIRINGSTAT_MOVEMENT_SPEED\" />\n      </_Specification>\\1\\2"
+   ]
+  ]
  }
 ]

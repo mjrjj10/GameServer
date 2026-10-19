@@ -431,9 +431,10 @@ void GamePacketHandler::HandlePacket_CQ_GamePlayerSyncPhy(ClientHandle clientHd,
 	}
 
 	const vec2 dir = vec2(aimOffset);
-	if(glm::length(dir) < 0.1f) return;
+	const bool aimless = glm::length(dir) < 0.1f;
+	if(aimless && !(nameLen == 10 && EA::StdC::Strncmp(name, L"Scene Root", 10) == 0)) return;
 
-	game->OnPlayerWeaponShot(clientHd, origin, glm::normalize(dir), glm::length(dir), packetData, packetSize);
+	game->OnPlayerWeaponShot(clientHd, origin, aimless ? vec2(0) : glm::normalize(dir), aimless ? 0.0f : glm::length(dir), packetData, packetSize);
 }
 
 void GamePacketHandler::HandlePacket_CQ_PlayerCastSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
