@@ -3,24 +3,22 @@
 #include <mxm/game_content.h>
 #include "world_common.h"
 
-static const f32 COMBAT_ATTACK_STAT = 0.0f; // skill power only comes from in-game ability upgrades (CREATURE_CHARACTER _STAT_UP), none yet
+static const f32 COMBAT_ATTACK_STAT = 0.0f;
 static const i32 STAT_HEALTH = 0;
 static const i32 STAT_STAMINAREGEN = 5;
 static const i32 STAT_CRITICALRATE = 9;
 static const i32 STAT_CRITICALDAMAGE = 10;
-// secondary resources: max stat, regen stat (per second), starts full
 static const i32 STAT_RAGE_ATTACK_RECOVERY_VALUE = 51;
 static const i32 STAT_MANAREGEN = 39;
 static const i32 STAT_ULTIMATEREGEN = 42;
 static const i32 STAT_SKILL_CRITICALRATE = 63;
 static const i32 STAT_SKILL_CRITICALDAMAGE = 64;
-static const u32 PACKET_DAMAGE_TYPE_NORMAL = 0;   // client enum PACKET_DAMAGE_TYPE
+static const u32 PACKET_DAMAGE_TYPE_NORMAL = 0;
 static const u32 PACKET_DAMAGE_TYPE_CRITICAL = 2;
-static const i32 STAT_ELEMENT_DAMAGE_BONUS = 54;       // weapon damage bonus % (CHARACTER_BASE_STATS)
-static const i32 STAT_ELEMENT_SKILL_DAMAGE_BONUS = 55; // skill damage bonus % (CHARACTER_BASE_STATS)
+static const i32 STAT_ELEMENT_DAMAGE_BONUS = 54;
+static const i32 STAT_ELEMENT_SKILL_DAMAGE_BONUS = 55;
 
 
-// affinity triangle: Argent (red) > Helix (green) > Kinetic (blue) > Argent
 static bool ElementBeats(i32 a, i32 b)
 {
 	return (a == 1 && b == 2) || (a == 2 && b == 3) || (a == 3 && b == 1);
@@ -33,7 +31,6 @@ static f32 ElementMultiplier(const World::Player& attacker, const World::Player&
 	const i32 ea = content.GetCreatureElement((i32)content.GetMaster(ac).ID);
 	const i32 et = content.GetCreatureElement((i32)content.GetMaster(target.Main().classType).ID);
 	const i32 stat = skill ? STAT_ELEMENT_SKILL_DAMAGE_BONUS : STAT_ELEMENT_DAMAGE_BONUS;
-	// advantage: attacker deals +bonus% to the element it counters, and takes -bonus% from it
 	if(ElementBeats(ea, et)) return 1.0f + MasterStat(ac, stat) / 100.0f;
 	if(ElementBeats(et, ea)) return 1.0f - MasterStat(target.Main().classType, stat) / 100.0f;
 	return 1.0f;
@@ -285,7 +282,6 @@ void World::Update(Time localTime_)
 		if(p.input.tag) {
 			p.input.tag = 0;
 			p.mainCharaID ^= 1;
-			// mana and master resources belong to each master
 			eastl::swap(p.mana, p.benchMana);
 			eastl::swap(p.res, p.benchRes);
 			p.tNextManaSend = Time::ZERO;
@@ -1140,7 +1136,6 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	f32 aimMax = WEAPON_SHOT_MAX_DISTANCE;
 	f32 aimMin = 0;
 	bool spawnAtAim = false;
-	// FIRING_METHOD of the active weapon: combo step / charge level / every Nth shot / status replacement
 	{
 		const u32 m = player.mainCharaID & 1;
 		const WeaponIndex weapon = m == 0 ? player.mainWeapon : player.subWeapon;
@@ -1165,8 +1160,6 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		}
 	}
 
-	// the client picks the weapon remote itself (firing combo step, charge level, status replacement such as
-	// passives or stances): look for a weapon remote document index in the fire packet after the fire node name
 	if(player.pendingShotRawSize > 44) {
 		const u8* raw = player.pendingShotRaw.data();
 		const i32 nameLen = *(const u16*)(raw + 42);
@@ -1257,7 +1250,6 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		player.pendingShotRawSize = 0;
 	}
 	else if(player.clientHd == ClientHandle::INVALID && remote) {
-		// bot shot: no client packet to relay, create the weapon remote for everyone
 		const u32 seed = nextRemoteSeed;
 		nextRemoteSeed += 2;
 		proj.remoteID = seed + 1;
@@ -1265,7 +1257,6 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		const vec3 target = firePos + vec3(proj.dir * proj.range, 0);
 		replication->SendRemoteCreateToAll(player.Main().UID, seed, remote->ID, firePos, atan2f(proj.dir.y, proj.dir.x), target, ActorUID::INVALID, L"Attack_Fire_Dummy");
 	}
-	// weapon damage scales with attack: percent attack modifiers of active statuses (skilltt STAT_TYPE_ATTACK MUL)
 	proj.damage = (i32)WeaponHitDamage(player, remote);
 	LOG("Shot :: %ls class=%d remote=%d graph=%d reliable=%d dist=%.0f range=%.0f speed=%.0f width=%.0f hits=%d aoe=%.0f", player.name.data(), (i32)classType, remote ? (i32)remote->ID : -1, graph, reliable, distance, proj.range, proj.speed, proj.halfWidth, proj.hitsLeft, proj.aoeRadius);
 	projectileList.push_back(proj);
@@ -1414,7 +1405,6 @@ static f32 SkillDamage(SkillID skillID)
 	if(found == content.skillMap.end()) return (f32)SKILL_FALLBACK_DAMAGE;
 	SkillNormalModel& skill = const_cast<SkillNormalModel&>(found->second);
 	SkillNormalLevelModel& level = *skill.getSkillNormalLevelByIndex(0);
-	// base damage of the un-upgraded skill: skilltt TTATTR_REMOTE_DAMAGE (SKILL_PROPERTY rows are upgrades)
 	const f32 ttBase = content.GetSkillBaseDamage((i32)skillID);
 	const f32 base = ttBase > 0 ? ttBase : level.getBaseDamage();
 	const f32 damage = base + COMBAT_ATTACK_STAT * level.getAttackMultiplier();
@@ -1471,7 +1461,6 @@ vec2 World::LagClosestPos(const Player& p, const vec2& point) const
 	return best;
 }
 
-// weapon overheat (FIRING_METHOD _GAUGE)
 static const WeaponHeatInfo* ActiveWeaponHeat(const World::Player& player)
 {
 	const u32 m = player.mainCharaID & 1;
@@ -1479,7 +1468,6 @@ static const WeaponHeatInfo* ActiveWeaponHeat(const World::Player& player)
 	return GetGameXmlContent().FindWeaponHeat((i32)weapon);
 }
 
-// current gauge of the active master, cooling applied since its last shot
 static f32 CurrentHeat(const World::Player& player, const WeaponHeatInfo& h, Time now)
 {
 	const u32 m = player.mainCharaID & 1;
@@ -1495,7 +1483,6 @@ void World::UpdateWeaponHeat(Player& player)
 	if(!h) return;
 	const u32 m = player.mainCharaID & 1;
 
-	// overheat finished: gauge resets, cooling starts from there
 	if(player.overheatUntil[m] != Time::ZERO && localTime >= player.overheatUntil[m]) {
 		player.overheatUntil[m] = Time::ZERO;
 		player.heat[m] = h->overheatResetGauge;
@@ -1514,7 +1501,6 @@ void World::UpdateWeaponHeat(Player& player)
 	replication->SendGaugeToAll(player.userID, 0, overheated, 0, (u16)cur, (u16)h->maxGauge);
 }
 
-// returns false while the weapon is overheated
 static bool WeaponHeatShot(World::Player& player, Time now, Replication* replication)
 {
 	const WeaponHeatInfo* h = ActiveWeaponHeat(player);
@@ -1581,7 +1567,6 @@ void World::UpdateUltimateGauges(f32 delta)
 
 		UpdateWeaponHeat(*it);
 
-		// move speed (percent stat, base from master stats) with status percent modifiers; the client moves itself
 		{
 			const f32 base = MasterStat(cls, STAT_MOVESPEED);
 			const f32 speed = MAX(base * (1.0f + StatusModMulSum(*it, StatusMod::MOVESPEED) / 100.0f), 0.0f);
@@ -1619,7 +1604,7 @@ void World::UpdateUltimateGauges(f32 delta)
 		if(localTime >= it->tNextResRefresh) {
 			it->tNextResRefresh = TimeAdd(localTime, TimeMsToTime(1000));
 			resChanged = true;
-			it->moveSpeedSent = -1.0f; // resend move speed too
+			it->moveSpeedSent = -1.0f;
 		}
 		if(resChanged && localTime >= it->tNextResSend) {
 			it->tNextResSend = TimeAdd(localTime, TimeMsToTime(250));
@@ -1641,7 +1626,6 @@ void World::UpdateUltimateGauges(f32 delta)
 			}
 		}
 
-		// tagged-out master regenerates its own pools (its regen stats; STAT_TYPE_TAG_* bonuses only come from items)
 		{
 			const ClassType benchCls = it->Sub().classType;
 			const f32 benchManaMax = MasterStat(benchCls, STAT_MANA);
@@ -1668,10 +1652,8 @@ void World::UpdateUltimateGauges(f32 delta)
 
 bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 {
-	// base costs from SKILL.xml: _ConsumeMP (mana), _ConsumeUG (ultimate gauge), _ConsumeStamina (dodge)
 	const auto& content = GetGameXmlContent();
 	f32 mp = content.GetSkillConsumeMP(skillID);
-	// STATUS_TYPE_NOCOST: the listed skills cost _AddRatioCostMP % more (-100 = free), then the status is used up
 	foreach(it, activeStatuses) {
 		if(it->targetIndex != player.index || !it->info || it->info->type != "STATUS_TYPE_NOCOST" || it->until <= localTime) continue;
 		if(eastl::find(it->info->costSkills.begin(), it->info->costSkills.end(), skillID) == it->info->costSkills.end()) continue;
@@ -1685,7 +1667,7 @@ bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 	const f32 resCost[3] = { content.GetSkillConsume(skillID, 0), content.GetSkillConsume(skillID, 1), content.GetSkillConsume(skillID, 2) };
 	const f32 hpCost = content.GetSkillConsume(skillID, 3);
 	if(mp <= 0 && ug <= 0 && st <= 0 && resCost[0] <= 0 && resCost[1] <= 0 && resCost[2] <= 0 && hpCost <= 0) return true;
-	if(player.clientHd == ClientHandle::INVALID) return true; // bots don't track resources
+	if(player.clientHd == ClientHandle::INVALID) return true;
 
 	bool ok = (mp <= 0 || player.mana < 0 || player.mana >= mp) &&
 		(ug <= 0 || player.ultGauge < 0 || player.ultGauge >= ug) &&
@@ -1785,14 +1767,12 @@ World::ActiveStatus* World::FindActiveStatus(u32 targetIndex, i32 statusID)
 	return nullptr;
 }
 
-// ends a status now: the status update removes it and runs its _NextStatusIndex chain
 void World::ConsumeStatus(u32 targetIndex, i32 statusID)
 {
 	ActiveStatus* st = FindActiveStatus(targetIndex, statusID);
 	if(st) st->until = localTime;
 }
 
-// SKILL_TYPE_PASSIVE _Status of both masters
 void World::ApplyPassives(Player& player)
 {
 	if(player.dead) return;
@@ -1816,7 +1796,6 @@ void World::ApplyAllPassives()
 	foreach(it, players) ApplyPassives(*it);
 }
 
-// is this passive status one of the active master's passives
 static bool PassiveOfActiveMaster(const World::Player& player, i32 statusID)
 {
 	const auto* list = GetGameXmlContent().FindPassiveStatuses(player.Main().classType);
@@ -2121,12 +2100,11 @@ void World::UpdatePassives()
 
 void World::PassiveOnSkillCast(Player& player, i32 skillID)
 {
-	if(GetGameXmlContent().GetSkillConsumeStamina(skillID) > 0) return; // dodges are not skills here
+	if(GetGameXmlContent().GetSkillConsumeStamina(skillID) > 0) return;
 	eastl::fixed_vector<i32,4,false> toApply;
 	foreach(it, activeStatuses) {
 		if(it->targetIndex != player.index || !it->info || it->info->customMax <= 0) continue;
 		if(!PassiveOfActiveMaster(player, it->statusID)) continue;
-		// skills used counter: STATUS_TYPE_SKILLSTATUS applies _AuraStatusIndex on the max
 		if(it->info->type == "STATUS_TYPE_SKILLSTATUS") {
 			it->custom++;
 			LOG("Passive :: %ls skill counter %d/%d", player.name.data(), it->custom, it->info->customMax);
@@ -2176,7 +2154,6 @@ void World::PassiveOnSkillCast(Player& player, i32 skillID)
 
 void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj)
 {
-	// statuses of the weapon remote itself
 	if(proj.remoteDoc != RemoteIdx::INVALID && !target.dead) {
 		const Remote* remote = GetGameXmlContent().FindRemote(proj.remoteDoc);
 		if(remote) {
@@ -2201,7 +2178,6 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 		if(it->targetIndex != attacker.index || !it->info) continue;
 		if(!PassiveOfActiveMaster(attacker, it->statusID)) continue;
 		const StatusInfo& info = *it->info;
-		// every Nth weapon hit (STATUS_TYPE_HIT_PLAGUE): _HITEFFECT status on the target
 		if(info.type == "STATUS_TYPE_HIT_PLAGUE" && info.customMax > 0) {
 			it->custom++;
 			if(it->custom >= info.customMax) {
@@ -2209,13 +2185,11 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 				if(info.hitEffectStatus && !toApply.full()) toApply.push_back(info.hitEffectStatus);
 			}
 		}
-		// STATUS_TYPE_KROMEDE: weapon hits on stunned, bound or shocked targets apply _HITEFFECT
 		else if(info.type == "STATUS_TYPE_KROMEDE" && info.hitEffectStatus) {
 			if(HasStatusType(target, "STATUS_TYPE_STUN") || HasStatusType(target, "STATUS_TYPE_ROOT") || HasStatusType(target, "STATUS_TYPE_SHOCKED")) {
 				if(!toApply.full()) toApply.push_back(info.hitEffectStatus);
 			}
 		}
-		// STATUS_TYPE_MANABURN: a weapon hit on a target marked by a skill steals _AddValue mana
 		else if(info.type == "STATUS_TYPE_MANABURN" && info.hitEffectStatus) {
 			if(FindActiveStatus(target.index, info.hitEffectStatus)) {
 				ConsumeStatus(target.index, info.hitEffectStatus);
@@ -2260,7 +2234,6 @@ void World::PassiveOnSkillHit(Player& attacker, Player& target)
 	}
 	foreach_const(it, activeStatuses) {
 		if(it->targetIndex != attacker.index || !it->info) continue;
-		// STATUS_TYPE_MANABURN: skill hits mark the target (_HITEFFECT _StatusDocIndex)
 		if(it->info->type == "STATUS_TYPE_MANABURN" && it->info->hitEffectStatus && PassiveOfActiveMaster(attacker, it->statusID)) {
 			const i32 mark = it->info->hitEffectStatus;
 			ApplyStatus(attacker, target, mark);
@@ -2274,7 +2247,6 @@ f32 World::PassiveWeaponDamageMul(Player& attacker, Player& target)
 	f32 mul = 1.0f;
 	foreach_const(it, activeStatuses) {
 		if(it->targetIndex != attacker.index || !it->info) continue;
-		// STATUS_TYPE_GHOSTWIDOW: weapon damage +_AddValue per debuff on the target
 		if(it->info->type == "STATUS_TYPE_GHOSTWIDOW" && PassiveOfActiveMaster(attacker, it->statusID)) {
 			i32 debuffs = 0;
 			foreach_const(d, activeStatuses) {
@@ -2310,7 +2282,6 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	if(info && caster.team != target.team && PassiveBlocksCC(target, *info, &duration)) return;
 	if(Config().DevShowcase && target.index == showcase.prevDummy && caster.team != target.team && !showcase.statusesSeen.full() &&
 	   eastl::find(showcase.statusesSeen.begin(), showcase.statusesSeen.end(), statusID) == showcase.statusesSeen.end()) showcase.statusesSeen.push_back(statusID);
-	// passives without duration stay until consumed; clients get the data's "infinite" value (-1)
 	const bool permanent = info && info->permanent && durationOverride <= 0;
 	if(permanent) duration = 1000000.0f;
 	const f32 sentDuration = permanent ? -1.0f : duration;
@@ -2349,11 +2320,8 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			if(stacked) it->overlap++;
 			LOG("Status :: %ls -> %ls status=%d refreshed overlap=%d", caster.name.data(), target.name.data(), statusID, it->overlap);
 			const vec3 pos = target.body->GetWorldPos();
-			// clients add one instance per SN_AddStatus: drop the previous one first, otherwise the final remove
-			// leaves a copy (icon and effect) on screen
 			if(!stacked) replication->SendRemoveStatusToAll(statusID, it->targetUID, it->casterUID);
 			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, sentDuration, pos, pos, 0, it->overlap);
-			// stacking passive (_ICEQUEEN): full stack -> remove it and apply the burst status
 			if(info && it->overlap >= info->maxOverlap && info->maxOverlap > 1) {
 				foreach_const(ps, activeStatuses) {
 					if(ps->targetIndex != caster.index || !ps->info || ps->info->stackStatus != statusID || ps->info->stackFullStatus == 0) continue;
@@ -2389,7 +2357,6 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		foreach_const(m, info->mods) {
 			if(m->stat == StatusMod::SHIELD_DEFENCE && !m->mul) dataShield += m->value;
 		}
-		// skilltt shield value when present, otherwise the old estimate
 		st.shieldHP = dataShield > 0 ? dataShield : MAX(power, 100.0f) * (info->paramRatio > 0 ? info->paramRatio : 1.0f);
 	}
 	activeStatuses.push_back(st);
@@ -2402,7 +2369,6 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	if(info && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT)) {
 		Time ccEnd = st.until;
 		if(info->type == "STATUS_TYPE_AIRBORNE" || info->type == "STATUS_TYPE_FLY" || info->type == "STATUS_TYPE_KNOCKDOWN") {
-			// lying on the ground (_LyingTime) then the stand-up animation (AniLength LIE_END)
 			const auto& content = GetGameXmlContent();
 			const f32 recover = info->lyingTime + content.GetLieEndTime(content.GetMaster(target.Main().classType).className.c_str());
 			ccEnd = TimeAdd(ccEnd, TimeMsToTime(recover * 1000.0));
@@ -2494,7 +2460,6 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	}
 
 	if(info && info->type == "STATUS_TYPE_DISPEL" && info->dispelEffect >= 0) {
-		// removes the target's dispellable buffs (0) or debuffs (1)
 		foreach(it, activeStatuses) {
 			if(it->targetIndex != target.index || !it->info || !it->info->canDispel || it->statusID == statusID) continue;
 			if((it->info->isDebuff ? 1 : 0) != info->dispelEffect) continue;
@@ -2547,8 +2512,6 @@ f32 World::StatusModSum(const Player& p, i32 stat) const
 	return sum;
 }
 
-// bots cast their master's skills (BotBrainData _SkillIndexData) at the nearest enemy within _BotSkillMaxDistance;
-// each skill waits max(its _CoolTime, bot NORMALSKILL/UGSKILL cooldown) before being used again
 void World::UpdateBotSkills()
 {
 	const auto& content = GetGameXmlContent();
@@ -2557,7 +2520,7 @@ void World::UpdateBotSkills()
 		if(bot.clientHd != ClientHandle::INVALID || bot.dead) continue;
 		if(localTime < bot.tNextBotSkill || localTime < bot.ccUntil) continue;
 		if(IsBlocked(bot, false, true, false)) continue;
-		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500)); // re-evaluated twice per second
+		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500));
 
 		const ActorMaster& master = bot.Main();
 		const auto* skills = content.FindBotSkills(100000000 + (i32)master.classType);
@@ -2573,7 +2536,6 @@ void World::UpdateBotSkills()
 		}
 		if(!target) continue;
 
-		// ready skills whose bot range reaches the target
 		eastl::fixed_vector<i32,5,false> ready;
 		for(i32 i = 0; i < 5; i++) {
 			const i32 skill = (*skills)[i];
@@ -2591,7 +2553,6 @@ void World::UpdateBotSkills()
 		bot.botSkillReady[slot] = TimeAdd(localTime, TimeMsToTime(cd * 1000.0));
 		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(MAX(content.BotAfterSkillDelay(), 0.5f) * 1000.0));
 
-		// face the target, then cast like a player would
 		const vec3 tpos = target->body->GetWorldPos();
 		const f32 yaw = atan2f(tpos.y - pos.y, tpos.x - pos.x);
 		bot.input.rot.upperYaw = yaw;
@@ -2920,7 +2881,6 @@ void World::UpdateBotCombat()
 		f32 range = ClassAttackRange(cls) * WEAPON_RANGE_SCALE;
 		if(remote && remote->maxDistance > 0) range = remote->maxDistance;
 
-		// nearest living enemy in weapon range
 		const vec3 pos = bot.body->GetWorldPos();
 		Player* target = nullptr;
 		f32 best = range;
@@ -2936,7 +2896,7 @@ void World::UpdateBotCombat()
 		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(delay * 1000.0));
 		if(!target) continue;
 
-		if(!WeaponHeatShot(bot, localTime, replication)) continue; // overheated
+		if(!WeaponHeatShot(bot, localTime, replication)) continue;
 		const vec2 rel = vec2(target->body->GetWorldPos()) - vec2(pos);
 		const vec2 dir = glm::length(rel) > 1.0f ? glm::normalize(rel) : vec2(1, 0);
 		bot.weaponAimYaw = atan2f(dir.y, dir.x);
@@ -3039,7 +2999,7 @@ void World::UpdateSummons()
 				PendingRemote pr;
 				pr.time = localTime;
 				pr.idx = RemoteIdx(pc->index);
-				pr.preset = (i32)ActionCommand::TargetPreset::POS_FFF; // fired from the summon's position
+				pr.preset = (i32)ActionCommand::TargetPreset::POS_FFF;
 				const Remote* summonRemote = GetGameXmlContent().FindRemote(RemoteIdx(pc->index));
 				const bool aimedGraph = summonRemote && summonRemote->behaviorType == Remote::BehaviorType::GRAPH && glm::length(vec2(pc->aim)) > 1.0f;
 				pr.offsetSide = 0;
@@ -3157,7 +3117,6 @@ void World::UpdateStatuses()
 			}
 		}
 
-		// regen modifiers (skilltt STATPROC_REGEN HEALTH): value per tick, value_2 ticks over the status duration
 		if(it->info && !target.dead) {
 			foreach_const(m, it->info->mods) {
 				if(!m->regen || m->stat != StatusMod::HEALTH) continue;
@@ -3171,7 +3130,6 @@ void World::UpdateStatuses()
 			}
 		}
 
-		// aura: periodically gives its _AuraStatusIndex to players around (buffs to allies, debuffs to enemies)
 		if(it->info && it->info->auraStatus != 0 && !target.dead && localTime >= it->nextAuraPulse) {
 			it->nextAuraPulse = TimeAdd(localTime, TimeMsToTime(500));
 			const StatusInfo* child = GetGameXmlContent().FindStatus(it->info->auraStatus);
@@ -3215,7 +3173,6 @@ void World::UpdateStatuses()
 				}
 			}
 			for(i32 k = 0; k < MAX(it->overlap, 1); k++) replication->SendRemoveStatusToAll(it->statusID, it->targetUID, it->casterUID);
-			// next status chain (_NextStatusIndex / _NextStatusCondition)
 			i32 next = 0;
 			if(it->info && it->info->nextStatus != 0 && !target.dead) {
 				const auto cond = it->info->nextCondition;
@@ -3267,13 +3224,12 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	{
 		SkillNormalModel& skillModel = const_cast<SkillNormalModel&>(skill);
 		const f32 consumeUG = skillModel.getSkillNormalLevelByIndex(0)->getConsumeUG();
-		(void)consumeUG; // paid in PlayerPaySkillCost
+		(void)consumeUG;
 	}
 
 	const u32 castID = nextCastID++;
 	i32 damage = (i32)SkillDamage(skillID);
 	{
-		// skill power granted by active statuses (skilltt STAT_TYPE_SKILLPOWER) scales with the skill's attack multiplier
 		const f32 skillPower = StatusModSum(player, StatusMod::SKILLPOWER);
 		if(skillPower > 0) {
 			SkillNormalModel& sm = const_cast<SkillNormalModel&>(skill);
@@ -3284,8 +3240,6 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 
 	bool scheduled = false;
 	bool teleportToChild = false;
-	// animation 0 without any action and no hit-event combo: animation 1 is its continuation,
-	// played once animation 0 is over (AniLength of its AnimationId)
 	eastl::fixed_vector<SkillAnimPass,8,false>& animPasses = lastAnimPasses;
 	animPasses.clear();
 	if(anim == 0 && forceAnim < 0) {
@@ -3325,7 +3279,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	for(i32 pass = 0; pass < passes; pass++) {
 	const i32 curAnim = animPasses[pass].index;
 	foreach_const(cmd, action.commands) {
-		if(cmd->animIndex != curAnim && (cmd->animIndex != -1 || pass > 0)) continue; // -1: command shared by every animation
+		if(cmd->animIndex != curAnim && (cmd->animIndex != -1 || pass > 0)) continue;
 		const f32 t = animPasses[pass].start + cmd->delay;
 		if((cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) && !pendingRemotes.full()) {
 			PendingRemote pr;
@@ -3346,8 +3300,6 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.angle = angle;
 			pr.target = cmd->remote.targetPreset == ActionCommand::TargetPreset::MEMORIZED_TFT ? player.memorizedTarget : currentTarget;
 			pr.atTarget = cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET;
-			// DestroyAwayTarget: the remote ends at the aimed point. Client RE: ActionBase Param2 flag 0x20 passed to
-			// the remote creation; every PC skill using it is aimed with a ground cursor (SKILL_CAST_TARGET_POSITION*)
 			pr.stopAtTarget = cmd->remote.stopAtTarget;
 			pr.remove = cmd->remote.remove != 0;
 			pr.nodeName = cmd->nodeName;
@@ -3430,16 +3382,14 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	inst.range = remote->maxDistance;
 	if(remote->behaviorType == Remote::BehaviorType::GRAPH && remote->fixedGraphLength > 0) inst.range = remote->fixedGraphLength;
 	if(inst.range <= 0 && remote->lifeTime > 0 && inst.speed > 0) inst.range = remote->lifeTime * inst.speed;
-	// lobbed remotes (bezier graph) land on the aimed point, clamped to their max reach
 	if(remote->behaviorType == Remote::BehaviorType::GRAPH && remote->fixedGraphLength <= 0 && aimPos && glm::length(vec2(*aimPos)) > 1.0f) {
 		const f32 aimDist = glm::length(vec2(*aimPos) - vec2(pos));
 		inst.range = inst.range > 0 ? MIN(aimDist, inst.range) : aimDist;
 		inst.landZ = aimPos->z;
 		inst.hasLandZ = true;
 	}
-	inst.stopAtFirstHit = false; // first-hit stop comes from _ActivateCount
+	inst.stopAtFirstHit = false;
 	if(stopAtTarget && remote->behaviorType != Remote::BehaviorType::GRAPH && aimPos && glm::length(vec2(*aimPos)) > 1.0f && inst.speed > 0) {
-		// DestroyAwayTarget: the remote ends at the aimed point
 		const f32 aimDist = glm::length(vec2(*aimPos) - vec2(pos));
 		inst.range = inst.range > 0 ? MIN(aimDist, inst.range) : aimDist;
 	}
@@ -3466,13 +3416,10 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 			targetPos = pos + vec3(dir * inst.range, 0);
 			targetPos.z = aimPos->z;
 		}
-		// the client draws plain (non-fan) static boxes facing the opposite way of their rotation
 		const bool plainStaticBox = inst.speed <= 0 && remote->boundType == Remote::BoundType::E_BOUND_BOX && remote->angle <= 0;
 		const bool chained = remote->destroyCreateRemote != RemoteIdx::INVALID || !remote->onDestroy.empty() || !remote->onTime.empty() || !remote->onActivate.empty();
 		const bool flip = plainStaticBox && (chained || nodeName == 0);
 		const f32 sendYaw = atan2f(dir.y, dir.x) + (flip ? PI : 0.0f);
-		// the client adds the remote's _OffsetZ to the fire position: compensate so the remote shows at the
-		// height the server simulates (weapon fire height), not under the ground
 		vec3 sendPos = pos - vec3(0, 0, remote->offsetZ);
 		const bool atAimedPoint = aimPos && glm::length(vec2(*aimPos)) > 1.0f && glm::length(vec2(pos) - vec2(*aimPos)) < 1.0f;
 		if(plainStaticBox && !flip && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY), 0);
@@ -3549,8 +3496,7 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 				if(glm::length(rel) > 1.0f) dir = glm::normalize(rel);
 			}
 			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, CostReplacedRemote(parent.costLevel, rule->idx), at + vec3(dir * child->offsetY, 0), dir, childTarget, parent.skillID, parent.castID, parent.damage,
-				// clients spawn the directed children (_CreateRemote) of a remote ending on their side themselves
-				parent.clientRemoteID != 0 && !(fromDestroy && rule->kind != Remote::SPAWN_SINGLE && !rule->targetOwner), parent.casterLocal); // returns to the caster are not spawned by clients
+				parent.clientRemoteID != 0 && !(fromDestroy && rule->kind != Remote::SPAWN_SINGLE && !rule->targetOwner), parent.casterLocal);
 			if(inst) {
 				inst->excludeIndex = excludeIndex;
 				inst->costLevel = parent.costLevel;
@@ -3807,7 +3753,7 @@ void World::RemoteHitAlongPath(RemoteInst& inst)
 	const f32 radius = remote.boundSize[0] * 0.5f;
 	foreach(it, players) {
 		if(!RemoteCanAffect(inst, *it, false)) continue;
-		if(it->team == players[inst.ownerIndex].team) continue; // on the way: enemies only
+		if(it->team == players[inst.ownerIndex].team) continue;
 		if(glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos)) > radius + HitRadius(*it)) continue;
 		RemoteHit(inst, *it);
 	}
@@ -3952,7 +3898,6 @@ void World::UpdateRemotes(f32 delta)
 			}
 		}
 		if(!owner.dead) {
-			// presets whose T/F flags start with T (SELF_TFF, MEMORIZED_TFT, ...) are created by the caster's own client
 			bool casterLocal = false;
 			{
 				const char* name = ActionCommand::TargetPresetToString((ActionCommand::TargetPreset)pr->preset);
@@ -4117,10 +4062,8 @@ void World::UpdateRemotes(f32 delta)
 				const f32 step = MIN(inst.speed * delta, inst.range - inst.travelled);
 				inst.travelled += step;
 				if(remote.bezier && inst.range > 0) {
-					// cubic bezier start -> end; control points at 1/3 and 2/3, offset by up rotated around the
-					// forward axis (only its horizontal part matters here) and pushed by front
 					const vec2 f = inst.graphDir;
-					const vec2 side = -Perp(f); // positive rotate = right of the travel direction (client angles are clockwise; matches gameplay video)
+					const vec2 side = -Perp(f);
 					const vec2 p0 = vec2(inst.graphStart);
 					const vec2 p3 = p0 + f * inst.range;
 					vec2 c[2];
@@ -4140,7 +4083,7 @@ void World::UpdateRemotes(f32 delta)
 				}
 				RemoteHitAlongPath(inst);
 				destroyed = inst.travelled >= inst.range - 0.01f;
-				if(destroyed && inst.hasLandZ) inst.pos.z = inst.landZ; // landed on the ground
+				if(destroyed && inst.hasLandZ) inst.pos.z = inst.landZ;
 			} break;
 
 			default: {
@@ -4191,11 +4134,9 @@ void World::UpdateRemotes(f32 delta)
 					}
 				}
 				else if(remote.lifeTime > 0 && inst.hitsLeft > 0) {
-					// lingering zone / mine: keeps checking contact, hits again once each target's hit window expires
 					RemoteApplyArea(inst);
 				}
 				if(inst.hitsLeft <= 0 && remote.lifeTime > 0) {
-					// activation count used up (e.g. a mine triggered by an enemy): ends now and spawns its chain
 					if(inst.clientRemoteID != 0) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
 					inst.destroyedByHit = true;
 					destroyed = true;
@@ -4220,7 +4161,6 @@ void World::UpdateRemotes(f32 delta)
 		}
 
 		if(destroyed && inst.hasLandZ) inst.pos.z = inst.landZ;
-		// tell clients a moving remote ended here (otherwise they let it fly on, e.g. a boomerang curve past its target)
 		if(destroyed && !inst.destroyedByHit && inst.clientRemoteID != 0 && (inst.speed > 0 || inst.killNow)) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
 		if(destroyed) {
 			const RemoteIdx next = remote.destroyCreateRemote;
@@ -4318,7 +4258,6 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		return;
 	}
 
-	// close-range penalty of the remote (_DistPenaltyRate within _PenaltyApplyDistance of the caster)
 	{
 		const RemoteIdx doc = proj ? proj->remoteDoc : remoteDoc;
 		const Remote* pr = doc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(doc) : nullptr;
@@ -4337,14 +4276,12 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		damage = MAX((i32)(damage * mul + 0.5f), damage > 0 ? 1 : 0);
 	}
 
-	// element advantage: weapon shots use the weapon bonus, skills the skill bonus, DoTs none
 	u32 damageType = PACKET_DAMAGE_TYPE_NORMAL;
 	if(proj || skillID != SkillID::INVALID) {
 		const f32 mul = ElementMultiplier(attacker, target, !proj);
 		if(mul != 1.0f) damage = (i32)(damage * mul);
 		elementMul = mul;
 
-		// critical hit: master crit stats (weapon or skill) + the remote's own _CriticalRate
 		const ClassType ac = attacker.Main().classType;
 		const RemoteIdx doc = proj ? proj->remoteDoc : remoteDoc;
 		const Remote* critRemote = doc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(doc) : nullptr;
@@ -4397,7 +4334,6 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		}
 	}
 
-	// rage: STAT_TYPE_RAGE_ATTACK_RECOVERY_VALUE per landed hit
 	if(attacker.res[1] >= 0) {
 		const ClassType ac = attacker.Main().classType;
 		const f32 rageMax = MasterStat(ac, RESOURCES[1].maxStat);
@@ -4435,7 +4371,6 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 void World::RespawnPlayer(Player& player)
 {
 	player.dead = false;
-	// pools back to their start values (initialised again on the next update)
 	player.mana = -1.0f;
 	player.benchMana = -1.0f;
 	player.stamina = -1.0f;
@@ -4471,7 +4406,6 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 
 	switch(cmd.type) {
 		case ActionCommand::Type::STATE_BLOCK: {
-			// lock WASD input type movement during skill execution
 			caster->parent->body->lockedMoveUntil = TimeAddSec(localTime, cmd.delay);
 		} break
 			;
@@ -4494,7 +4428,7 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			switch(cmd.move.preset) {
 				case ActionCommand::MovePreset::WARP: {
 					distance = (f32)cmd.move.param2;
-					moveDuration = 0.01f; // warping
+					moveDuration = 0.01f;
 				} break;
 				case ActionCommand::MovePreset::TARGET_POS:
 				case ActionCommand::MovePreset::TARGET_POS_LEAP:

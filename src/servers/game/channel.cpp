@@ -70,8 +70,8 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 		CASE(CQ_InteractionCancel);
 		CASE(CQ_GamePlayerSyncPhy);
 
-		case 60026: // CQ_ReturnToCity
-		case 60027: { // CQ_HandoverToChannel: "return to bridge"
+		case 60026:
+		case 60027: {
 			NT_LOG("[client%x] Client :: CQ_HandoverToChannel", clientHd);
 			game->OnPlayerReturnToChannel(clientHd);
 		} break;

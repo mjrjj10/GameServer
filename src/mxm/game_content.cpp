@@ -2231,11 +2231,10 @@ bool GameXmlContent::LoadStatusData()
 
 	LOG("Loaded %d statuses", (i32)statusMap.size());
 
-	// skilltt.xml: master > skill > one <data> per upgrade combination (first = base level)
 	XMLDocument xmlTT;
 	if(LoadXMLFile(L"/client/skilltt.xml", xmlTT)) {
 		i32 modCount = 0;
-		eastl::hash_set<i32> touched; // statuses already filled (first skill describing them wins)
+		eastl::hash_set<i32> touched;
 		struct SkillMulStat { i32 skill; i32 status; u8 stat; f32 value; };
 		eastl::fixed_vector<SkillMulStat,512,false> skillMulStats;
 		for(XMLElement* pMaster = xmlTT.FirstChildElement()->FirstChildElement(); pMaster; pMaster = pMaster->NextSiblingElement()) {
@@ -2252,7 +2251,6 @@ bool GameXmlContent::LoadStatusData()
 					pT->QueryFloatAttribute("value_1", &dmg);
 					if(dmg > 0 && skillBaseDamage.find(skillID) == skillBaseDamage.end()) skillBaseDamage[skillID] = dmg;
 				}
-				// attrMap: key -> status (TTATTR_STATUS_DELIGATE = main status, TTATTR_STATUS_DEFINE_n = other statuses of the skill)
 				eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,40,false>, i32>,16,false> keyStatus;
 				i32 delegateID = 0;
 				for(XMLElement* pAttr = pBase->FirstChildElement("attrMap"); pAttr; pAttr = pAttr->NextSiblingElement("attrMap")) {
@@ -2318,8 +2316,6 @@ bool GameXmlContent::LoadStatusData()
 		}
 		LOG("Loaded %d status stat modifiers from skilltt", modCount);
 
-		// skill descriptions (string/skilldesc.xml): "... weapon damage and movespeed ... by {skill:ID:status:stat:mul:attack:1}%"
-		// -> movespeed shares that percent (only when the status has no movespeed value of its own)
 		XMLDocument xmlDesc;
 		if(LoadXMLFile(L"/client/string/skilldesc.xml", xmlDesc)) {
 			i32 added = 0;
@@ -2333,7 +2329,7 @@ bool GameXmlContent::LoadStatusData()
 				if(!EA::StdC::Stristr(text, "movespeed") && !EA::StdC::Stristr(text, "movement speed")) continue;
 				const char* ph = EA::StdC::Strstr(text, ":status:stat:mul:");
 				if(!ph) continue;
-				const char* statName = ph + 17; // strlen(":status:stat:mul:")
+				const char* statName = ph + 17;
 				StatusMod::Stat stat = StatusMod::OTHER;
 				if(EA::StdC::Strnicmp(statName, "attack:", 7) == 0) stat = StatusMod::ATTACK;
 				if(stat == StatusMod::OTHER) continue;
@@ -2771,7 +2767,6 @@ bool GameXmlContent::LoadStatusData()
 		LOG("Loaded %d weapon overheat gauges, %d weapon firing remotes, %d stance firing methods", (i32)weaponHeat.size(), (i32)weaponFiring.size(), (i32)weaponStanceFiring.size());
 	}
 
-	// passive skills: SKILL_TYPE_PASSIVE _Status per _RequireClass
 	XMLDocument xmlSkillP;
 	if(LoadXMLFile(L"/client/SKILL.xml", xmlSkillP)) {
 		i32 count = 0;

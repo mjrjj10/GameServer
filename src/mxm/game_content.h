@@ -109,29 +109,26 @@ const char* TargetPresetToString(TargetPreset p);
 
 }
 
-// a stat modifier of a status, from skilltt.xml TTATTR_STATUS_STAT (base skill level)
-// summoned creature (CREATURE_MONSTER_SUMMON.xml)
-// a command of a summoned creature's action (ActionBase_Monster_MOB_PvP.xml)
 struct SummonCommand
 {
 	enum Kind: u8 { REMOTE = 0, STATUS, DIE };
 	Kind kind = REMOTE;
 	bool onCurrent = false;
 	u8 dieMode = 0;
-	i32 index = 0;     // RemoteIndex / StatusIndex
-	f32 delay = 0;     // time after the previous command
+	i32 index = 0;
+	f32 delay = 0;
 };
 
 struct SummonInfo
 {
-	eastl::fixed_string<char,48,false> className;           // Kfm_ComData KeyName = ActionBase class
-	eastl::fixed_vector<SummonCommand,12,false> onSpawn;    // SPAWN_BEHAVIORSTATE
-	eastl::fixed_vector<SummonCommand,12,false> onDie;      // DIE_BEHAVIORSTATE
-	f32 lifeTime = 0;          // LifeTime_ComData
-	f32 moveSpeed = 0;         // EntityComData _MoveSpeed
-	f32 perception = 0;        // Ai_ComData _PerceptionLength
-	bool targetable = false;   // EntityComData _IsTargetable
-	eastl::fixed_vector<i32,4,false> skills; // SkillComData _SkillID
+	eastl::fixed_string<char,48,false> className;
+	eastl::fixed_vector<SummonCommand,12,false> onSpawn;
+	eastl::fixed_vector<SummonCommand,12,false> onDie;
+	f32 lifeTime = 0;
+	f32 moveSpeed = 0;
+	f32 perception = 0;
+	bool targetable = false;
+	eastl::fixed_vector<i32,4,false> skills;
 	enum Ai: u8 { AI_NONE = 0, AI_RELAY, AI_CHASE };
 	Ai ai = AI_NONE;
 	i32 variation = 0;
@@ -144,10 +141,10 @@ struct StatusMod
 {
 	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE, ATTACK, MOVESPEED, REFLECT_DAMAGE_RATIO, DEFENCE };
 	Stat stat = OTHER;
-	bool regen = false;  // STATPROC_REGEN: applied every tick (value_2 = tick count)
-	bool mul = false;    // STATAPPLY_MUL: percent
-	f32 value = 0;       // value_1
-	f32 count = 0;       // value_2
+	bool regen = false;
+	bool mul = false;
+	f32 value = 0;
+	f32 count = 0;
 };
 
 struct StatusInfo
@@ -164,7 +161,7 @@ struct StatusInfo
 	f32 distanceRatio = 0;
 	f32 timeRatio = 0;
 	f32 heightRatio = 0;
-	f32 lyingTime = 0;    // _LyingTime: time spent on the ground after an airborne/knockdown
+	f32 lyingTime = 0;
 	f32 dotDamage = 0;
 	f32 drainMultiplier = 0;
 	i32 skillIndex = 0;
@@ -179,33 +176,31 @@ struct StatusInfo
 	eastl::fixed_vector<StatusMod,6,false> mods;
 	bool modsFromTT = false;
 	enum class NextCondition: u8 { NONE = 0, ALL, TIMEOVER, REMOVE_ONHIT };
-	i32 nextStatus = 0;                 // _NextStatusIndex
-	// _INPUT_STATE_BLOCK
+	i32 nextStatus = 0;
 	bool blockAttack = false;
 	bool blockSkill = false;
 	bool blockShirk = false;
-	bool isDebuff = false;              // _EffectType STATUS_EFFECT_DEBUFF
-	bool canDispel = false;             // _CanDispel
-	i8 dispelEffect = -1;               // STATUS_TYPE_DISPEL _DispelEffectType: 0 buffs, 1 debuffs
+	bool isDebuff = false;
+	bool canDispel = false;
+	i8 dispelEffect = -1;
 	i32 auraStatus = 0;
 	eastl::fixed_vector<i32,8,false> auraStatuses;
 	bool auraAll = false;
 	i32 linkCasterStatus = 0;
 	i32 linkTargetStatus = 0;
-	f32 targetingRange = 0;             // _TargetingRange
+	f32 targetingRange = 0;
 	f32 explodeDamage = 0;
 	f32 additionalDamageByCaster = 0;
 	NextCondition nextCondition = NextCondition::NONE;
 	eastl::fixed_string<char,40,false> type;
 
-	// passives
-	bool permanent = false;             // _Passive without duration: stays until consumed (or chained)
-	i32 customInit = 0;                 // _InitCustomValue
-	i32 customMax = 0;                  // _MaxCustomValue: counter (skills used, weapon hits)
-	i32 hitEffectStatus = 0;            // _HITEFFECT _StatusDocIndex
-	f32 hitEffectValue = 0;             // _HITEFFECT _AddValue
-	f32 costRatioMP = 0;                // STATUS_TYPE_NOCOST _AddRatioCostMP (%)
-	eastl::fixed_vector<i32,8,false> costSkills; // STATUS_TYPE_NOCOST _SkillList
+	bool permanent = false;
+	i32 customInit = 0;
+	i32 customMax = 0;
+	i32 hitEffectStatus = 0;
+	f32 hitEffectValue = 0;
+	f32 costRatioMP = 0;
+	eastl::fixed_vector<i32,8,false> costSkills;
 	struct NamedValue { eastl::fixed_string<char,32,false> name; f64 value; };
 	eastl::fixed_vector<NamedValue,64,false> params;
 	f32 Param(const char* name, f32 fallback = 0) const
@@ -223,23 +218,22 @@ struct StatusInfo
 		for(const NamedValue& p : params) if(p.name == name && (i64)p.value == value) return true;
 		return false;
 	}
-	i32 stackStatus = 0;                // _ICEQUEEN _Index: stacking status put by the master's hits
-	i32 stackFullStatus = 0;            // _ICEQUEEN _FreezeStatusIndex: applied when the stack is full
-	i32 casterStatus = 0;               // _CasterStatusIndex: applied to the caster when this status is applied
+	i32 stackStatus = 0;
+	i32 stackFullStatus = 0;
+	i32 casterStatus = 0;
 	bool staminaBurn = false;
 	f32 descDefenceDown = 0;
 };
 
-// FIRING_METHOD RemoteFactoryComData: the remote a weapon shot creates
 struct WeaponFiring
 {
-	RemoteIdx base = RemoteIdx::INVALID;              // _Remote _RemoteIndex (first combo step, no charge)
-	eastl::fixed_vector<RemoteIdx,4,false> combo;     // _COMBO _Index: following firing combo steps
-	eastl::fixed_vector<RemoteIdx,4,false> charge;    // _CHARGINGREMOTE _Index: charge levels 1..n
-	i32 countRate = 0;                                // _FIRINGCOUNT _Rate: every Nth shot uses countRemote
+	RemoteIdx base = RemoteIdx::INVALID;
+	eastl::fixed_vector<RemoteIdx,4,false> combo;
+	eastl::fixed_vector<RemoteIdx,4,false> charge;
+	i32 countRate = 0;
 	RemoteIdx countRemote = RemoteIdx::INVALID;
-	i32 replaceStatus = 0;                            // _STATUS _OwnerStatusToCheck
-	RemoteIdx replaceRemote = RemoteIdx::INVALID;     // _RemoteIndexToReplace (the status is consumed)
+	i32 replaceStatus = 0;
+	RemoteIdx replaceRemote = RemoteIdx::INVALID;
 	f32 maxDistance = 0;
 	f32 minDistance = 0;
 	eastl::fixed_string<char,32,false> fireDummy;
@@ -317,19 +311,16 @@ struct Remote
 	f32 attackMultiplier = 0;
 	f32 offsetY = 0;
 	bool forceTargetDir = false;
-	f32 offsetZ = 0;     // RemoteComData2 _OffsetZ: height offset the client applies to the fire position
-	// close-range penalty: damage reduced by _DistPenaltyRate % when the target is within _PenaltyApplyDistance
-	// of the caster (guides: "-30% damage to enemies within 5 m", V-Merang ult "-40% until 8 m")
+	f32 offsetZ = 0;
 	f32 distPenaltyRate = 0;
 	f32 penaltyApplyDistance = 0;
 	f32 boundOffsetY = 0;
 	f32 angle = 0;
 	f32 hitInvalidTime = 1;
 	f32 fixedGraphLength = 0;
-	// RemoteGraphComData REMOTE_GRAPH_BEZIER_CURVE: two control points
 	bool bezier = false;
 	f32 bezierUp[2] = { 0, 0 };
-	f32 bezierRotate[2] = { 0, 0 };   // degrees around the forward axis (0 = up, 90 = sideways)
+	f32 bezierRotate[2] = { 0, 0 };
 	f32 bezierFront[2] = { 0, 0 };
 	bool memorizeTarget = false;
 
@@ -342,7 +333,6 @@ struct Remote
 	eastl::fixed_vector<AppliedStatus,4,false> statuses;
 	eastl::fixed_vector<AppliedStatus,4,false> friendlyStatuses;
 
-	// child remotes spawned by remote system events
 	enum SpawnKind: u8 {
 		SPAWN_SINGLE = 0,
 		SPAWN_RADIATE,
@@ -358,7 +348,7 @@ struct Remote
 		f32 maxAngle = 0;
 		f32 radius = 0;
 		f32 angleY = 0;
-		bool targetOwner = false; // _CreateRemote _TargetOwner: the child goes back to the caster
+		bool targetOwner = false;
 	};
 	typedef eastl::fixed_vector<SpawnRule,4,false> SpawnRules;
 	SpawnRules onDestroy;
@@ -377,22 +367,21 @@ struct Remote
 	f32 timeChangeSpeed = 0;
 	ActionStateID changeCasterAction = ActionStateID::INVALID;
 	f32 sight = 0;
-	f32 homingLength = 0;  // _Homing _ReactionLength: a homing remote without target acquires the nearest enemy in range
-	f32 homingAngle = 0;   // _Homing _ReactionAngle (cone around the travel direction)
+	f32 homingLength = 0;
+	f32 homingAngle = 0;
 	f32 homingTime = 0;
 	bool homingLockOn = false;
 	f32 angularVel = 0;
-	f32 criticalRate = 0; // extra crit chance % (RemoteComData2 _CriticalRate)
-	i32 onHitOwnerStatus = 0; // _OnHitOwnerStatusIndex: status applied to the caster when this remote hits
-	f32 activateDelay = 0;    // RemoteBoundComData2 _ActivateDelayTime: bound inactive for this long after spawn
+	f32 criticalRate = 0;
+	i32 onHitOwnerStatus = 0;
+	f32 activateDelay = 0;
 };
 
-// weapon overheat gauge (FIRING_METHOD.xml _GAUGE of the weapon's _DefaultFiringIndex)
 struct WeaponHeatInfo
 {
 	f32 maxGauge = 0;
 	f32 consumption = 0;
-	f32 autoRegen = 0;        // per autoRegenInterval (negative = cooling)
+	f32 autoRegen = 0;
 	f32 autoRegenInterval = 0.1f;
 	f32 autoRegenDelay = 0;
 	f32 overheatDuration = 0;
@@ -484,8 +473,8 @@ struct GameXmlContent
 			f32 delay;
 			f32 relativeEndTimeFromStart;
 			i32 animIndex = 0;
-			i32 animationId = 0; // AnimationId (AniLength _SeqID)
-			u16 nodeName = 0; // index in GameXmlContent::nodeNames, 0 = Scene Root
+			i32 animationId = 0;
+			u16 nodeName = 0;
 			u8 byDummyDir = 0;
 
 			union {
@@ -507,7 +496,7 @@ struct GameXmlContent
 					ActionCommand::TargetPreset targetPreset;
 					f32 offsetSide;
 					f32 offsetFront;
-					u8 stopAtTarget; // Param2 DestroyAwayTarget: ends at the aimed point instead of max range
+					u8 stopAtTarget;
 					u8 remove;
 					u8 removeAtAnimEnd;
 				} remote;
@@ -674,7 +663,6 @@ struct GameXmlContent
 	const eastl::fixed_vector<i32,4,false>* FindPassiveStatuses(ClassType c) const { auto f = passiveStatuses.find((i32)c); return f == passiveStatuses.end() ? nullptr : &f->second; }
 	const WeaponHeatInfo* FindWeaponHeat(i32 weaponID) const { auto f = weaponHeat.find(weaponID); return f == weaponHeat.end() ? nullptr : &f->second; }
 	f32 GetSkillBaseDamage(i32 skillID) const { auto f = skillBaseDamage.find(skillID); return f == skillBaseDamage.end() ? 0 : f->second; }
-	// index: 0 EP (energy), 1 RP (rage), 2 BB (charges), 3 HP
 	struct CostLevel {
 		f32 consume[3] = { 0, 0, 0 };
 		ActionStateID action = ActionStateID::INVALID;
@@ -682,7 +670,7 @@ struct GameXmlContent
 		eastl::fixed_vector<eastl::pair<i32,i32>,8,false> statusReplace;
 		f32 damageRatio = 1.0f;
 	};
-	eastl::hash_map<i32, eastl::fixed_vector<CostLevel,4,false>> skillCostLevels; // SKILL.xml _COST_PROPERTY/_PROPERTY_LEVEL
+	eastl::hash_map<i32, eastl::fixed_vector<CostLevel,4,false>> skillCostLevels;
 	const eastl::fixed_vector<CostLevel,4,false>* FindSkillCostLevels(i32 skillID) const { auto f = skillCostLevels.find(skillID); return f == skillCostLevels.end() ? nullptr : &f->second; }
 	f32 GetSkillConsume(i32 skillID, i32 index) const { auto f = skillConsumeRes.find(skillID); return f == skillConsumeRes.end() ? 0 : f->second[index]; }
 	eastl::hash_map<i32, i32> comboAutoCastMs;
@@ -718,7 +706,6 @@ struct GameXmlContent
 		}
 	};
 	const MoveCurve* GetMoveCurve(const char* className, i32 seqID) const { auto f = moveCurves.find(AniKey(className, seqID)); return f == moveCurves.end() ? nullptr : &f->second; }
-	// stand-up animation length of a master (AniLength LIE_END, entity key = class name without CLASS_TYPE_)
 	f32 GetLieEndTime(const char* className) const
 	{
 		const char* key = EA::StdC::Strncmp(className, "CLASS_TYPE_", 11) == 0 ? className + 11 : className;
@@ -778,40 +765,39 @@ private:
 	eastl::hash_map<i32, StatusInfo> statusMap;
 	eastl::hash_map<i32, i32> skillHitEventRemote;
 	eastl::hash_map<i32, WeaponHeatInfo> weaponHeat;
-	eastl::hash_map<i32, f32> weaponFireDelay; // weapon -> FIRING_METHOD _FIREINFO _FireDelayTime
-	eastl::hash_map<i32, WeaponFiring> weaponFiring; // weapon -> default firing method remotes
+	eastl::hash_map<i32, f32> weaponFireDelay;
+	eastl::hash_map<i32, WeaponFiring> weaponFiring;
 	eastl::hash_map<u32, WeaponFiring> weaponStanceFiring;
 	eastl::hash_map<u32, f32> weaponStanceFireDelay;
 	eastl::hash_map<i32, f32> weaponAttack;
 	eastl::hash_set<i32> repeatHitReduced;
 	eastl::hash_map<u32, i32> childSkill;
 	eastl::hash_set<u32> childOnExisting;
-	// bots (BotBrainData.xml _SkillIndexData per master, E_BOT_STAGE_LEVEL_NORMAL constants; SKILL.xml)
-	eastl::hash_map<i32, eastl::array<i32,5>> botSkills;  // master creature -> _Skill0.._Skill3, _UgSkill
-	eastl::hash_map<i32, f32> skillCoolTime;              // _CoolTime (s)
+	eastl::hash_map<i32, eastl::array<i32,5>> botSkills;
+	eastl::hash_map<i32, f32> skillCoolTime;
 	eastl::hash_map<i32, i32> firstComboSkill;
 	eastl::hash_map<i32, SkillStance> skillStance;
 	eastl::hash_map<i32, SkillCast> skillCast;
 	eastl::hash_map<i32, SkillToggle> skillToggle;
 	eastl::hash_map<i32, SkillInput> skillInput;
-	eastl::hash_map<i32, f32> botSkillMaxDistance;        // _Target _BotSkillMaxDistance
+	eastl::hash_map<i32, f32> botSkillMaxDistance;
 	eastl::hash_map<i32, f32> skillRangeX;
 	eastl::hash_map<i32, f32> skillTargetRangeX;
-	f32 botNormalSkillCoolTime = 0;                       // BOTLOGIC_STAGELEVEL_KEY_NORMALSKILL_COOLTIME
-	f32 botUgSkillCoolTime = 0;                           // BOTLOGIC_STAGELEVEL_KEY_UGSKILL_COOLTIME
-	f32 botAfterSkillDelay = 0;                           // BOTLOGIC_STAGELEVEL_KEY_AFTER_SKILL_DELAY
-	eastl::hash_map<i32, eastl::fixed_vector<i32,4,false>> passiveStatuses; // class -> SKILL_TYPE_PASSIVE _Status
-	eastl::hash_map<i32, f32> skillConsumeStamina; // SKILL.xml _ConsumeStamina (dodge)
-	eastl::hash_map<i32, f32> skillConsumeMP;      // SKILL.xml _ConsumeMP
-	eastl::hash_map<i32, eastl::array<f32,4>> skillConsumeRes; // SKILL.xml _ConsumeEP, _ConsumeRP, _ConsumeBB, _ConsumeHP
-	eastl::hash_map<i32, f32> skillBaseDamage;     // skilltt.xml base level TTATTR_REMOTE_DAMAGE
-	eastl::hash_map<i32, f32> skillConsumeUG;      // SKILL.xml _ConsumeUG
+	f32 botNormalSkillCoolTime = 0;
+	f32 botUgSkillCoolTime = 0;
+	f32 botAfterSkillDelay = 0;
+	eastl::hash_map<i32, eastl::fixed_vector<i32,4,false>> passiveStatuses;
+	eastl::hash_map<i32, f32> skillConsumeStamina;
+	eastl::hash_map<i32, f32> skillConsumeMP;
+	eastl::hash_map<i32, eastl::array<f32,4>> skillConsumeRes;
+	eastl::hash_map<i32, f32> skillBaseDamage;
+	eastl::hash_map<i32, f32> skillConsumeUG;
 	eastl::hash_map<i32, SummonInfo> summonMap;
-	eastl::hash_map<u64, f32> aniSeqTime; // AniLength.xml PC: (entity key hash, SeqID) -> length
+	eastl::hash_map<u64, f32> aniSeqTime;
 	eastl::hash_map<u64, MoveCurve> moveCurves;
-	eastl::hash_map<i32, f32> stageTimeLimit; // STAGELIST success condition TIME_COUNT (seconds)
-	eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,48,false>, f32>,128,true> lieEndTime; // AniLength.xml PC LIE_END per entity key
-	eastl::hash_map<i32, i32> creatureElement; // CREATURE_CHARACTER _ElementType: 0 none, 1 red, 2 green, 3 blue
+	eastl::hash_map<i32, f32> stageTimeLimit;
+	eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,48,false>, f32>,128,true> lieEndTime;
+	eastl::hash_map<i32, i32> creatureElement;
 	bool LoadStatusData();
 };
 

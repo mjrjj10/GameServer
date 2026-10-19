@@ -9,9 +9,9 @@ static const i32 STAT_MOVESPEED = 14;
 static const i32 STAT_MANA = 35;
 struct ResourceDef { i32 maxStat; i32 regenStat; bool startFull; };
 static const ResourceDef RESOURCES[3] = {
-	{ 17, 41, true },   // STAT_TYPE_ENERGY / ENERGYREGEN
-	{ 36, 40, false },  // STAT_TYPE_RAGE / RAGEREGEN (negative: decays), gained by hits
-	{ 56, 57, true },   // STAT_TYPE_BUBBLE / BUBBLEREGEN (charges)
+	{ 17, 41, true },
+	{ 36, 40, false },
+	{ 56, 57, true },
 };
 static const i32 STAT_ULTIMATE = 37;
 static const f32 WEAPON_HIT_TOLERANCE = 50.0f;

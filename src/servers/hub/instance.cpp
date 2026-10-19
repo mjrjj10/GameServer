@@ -96,7 +96,6 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 	teamMasterPickCount[Team::RED].fill(0);
 	teamMasterPickCount[Team::BLUE].fill(0);
 
-	// every character with complete data (skills, skins, default weapons) is pickable
 	foreach_const(m, GetGameXmlContent().masters) {
 		if(m->skillIDs.empty() || m->skinIDs.empty() || m->defaultWeaponIDs.empty()) continue;
 		if(allowedMastersSet.size() >= 100) break;
@@ -375,7 +374,6 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 	// make bots pick random masters
 	foreach(u, userList) {
 		if(u->isBot && !Config().DevShowcase) {
-			// bots only use the original, fully supported characters
 			static const ClassType botMasters[] = {
 				ClassType::STRIKER, ClassType::ARTILLERY, ClassType::ASSASSIN, ClassType::ELECTRO,
 				ClassType::DEFENDER, ClassType::SNIPER, ClassType::LAUNCHER,
@@ -679,7 +677,6 @@ void RoomInstance::OnClientPacket(ClientHandle clientHd, const NetHeader& header
 		} break;
 
 		case Cl::CQ_RoomEquipSkill::NET_ID: {
-			// client sender 0x58f99a: u32 master local id, u32 skill, u32 slot (0/1)
 			User* user = FindUser(clientHd);
 			if(!user || packetSize < 12) break;
 			u32 v[3];
@@ -698,12 +695,11 @@ void RoomInstance::OnClientPacket(ClientHandle clientHd, const NetHeader& header
 				break;
 			}
 			auto& skills = user->masters[masterIndex].skills;
-			if(skills[slot ^ 1] == skill) skills[slot ^ 1] = skills[slot]; // already in the other slot: swap
+			if(skills[slot ^ 1] == skill) skills[slot ^ 1] = skills[slot];
 			skills[slot] = skill;
 			user->replicate.masterPick = true;
 			LOG("[Room] %ls equips skill %d in slot %d of master %d", user->name.data(), (i32)skill, slot, masterIndex);
 
-			// answers matching the request fields (characterID, result, skill, slot)
 			Sv::SA_SkillSelect ack;
 			ack.characterID = characterID;
 			ack.result = 0;
@@ -719,7 +715,6 @@ void RoomInstance::OnClientPacket(ClientHandle clientHd, const NetHeader& header
 		} break;
 
 		case Cl::CQ_RoomSwapSkill::NET_ID: {
-			// client sender 0x58fa11 writes 1 u32 (the master)
 			User* user = FindUser(clientHd);
 			if(!user) break;
 			u32 v = 0;

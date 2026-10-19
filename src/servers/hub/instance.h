@@ -30,9 +30,6 @@ struct HubInstance
 	void OnMatchmakerPacket(const NetHeader& header, const u8* packetData);
 };
 
-// accounts sent to a game server: when they come back to the hub ("return to bridge"),
-// the hub loads the lobby for them since the client won't ask for it
-// (by nickname: the hub gives a new account id on every connection)
 void MarkAccountSentToGame(const WideString& nickname);
 bool TakeAccountReturningFromGame(const WideString& nickname);
 

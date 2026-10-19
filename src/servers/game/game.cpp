@@ -178,15 +178,12 @@ void Game::Update(Time localTime_)
 		} break;
 
 		case Phase::Game: {
-			// end of game: stage success condition E_CONDITION_TYPE_TIME_COUNT
 			if(!gameEnded && tGameStarted != Time::ZERO) {
 				f32 limit = GetGameXmlContent().GetStageTimeLimit((i32)replication.stageIndex);
 				if(limit <= 0) limit = 300.0f;
 				if(Config().DevGameTimeSec > 0) limit = (f32)Config().DevGameTimeSec;
 				if(TimeDiffSec(TimeDiff(tGameStarted, localTime)) >= limit) EndGame();
 			}
-			// fallback if a player never clicks the result screen's return button: send everyone back to the lobby
-			// after a delay of our own (not from data)
 			if(gameEnded && !sentBackToLobby && TimeDiffSec(TimeDiff(tGameEnded, localTime)) >= 20.0) {
 				sentBackToLobby = true;
 				foreach_const(p, playerList) {

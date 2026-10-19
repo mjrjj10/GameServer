@@ -109,12 +109,12 @@ struct World
 		PhysicsDynamicBody* body = nullptr;
 
 		bool weaponFired = false;
-		u8 firingCombo = 0;       // CQ_WeaponState: current firing combo step / charge level
+		u8 firingCombo = 0;
 		u8 chargeLevel = 0;
 		i32 weaponState = 0;
 		u32 fuelDodgeCast = 0;
 		eastl::fixed_vector<u32,10,false> fuelDodgeTargets;
-		eastl::array<i32,2> shotCount = { 0, 0 }; // weapon shots per master (_FIRINGCOUNT)
+		eastl::array<i32,2> shotCount = { 0, 0 };
 		bool passivesApplied = false;
 		i32 damageTaken = 0;
 		i32 hitsTaken = 0;
@@ -143,19 +143,19 @@ struct World
 		ActorUID pendingChildTarget = ActorUID::INVALID;
 		eastl::array<Time,5> botSkillReady = { Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO };
 		Time tNextBotSkill = Time::ZERO;
-		f32 ultGauge = -1.0f; // initialised to the master's max on first update
+		f32 ultGauge = -1.0f;
 		f32 stamina = -1.0f;
 		f32 mana = -1.0f;
 		Time tNextBotShot = Time::ZERO;
 		f32 moveSpeedSent = -1.0f;
 		Time tNextManaSend = Time::ZERO;
-		eastl::array<f32,3> res = { -1, -1, -1 };      // energy, rage, charges (bubble)
-		f32 benchMana = -1.0f;                          // tagged-out master's own pools (swapped on tag)
+		eastl::array<f32,3> res = { -1, -1, -1 };
+		f32 benchMana = -1.0f;
 		eastl::array<f32,3> benchRes = { -1, -1, -1 };
 		eastl::array<f32,3> resSent = { -1, -1, -1 };
 		Time tNextResSend = Time::ZERO;
-		Time tNextResRefresh = Time::ZERO; // periodic resend: early sends are dropped until the client is in game
-		eastl::array<f32,2> heat = { 0, 0 };        // weapon overheat gauge per master
+		Time tNextResRefresh = Time::ZERO;
+		eastl::array<f32,2> heat = { 0, 0 };
 		eastl::array<Time,2> heatLastShot = { Time::ZERO, Time::ZERO };
 		eastl::array<Time,2> overheatUntil = { Time::ZERO, Time::ZERO };
 		i32 heatSent = -1;
@@ -317,7 +317,7 @@ struct World
 		i32 seed = 0;
 		i32 entityType = 1;
 		ActorUID ownerUID = ActorUID::INVALID;
-		Time despawnAt = Time::ZERO;   // summons: end of LifeTime
+		Time despawnAt = Time::ZERO;
 		u32 ownerIndex = 0;
 		u8 ai = 0;
 		ActorUID chaseTarget = ActorUID::INVALID;
@@ -488,10 +488,10 @@ struct World
 		i32 excludeIndex = -1;
 		i32 lastHitIndex = -1;
 		bool chainEnded = false;
-		bool casterLocal = false; // the caster's client creates this remote (and its children) itself
-		f32 landZ = 0;            // lobbed remotes: height of the aimed point
+		bool casterLocal = false;
+		f32 landZ = 0;
 		vec3 graphStart = vec3(0);
-		bool stopAtFirstHit = false; // DestroyAwayTarget: ends on the first enemy hit (or at the aimed point)
+		bool stopAtFirstHit = false;
 		vec2 graphDir = vec2(1, 0);
 		bool hasLandZ = false;
 		bool centeredBox = false;
@@ -532,8 +532,8 @@ struct World
 		Time nextAuraPulse = Time::ZERO;
 		Time appliedAt = Time::ZERO;
 		f32 absorbed = 0;
-		bool removeOnHit = false; // marked when its target got hit (E_NEXT_STATUS_CONDITION_REMOVE_ONHIT)
-		i32 custom = 0;           // passive counter (_InitCustomValue .. _MaxCustomValue)
+		bool removeOnHit = false;
+		i32 custom = 0;
 		i32 damageAtStart = 0;
 	};
 	eastl::fixed_vector<ActiveStatus,512,false> activeStatuses;
@@ -561,24 +561,22 @@ struct World
 	};
 	eastl::fixed_vector<PendingSummon,64,false> pendingSummons;
 
-	// commands run by a summon (spawn / die actions), attributed to its owner
 	struct PendingSummonCommand
 	{
 		Time time;
 		u32 ownerIndex;
-		i32 kind;      // SummonCommand::Kind
+		i32 kind;
 		i32 index;
 		vec3 pos;
 		f32 yaw;
-		i32 skill;     // the summon's own skill (SkillComData), gives remote damage
+		i32 skill;
 		ActorUID target = ActorUID::INVALID;
 		ActorUID source = ActorUID::INVALID;
 		vec3 aim = vec3(0);
-		Time until;    // summon end (auras stop with it)
+		Time until;
 	};
 	eastl::fixed_vector<PendingSummonCommand,128,false> pendingSummonCommands;
 
-	// auras carried by a summon: give the aura status around a fixed point
 	struct GroundAura
 	{
 		u32 ownerIndex;
@@ -638,7 +636,7 @@ struct World
 	vec3 statusForceCenter = vec3(0);
 	const GameXmlContent::CostLevel* castCostLevel = nullptr;
 	bool reflecting = false;
-	bool frozen = false; // game over: no more shots, skills or bot actions
+	bool frozen = false;
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActorByCreatureID(CreatureIndex docID); // Warning: slow!

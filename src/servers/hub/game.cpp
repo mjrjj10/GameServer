@@ -241,7 +241,6 @@ void HubGame::OnPlayerChatWhisper(ClientHandle clientHd, const wchar* destNick, 
 	replication.SendChatWhisperToClient(playerMap[destClientID]->clientHd, playerAccountData[userID]->nickname.data(), msg);
 }
 
-// last leader character per nickname (the client doesn't send it again when coming back from a game)
 struct LastLeader { WideString nickname; LocalActorID characterID; SkinIndex skin; };
 static eastl::fixed_vector<LastLeader,64,true> g_lastLeader;
 
@@ -253,7 +252,7 @@ void HubGame::OnPlayerEnterCity(ClientHandle clientHd)
 		OnCreateParty(clientHd, EntrySystemID::ARENA_3v3, StageType::PVP_GAME);
 	}
 	if(playerActorUID[userID] != ActorUID::INVALID || !playerAccountData[userID]) return;
-	LocalActorID characterID = LocalActorID((u32)LocalActorID::FIRST_SELF_MASTER + 35); // Lua
+	LocalActorID characterID = LocalActorID((u32)LocalActorID::FIRST_SELF_MASTER + 35);
 	SkinIndex skin = SkinIndex::DEFAULT;
 	foreach_const(it, g_lastLeader) {
 		if(it->nickname == playerAccountData[userID]->nickname) { characterID = it->characterID; skin = it->skin; }

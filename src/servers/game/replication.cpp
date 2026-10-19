@@ -820,14 +820,12 @@ void Replication::SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, Skil
 
 void Replication::SendDoConnectChannel(ClientHandle clientHd, const wchar* nickname, const i32 hubIP[4], u16 hubPort)
 {
-	// client handler 0xa0dccf: errcode 0 resets its game state and goes back to the city
 	Sv::SA_ReturnToCity ret;
 	ret.errcode = 0;
 	SendPacket(clientHd, ret);
 
-	// same redirection the login server uses to send the client to the hub (channel) server
 	PacketWriter<Sv::SN_DoConnectChannelServer,256> packet;
-	packet.Write<u16>(1); // addresses count
+	packet.Write<u16>(1);
 	const u8 ip[4] = { (u8)hubIP[0], (u8)hubIP[1], (u8)hubIP[2], (u8)hubIP[3] };
 	packet.Write<u8[4]>(ip);
 	packet.Write<u16>(hubPort);
@@ -835,19 +833,17 @@ void Replication::SendDoConnectChannel(ClientHandle clientHd, const wchar* nickn
 	packet.Write<u16>(10);
 	packet.WriteRaw(serverName, 10 * sizeof(wchar));
 	packet.WriteStringObj(nickname, (i32)EA::StdC::Strlen(nickname));
-	packet.Write<i32>(536); // instantKey
-	packet.Write<i32>(1);   // reasonCode
+	packet.Write<i32>(536);
+	packet.Write<i32>(1);
 	LOG("[client%x] Replication :: SendDoConnectChannel (return to bridge)", clientHd);
 	SendPacket(clientHd, packet);
 }
 
 void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore, i32 blueScore, u32 playTimeMs)
 {
-	// client enums: PVP_RESULT 1 WIN / 2 LOSE / 3 DRAW, TeamType RED / BLUE
 	const u32 redResult = redScore > blueScore ? 1 : (redScore < blueScore ? 2 : 3);
 	const u32 blueResult = redScore < blueScore ? 1 : (redScore > blueScore ? 2 : 3);
 
-	// SN_PvpResultScoreDeathmatch
 	PacketWriter<Sv::SN_PvpResultScoreDeathmatch,4096> score;
 	score.Write<u16>(2);
 	score.Write<TeamType>(TeamType::RED);
@@ -860,7 +856,7 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 		score.Write<u32>((u32)p.userID);
 		score.WriteStringObj(p.name, (i32)EA::StdC::Strlen(p.name));
 		score.Write<TeamType>(p.team == 0 ? TeamType::RED : TeamType::BLUE);
-		score.Write<u8>(0); // disconnected
+		score.Write<u8>(0);
 		score.Write<u32>((u32)p.kills);
 		score.Write<u16>(2);
 		for(int m = 0; m < 2; m++) {
@@ -878,51 +874,47 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 	for(i32 i = 0; i < count; i++) {
 		const ClientHandle clientHd = players[i].clientHd;
 		if(clientHd == ClientHandle::INVALID) continue;
-		// SN_PvpResult first: the result window opens on the score packet and reads the result right away
 		PacketWriter<Sv::SN_PvpResult,512> res;
-		res.Write<u32>(0); // gameEndReason
+		res.Write<u32>(0);
 		res.Write<u32>(playTimeMs);
 		res.Write<u16>(2);
 		res.Write<TeamType>(TeamType::RED);
 		res.Write<u32>(redResult);
 		res.Write<TeamType>(TeamType::BLUE);
 		res.Write<u32>(blueResult);
-		res.Write<u32>((u32)players[i].userID); // m_playerID
-		res.Write<u32>(0); // baseRon
-		res.Write<u16>(0); // bonusRon
-		res.Write<u32>(0); // baseExp
-		res.Write<u16>(0); // bonusExp
-		res.Write<u16>(0); // rewardItems
-		for(int z = 0; z < 15; z++) res.Write<u8>(0); // guild reward
-		for(int z = 0; z < 12; z++) res.Write<u8>(0); // pc cafe item
-		res.Write<u8>(0); // tierGameResult
-		res.Write<u8>(0); // tierTypeResult
-		res.Write<u16>(0); // curTierPoint
-		res.Write<u16>(0); // deltaTierPoint
-		res.Write<u16>(0); // deltaGuildRp
-		res.Write<u16>(0); // pcCafeUserIds
+		res.Write<u32>((u32)players[i].userID);
+		res.Write<u32>(0);
+		res.Write<u16>(0);
+		res.Write<u32>(0);
+		res.Write<u16>(0);
+		res.Write<u16>(0);
+		for(int z = 0; z < 15; z++) res.Write<u8>(0);
+		for(int z = 0; z < 12; z++) res.Write<u8>(0);
+		res.Write<u8>(0);
+		res.Write<u8>(0);
+		res.Write<u16>(0);
+		res.Write<u16>(0);
+		res.Write<u16>(0);
+		res.Write<u16>(0);
 		SendPacket(clientHd, res);
 		SendPacket(clientHd, score);
 	}
-	// reward stage with no reward slot: the result screen moves on (client: slotCount 0 skips the card pick)
 	for(i32 i = 0; i < count; i++) {
 		const ClientHandle clientHd = players[i].clientHd;
 		if(clientHd == ClientHandle::INVALID) continue;
 		PacketWriter<Sv::SN_RewardStageStart,64> start;
-		start.Write<u32>(0); // timeToWaitSec
-		start.Write<u8>(0);  // nextAction
-		start.Write<u32>(0); // nextActionCost
-		start.Write<u8>(0);  // slotCount
-		start.Write<u32>(0); // slotRewardPenaltyReason
+		start.Write<u32>(0);
+		start.Write<u8>(0);
+		start.Write<u32>(0);
+		start.Write<u8>(0);
+		start.Write<u32>(0);
 		SendPacket(clientHd, start);
 		PacketWriter<Sv::SN_RewardStageEnd,64> end;
-		end.Write<u16>(0); // rewardItemList
-		end.Write<u16>(0); // otherSelectList
-		end.Write<u32>(0); // spSlotIndex
+		end.Write<u16>(0);
+		end.Write<u16>(0);
+		end.Write<u32>(0);
 		SendPacket(clientHd, end);
 
-		// client RE: SA_RestartPvpEntryLeave (errcode 0) calls SHOW_PVP_RESULT_BUTTON(1), enabling the
-		// result screen's return button (it starts disabled; its click sends the return to the city)
 		Sv::SA_RestartPvpEntryLeave leave;
 		leave.errcode = 0;
 		SendPacket(clientHd, leave);
@@ -946,8 +938,6 @@ void Replication::SendGaugeToAll(UserID userID, u8 updateType, bool overheated, 
 	}
 }
 
-// SN_ScoreUpdate (client RE): teamType -1 = records of player usn, otherwise records of that team.
-// Record types (client enum): 0 SCORE, 1 KILL_COUNT, 3 PLAYER_KILL_COUNT, 14 DEAD_COUNT
 void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKills, UserID victimID, i32 victimDeaths)
 {
 	enum : u32 { SCORE = 0, KILL_COUNT = 1, PLAYER_KILL_COUNT = 3, DEAD_COUNT = 14 };
@@ -1166,7 +1156,7 @@ void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx d
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
-		if(clientHd == exclude) continue; // the caster's client already shows its own skill remotes
+		if(clientHd == exclude) continue;
 
 		const LocalActorID ownerLocal = GetLocalActorID(clientHd, ownerUID);
 		if(ownerLocal == LocalActorID::INVALID) continue;
