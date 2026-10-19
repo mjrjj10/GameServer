@@ -1281,6 +1281,14 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	proj.hitsLeft = remote ? MAX(remote->activateCount, 1) : 1;
 	proj.forwardReach = (remote && remote->boundType == Remote::BoundType::E_BOUND_BOX) ? MAX(remote->offsetY + remote->boundSize[1] * 0.5f, 0.0f) : 0.0f;
 	proj.aoeRadius = bomb ? bomb->boundSize[0] * 0.5f : 0;
+	if(remote && remote->behaviorType == Remote::BehaviorType::HOMING && remote->angularVel > 0) {
+		proj.angularVel = remote->angularVel;
+		proj.homingLength = remote->homingLength;
+		proj.homingHalfCos = (remote->homingAngle > 0 && remote->homingAngle < 360) ? cosf(remote->homingAngle * 0.5f * PI / 180.0f) : -1.0f;
+		proj.homingTime = remote->homingTime;
+		proj.homingTimer = remote->homingTime;
+		proj.homingLockOn = remote->homingLockOn;
+	}
 
 	proj.remoteDoc = remote ? remote->ID : RemoteIdx::INVALID;
 	proj.pendingAdvance = player.shotLeadSec * proj.speed;
@@ -1330,10 +1338,46 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage)
 	}
 }
 
+void World::SteerProjectile(Projectile& proj, f32 delta)
+{
+	const Player& owner = players[proj.ownerIndex];
+	const auto targetable = [&](const Player& p) { return p.team != owner.team && !p.dead && !p.untargetable; };
+	if(proj.homingTarget >= 0 && !targetable(players[proj.homingTarget])) proj.homingTarget = -1;
+	proj.homingTimer += delta;
+	if(proj.homingTimer >= proj.homingTime && !(proj.homingLockOn && proj.homingTarget >= 0)) {
+		proj.homingTimer = 0;
+		f32 bestDist = proj.homingLength;
+		i32 found = -1;
+		foreach_const(it, players) {
+			if(!targetable(*it)) continue;
+			const vec2 rel = vec2(it->body->GetWorldPos() - proj.pos);
+			const f32 d = glm::length(rel);
+			if(d > bestDist) continue;
+			if(d > 1.0f && glm::dot(rel / d, proj.dir) < proj.homingHalfCos) continue;
+			bestDist = d;
+			found = (i32)it->index;
+		}
+		if(found >= 0 && found != proj.homingTarget) LOG("Shot :: homing projectile locked %ls at %.0f", players[found].name.data(), bestDist);
+		proj.homingTarget = found;
+	}
+	if(proj.homingTarget < 0) return;
+	const vec2 rel = vec2(players[proj.homingTarget].body->GetWorldPos() - proj.pos);
+	if(glm::length(rel) < 1.0f) return;
+	f32 turn = atan2f(rel.y, rel.x) - atan2f(proj.dir.y, proj.dir.x);
+	while(turn > PI) turn -= 2 * PI;
+	while(turn < -PI) turn += 2 * PI;
+	const f32 maxTurn = proj.angularVel * delta;
+	turn = MAX(MIN(turn, maxTurn), -maxTurn);
+	const f32 c = cosf(turn);
+	const f32 sn = sinf(turn);
+	proj.dir = vec2(proj.dir.x * c - proj.dir.y * sn, proj.dir.x * sn + proj.dir.y * c);
+}
+
 void World::UpdateProjectiles(f32 delta)
 {
 	for(auto proj = projectileList.begin(); proj != projectileList.end(); ) {
 		Player& owner = players[proj->ownerIndex];
+		if(proj->angularVel > 0) SteerProjectile(*proj, delta);
 		f32 step = MIN(proj->speed * delta + proj->pendingAdvance, proj->range - proj->travelled);
 		proj->pendingAdvance = 0;
 		bool hitWall = false;

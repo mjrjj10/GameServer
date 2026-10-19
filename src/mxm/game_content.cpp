@@ -1741,11 +1741,15 @@ bool GameXmlContent::LoadRemoteData()
 				if(XMLElement* pHoming = pComp->FirstChildElement("_Homing")) {
 					pHoming->QueryFloatAttribute("_ReactionLength", &remote.homingLength);
 					pHoming->QueryFloatAttribute("_ReactionAngle", &remote.homingAngle);
+					pHoming->QueryFloatAttribute("_ReactionTime", &remote.homingTime);
+					pHoming->QueryBoolAttribute("_LockOn", &remote.homingLockOn);
 				}
 			}
 			else if((EA::StdC::Strcmp("_Homing", compName) == 0)) {
 				pComp->QueryFloatAttribute("_ReactionLength", &remote.homingLength);
 				pComp->QueryFloatAttribute("_ReactionAngle", &remote.homingAngle);
+				pComp->QueryFloatAttribute("_ReactionTime", &remote.homingTime);
+				pComp->QueryBoolAttribute("_LockOn", &remote.homingLockOn);
 			}
 
 			else if((EA::StdC::Strcmp("RemoteGraphComData", compName) == 0)) {
@@ -1768,6 +1772,7 @@ bool GameXmlContent::LoadRemoteData()
 				ELT_GET(pComp, f32, _MaxDistance, 0);
 				remote.maxSpeed = _MaxSpeed;
 				remote.maxDistance = _MaxDistance;
+				pComp->QueryFloatAttribute("_AngularVel", &remote.angularVel);
 			}
 
 			else if((EA::StdC::Strcmp("RemoteSystemComData", compName) == 0)) {

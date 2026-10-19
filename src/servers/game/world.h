@@ -424,6 +424,13 @@ struct World
 		bool graph;
 		bool ignoreWalls = true;
 		f32 wallZ = 0;
+		f32 angularVel = 0;
+		f32 homingLength = 0;
+		f32 homingHalfCos = -1.0f;
+		f32 homingTime = 0;
+		f32 homingTimer = 0;
+		bool homingLockOn = false;
+		i32 homingTarget = -1;
 		eastl::fixed_vector<u32,16,false> hitList;
 	};
 
@@ -715,6 +722,7 @@ private:
 
 	void PlayerWeaponFire(Player& player);
 	void UpdateProjectiles(f32 delta);
+	void SteerProjectile(Projectile& proj, f32 delta);
 	void Explode(Player& owner, const vec3& center, f32 radius, i32 damage);
 	void RespawnPlayer(Player& player);
 	bool ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle, i32 forceAnim = -1, ActionStateID forcedAction = ActionStateID::INVALID);

@@ -379,6 +379,9 @@ struct Remote
 	f32 sight = 0;
 	f32 homingLength = 0;  // _Homing _ReactionLength: a homing remote without target acquires the nearest enemy in range
 	f32 homingAngle = 0;   // _Homing _ReactionAngle (cone around the travel direction)
+	f32 homingTime = 0;
+	bool homingLockOn = false;
+	f32 angularVel = 0;
 	f32 criticalRate = 0; // extra crit chance % (RemoteComData2 _CriticalRate)
 	i32 onHitOwnerStatus = 0; // _OnHitOwnerStatusIndex: status applied to the caster when this remote hits
 	f32 activateDelay = 0;    // RemoteBoundComData2 _ActivateDelayTime: bound inactive for this long after spawn
