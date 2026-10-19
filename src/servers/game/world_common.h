@@ -2,7 +2,14 @@
 #include <common/base.h>
 #include <common/vector_math.h>
 #include <mxm/game_content.h>
+#include "world.h"
 
+static const f32 COMBAT_ATTACK_STAT = 0.0f;
+static const f32 WEAPON_RANGE_SCALE = 1.1f;
+static const f32 WEAPON_TARGET_RADIUS = 110.0f;
+static const f32 PROJECTILE_HIT_TOLERANCE = 20.0f;
+static const f32 WEAPON_PROJECTILE_HIT_HEIGHT = 300.0f;
+static const i32 SKILL_FALLBACK_DAMAGE = 250;
 static const i32 STAT_STAMINA = 2;
 static const i32 STAT_MOVESPEED = 14;
 static const i32 STAT_MANA = 35;
@@ -17,6 +24,89 @@ static const f32 WEAPON_HIT_TOLERANCE = 50.0f;
 static const f32 OBSTRUCT_JUMPABLE_HEIGHT = 120.0f;
 static const f32 OBSTRUCT_SIDE = 50.0f;
 static const i32 CLASS_NUM_SHUTTLE = 41;
+
+static inline f32 ClassAttackRange(ClassType classType)
+{
+	static const f32 ranges[] = {
+		0, 820, 1600, 450, 730, 480, 1100, 300, 600, 400,
+		1200, 900, 380, 1200, 400, 800, 800, 800, 1200, 1000,
+		1500, 800, 800, 550, 300, 300, 300, 1400, 1400, 400,
+		300, 480, 500, 1100, 450, 1100, 300, 300, 300, 1200,
+		950,
+	};
+	const i32 i = (i32)classType;
+	if(i > 0 && i < (i32)(sizeof(ranges)/sizeof(ranges[0]))) return ranges[i];
+	return 800;
+}
+
+static inline f32 SkillMoveDuration(const GameXmlContent& content, ClassType cls, const GameXmlContent::Action& action, i32 animIndex)
+{
+	f32 animLen = 0;
+	foreach_const(st, action.anims) {
+		if(st->index != animIndex) continue;
+		animLen = content.GetAniSeqTime(content.GetMaster(cls).className.c_str(), st->animationId) * (f32)MAX(st->loop, 1);
+		if(animLen > 0) break;
+	}
+	f32 attachedLife = 0;
+	foreach_const(cmd, action.commands) {
+		if(cmd->type != ActionCommand::Type::REMOTE || (cmd->animIndex != animIndex && cmd->animIndex != -1)) continue;
+		const Remote* r = content.FindRemote(cmd->remote.idx);
+		if(!r || !r->attachFireObject || r->lifeTime <= 0) continue;
+		const f32 life = (cmd->remote.removeAtAnimEnd && animLen > 0) ? MIN(r->lifeTime, animLen) : r->lifeTime;
+		attachedLife = MAX(attachedLife, life);
+	}
+	if(attachedLife > 0) return attachedLife;
+	if(animLen > 0) return animLen;
+	return action.seqLength;
+}
+
+static inline f32 SkillDamage(SkillID skillID)
+{
+	const auto& content = GetGameXmlContent();
+	auto found = content.skillMap.find(skillID);
+	if(found == content.skillMap.end()) return (f32)SKILL_FALLBACK_DAMAGE;
+	SkillNormalModel& skill = const_cast<SkillNormalModel&>(found->second);
+	SkillNormalLevelModel& level = *skill.getSkillNormalLevelByIndex(0);
+	const f32 ttBase = content.GetSkillBaseDamage((i32)skillID);
+	const f32 base = ttBase > 0 ? ttBase : level.getBaseDamage();
+	const f32 damage = base + COMBAT_ATTACK_STAT * level.getAttackMultiplier();
+	return damage > 0 ? damage : (f32)SKILL_FALLBACK_DAMAGE;
+}
+
+static inline const WeaponHeatInfo* ActiveWeaponHeat(const World::Player& player)
+{
+	const u32 m = player.mainCharaID & 1;
+	const WeaponIndex weapon = m == 0 ? player.mainWeapon : player.subWeapon;
+	return GetGameXmlContent().FindWeaponHeat((i32)weapon);
+}
+
+static inline f32 CurrentHeat(const World::Player& player, const WeaponHeatInfo& h, Time now)
+{
+	const u32 m = player.mainCharaID & 1;
+	if(player.overheatUntil[m] != Time::ZERO && now < player.overheatUntil[m]) return h.maxGauge;
+	const f32 idle = player.heatLastShot[m] == Time::ZERO ? 999.0f : (f32)TimeDiffSec(TimeDiff(player.heatLastShot[m], now));
+	if(idle <= h.autoRegenDelay || h.autoRegenInterval <= 0) return player.heat[m];
+	return MIN(MAX(player.heat[m] + h.autoRegen * (idle - h.autoRegenDelay) / h.autoRegenInterval, 0.0f), h.maxGauge);
+}
+
+static inline bool WeaponHeatShot(World::Player& player, Time now, Replication* replication)
+{
+	const WeaponHeatInfo* h = ActiveWeaponHeat(player);
+	if(!h) return true;
+	const u32 m = player.mainCharaID & 1;
+	if(player.overheatUntil[m] != Time::ZERO) return false;
+
+	player.heat[m] = CurrentHeat(player, *h, now) + h->consumption;
+	player.heatLastShot[m] = now;
+	if(player.heat[m] >= h->maxGauge) {
+		player.heat[m] = h->maxGauge;
+		player.overheatUntil[m] = TimeAdd(now, TimeMsToTime(h->overheatDuration * 1000.0));
+		replication->SendGaugeToAll(player.userID, 1, true, h->overheatDuration, (u16)h->maxGauge, (u16)h->maxGauge);
+		player.heatSent = (i32)h->maxGauge;
+		LOG("Overheat :: %ls locked %.1fs", player.name.data(), h->overheatDuration);
+	}
+	return true;
+}
 
 static inline f32 MasterStat(ClassType classType, i32 statType)
 {
