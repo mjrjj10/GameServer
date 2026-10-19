@@ -2,24 +2,27 @@ import os
 import re
 import sys
 
-ANILIST = r'D:\MxM\ClientEUdump\Graphic__Creature__AniList.xml'
-DATA = r'D:\MxM\ClientCN\cn\Data'
+ANILIST = r'D:\MxM\Client\Data\Graphic\Creature\AniList.xml'
+DUMP = r'D:\MxM\ClientEUdump'
+CLIENT = r'D:\MxM\Client\Data'
 OUT = r'D:\MxM\GameServer\gamedata\MoveGraph.xml'
 
 
 def find_file(rel):
-    path = os.path.join(DATA, rel.replace('/', os.sep))
-    if os.path.exists(path):
-        return path
-    folder = DATA
+    folder = CLIENT
     for part in rel.split('/'):
-        if not os.path.isdir(folder):
-            return None
-        match = [e for e in os.listdir(folder) if e.lower() == part.lower()]
+        match = [e for e in os.listdir(folder) if e.lower() == part.lower()] if os.path.isdir(folder) else []
         if not match:
-            return None
+            folder = None
+            break
         folder = os.path.join(folder, match[0])
-    return folder if os.path.isfile(folder) else None
+    if folder and os.path.isfile(folder):
+        return folder
+    want = rel.replace('/', '__').lower()
+    for name in os.listdir(DUMP):
+        if name.lower() == want:
+            return os.path.join(DUMP, name)
+    return None
 
 
 def curves(path):
