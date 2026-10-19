@@ -2,7 +2,6 @@
 #include <common/base.h>
 #include <common/vector_math.h>
 #include <mxm/game_content.h>
-#include <chrono>
 
 static const i32 STAT_STAMINA = 2;
 static const i32 STAT_MOVESPEED = 14;
@@ -18,7 +17,6 @@ static const f32 WEAPON_HIT_TOLERANCE = 50.0f;
 static const f32 OBSTRUCT_JUMPABLE_HEIGHT = 120.0f;
 static const f32 OBSTRUCT_SIDE = 50.0f;
 static const i32 CLASS_NUM_SHUTTLE = 41;
-static const i32 GX_DEATH_TEST_MODE = 4;
 
 static inline f32 MasterStat(ClassType classType, i32 statType)
 {
@@ -32,9 +30,4 @@ static inline f32 MasterStat(ClassType classType, i32 statType)
 static inline vec2 Perp(const vec2& v)
 {
 	return vec2(-v.y, v.x);
-}
-
-static inline i64 ShowcaseWallMs()
-{
-	return (i64)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }

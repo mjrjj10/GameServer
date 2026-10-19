@@ -777,10 +777,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	}
 	const auto& skill = skillFound->second;
 	const bool followUp = forcedAction != ActionStateID::INVALID;
-	if(Config().DevMirror && !followUp && player.clientHd != ClientHandle::INVALID && player.index == showcase.prevCaster && !showcase.castSeen) {
-		showcase.castSeen = true;
-		showcase.castAt = localTime;
-	}
+	if(!followUp) ShowcaseOnCast(player);
 	if(!followUp && content.FindSkillToggle((i32)skillID)) {
 		if(player.toggleSkill == skillID) {
 			ToggleOff(player);
@@ -1072,10 +1069,7 @@ void World::PlayerWeaponFire(Player& player)
 	const vec2 dir = vec2(cosf(player.weaponAimYaw), sinf(player.weaponAimYaw));
 	const vec3 origin = player.body->GetWorldPos();
 
-	if(Config().DevMirror && player.clientHd != ClientHandle::INVALID && player.index == showcase.prevCaster && !showcase.castSeen) {
-		showcase.castSeen = true;
-		showcase.castAt = localTime;
-	}
+	ShowcaseOnCast(player);
 	if(player.clientHd != ClientHandle::INVALID && player.casting.skillID != SkillID::INVALID && player.casting.type == GameXmlContent::SkillCast::LIMIT) {
 		ReleaseCast(player);
 		return;
@@ -1122,10 +1116,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		ReleaseCast(player);
 		return;
 	}
-	if(Config().DevMirror && player.clientHd != ClientHandle::INVALID && player.index == showcase.prevCaster && !showcase.castSeen) {
-		showcase.castSeen = true;
-		showcase.castAt = localTime;
-	}
+	ShowcaseOnCast(player);
 	const i8 shotStance = player.Main().stance;
 	StanceWeaponUse(player);
 	if(projectileList.full()) return;
@@ -1598,7 +1589,7 @@ void World::UpdateUltimateGauges(f32 delta)
 			if(it->res[r] < 0) it->res[r] = RESOURCES[r].startFull ? resMax : 0;
 			const f32 chargingFuel = r == 1 && (i32)cls == CLASS_NUM_SHUTTLE && it->weaponState == WEAPON_STATE_CHARGE ? TOOLTIP_SHUTTLE_CHARGING_FUEL_SEC : 0.0f;
 			it->res[r] = MIN(MAX(it->res[r] + (MasterStat(cls, RESOURCES[r].regenStat) + chargingFuel) * delta, 0.0f), resMax);
-			if(Config().DevMirror && Config().DevShowcaseFullRes && it->clientHd != ClientHandle::INVALID && it->index == showcase.prevCaster && !showcase.castSeen) it->res[r] = resMax;
+			if(ShowcaseKeepsFullRes(*it)) it->res[r] = resMax;
 			if(fabsf(it->res[r] - it->resSent[r]) >= 0.01f) resChanged = true;
 		}
 		if(localTime >= it->tNextResRefresh) {
@@ -1815,7 +1806,7 @@ const World::ActiveStatus* World::FindPassiveOfType(const Player& p, const char*
 bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* duration)
 {
 	if(info.kind != StatusInfo::Kind::HARD_CC && info.kind != StatusInfo::Kind::ROOT) return false;
-	if(Config().DevShowcase && target.index == showcase.prevDummy) return false;
+	if(ShowcaseIsDummy(target)) return false;
 	if(localTime < target.ccImmuneUntil) {
 		LOG("Passive :: %ls immune to status %d", target.name.data(), info.ID);
 		return true;
@@ -1853,7 +1844,7 @@ bool World::PassiveOnLethal(Player& target)
 void World::PassiveOnDamaged(Player& target)
 {
 	if(target.dead) return;
-	if(Config().DevShowcase && target.index == showcase.prevDummy) return;
+	if(ShowcaseIsDummy(target)) return;
 	const ActiveStatus* st = FindPassiveOfType(target, "STATUS_TYPE_HPTRIGGER");
 	if(!st) return;
 	const ActorMaster& chara = target.Main();
@@ -2280,8 +2271,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
 	f32 duration = durationOverride > 0 ? durationOverride : (info && info->durationSec > 0 ? info->durationSec : 1.0f);
 	if(info && caster.team != target.team && PassiveBlocksCC(target, *info, &duration)) return;
-	if(Config().DevShowcase && target.index == showcase.prevDummy && caster.team != target.team && !showcase.statusesSeen.full() &&
-	   eastl::find(showcase.statusesSeen.begin(), showcase.statusesSeen.end(), statusID) == showcase.statusesSeen.end()) showcase.statusesSeen.push_back(statusID);
+	ShowcaseOnStatus(caster, target, statusID);
 	const bool permanent = info && info->permanent && durationOverride <= 0;
 	if(permanent) duration = 1000000.0f;
 	const f32 sentDuration = permanent ? -1.0f : duration;
@@ -3429,7 +3419,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 
 	remoteInsts.push_back(inst);
 
-	LOG("Remote :: spawn %d at (%.0f, %.0f) dir=(%.2f, %.2f) speed=%.0f range=%.0f wall=%lld", (i32)idx, pos.x, pos.y, dir.x, dir.y, inst.speed, inst.range, ShowcaseWallMs());
+	LOG("Remote :: spawn %d at (%.0f, %.0f) dir=(%.2f, %.2f) speed=%.0f range=%.0f", (i32)idx, pos.x, pos.y, dir.x, dir.y, inst.speed, inst.range);
 	return &remoteInsts.back();
 }
 
@@ -4315,14 +4305,11 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	if(damage <= 0) return;
 
 	ActorMaster& chara = target.Main();
-	if(Config().DevShowcase && target.index == showcase.prevDummy && showcase.firstHitMs < 0) {
-		showcase.firstHitMs = (i64)(TimeDiffSec(TimeDiff(showcase.castAt, localTime)) * 1000.0);
-		showcase.firstHitDamage = damage;
-	}
+	ShowcaseOnDamage(target, damage);
 	target.damageTaken += damage;
 	target.hitsTaken++;
-	const bool showcaseDummy = Config().DevShowcase && (target.clientHd == ClientHandle::INVALID || Config().DevMirror) && Config().DevGxTest != GX_DEATH_TEST_MODE;
-	chara.hp = MAX(chara.hp - damage, (showcaseDummy || HasStatusType(target, "STATUS_TYPE_NEARLY_IMMORTAL") || HasStatusType(target, "STATUS_TYPE_UNDEAD")) ? 1 : 0);
+	chara.hp = MAX(chara.hp - damage, (HasStatusType(target, "STATUS_TYPE_NEARLY_IMMORTAL") || HasStatusType(target, "STATUS_TYPE_UNDEAD")) ? 1 : 0);
+	if(ShowcaseKeepsAlive(target)) chara.hp = MAX(chara.hp, 1);
 	if(chara.hp == 0) PassiveOnLethal(target);
 	if(!reflecting && attacker.team != target.team && attacker.index != target.index && (proj || skillID != SkillID::INVALID)) {
 		const f32 ratio = StatusModSum(target, StatusMod::REFLECT_DAMAGE_RATIO);

@@ -2,7 +2,9 @@
 #include "world.h"
 #include "world_common.h"
 #include <mxm/game_content.h>
+#include <chrono>
 
+static const i32 GX_DEATH_TEST_MODE = 4;
 static const f32 SHOWCASE_MIN_MEASURE_SEC = 2.5f;
 static const f32 SHOWCASE_QUIET_SEC = 0.5f;
 static const f32 MIRROR_POS_TOLERANCE = 60.0f;
@@ -140,6 +142,11 @@ static bool SkillReachUnknown(const GameXmlContent& content, ClassType cls, Skil
 		if((cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) && RemoteShapeUnknown(content, cmd->remote.idx, 0)) return true;
 	}
 	return false;
+}
+
+static i64 ShowcaseWallMs()
+{
+	return (i64)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 void World::UpdateShowcase()
@@ -1127,4 +1134,39 @@ void World::UpdateGxTest(Player& human, Player& gx)
 			showcase.done = true;
 		} break;
 	}
+}
+
+void World::ShowcaseOnCast(const Player& player)
+{
+	if(!Config().DevMirror || player.clientHd == ClientHandle::INVALID || player.index != showcase.prevCaster || showcase.castSeen) return;
+	showcase.castSeen = true;
+	showcase.castAt = localTime;
+}
+
+bool World::ShowcaseKeepsFullRes(const Player& player) const
+{
+	return Config().DevMirror && Config().DevShowcaseFullRes && player.clientHd != ClientHandle::INVALID && player.index == showcase.prevCaster && !showcase.castSeen;
+}
+
+bool World::ShowcaseIsDummy(const Player& target) const
+{
+	return Config().DevShowcase && target.index == showcase.prevDummy;
+}
+
+void World::ShowcaseOnStatus(const Player& caster, const Player& target, i32 statusID)
+{
+	if(!ShowcaseIsDummy(target) || caster.team == target.team || showcase.statusesSeen.full()) return;
+	if(eastl::find(showcase.statusesSeen.begin(), showcase.statusesSeen.end(), statusID) == showcase.statusesSeen.end()) showcase.statusesSeen.push_back(statusID);
+}
+
+void World::ShowcaseOnDamage(const Player& target, i32 damage)
+{
+	if(!ShowcaseIsDummy(target) || showcase.firstHitMs >= 0) return;
+	showcase.firstHitMs = (i64)(TimeDiffSec(TimeDiff(showcase.castAt, localTime)) * 1000.0);
+	showcase.firstHitDamage = damage;
+}
+
+bool World::ShowcaseKeepsAlive(const Player& target) const
+{
+	return Config().DevShowcase && (target.clientHd == ClientHandle::INVALID || Config().DevMirror) && Config().DevGxTest != GX_DEATH_TEST_MODE;
 }

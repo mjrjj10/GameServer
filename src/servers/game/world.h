@@ -616,6 +616,12 @@ struct World
 	void UpdateBotSkills();
 	void UpdateSummonAi(f32 delta);
 	void UpdateShowcase();
+	void ShowcaseOnCast(const Player& player);
+	bool ShowcaseKeepsFullRes(const Player& player) const;
+	bool ShowcaseIsDummy(const Player& target) const;
+	void ShowcaseOnStatus(const Player& caster, const Player& target, i32 statusID);
+	void ShowcaseOnDamage(const Player& target, i32 damage);
+	bool ShowcaseKeepsAlive(const Player& target) const;
 	bool applyingCasterStatus = false;
 	void TeleportPlayer(Player& p, const vec3& pos, f32 yaw);
 	void MovePlayer(Player& p, const vec3& pos, f32 yaw, bool snap);
