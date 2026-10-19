@@ -610,6 +610,7 @@ struct World
 	void GxPreviewPlace(Player& human, f32 enemyDist);
 	void GxPreviewPrompt(Player& human, const char* key, i32 click, i32 holdMs, i32 count, const vec3& target);
 	void UpdateGxPreview(Player& human);
+	void UpdateGxEmpTest(Player& human);
 	struct Showcase
 	{
 		bool started = false;

@@ -167,6 +167,11 @@ static const f32 GX_TEST_RECALL_DIST = 1500.0f;
 static const f32 GX_TEST_ENEMY_VIEW_DIST = 350.0f;
 static const f32 GX_TEST_BASE_MOVESPEED = 620.0f;
 static const i32 GX_PREVIEW_MODE = 2;
+static const i32 GX_EMP_TEST_MODE = 3;
+static const i32 GX_DEATH_TEST_MODE = 4;
+static const i32 GX_TEST_PASSENGER_HIT = 500;
+static const f32 GX_TEST_EMP_DIST = 200.0f;
+static const i32 GX_TEST_EMP_SKILL = 180410020;
 static const i32 FIRST_PORTED_CLASS = CLASS_NUM_SHUTTLE;
 static const f32 GX_PREVIEW_ENEMY_DIST = 450.0f;
 static const f32 GX_PREVIEW_CLOSE_DIST = 220.0f;
@@ -3114,6 +3119,10 @@ void World::UpdateShowcase()
 		return;
 	}
 
+	if(Config().DevGxTest == GX_EMP_TEST_MODE) {
+		UpdateGxEmpTest(*human);
+		return;
+	}
 	if(Config().DevGxTest == GX_PREVIEW_MODE) {
 		UpdateGxPreview(*human);
 		return;
@@ -4405,6 +4414,42 @@ void World::UpdateGxPreview(Player& human)
 	}
 }
 
+void World::UpdateGxEmpTest(Player& human)
+{
+	Player* gx = nullptr;
+	foreach(it, players) if(!gx && it->team != human.team && (i32)it->Main().classType == CLASS_NUM_SHUTTLE) gx = &*it;
+	if(!gx) {
+		LOG("GxTest :: no enemy GX-09");
+		LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
+		showcase.done = true;
+		return;
+	}
+	const vec2 side = vec2(-showcase.dir.y, showcase.dir.x);
+	switch(showcase.gxPhase) {
+		case 0: {
+			MovePlayer(human, showcase.anchor, 0, true);
+			TeleportPlayer(*gx, showcase.anchor + vec3(side * GX_TEST_EMP_DIST, 0), atan2f(-side.y, -side.x));
+			showcase.gxPhase = 1;
+			showcase.next = TimeAdd(localTime, TimeMsToTime(3000));
+		} break;
+		case 1: {
+			LOG("GxTest :: emp before human class=%d mana=%.0f energy=%.0f", (i32)human.Main().classType, human.mana, human.res[0]);
+			PlayerCastSkill(*gx, SkillID(GX_TEST_EMP_SKILL), gx->body->GetWorldPos(), Slice<const ActorUID>(), 0);
+			showcase.gxPhase = 2;
+			showcase.next = TimeAdd(localTime, TimeMsToTime(1500));
+		} break;
+		case 2: {
+			LOG("GxTest :: emp after human mana=%.0f energy=%.0f", human.mana, human.res[0]);
+			showcase.gxPhase = 3;
+			showcase.next = TimeAdd(localTime, TimeMsToTime(2000));
+		} break;
+		default: {
+			LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
+			showcase.done = true;
+		} break;
+	}
+}
+
 void World::GxTestDrive(Player& gx, const vec2& dir)
 {
 	const f32 yaw = atan2f(dir.y, dir.x);
@@ -4420,6 +4465,12 @@ void World::UpdateGxTest(Player& human, Player& gx)
 	const vec2 dir = showcase.dir;
 	const vec2 side = vec2(-dir.y, dir.x);
 	const ActiveStatus* passive = FindPassiveOfType(gx, "STATUS_TYPE_GX09");
+	if(!passive && showcase.gxPhase == 40) {
+		LOG("GxTest :: after gx death human boarded=%d untargetable=%d", human.boardedOn >= 0 ? 1 : 0, human.untargetable ? 1 : 0);
+		LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
+		showcase.done = true;
+		return;
+	}
 	if(!passive) {
 		LOG("GxTest :: GX-09 passive missing");
 		showcase.done = true;
@@ -4450,7 +4501,24 @@ void World::UpdateGxTest(Player& human, Player& gx)
 			GxTestDrive(gx, dir);
 			LOG("GxTest :: drive gx=(%.0f, %.0f) human=(%.0f, %.0f) boarded=%d speed=%.0f", gx.body->GetWorldPos().x, gx.body->GetWorldPos().y, human.body->GetWorldPos().x, human.body->GetWorldPos().y, human.boardedOn >= 0 ? 1 : 0, gx.input.speed);
 			if(++showcase.gxStep >= GX_TEST_DRIVE_STEPS) showcase.gxPhase = 3;
+			if(Config().DevGxTest == GX_DEATH_TEST_MODE && showcase.gxStep == GX_TEST_DRIVE_STEPS / 2) {
+				foreach(it, players) {
+					if(it->team == gx.team || it->dead) continue;
+					const i32 hpBefore = human.Main().hp;
+					DamagePlayer(*it, human, SkillID::INVALID, GX_TEST_PASSENGER_HIT, nullptr, 0, RemoteIdx::INVALID, vec2(0));
+					LOG("GxTest :: passenger hit hp %d -> %d", hpBefore, human.Main().hp);
+					DamagePlayer(*it, gx, SkillID::INVALID, gx.Main().hpMax * 2, nullptr, 0, RemoteIdx::INVALID, vec2(0));
+					break;
+				}
+				LOG("GxTest :: gx killed mid ride dead=%d", gx.dead ? 1 : 0);
+				showcase.gxPhase = 40;
+			}
 			showcase.next = TimeAdd(localTime, TimeMsToTime(500));
+		} break;
+		case 40: {
+			LOG("GxTest :: after gx death human boarded=%d untargetable=%d dist=%.0f", human.boardedOn >= 0 ? 1 : 0, human.untargetable ? 1 : 0, glm::length(vec2(human.body->GetWorldPos()) - vec2(gx.body->GetWorldPos())));
+			LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
+			showcase.done = true;
 		} break;
 		case 3: {
 			if(gx.Main().stance != 0) {
@@ -5248,7 +5316,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	}
 	target.damageTaken += damage;
 	target.hitsTaken++;
-	const bool showcaseDummy = Config().DevShowcase && (target.clientHd == ClientHandle::INVALID || Config().DevMirror);
+	const bool showcaseDummy = Config().DevShowcase && (target.clientHd == ClientHandle::INVALID || Config().DevMirror) && Config().DevGxTest != GX_DEATH_TEST_MODE;
 	chara.hp = MAX(chara.hp - damage, (showcaseDummy || HasStatusType(target, "STATUS_TYPE_NEARLY_IMMORTAL") || HasStatusType(target, "STATUS_TYPE_UNDEAD")) ? 1 : 0);
 	if(chara.hp == 0) PassiveOnLethal(target);
 	if(!reflecting && attacker.team != target.team && attacker.index != target.index && (proj || skillID != SkillID::INVALID)) {
