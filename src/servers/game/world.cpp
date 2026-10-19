@@ -4361,8 +4361,8 @@ void World::UpdateGxPreview(Player& human)
 		case 14: GxPreviewPrompt(human, "rmb", 1, 0, 1, enemies + vec3(dir * 300.0f, 0)); clip("dodge", 15, 3500); break;
 		case 15: GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST); clip("reset", 16, 2000); break;
 		case 16: GxPreviewPrompt(human, "q", 1, 0, 1, enemies); clip("skill1", 17, 5000); break;
-		case 17: GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST); clip("reset", 18, 2000); break;
-		case 18: GxPreviewPrompt(human, "e", 1, 0, 1, enemies); clip("skill2", 99, 5000); break;
+		case 17: GxPreviewPlace(human, GX_PREVIEW_CLOSE_DIST); clip("reset", 18, 2000); break;
+		case 18: GxPreviewPrompt(human, "e", 1, 0, 1, base + vec3(dir * GX_PREVIEW_CLOSE_DIST, 0)); clip("skill2", 99, 5000); break;
 		case 20: GxPreviewPlace(human, GX_PREVIEW_CLOSE_DIST); clip("reset", 21, 1500); break;
 		case 21: GxPreviewPrompt(human, "q", 0, 0, 1, base); clip("skill3", 22, 4500); break;
 		case 22: {
@@ -4808,6 +4808,16 @@ void World::UpdateRemotes(f32 delta)
 			else if(glm::length(vec2(pr->castPos)) > 1.0f) pos = vec3(vec2(pr->castPos), owner.body->GetWorldPos().z);
 		}
 
+		const bool portedZone = remote && (i32)owner.Main().classType >= FIRST_PORTED_CLASS && remote->boundType == Remote::BoundType::E_BOUND_BOX &&
+			remote->maxSpeed <= 0 && remote->lifeTime > remote->hitInvalidTime;
+		if(portedZone) {
+			const f32 length = (f32)remote->boundSize[1];
+			foreach_const(ri, remoteInsts) {
+				if(ri->castID != pr->castID || !ri->remote || ri->remote->ID != pr->idx || ri->killNow) continue;
+				const f32 ahead = glm::dot(vec2(pos) - vec2(ri->pos), dir);
+				if(ahead >= 0 && ahead < length) pos = vec3(vec2(ri->pos) + dir * length, pos.z);
+			}
+		}
 		if(!owner.dead) {
 			// presets whose T/F flags start with T (SELF_TFF, MEMORIZED_TFT, ...) are created by the caster's own client
 			bool casterLocal = false;

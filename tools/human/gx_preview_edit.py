@@ -17,10 +17,10 @@ SEGMENTS = [
     ('take0', 'lmbhold', -2.4, 4.0, 'CHARGED ATTACK', 'Recovers 20 Fuel - 5 Fuel per second while charging'),
     ('take0', 'rmb', -0.8, 2.8, 'SUDDEN ACCELERATION', 'Dash 8 m with Super Armor - 22 Fuel per enemy in the path'),
     ('take0', 'q', -1.0, 5.0, 'SKILL 1 - DISRUPTION ROUTE', 'Distorted trail: enemies slowed and pulled to its center'),
-    ('take0', 'e', -1.0, 4.5, 'SKILL 2 - B-EMP', 'Drains 30% of the MP and EP of enemy masters'),
+    ('take0', 'e', -1.0, 4.5, 'SKILL 2 - B-EMP', 'Drains 30% of the MP and EP of enemy masters within 4 m'),
     ('take1', 'q', -0.8, 3.5, 'SKILL 3 - SHOCKWAVE', 'Knocks enemies back to the edge of the wave'),
-    ('take1', 'e', -0.8, 5.5, 'SKILL 4 - MASTER TRANSPORT', 'For 3 s allies board GX-09 with the interaction key'),
-    ('take1', 'drive', -3.0, 5.0, 'MASTER TRANSPORT', 'The passenger rides hidden and is dropped when the transport ends'),
+    ('take1', 'e', -0.8, 5.5, 'SKILL 4 - MASTER TRANSPORT', 'Allies board with the interaction key for 3 s - half speed while transforming'),
+    ('take1', 'drive', -3.0, 5.0, 'MASTER TRANSPORT', '+40% move speed after 2 s - the passenger is dropped when the 10 s end'),
     ('take1', 'r', -1.0, 6.0, 'ULTIMATE - TELEPORTER', 'Recalls the allies near the teleporter to GX-09 after 3 s'),
 ]
 
