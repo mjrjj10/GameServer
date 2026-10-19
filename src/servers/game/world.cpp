@@ -2321,8 +2321,9 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		target.tNextStaminaSend = Time::ZERO;
 	}
 
+	const bool dragForce = info && info->type == "STATUS_TYPE_DRAGGEDBYFORCE";
 	const bool displacement = info && (info->type == "STATUS_TYPE_PUSH" || info->type == "STATUS_TYPE_FORCEBACK" ||
-		info->type == "STATUS_TYPE_KNOCKDOWN" || info->type == "STATUS_TYPE_AIRBORNE" || info->type == "STATUS_TYPE_FLY" || info->type == "STATUS_TYPE_DRAGGED");
+		info->type == "STATUS_TYPE_KNOCKDOWN" || info->type == "STATUS_TYPE_AIRBORNE" || info->type == "STATUS_TYPE_FLY" || info->type == "STATUS_TYPE_DRAGGED" || dragForce);
 	if(displacement && HasStatusType(target, "STATUS_TYPE_SUPERARMOR")) {
 		LOG("Status :: %ls resisted %d (superarmor)", target.name.data(), statusID);
 		return;
@@ -2400,6 +2401,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	const bool chainedPush = target.clientHd == ClientHandle::INVALID ? localTime < target.pushUntil : localTime < target.clientPushUntil;
 	const vec3 from = chainedPush ? vec3(vec2(target.pushTarget), target.body->GetWorldPos().z) : target.body->GetWorldPos();
 	vec3 to = from;
+	vec3 forceCenter = from;
 	const f32 graphDuration = duration * (info && info->timeRatio > 0 ? info->timeRatio : 1.0f);
 	const bool flyMove = info && info->type == "STATUS_TYPE_FLY" && info->distanceRatio != 0;
 	if(info && displacement && info->type != "STATUS_TYPE_AIRBORNE" && (info->type != "STATUS_TYPE_FLY" || flyMove)) {
@@ -2407,7 +2409,15 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		const f32 len = glm::length(dir);
 		dir = len > 1.0f ? dir / len : vec2(cosf(caster.input.rot.upperYaw), sinf(caster.input.rot.upperYaw));
 		if(info->type == "STATUS_TYPE_FLY" && statusFromBehind) dir = -dir;
-		if(info->type == "STATUS_TYPE_DRAGGED" && &caster == &target) {
+		if(dragForce) {
+			forceCenter = statusForceCenterSet ? statusForceCenter : caster.body->GetWorldPos();
+			const vec2 rel = vec2(forceCenter) - vec2(from);
+			const f32 centerDist = glm::length(rel);
+			const f32 travel = (info->dragForceMin + info->dragForceMax) * 0.5f * duration;
+			dir = centerDist > 0.001f ? rel / centerDist : vec2(0);
+			to = from + vec3(dir * (travel > centerDist ? centerDist : travel), 0);
+		}
+		else if(info->type == "STATUS_TYPE_DRAGGED" && &caster == &target) {
 			const bool hooked = caster.lastHitTargetIndex >= 0 && caster.lastHitTargetIndex != (i32)caster.index && TimeDiffSec(TimeDiff(caster.lastHitAt, localTime)) <= SELF_DRAG_LINK_SEC;
 			if(hooked) {
 				const Player& hookedPlayer = players[caster.lastHitTargetIndex];
@@ -2479,7 +2489,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			LOG("Hide :: sent HideDetect flag=%d about %ls to %ls", Config().DevHideDetectFlag, target.name.data(), viewer->name.data());
 		}
 	}
-	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, to, graphDuration);
+	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, dragForce ? forceCenter : to, graphDuration);
 }
 
 bool World::IsBlocked(const Player& p, bool attack, bool skill, bool shirk) const
@@ -4753,6 +4763,8 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 
 	inst.lastHitIndex = (i32)target.index;
 	statusFromBehind = remote.offsetY < 0;
+	statusForceCenter = inst.pos;
+	statusForceCenterSet = true;
 	if(enemy && remote.onHitOwnerStatus != 0 && !owner.dead) ApplyStatus(owner, owner, remote.onHitOwnerStatus);
 	if(!target.dead) {
 		const bool friendGroup = remote.damageGroup == Remote::DamageGroup::eFRIEND;
@@ -4795,6 +4807,7 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 		}
 	}
 	statusFromBehind = false;
+	statusForceCenterSet = false;
 }
 
 void World::RemoteHitAlongPath(RemoteInst& inst)

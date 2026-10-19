@@ -678,6 +678,8 @@ struct World
 	void ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos);
 	ActorUID statusCasterOverride = ActorUID::INVALID;
 	bool statusFromBehind = false;
+	bool statusForceCenterSet = false;
+	vec3 statusForceCenter = vec3(0);
 	const GameXmlContent::CostLevel* castCostLevel = nullptr;
 	bool reflecting = false;
 	bool frozen = false; // game over: no more shots, skills or bot actions

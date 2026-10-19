@@ -172,6 +172,8 @@ struct StatusInfo
 	f32 distance = 0;
 	f32 paramRatio = 0;
 	f32 dragOffset = 0;
+	f32 dragForceMin = 0;
+	f32 dragForceMax = 0;
 	i32 maxOverlap = 1;
 	Kind kind = Kind::OTHER;
 	eastl::fixed_vector<StatusMod,6,false> mods;

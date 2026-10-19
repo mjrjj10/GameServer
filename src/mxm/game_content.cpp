@@ -2094,6 +2094,8 @@ bool GameXmlContent::LoadStatusData()
 		pCommon->QueryFloatAttribute("_Distance", &st.distance);
 		pCommon->QueryFloatAttribute("_ParamRatio", &st.paramRatio);
 		pCommon->QueryFloatAttribute("_OffsetDraggedDistanceFromTarget", &st.dragOffset);
+		pCommon->QueryFloatAttribute("_DraggedByForceMin", &st.dragForceMin);
+		pCommon->QueryFloatAttribute("_DraggedByForceMax", &st.dragForceMax);
 		pCommon->QueryAttribute("_MaxOverlapCount", &st.maxOverlap);
 		pCommon->QueryAttribute("_NextStatusIndex", &st.nextStatus);
 		pCommon->QueryFloatAttribute("_TargetingRange", &st.targetingRange);
