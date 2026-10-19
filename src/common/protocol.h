@@ -2407,10 +2407,10 @@ PUSH_PACKED
 struct CQ_GamePlayerSyncPhy
 {
 	enum { NET_ID = 60195 };
-	u32 unkId1;
-	u32 unkId2;
-	u32 unkId3;
-	float3 currPos;
+	u32 ParentEntity; // 4 bytes
+	u32 OwnerEntity; // 4 bytes
+	u32 RemoteSeedID; // 4 bytes
+	float3 FirePosition; // 12 bytes (ST_POS3: fX, fY, fZ)
 	u16 unkShort1;
 	u16 unkShort2;
 	u16 unkShort3;

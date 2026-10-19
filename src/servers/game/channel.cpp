@@ -373,7 +373,7 @@ void GamePacketHandler::HandlePacket_CQ_GamePlayerSyncPhy(ClientHandle clientHd,
 	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_GamePlayerSyncPhy>(packetData, packetSize));
 
 	const Cl::CQ_GamePlayerSyncPhy& phy = *(const Cl::CQ_GamePlayerSyncPhy*)packetData;
-	const vec3 origin = f2v(phy.currPos);
+	const vec3 origin = f2v(phy.FirePosition);
 	const vec3 aimOffset = vec3((f32)phy.aimOffsetX, (f32)phy.aimOffsetY, (f32)phy.aimOffsetZ) / SHOT_AIM_SCALE;
 	const u16 nameLen = phy.charNameLen;
 	const wchar* name = phy.charName;

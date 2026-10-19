@@ -122,38 +122,9 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		}
 	}
 
-	if(player.pendingShotRawSize > 44) {
-		const u8* raw = player.pendingShotRaw.data();
-		const i32 nameLen = *(const u16*)(raw + 42);
-		for(i32 off = 44 + nameLen * 2; off + 4 <= player.pendingShotRawSize; off++) {
-			const u32 v = *(const u32*)(raw + off);
-			if(v < 1430000000 || v >= 1440000000) continue;
-			const Remote* fired = content.FindRemote(RemoteIdx(v));
-			if(!fired) continue;
-			if(!remote || fired->ID != remote->ID) LOG("Shot :: %ls client weapon remote %u (offset %d)", player.name.data(), v, off);
-			remote = fired;
-			break;
-		}
-		static i32 dumpCount = 0;
-		if(dumpCount < 6) {
-			dumpCount++;
-			char hex[600] = {};
-			i32 n = 0;
-			for(i32 i = 44 + nameLen * 2; i < player.pendingShotRawSize && n < 590; i++) { static const char* H = "0123456789abcdef"; hex[n++] = H[raw[i] >> 4]; hex[n++] = H[raw[i] & 15]; }
-			LOG("Shot :: fire packet tail (%d bytes, name %d) %s", player.pendingShotRawSize, nameLen, hex);
-		}
-	}
 	const Remote* bomb = remote ? content.FindRemote(remote->destroyCreateRemote) : nullptr;
 	if(spawnAtAim && remote) {
 		f32 reach = MAX(MIN(distance > 1.0f ? distance : ClassAttackRange(classType) * WEAPON_RANGE_SCALE, aimMax), aimMin);
-		if(player.pendingShotRawSize > 0) {
-			static i32 aimDumps = 0;
-			if(aimDumps++ < 12) {
-				eastl::fixed_string<char,700,true> hex;
-				for(i32 k = 0; k < player.pendingShotRawSize && k < 300; k++) hex.append_sprintf("%02x", player.pendingShotRaw[k]);
-				LOG("Shot :: %ls aim-spawn packet origin=(%.0f, %.0f, %.0f) dist=%.0f raw=%s", player.name.data(), origin.x, origin.y, origin.z, distance, hex.c_str());
-			}
-		}
 		const vec3 aimPos = vec3(vec2(origin) + dir * reach, player.body->GetWorldPos().z);
 		replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(dir.y, dir.x)));
 		const bool bot = player.clientHd == ClientHandle::INVALID;
@@ -201,8 +172,8 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 
 	proj.remoteDoc = remote ? remote->ID : RemoteIdx::INVALID;
 	proj.pendingAdvance = player.shotLeadSec * proj.speed;
-	if(player.pendingShotRawSize >= 12) {
-		proj.remoteID = *(const u32*)(player.pendingShotRaw.data() + 8) + 1;
+	if(player.pendingShotRawSize >= (i32)offsetof(Cl::CQ_GamePlayerSyncPhy, FirePosition)) {
+		proj.remoteID = ((const Cl::CQ_GamePlayerSyncPhy*)player.pendingShotRaw.data())->RemoteSeedID + 1;
 	}
 	replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(proj.dir.y, proj.dir.x)));
 

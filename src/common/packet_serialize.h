@@ -2772,10 +2772,10 @@ inline const char* PacketSerialize<Cl::CQ_GamePlayerSyncPhy>(const void* packetD
 	SER_BEGIN();
 	ConstBuffer buff(packetData, packetSize);
 	SER("CQ_GamePlayerSyncPhy(%d, %d) :: {", Cl::CQ_GamePlayerSyncPhy::NET_ID, packetSize);
-	SER("	unkId1=0x%08x", buff.Read<u32>());
-	SER("	unkId2=0x%08x", buff.Read<u32>());
-	SER("	unkId3=0x%08x", buff.Read<u32>());
-	SER("	currPos=%s", PS::ToStr(buff.Read<float3>()));
+	SER("	ParentEntity=0x%08x", buff.Read<u32>());
+	SER("	OwnerEntity=0x%08x", buff.Read<u32>());
+	SER("	RemoteSeedID=0x%08x", buff.Read<u32>());
+	SER("	FirePosition=%s", PS::ToStr(buff.Read<float3>()));
 	for(int i = 0; i < 6; i++) buff.Read<u16>();
 	const i16 aimX = buff.Read<i16>();
 	const i16 aimY = buff.Read<i16>();
