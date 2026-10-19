@@ -4,11 +4,15 @@ import sys
 import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import drive
+import mirror_agent as ma
+import math
 
 PROMPT = re.compile(r'Preview :: prompt key=(\S+) click=(\d) hold=(\d+) count=(\d+) aim=\(([-\d.]+), ([-\d.]+)\)')
 HUMAN_SCREEN = (960, 575)
 WORLD_TO_SCREEN_H = ((0.432787797, -0.368195785, 3.85857082), (-0.255139072, -0.265550233, -12.8246199), (-0.000100763313, -0.0000256688599, 1.0))
 ENTITY_CLICK_RAISE = 40
+ENEMY_BODY_RAISE = 60
+ENEMY = re.compile(r'enemy=1')
 DRIVE_KEYS = ('w', 'd', 's', 'a')
 
 
@@ -30,11 +34,28 @@ def tap(k):
     drive.key(k, True)
 
 
-def act(m, out):
+def enemy_point(ax, ay, f, out, key):
+    tgt = ma.find_enemy(ma.grab())
+    if not tgt:
+        out.write('enemy not found on screen' + chr(10))
+        return world_to_screen(ax, ay)
+    x, y = tgt[0], tgt[1] - ENEMY_BODY_RAISE
+    if key in ('lmb', 'lmbhold'):
+        drive.move(x, y)
+        time.sleep(0.15)
+        x, y = ma.aim_loop(f, out, x, y, math.atan2(ay, ax))
+    return x, y
+
+
+def act(m, out, f):
     key, click, hold, count = m.group(1), m.group(2) == '1', int(m.group(3)), int(m.group(4))
-    x, y = world_to_screen(float(m.group(5)), float(m.group(6)))
-    if key == 'r':
-        y -= ENTITY_CLICK_RAISE
+    ax, ay = float(m.group(5)), float(m.group(6))
+    if ENEMY.search(m.string):
+        x, y = enemy_point(ax, ay, f, out, key)
+    else:
+        x, y = world_to_screen(ax, ay)
+        if key == 'r':
+            y -= ENTITY_CLICK_RAISE
     drive.move(x, y)
     time.sleep(0.25)
     if key == 'lmb':
@@ -79,7 +100,7 @@ def main():
         if m:
             drive.focus(pid)
             time.sleep(0.2)
-            act(m, out)
+            act(m, out, f)
         if 'Showcase :: done' in line:
             break
     out.write('preview agent end\n')

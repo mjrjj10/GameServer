@@ -758,14 +758,14 @@
     <StringData DATAKEY="STR_SKILL_NAME_180430002" DocId="100000043" data="Spider Mine" />
     <StringData DATAKEY="STR_SKILL_DESC_180430002" DocId="100000043" data="Dashes 6m forward and marks the ground with a spider mine for 2.5 seconds." />
     <StringData DATAKEY="STR_SKILL_NAME_180430010" DocId="100000043" data="Anchor Throw" />
-    <StringData DATAKEY="STR_SKILL_DESC_180430010" DocId="100000043" data="Steps back 2.5m and hurls an anchor forward. It travels 15.75m and deals damage to every enemy within 4.7m of its path." />
+    <StringData DATAKEY="STR_SKILL_DESC_180430010" DocId="100000043" data="Steps back 2.5m and hurls an anchor forward. It travels 15.75m and deals damage to every enemy within 2.35m of its path." />
     <StringData DATAKEY="STR_SKILL_NAME_180430020" DocId="100000043" data="Back Grab" />
-    <StringData DATAKEY="STR_SKILL_DESC_180430020" DocId="100000043" data="Dashes through the targeted enemy (up to 8m) while evading attacks, then fires a burst in front, dealing damage to enemies within 7m and knocking them down." />
+    <StringData DATAKEY="STR_SKILL_DESC_180430020" DocId="100000043" data="Dashes through the targeted enemy (up to 8m) while evading attacks, then fires a burst in front, dealing damage to enemies within 3.5m and knocking them down." />
     <StringData DATAKEY="STR_SKILL_NAME_180430030" DocId="100000043" data="Leap Barrage" />
-    <StringData DATAKEY="STR_SKILL_DESC_180430030" DocId="100000043" data="Leaps in place while evading attacks and sprays bullets in a half circle in front, dealing damage to enemies within 14m up to 4 times. Applies Armor-Piercing Rounds." />
+    <StringData DATAKEY="STR_SKILL_DESC_180430030" DocId="100000043" data="Leaps in place while evading attacks and sprays bullets in a half circle in front, dealing damage to enemies within 7m up to 4 times. Applies Armor-Piercing Rounds." />
     <StringData DATAKEY="STR_SKILL_NAME_180430040" DocId="100000043" data="Heavy Snipe" />
-    <StringData DATAKEY="STR_SKILL_DESC_180430040" DocId="100000043" data="Locks onto an enemy within 15m. After 3 seconds an explosion deals damage to enemies within 6m of them, reduced beyond 3m from the center." />
+    <StringData DATAKEY="STR_SKILL_DESC_180430040" DocId="100000043" data="Locks onto an enemy within 15m. After 3 seconds an explosion deals damage to enemies within 3m of them." />
     <StringData DATAKEY="STR_SKILL_NAME_180430050" DocId="100000043" data="Heavy Barrage" />
-    <StringData DATAKEY="STR_SKILL_DESC_180430050" DocId="100000043" data="Plants in place with Super Armor and fires in every direction, dealing damage to enemies within 14m every 0.4 seconds and pushing them out. Applies Armor-Piercing Rounds." />
+    <StringData DATAKEY="STR_SKILL_DESC_180430050" DocId="100000043" data="Plants in place with Super Armor and fires in every direction, dealing damage to enemies within 7m every 0.4 seconds and pushing them out. Applies Armor-Piercing Rounds." />
   </StringTableData>
 </ENTITY_FILE>

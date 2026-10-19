@@ -191,6 +191,11 @@ struct World
 		vec3 pushTarget = vec3(0);
 		f32 pushSpeed = 0;
 		Time pushUntil = Time::ZERO;
+		vec2 dragCenter = vec2(0);
+		f32 dragMin = 0;
+		f32 dragMax = 0;
+		f32 dragDuration = 0;
+		f32 dragElapsed = 0;
 		Time fearNextTurn = Time::ZERO;
 		Time dashUntil = Time::ZERO;
 		vec2 dashDir = vec2(1, 0);
@@ -608,7 +613,7 @@ struct World
 	void MovePlayer(Player& p, const vec3& pos, f32 yaw, bool snap);
 	void GxTestDrive(Player& gx, const vec2& dir);
 	void GxPreviewPlace(Player& human, f32 enemyDist);
-	void GxPreviewPrompt(Player& human, const char* key, i32 click, i32 holdMs, i32 count, const vec3& target);
+	void GxPreviewPrompt(Player& human, const char* key, i32 click, i32 holdMs, i32 count, const vec3& target, i32 enemy = 0);
 	void UpdateGxPreview(Player& human);
 	void UpdateGatlingPreview(Player& human);
 	void UpdateGxEmpTest(Player& human);

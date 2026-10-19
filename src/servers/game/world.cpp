@@ -273,6 +273,25 @@ void World::Update(Time localTime_)
 			p.input.moveTo = body.GetWorldPos();
 		}
 
+		if(!p.dead && p.clientHd == ClientHandle::INVALID && p.dragElapsed < p.dragDuration) {
+			const f32 dt = MIN((f32)tdelta, p.dragDuration - p.dragElapsed);
+			const f32 accel = (p.dragMax - p.dragMin) / p.dragDuration;
+			const f32 t0 = p.dragElapsed;
+			const f32 t1 = t0 + dt;
+			const f32 step = (t1 * t1 - t0 * t0) * accel * 0.5f + p.dragMin * dt;
+			const vec2 rel = p.dragCenter - vec2(body.GetWorldPos());
+			const f32 dist = glm::length(rel);
+			p.dragElapsed = t1;
+			if(dist > 0.001f) {
+				if(dist * dist < step * step) {
+					physics.Move(&body, vec3(rel, 0), (f32)tdelta);
+					p.dragElapsed = p.dragDuration;
+				}
+				else physics.Move(&body, vec3(rel / dist * step, 0), (f32)tdelta);
+			}
+			p.input.moveTo = body.GetWorldPos();
+		}
+
 		if(!p.dead && p.clientHd == ClientHandle::INVALID && localTime < p.ccUntil) {
 			const ActiveStatus* fear = nullptr;
 			foreach_const(st, activeStatuses) {
@@ -2442,7 +2461,16 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			to = from + vec3(dir * dist, 0);
 		}
 		LOG("Push :: %ls -> %ls status=%d sep=%.0f dir=(%.2f, %.2f) to=(%.0f, %.0f)", caster.name.data(), target.name.data(), statusID, len, dir.x, dir.y, to.x, to.y);
-		if(target.clientHd == ClientHandle::INVALID && graphDuration > 0 && &caster == &target) {
+		if(dragForce && target.clientHd == ClientHandle::INVALID) {
+			target.dragCenter = vec2(forceCenter);
+			target.dragMin = info->dragForceMin;
+			target.dragMax = info->dragForceMax;
+			target.dragDuration = MAX(duration, 0.001f);
+			target.dragElapsed = 0;
+			const Time dragEnd = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
+			if(dragEnd > target.ccUntil) target.ccUntil = dragEnd;
+		}
+		else if(target.clientHd == ClientHandle::INVALID && graphDuration > 0 && &caster == &target) {
 			const vec2 rel = vec2(to - from);
 			const f32 rl = glm::length(rel);
 			if(rl > 1.0f) {
@@ -4350,10 +4378,10 @@ void World::GxPreviewPlace(Player& human, f32 enemyDist)
 	}
 }
 
-void World::GxPreviewPrompt(Player& human, const char* key, i32 click, i32 holdMs, i32 count, const vec3& target)
+void World::GxPreviewPrompt(Player& human, const char* key, i32 click, i32 holdMs, i32 count, const vec3& target, i32 enemy)
 {
 	const vec2 aim = vec2(target) - vec2(human.body->GetWorldPos());
-	LOG("Preview :: prompt key=%s click=%d hold=%d count=%d aim=(%.0f, %.0f) wall=%lld", key, click, holdMs, count, aim.x, aim.y, ShowcaseWallMs());
+	LOG("Preview :: prompt key=%s click=%d hold=%d count=%d aim=(%.0f, %.0f) wall=%lld enemy=%d", key, click, holdMs, count, aim.x, aim.y, ShowcaseWallMs(), enemy);
 }
 
 void World::UpdateGatlingPreview(Player& human)
@@ -4383,23 +4411,23 @@ void World::UpdateGatlingPreview(Player& human)
 			LOG("Preview :: start pass=%d skills=%d %d wall=%lld", second ? 1 : 0, (i32)human.skills[(i32)human.mainCharaID * 2], (i32)human.skills[(i32)human.mainCharaID * 2 + 1], ShowcaseWallMs());
 			clip("intro", second ? 20 : 10, 3000);
 		} break;
-		case 10: GxPreviewPrompt(human, "lmb", 1, 0, 8, target()); clip("weapon", 11, 5000); break;
+		case 10: GxPreviewPrompt(human, "lmb", 1, 0, 8, target(), 1); clip("weapon", 11, 5000); break;
 		case 11: GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST); clip("reset", 12, 1500); break;
 		case 12: GxPreviewPrompt(human, "rmb", 1, 0, 1, enemies); clip("dodge", 13, 3500); break;
 		case 13: GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST); clip("reset", 14, 1500); break;
-		case 14: GxPreviewPrompt(human, "q", 1, 0, 1, target()); clip("skill1", 15, 5000); break;
+		case 14: GxPreviewPrompt(human, "q", 1, 0, 1, target(), 1); clip("skill1", 15, 5000); break;
 		case 15: GxPreviewPlace(human, GX_PREVIEW_CLOSE_DIST); clip("reset", 16, 2000); break;
-		case 16: GxPreviewPrompt(human, "e", 1, 0, 1, target()); clip("skill2", 17, 5000); break;
+		case 16: GxPreviewPrompt(human, "e", 1, 0, 1, target(), 1); clip("skill2", 17, 5000); break;
 		case 17: {
 			GxPreviewPlace(human, GATLING_PREVIEW_NEAR_DIST);
 			human.ultGauge = MasterStat(human.Main().classType, STAT_ULTIMATE);
 			clip("reset", 18, 2500);
 		} break;
-		case 18: GxPreviewPrompt(human, "r", 1, 0, 1, target()); clip("ultimate", 99, 7000); break;
+		case 18: GxPreviewPrompt(human, "r", 1, 0, 1, target(), 1); clip("ultimate", 99, 7000); break;
 		case 20: GxPreviewPlace(human, GATLING_PREVIEW_NEAR_DIST); clip("reset", 21, 1500); break;
-		case 21: GxPreviewPrompt(human, "q", 1, 0, 1, target()); clip("skill3", 22, 5500); break;
+		case 21: GxPreviewPrompt(human, "q", 1, 0, 1, target(), 1); clip("skill3", 22, 5500); break;
 		case 22: GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST); clip("reset", 23, 2000); break;
-		case 23: GxPreviewPrompt(human, "e", 1, 0, 1, target()); clip("skill4", 99, 5500); break;
+		case 23: GxPreviewPrompt(human, "e", 1, 0, 1, target(), 1); clip("skill4", 99, 5500); break;
 		default: {
 			LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
 			showcase.done = true;
