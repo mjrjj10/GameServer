@@ -3033,6 +3033,43 @@ static f32 SkillDamageRadius(const GameXmlContent& content, ClassType cls, Skill
 	return anyRemote ? radius : -1.0f;
 }
 
+static f32 SkillDashDistance(const GameXmlContent& content, ClassType cls, SkillID skillID)
+{
+	auto f = content.skillMap.find(skillID);
+	if(f == content.skillMap.end()) return 0;
+	const auto& action = content.GetSkillAction(cls, f->second.action);
+	f32 dash = 0;
+	foreach_const(cmd, action.commands) {
+		if(cmd->type == ActionCommand::Type::MOVE && (cmd->move.preset == ActionCommand::MovePreset::TARGET_POS || cmd->move.preset == ActionCommand::MovePreset::TARGET_POS_LEAP)) return 0;
+		if(cmd->type == ActionCommand::Type::GRAPH_MOVE_HORZ) dash = MAX(dash, cmd->graphMoveHorz.distance);
+	}
+	return dash;
+}
+
+static bool RemoteShapeUnknown(const GameXmlContent& content, RemoteIdx idx, i32 depth)
+{
+	const Remote* r = content.FindRemote(idx);
+	if(!r || depth > 5) return false;
+	if(r->boundType == Remote::BoundType::E_BOUND_BEAM_NIF) return true;
+	const Remote::SpawnRules* lists[4] = { &r->onDestroy, &r->onTime, &r->onActivate, &r->onHitCharacter };
+	for(const Remote::SpawnRules* l : lists) {
+		for(const Remote::SpawnRule& rule : *l) if(RemoteShapeUnknown(content, rule.idx, depth + 1)) return true;
+	}
+	return false;
+}
+
+static bool SkillReachUnknown(const GameXmlContent& content, ClassType cls, SkillID skillID)
+{
+	auto f = content.skillMap.find(skillID);
+	if(f == content.skillMap.end()) return false;
+	const auto& action = content.GetSkillAction(cls, f->second.action);
+	foreach_const(cmd, action.commands) {
+		if(cmd->type == ActionCommand::Type::ENTITY || cmd->type == ActionCommand::Type::AIOBJECT || cmd->type == ActionCommand::Type::CALL_CHILD_SKILL) return true;
+		if((cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) && RemoteShapeUnknown(content, cmd->remote.idx, 0)) return true;
+	}
+	return false;
+}
+
 static i64 ShowcaseWallMs()
 {
 	return (i64)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -3378,6 +3415,7 @@ void World::UpdateShowcase()
 	if(skill != 0) {
 		range = content.GetSkillRange(skill);
 		if(const GameXmlContent::SkillInput* lock = content.FindSkillInput(skill)) if(lock->lockOn && lock->maxDistance > 0) range = lock->maxDistance;
+		if(const GameXmlContent::SkillInput* in = content.FindSkillInput(skill)) if(in->minDistance > range) range = MAX(in->maxDistance, in->minDistance);
 		const f32 zone = content.GetSkillTargetRange(skill) * 0.5f;
 		const f32 effect = SkillDamageRadius(content, cls, SkillID(skill));
 		const f32 reach = SkillReach(content, cls, SkillID(skill));
@@ -3388,7 +3426,16 @@ void World::UpdateShowcase()
 			const f32 minDist = nearIn ? nearIn->minDistance : 0.0f;
 			tests.push_back({ MAX(MAX(range * 0.3f, 150.0f), minDist > 0 ? minDist + 40.0f : 0.0f), 0, "near", 1 });
 			tests.push_back({ range - 40.0f, 0, "range_in", 1 });
-			tests.push_back({ MAX(range + MAX(zone, effect), reach) + dummyRadius + 60.0f, 0, "range_out", 0 });
+			const f32 dash = SkillDashDistance(content, cls, SkillID(skill));
+			f32 outDist = MAX(MAX(range + MAX(zone, effect), reach), dash > 0 ? dash + MAX(reach, effect) : 0.0f);
+			bool outUnknown = SkillReachUnknown(content, cls, SkillID(skill));
+			if(const i32 combo = content.GetFirstComboSkill(skill)) {
+				const SkillID cs = SkillID(combo);
+				const f32 comboDash = SkillDashDistance(content, cls, cs);
+				outDist = MAX(outDist, dash + comboDash + MAX(SkillReach(content, cls, cs), SkillDamageRadius(content, cls, cs)));
+				outUnknown = outUnknown || SkillReachUnknown(content, cls, cs);
+			}
+			tests.push_back({ outDist + dummyRadius + 60.0f, 0, "range_out", outUnknown ? -1 : 0 });
 		}
 		else {
 			tests.push_back({ 300.0f, 0, "near", -1 });
