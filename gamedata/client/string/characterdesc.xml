@@ -370,5 +370,14 @@
     <StringData DATAKEY="STR_TOOLTIP_SHUTTLE_ABILITY_02" DocId="100000041" data="Boost Skill Power" />
     <StringData DATAKEY="STR_TOOLTIP_SHUTTLE_ABILITY_03" DocId="100000041" data="Boost Health" />
     <StringData DATAKEY="STR_TOOLTIP_SHUTTLE_ABILITY_04" DocId="100000041" data="Boost Mobility" />
+    <StringData DATAKEY="STR_BASEFEATURE_GATLING" DocId="100000043" data="Assault" />
+    <StringData DATAKEY="STR_RANGEFEATURE_GATLING" DocId="100000043" data="Mid-ranged" />
+    <StringData DATAKEY="STR_MASTER_GATLING" DocId="100000043" data="Yeon Hwarin pins enemies down with sustained fire, shreds their defense and finishes them with heavy explosive shots." />
+    <StringData DATAKEY="STR_STORYTITLE_GATLING" DocId="100000043" data="Twin Gatling Gunner" />
+    <StringData DATAKEY="STR_STORY_GATLING" DocId="100000043" data="Yeon Hwarin was never released: no story exists in the game data." />
+    <StringData DATAKEY="STR_TOOLTIP_GATLING_ABILITY_01" DocId="100000043" data="Boost Weapon Damage" />
+    <StringData DATAKEY="STR_TOOLTIP_GATLING_ABILITY_02" DocId="100000043" data="Boost Skill Power" />
+    <StringData DATAKEY="STR_TOOLTIP_GATLING_ABILITY_03" DocId="100000043" data="Boost Health" />
+    <StringData DATAKEY="STR_TOOLTIP_GATLING_ABILITY_04" DocId="100000043" data="Boost Mobility" />
   </StringTableData>
 </ENTITY_FILE>

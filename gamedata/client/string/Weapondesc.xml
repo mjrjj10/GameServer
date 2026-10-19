@@ -1122,5 +1122,44 @@
     <StringData DATAKEY="STR_ITEM_NAME_131141000" DocId="100000041" data="GX-T" />
     <StringData DATAKEY="STR_ITEM_WEAPONDESC_131141000" DocId="100000041" data="Attacks in a cone in front." />
     <StringData DATAKEY="STR_ITEM_DESC_131141000" DocId="100000041" data="A weapon specially mounted to protect passengers." />
+    <StringData DATAKEY="STR_ITEM_NAME_131143000" DocId="100000043" data="Twin Gatling" />
+    <StringData DATAKEY="STR_ITEM_WEAPONDESC_131143000" DocId="100000043" data="Fires bullets from both barrels in turn. Continuous fire heats the weapon: it overheats for 2 seconds at full gauge." />
+    <StringData DATAKEY="STR_ITEM_DESC_131143000" DocId="100000043" data="Twin rotary guns." />
+    <StringData DATAKEY="STR_ITEM_NAME_131143011" DocId="100000043" data="Weapon Damage" />
+    <StringData DATAKEY="STR_ITEM_DESC_131143011" DocId="100000043" data="{color:#edec72}[Upgrade Type: Damage]{color:end}
+Increases Weapon Damage." />
+    <StringData DATAKEY="STR_ITEM_NAME_131143021" DocId="100000043" data="Range" />
+    <StringData DATAKEY="STR_ITEM_DESC_131143021" DocId="100000043" data="{color:#edec72}[Upgrade Type: Extension]{color:end}
+Increases attack range." />
+    <StringData DATAKEY="STR_ITEM_NAME_131143031" DocId="100000043" data="Projectile Speed" />
+    <StringData DATAKEY="STR_ITEM_DESC_131143031" DocId="100000043" data="{color:#edec72}[Upgrade Type: Swift]{color:end}
+Increases projectile speed." />
+    <StringData DATAKEY="STR_ITEM_NAME_131143012" DocId="100000043" data="Weapon Damage" />
+    <StringData DATAKEY="STR_ITEM_DESC_131143012" DocId="100000043" data="{color:#edec72}[Upgrade Type: Damage]{color:end}
+Increases Weapon Damage." />
+    <StringData DATAKEY="STR_ITEM_NAME_131143022" DocId="100000043" data="Range" />
+    <StringData DATAKEY="STR_ITEM_DESC_131143022" DocId="100000043" data="{color:#edec72}[Upgrade Type: Extension]{color:end}
+Increases attack range." />
+    <StringData DATAKEY="STR_ITEM_NAME_131143032" DocId="100000043" data="Projectile Speed" />
+    <StringData DATAKEY="STR_ITEM_DESC_131143032" DocId="100000043" data="{color:#edec72}[Upgrade Type: Swift]{color:end}
+Increases projectile speed." />
+    <StringData DATAKEY="STR_ITEM_NAME_131143013" DocId="100000043" data="Weapon Damage" />
+    <StringData DATAKEY="STR_ITEM_DESC_131143013" DocId="100000043" data="{color:#edec72}[Upgrade Type: Damage]{color:end}
+Increases Weapon Damage." />
+    <StringData DATAKEY="STR_ITEM_NAME_131143023" DocId="100000043" data="Range" />
+    <StringData DATAKEY="STR_ITEM_DESC_131143023" DocId="100000043" data="{color:#edec72}[Upgrade Type: Extension]{color:end}
+Increases attack range." />
+    <StringData DATAKEY="STR_ITEM_NAME_131143033" DocId="100000043" data="Projectile Speed" />
+    <StringData DATAKEY="STR_ITEM_DESC_131143033" DocId="100000043" data="{color:#edec72}[Upgrade Type: Swift]{color:end}
+Increases projectile speed." />
+    <StringData DATAKEY="STR_ITEM_NAME_131143014" DocId="100000043" data="Weapon Damage" />
+    <StringData DATAKEY="STR_ITEM_DESC_131143014" DocId="100000043" data="{color:#edec72}[Upgrade Type: Damage]{color:end}
+Increases Weapon Damage." />
+    <StringData DATAKEY="STR_ITEM_NAME_131143024" DocId="100000043" data="Range" />
+    <StringData DATAKEY="STR_ITEM_DESC_131143024" DocId="100000043" data="{color:#edec72}[Upgrade Type: Extension]{color:end}
+Increases attack range." />
+    <StringData DATAKEY="STR_ITEM_NAME_131143034" DocId="100000043" data="Projectile Speed" />
+    <StringData DATAKEY="STR_ITEM_DESC_131143034" DocId="100000043" data="{color:#edec72}[Upgrade Type: Swift]{color:end}
+Increases projectile speed." />
   </StringTableData>
 </ENTITY_FILE>

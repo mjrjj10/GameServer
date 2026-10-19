@@ -7811,4 +7811,166 @@
       </_PROPERTY_LEVEL>
     </ST_SKILL_PROPERTY>
   </INFO>
+  <INFO ID="280431001" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280431001" _Name="닻 던지기" _SkillIndex="180430010" _Type="E_SKILL_PROPERTY_COST" _Priority="1">
+      <_PROPERTY_LEVEL _ConsumeMP="205" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280431002" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280431002" _Name="닻 던지기" _SkillIndex="180430010" _Type="E_SKILL_PROPERTY_COST" _Priority="2">
+      <_PROPERTY_LEVEL _CoolTimeType="SKILL_1" _CoolTime="21" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280431003" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280431003" _Name="닻 던지기" _SkillIndex="180430010" _Type="E_SKILL_PROPERTY_DAMAGE" _Priority="3">
+      <_PROPERTY_LEVEL _BaseDamage="700" _AttackMultiplier="0.635" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280431004" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280431004" _Name="닻 던지기" _SkillIndex="180430010" _Type="E_SKILL_PROPERTY_COST" _Priority="4">
+      <_PROPERTY_LEVEL _ConsumeMP="200" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280431005" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280431005" _Name="닻 던지기" _SkillIndex="180430010" _Type="E_SKILL_PROPERTY_COST" _Priority="5">
+      <_PROPERTY_LEVEL _CoolTimeType="SKILL_1" _CoolTime="20" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280431006" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280431006" _Name="닻 던지기" _SkillIndex="180430010" _Type="E_SKILL_PROPERTY_DAMAGE" _Priority="6">
+      <_PROPERTY_LEVEL _BaseDamage="765" _AttackMultiplier="0.635" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280432001" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280432001" _Name="뒤잡기" _SkillIndex="180430020" _Type="E_SKILL_PROPERTY_COST" _Priority="1">
+      <_PROPERTY_LEVEL _ConsumeMP="175" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280432002" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280432002" _Name="뒤잡기" _SkillIndex="180430020" _Type="E_SKILL_PROPERTY_COST" _Priority="2">
+      <_PROPERTY_LEVEL _CoolTimeType="SKILL_2" _CoolTime="14" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280432003" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280432003" _Name="뒤잡기" _SkillIndex="180430020" _Type="E_SKILL_PROPERTY_RANGE" _Priority="3">
+      <_PROPERTY_LEVEL _Tooltip="STR_SKILL_PROPERTY_TOOLTIP1_280432003" _TargetMaxDistance="1000" _SkillRangeLengthX="1000" _SkillRangeLengthY="1000" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280432004" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280432004" _Name="뒤잡기" _SkillIndex="180430020" _Type="E_SKILL_PROPERTY_COST" _Priority="4">
+      <_PROPERTY_LEVEL _ConsumeMP="170" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280432005" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280432005" _Name="뒤잡기" _SkillIndex="180430020" _Type="E_SKILL_PROPERTY_COST" _Priority="5">
+      <_PROPERTY_LEVEL _CoolTimeType="SKILL_2" _CoolTime="13" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280432006" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280432006" _Name="뒤잡기" _SkillIndex="180430020" _Type="E_SKILL_PROPERTY_EFFECT" _Priority="6">
+      <_PROPERTY_LEVEL _Tooltip="STR_SKILL_PROPERTY_TOOLTIP1_280432006" _Action="SKILL_7_BEHAVIORSTATE" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280433001" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280433001" _Name="범위난사" _SkillIndex="180430030" _Type="E_SKILL_PROPERTY_COST" _Priority="1">
+      <_PROPERTY_LEVEL _ConsumeMP="195" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280433002" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280433002" _Name="범위난사" _SkillIndex="180430030" _Type="E_SKILL_PROPERTY_COST" _Priority="2">
+      <_PROPERTY_LEVEL _CoolTimeType="SKILL_3" _CoolTime="17" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280433003" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280433003" _Name="범위난사" _SkillIndex="180430030" _Type="E_SKILL_PROPERTY_RANGE" _Priority="3">
+      <_PROPERTY_LEVEL _Tooltip="STR_SKILL_PROPERTY_TOOLTIP1_280433003" _SkillRangeLengthX="750" _SkillRangeLengthY="750">
+        <_REMOTELIST _RemoteIndex="1440430030" _ReplaceIndex="1440430032" />
+      </_PROPERTY_LEVEL>
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280433004" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280433004" _Name="범위난사" _SkillIndex="180430030" _Type="E_SKILL_PROPERTY_COST" _Priority="4">
+      <_PROPERTY_LEVEL _ConsumeMP="190" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280433005" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280433005" _Name="범위난사" _SkillIndex="180430030" _Type="E_SKILL_PROPERTY_COST" _Priority="5">
+      <_PROPERTY_LEVEL _CoolTimeType="SKILL_3" _CoolTime="16" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280433006" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280433006" _Name="범위난사" _SkillIndex="180430030" _Type="E_SKILL_PROPERTY_DAMAGE" _Priority="6">
+      <_PROPERTY_LEVEL _BaseDamage="110" _AttackMultiplier="0.1" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280434001" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280434001" _Name="대형저격" _SkillIndex="180430040" _Type="E_SKILL_PROPERTY_COST" _Priority="1">
+      <_PROPERTY_LEVEL _ConsumeMP="245" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280434002" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280434002" _Name="대형저격" _SkillIndex="180430040" _Type="E_SKILL_PROPERTY_COST" _Priority="2">
+      <_PROPERTY_LEVEL _CoolTimeType="SKILL_4" _CoolTime="24" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280434003" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280434003" _Name="대형저격" _SkillIndex="180430040" _Type="E_SKILL_PROPERTY_RANGE" _Priority="3">
+      <_PROPERTY_LEVEL _Tooltip="STR_SKILL_PROPERTY_TOOLTIP1_280434003">
+        <_REMOTELIST _RemoteIndex="1440430040" _ReplaceIndex="1440430044" />
+        <_REMOTELIST _RemoteIndex="1440430041" _ReplaceIndex="1440430045" />
+      </_PROPERTY_LEVEL>
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280434004" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280434004" _Name="대형저격" _SkillIndex="180430040" _Type="E_SKILL_PROPERTY_COST" _Priority="4">
+      <_PROPERTY_LEVEL _ConsumeMP="240" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280434005" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280434005" _Name="대형저격" _SkillIndex="180430040" _Type="E_SKILL_PROPERTY_COST" _Priority="5">
+      <_PROPERTY_LEVEL _CoolTimeType="SKILL_4" _CoolTime="23" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280434006" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280434006" _Name="대형저격" _SkillIndex="180430040" _Type="E_SKILL_PROPERTY_EFFECT" _Priority="6">
+      <_PROPERTY_LEVEL _Tooltip="STR_SKILL_PROPERTY_TOOLTIP1_280434006">
+        <_REMOTELIST _RemoteIndex="1440430040" _ReplaceIndex="1440430070" />
+        <_REMOTELIST _RemoteIndex="1440430041" _ReplaceIndex="1440430071" />
+      </_PROPERTY_LEVEL>
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280435001" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280435001" _Name="대형난사" _SkillIndex="180430050" _Type="E_SKILL_PROPERTY_DAMAGE" _Priority="1">
+      <_PROPERTY_LEVEL _BaseDamage="155" _AttackMultiplier="0.075" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280435002" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280435002" _Name="대형난사" _SkillIndex="180430050" _Type="E_SKILL_PROPERTY_DAMAGE" _Priority="2">
+      <_PROPERTY_LEVEL _BaseDamage="160" _AttackMultiplier="0.075" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280435003" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280435003" _Name="대형난사" _SkillIndex="180430050" _Type="E_SKILL_PROPERTY_EFFECT" _Priority="3">
+      <_PROPERTY_LEVEL _Tooltip="STR_SKILL_PROPERTY_TOOLTIP1_280435003">
+        <_STATUSLIST _StatusIndex="1230430052" _ReplaceIndex="1230430053" />
+      </_PROPERTY_LEVEL>
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280435004" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280435004" _Name="대형난사" _SkillIndex="180430050" _Type="E_SKILL_PROPERTY_DAMAGE" _Priority="4">
+      <_PROPERTY_LEVEL _BaseDamage="165" _AttackMultiplier="0.075" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280435005" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280435005" _Name="대형난사" _SkillIndex="180430050" _Type="E_SKILL_PROPERTY_DAMAGE" _Priority="5">
+      <_PROPERTY_LEVEL _BaseDamage="170" _AttackMultiplier="0.075" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280435006" _DocID="100000043">
+    <ST_SKILL_PROPERTY _Index="280435006" _Name="대형난사" _SkillIndex="180430050" _Type="E_SKILL_PROPERTY_EFFECT" _Priority="6">
+      <_PROPERTY_LEVEL _Tooltip="STR_SKILL_PROPERTY_TOOLTIP1_280435006">
+        <_REMOTELIST _RemoteIndex="1440430051" _ReplaceIndex="1440430052" />
+      </_PROPERTY_LEVEL>
+    </ST_SKILL_PROPERTY>
+  </INFO>
 </ENTITY_FILE>

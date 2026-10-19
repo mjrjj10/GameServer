@@ -11427,4 +11427,131 @@
     <HUDComData _NameTagOffsetZ="80" _ShowNameTag="-1" />
     <ResourceComData _IconAlias="weapon_shuttle_01" />
   </INFO>
+  <INFO ID="131143011" _DocID="100000043">
+    <EntityComData _Type="ENTITY_TYPE_ITEM" _Name="STR_ITEM_NAME_131143011" _Description="STR_ITEM_DESC_131143011" />
+    <ItemComData _Type="ITEM_TYPE_WEAPON" _RequireClass="CLASS_TYPE_GATLING" _Rank="ITEM_RANK_RARE" />
+    <WeaponComData _Attack="91" _PvPAttack="91" _WeaponCategory="WEAPONCATEGORY_OVERHEAT" _EquipSlot="ITEM_SLOT_WEAPON_PRIMARY" _FireDummy="Attack_Fire_Dummy" _WeaponChangeDelayTime="0.5" _DefaultFiringIndex="230431110" _WeaponType="WEAPON_TYPE_1" _BaseWeaponIndex="131143000" _FirstGradeIndex="131143011" _NextGradeIndex="131143012" />
+    <HUDComData _NameTagOffsetZ="80" _ShowNameTag="-1" />
+    <ResourceComData _IconAlias="weapon_parts_08" />
+  </INFO>
+  <INFO ID="131143012" _DocID="100000043">
+    <EntityComData _Type="ENTITY_TYPE_ITEM" _Name="STR_ITEM_NAME_131143012" _Description="STR_ITEM_DESC_131143012" />
+    <ItemComData _Type="ITEM_TYPE_WEAPON" _RequireClass="CLASS_TYPE_GATLING" _Rank="ITEM_RANK_UNIQUE" />
+    <WeaponComData _Attack="93" _PvPAttack="93" _WeaponCategory="WEAPONCATEGORY_OVERHEAT" _EquipSlot="ITEM_SLOT_WEAPON_PRIMARY" _FireDummy="Attack_Fire_Dummy" _WeaponChangeDelayTime="0.5" _DefaultFiringIndex="230431110" _WeaponType="WEAPON_TYPE_1" _BaseWeaponIndex="131143000" _FirstGradeIndex="131143011" _NextGradeIndex="131143013">
+      <_RequiredIngredients _Index="136020003" _Count="5" />
+      <_RequiredIngredients _Index="136020011" _Count="3" />
+    </WeaponComData>
+    <HUDComData _NameTagOffsetZ="80" _ShowNameTag="-1" />
+    <ResourceComData _IconAlias="weapon_parts_08" />
+  </INFO>
+  <INFO ID="131143013" _DocID="100000043">
+    <EntityComData _Type="ENTITY_TYPE_ITEM" _Name="STR_ITEM_NAME_131143013" _Description="STR_ITEM_DESC_131143013" />
+    <ItemComData _Type="ITEM_TYPE_WEAPON" _RequireClass="CLASS_TYPE_GATLING" _Rank="ITEM_RANK_HEROIC" />
+    <WeaponComData _Attack="96" _PvPAttack="96" _WeaponCategory="WEAPONCATEGORY_OVERHEAT" _EquipSlot="ITEM_SLOT_WEAPON_PRIMARY" _FireDummy="Attack_Fire_Dummy" _WeaponChangeDelayTime="0.5" _DefaultFiringIndex="230431110" _WeaponType="WEAPON_TYPE_1" _BaseWeaponIndex="131143000" _FirstGradeIndex="131143011" _NextGradeIndex="131143014">
+      <_RequiredIngredients _Index="136020003" _Count="10" />
+      <_RequiredIngredients _Index="136020011" _Count="5" />
+      <_RequiredIngredients _Index="136030011" _Count="3" />
+    </WeaponComData>
+    <HUDComData _NameTagOffsetZ="80" _ShowNameTag="-1" />
+    <ResourceComData _IconAlias="weapon_parts_08" />
+  </INFO>
+  <INFO ID="131143014" _DocID="100000043">
+    <EntityComData _Type="ENTITY_TYPE_ITEM" _Name="STR_ITEM_NAME_131143014" _Description="STR_ITEM_DESC_131143014" />
+    <ItemComData _Type="ITEM_TYPE_WEAPON" _RequireClass="CLASS_TYPE_GATLING" _Rank="ITEM_RANK_LEGENDARY" />
+    <WeaponComData _Attack="100" _PvPAttack="100" _WeaponCategory="WEAPONCATEGORY_OVERHEAT" _EquipSlot="ITEM_SLOT_WEAPON_PRIMARY" _FireDummy="Attack_Fire_Dummy" _WeaponChangeDelayTime="0.5" _DefaultFiringIndex="230431110" _WeaponType="WEAPON_TYPE_1" _BaseWeaponIndex="131143000" _FirstGradeIndex="131143011">
+      <_RequiredIngredients _Index="136020003" _Count="15" />
+      <_RequiredIngredients _Index="136020011" _Count="10" />
+      <_RequiredIngredients _Index="136030011" _Count="5" />
+      <_RequiredIngredients _Index="136040100" _Count="1" />
+    </WeaponComData>
+    <HUDComData _NameTagOffsetZ="80" _ShowNameTag="-1" />
+    <ResourceComData _IconAlias="weapon_parts_08" />
+  </INFO>
+  <INFO ID="131143021" _DocID="100000043">
+    <EntityComData _Type="ENTITY_TYPE_ITEM" _Name="STR_ITEM_NAME_131143021" _Description="STR_ITEM_DESC_131143021" />
+    <ItemComData _Type="ITEM_TYPE_WEAPON" _RequireClass="CLASS_TYPE_GATLING" _Rank="ITEM_RANK_RARE" />
+    <WeaponComData _Attack="87" _PvPAttack="87" _WeaponCategory="WEAPONCATEGORY_OVERHEAT" _EquipSlot="ITEM_SLOT_WEAPON_PRIMARY" _FireDummy="Attack_Fire_Dummy" _WeaponChangeDelayTime="0.5" _DefaultFiringIndex="230431210" _WeaponType="WEAPON_TYPE_2" _BaseWeaponIndex="131143000" _FirstGradeIndex="131143021" _NextGradeIndex="131143022" />
+    <HUDComData _NameTagOffsetZ="80" _ShowNameTag="-1" />
+    <ResourceComData _IconAlias="weapon_parts_04" />
+  </INFO>
+  <INFO ID="131143022" _DocID="100000043">
+    <EntityComData _Type="ENTITY_TYPE_ITEM" _Name="STR_ITEM_NAME_131143022" _Description="STR_ITEM_DESC_131143022" />
+    <ItemComData _Type="ITEM_TYPE_WEAPON" _RequireClass="CLASS_TYPE_GATLING" _Rank="ITEM_RANK_UNIQUE" />
+    <WeaponComData _Attack="87" _PvPAttack="87" _WeaponCategory="WEAPONCATEGORY_OVERHEAT" _EquipSlot="ITEM_SLOT_WEAPON_PRIMARY" _FireDummy="Attack_Fire_Dummy" _WeaponChangeDelayTime="0.5" _DefaultFiringIndex="230431220" _WeaponType="WEAPON_TYPE_2" _BaseWeaponIndex="131143000" _FirstGradeIndex="131143021" _NextGradeIndex="131143023">
+      <_RequiredIngredients _Index="136020003" _Count="5" />
+      <_RequiredIngredients _Index="136020013" _Count="3" />
+    </WeaponComData>
+    <HUDComData _NameTagOffsetZ="80" _ShowNameTag="-1" />
+    <ResourceComData _IconAlias="weapon_parts_04" />
+  </INFO>
+  <INFO ID="131143023" _DocID="100000043">
+    <EntityComData _Type="ENTITY_TYPE_ITEM" _Name="STR_ITEM_NAME_131143023" _Description="STR_ITEM_DESC_131143023" />
+    <ItemComData _Type="ITEM_TYPE_WEAPON" _RequireClass="CLASS_TYPE_GATLING" _Rank="ITEM_RANK_HEROIC" />
+    <WeaponComData _Attack="87" _PvPAttack="87" _WeaponCategory="WEAPONCATEGORY_OVERHEAT" _EquipSlot="ITEM_SLOT_WEAPON_PRIMARY" _FireDummy="Attack_Fire_Dummy" _WeaponChangeDelayTime="0.5" _DefaultFiringIndex="230431230" _WeaponType="WEAPON_TYPE_2" _BaseWeaponIndex="131143000" _FirstGradeIndex="131143021" _NextGradeIndex="131143024">
+      <_RequiredIngredients _Index="136020003" _Count="10" />
+      <_RequiredIngredients _Index="136020013" _Count="5" />
+      <_RequiredIngredients _Index="136030013" _Count="3" />
+    </WeaponComData>
+    <HUDComData _NameTagOffsetZ="80" _ShowNameTag="-1" />
+    <ResourceComData _IconAlias="weapon_parts_04" />
+  </INFO>
+  <INFO ID="131143024" _DocID="100000043">
+    <EntityComData _Type="ENTITY_TYPE_ITEM" _Name="STR_ITEM_NAME_131143024" _Description="STR_ITEM_DESC_131143024" />
+    <ItemComData _Type="ITEM_TYPE_WEAPON" _RequireClass="CLASS_TYPE_GATLING" _Rank="ITEM_RANK_LEGENDARY" />
+    <WeaponComData _Attack="87" _PvPAttack="87" _WeaponCategory="WEAPONCATEGORY_OVERHEAT" _EquipSlot="ITEM_SLOT_WEAPON_PRIMARY" _FireDummy="Attack_Fire_Dummy" _WeaponChangeDelayTime="0.5" _DefaultFiringIndex="230431240" _WeaponType="WEAPON_TYPE_2" _BaseWeaponIndex="131143000" _FirstGradeIndex="131143021">
+      <_RequiredIngredients _Index="136020003" _Count="15" />
+      <_RequiredIngredients _Index="136020013" _Count="10" />
+      <_RequiredIngredients _Index="136030013" _Count="5" />
+      <_RequiredIngredients _Index="136040100" _Count="1" />
+    </WeaponComData>
+    <HUDComData _NameTagOffsetZ="80" _ShowNameTag="-1" />
+    <ResourceComData _IconAlias="weapon_parts_04" />
+  </INFO>
+  <INFO ID="131143031" _DocID="100000043">
+    <EntityComData _Type="ENTITY_TYPE_ITEM" _Name="STR_ITEM_NAME_131143031" _Description="STR_ITEM_DESC_131143031" />
+    <ItemComData _Type="ITEM_TYPE_WEAPON" _RequireClass="CLASS_TYPE_GATLING" _Rank="ITEM_RANK_RARE" />
+    <WeaponComData _Attack="87" _PvPAttack="87" _WeaponCategory="WEAPONCATEGORY_OVERHEAT" _EquipSlot="ITEM_SLOT_WEAPON_PRIMARY" _FireDummy="Attack_Fire_Dummy" _WeaponChangeDelayTime="0.5" _DefaultFiringIndex="230431310" _WeaponType="WEAPON_TYPE_3" _BaseWeaponIndex="131143000" _FirstGradeIndex="131143031" _NextGradeIndex="131143032" />
+    <HUDComData _NameTagOffsetZ="80" _ShowNameTag="-1" />
+    <ResourceComData _IconAlias="weapon_parts_06" />
+  </INFO>
+  <INFO ID="131143032" _DocID="100000043">
+    <EntityComData _Type="ENTITY_TYPE_ITEM" _Name="STR_ITEM_NAME_131143032" _Description="STR_ITEM_DESC_131143032" />
+    <ItemComData _Type="ITEM_TYPE_WEAPON" _RequireClass="CLASS_TYPE_GATLING" _Rank="ITEM_RANK_UNIQUE" />
+    <WeaponComData _Attack="87" _PvPAttack="87" _WeaponCategory="WEAPONCATEGORY_OVERHEAT" _EquipSlot="ITEM_SLOT_WEAPON_PRIMARY" _FireDummy="Attack_Fire_Dummy" _WeaponChangeDelayTime="0.5" _DefaultFiringIndex="230431320" _WeaponType="WEAPON_TYPE_3" _BaseWeaponIndex="131143000" _FirstGradeIndex="131143031" _NextGradeIndex="131143033">
+      <_RequiredIngredients _Index="136020003" _Count="5" />
+      <_RequiredIngredients _Index="136020012" _Count="3" />
+    </WeaponComData>
+    <HUDComData _NameTagOffsetZ="80" _ShowNameTag="-1" />
+    <ResourceComData _IconAlias="weapon_parts_06" />
+  </INFO>
+  <INFO ID="131143033" _DocID="100000043">
+    <EntityComData _Type="ENTITY_TYPE_ITEM" _Name="STR_ITEM_NAME_131143033" _Description="STR_ITEM_DESC_131143033" />
+    <ItemComData _Type="ITEM_TYPE_WEAPON" _RequireClass="CLASS_TYPE_GATLING" _Rank="ITEM_RANK_HEROIC" />
+    <WeaponComData _Attack="87" _PvPAttack="87" _WeaponCategory="WEAPONCATEGORY_OVERHEAT" _EquipSlot="ITEM_SLOT_WEAPON_PRIMARY" _FireDummy="Attack_Fire_Dummy" _WeaponChangeDelayTime="0.5" _DefaultFiringIndex="230431330" _WeaponType="WEAPON_TYPE_3" _BaseWeaponIndex="131143000" _FirstGradeIndex="131143031" _NextGradeIndex="131143034">
+      <_RequiredIngredients _Index="136020003" _Count="10" />
+      <_RequiredIngredients _Index="136020012" _Count="5" />
+      <_RequiredIngredients _Index="136030012" _Count="3" />
+    </WeaponComData>
+    <HUDComData _NameTagOffsetZ="80" _ShowNameTag="-1" />
+    <ResourceComData _IconAlias="weapon_parts_06" />
+  </INFO>
+  <INFO ID="131143034" _DocID="100000043">
+    <EntityComData _Type="ENTITY_TYPE_ITEM" _Name="STR_ITEM_NAME_131143034" _Description="STR_ITEM_DESC_131143034" />
+    <ItemComData _Type="ITEM_TYPE_WEAPON" _RequireClass="CLASS_TYPE_GATLING" _Rank="ITEM_RANK_LEGENDARY" />
+    <WeaponComData _Attack="87" _PvPAttack="87" _WeaponCategory="WEAPONCATEGORY_OVERHEAT" _EquipSlot="ITEM_SLOT_WEAPON_PRIMARY" _FireDummy="Attack_Fire_Dummy" _WeaponChangeDelayTime="0.5" _DefaultFiringIndex="230431340" _WeaponType="WEAPON_TYPE_3" _BaseWeaponIndex="131143000" _FirstGradeIndex="131143031">
+      <_RequiredIngredients _Index="136020003" _Count="15" />
+      <_RequiredIngredients _Index="136020012" _Count="10" />
+      <_RequiredIngredients _Index="136030012" _Count="5" />
+      <_RequiredIngredients _Index="136040100" _Count="1" />
+    </WeaponComData>
+    <HUDComData _NameTagOffsetZ="80" _ShowNameTag="-1" />
+    <ResourceComData _IconAlias="weapon_parts_06" />
+  </INFO>
+  <INFO ID="131143000" _DocID="100000043">
+    <EntityComData _Type="ENTITY_TYPE_ITEM" _Name="STR_ITEM_NAME_131143000" _Description="STR_ITEM_DESC_131143000" />
+    <ItemComData _Type="ITEM_TYPE_WEAPON" _RequireClass="CLASS_TYPE_GATLING" _Rank="ITEM_RANK_NORMAL" />
+    <WeaponComData _Attack="87" _PvPAttack="87" _WeaponCategory="WEAPONCATEGORY_OVERHEAT" _EquipSlot="ITEM_SLOT_WEAPON_PRIMARY" _FireDummy="Attack_Fire_Dummy" _WeaponDescription="STR_ITEM_WEAPONDESC_131143000" _WeaponChangeDelayTime="0.5" _DefaultFiringIndex="230431010" _WeaponType="WEAPON_TYPE_0" _BaseWeaponIndex="131143000" />
+    <HUDComData _NameTagOffsetZ="80" _ShowNameTag="-1" />
+    <ResourceComData _IconAlias="weapon_gatling_01" />
+  </INFO>
 </ENTITY_FILE>

@@ -383,5 +383,12 @@
     <StringData DATAKEY="STR_SKILL_PROPERTY_TOOLTIP1_280414006" DocId="100000041" data="Defense +100% in transport mode" />
     <StringData DATAKEY="STR_SKILL_PROPERTY_TOOLTIP1_280415003" DocId="100000041" data="Allies at the teleporter: shield +100, defense +15%" />
     <StringData DATAKEY="STR_SKILL_PROPERTY_TOOLTIP1_280415006" DocId="100000041" data="Allies at the teleporter: shield +200, defense +15%" />
+    <StringData DATAKEY="STR_SKILL_PROPERTY_TOOLTIP1_280432003" DocId="100000043" data="Target range +2m" />
+    <StringData DATAKEY="STR_SKILL_PROPERTY_TOOLTIP1_280432006" DocId="100000043" data="The burst fires right after the dash" />
+    <StringData DATAKEY="STR_SKILL_PROPERTY_TOOLTIP1_280433003" DocId="100000043" data="Barrage range +4m" />
+    <StringData DATAKEY="STR_SKILL_PROPERTY_TOOLTIP1_280434003" DocId="100000043" data="Explosion radius +3m" />
+    <StringData DATAKEY="STR_SKILL_PROPERTY_TOOLTIP1_280434006" DocId="100000043" data="Explosion radius +3m, enemies hit are slowed by 60% for 1 second" />
+    <StringData DATAKEY="STR_SKILL_PROPERTY_TOOLTIP1_280435003" DocId="100000043" data="Defense +100% while firing" />
+    <StringData DATAKEY="STR_SKILL_PROPERTY_TOOLTIP1_280435006" DocId="100000043" data="Hits every 0.3 seconds" />
   </StringTableData>
 </ENTITY_FILE>

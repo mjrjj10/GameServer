@@ -586,5 +586,9 @@
     <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230410023" DocId="100000041" data="Shock resistance." />
     <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230410054" DocId="100000041" data="Defense increased and shield created." />
     <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230410055" DocId="100000041" data="Defense increased and shield created." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230430000" DocId="100000043" data="Defense decreased." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230430032" DocId="100000043" data="Movespeed decreased." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230430041" DocId="100000043" data="Movespeed decreased." />
+    <StringData DATAKEY="STR_STATUS_PC_TOOLTIP_1230430053" DocId="100000043" data="Defense increased." />
   </StringTableData>
 </ENTITY_FILE>

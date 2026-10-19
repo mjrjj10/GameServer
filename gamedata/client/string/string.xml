@@ -6402,5 +6402,6 @@
     <StringData DATAKEY="CLASS_TYPE_SHUTTLE" DocId="100000041" data="GX-09" />
     <StringData DATAKEY="WEAPON_SPEC_REGEN_ADD_RAGE" DocId="100000041" data="차지 연료 회복" />
     <StringData DATAKEY="IT_NAME_GX09_BOARD" data="Board" />
+    <StringData DATAKEY="CLASS_TYPE_GATLING" DocId="100000043" data="Yeon Hwarin" />
   </StringTableData>
 </ENTITY_FILE>

@@ -146,5 +146,8 @@
     <StringData DATAKEY="STR_SKIN_SHUTTLE_01" DocId="100000041" data="GX-09" />
     <StringData DATAKEY="STR_SKIN_SHUTTLE_02" DocId="100000041" data="Safe Driver GX-09" />
     <StringData DATAKEY="STR_SKIN_SHUTTLE_03" DocId="100000041" data="Camper GX-09" />
+    <StringData DATAKEY="STR_SKIN_GATLING_01" DocId="100000043" data="Yeon Hwarin" />
+    <StringData DATAKEY="STR_SKIN_GATLING_02" DocId="100000043" data="Crew Yeon Hwarin" />
+    <StringData DATAKEY="STR_SKIN_GATLING_03" DocId="100000043" data="Guard Yeon Hwarin" />
   </StringTableData>
 </ENTITY_FILE>

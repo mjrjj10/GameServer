@@ -4923,4 +4923,53 @@
   <INFO ID="1230410055" KEYNAME="STATUS_SHUTTLE_EP_SHIELD_UP" _DocID="100000041">
     <ST_COMMONSTATUS _CanDispel="true" _Description="장치 주변 아군에게 보호막 + 방어력 강화" _DurationTime="2000" _EffectKeyName="STATUS_SFX_PC_SHUTTLE_EVADE_SHIELD" _EffectSlot="41061" _EffectType="STATUS_EFFECT_BUFF" _IconAlias="barrier_01" _Name="[셔틀] 필살기 보호막 강화6" _Passive="false" _ReAction="false" _SaveDB="false" _SkillIndex="180410000" _Tooltip="STR_STATUS_PC_TOOLTIP_1230410055" _Type="STATUS_TYPE_SHIELD" />
   </INFO>
+  <INFO ID="1230430000" KEYNAME="STATUS_GATLING_PASSIVE_WEAKSTACK" _DocID="100000043">
+    <ST_COMMONSTATUS _CanDispel="true" _Description="1스택당 방어력 감소량 -1.5%" _DurationTime="2500" _EffectKeyName="STATUS_SFX_PC_Attack_Damping" _EffectSlot="43000" _EffectType="STATUS_EFFECT_DEBUFF" _IconAlias="weakness_02" _MaxOverlapCount="10" _Name="[연] 방어력 관통 탄" _Passive="false" _ReAction="false" _SaveDB="false" _SkillIndex="180430000" _Tooltip="STR_STATUS_PC_TOOLTIP_1230430000" _Type="STATUS_TYPE_STAT" />
+    <ST_TOOLTIP _Attr="DELIGATE" />
+  </INFO>
+  <INFO ID="1230430011" KEYNAME="STATUS_GATLING_SK1_EVADE" _DocID="100000043">
+    <ST_COMMONSTATUS _CanDispel="false" _Description="지점 도약 중 회피" _DurationTime="400" _EffectType="STATUS_EFFECT_BUFF" _Name="[연] 지점 도약 중 회피 " _Passive="false" _ReAction="false" _SaveDB="false" _SkillIndex="180430010" _Type="STATUS_TYPE_EVADE" />
+    <ST_TOOLTIP _Attr="DELIGATE" />
+  </INFO>
+  <INFO ID="1230430020" KEYNAME="STATUS_GATLING_SK2_KNOCKDOWN" _DocID="100000043">
+    <ST_COMMONSTATUS _CanDispel="true" _Description="뒤잡기 넉다운" _DistanceRatio="1" _DurationTime="600" _EffectType="STATUS_EFFECT_DEBUFF" _HeightRatio="0.4" _LyingTime="0.2" _Name="[연] 뒤잡기 후 넘어뜨리기" _Passive="false" _ReAction="true" _SaveDB="false" _SkillIndex="180430020" _SuppressTag="true" _TimeRatio="0.4" _Type="STATUS_TYPE_KNOCKDOWN">
+      <_INPUT_STATE_BLOCK _Attack="1" _HideSkill="1" _Jump="1" _Move="1" _MoveSkill="1" _MovingShirk="1" _Skill="1" _StandingShirk="1" />
+    </ST_COMMONSTATUS>
+    <ST_TOOLTIP _Attr="DELIGATE" />
+  </INFO>
+  <INFO ID="1230430030" KEYNAME="STATUS_GATLING_SK3_STATUS_CHECK" _DocID="100000043">
+    <ST_COMMONSTATUS _CanDispel="false" _Description="4중첩 → SLOW 효과" _EffectType="STATUS_EFFECT_UNKNOWN" _Name="[연] 둔화효과 중첩 부여" _Passive="true" _ReAction="false" _SaveDB="false" _SkillIndex="180430030" _Type="STATUS_TYPE_ICEQUEEN">
+      <_ICEQUEEN _CheckConditon="PROC_CHECK_STATUS_INDEX" _FreezeStatusIndex="1230430032" _Index="1230430031" />
+    </ST_COMMONSTATUS>
+  </INFO>
+  <INFO ID="1230430031" KEYNAME="STATUS_GATLING_SK3_STACK" _DocID="100000043">
+    <ST_COMMONSTATUS _CanDispel="true" _Description="중첩 체크용" _DurationTime="1000" _EffectType="STATUS_EFFECT_UNKNOWN" _MaxOverlapCount="4" _Name="[연] 둔화효과 중첩 스택" _OverlapType="OVERLAP_BY_STATUS_TYPE" _Passive="false" _ReAction="false" _SaveDB="false" _SkillIndex="180430030" _Type="STATUS_TYPE_STAT" />
+  </INFO>
+  <INFO ID="1230430032" KEYNAME="STATUS_GATLING_SK3_SLOW" _DocID="100000043">
+    <ST_COMMONSTATUS _CanDispel="true" _CasterStatusIndex="1230430033" _Description="중첩으로 인한 SLOW -50%" _DurationTime="2500" _EffectKeyName="STATUS_SFX_PC_SLOW" _EffectSlot="43030" _EffectType="STATUS_EFFECT_DEBUFF" _IconAlias="slow_01" _MaxOverlapCount="1" _Name="[연] 범위난사 범위 SLOW" _Passive="false" _ReAction="false" _SaveDB="false" _SkillIndex="180430030" _Tooltip="STR_STATUS_PC_TOOLTIP_1230430032" _Type="STATUS_TYPE_SLOW" />
+    <ST_TOOLTIP _Attr="DELIGATE" />
+  </INFO>
+  <INFO ID="1230430033" KEYNAME="STATUS_GATLING_SK3_FLAG" _DocID="100000043">
+    <ST_COMMONSTATUS _CanDispel="false" _Description="강화용 상태이상 FLAG" _DurationTime="100" _EffectType="STATUS_EFFECT_BUFF" _Name="[연] 자신용 빈 상태이상" _Passive="false" _ReAction="false" _SaveDB="false" _SkillIndex="180430030" _Type="STATUS_TYPE_STAT" />
+  </INFO>
+  <INFO ID="1230430035" KEYNAME="STATUS_GATLING_SK3_EVADE" _DocID="100000043">
+    <ST_COMMONSTATUS _CanDispel="false" _Description="상태블록 해제시간과 동일 (0.7초)" _DurationTime="700" _EffectType="STATUS_EFFECT_BUFF" _Name="[연] 제자리 도약 중 회피 " _Passive="false" _ReAction="false" _SaveDB="false" _SkillIndex="180430030" _Type="STATUS_TYPE_EVADE" />
+  </INFO>
+  <INFO ID="1230430041" KEYNAME="STATUS_GATLING_SK4_SLOW_UP1" _DocID="100000043">
+    <ST_COMMONSTATUS _CanDispel="true" _Description="[1틱]범위안의 적 SLOW -60%" _DurationTime="1000" _EffectKeyName="STATUS_SFX_PC_SLOW" _EffectSlot="43040" _EffectType="STATUS_EFFECT_DEBUFF" _IconAlias="slow_01" _Name="[연] 대형저격 SLOW 교체용" _Passive="false" _ReAction="false" _SaveDB="false" _SkillIndex="180430040" _Tooltip="STR_STATUS_PC_TOOLTIP_1230430041" _Type="STATUS_TYPE_SLOW" />
+    <ST_TOOLTIP _Attr="DELIGATE" />
+  </INFO>
+  <INFO ID="1230430050" KEYNAME="STATUS_GATLING_EP_DRAGGED_OUT" _DocID="100000043">
+    <ST_COMMONSTATUS _CanDispel="false" _Description="밖으로 밀어내기" _DraggedByForceMax="-400" _DraggedByForceMin="-700" _DurationTime="300" _EffectType="STATUS_EFFECT_DEBUFF" _Name="[연] 필살기 밖으로 밀어내기" _Passive="false" _ReAction="true" _SaveDB="false" _SkillIndex="180430050" _Type="STATUS_TYPE_DRAGGEDBYFORCE" />
+    <ST_TOOLTIP _Attr="DELIGATE" />
+  </INFO>
+  <INFO ID="1230430051" KEYNAME="STATUS_GATLING_EP_SUPERARMOR" _DocID="100000043">
+    <ST_COMMONSTATUS _CanDispel="false" _Description="필살기 시전 중 슈퍼아머" _DurationTime="4000" _EffectKeyName="STATUS_SFX_PC_SUPERARMOR_LONG" _EffectSlot="43051" _EffectType="STATUS_EFFECT_BUFF" _Name="[연] 필살기 시전 중 슈퍼아머" _Passive="false" _ReAction="false" _SaveDB="false" _SkillIndex="180430050" _Type="STATUS_TYPE_SUPERARMOR" />
+  </INFO>
+  <INFO ID="1230430052" KEYNAME="STATUS_GATLING_EP_STATUP_FAKE" _DocID="100000043">
+    <ST_COMMONSTATUS _CanDispel="true" _Description="강화 교체용 FLAG" _DurationTime="100" _EffectType="STATUS_EFFECT_BUFF" _Name="[연] 필살기 강화 교체용" _Passive="false" _ReAction="false" _SaveDB="false" _SkillIndex="180430050" _Type="STATUS_TYPE_STAT" />
+  </INFO>
+  <INFO ID="1230430053" KEYNAME="STATUS_GATLING_EP_STATUP_UP1" _DocID="100000043">
+    <ST_COMMONSTATUS _CanDispel="true" _Description="방어력 상승 +100%" _DurationTime="4000" _EffectKeyName="STATUS_SFX_PC_DEFENCE" _EffectSlot="43052" _EffectType="STATUS_EFFECT_BUFF" _IconAlias="defenseup_01" _Name="[연] 필살기 중 방어력 +100%" _Passive="false" _ReAction="false" _SaveDB="false" _SkillIndex="180430050" _Tooltip="STR_STATUS_PC_TOOLTIP_1230430053" _Type="STATUS_TYPE_STAT" />
+  </INFO>
 </ENTITY_FILE>

@@ -214,7 +214,10 @@ def patch(text, low, ps):
                 close = text.rfind('  </StringTableData>')
                 text = text[:close] + pt['append'] + text[close:]
             continue
-        m = re.search(r'<INFO ID="%s".*?</INFO>' % pt['id'], text, re.S)
+        if 'datakey' in pt:
+            m = re.search(r'\t<data DATAKEY="%s">.*?\n\t</data>' % pt['datakey'], text, re.S)
+        else:
+            m = re.search(r'<INFO ID="%s".*?</INFO>' % pt['id'], text, re.S)
         if not m:
             continue
         block = m.group(0)
