@@ -1,9 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<ENTITY_FILE>
-  <StringTableData>
-    <StringData DATAKEY="STR_MASTER_TITAN" data="" />
-    <StringData DATAKEY="STR_MASTER_TITAN_SIEGE" data="" />
-    <StringData DATAKEY="STR_MASTER_TITAN_BOT" data="" />
-    <StringData DATAKEY="STR_MASTER_TITAN_SIEGE_BOT" data="" />
-  </StringTableData>
-</ENTITY_FILE>
