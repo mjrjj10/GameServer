@@ -6,6 +6,8 @@
 #include <EAStdC/EAString.h>
 #include <common/utils.h>
 
+static const ClassType DEFAULT_LEADER_CLASS = ClassType::LAUNCHER;
+
 
 void HubGame::Init(Server* server_, const ClientLocalMapping* plidMap_)
 {
@@ -241,9 +243,6 @@ void HubGame::OnPlayerChatWhisper(ClientHandle clientHd, const wchar* destNick, 
 	replication.SendChatWhisperToClient(playerMap[destClientID]->clientHd, playerAccountData[userID]->nickname.data(), msg);
 }
 
-struct LastLeader { WideString nickname; LocalActorID characterID; SkinIndex skin; };
-static eastl::fixed_vector<LastLeader,64,true> g_lastLeader;
-
 void HubGame::OnPlayerEnterCity(ClientHandle clientHd)
 {
 	const i32 userID = plidMap->Get(clientHd);
@@ -252,9 +251,9 @@ void HubGame::OnPlayerEnterCity(ClientHandle clientHd)
 		OnCreateParty(clientHd, EntrySystemID::ARENA_3v3, StageType::PVP_GAME);
 	}
 	if(playerActorUID[userID] != ActorUID::INVALID || !playerAccountData[userID]) return;
-	LocalActorID characterID = LocalActorID((u32)LocalActorID::FIRST_SELF_MASTER + 35);
+	LocalActorID characterID = LocalActorID((u32)LocalActorID::FIRST_SELF_MASTER + (u32)DEFAULT_LEADER_CLASS);
 	SkinIndex skin = SkinIndex::DEFAULT;
-	foreach_const(it, g_lastLeader) {
+	foreach_const(it, lastLeaders) {
 		if(it->nickname == playerAccountData[userID]->nickname) { characterID = it->characterID; skin = it->skin; }
 	}
 	LOG("[client%x] HubGame :: entered the city without a leader character, spawning the last one", clientHd);
@@ -266,10 +265,10 @@ void HubGame::OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID cha
 	const i32 userID = plidMap->Get(clientHd);
 	if(playerAccountData[userID]) {
 		bool found = false;
-		foreach(it, g_lastLeader) {
+		foreach(it, lastLeaders) {
 			if(it->nickname == playerAccountData[userID]->nickname) { it->characterID = characterID; it->skin = skinIndex; found = true; }
 		}
-		if(!found && !g_lastLeader.full()) g_lastLeader.push_back({ playerAccountData[userID]->nickname, characterID, skinIndex });
+		if(!found && !lastLeaders.full()) lastLeaders.push_back({ playerAccountData[userID]->nickname, characterID, skinIndex });
 	}
 
 	const i32 leaderMasterContentID = (u32)characterID - (u32)LocalActorID::FIRST_SELF_MASTER - 1;

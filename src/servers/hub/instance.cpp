@@ -1,3 +1,4 @@
+#include <mutex>
 #include <EASTL/sort.h>
 #include "config.h"
 #include <mxm/game_content.h>
@@ -67,9 +68,6 @@ void HubInstance::OnMatchmakerPacket(const NetHeader& header, const u8* packetDa
 const i32 PICKING_TIME = 60;
 const i32 MATCH_WAIT_TIME = 10;
 
-#include <mutex>
-#include <EASTL/hash_set.h>
-
 static std::mutex g_sentToGameMutex;
 static eastl::fixed_vector<WideString,64,true> g_sentToGame;
 
@@ -138,7 +136,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 
 		// SN_ProfileCharacters
 		{
-			PacketWriter<Sv::SN_ProfileCharacters,32768> packet;
+			PacketWriter<Sv::SN_ProfileCharacters,2048> packet;
 
 			packet.Write<u16>(allowedMastersSet.size()); // charaList_count
 
@@ -166,7 +164,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 
 		// SN_ProfileWeapons
 		{
-			PacketWriter<Sv::SN_ProfileWeapons,32768> packet;
+			PacketWriter<Sv::SN_ProfileWeapons,4096> packet;
 
 			u16 weaponCount = 0;
 			foreach_const(it, allowedMastersSet) {
@@ -199,7 +197,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 
 		// SN_ProfileMasterGears
 		{
-			PacketWriter<Sv::SN_ProfileMasterGears,32768> packet;
+			PacketWriter<Sv::SN_ProfileMasterGears,2048> packet;
 
 			// NOTE: we send one empty gear page for now
 
@@ -223,7 +221,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 
 		// SN_ProfileSkills
 		{
-			PacketWriter<Sv::SN_ProfileSkills,32768> packet;
+			PacketWriter<Sv::SN_ProfileSkills,8192> packet;
 			// TODO: split in several packets?
 			packet.Write<u8>(1); // packetNum
 
@@ -253,7 +251,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 
 		// SN_MasterRotationInfo
 		{
-			PacketWriter<Sv::SN_MasterRotationInfo,32768> packet;
+			PacketWriter<Sv::SN_MasterRotationInfo> packet;
 			packet.Write<i32>(0); // refreshCount
 
 			eastl::fixed_vector<CreatureIndex,100,false> freeList;
@@ -269,7 +267,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 		}
 
 		{
-			PacketWriter<Sv::SN_SortieMasterPickPhaseStart,32768> packet;
+			PacketWriter<Sv::SN_SortieMasterPickPhaseStart,1024> packet;
 			packet.Write<u8>(0);
 			packet.Write<u16>((u16)allowedMastersSet.size());
 			foreach_const(m, allowedMastersSet) {
@@ -282,7 +280,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 
 		// allow everyone to pick at once
 		{
-			PacketWriter<Sv::SN_SortieMasterPickPhaseStepStart,32768> packet;
+			PacketWriter<Sv::SN_SortieMasterPickPhaseStepStart> packet;
 			packet.Write<i32>(PICKING_TIME); // timeSec
 
 			eastl::fixed_vector<UserID,5> allyTeamUserIds;
@@ -587,7 +585,7 @@ void RoomInstance::Replicate()
 	}
 
 	if(doReplicateMasterCount) {
-		PacketWriter<Sv::SN_SortieCharacterSlotInfo,32768> packet[2];
+		PacketWriter<Sv::SN_SortieCharacterSlotInfo,1024> packet[2];
 		u16 slotInfos_count[2] = {0};
 
 		for(int team = 0; team < 2; team++) {

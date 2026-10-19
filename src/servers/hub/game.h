@@ -53,6 +53,8 @@ struct HubGame
 	};
 
 	const ClientLocalMapping* plidMap;
+	struct LastLeader { WideString nickname; LocalActorID characterID; SkinIndex skin; };
+	eastl::fixed_vector<LastLeader,64,true> lastLeaders;
 	eastl::array<const Account*,MAX_PLAYERS> playerAccountData;
 
 	WorldHub world;
