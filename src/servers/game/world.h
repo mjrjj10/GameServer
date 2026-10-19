@@ -606,6 +606,7 @@ struct World
 	bool applyingCasterStatus = false;
 	void TeleportPlayer(Player& p, const vec3& pos, f32 yaw);
 	void MovePlayer(Player& p, const vec3& pos, f32 yaw, bool snap);
+	void GxTestDrive(Player& gx, const vec2& dir);
 	struct Showcase
 	{
 		bool started = false;

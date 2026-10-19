@@ -159,12 +159,13 @@ static const i32 DYNAMIC_SHUTTLE_BOARD_POINT = 110041070;
 static const i32 BOARD_POINT_LOCAL_BASE = 41000;
 static const f32 TOOLTIP_SHUTTLE_BOARD_WINDOW_SEC = 3.0f;
 static const i32 STATUS_SHUTTLE_BOARD_END = 1230410047;
-static const f32 RIDE_SYNC_SEC = 0.25f;
+static const f32 RIDE_SYNC_SEC = 0.1f;
 static const f32 GX_TEST_BOARD_GAP = 250.0f;
 static const f32 GX_TEST_DRIVE_STEP = 150.0f;
 static const i32 GX_TEST_DRIVE_STEPS = 7;
 static const f32 GX_TEST_RECALL_DIST = 1500.0f;
 static const f32 GX_TEST_ENEMY_VIEW_DIST = 350.0f;
+static const f32 GX_TEST_BASE_MOVESPEED = 620.0f;
 static const f32 TOOLTIP_RYTLOCK_THIRD_MUL = 1.20f;
 static const f32 WEAPON_AOE_RADIUS = 250.0f;
 static const f32 WEAPON_SHOT_RELIABLE_DISTANCE = 100.0f;
@@ -4282,11 +4283,21 @@ void World::UpdateRides()
 			Unboard(*it);
 			continue;
 		}
-		if(localTime >= it->nextRideSync) {
+		TeleportPlayer(*it, gx.body->GetWorldPos(), gx.input.rot.upperYaw);
+		if(it->clientHd != ClientHandle::INVALID && localTime >= it->nextRideSync) {
 			it->nextRideSync = TimeAdd(localTime, TimeMsToTime(RIDE_SYNC_SEC * 1000.0));
-			MovePlayer(*it, gx.body->GetWorldPos(), gx.input.rot.upperYaw, false);
+			replication->SendSelfMove(it->clientHd, it->Main().UID, gx.body->GetWorldPos(), gx.movement.moveDir, gx.movement.moveSpeed, gx.input.rot.upperYaw);
 		}
 	}
+}
+
+void World::GxTestDrive(Player& gx, const vec2& dir)
+{
+	const f32 yaw = atan2f(dir.y, dir.x);
+	gx.input.speed = GX_TEST_BASE_MOVESPEED * MasterStat(gx.Main().classType, STAT_MOVESPEED) / 100.0f * (1.0f + StatusModMulSum(gx, StatusMod::MOVESPEED) / 100.0f);
+	gx.input.moveTo = gx.body->GetWorldPos() + vec3(dir * GX_TEST_DRIVE_STEP * 4.0f, 0);
+	gx.input.rot.upperYaw = yaw;
+	gx.input.rot.bodyYaw = yaw;
 }
 
 void World::UpdateGxTest(Player& human, Player& gx)
@@ -4322,17 +4333,18 @@ void World::UpdateGxTest(Player& human, Player& gx)
 			showcase.next = TimeAdd(localTime, TimeMsToTime(2500));
 		} break;
 		case 2: {
-			const vec3 to = base + vec3(dir * (GX_TEST_DRIVE_STEP * (showcase.gxStep + 1)), 0);
-			TeleportPlayer(gx, to, atan2f(dir.y, dir.x));
-			LOG("GxTest :: drive step %d gx=(%.0f, %.0f) human=(%.0f, %.0f) boarded=%d", showcase.gxStep, gx.body->GetWorldPos().x, gx.body->GetWorldPos().y, human.body->GetWorldPos().x, human.body->GetWorldPos().y, human.boardedOn >= 0 ? 1 : 0);
+			GxTestDrive(gx, dir);
+			LOG("GxTest :: drive gx=(%.0f, %.0f) human=(%.0f, %.0f) boarded=%d speed=%.0f", gx.body->GetWorldPos().x, gx.body->GetWorldPos().y, human.body->GetWorldPos().x, human.body->GetWorldPos().y, human.boardedOn >= 0 ? 1 : 0, gx.input.speed);
 			if(++showcase.gxStep >= GX_TEST_DRIVE_STEPS) showcase.gxPhase = 3;
 			showcase.next = TimeAdd(localTime, TimeMsToTime(500));
 		} break;
 		case 3: {
 			if(gx.Main().stance != 0) {
+				GxTestDrive(gx, dir);
 				showcase.next = TimeAdd(localTime, TimeMsToTime(500));
 				return;
 			}
+			gx.input.moveTo = gx.body->GetWorldPos();
 			LOG("GxTest :: transport ended human boarded=%d dist=%.0f", human.boardedOn >= 0 ? 1 : 0, glm::length(vec2(human.body->GetWorldPos()) - vec2(gx.body->GetWorldPos())));
 			const vec3 away = gx.body->GetWorldPos() + vec3(side * GX_TEST_RECALL_DIST, 0);
 			TeleportPlayer(human, away, 0);
@@ -4394,7 +4406,7 @@ void World::UpdateGxTest(Player& human, Player& gx)
 		case 8: {
 			Player& enemyGx = players[showcase.gxEnemy];
 			Player& rider = players[showcase.gxRider];
-			TeleportPlayer(enemyGx, enemyGx.body->GetWorldPos() + vec3(dir * GX_TEST_DRIVE_STEP, 0), atan2f(dir.y, dir.x));
+			GxTestDrive(enemyGx, dir);
 			LOG("GxTest :: enemy drive step %d gx=(%.0f, %.0f) rider=(%.0f, %.0f) boarded=%d", showcase.gxStep, enemyGx.body->GetWorldPos().x, enemyGx.body->GetWorldPos().y, rider.body->GetWorldPos().x, rider.body->GetWorldPos().y, rider.boardedOn >= 0 ? 1 : 0);
 			if(++showcase.gxStep >= GX_TEST_DRIVE_STEPS) showcase.gxPhase = 9;
 			showcase.next = TimeAdd(localTime, TimeMsToTime(500));
@@ -4403,9 +4415,11 @@ void World::UpdateGxTest(Player& human, Player& gx)
 			Player& enemyGx = players[showcase.gxEnemy];
 			Player& rider = players[showcase.gxRider];
 			if(enemyGx.Main().stance != 0) {
+				GxTestDrive(enemyGx, dir);
 				showcase.next = TimeAdd(localTime, TimeMsToTime(500));
 				return;
 			}
+			enemyGx.input.moveTo = enemyGx.body->GetWorldPos();
 			LOG("GxTest :: enemy transport ended rider boarded=%d dist=%.0f wall=%lld", rider.boardedOn >= 0 ? 1 : 0, glm::length(vec2(rider.body->GetWorldPos()) - vec2(enemyGx.body->GetWorldPos())), ShowcaseWallMs());
 			showcase.gxPhase = 10;
 			showcase.next = TimeAdd(localTime, TimeMsToTime(2000));
