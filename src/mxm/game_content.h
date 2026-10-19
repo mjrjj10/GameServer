@@ -509,6 +509,7 @@ struct GameXmlContent
 					f32 offsetFront;
 					u8 stopAtTarget; // Param2 DestroyAwayTarget: ends at the aimed point instead of max range
 					u8 remove;
+					u8 removeAtAnimEnd;
 				} remote;
 
 				struct {

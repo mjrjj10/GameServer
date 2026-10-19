@@ -761,18 +761,22 @@ World::ActorMasterHandle World::MasterInvalidHandle()
 
 static f32 SkillMoveDuration(const GameXmlContent& content, ClassType cls, const GameXmlContent::Action& action, i32 animIndex)
 {
+	f32 animLen = 0;
+	foreach_const(st, action.anims) {
+		if(st->index != animIndex) continue;
+		animLen = content.GetAniSeqTime(content.GetMaster(cls).className.c_str(), st->animationId) * (f32)MAX(st->loop, 1);
+		if(animLen > 0) break;
+	}
 	f32 attachedLife = 0;
 	foreach_const(cmd, action.commands) {
 		if(cmd->type != ActionCommand::Type::REMOTE || (cmd->animIndex != animIndex && cmd->animIndex != -1)) continue;
 		const Remote* r = content.FindRemote(cmd->remote.idx);
-		if(r && r->attachFireObject && r->lifeTime > 0) attachedLife = MAX(attachedLife, r->lifeTime);
+		if(!r || !r->attachFireObject || r->lifeTime <= 0) continue;
+		const f32 life = (cmd->remote.removeAtAnimEnd && animLen > 0) ? MIN(r->lifeTime, animLen) : r->lifeTime;
+		attachedLife = MAX(attachedLife, life);
 	}
 	if(attachedLife > 0) return attachedLife;
-	foreach_const(st, action.anims) {
-		if(st->index != animIndex) continue;
-		const f32 len = content.GetAniSeqTime(content.GetMaster(cls).className.c_str(), st->animationId) * (f32)MAX(st->loop, 1);
-		if(len > 0) return len;
-	}
+	if(animLen > 0) return animLen;
 	return action.seqLength;
 }
 
@@ -5031,6 +5035,11 @@ void World::UpdateRemotes(f32 delta)
 			case ActionCommand::TargetPreset::CURRENT_FFF: {
 				const ActorMaster* targetMaster = pr->target != ActorUID::INVALID ? FindMasterActor(pr->target) : nullptr;
 				if(targetMaster && (!remote || remote->maxSpeed <= 0)) pos = targetMaster->parent->body->GetWorldPos();
+			} break;
+			case ActionCommand::TargetPreset::LAST_CHILD_FFF:
+			case ActionCommand::TargetPreset::LAST_CHILD_TFF: {
+				const ActorNpc* child = FindNpcActor(owner.lastChildUID);
+				if(child && localTime < child->despawnAt) pos = vec3(vec2(child->pos), owner.body->GetWorldPos().z);
 			} break;
 			default: {
 				if(pr->offsetFront != 0 || pr->offsetSide != 0) pos = vec3(vec2(owner.body->GetWorldPos()) + dir * pr->offsetFront + Perp(dir) * pr->offsetSide, owner.body->GetWorldPos().z);
