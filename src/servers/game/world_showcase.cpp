@@ -32,6 +32,13 @@ static const f32 GX_PREVIEW_RIDER_GAP = 250.0f;
 static const f32 GX_PREVIEW_RECALL_DIST = 750.0f;
 static const f32 GATLING_PREVIEW_NEAR_DIST = 160.0f;
 
+static const GameXmlContent::Action& ShowcaseSkillAction(const GameXmlContent& content, ClassType cls, ActionStateID action, i8 stance = 0)
+{
+	static const GameXmlContent::Action none = {};
+	const GameXmlContent::Action* found = content.FindSkillAction(cls, action, stance);
+	return found ? *found : none;
+}
+
 static f32 RemoteDamageRadius(const GameXmlContent& content, RemoteIdx idx, i32 depth)
 {
 	const Remote* r = content.FindRemote(idx);
@@ -68,7 +75,7 @@ static f32 SkillReach(const GameXmlContent& content, ClassType cls, SkillID skil
 {
 	auto f = content.skillMap.find(skillID);
 	if(f == content.skillMap.end()) return 0;
-	const auto& action = content.GetSkillAction(cls, f->second.action);
+	const auto& action = ShowcaseSkillAction(content, cls, f->second.action);
 	f32 reach = 0;
 	foreach_const(cmd, action.commands) {
 		const bool atCaster = cmd->remote.targetPreset == ActionCommand::TargetPreset::SELF_FFF || cmd->remote.targetPreset == ActionCommand::TargetPreset::SELF_FFF_1 ||
@@ -89,7 +96,7 @@ static f32 SkillDamageRadius(const GameXmlContent& content, ClassType cls, Skill
 {
 	auto f = content.skillMap.find(skillID);
 	if(f == content.skillMap.end()) return 0;
-	const auto& action = content.GetSkillAction(cls, f->second.action);
+	const auto& action = ShowcaseSkillAction(content, cls, f->second.action);
 	f32 radius = 0;
 	bool anyRemote = false;
 	bool selfOnly = true;
@@ -110,7 +117,7 @@ static f32 SkillDashDistance(const GameXmlContent& content, ClassType cls, Skill
 {
 	auto f = content.skillMap.find(skillID);
 	if(f == content.skillMap.end()) return 0;
-	const auto& action = content.GetSkillAction(cls, f->second.action);
+	const auto& action = ShowcaseSkillAction(content, cls, f->second.action);
 	f32 dash = 0;
 	foreach_const(cmd, action.commands) {
 		if(cmd->type == ActionCommand::Type::MOVE && (cmd->move.preset == ActionCommand::MovePreset::TARGET_POS || cmd->move.preset == ActionCommand::MovePreset::TARGET_POS_LEAP)) return 0;
@@ -135,7 +142,7 @@ static bool SkillReachUnknown(const GameXmlContent& content, ClassType cls, Skil
 {
 	auto f = content.skillMap.find(skillID);
 	if(f == content.skillMap.end()) return false;
-	const auto& action = content.GetSkillAction(cls, f->second.action);
+	const auto& action = ShowcaseSkillAction(content, cls, f->second.action);
 	foreach_const(cmd, action.commands) {
 		if(cmd->type == ActionCommand::Type::ENTITY || cmd->type == ActionCommand::Type::AIOBJECT || cmd->type == ActionCommand::Type::CALL_CHILD_SKILL) return true;
 		if((cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) && RemoteShapeUnknown(content, cmd->remote.idx, 0)) return true;
@@ -680,7 +687,7 @@ void World::UpdateShowcase()
 			foreach_const(sid, content.GetMaster(hc).skillIDs) {
 				auto f = content.skillMap.find(*sid);
 				if(f == content.skillMap.end() || f->second.type != SkillType::NORMAL) continue;
-				if(content.GetSkillAction(hc, f->second.action, st->stance).stance != st->stance) continue;
+				if(ShowcaseSkillAction(content, hc, f->second.action, st->stance).stance != st->stance) continue;
 				if(human->skills[hb] == *sid) { followKey = "q"; break; }
 				if(human->skills[hb + 1] == *sid) { followKey = "e"; break; }
 			}
@@ -714,7 +721,7 @@ void World::UpdateShowcase()
 				auto f = content.skillMap.find(*sid);
 				if(f == content.skillMap.end() || f->second.type != SkillType::NORMAL) continue;
 				if(mirror && human->Main().classType == cls && human->skills[hb] != *sid && human->skills[hb + 1] != *sid) continue;
-				if(content.GetSkillAction(cls, f->second.action, st->stance).stance == st->stance) { combo = (i32)*sid; comboDelayMs = 1000; break; }
+				if(ShowcaseSkillAction(content, cls, f->second.action, st->stance).stance == st->stance) { combo = (i32)*sid; comboDelayMs = 1000; break; }
 			}
 		}
 		if(combo != 0) {

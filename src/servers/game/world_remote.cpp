@@ -45,8 +45,9 @@ static f32 WeaponNodeForward(const GameXmlContent& content, ClassType cls, Skill
 	SkillNormalModel& skill = const_cast<SkillNormalModel&>(f->second);
 	const f32 indicator = skill.getSkillNormalLevelByIndex(0)->getSkillRangeLengthY();
 	if(indicator <= 0) return 0;
-	const auto& action = content.GetSkillAction(cls, skill.action);
-	foreach_const(cmd, action.commands) {
+	const GameXmlContent::Action* action = content.FindSkillAction(cls, skill.action);
+	if(!action) return 0;
+	foreach_const(cmd, action->commands) {
 		if(cmd->type == ActionCommand::Type::GRAPH_MOVE_HORZ && cmd->graphMoveHorz.distance > 0) return 0;
 		if(cmd->type == ActionCommand::Type::MOVE && cmd->move.preset != ActionCommand::MovePreset::MOVE_NONE) return 0;
 	}

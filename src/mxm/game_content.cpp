@@ -2,11 +2,9 @@
 #include <EAStdC/EAString.h>
 #include <EAStdC/EASprintf.h>
 #include <tinyxml2.h>
-#include <EASTL/hash_set.h>
 
 #include "core.h"
 #include "game_content.h"
-#include <EASTL/hash_set.h>
 
 using namespace tinyxml2;
 constexpr eastl::hash<const char*> strHash;
@@ -1908,6 +1906,9 @@ bool GameXmlContent::Load()
 	r = LoadBotBrain();
 	if(!r) return false;
 
+	r = CheckSkillActions();
+	if(!r) return false;
+
 	/*
 	LOG("Masters:");
 	eastl::fixed_string<char,1024> buff;
@@ -2091,28 +2092,60 @@ i8 GameXmlContent::StanceFromString(const char* str)
 	return (c >= 'A' && c <= 'Z' && str[13] == 0) ? (i8)(c - 'A' + 1) : 0;
 }
 
-const GameXmlContent::Action& GameXmlContent::GetSkillAction(ClassType classType, ActionStateID actionID, i8 stance) const
+static u64 SkillActionKey(ClassType classType, ActionStateID actionID)
 {
-	static const Action emptyAction = {};
+	return ((u64)(u32)classType << 32) | (u64)(u32)actionID;
+}
+
+const GameXmlContent::Action* GameXmlContent::FindSkillAction(ClassType classType, ActionStateID actionID, i8 stance) const
+{
 	auto found = actionListMap.find(classType);
-	if(found == actionListMap.end()) {
-		WARN("GetSkillAction :: no actions for class %d", (i32)classType);
-		return emptyAction;
-	}
+	if(found == actionListMap.end()) return nullptr;
 
 	if(stance != 0) {
 		foreach_const(it, found->second) {
-			if(it->ID == actionID && it->stance == stance) return *it;
+			if(it->ID == actionID && it->stance == stance) return &*it;
 		}
 	}
 	foreach_const(it, found->second) {
-		if(it->ID == actionID && it->stance == 0) {
-			return *it;
+		if(it->ID == actionID && it->stance == 0) return &*it;
+	}
+	return nullptr;
+}
+
+const GameXmlContent::Action& GameXmlContent::GetSkillAction(ClassType classType, ActionStateID actionID, i8 stance) const
+{
+	static const Action noServerAction = {};
+	const Action* action = FindSkillAction(classType, actionID, stance);
+	if(action) return *action;
+	if(skillActionGaps.find(SkillActionKey(classType, actionID)) == skillActionGaps.end()) {
+		LOG("ERROR(GetSkillAction): action %d not found for class %d", (i32)actionID, (i32)classType);
+		ASSERT_MSG(0, "action not found");
+	}
+	return noServerAction;
+}
+
+bool GameXmlContent::CheckSkillActions()
+{
+	foreach_const(m, masters) {
+		foreach_const(sid, m->skillIDs) {
+			auto found = skillMap.find(*sid);
+			if(found == skillMap.end()) continue;
+			eastl::fixed_vector<ActionStateID,6,false> actions;
+			actions.push_back(found->second.action);
+			if(const SkillCast* cast = FindSkillCast((i32)*sid)) actions.push_back(cast->action);
+			if(const auto* levels = FindSkillCostLevels((i32)*sid)) {
+				for(const CostLevel& lvl : *levels) if(!actions.full()) actions.push_back(lvl.action);
+			}
+			foreach_const(a, actions) {
+				if(*a == ActionStateID::INVALID || FindSkillAction(m->classType, *a)) continue;
+				if(skillActionGaps.insert(SkillActionKey(m->classType, *a)).second) {
+					LOG("GameContent :: class %d skill %d action %d has no ActionBase entry (no server-side commands)", (i32)m->classType, (i32)*sid, (i32)*a);
+				}
+			}
 		}
 	}
-
-	WARN("GetSkillAction :: action %d not found for class %d", (i32)actionID, (i32)classType);
-	return emptyAction;
+	return true;
 }
 
 StatusType StatusTypeFromString(const char* str)
