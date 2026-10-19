@@ -1170,3 +1170,33 @@ bool World::ShowcaseKeepsAlive(const Player& target) const
 {
 	return Config().DevShowcase && (target.clientHd == ClientHandle::INVALID || Config().DevMirror) && Config().DevGxTest != GX_DEATH_TEST_MODE;
 }
+
+static const i64 SHOWCASE_PERF_WINDOW_US = 10000000;
+
+static i64 ShowcaseNowUs()
+{
+	return (i64)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+ShowcaseTickTimer::ShowcaseTickTimer(ShowcaseState& state_):
+	state(state_),
+	startUs(Config().DevShowcase ? ShowcaseNowUs() : 0)
+{
+}
+
+ShowcaseTickTimer::~ShowcaseTickTimer()
+{
+	if(!Config().DevShowcase) return;
+	const i64 now = ShowcaseNowUs();
+	const i64 spent = now - startUs;
+	if(state.perfWindowStartUs == 0) state.perfWindowStartUs = now;
+	state.perfTotalUs += spent;
+	state.perfMaxUs = MAX(state.perfMaxUs, spent);
+	state.perfTicks++;
+	if(now - state.perfWindowStartUs < SHOWCASE_PERF_WINDOW_US) return;
+	LOG("Perf :: world update avg=%.1fus max=%lldus ticks=%d", (f64)state.perfTotalUs / MAX(state.perfTicks, 1), state.perfMaxUs, state.perfTicks);
+	state.perfWindowStartUs = now;
+	state.perfTotalUs = 0;
+	state.perfMaxUs = 0;
+	state.perfTicks = 0;
+}

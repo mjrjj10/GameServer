@@ -31,6 +31,7 @@ void World::Cleanup()
 void World::Update(Time localTime_)
 {
 	ProfileFunction();
+	ShowcaseTickTimer showcaseTimer(showcase);
 
 	const f64 tdelta = TimeDurationSec(localTime, localTime_);
 	localTime = localTime_;

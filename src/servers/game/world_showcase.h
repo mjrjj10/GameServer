@@ -64,4 +64,16 @@ struct ShowcaseState
 	i32 posWaits = 0;
 	vec3 anchor = vec3(0);
 	f32 yaw = 0;
+	i64 perfWindowStartUs = 0;
+	i64 perfTotalUs = 0;
+	i64 perfMaxUs = 0;
+	i32 perfTicks = 0;
+};
+
+struct ShowcaseTickTimer
+{
+	ShowcaseState& state;
+	const i64 startUs;
+	explicit ShowcaseTickTimer(ShowcaseState& state_);
+	~ShowcaseTickTimer();
 };
