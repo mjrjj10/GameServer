@@ -141,6 +141,19 @@ def main():
             f.write(text)
         manifest['files'][rel] = sorted('%s:%s' % (k, v) for k, v, _ in items)
         print('%-34s +%d (%s)' % (name, len(items), ', '.join(sorted(set(k for k, _, _ in items)))))
+    for pt in ps:
+        low = pt['doc']
+        if low in by_doc or low not in cn:
+            continue
+        sub, name, _ = cn[low]
+        rel = os.path.join('Data', OVERLAY, sub, name)
+        dst = os.path.join(OUT, rel)
+        text = read(dst) if os.path.exists(dst) else read(eu[low])
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        with open(dst, 'w', encoding='utf-8-sig', newline='') as f:
+            f.write(patch(text, low, ps))
+        by_doc.setdefault(low, [])
+        print('%-34s patched' % name)
     with open(os.path.join(OUT, 'manifest_%d.json' % seed_doc), 'w', encoding='utf-8') as f:
         json.dump(manifest, f, indent=1, ensure_ascii=False)
     if '--server' in sys.argv:
@@ -191,10 +204,24 @@ def patch(text, low, ps):
     for pt in ps:
         if pt['doc'] != low:
             continue
-        m = re.search(r'<INFO ID="%s".*?</INFO>' % pt['id'], text, re.S)
-        if not m or pt['insert'].strip() in m.group(0):
+        if 'append_info' in pt:
+            if 'ID="%s"' % pt['id'] not in text:
+                close = text.rfind('</')
+                text = text[:close] + pt['append_info'] + text[close:]
             continue
-        block = m.group(0).replace(pt['after'], pt['after'] + pt['insert'], 1)
+        if 'append' in pt:
+            if pt['append'].strip() not in text:
+                close = text.rfind('  </StringTableData>')
+                text = text[:close] + pt['append'] + text[close:]
+            continue
+        m = re.search(r'<INFO ID="%s".*?</INFO>' % pt['id'], text, re.S)
+        if not m:
+            continue
+        block = m.group(0)
+        if 'insert' in pt and pt['insert'].strip() not in block:
+            block = block.replace(pt['after'], pt['after'] + pt['insert'], 1)
+        for a, b in pt.get('replace', []):
+            block = block.replace(a, b)
         text = text[:m.start()] + block + text[m.end():]
     return text
 

@@ -152,6 +152,19 @@ static const i32 STATUS_SHUTTLE_SHOCKWAVE = 1230410030;
 static const i32 REMOTE_SHUTTLE_SHOCKWAVE = 1440410030;
 static const f32 TOOLTIP_SHUTTLE_EMP_DRAIN = 0.30f;
 static const f32 TELEPORT_SPREAD = 80.0f;
+static const i32 INTERACTION_SHUTTLE_BOARD = 900000071;
+static const i32 INTERACTION_NOT_OCCUPIED = -1;
+static const u32 PLAYER_FACTION_BASE = 3;
+static const i32 DYNAMIC_SHUTTLE_BOARD_POINT = 110041070;
+static const i32 BOARD_POINT_LOCAL_BASE = 41000;
+static const f32 TOOLTIP_SHUTTLE_BOARD_WINDOW_SEC = 3.0f;
+static const i32 STATUS_SHUTTLE_BOARD_END = 1230410047;
+static const f32 RIDE_SYNC_SEC = 0.25f;
+static const f32 GX_TEST_BOARD_GAP = 250.0f;
+static const f32 GX_TEST_DRIVE_STEP = 150.0f;
+static const i32 GX_TEST_DRIVE_STEPS = 7;
+static const f32 GX_TEST_RECALL_DIST = 1500.0f;
+static const f32 GX_TEST_ENEMY_VIEW_DIST = 350.0f;
 static const f32 TOOLTIP_RYTLOCK_THIRD_MUL = 1.20f;
 static const f32 WEAPON_AOE_RADIUS = 250.0f;
 static const f32 WEAPON_SHOT_RELIABLE_DISTANCE = 100.0f;
@@ -369,6 +382,7 @@ void World::Update(Time localTime_)
 	if(!frozen) UpdatePassives();
 	if(!frozen) UpdateStances();
 	if(!frozen) UpdateCasts();
+	if(!frozen) UpdateRides();
 	if(Config().DevShowcase) { if(!frozen) UpdateShowcase(); }
 	else {
 		if(!frozen) UpdateBotCombat();
@@ -844,6 +858,19 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 				castCostLevel->consume[1], castCostLevel->consume[2], (i32)castCostLevel->remoteReplace.size(), (i32)castCostLevel->statusReplace.size(), castCostLevel->damageRatio);
 		}
 		PassiveOnSkillCast(player, (i32)skillID);
+		if(const ActiveStatus* gx = FindPassiveOfType(player, "STATUS_TYPE_GX09")) {
+			if(gx->info->ParamInt("_ShuttleSkillIndex") == (i64)skillID) {
+				player.boardOpenUntil = TimeAdd(localTime, TimeMsToTime(TOOLTIP_SHUTTLE_BOARD_WINDOW_SEC * 1000.0));
+				RemoveBoardPoint(player);
+				static i32 boardPointLocal = BOARD_POINT_LOCAL_BASE;
+				ActorDynamic& point = SpawnDynamic(CreatureIndex(DYNAMIC_SHUTTLE_BOARD_POINT), boardPointLocal++);
+				point.pos = player.body->GetWorldPos();
+				point.rot = vec3(0, 0, player.input.rot.upperYaw);
+				player.boardPointUID = point.UID;
+				player.boardPointAnnounceAt = TimeAdd(localTime, TimeMsToTime(200));
+				LOG("Interaction :: %ls opens boarding for %.0fs", player.name.data(), TOOLTIP_SHUTTLE_BOARD_WINDOW_SEC);
+			}
+		}
 	}
 
 	f32 angle = player.input.rot.upperYaw;
@@ -2806,6 +2833,13 @@ void World::TeleportPlayer(Player& p, const vec3& pos, f32 yaw)
 	p.weaponAimYaw = yaw;
 }
 
+void World::MovePlayer(Player& p, const vec3& pos, f32 yaw, bool snap)
+{
+	TeleportPlayer(p, pos, yaw);
+	if(p.clientHd == ClientHandle::INVALID) return;
+	replication->SendSelfTeleport(p.clientHd, p.Main().UID, pos, yaw, snap ? &p.lastClientPos : nullptr);
+}
+
 static f32 RemoteDamageRadius(const GameXmlContent& content, RemoteIdx idx, i32 depth)
 {
 	const Remote* r = content.FindRemote(idx);
@@ -3069,6 +3103,15 @@ void World::UpdateShowcase()
 	if(showcase.casterSlot >= (i32)bots.size()) {
 		showcase.done = true;
 		LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
+		return;
+	}
+
+	if(Config().DevGxTest) {
+		foreach_const(b, bots) {
+			if(players[*b].team == human->team && (i32)players[*b].Main().classType == CLASS_NUM_SHUTTLE) { UpdateGxTest(*human, players[*b]); return; }
+		}
+		LOG("GxTest :: no allied GX-09 bot");
+		showcase.done = true;
 		return;
 	}
 
@@ -4149,10 +4192,229 @@ void World::MassTeleport(Player& gx, const StatusInfo& passive)
 		if(FindActiveStatus(it->index, STATUS_SHUTTLE_TELEPORT_RESIST)) continue;
 		const f32 a = moved * PI * 2.0f / 5.0f;
 		if(effect != 0) ApplyStatus(gx, *it, effect);
-		TeleportPlayer(*it, dest + vec3(cosf(a) * TELEPORT_SPREAD, sinf(a) * TELEPORT_SPREAD, 0), it->input.rot.upperYaw);
+		MovePlayer(*it, dest + vec3(cosf(a) * TELEPORT_SPREAD, sinf(a) * TELEPORT_SPREAD, 0), it->input.rot.upperYaw, true);
 		moved++;
 	}
 	LOG("Passive :: %ls teleporter moved %d allies from (%.0f, %.0f) radius %.0f", gx.name.data(), moved, gx.massTeleportPos.x, gx.massTeleportPos.y, radius);
+}
+
+void World::RemoveBoardPoint(Player& gx)
+{
+	if(gx.boardPointUID == ActorUID::INVALID) return;
+	auto found = actorDynamicMap.find(gx.boardPointUID);
+	if(found != actorDynamicMap.end()) {
+		actorDynamicList.erase(found->second);
+		actorDynamicMap.erase(found);
+	}
+	gx.boardPointUID = ActorUID::INVALID;
+}
+
+void World::PlayerInteract(Player& player, ActorUID targetUID)
+{
+	Player* owner = nullptr;
+	foreach(it, players) if(it->boardPointUID == targetUID && targetUID != ActorUID::INVALID) owner = &*it;
+	if(!owner) {
+		ActorMaster* target = FindMasterActor(targetUID);
+		owner = target ? target->parent : nullptr;
+	}
+	if(!owner || player.dead || player.boardedOn >= 0) return;
+	Player& gx = *owner;
+	if(gx.index == player.index || gx.team != player.team || gx.dead || localTime >= gx.boardOpenUntil) return;
+	const ActiveStatus* passive = FindPassiveOfType(gx, "STATUS_TYPE_GX09");
+	if(!passive) return;
+	const f32 reach = GetGameXmlContent().GetInteractionActiveDistance(INTERACTION_SHUTTLE_BOARD);
+	const f32 dist = glm::length(vec2(gx.body->GetWorldPos()) - vec2(player.body->GetWorldPos()));
+	if(reach > 0 && dist > reach + HitRadius(gx)) {
+		LOG("Interaction :: %ls too far from %ls to board (%.0f > %.0f)", player.name.data(), gx.name.data(), dist, reach);
+		return;
+	}
+	i32 applied = 0;
+	foreach_const(p, passive->info->params) {
+		if(p->name != "DATA") continue;
+		ApplyStatus(gx, player, (i32)p->value);
+		applied++;
+	}
+	LOG("Interaction :: %ls boarding statuses %d (params %d)", player.name.data(), applied, (i32)passive->info->params.size());
+	player.boardedOn = (i32)gx.index;
+	player.untargetable = true;
+	replication->SendInteractionExecuteToAll(player.Main().UID, gx.Main().UID, (u32)INTERACTION_SHUTTLE_BOARD, 0);
+	LOG("Interaction :: %ls boards %ls", player.name.data(), gx.name.data());
+}
+
+void World::Unboard(Player& passenger)
+{
+	if(passenger.boardedOn < 0) return;
+	Player& gx = players[passenger.boardedOn];
+	passenger.boardedOn = -1;
+	passenger.untargetable = false;
+	if(const ActiveStatus* passive = FindPassiveOfType(gx, "STATUS_TYPE_GX09")) {
+		foreach_const(p, passive->info->params) {
+			if(p->name != "DATA") continue;
+			const i32 id = (i32)p->value;
+			const StatusInfo* info = GetGameXmlContent().FindStatus(id);
+			foreach(st, activeStatuses) {
+				if(st->targetIndex == passenger.index && st->statusID == id) st->until = localTime;
+				if(info && st->targetIndex == gx.index && st->statusID == info->casterStatus) st->until = localTime;
+			}
+		}
+	}
+	if(!passenger.dead) {
+		MovePlayer(passenger, gx.body->GetWorldPos() + vec3(TELEPORT_SPREAD, 0, 0), passenger.input.rot.upperYaw, true);
+	}
+	LOG("Interaction :: %ls leaves %ls", passenger.name.data(), gx.name.data());
+}
+
+void World::UpdateRides()
+{
+	foreach(it, players) {
+		if(it->boardOpenUntil != Time::ZERO && localTime >= it->boardOpenUntil) {
+			it->boardOpenUntil = Time::ZERO;
+			RemoveBoardPoint(*it);
+		}
+		if(it->boardPointAnnounceAt != Time::ZERO && localTime >= it->boardPointAnnounceAt) {
+			it->boardPointAnnounceAt = Time::ZERO;
+			replication->SendInteractionStatusToAll(it->boardPointUID, 1u << (PLAYER_FACTION_BASE + it->team), INTERACTION_SHUTTLE_BOARD, INTERACTION_NOT_OCCUPIED);
+		}
+		if(it->boardedOn < 0) continue;
+		Player& gx = players[it->boardedOn];
+		const bool shuttle = (i32)gx.Main().classType == CLASS_NUM_SHUTTLE;
+		if(it->dead || gx.dead || !shuttle || gx.Main().stance == 0) {
+			Unboard(*it);
+			continue;
+		}
+		if(localTime >= it->nextRideSync) {
+			it->nextRideSync = TimeAdd(localTime, TimeMsToTime(RIDE_SYNC_SEC * 1000.0));
+			MovePlayer(*it, gx.body->GetWorldPos(), gx.input.rot.upperYaw, false);
+		}
+	}
+}
+
+void World::UpdateGxTest(Player& human, Player& gx)
+{
+	const vec3 base = showcase.anchor;
+	const vec2 dir = showcase.dir;
+	const vec2 side = vec2(-dir.y, dir.x);
+	const ActiveStatus* passive = FindPassiveOfType(gx, "STATUS_TYPE_GX09");
+	if(!passive) {
+		LOG("GxTest :: GX-09 passive missing");
+		showcase.done = true;
+		return;
+	}
+	const SkillID transport = SkillID((i32)passive->info->ParamInt("_ShuttleSkillIndex"));
+	const SkillID teleporter = SkillID((i32)passive->info->ParamInt("_MassiveTeleportIndex"));
+	switch(showcase.gxPhase) {
+		case 0: {
+			TeleportPlayer(gx, base, atan2f(dir.y, dir.x));
+			const vec3 humanPos = base + vec3(dir * GX_TEST_BOARD_GAP, 0);
+			TeleportPlayer(human, humanPos, atan2f(-dir.y, -dir.x));
+			replication->SendSelfTeleport(human.clientHd, human.Main().UID, humanPos, 0);
+			gx.res[1] = MasterStat(gx.Main().classType, RESOURCES[1].maxStat);
+			gx.ultGauge = MasterStat(gx.Main().classType, STAT_ULTIMATE);
+			LOG("GxTest :: phase board gx=%ls human=%ls gap=%.0f", gx.name.data(), human.name.data(), GX_TEST_BOARD_GAP);
+			showcase.gxPhase = 1;
+			showcase.next = TimeAdd(localTime, TimeMsToTime(2000));
+		} break;
+		case 1: {
+			PlayerCastSkill(gx, transport, gx.body->GetWorldPos(), Slice<const ActorUID>(), 0);
+			LOG("GxTest :: press F wall=%lld", ShowcaseWallMs());
+			showcase.gxPhase = 2;
+			showcase.gxStep = 0;
+			showcase.next = TimeAdd(localTime, TimeMsToTime(2500));
+		} break;
+		case 2: {
+			const vec3 to = base + vec3(dir * (GX_TEST_DRIVE_STEP * (showcase.gxStep + 1)), 0);
+			TeleportPlayer(gx, to, atan2f(dir.y, dir.x));
+			LOG("GxTest :: drive step %d gx=(%.0f, %.0f) human=(%.0f, %.0f) boarded=%d", showcase.gxStep, gx.body->GetWorldPos().x, gx.body->GetWorldPos().y, human.body->GetWorldPos().x, human.body->GetWorldPos().y, human.boardedOn >= 0 ? 1 : 0);
+			if(++showcase.gxStep >= GX_TEST_DRIVE_STEPS) showcase.gxPhase = 3;
+			showcase.next = TimeAdd(localTime, TimeMsToTime(500));
+		} break;
+		case 3: {
+			if(gx.Main().stance != 0) {
+				showcase.next = TimeAdd(localTime, TimeMsToTime(500));
+				return;
+			}
+			LOG("GxTest :: transport ended human boarded=%d dist=%.0f", human.boardedOn >= 0 ? 1 : 0, glm::length(vec2(human.body->GetWorldPos()) - vec2(gx.body->GetWorldPos())));
+			const vec3 away = gx.body->GetWorldPos() + vec3(side * GX_TEST_RECALL_DIST, 0);
+			TeleportPlayer(human, away, 0);
+			replication->SendSelfTeleport(human.clientHd, human.Main().UID, away, 0);
+			showcase.gxPhase = 4;
+			showcase.next = TimeAdd(localTime, TimeMsToTime(2000));
+		} break;
+		case 4: {
+			const ActorUID target = human.Main().UID;
+			gx.ultGauge = MasterStat(gx.Main().classType, STAT_ULTIMATE);
+			PlayerCastSkill(gx, teleporter, human.body->GetWorldPos(), Slice<const ActorUID>(&target, 1), 0);
+			LOG("GxTest :: teleporter cast on human at %.0f", glm::length(vec2(human.body->GetWorldPos()) - vec2(gx.body->GetWorldPos())));
+			showcase.gxPhase = 5;
+			showcase.next = TimeAdd(localTime, TimeMsToTime(5000));
+		} break;
+		case 5: {
+			LOG("GxTest :: teleporter result dist=%.0f", glm::length(vec2(human.body->GetWorldPos()) - vec2(gx.body->GetWorldPos())));
+			Player* enemyGx = nullptr;
+			Player* rider = nullptr;
+			foreach(it, players) {
+				if(it->team == human.team || it->clientHd != ClientHandle::INVALID || it->dead) continue;
+				if(!enemyGx && (i32)it->Main().classType == CLASS_NUM_SHUTTLE) enemyGx = &*it;
+				else if(!rider && (i32)it->Main().classType != CLASS_NUM_SHUTTLE) rider = &*it;
+			}
+			if(!enemyGx || !rider || !FindPassiveOfType(*enemyGx, "STATUS_TYPE_GX09")) {
+				LOG("GxTest :: no enemy GX-09 and rider");
+				LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
+				showcase.done = true;
+				return;
+			}
+			showcase.gxEnemy = (i32)enemyGx->index;
+			showcase.gxRider = (i32)rider->index;
+			const vec3 view = human.body->GetWorldPos();
+			const vec3 start = view + vec3(side * GX_TEST_ENEMY_VIEW_DIST - dir * (GX_TEST_DRIVE_STEP * GX_TEST_DRIVE_STEPS * 0.5f), 0);
+			TeleportPlayer(*enemyGx, start, atan2f(dir.y, dir.x));
+			TeleportPlayer(*rider, start - vec3(dir * GX_TEST_BOARD_GAP, 0), atan2f(dir.y, dir.x));
+			enemyGx->res[1] = MasterStat(enemyGx->Main().classType, RESOURCES[1].maxStat);
+			LOG("GxTest :: enemy phase gx=%ls rider=%ls", enemyGx->name.data(), rider->name.data());
+			showcase.gxPhase = 6;
+			showcase.next = TimeAdd(localTime, TimeMsToTime(2000));
+		} break;
+		case 6: {
+			Player& enemyGx = players[showcase.gxEnemy];
+			const ActiveStatus* enemyPassive = FindPassiveOfType(enemyGx, "STATUS_TYPE_GX09");
+			PlayerCastSkill(enemyGx, SkillID((i32)enemyPassive->info->ParamInt("_ShuttleSkillIndex")), enemyGx.body->GetWorldPos(), Slice<const ActorUID>(), 0);
+			LOG("GxTest :: enemy transport cast wall=%lld", ShowcaseWallMs());
+			showcase.gxPhase = 7;
+			showcase.next = TimeAdd(localTime, TimeMsToTime(1000));
+		} break;
+		case 7: {
+			Player& enemyGx = players[showcase.gxEnemy];
+			Player& rider = players[showcase.gxRider];
+			PlayerInteract(rider, enemyGx.boardPointUID);
+			LOG("GxTest :: enemy rider boarded=%d wall=%lld", rider.boardedOn >= 0 ? 1 : 0, ShowcaseWallMs());
+			showcase.gxPhase = 8;
+			showcase.gxStep = 0;
+			showcase.next = TimeAdd(localTime, TimeMsToTime(1500));
+		} break;
+		case 8: {
+			Player& enemyGx = players[showcase.gxEnemy];
+			Player& rider = players[showcase.gxRider];
+			TeleportPlayer(enemyGx, enemyGx.body->GetWorldPos() + vec3(dir * GX_TEST_DRIVE_STEP, 0), atan2f(dir.y, dir.x));
+			LOG("GxTest :: enemy drive step %d gx=(%.0f, %.0f) rider=(%.0f, %.0f) boarded=%d", showcase.gxStep, enemyGx.body->GetWorldPos().x, enemyGx.body->GetWorldPos().y, rider.body->GetWorldPos().x, rider.body->GetWorldPos().y, rider.boardedOn >= 0 ? 1 : 0);
+			if(++showcase.gxStep >= GX_TEST_DRIVE_STEPS) showcase.gxPhase = 9;
+			showcase.next = TimeAdd(localTime, TimeMsToTime(500));
+		} break;
+		case 9: {
+			Player& enemyGx = players[showcase.gxEnemy];
+			Player& rider = players[showcase.gxRider];
+			if(enemyGx.Main().stance != 0) {
+				showcase.next = TimeAdd(localTime, TimeMsToTime(500));
+				return;
+			}
+			LOG("GxTest :: enemy transport ended rider boarded=%d dist=%.0f wall=%lld", rider.boardedOn >= 0 ? 1 : 0, glm::length(vec2(rider.body->GetWorldPos()) - vec2(enemyGx.body->GetWorldPos())), ShowcaseWallMs());
+			showcase.gxPhase = 10;
+			showcase.next = TimeAdd(localTime, TimeMsToTime(2000));
+		} break;
+		default: {
+			LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
+			showcase.done = true;
+		} break;
+	}
 }
 
 void World::AddFuel(Player& player, f32 amount)

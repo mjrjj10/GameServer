@@ -1417,6 +1417,45 @@ void Replication::SendCancelSkillToAll(ActorUID casterUID, SkillID skillID)
 	}
 }
 
+void Replication::SendInteractionStatusToAll(ActorUID objectUID, u32 allowedTeamMask, i32 interactionID, i32 occupiedTeam)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, objectUID);
+		if(localID == LocalActorID::INVALID) continue;
+		Sv::SN_InteractionStatus packet;
+		packet.allowedTeamMask = allowedTeamMask;
+		packet.objectID = (u32)localID;
+		packet.interactionID = (u32)interactionID;
+		packet.occupiedTeam = occupiedTeam;
+		packet.coolTime = 0;
+		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendInteractionExecuteToAll(ActorUID objectUID, ActorUID targetUID, u32 actionState, u32 castingTimeMS)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID objectID = GetLocalActorID(clientHd, objectUID);
+		const LocalActorID targetID = GetLocalActorID(clientHd, targetUID);
+		if(objectID == LocalActorID::INVALID || targetID == LocalActorID::INVALID) continue;
+		Sv::SN_InteractionCasting casting;
+		casting.objectID = (u32)objectID;
+		casting.targetID = (u32)targetID;
+		casting.actionState = actionState;
+		casting.castingTimeMS = castingTimeMS;
+		SendPacket(clientHd, casting);
+		Sv::SN_InteractionExecute execute;
+		execute.objectID = (u32)objectID;
+		execute.targetID = (u32)targetID;
+		execute.actionState = actionState;
+		SendPacket(clientHd, execute);
+	}
+}
+
 void Replication::SendNpcBehaviorToAll(ActorUID actorUID, ActionStateID action, const vec3& pos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID)
 {
 	const float3 dir = v2f(vec3(cosf(worldYaw), sinf(worldYaw), 0));

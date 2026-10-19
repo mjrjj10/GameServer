@@ -2783,6 +2783,71 @@ inline const char* PacketSerialize<Cl::CQ_GamePlayerSyncPhy>(const void* packetD
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_InteractionStatus>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_InteractionStatus(%d, %d) :: {", Sv::SN_InteractionStatus::NET_ID, packetSize);
+	SER("	allowedTeamMask=0x%x", buff.Read<u32>());
+	SER("	objectID=0x%08x", buff.Read<u32>());
+	SER("	interactionID=%u", buff.Read<u32>());
+	SER("	occupiedTeam=%d", buff.Read<i32>());
+	SER("	coolTime=%g", buff.Read<f32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_InteractionCasting>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_InteractionCasting(%d, %d) :: {", Sv::SN_InteractionCasting::NET_ID, packetSize);
+	SER("	objectID=0x%08x", buff.Read<u32>());
+	SER("	targetID=0x%08x", buff.Read<u32>());
+	SER("	actionState=%u", buff.Read<u32>());
+	SER("	castingTimeMS=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_InteractionExecute>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_InteractionExecute(%d, %d) :: {", Sv::SN_InteractionExecute::NET_ID, packetSize);
+	SER("	objectID=0x%08x", buff.Read<u32>());
+	SER("	targetID=0x%08x", buff.Read<u32>());
+	SER("	actionState=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_InteractionCasting>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_InteractionCasting(%d, %d) :: {", Cl::CQ_InteractionCasting::NET_ID, packetSize);
+	SER("	self=0x%08x", buff.Read<u32>());
+	SER("	target=0x%08x", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_InteractionCancel>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_InteractionCancel(%d, %d) :: {", Cl::CQ_InteractionCancel::NET_ID, packetSize);
+	SER("	param=0x%08x", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Cl::CQ_WeaponState>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

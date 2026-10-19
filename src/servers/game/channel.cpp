@@ -66,6 +66,8 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 		CASE(CQ_PlayerJump);
 		CASE(CQ_PlayerCastSkill);
 		CASE(CQ_WeaponState);
+		CASE(CQ_InteractionCasting);
+		CASE(CQ_InteractionCancel);
 		CASE(CQ_GamePlayerSyncPhy);
 
 		case 60026: // CQ_ReturnToCity
@@ -377,6 +379,28 @@ void GamePacketHandler::HandlePacket_CQ_WeaponState(ClientHandle clientHd, const
 	if(state == 2) {
 		game->OnPlayerWeaponFire(clientHd, MxmYawToWorldYaw(aimYaw));
 	}
+}
+
+void GamePacketHandler::HandlePacket_CQ_InteractionCasting(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_InteractionCasting>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_InteractionCasting (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_InteractionCasting>(packetData, packetSize));
+	ConstBuffer buff(packetData, packetSize);
+	const LocalActorID self = buff.Read<LocalActorID>();
+	const LocalActorID target = buff.Read<LocalActorID>();
+	game->OnPlayerInteraction(clientHd, replication->GetWorldActorUID(clientHd, target), self);
+}
+
+void GamePacketHandler::HandlePacket_CQ_InteractionCancel(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_InteractionCancel>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_InteractionCancel (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_InteractionCancel>(packetData, packetSize));
 }
 
 void GamePacketHandler::HandlePacket_CQ_GamePlayerSyncPhy(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

@@ -708,6 +708,15 @@ void Game::OnPlayerWeaponStateRelay(ClientHandle clientHd, ActorUID ownerUID, i3
 	replication.RelayWeaponState(clientHd, ownerUID, (i32)weapon, state, chargeLevel, firingCombo);
 }
 
+void Game::OnPlayerInteraction(ClientHandle clientHd, ActorUID targetUID, LocalActorID selfLocal)
+{
+	Player& p = *playerMap.at(clientHd);
+	World::Player& player = world.GetPlayer(p.playerIndex);
+	ASSERT(player.clientHd == clientHd);
+	LOG("Interaction :: %ls self=%u target uid=%u", player.name.data(), (u32)selfLocal, (u32)targetUID);
+	if(targetUID != ActorUID::INVALID) world.PlayerInteract(player, targetUID);
+}
+
 void Game::OnPlayerToggleSkill(ClientHandle clientHd, SkillID skillID, bool on)
 {
 	auto found = playerMap.find(clientHd);

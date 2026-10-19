@@ -2193,6 +2193,20 @@ bool GameXmlContent::LoadStatusData()
 				}
 			}
 		}
+		for(XMLElement* pChild = pInfo->FirstChildElement(); pChild; pChild = pChild->NextSiblingElement()) {
+			for(XMLElement* pNode = pChild->FirstChildElement(); pNode; pNode = pNode->NextSiblingElement()) {
+				for(XMLElement* pLeaf = pNode->FirstChildElement(); pLeaf; pLeaf = pLeaf->NextSiblingElement()) {
+					for(const XMLAttribute* a = pLeaf->FirstAttribute(); a; a = a->Next()) {
+						f64 v = 0;
+						if(a->QueryDoubleValue(&v) != XML_SUCCESS || st.params.full() || EA::StdC::Strlen(a->Name()) >= 31) continue;
+						StatusInfo::NamedValue nv;
+						nv.name = a->Name();
+						nv.value = v;
+						st.params.push_back(nv);
+					}
+				}
+			}
+		}
 
 		statusMap[st.ID] = st;
 	}
@@ -2752,6 +2766,17 @@ bool GameXmlContent::LoadStatusData()
 			if(!list.full()) { list.push_back(status); count++; }
 		}
 		LOG("Loaded %d passive statuses", count);
+		XMLDocument xmlInteraction;
+		if(LoadXMLFile(L"/client/INTERACTION.xml", xmlInteraction)) {
+			for(XMLElement* pI = xmlInteraction.FirstChildElement()->FirstChildElement(); pI; pI = pI->NextSiblingElement()) {
+				XMLElement* pData = pI->FirstChildElement("ST_INTERACTION");
+				i32 id = 0;
+				f32 dist = 0;
+				if(!pData || pI->QueryAttribute("ID", &id) != XML_SUCCESS) continue;
+				pData->QueryFloatAttribute("_ActiveDistance", &dist);
+				interactionActiveDistance[id] = dist;
+			}
+		}
 	}
 
 	XMLDocument xmlBrain;

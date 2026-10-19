@@ -49,6 +49,8 @@ private:
 	void HandlePacket_CQ_PlayerJump(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_GamePlayerSyncPhy(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_WeaponState(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
+	void HandlePacket_CQ_InteractionCasting(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
+	void HandlePacket_CQ_InteractionCancel(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_PlayerCastSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 
 	template<typename Packet>

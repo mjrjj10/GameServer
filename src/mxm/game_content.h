@@ -687,6 +687,8 @@ struct GameXmlContent
 		for(const char* c = key; *c; c++) { h ^= (u8)(*c >= 'a' && *c <= 'z' ? *c - 32 : *c); h *= 16777619u; }
 		return ((u64)h << 32) | (u32)seqID;
 	}
+	eastl::hash_map<i32, f32> interactionActiveDistance;
+	f32 GetInteractionActiveDistance(i32 id) const { auto f = interactionActiveDistance.find(id); return f == interactionActiveDistance.end() ? 0 : f->second; }
 	f32 GetAniSeqTime(const char* className, i32 seqID) const { auto f = aniSeqTime.find(AniKey(className, seqID)); return f == aniSeqTime.end() ? 0 : f->second; }
 	// stand-up animation length of a master (AniLength LIE_END, entity key = class name without CLASS_TYPE_)
 	f32 GetLieEndTime(const char* className) const

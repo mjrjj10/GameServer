@@ -16,6 +16,7 @@ bool CConfigGame::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "DevShowcaseFullRes=%d", &DevShowcaseFullRes) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcaseKeepSummons=%d", &DevShowcaseKeepSummons) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevHideDetectFlag=%d", &DevHideDetectFlag) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevGxTest=%d", &DevGxTest) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DamageFormula=%d", &DamageFormula) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevMirror=%d", &DevMirror) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevNoFireNode=%d", &DevNoFireNode) == 1) return true;

@@ -1,3 +1,31 @@
 [
- {"doc": "creature_character.xml", "id": "100000041", "after": "_class=\"CLASS_TYPE_SHUTTLE\"", "insert": " _ElementType=\"CELEMENT_TYPE_BLUE\""}
+ {
+  "doc": "creature_character.xml",
+  "id": "100000041",
+  "after": "_class=\"CLASS_TYPE_SHUTTLE\"",
+  "insert": " _ElementType=\"CELEMENT_TYPE_BLUE\""
+ },
+ {
+  "doc": "interaction.xml",
+  "id": "900000071",
+  "replace": [
+   [
+    "_Action=\"IT_ACTION_BOARD\"",
+    "_Action=\"IT_ACTION_TELEPORT\""
+   ],
+   [
+    "_Name=\"IT_NAME_BOARD\"",
+    "_Name=\"IT_NAME_GX09_BOARD\""
+   ]
+  ]
+ },
+ {
+  "doc": "string.xml",
+  "append": "    <StringData DATAKEY=\"IT_NAME_GX09_BOARD\" data=\"Board\" />\n"
+ },
+ {
+  "doc": "dynamic.xml",
+  "id": "110041070",
+  "append_info": "  <INFO ID=\"110041070\">\n    <EntityComData _Type=\"ENTITY_TYPE_DYNAMIC\" KEYNAME=\"GX09_Board_Point\" _Scale=\"1\" _SizeType=\"SIZE_TYPE_NONE\" _Outline=\"0\" _IsTargetable=\"FALSE\" _IsAimingTarget=\"FALSE\" _DensityCount=\"1000000\" _MaterialType=\"MATERIAL_TYPE_DEFAULT\" />\n    <Kfm_ComData KeyName=\"Dummy_Invisible2\" _UseHitColor=\"false\" />\n    <DynamicComData _IgnoreSubBound=\"True\" _IgnoreSkillCastPick=\"True\" _AniUpdate=\"False\" _RankDetail=\"DYNAMIC_RANK_DETAIL_IMMORTAL\" _Type=\"DYNAMIC_TYPE_CONTROL\" />\n    <HUDComData _ShowNameTag=\"0\" _ShowHP=\"0\" _ShowIcon=\"-1\" _ShowMinimap=\"false\" />\n    <InteractionRecvComData _Index=\"900000071\" />\n    <StatsComData _DestroyTime=\"1\" _Team=\"TEAM_DYNAMIC\" />\n  </INFO>\n"
+ }
 ]

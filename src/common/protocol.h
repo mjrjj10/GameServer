@@ -12328,10 +12328,10 @@ PUSH_PACKED
 struct SN_InteractionStatus
 {
 	enum { NET_ID = 62493 };
-	u32 state; // 4 bytes
+	u32 allowedTeamMask; // 4 bytes
 	u32 objectID; // 4 bytes
 	u32 interactionID; // 4 bytes
-	u32 occupiedTeam; // 4 bytes
+	i32 occupiedTeam; // 4 bytes
 	f32 coolTime; // 4 bytes
 	// logger 0x998a0d
 };

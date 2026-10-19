@@ -119,6 +119,11 @@ struct World
 		i32 hitsTaken = 0;
 		i32 statusesTaken = 0;
 		bool untargetable = false;
+		Time boardOpenUntil = Time::ZERO;
+		i32 boardedOn = -1;
+		Time nextRideSync = Time::ZERO;
+		ActorUID boardPointUID = ActorUID::INVALID;
+		Time boardPointAnnounceAt = Time::ZERO;
 		struct Casting {
 			SkillID skillID = SkillID::INVALID;
 			vec3 castPos;
@@ -600,6 +605,7 @@ struct World
 	void UpdateShowcase();
 	bool applyingCasterStatus = false;
 	void TeleportPlayer(Player& p, const vec3& pos, f32 yaw);
+	void MovePlayer(Player& p, const vec3& pos, f32 yaw, bool snap);
 	struct Showcase
 	{
 		bool started = false;
@@ -651,6 +657,10 @@ struct World
 		ActorUID comboTarget = ActorUID::INVALID;
 		f32 flatLen = 2050.0f;
 		Time minNext = Time::ZERO;
+		i32 gxPhase = 0;
+		i32 gxStep = 0;
+		i32 gxEnemy = -1;
+		i32 gxRider = -1;
 		Time quietSince = Time::ZERO;
 		i32 posWaits = 0;
 		vec3 anchor = vec3(0);
@@ -672,6 +682,11 @@ struct World
 	void PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir, f32 distance);
 	void AddFuel(Player& player, f32 amount);
 	void MassTeleport(Player& gx, const StatusInfo& passive);
+	void PlayerInteract(Player& player, ActorUID targetUID);
+	void Unboard(Player& passenger);
+	void UpdateRides();
+	void RemoveBoardPoint(Player& gx);
+	void UpdateGxTest(Player& human, Player& gx);
 	void OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize);
 	void OnWeaponAimPacket(Player& player, f32 aimYaw);
 
