@@ -11,6 +11,7 @@
 
 #include "replication.h"
 #include "physics.h"
+#include "world_showcase.h"
 
 struct StatusInfo;
 
@@ -626,66 +627,7 @@ struct World
 	void UpdateGxPreview(Player& human);
 	void UpdateGatlingPreview(Player& human);
 	void UpdateGxEmpTest(Player& human);
-	struct Showcase
-	{
-		bool started = false;
-		bool done = false;
-		Time next = Time::ZERO;
-		i32 casterSlot = 0;
-		i32 dummySlot = -1;
-		i32 masterPass = 0;
-		i32 step = 0;
-		i32 rangeIdx = 0;
-		i32 testCount = 1;
-		i32 lastDummyHp = 0;
-		i32 lastDummyHits = 0;
-		i32 lastDummyStatuses = 0;
-		bool pendingResult = false;
-		i32 prevExpect = -1;
-		u32 prevDummy = 0;
-		u32 prevCaster = 0;
-		i32 phase = 0;
-		vec3 mid = vec3(0);
-		vec2 dir = vec2(1, 0);
-		i32 probeDir = 0;
-		f32 groundZ = 0;
-		eastl::fixed_vector<vec2,24,false> candidates;
-		i32 candIdx = 0;
-		f32 bestLen = 0;
-		vec2 bestDir = vec2(1, 0);
-		vec2 bestCenter = vec2(0);
-		f32 bestZ = 0;
-		i32 comboSkill = 0;
-		bool settled = false;
-		i32 mirrorTurn = 0;
-		bool castSeen = false;
-		i32 mastersDone = 0;
-		vec2 casterStart = vec2(0);
-		vec2 dummyStart = vec2(0);
-		Time castAt = Time::ZERO;
-		i64 firstHitMs = -1;
-		i32 firstHitDamage = 0;
-		eastl::fixed_vector<i32,12,false> statusesSeen;
-		f32 casterMana0 = 0;
-		f32 casterStamina0 = 0;
-		Time comboAt = Time::ZERO;
-		i32 stanceShots = 0;
-		Time stanceShotAt = Time::ZERO;
-		i32 stanceShooter = -1;
-		vec3 comboPos = vec3(0);
-		i32 comboCaster = -1;
-		ActorUID comboTarget = ActorUID::INVALID;
-		f32 flatLen = 2050.0f;
-		Time minNext = Time::ZERO;
-		i32 gxPhase = 0;
-		i32 gxStep = 0;
-		i32 gxEnemy = -1;
-		i32 gxRider = -1;
-		Time quietSince = Time::ZERO;
-		i32 posWaits = 0;
-		vec3 anchor = vec3(0);
-		f32 yaw = 0;
-	} showcase;
+	ShowcaseState showcase;
 	void RunSummonState(ActorNpc& npc, i32 state);
 	void RelayPassive(ActorNpc& npc, const SummonInfo& info, Player& owner);
 	void RelayWarp(ActorNpc& npc, const vec3& to);
