@@ -9,10 +9,6 @@ static const f32 COMBO_SLOT_WINDOW_SEC = 5.0f;
 static const i32 SKILL_SLOT_ENUM_FIRST = 2;
 static const f32 OBSTRUCT_LOW_HEIGHT = 30.0f;
 static const i32 SKILL_SLOT_ENUM_UG = 6;
-static const f32 TOOLTIP_SHUTTLE_TELEPORT_SEC = 3.0f;
-static const i32 DYNAMIC_SHUTTLE_BOARD_POINT = 110041070;
-static const i32 BOARD_POINT_LOCAL_BASE = 41000;
-static const f32 TOOLTIP_SHUTTLE_BOARD_WINDOW_SEC = 3.0f;
 
 void World::Init(Replication* replication_)
 {
@@ -550,37 +546,10 @@ World::ActorMasterHandle World::MasterInvalidHandle()
 
 void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPosIn, Slice<const ActorUID> targets, f32 clientTime, ActionStateID forcedAction)
 {
-	SkillID skillID = skillIn;
-	if(player.clientHd != ClientHandle::INVALID && forcedAction == ActionStateID::INVALID && player.comboSlot >= 0 && skillIn == player.comboBase && localTime < player.comboUntil && player.comboSkill != SkillID::INVALID) {
-		LOG("Combo :: %ls recast %d -> combo %d", player.name.data(), (i32)skillIn, (i32)player.comboSkill);
-		skillID = player.comboSkill;
-	}
-	vec3 castPos = castPosIn;
-	if(player.clientHd != ClientHandle::INVALID && forcedAction == ActionStateID::INVALID && player.comboSlot >= 0 && skillID == player.comboSkill && glm::length(vec2(player.comboCastPos)) > 1.0f) {
-		const GameXmlContent::SkillInput* comboIn = GetGameXmlContent().FindSkillInput((i32)skillID);
-		if(comboIn && comboIn->selfPosition) castPos = player.comboCastPos;
-	}
-	if(player.clientHd == ClientHandle::INVALID && forcedAction == ActionStateID::INVALID && glm::length(vec2(castPos)) > 1.0f) {
-		const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput((i32)skillID);
-		const vec2 from = vec2(player.body->GetWorldPos());
-		const vec2 rel = vec2(castPos) - from;
-		const f32 len = glm::length(rel);
-		if(in && len > 1.0f) {
-			f32 clamped = len;
-			if(in->minDistance > 0) clamped = MAX(clamped, in->minDistance);
-			if(in->maxDistance > 0) clamped = MIN(clamped, in->maxDistance);
-			if(clamped != len) castPos = vec3(from + rel / len * clamped, castPos.z);
-		}
-	}
+	const SkillID skillID = ResolveComboRecast(player, skillIn, forcedAction);
+	const vec3 castPos = ResolveCastPos(player, skillID, castPosIn, forcedAction);
 	if(frozen) return;
-	if(player.Main().classType == ClassType::SLIME && targets.size() > 0) {
-		const GameXmlContent::SkillInput* pickIn = GetGameXmlContent().FindSkillInput((i32)skillID);
-		const ActorMaster* picked = pickIn && pickIn->pickedEntity ? FindMasterActor(targets[0]) : nullptr;
-		if(picked && picked->parent != &player && picked->classType == ClassType::SLIME) {
-			LOG("Skill :: %ls skill=%d refused: cannot cling to another Bumaro (ERROR_TYPE_SKILL_CANT_USE_SAME_MASTER)", player.name.data(), (i32)skillID);
-			return;
-		}
-	}
+	if(!SkillTargetsAllowed(player, skillID, targets)) return;
 	eastl::fixed_vector<ActorUID,10,false> allEnemyTargets;
 	if(const GameXmlContent::SkillInput* selIn = GetGameXmlContent().FindSkillInput((i32)skillID)) {
 		if(selIn->allEnemies) {
@@ -612,70 +581,10 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		return;
 	}
 	const GameXmlContent::SkillCast* cast = followUp ? nullptr : content.FindSkillCast((i32)skillID);
-	castCostLevel = nullptr;
-	if(!followUp) {
-		if(const auto* levels = content.FindSkillCostLevels((i32)skillID)) {
-			for(const GameXmlContent::CostLevel& lvl : *levels) {
-				bool affordable = lvl.consume[0] > 0 || lvl.consume[1] > 0 || lvl.consume[2] > 0;
-				for(i32 r = 0; r < 3; r++) if(lvl.consume[r] > 0 && player.res[r] < lvl.consume[r]) affordable = false;
-				if(affordable) castCostLevel = &lvl;
-			}
-		}
-	}
+	castCostLevel = followUp ? nullptr : PickCostLevel(player, skillID);
 	const ActionStateID actionState = followUp ? forcedAction : castCostLevel && castCostLevel->action != ActionStateID::INVALID ? castCostLevel->action : (cast ? cast->action : skill.action);
 
-	if(!followUp) {
-		const bool shirk = GetGameXmlContent().GetSkillConsumeStamina((i32)skillID) > 0;
-		if(IsBlocked(player, false, !shirk, shirk)) {
-			LOG("Blocked :: %ls skill=%d (input blocked by a status)", player.name.data(), (i32)skillID);
-			return;
-		}
-		if(player.clientHd == ClientHandle::INVALID) {
-			const GameXmlContent::SkillInput* obIn = content.FindSkillInput((i32)skillID);
-			if(obIn && (obIn->obstructMove != 0 || obIn->obstructSight)) {
-				vec3 to = castPos;
-				if(targets.size() > 0) { if(const ActorMaster* tm = FindMasterActor(targets[0])) to = tm->parent->body->GetWorldPos(); }
-				const vec3 from = player.body->GetWorldPos();
-				if(glm::length(vec2(to)) > 1.0f && glm::length(vec2(to) - vec2(from)) > 1.0f) {
-					const f32 height = obIn->obstructMove == 1 ? OBSTRUCT_JUMPABLE_HEIGHT : OBSTRUCT_LOW_HEIGHT;
-					const vec2 along = glm::normalize(vec2(to) - vec2(from));
-					const vec2 side = vec2(-along.y, along.x);
-					bool blocked = false;
-					for(f32 off : { 0.0f, -OBSTRUCT_SIDE, OBSTRUCT_SIDE }) {
-						f32 hitDist = 0;
-						const bool hit = physics.RaycastStatic(vec3(vec2(from) + side * off, from.z + height), vec3(vec2(to) + side * off, from.z + height), &hitDist);
-						if(hit) blocked = true;
-					}
-					if(blocked) {
-						LOG("Blocked :: %ls skill=%d obstacle between caster and target", player.name.data(), (i32)skillID);
-						return;
-					}
-				}
-			}
-		}
-		if(!PlayerPaySkillCost(player, (i32)skillID)) return;
-		if(castCostLevel) {
-			for(i32 r = 0; r < 3; r++) {
-				if(castCostLevel->consume[r] > 0 && player.res[r] >= 0) { player.res[r] -= castCostLevel->consume[r]; player.tNextResSend = Time::ZERO; }
-			}
-			LOG("Cost :: %ls skill=%d empowered level (consumed rp=%.0f bb=%.0f, %d remotes / %d statuses replaced, damage x%.3f)", player.name.data(), (i32)skillID,
-				castCostLevel->consume[1], castCostLevel->consume[2], (i32)castCostLevel->remoteReplace.size(), (i32)castCostLevel->statusReplace.size(), castCostLevel->damageRatio);
-		}
-		PassiveOnSkillCast(player, (i32)skillID);
-		if(const ActiveStatus* gx = FindPassiveOfType(player, StatusType::GX09)) {
-			if(gx->info->ParamInt("_ShuttleSkillIndex") == (i64)skillID) {
-				player.boardOpenUntil = TimeAdd(localTime, TimeMsToTime(TOOLTIP_SHUTTLE_BOARD_WINDOW_SEC * 1000.0));
-				RemoveBoardPoint(player);
-				static i32 boardPointLocal = BOARD_POINT_LOCAL_BASE;
-				ActorDynamic& point = SpawnDynamic(CreatureIndex(DYNAMIC_SHUTTLE_BOARD_POINT), boardPointLocal++);
-				point.pos = player.body->GetWorldPos();
-				point.rot = vec3(0, 0, player.input.rot.upperYaw);
-				player.boardPointUID = point.UID;
-				player.boardPointAnnounceAt = TimeAdd(localTime, TimeMsToTime(200));
-				LOG("Interaction :: %ls opens boarding for %.0fs", player.name.data(), TOOLTIP_SHUTTLE_BOARD_WINDOW_SEC);
-			}
-		}
-	}
+	if(!followUp && !CheckAndPayCast(player, skillID, castPos, targets)) return;
 
 	f32 angle = player.input.rot.upperYaw;
 	if(skill.type == SkillType::SHIRK) {
@@ -780,16 +689,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	rpExec.rot = { angle, 0, angle };
 	rpExec.speed = player.input.speed; // FIXME: should not come from input
 
-	if(distance > 0 && glm::length(gotoDir) < 0.5f && glm::length(vec2(castPos)) > 1.0f) {
-		foreach_const(cmd, action.commands) {
-			if(cmd->type == ActionCommand::Type::MOVE && (cmd->move.preset == ActionCommand::MovePreset::TARGET_POS || cmd->move.preset == ActionCommand::MovePreset::TARGET_POS_LEAP)) {
-				const vec2 rel = vec2(castPos) - vec2(player.body->GetWorldPos());
-				const f32 len = glm::length(rel);
-				distance = len;
-				if(len > 1.0f) gotoDir = rel / len;
-			}
-		}
-	}
+	if(distance > 0 && glm::length(gotoDir) < 0.5f && glm::length(vec2(castPos)) > 1.0f) TargetPositionMove(player, action, castPos, &distance, &gotoDir);
 	if(distance != 0) {
 		const vec2 moveDir = glm::length(gotoDir) > 0.5f ? gotoDir : dir;
 		const vec3 endPos = physics.FindMovePos(player.body, vec3(moveDir * distance, 0), moveDuration);
@@ -803,25 +703,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	if(castRelease && player.lastComboSkill == skillID) player.lastComboSkill = SkillID::INVALID;
 	const bool remotesScheduled = ScheduleSkillRemotes(player, skillID, castPos, targets, angle, followUp && !castRelease ? 0 : -1, cast ? cast->action : forcedAction);
 	castCostLevel = nullptr;
-	if(cast) {
-		const bool bot = player.clientHd == ClientHandle::INVALID;
-		f32 wait = cast->time;
-		if(bot && cast->type != GameXmlContent::SkillCast::DELAY) wait = MIN(wait, action.seqLength);
-		player.casting.skillID = skillID;
-		player.casting.castPos = castPos;
-		player.casting.target = targets.size() > 0 ? targets[0] : ActorUID::INVALID;
-		player.casting.startPos = vec2(player.body->GetWorldPos());
-		player.casting.executeAt = TimeAdd(localTime, TimeMsToTime(wait * 1000.0));
-		player.casting.type = (u8)cast->type;
-		player.casting.interruptByMove = cast->interruptByMove;
-		LOG("Cast :: %ls skill=%d start action=%d type=%d wait=%.2f", player.name.data(), (i32)skillID, (i32)cast->action, (i32)cast->type, wait);
-		if(const ActiveStatus* gx = FindPassiveOfType(player, StatusType::GX09)) {
-			if(gx->info->ParamInt("_MassiveTeleportIndex") == (i64)skillID) {
-				player.massTeleportAt = TimeAdd(localTime, TimeMsToTime(TOOLTIP_SHUTTLE_TELEPORT_SEC * 1000.0));
-				player.massTeleportPos = castPos;
-			}
-		}
-	}
+	if(cast) StartCasting(player, skillID, *cast, castPos, targets, action);
 	skillProgramList.back().passes = lastAnimPasses;
 	bool effectCommands = false;
 	foreach_const(cmd, action.commands) {
@@ -831,40 +713,179 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		PlayerSkillDamage(player, skillID, castPos, targets, angle);
 	}
 
-	if(!followUp && player.clientHd != ClientHandle::INVALID) {
-		if(player.comboSlot >= 0 && skill.type == SkillType::COMBO) {
-			replication->SendChangeSkillSlot(player.clientHd, player.Main().UID, player.comboSlot, player.comboBase, 0);
-			ComboBaseCooldown(player);
-			LOG("Combo :: %ls slot %d back to %d", player.name.data(), player.comboSlot, (i32)player.comboBase);
-			player.comboSlot = -1;
-		}
-		const i32 combo = content.GetFirstComboSkill((i32)skillID);
-		if(combo != 0) {
-			const i32 base = (i32)player.mainCharaID * 2;
-			i32 slot = -1;
-			const i32 order = ((i32)skillID / 10) % 10;
-			if((player.skills[base] == skillID || player.skills[base + 1] == skillID) && order >= 1 && order <= 4) slot = SKILL_SLOT_ENUM_FIRST + order - 1;
-			else if(order == 5 && (i32)skillID % 10 == 0) slot = SKILL_SLOT_ENUM_UG;
-			if(slot >= 0) {
-				const GameXmlContent::SkillInput* baseIn = content.FindSkillInput((i32)skillID);
-				player.comboPending = SkillID(combo);
-				player.comboSkill = SkillID(combo);
-				player.comboSendAt = TimeAdd(localTime, TimeMsToTime(50.0));
-				player.comboResetCooltime = baseIn ? baseIn->coolTimeID : 0;
-				player.comboSlot = slot;
-				player.comboBase = skillID;
-				player.comboCastPos = castPos;
-				player.comboUntil = TimeAdd(localTime, TimeMsToTime(COMBO_SLOT_WINDOW_SEC * 1000.0));
-				LOG("Combo :: %ls slot %d -> %d", player.name.data(), slot, combo);
-				const i32 autoMs = content.GetComboAutoCastMs(combo);
-				player.comboAutoAt = autoMs > 0 ? TimeAdd(localTime, TimeMsToTime((f64)autoMs)) : Time::ZERO;
-			}
-		}
-	}
+	if(!followUp && player.clientHd != ClientHandle::INVALID) UpdateComboSlot(player, skillID, skill.type, castPos);
 	if(!followUp) {
 		if(const GameXmlContent::SkillStance* st = content.FindSkillStance((i32)skillID)) SetStance(player.Main(), st->stance, st->duration, st->weaponFireCount, st->cancelByDefeat);
 	}
 
+	QueueChildSkill(player, actionState, castPos, targets);
+}
+
+SkillID World::ResolveComboRecast(Player& player, SkillID skillIn, ActionStateID forcedAction)
+{
+	if(player.clientHd != ClientHandle::INVALID && forcedAction == ActionStateID::INVALID && player.comboSlot >= 0 && skillIn == player.comboBase && localTime < player.comboUntil && player.comboSkill != SkillID::INVALID) {
+		LOG("Combo :: %ls recast %d -> combo %d", player.name.data(), (i32)skillIn, (i32)player.comboSkill);
+		return player.comboSkill;
+	}
+	return skillIn;
+}
+
+vec3 World::ResolveCastPos(const Player& player, SkillID skillID, const vec3& castPosIn, ActionStateID forcedAction) const
+{
+	vec3 castPos = castPosIn;
+	if(player.clientHd != ClientHandle::INVALID && forcedAction == ActionStateID::INVALID && player.comboSlot >= 0 && skillID == player.comboSkill && glm::length(vec2(player.comboCastPos)) > 1.0f) {
+		const GameXmlContent::SkillInput* comboIn = GetGameXmlContent().FindSkillInput((i32)skillID);
+		if(comboIn && comboIn->selfPosition) castPos = player.comboCastPos;
+	}
+	if(player.clientHd == ClientHandle::INVALID && forcedAction == ActionStateID::INVALID && glm::length(vec2(castPos)) > 1.0f) {
+		const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput((i32)skillID);
+		const vec2 from = vec2(player.body->GetWorldPos());
+		const vec2 rel = vec2(castPos) - from;
+		const f32 len = glm::length(rel);
+		if(in && len > 1.0f) {
+			f32 clamped = len;
+			if(in->minDistance > 0) clamped = MAX(clamped, in->minDistance);
+			if(in->maxDistance > 0) clamped = MIN(clamped, in->maxDistance);
+			if(clamped != len) castPos = vec3(from + rel / len * clamped, castPos.z);
+		}
+	}
+	return castPos;
+}
+
+bool World::SkillTargetsAllowed(const Player& player, SkillID skillID, Slice<const ActorUID> targets) const
+{
+	if(player.Main().classType == ClassType::SLIME && targets.size() > 0) {
+		const GameXmlContent::SkillInput* pickIn = GetGameXmlContent().FindSkillInput((i32)skillID);
+		const ActorMaster* picked = pickIn && pickIn->pickedEntity ? FindMasterActor(targets[0]) : nullptr;
+		if(picked && picked->parent != &player && picked->classType == ClassType::SLIME) {
+			LOG("Skill :: %ls skill=%d refused: cannot cling to another Bumaro (ERROR_TYPE_SKILL_CANT_USE_SAME_MASTER)", player.name.data(), (i32)skillID);
+			return false;
+		}
+	}
+	return true;
+}
+
+const GameXmlContent::CostLevel* World::PickCostLevel(const Player& player, SkillID skillID) const
+{
+	const GameXmlContent::CostLevel* picked = nullptr;
+	if(const auto* levels = GetGameXmlContent().FindSkillCostLevels((i32)skillID)) {
+		for(const GameXmlContent::CostLevel& lvl : *levels) {
+			bool affordable = lvl.consume[0] > 0 || lvl.consume[1] > 0 || lvl.consume[2] > 0;
+			for(i32 r = 0; r < 3; r++) if(lvl.consume[r] > 0 && player.res[r] < lvl.consume[r]) affordable = false;
+			if(affordable) picked = &lvl;
+		}
+	}
+	return picked;
+}
+
+bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets)
+{
+	const auto& content = GetGameXmlContent();
+	const bool shirk = GetGameXmlContent().GetSkillConsumeStamina((i32)skillID) > 0;
+	if(IsBlocked(player, false, !shirk, shirk)) {
+		LOG("Blocked :: %ls skill=%d (input blocked by a status)", player.name.data(), (i32)skillID);
+		return false;
+	}
+	if(player.clientHd == ClientHandle::INVALID) {
+		const GameXmlContent::SkillInput* obIn = content.FindSkillInput((i32)skillID);
+		if(obIn && (obIn->obstructMove != 0 || obIn->obstructSight)) {
+			vec3 to = castPos;
+			if(targets.size() > 0) { if(const ActorMaster* tm = FindMasterActor(targets[0])) to = tm->parent->body->GetWorldPos(); }
+			const vec3 from = player.body->GetWorldPos();
+			if(glm::length(vec2(to)) > 1.0f && glm::length(vec2(to) - vec2(from)) > 1.0f) {
+				const f32 height = obIn->obstructMove == 1 ? OBSTRUCT_JUMPABLE_HEIGHT : OBSTRUCT_LOW_HEIGHT;
+				const vec2 along = glm::normalize(vec2(to) - vec2(from));
+				const vec2 side = vec2(-along.y, along.x);
+				bool blocked = false;
+				for(f32 off : { 0.0f, -OBSTRUCT_SIDE, OBSTRUCT_SIDE }) {
+					f32 hitDist = 0;
+					const bool hit = physics.RaycastStatic(vec3(vec2(from) + side * off, from.z + height), vec3(vec2(to) + side * off, from.z + height), &hitDist);
+					if(hit) blocked = true;
+				}
+				if(blocked) {
+					LOG("Blocked :: %ls skill=%d obstacle between caster and target", player.name.data(), (i32)skillID);
+					return false;
+				}
+			}
+		}
+	}
+	if(!PlayerPaySkillCost(player, (i32)skillID)) return false;
+	if(castCostLevel) {
+		for(i32 r = 0; r < 3; r++) {
+			if(castCostLevel->consume[r] > 0 && player.res[r] >= 0) { player.res[r] -= castCostLevel->consume[r]; player.tNextResSend = Time::ZERO; }
+		}
+		LOG("Cost :: %ls skill=%d empowered level (consumed rp=%.0f bb=%.0f, %d remotes / %d statuses replaced, damage x%.3f)", player.name.data(), (i32)skillID,
+			castCostLevel->consume[1], castCostLevel->consume[2], (i32)castCostLevel->remoteReplace.size(), (i32)castCostLevel->statusReplace.size(), castCostLevel->damageRatio);
+	}
+	PassiveOnSkillCast(player, (i32)skillID);
+	OnShuttleSkillCast(player, skillID);
+	return true;
+}
+
+void World::TargetPositionMove(const Player& player, const GameXmlContent::Action& action, const vec3& castPos, f32* distance, vec2* gotoDir) const
+{
+	foreach_const(cmd, action.commands) {
+		if(cmd->type == ActionCommand::Type::MOVE && (cmd->move.preset == ActionCommand::MovePreset::TARGET_POS || cmd->move.preset == ActionCommand::MovePreset::TARGET_POS_LEAP)) {
+			const vec2 rel = vec2(castPos) - vec2(player.body->GetWorldPos());
+			const f32 len = glm::length(rel);
+			*distance = len;
+			if(len > 1.0f) *gotoDir = rel / len;
+		}
+	}
+}
+
+void World::StartCasting(Player& player, SkillID skillID, const GameXmlContent::SkillCast& cast, const vec3& castPos, Slice<const ActorUID> targets, const GameXmlContent::Action& action)
+{
+	const bool bot = player.clientHd == ClientHandle::INVALID;
+	f32 wait = cast.time;
+	if(bot && cast.type != GameXmlContent::SkillCast::DELAY) wait = MIN(wait, action.seqLength);
+	player.casting.skillID = skillID;
+	player.casting.castPos = castPos;
+	player.casting.target = targets.size() > 0 ? targets[0] : ActorUID::INVALID;
+	player.casting.startPos = vec2(player.body->GetWorldPos());
+	player.casting.executeAt = TimeAdd(localTime, TimeMsToTime(wait * 1000.0));
+	player.casting.type = (u8)cast.type;
+	player.casting.interruptByMove = cast.interruptByMove;
+	LOG("Cast :: %ls skill=%d start action=%d type=%d wait=%.2f", player.name.data(), (i32)skillID, (i32)cast.action, (i32)cast.type, wait);
+	OnShuttleCastStart(player, skillID, castPos);
+}
+
+void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType, const vec3& castPos)
+{
+	const auto& content = GetGameXmlContent();
+	if(player.comboSlot >= 0 && skillType == SkillType::COMBO) {
+		replication->SendChangeSkillSlot(player.clientHd, player.Main().UID, player.comboSlot, player.comboBase, 0);
+		ComboBaseCooldown(player);
+		LOG("Combo :: %ls slot %d back to %d", player.name.data(), player.comboSlot, (i32)player.comboBase);
+		player.comboSlot = -1;
+	}
+	const i32 combo = content.GetFirstComboSkill((i32)skillID);
+	if(combo != 0) {
+		const i32 base = (i32)player.mainCharaID * 2;
+		i32 slot = -1;
+		const i32 order = ((i32)skillID / 10) % 10;
+		if((player.skills[base] == skillID || player.skills[base + 1] == skillID) && order >= 1 && order <= 4) slot = SKILL_SLOT_ENUM_FIRST + order - 1;
+		else if(order == 5 && (i32)skillID % 10 == 0) slot = SKILL_SLOT_ENUM_UG;
+		if(slot >= 0) {
+			const GameXmlContent::SkillInput* baseIn = content.FindSkillInput((i32)skillID);
+			player.comboPending = SkillID(combo);
+			player.comboSkill = SkillID(combo);
+			player.comboSendAt = TimeAdd(localTime, TimeMsToTime(50.0));
+			player.comboResetCooltime = baseIn ? baseIn->coolTimeID : 0;
+			player.comboSlot = slot;
+			player.comboBase = skillID;
+			player.comboCastPos = castPos;
+			player.comboUntil = TimeAdd(localTime, TimeMsToTime(COMBO_SLOT_WINDOW_SEC * 1000.0));
+			LOG("Combo :: %ls slot %d -> %d", player.name.data(), slot, combo);
+			const i32 autoMs = content.GetComboAutoCastMs(combo);
+			player.comboAutoAt = autoMs > 0 ? TimeAdd(localTime, TimeMsToTime((f64)autoMs)) : Time::ZERO;
+		}
+	}
+}
+
+void World::QueueChildSkill(Player& player, ActionStateID actionState, const vec3& castPos, Slice<const ActorUID> targets)
+{
+	const auto& content = GetGameXmlContent();
 	const i32 child = content.GetChildSkill(player.Main().classType, actionState);
 	if(child > 0 && content.IsChildOnExisting(player.Main().classType, actionState)) {
 		ChildSkillOnExisting(player, child, castPos);

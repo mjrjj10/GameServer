@@ -9,6 +9,10 @@ static const i32 INTERACTION_SHUTTLE_BOARD = 900000071;
 static const i32 INTERACTION_NOT_OCCUPIED = -1;
 static const u32 PLAYER_FACTION_BASE = 3;
 static const f32 RIDE_SYNC_SEC = 0.1f;
+static const f32 TOOLTIP_SHUTTLE_BOARD_WINDOW_SEC = 3.0f;
+static const i32 DYNAMIC_SHUTTLE_BOARD_POINT = 110041070;
+static const i32 BOARD_POINT_LOCAL_BASE = 41000;
+static const f32 TOOLTIP_SHUTTLE_TELEPORT_SEC = 3.0f;
 
 void World::MassTeleport(Player& gx, const StatusInfo& passive)
 {
@@ -127,4 +131,30 @@ void World::AddFuel(Player& player, f32 amount)
 	player.res[1] = MIN(MAX(player.res[1], 0.0f) + amount, resMax);
 	player.tNextResSend = Time::ZERO;
 	LOG("Passive :: %ls fuel +%.0f -> %.0f", player.name.data(), amount, player.res[1]);
+}
+
+void World::OnShuttleSkillCast(Player& player, SkillID skillID)
+{
+	if(const ActiveStatus* gx = FindPassiveOfType(player, StatusType::GX09)) {
+		if(gx->info->ParamInt("_ShuttleSkillIndex") == (i64)skillID) {
+			player.boardOpenUntil = TimeAdd(localTime, TimeMsToTime(TOOLTIP_SHUTTLE_BOARD_WINDOW_SEC * 1000.0));
+			RemoveBoardPoint(player);
+			ActorDynamic& point = SpawnDynamic(CreatureIndex(DYNAMIC_SHUTTLE_BOARD_POINT), BOARD_POINT_LOCAL_BASE + nextBoardPointLocal++);
+			point.pos = player.body->GetWorldPos();
+			point.rot = vec3(0, 0, player.input.rot.upperYaw);
+			player.boardPointUID = point.UID;
+			player.boardPointAnnounceAt = TimeAdd(localTime, TimeMsToTime(200));
+			LOG("Interaction :: %ls opens boarding for %.0fs", player.name.data(), TOOLTIP_SHUTTLE_BOARD_WINDOW_SEC);
+		}
+	}
+}
+
+void World::OnShuttleCastStart(Player& player, SkillID skillID, const vec3& castPos)
+{
+	if(const ActiveStatus* gx = FindPassiveOfType(player, StatusType::GX09)) {
+		if(gx->info->ParamInt("_MassiveTeleportIndex") == (i64)skillID) {
+			player.massTeleportAt = TimeAdd(localTime, TimeMsToTime(TOOLTIP_SHUTTLE_TELEPORT_SEC * 1000.0));
+			player.massTeleportPos = castPos;
+		}
+	}
 }

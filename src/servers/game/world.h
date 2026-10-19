@@ -663,6 +663,18 @@ private:
 	ActorMasterHandle MasterInvalidHandle();
 
 	void PlayerCastSkill(Player& player, SkillID skill, const vec3& castPos, Slice<const ActorUID> targets, f32 clientTime, ActionStateID forcedAction = ActionStateID::INVALID);
+	SkillID ResolveComboRecast(Player& player, SkillID skillIn, ActionStateID forcedAction);
+	vec3 ResolveCastPos(const Player& player, SkillID skillID, const vec3& castPosIn, ActionStateID forcedAction) const;
+	bool SkillTargetsAllowed(const Player& player, SkillID skillID, Slice<const ActorUID> targets) const;
+	const GameXmlContent::CostLevel* PickCostLevel(const Player& player, SkillID skillID) const;
+	bool CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets);
+	void TargetPositionMove(const Player& player, const GameXmlContent::Action& action, const vec3& castPos, f32* distance, vec2* gotoDir) const;
+	void StartCasting(Player& player, SkillID skillID, const GameXmlContent::SkillCast& cast, const vec3& castPos, Slice<const ActorUID> targets, const GameXmlContent::Action& action);
+	void UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType, const vec3& castPos);
+	void QueueChildSkill(Player& player, ActionStateID actionState, const vec3& castPos, Slice<const ActorUID> targets);
+	void OnShuttleSkillCast(Player& player, SkillID skillID);
+	void OnShuttleCastStart(Player& player, SkillID skillID, const vec3& castPos);
+	i32 nextBoardPointLocal = 0;
 	void ExecuteSkillProgram(SkillProgram& prog);
 	void RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 cmdIndex, const vec2& dir);
 	eastl::fixed_vector<SkillAnimPass,8,false> lastAnimPasses;
