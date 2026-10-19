@@ -333,9 +333,27 @@ struct Replication
 	void SendDestroyRemoteToAll(u32 remoteID);
 	void SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed);
 	void SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject = L"Scene Root", ClientHandle exclude = ClientHandle::INVALID);
-	void RelayRemoteCreateDoc(ClientHandle senderHd, const u8* packetData, i32 packetSize);
+	struct RemoteCreate
+	{
+		ActorUID parentUID = ActorUID::INVALID;
+		ActorUID ownerUID = ActorUID::INVALID;
+		u32 seed = 0;
+		vec3 firePos = vec3(0);
+		eastl::array<u16,3> fireRotation = { 0, 0, 0 };
+		vec3 targetPos = vec3(0);
+		const wchar* fireObject = nullptr;
+		u16 fireObjectLen = 0;
+		u16 scale = 100;
+		f32 lifeTime = 0;
+		u32 hitInvalidTarget = 0;
+		RemoteIdx doc = RemoteIdx::INVALID;
+		ActorUID targetUID = ActorUID::INVALID;
+		u8 flags = 0;
+	};
+	void SendRemoteCreate(const RemoteCreate& remote, ClientHandle exclude);
+	void RelayRemoteSyncCreateFromRemoteDoc(ClientHandle senderHd, const u8* packetData, i32 packetSize);
 	void RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetData, i32 packetSize);
-	void RelayRemoteCreate(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, f32 lifeTime, RemoteIdx remoteDoc);
+	void RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, RemoteIdx remoteDoc);
 	void RelayWeaponState(ClientHandle senderHd, ActorUID ownerUID, i32 weaponID, i32 state, u8 chargeLevel, u8 firingCombo);
 	void SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKills, UserID victimID, i32 victimDeaths);
 	void SendDeathToAll(ActorUID killerUID, ActorUID targetUID, CreatureIndex targetDocID, UserID targetUserID, i32 respawnDelayMs);

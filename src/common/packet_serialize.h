@@ -2743,7 +2743,10 @@ inline const char* PacketSerialize<Sv::SN_RemoteSyncCreateFromRemoteDoc>(const v
 	SER("	OwnerEntity=0x%08x", buff.Read<u32>());
 	SER("	RemoteSeedID=0x%08x", buff.Read<u32>());
 	SER("	FirePosition=%s", PS::ToStr(buff.Read<float3>()));
-	SER("	FireRotation=(%u, %u, %u)", buff.Read<u16>(), buff.Read<u16>(), buff.Read<u16>());
+	const u16 rotX = buff.Read<u16>();
+	const u16 rotY = buff.Read<u16>();
+	const u16 rotZ = buff.Read<u16>();
+	SER("	FireRotation=(%u, %u, %u)", rotX, rotY, rotZ);
 	SER("	TargetPosition=%s", PS::ToStr(buff.Read<float3>()));
 	SER("}");
 	return str.data();
@@ -2769,15 +2772,113 @@ inline const char* PacketSerialize<Cl::CQ_GamePlayerSyncPhy>(const void* packetD
 	SER_BEGIN();
 	ConstBuffer buff(packetData, packetSize);
 	SER("CQ_GamePlayerSyncPhy(%d, %d) :: {", Cl::CQ_GamePlayerSyncPhy::NET_ID, packetSize);
-	SER("	ownerID=0x%08x", buff.Read<u32>());
-	SER("	ownerID2=0x%08x", buff.Read<u32>());
-	SER("	remoteSeq=0x%08x", buff.Read<u32>());
-	SER("	pos=%s", PS::ToStr(buff.Read<float3>()));
-	const i16 dirX = buff.Read<i16>();
-	const i16 dirY = buff.Read<i16>();
-	SER("	dir=(%d, %d)", dirX, dirY);
-	for(int i = 0; i < 6; i++) buff.Read<i16>();
-	SER("	distance=%d", buff.Read<i16>());
+	SER("	unkId1=0x%08x", buff.Read<u32>());
+	SER("	unkId2=0x%08x", buff.Read<u32>());
+	SER("	unkId3=0x%08x", buff.Read<u32>());
+	SER("	currPos=%s", PS::ToStr(buff.Read<float3>()));
+	for(int i = 0; i < 6; i++) buff.Read<u16>();
+	const i16 aimX = buff.Read<i16>();
+	const i16 aimY = buff.Read<i16>();
+	const i16 aimZ = buff.Read<i16>();
+	SER("	aimOffset=(%d, %d, %d)", aimX, aimY, aimZ);
+	const u16 nameLen = buff.Read<u16>();
+	SER("	charName='%.*ls'", nameLen, (const wchar*)buff.ReadRaw(nameLen * sizeof(wchar)));
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_RemoteSyncCreateFromRemoteDoc>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_RemoteSyncCreateFromRemoteDoc(%d, %d) :: {", Cl::CQ_RemoteSyncCreateFromRemoteDoc::NET_ID, packetSize);
+	SER("	ParentEntity=0x%08x", buff.Read<u32>());
+	SER("	OwnerEntity=0x%08x", buff.Read<u32>());
+	SER("	RemoteSeedID=0x%08x", buff.Read<u32>());
+	SER("	FirePosition=%s", PS::ToStr(buff.Read<float3>()));
+	const u16 rotX = buff.Read<u16>();
+	const u16 rotY = buff.Read<u16>();
+	const u16 rotZ = buff.Read<u16>();
+	SER("	FireRotation=(%u, %u, %u)", rotX, rotY, rotZ);
+	SER("	TargetPosition=%s", PS::ToStr(buff.Read<float3>()));
+	const u16 nameLen = buff.Read<u16>();
+	SER("	FireObject='%.*ls'", nameLen, (const wchar*)buff.ReadRaw(nameLen * sizeof(wchar)));
+	SER("	Scale=%u", buff.Read<u16>());
+	SER("	LifeTime=%g", buff.Read<f32>());
+	SER("	HitInvalidTarget=%u", buff.Read<u32>());
+	SER("	RemoteDocIndex=%u", buff.Read<u32>());
+	SER("	TargetEntity=0x%08x", buff.Read<u32>());
+	SER("	RemoteCreateFlags=%u", buff.Read<u8>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_RemoteSyncTarget>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_RemoteSyncTarget(%d, %d) :: {", Cl::CQ_RemoteSyncTarget::NET_ID, packetSize);
+	const u8 bits = buff.Read<u8>();
+	SER("	excludedFieldBits=%u", bits);
+	SER("	remoteID=0x%08x", buff.Read<u32>());
+	SER("	targetEntity=0x%08x", buff.Read<u32>());
+	SER("	DestPos=%s", PS::ToStr(buff.Read<float3>()));
+	if(!(bits & 8)) SER("	MoveDir=%s", PS::ToStr(buff.Read<float3>()));
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_PreCastSkill>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	const Cl::CQ_PreCastSkill& pre = SafeCast<Cl::CQ_PreCastSkill>(packetData, packetSize);
+	SER("CQ_PreCastSkill(%d, %d) :: {", Cl::CQ_PreCastSkill::NET_ID, packetSize);
+	SER("	skillId=%u", pre.skillId);
+	SER("	castId=%u", pre.castId);
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_ExecuteSkill>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_ExecuteSkill(%d, %d) :: {", Cl::CQ_ExecuteSkill::NET_ID, packetSize);
+	SER("	charID=0x%08x", buff.Read<u32>());
+	SER("	skillID=%u", buff.Read<u32>());
+	SER("	targetPos=%s", PS::ToStr(buff.Read<float3>()));
+	const u16 count = buff.Read<u16>();
+	SER("	targetIDs(%u)=[", count);
+	for(u16 i = 0; i < count; i++) SER("		0x%08x", buff.Read<u32>());
+	SER("	]");
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_SwitchOnToggleSkill>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	const Cl::CQ_SwitchOnToggleSkill& toggle = SafeCast<Cl::CQ_SwitchOnToggleSkill>(packetData, packetSize);
+	SER("CQ_SwitchOnToggleSkill(%d, %d) :: {", Cl::CQ_SwitchOnToggleSkill::NET_ID, packetSize);
+	SER("	charID=0x%08x", toggle.charID);
+	SER("	skillID=%u", toggle.skillID);
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_SwitchOffToggleSkill>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	const Cl::CQ_SwitchOffToggleSkill& toggle = SafeCast<Cl::CQ_SwitchOffToggleSkill>(packetData, packetSize);
+	SER("CQ_SwitchOffToggleSkill(%d, %d) :: {", Cl::CQ_SwitchOffToggleSkill::NET_ID, packetSize);
+	SER("	charID=0x%08x", toggle.charID);
+	SER("	skillID=%u", toggle.skillID);
 	SER("}");
 	return str.data();
 }
@@ -2853,12 +2954,12 @@ inline const char* PacketSerialize<Cl::CQ_WeaponState>(const void* packetData, c
 	SER_BEGIN();
 	ConstBuffer buff(packetData, packetSize);
 	SER("CQ_WeaponState(%d, %d) :: {", Cl::CQ_WeaponState::NET_ID, packetSize);
-	SER("	unk0=0x%08x", buff.Read<u32>());
-	SER("	unk1=%u", buff.Read<u32>());
-	SER("	unk2=%u", buff.Read<u8>());
-	SER("	unk3=%u", buff.Read<u8>());
+	SER("	ownerID=0x%08x", buff.Read<u32>());
+	SER("	state=%u", buff.Read<u32>());
+	SER("	chargeLevel=%u", buff.Read<u8>());
+	SER("	firingCombo=%u", buff.Read<u8>());
 	SER("	unk4=%u", buff.Read<u32>());
-	SER("	unk5=%u", buff.Read<u32>());
+	SER("	aimYaw=%g", buff.Read<f32>());
 	SER("}");
 	return str.data();
 }

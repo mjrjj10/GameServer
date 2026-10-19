@@ -972,54 +972,70 @@ void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKi
 }
 
 static const f32 REMOTE_FIRE_HEIGHT = 158.0f;
+static const u16 MAX_FIRE_OBJECT_LEN = 64;
 
-void Replication::RelayRemoteCreate(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, f32 lifeTime, RemoteIdx remoteDoc)
+static i16 WorldYawToCentiDegrees(f32 worldYaw)
 {
-	const i32 nameOffset = 12 + 12 + 6 + 12;
-	if(packetSize < nameOffset + 2) return;
-	const u16 nameLen = *(const u16*)(packetData + nameOffset);
-	const i32 relaySize = sizeof(Sv::SN_RemoteSyncCreateFromCreatorId) - sizeof(wchar_t) + nameLen * sizeof(wchar_t);
-	if(packetSize < relaySize || relaySize > 512) return;
+	f32 yawDeg = 90.0f - worldYaw * 180.0f / PI;
+	while(yawDeg > 180.0f) yawDeg -= 360.0f;
+	while(yawDeg < -180.0f) yawDeg += 360.0f;
+	return (i16)(yawDeg * 100.0f);
+}
 
-	const ActorUID parentUID = GetWorldActorUID(senderHd, *(const LocalActorID*)(packetData + 0));
-	const ActorUID ownerUID = GetWorldActorUID(senderHd, *(const LocalActorID*)(packetData + 4));
-	if(parentUID == ActorUID::INVALID || ownerUID == ActorUID::INVALID) return;
-
-	u8 buff[512];
+void Replication::SendRemoteCreate(const RemoteCreate& remote, ClientHandle exclude)
+{
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
-		if(clientHd == senderHd) continue;
+		if(clientHd == exclude) continue;
 
-		const LocalActorID parentLocal = GetLocalActorID(clientHd, parentUID);
-		const LocalActorID ownerLocal = GetLocalActorID(clientHd, ownerUID);
+		const LocalActorID parentLocal = GetLocalActorID(clientHd, remote.parentUID);
+		const LocalActorID ownerLocal = GetLocalActorID(clientHd, remote.ownerUID);
 		if(parentLocal == LocalActorID::INVALID || ownerLocal == LocalActorID::INVALID) continue;
+		const LocalActorID targetLocal = remote.targetUID != ActorUID::INVALID ? GetLocalActorID(clientHd, remote.targetUID) : LocalActorID::INVALID;
 
-		const i32 headSize = nameOffset + 2 + nameLen * 2 + 2;
-		memmove(buff, packetData, headSize);
-		*(LocalActorID*)(buff + 0) = parentLocal;
-		*(LocalActorID*)(buff + 4) = ownerLocal;
-		*(float3*)(buff + 30) = v2f(target);
-		{
-			float3& firePos = *(float3*)(buff + 12);
-			const f32 worldYaw = atan2f(target.y - firePos.y, target.x - firePos.x);
-			f32 yawDeg = 90.0f - worldYaw * 180.0f / PI;
-			while(yawDeg > 180.0f) yawDeg -= 360.0f;
-			while(yawDeg < -180.0f) yawDeg += 360.0f;
-			*(i16*)(buff + 24) = 0;
-			*(i16*)(buff + 26) = 0;
-			*(i16*)(buff + 28) = (i16)(yawDeg * 100.0f);
-			firePos.z += REMOTE_FIRE_HEIGHT;
-			*(f32*)(buff + 38) = firePos.z;
-		}
-		u8* tail = buff + headSize;
-		*(f32*)tail = 0; tail += 4;
-		*(u32*)tail = 0; tail += 4;
-		*(u32*)tail = (u32)remoteDoc; tail += 4;
-		*(u32*)tail = 0; tail += 4;
-		*tail = 0; tail += 1;
-		SendPacketData<Sv::SN_RemoteSyncCreateFromRemoteDoc>(clientHd, (u16)(tail - buff), buff);
+		PacketWriter<Sv::SN_RemoteSyncCreateFromRemoteDoc,512> packet;
+		packet.Write<u32>((u32)parentLocal);
+		packet.Write<u32>((u32)ownerLocal);
+		packet.Write<u32>(remote.seed);
+		packet.Write<float3>(v2f(remote.firePos));
+		packet.Write<u16>(remote.fireRotation[0]);
+		packet.Write<u16>(remote.fireRotation[1]);
+		packet.Write<u16>(remote.fireRotation[2]);
+		packet.Write<float3>(v2f(remote.targetPos));
+		packet.Write<u16>(remote.fireObjectLen);
+		packet.WriteRaw(remote.fireObject, remote.fireObjectLen * sizeof(wchar));
+		packet.Write<u16>(remote.scale);
+		packet.Write<f32>(remote.lifeTime);
+		packet.Write<u32>(remote.hitInvalidTarget);
+		packet.Write<u32>((u32)remote.doc);
+		packet.Write<u32>((u32)targetLocal);
+		packet.Write<u8>(remote.flags);
+		SendPacket(clientHd, packet);
 	}
+}
+
+void Replication::RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, RemoteIdx remoteDoc)
+{
+	ConstBuffer buff(packetData, packetSize);
+	RemoteCreate remote;
+	remote.parentUID = GetWorldActorUID(senderHd, buff.Read<LocalActorID>());
+	remote.ownerUID = GetWorldActorUID(senderHd, buff.Read<LocalActorID>());
+	remote.seed = buff.Read<u32>();
+	const vec3 clientFirePos = f2v(buff.Read<float3>());
+	buff.ReadRaw(offsetof(Cl::CQ_GamePlayerSyncPhy, charNameLen) - offsetof(Cl::CQ_GamePlayerSyncPhy, unkShort1));
+	remote.fireObjectLen = buff.Read<u16>();
+	if(remote.fireObjectLen > MAX_FIRE_OBJECT_LEN) return;
+	if(packetSize < (i32)(sizeof(Sv::SN_RemoteSyncCreateFromCreatorId) - sizeof(wchar_t) + remote.fireObjectLen * sizeof(wchar_t))) return;
+	remote.fireObject = (const wchar*)buff.ReadRaw(remote.fireObjectLen * sizeof(wchar));
+	remote.scale = buff.Read<u16>();
+	if(remote.parentUID == ActorUID::INVALID || remote.ownerUID == ActorUID::INVALID) return;
+
+	remote.fireRotation[2] = (u16)WorldYawToCentiDegrees(atan2f(target.y - clientFirePos.y, target.x - clientFirePos.x));
+	remote.firePos = clientFirePos + vec3(0, 0, REMOTE_FIRE_HEIGHT);
+	remote.targetPos = vec3(target.x, target.y, remote.firePos.z);
+	remote.doc = remoteDoc;
+	SendRemoteCreate(remote, senderHd);
 }
 
 void Replication::RelayWeaponState(ClientHandle senderHd, ActorUID ownerUID, i32 weaponID, i32 state, u8 chargeLevel, u8 firingCombo)
@@ -1084,110 +1100,71 @@ void Replication::SendRemoteDamageToAll(u32 remoteID, RemoteIdx remoteDoc, Actor
 	SendHpToAll(targetUID, hp, hpMax);
 }
 
-void Replication::RelayRemoteCreateDoc(ClientHandle senderHd, const u8* packetData, i32 packetSize)
+void Replication::RelayRemoteSyncCreateFromRemoteDoc(ClientHandle senderHd, const u8* packetData, i32 packetSize)
 {
-	const i32 nameOffset = 12 + 12 + 6 + 12;
-	if(packetSize < nameOffset + 2) return;
-	const u16 nameLen = *(const u16*)(packetData + nameOffset);
-	const i32 tailOffset = nameOffset + 2 + nameLen * 2;
-	const i32 relaySize = tailOffset + 2 + 4 + 4 + 4 + 4 + 1;
-	if(packetSize < relaySize || relaySize > 512) return;
-
-	const ActorUID parentUID = GetWorldActorUID(senderHd, *(const LocalActorID*)(packetData + 0));
-	const ActorUID ownerUID = GetWorldActorUID(senderHd, *(const LocalActorID*)(packetData + 4));
-	const LocalActorID targetLocal = *(const LocalActorID*)(packetData + tailOffset + 2 + 12);
-	const ActorUID targetUID = targetLocal != LocalActorID::INVALID && (u32)targetLocal != 0 ? GetWorldActorUID(senderHd, targetLocal) : ActorUID::INVALID;
-	if(parentUID == ActorUID::INVALID || ownerUID == ActorUID::INVALID) return;
-
-	{
-		eastl::fixed_string<char,512,true> hex;
-		for(int i = 0; i < packetSize && i < 96; i++) hex.append_sprintf("%02x ", packetData[i]);
-		NT_LOG("[client%x] RemoteCreateDoc :: doc=%u name_len=%u size=%d :: %s", senderHd, *(const u32*)(packetData + tailOffset + 2 + 8), nameLen, packetSize, hex.data());
-	}
-
-	u8 buff[512];
-	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
-		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
-		const ClientHandle clientHd = clientHandle[clientID];
-		if(clientHd == senderHd) continue;
-
-		const LocalActorID parentLocal = GetLocalActorID(clientHd, parentUID);
-		const LocalActorID ownerLocal = GetLocalActorID(clientHd, ownerUID);
-		if(parentLocal == LocalActorID::INVALID || ownerLocal == LocalActorID::INVALID) continue;
-
-		memmove(buff, packetData, relaySize);
-		*(LocalActorID*)(buff + 0) = parentLocal;
-		*(LocalActorID*)(buff + 4) = ownerLocal;
-		*(u32*)(buff + tailOffset + 2 + 12) = targetUID != ActorUID::INVALID ? (u32)GetLocalActorID(clientHd, targetUID) : 0;
-		SendPacketData<Sv::SN_RemoteSyncCreateFromRemoteDoc>(clientHd, (u16)relaySize, buff);
-	}
+	ConstBuffer buff(packetData, packetSize);
+	RemoteCreate remote;
+	remote.parentUID = GetWorldActorUID(senderHd, buff.Read<LocalActorID>());
+	remote.ownerUID = GetWorldActorUID(senderHd, buff.Read<LocalActorID>());
+	remote.seed = buff.Read<u32>();
+	remote.firePos = f2v(buff.Read<float3>());
+	remote.fireRotation[0] = buff.Read<u16>();
+	remote.fireRotation[1] = buff.Read<u16>();
+	remote.fireRotation[2] = buff.Read<u16>();
+	remote.targetPos = f2v(buff.Read<float3>());
+	remote.fireObjectLen = buff.Read<u16>();
+	if(remote.fireObjectLen > MAX_FIRE_OBJECT_LEN) return;
+	remote.fireObject = (const wchar*)buff.ReadRaw(remote.fireObjectLen * sizeof(wchar));
+	remote.scale = buff.Read<u16>();
+	remote.lifeTime = buff.Read<f32>();
+	remote.hitInvalidTarget = buff.Read<u32>();
+	remote.doc = (RemoteIdx)buff.Read<u32>();
+	const LocalActorID targetLocal = buff.Read<LocalActorID>();
+	remote.targetUID = targetLocal != LocalActorID::INVALID ? GetWorldActorUID(senderHd, targetLocal) : ActorUID::INVALID;
+	remote.flags = buff.Read<u8>();
+	if(remote.parentUID == ActorUID::INVALID || remote.ownerUID == ActorUID::INVALID) return;
+	SendRemoteCreate(remote, senderHd);
 }
-
 void Replication::RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetData, i32 packetSize)
 {
-	if(packetSize < 21) return;
-	const u8 bits = packetData[0];
-	const i32 relaySize = (bits & 8) ? 21 : 33;
-	if(packetSize < relaySize) return;
+	const Cl::CQ_RemoteSyncTarget& sync = *(const Cl::CQ_RemoteSyncTarget*)packetData;
+	const bool hasMoveDir = !(sync.excludedFieldBits & 8);
+	const u16 relaySize = hasMoveDir ? sizeof(Sv::SN_RemoteSyncTarget) : offsetof(Sv::SN_RemoteSyncTarget, MoveDir);
+	const ActorUID targetUID = sync.targetEntity != 0 ? GetWorldActorUID(senderHd, (LocalActorID)sync.targetEntity) : ActorUID::INVALID;
 
-	const LocalActorID targetLocal = *(const LocalActorID*)(packetData + 5);
-	const ActorUID targetUID = (u32)targetLocal != 0 ? GetWorldActorUID(senderHd, targetLocal) : ActorUID::INVALID;
-
-	u8 buff[64];
+	Sv::SN_RemoteSyncTarget packet;
+	packet.excludedFieldBits = sync.excludedFieldBits;
+	packet.remoteID = sync.remoteID;
+	packet.DestPos = sync.DestPos;
+	packet.MoveDir = hasMoveDir ? sync.MoveDir : float3{ 0, 0, 0 };
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		if(clientHd == senderHd) continue;
 
-		memmove(buff, packetData, relaySize);
-		*(u32*)(buff + 5) = targetUID != ActorUID::INVALID ? (u32)GetLocalActorID(clientHd, targetUID) : 0;
-		SendPacketData<Sv::SN_RemoteSyncTarget>(clientHd, (u16)relaySize, buff);
+		packet.targetEntity = targetUID != ActorUID::INVALID ? (u32)GetLocalActorID(clientHd, targetUID) : 0;
+		SendPacketData<Sv::SN_RemoteSyncTarget>(clientHd, relaySize, &packet);
 	}
 }
-
 void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject, ClientHandle exclude)
 {
-	f32 yawDeg = 90.0f - worldYaw * 180.0f / PI;
-	while(yawDeg > 180.0f) yawDeg -= 360.0f;
-	while(yawDeg < -180.0f) yawDeg += 360.0f;
 	if(!fireObject || !fireObject[0]) fireObject = L"Scene Root";
-	const u16 fireObjectLen = (u16)EA::StdC::Strlen(fireObject);
-
-	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
-		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
-		const ClientHandle clientHd = clientHandle[clientID];
-		if(clientHd == exclude) continue;
-
-		const LocalActorID ownerLocal = GetLocalActorID(clientHd, ownerUID);
-		if(ownerLocal == LocalActorID::INVALID) continue;
-		const LocalActorID targetLocal = targetUID != ActorUID::INVALID ? GetLocalActorID(clientHd, targetUID) : LocalActorID::INVALID;
-
-		PacketWriter<Sv::SN_RemoteSyncCreateFromRemoteDoc,512> packet;
-		packet.Write<u32>((u32)ownerLocal);
-		packet.Write<u32>((u32)ownerLocal);
-		packet.Write<u32>(seed);
-		packet.Write<float3>(v2f(firePos));
-		packet.Write<i16>(0);
-		packet.Write<i16>(0);
-		packet.Write<i16>((i16)(yawDeg * 100.0f));
-		packet.Write<float3>(v2f(targetPos));
-		packet.Write<u16>(fireObjectLen);
-		packet.WriteRaw(fireObject, fireObjectLen * sizeof(wchar));
-		packet.Write<u16>(100);
-		packet.Write<f32>(0);
-		packet.Write<u32>(0);
-		packet.Write<u32>((u32)doc);
-		packet.Write<u32>(targetLocal != LocalActorID::INVALID ? (u32)targetLocal : 0);
-		packet.Write<u8>(0);
-		SendPacket(clientHd, packet);
-	}
+	RemoteCreate remote;
+	remote.parentUID = ownerUID;
+	remote.ownerUID = ownerUID;
+	remote.seed = seed;
+	remote.firePos = firePos;
+	remote.fireRotation[2] = (u16)WorldYawToCentiDegrees(worldYaw);
+	remote.targetPos = targetPos;
+	remote.fireObject = fireObject;
+	remote.fireObjectLen = (u16)EA::StdC::Strlen(fireObject);
+	remote.doc = doc;
+	remote.targetUID = targetUID;
+	SendRemoteCreate(remote, exclude);
 }
-
 void Replication::SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed)
 {
-	f32 yawDeg = 90.0f - worldYaw * 180.0f / PI;
-	while(yawDeg > 180.0f) yawDeg -= 360.0f;
-	while(yawDeg < -180.0f) yawDeg += 360.0f;
+	const i16 yaw = WorldYawToCentiDegrees(worldYaw);
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
@@ -1197,8 +1174,8 @@ void Replication::SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec
 		packet.excludedFieldBits = 0;
 		packet.monsterID = (u32)localID;
 		packet.upperBodyPitch = 0;
-		packet.upperBodyYaw = (i16)(yawDeg * 100.0f);
-		packet.lowerBodyYaw = (i16)(yawDeg * 100.0f);
+		packet.upperBodyYaw = yaw;
+		packet.lowerBodyYaw = yaw;
 		packet.angularSpeed = 0;
 		packet.linearSpeed = (u16)MIN(speed * 5.0f, 65535.0f);
 		packet.currPos = v2f(pos);

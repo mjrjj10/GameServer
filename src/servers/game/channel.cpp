@@ -8,6 +8,7 @@
 #include "game.h"
 
 static const f32 SHOT_AIM_SCALE = 10.0f;
+static const u32 WEAPON_STATE_FIRE = 2;
 
 bool GamePacketHandler::Init(Game* game_)
 {
@@ -69,49 +70,17 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 		CASE(CQ_InteractionCasting);
 		CASE(CQ_InteractionCancel);
 		CASE(CQ_GamePlayerSyncPhy);
-
-		case 60026:
-		case 60027: {
-			NT_LOG("[client%x] Client :: CQ_HandoverToChannel", clientHd);
-			game->OnPlayerReturnToChannel(clientHd);
-		} break;
-
-		case 60039:
-		case 60041: {
-			eastl::fixed_string<char,512,true> hex;
-			for(int i = 0; i < packetSize && i < 120; i++) hex.append_sprintf("%02x ", packetData[i]);
-			NT_LOG("[client%x] Client :: %s size=%d :: %s", clientHd, header.netID == 60041 ? "CQ_ExecuteSkill" : "CQ_PreCastSkill", packetSize, hex.data());
-			LOG("Cast :: client%x %s size=%d", clientHd, header.netID == 60041 ? "CQ_ExecuteSkill" : "CQ_PreCastSkill", packetSize);
-			if(header.netID == 60041 && packetSize >= 8) {
-				const float3* pos = packetSize >= 20 ? (const float3*)(packetData + 8) : nullptr;
-				LocalActorID target = LocalActorID::INVALID;
-				if(packetSize >= 26 && *(const u16*)(packetData + 20) > 0) target = (LocalActorID)*(const u32*)(packetData + 22);
-				game->OnPlayerExecuteSkill(clientHd, SkillID(*(const u32*)(packetData + 4)), pos, target);
-			}
-		} break;
-
-		case 60042:
-		case 60043: {
-			eastl::fixed_string<char,64,true> hex;
-			for(int i = 0; i < packetSize && i < 16; i++) hex.append_sprintf("%02x ", packetData[i]);
-			NT_LOG("[client%x] Client :: %s size=%d :: %s", clientHd, header.netID == 60042 ? "CQ_SwitchOnToggleSkill" : "CQ_SwitchOffToggleSkill", packetSize, hex.data());
-			if(packetSize >= 8) game->OnPlayerToggleSkill(clientHd, SkillID(*(const u32*)(packetData + 4)), header.netID == 60042);
-		} break;
-
-		case 60196: {
-			NT_LOG("[client%x] Client :: RemoteCreateDoc (60196) size=%d", clientHd, packetSize);
-			replication->RelayRemoteCreateDoc(clientHd, packetData, packetSize);
-		} break;
-
-		case 60197: {
-			NT_LOG("[client%x] Client :: RemoteSyncTarget (60197) size=%d", clientHd, packetSize);
-			replication->RelayRemoteSyncTarget(clientHd, packetData, packetSize);
-		} break;
+		CASE(CQ_ReturnToCity);
+		CASE(CQ_HandoverToChannel);
+		CASE(CQ_PreCastSkill);
+		CASE(CQ_ExecuteSkill);
+		CASE(CQ_SwitchOnToggleSkill);
+		CASE(CQ_SwitchOffToggleSkill);
+		CASE(CQ_RemoteSyncCreateFromRemoteDoc);
+		CASE(CQ_RemoteSyncTarget);
 
 		default: {
-			eastl::fixed_string<char,2048,true> hex;
-			for(int i = 0; i < packetSize && i < 512; i++) hex.append_sprintf("%02x ", packetData[i]);
-			NT_LOG("[client%x] Client :: Unknown packet :: size=%d netID=%d :: %s", clientHd, header.size, header.netID, hex.data());
+			NT_LOG("[client%x] Client :: Unknown packet :: size=%d netID=%d", clientHd, header.size, header.netID);
 		} break;
 	}
 
@@ -366,18 +335,10 @@ void GamePacketHandler::HandlePacket_CQ_WeaponState(ClientHandle clientHd, const
 	}
 	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_WeaponState>(packetData, packetSize));
 
-	ConstBuffer buff(packetData, packetSize);
-	const LocalActorID ownerLocal = buff.Read<LocalActorID>();
-	const u32 state = buff.Read<u32>();
-	const u8 chargeLevel = buff.Read<u8>();
-	const u8 firingCombo = buff.Read<u8>();
-	buff.Read<f32>();
-	const f32 aimYaw = buff.Read<f32>();
-
-	game->OnPlayerWeaponStateRelay(clientHd, replication->GetWorldActorUID(clientHd, ownerLocal), (i32)state, chargeLevel, firingCombo);
-
-	if(state == 2) {
-		game->OnPlayerWeaponFire(clientHd, MxmYawToWorldYaw(aimYaw));
+	const Cl::CQ_WeaponState& weapon = SafeCast<Cl::CQ_WeaponState>(packetData, packetSize);
+	game->OnPlayerWeaponStateRelay(clientHd, replication->GetWorldActorUID(clientHd, (LocalActorID)weapon.ownerID), (i32)weapon.state, weapon.chargeLevel, weapon.firingCombo);
+	if(weapon.state == WEAPON_STATE_FIRE) {
+		game->OnPlayerWeaponFire(clientHd, MxmYawToWorldYaw(weapon.aimYaw));
 	}
 }
 
@@ -411,19 +372,11 @@ void GamePacketHandler::HandlePacket_CQ_GamePlayerSyncPhy(ClientHandle clientHd,
 	}
 	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_GamePlayerSyncPhy>(packetData, packetSize));
 
-	ConstBuffer buff(packetData, packetSize);
-	buff.Read<u32>();
-	buff.Read<u32>();
-	buff.Read<u32>();
-	const vec3 origin = f2v(buff.Read<float3>());
-	for(int i = 0; i < 6; i++) buff.Read<i16>();
-	const i16 aimX = buff.Read<i16>();
-	const i16 aimY = buff.Read<i16>();
-	const i16 aimZ = buff.Read<i16>();
-	const vec3 aimOffset = vec3((f32)aimX, (f32)aimY, (f32)aimZ) / SHOT_AIM_SCALE;
-
-	const u16 nameLen = buff.Read<u16>();
-	const wchar* name = (const wchar*)buff.ReadRaw(nameLen * sizeof(wchar));
+	const Cl::CQ_GamePlayerSyncPhy& phy = *(const Cl::CQ_GamePlayerSyncPhy*)packetData;
+	const vec3 origin = f2v(phy.currPos);
+	const vec3 aimOffset = vec3((f32)phy.aimOffsetX, (f32)phy.aimOffsetY, (f32)phy.aimOffsetZ) / SHOT_AIM_SCALE;
+	const u16 nameLen = phy.charNameLen;
+	const wchar* name = phy.charName;
 	const bool isWeapon = (nameLen >= 6 && EA::StdC::Strncmp(name, L"Attack", 6) == 0) || game->IsWeaponFireObject(clientHd, name, nameLen);
 	if(!isWeapon) {
 		NT_LOG("[client%x] SyncPhy :: non-weapon fire object '%.*ls'", clientHd, nameLen, name);
@@ -435,6 +388,86 @@ void GamePacketHandler::HandlePacket_CQ_GamePlayerSyncPhy(ClientHandle clientHd,
 	if(aimless && !(nameLen == 10 && EA::StdC::Strncmp(name, L"Scene Root", 10) == 0)) return;
 
 	game->OnPlayerWeaponShot(clientHd, origin, aimless ? vec2(0) : glm::normalize(dir), aimless ? 0.0f : glm::length(dir), packetData, packetSize);
+}
+
+void GamePacketHandler::HandlePacket_CQ_ReturnToCity(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	NT_LOG("[client%x] Client :: CQ_ReturnToCity", clientHd);
+	game->OnPlayerReturnToChannel(clientHd);
+}
+
+void GamePacketHandler::HandlePacket_CQ_HandoverToChannel(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	NT_LOG("[client%x] Client :: CQ_HandoverToChannel", clientHd);
+	game->OnPlayerReturnToChannel(clientHd);
+}
+
+void GamePacketHandler::HandlePacket_CQ_PreCastSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_PreCastSkill>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_PreCastSkill (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_PreCastSkill>(packetData, packetSize));
+}
+
+void GamePacketHandler::HandlePacket_CQ_ExecuteSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_ExecuteSkill>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_ExecuteSkill (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_ExecuteSkill>(packetData, packetSize));
+
+	ConstBuffer buff(packetData, packetSize);
+	buff.Read<u32>();
+	const SkillID skillID = SkillID(buff.Read<u32>());
+	const vec3 targetPos = f2v(buff.Read<float3>());
+	const u16 targetCount = buff.Read<u16>();
+	const LocalActorID target = targetCount > 0 ? buff.Read<LocalActorID>() : LocalActorID::INVALID;
+	game->OnPlayerExecuteSkill(clientHd, skillID, targetPos, target);
+}
+
+void GamePacketHandler::HandlePacket_CQ_SwitchOnToggleSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_SwitchOnToggleSkill>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_SwitchOnToggleSkill (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_SwitchOnToggleSkill>(packetData, packetSize));
+	const Cl::CQ_SwitchOnToggleSkill& toggle = SafeCast<Cl::CQ_SwitchOnToggleSkill>(packetData, packetSize);
+	game->OnPlayerToggleSkill(clientHd, SkillID(toggle.skillID), true);
+}
+
+void GamePacketHandler::HandlePacket_CQ_SwitchOffToggleSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_SwitchOffToggleSkill>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_SwitchOffToggleSkill (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_SwitchOffToggleSkill>(packetData, packetSize));
+	const Cl::CQ_SwitchOffToggleSkill& toggle = SafeCast<Cl::CQ_SwitchOffToggleSkill>(packetData, packetSize);
+	game->OnPlayerToggleSkill(clientHd, SkillID(toggle.skillID), false);
+}
+
+void GamePacketHandler::HandlePacket_CQ_RemoteSyncCreateFromRemoteDoc(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_RemoteSyncCreateFromRemoteDoc>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_RemoteSyncCreateFromRemoteDoc (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_RemoteSyncCreateFromRemoteDoc>(packetData, packetSize));
+	replication->RelayRemoteSyncCreateFromRemoteDoc(clientHd, packetData, packetSize);
+}
+
+void GamePacketHandler::HandlePacket_CQ_RemoteSyncTarget(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_RemoteSyncTarget>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_RemoteSyncTarget (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_RemoteSyncTarget>(packetData, packetSize));
+	replication->RelayRemoteSyncTarget(clientHd, packetData, packetSize);
 }
 
 void GamePacketHandler::HandlePacket_CQ_PlayerCastSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

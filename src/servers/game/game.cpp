@@ -769,18 +769,18 @@ void Game::OnPlayerCastSkill(ClientHandle clientHd, ActorUID actorUID, const Pla
 	LOG("OnPlayerCastSkill :: (%f, %f, %f) targets=%d rot=(%.3f, %.3f, %.3f) moveDir=(%.2f, %.2f)", cast.pos.x, cast.pos.y, cast.pos.z, (i32)cast.targetList.size(), posInfo.rot.x, posInfo.rot.y, posInfo.rot.z, posInfo.moveDir.x, posInfo.moveDir.y);
 }
 
-void Game::OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID, const float3* pos, LocalActorID target)
+void Game::OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID, const vec3& targetPos, LocalActorID target)
 {
 	Player& p = *playerMap.at(clientHd);
 	World::Player& player = world.GetPlayer(p.playerIndex);
 	if(player.casting.skillID == skillID) {
-		if(pos && (pos->x != 0 || pos->y != 0)) player.casting.castPos = f2v(*pos);
+		if(targetPos.x != 0 || targetPos.y != 0) player.casting.castPos = targetPos;
 		if(target != LocalActorID::INVALID) {
 			const ActorUID uid = replication.GetWorldActorUID(clientHd, target);
 			if(uid != ActorUID::INVALID) player.casting.target = uid;
 		}
 	}
-	LOG("Cast :: %ls execute request skill=%d (casting %d) pos=(%.0f, %.0f) target=%d", player.name.data(), (i32)skillID, (i32)player.casting.skillID, pos ? pos->x : 0.0f, pos ? pos->y : 0.0f, (i32)player.casting.target);
+	LOG("Cast :: %ls execute request skill=%d (casting %d) pos=(%.0f, %.0f) target=%d", player.name.data(), (i32)skillID, (i32)player.casting.skillID, targetPos.x, targetPos.y, (i32)player.casting.target);
 	replication.SendExecuteSkillAck(clientHd, player.Main().UID, skillID);
 	if(player.casting.skillID == skillID) world.ReleaseCast(player);
 }

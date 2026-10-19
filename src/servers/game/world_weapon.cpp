@@ -158,7 +158,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(dir.y, dir.x)));
 		const bool bot = player.clientHd == ClientHandle::INVALID;
 		if(!bot && player.pendingShotRawSize > 0) {
-			replication->RelayRemoteCreate(player.clientHd, player.pendingShotRaw.data(), player.pendingShotRawSize, aimPos, remote->lifeTime, remote->ID);
+			replication->RelayWeaponShot(player.clientHd, player.pendingShotRaw.data(), player.pendingShotRawSize, aimPos, remote->ID);
 			player.pendingShotRawSize = 0;
 		}
 		SpawnRemote(player.index, remote->ID, aimPos, dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), bot);
@@ -208,7 +208,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 
 	if(player.pendingShotRawSize > 0) {
 		const vec3 target = vec3(vec2(origin) + proj.dir * proj.range, origin.z);
-		replication->RelayRemoteCreate(player.clientHd, player.pendingShotRaw.data(), player.pendingShotRawSize, target, remote ? remote->lifeTime : 0, remote ? remote->ID : RemoteIdx::INVALID);
+		replication->RelayWeaponShot(player.clientHd, player.pendingShotRaw.data(), player.pendingShotRawSize, target, remote ? remote->ID : RemoteIdx::INVALID);
 		player.pendingShotRawSize = 0;
 	}
 	else if(player.clientHd == ClientHandle::INVALID && remote) {

@@ -117,7 +117,7 @@ struct Game
 	void OnPlayerToggleSkill(ClientHandle clientHd, SkillID skillID, bool on);
 	void OnPlayerInteraction(ClientHandle clientHd, ActorUID targetUID, LocalActorID selfLocal);
 	bool IsWeaponFireObject(ClientHandle clientHd, const wchar* name, u16 len);
-	void OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID, const float3* pos, LocalActorID target);
+	void OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID, const vec3& targetPos, LocalActorID target);
 
 	bool ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 len);
 	void SendDbgMsg(ClientHandle clientHd, const wchar* msg);
