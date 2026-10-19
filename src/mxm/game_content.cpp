@@ -2115,6 +2115,62 @@ const GameXmlContent::Action& GameXmlContent::GetSkillAction(ClassType classType
 	return emptyAction;
 }
 
+StatusType StatusTypeFromString(const char* str)
+{
+	static const char* names[] = {
+		"STATUS_TYPE_ACTIONBLOCK",
+		"STATUS_TYPE_ACTIVATE_UNDEAD",
+		"STATUS_TYPE_AIRBORNE",
+		"STATUS_TYPE_ARTILLERY",
+		"STATUS_TYPE_DEFEAT_CASTER_AURA",
+		"STATUS_TYPE_DEFENDER",
+		"STATUS_TYPE_DISPEL",
+		"STATUS_TYPE_DRAGGED",
+		"STATUS_TYPE_DRAGGEDBYFORCE",
+		"STATUS_TYPE_ELECTRO",
+		"STATUS_TYPE_EVADE",
+		"STATUS_TYPE_FEAR",
+		"STATUS_TYPE_FLY",
+		"STATUS_TYPE_FORCEBACK",
+		"STATUS_TYPE_GHOSTWIDOW",
+		"STATUS_TYPE_GODMODE",
+		"STATUS_TYPE_GX09",
+		"STATUS_TYPE_HEAL",
+		"STATUS_TYPE_HIDE",
+		"STATUS_TYPE_HIT_PLAGUE",
+		"STATUS_TYPE_HPTRIGGER",
+		"STATUS_TYPE_KNOCKDOWN",
+		"STATUS_TYPE_KROMEDE",
+		"STATUS_TYPE_LINK",
+		"STATUS_TYPE_MANABURN",
+		"STATUS_TYPE_NEARLY_IMMORTAL",
+		"STATUS_TYPE_NOCOST",
+		"STATUS_TYPE_PUSH",
+		"STATUS_TYPE_ROOT",
+		"STATUS_TYPE_SHIELD",
+		"STATUS_TYPE_SHIELDBOMB",
+		"STATUS_TYPE_SHOCKED",
+		"STATUS_TYPE_SKILLSTAMINA",
+		"STATUS_TYPE_SKILLSTATUS",
+		"STATUS_TYPE_SLOW",
+		"STATUS_TYPE_SNIPER",
+		"STATUS_TYPE_STACKBOMB",
+		"STATUS_TYPE_STAT",
+		"STATUS_TYPE_STUN",
+		"STATUS_TYPE_SUICIDE",
+		"STATUS_TYPE_SUPERARMOR",
+		"STATUS_TYPE_TARGET",
+		"STATUS_TYPE_UNDEAD",
+		"STATUS_TYPE_UNSHAKABLE",
+		"STATUS_TYPE_WEAK_ON_CRITICAL",
+	};
+	if(!str) return StatusType::OTHER;
+	for(i32 i = 0; i < (i32)ARRAY_COUNT(names); i++) {
+		if(EA::StdC::Strcmp(str, names[i]) == 0) return (StatusType)(i + 1);
+	}
+	return StatusType::OTHER;
+}
+
 bool GameXmlContent::LoadStatusData()
 {
 	XMLDocument xml;
@@ -2204,7 +2260,10 @@ bool GameXmlContent::LoadStatusData()
 		if(st.maxOverlap < 1) st.maxOverlap = 1;
 		const char* type = nullptr;
 		pCommon->QueryStringAttribute("_Type", &type);
-		if(type) st.type = type;
+		if(type) {
+			st.typeName = type;
+			st.type = StatusTypeFromString(type);
+		}
 
 		{
 			const char* pas = nullptr;
@@ -2221,7 +2280,7 @@ bool GameXmlContent::LoadStatusData()
 				pIce->QueryAttribute("_Index", &st.stackStatus);
 				pIce->QueryAttribute("_FreezeStatusIndex", &st.stackFullStatus);
 			}
-			if(type && EA::StdC::Strcmp(type, "STATUS_TYPE_NOCOST") == 0) {
+			if(st.type == StatusType::NOCOST) {
 				if(XMLElement* pCost = pCommon->FirstChildElement("_DOUBLEGUN")) {
 					pCost->QueryFloatAttribute("_AddRatioCostMP", &st.costRatioMP);
 					for(XMLElement* pS = pCost->FirstChildElement("_SkillList"); pS; pS = pS->NextSiblingElement("_SkillList")) {
@@ -2233,11 +2292,15 @@ bool GameXmlContent::LoadStatusData()
 			}
 		}
 
-		static const char* hardCC[] = { "STATUS_TYPE_STUN", "STATUS_TYPE_PUSH", "STATUS_TYPE_KNOCKDOWN", "STATUS_TYPE_AIRBORNE",
-			"STATUS_TYPE_FEAR", "STATUS_TYPE_FORCEBACK", "STATUS_TYPE_DRAGGED", "STATUS_TYPE_SHOCKED", "STATUS_TYPE_ACTIONBLOCK", "STATUS_TYPE_FLY" };
-		for(const char* t : hardCC) if(type && EA::StdC::Strcmp(type, t) == 0) st.kind = StatusInfo::Kind::HARD_CC;
-		if(type && EA::StdC::Strcmp(type, "STATUS_TYPE_ROOT") == 0) st.kind = StatusInfo::Kind::ROOT;
-		if(type && EA::StdC::Strcmp(type, "STATUS_TYPE_SLOW") == 0) st.kind = StatusInfo::Kind::SLOW;
+		switch(st.type) {
+			case StatusType::STUN: case StatusType::PUSH: case StatusType::KNOCKDOWN: case StatusType::AIRBORNE: case StatusType::FEAR:
+			case StatusType::FORCEBACK: case StatusType::DRAGGED: case StatusType::SHOCKED: case StatusType::ACTIONBLOCK: case StatusType::FLY:
+				st.kind = StatusInfo::Kind::HARD_CC;
+				break;
+			case StatusType::ROOT: st.kind = StatusInfo::Kind::ROOT; break;
+			case StatusType::SLOW: st.kind = StatusInfo::Kind::SLOW; break;
+			default: break;
+		}
 
 		for(XMLElement* pChild = pInfo->FirstChildElement(); pChild; pChild = pChild->NextSiblingElement()) {
 			for(XMLElement* pNode = pChild; pNode; pNode = pNode == pChild ? pChild->FirstChildElement() : pNode->NextSiblingElement()) {
@@ -2356,7 +2419,7 @@ bool GameXmlContent::LoadSkillTooltips()
 	}
 	foreach(it, statusMap) {
 		StatusInfo& st = it->second;
-		if(st.descDefenceDown <= 0 || !st.mods.empty() || st.type != "STATUS_TYPE_STAT") continue;
+		if(st.descDefenceDown <= 0 || !st.mods.empty() || st.type != StatusType::STAT) continue;
 		StatusMod mod;
 		mod.stat = StatusMod::DEFENCE;
 		mod.mul = true;

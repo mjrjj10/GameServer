@@ -9,7 +9,7 @@ static const f32 REPEAT_HIT_REDUCTION = 0.1f;
 static const f32 REPEAT_HIT_REDUCTION_CAP = 0.4f;
 static const i32 REMOTE_SHUTTLE_DODGE = 1440410000;
 static const f32 TOOLTIP_SHUTTLE_DODGE_FUEL = 22.0f;
-static const i32 FIRST_PORTED_CLASS = CLASS_NUM_SHUTTLE;
+static const ClassType FIRST_PORTED_CLASS = ClassType::SHUTTLE;
 static const f32 ORBIT_RADIUS = 150.0f;
 struct WorldRemoteSpawner
 {
@@ -197,7 +197,7 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	if(!RemoteCanAffect(inst, target, true)) return;
 	if(remote.activateDelay > 0 && TimeDiffSec(TimeDiff(inst.spawnTime, localTime)) < remote.activateDelay) return;
 	const bool enemy = target.team != owner.team;
-	if(enemy && (i32)remote.ID == REMOTE_SHUTTLE_DODGE && (i32)owner.Main().classType == CLASS_NUM_SHUTTLE) {
+	if(enemy && (i32)remote.ID == REMOTE_SHUTTLE_DODGE && owner.Main().classType == ClassType::SHUTTLE) {
 		if(owner.fuelDodgeCast != inst.castID) {
 			owner.fuelDodgeCast = inst.castID;
 			owner.fuelDodgeTargets.clear();
@@ -452,7 +452,7 @@ void World::UpdateRemotes(f32 delta)
 			else if(glm::length(vec2(pr->castPos)) > 1.0f) pos = vec3(vec2(pr->castPos), owner.body->GetWorldPos().z);
 		}
 
-		const bool portedZone = remote && (i32)owner.Main().classType >= FIRST_PORTED_CLASS && remote->boundType == Remote::BoundType::E_BOUND_BOX &&
+		const bool portedZone = remote && owner.Main().classType >= FIRST_PORTED_CLASS && remote->boundType == Remote::BoundType::E_BOUND_BOX &&
 			remote->maxSpeed <= 0 && remote->lifeTime > remote->hitInvalidTime;
 		if(portedZone) {
 			const f32 length = (f32)remote->boundSize[1];
@@ -476,7 +476,7 @@ void World::UpdateRemotes(f32 delta)
 					t = *e ? e + 1 : e;
 				}
 			}
-			if((i32)players[pr->ownerIndex].Main().classType >= FIRST_PORTED_CLASS) casterLocal = false;
+			if(players[pr->ownerIndex].Main().classType >= FIRST_PORTED_CLASS) casterLocal = false;
 			RemoteInst* spawned = SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, casterLocal, pr->stopAtTarget);
 			if(spawned) {
 				spawned->sourceUID = pr->sourceUID;

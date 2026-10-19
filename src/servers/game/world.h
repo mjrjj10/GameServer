@@ -695,7 +695,7 @@ private:
 	void PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj);
 	void PassiveOnSkillHit(Player& attacker, Player& target);
 	f32 PassiveWeaponDamageMul(Player& attacker, Player& target);
-	const ActiveStatus* FindPassiveOfType(const Player& p, const char* type) const;
+	const ActiveStatus* FindPassiveOfType(const Player& p, StatusType type) const;
 	bool PassiveBlocksCC(Player& target, const StatusInfo& info, f32* duration);
 	void PassiveOnDamaged(Player& target);
 	bool PassiveOnLethal(Player& target);
@@ -705,7 +705,7 @@ private:
 	void UpdateStances();
 	void CancelCast(Player& player, const char* reason);
 	void UpdateCasts();
-	bool HasStatusType(const Player& p, const char* type) const;
+	bool HasStatusType(const Player& p, StatusType type) const;
 	f32 StatusModSum(const Player& p, i32 stat) const;
 	f32 StatusModMulSum(const Player& p, i32 stat) const;
 	bool IsBlocked(const Player& p, bool attack, bool skill, bool shirk) const;

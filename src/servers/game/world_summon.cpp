@@ -105,11 +105,11 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			if(!st) continue;
 			const f32 duration = st->durationSec > 0 ? st->durationSec : 1.0f;
 			replication->SendAddStatusToAll(c->index, npc.UID, owner.Main().UID, duration, npc.pos, npc.pos, 0);
-			if(st->type == "STATUS_TYPE_SUICIDE") {
+			if(st->type == StatusType::SUICIDE) {
 				const Time at = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
 				if(npc.despawnAt == Time::ZERO || at < npc.despawnAt) npc.despawnAt = at;
 			}
-			LOG("Summon :: creature=%d self status %d (%s)", (i32)npc.docID, c->index, st->type.c_str());
+			LOG("Summon :: creature=%d self status %d (%s)", (i32)npc.docID, c->index, st->typeName.c_str());
 			if(st->auraStatus != 0 && st->targetingRange > 0 && !groundAuras.full()) {
 				GroundAura ga;
 				ga.ownerIndex = npc.ownerIndex;
@@ -147,7 +147,7 @@ void World::ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos)
 	LOG("Summon :: %ls child SKILL_%d on its creature=%d, flies %.0f in %.2fs", owner.name.data(), child, (i32)npc->docID, dist, travel);
 	if(dist > 1.0f) replication->SendNpcMoveToAll(npc->UID, npc->pos, goal, atan2f(goal.y - npc->pos.y, goal.x - npc->pos.x), travel > 0 ? dist / travel : dist);
 	foreach(st, activeStatuses) {
-		if(st->casterIndex != owner.index || !st->info || st->info->type != "STATUS_TYPE_TARGET" || localTime >= st->until) continue;
+		if(st->casterIndex != owner.index || !st->info || st->info->type != StatusType::TARGET || localTime >= st->until) continue;
 		Player& carried = players[st->targetIndex];
 		const Time drop = TimeAdd(localTime, TimeMsToTime(travel * 1000.0));
 		foreach(with, activeStatuses) {

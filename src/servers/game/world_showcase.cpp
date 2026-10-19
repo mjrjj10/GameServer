@@ -14,7 +14,6 @@ static const f64 MIRROR_POS_RETRY_MS = 400.0;
 static const i32 SHOWCASE_STANCE_SHOTS = 3;
 static const f32 SHOWCASE_STANCE_WINDOW_SEC = 4.0f;
 static const i32 SHOWCASE_STANCE_FIRST_SHOT_MS = 900;
-static const i32 CLASS_NUM_GATLING = 43;
 static const f32 GX_TEST_BOARD_GAP = 250.0f;
 static const f32 GX_TEST_DRIVE_STEP = 150.0f;
 static const i32 GX_TEST_DRIVE_STEPS = 7;
@@ -340,7 +339,7 @@ void World::UpdateShowcase()
 	}
 	if(Config().DevGxTest) {
 		foreach_const(b, bots) {
-			if(players[*b].team == human->team && (i32)players[*b].Main().classType == CLASS_NUM_SHUTTLE) { UpdateGxTest(*human, players[*b]); return; }
+			if(players[*b].team == human->team && players[*b].Main().classType == ClassType::SHUTTLE) { UpdateGxTest(*human, players[*b]); return; }
 		}
 		LOG("GxTest :: no allied GX-09 bot");
 		showcase.done = true;
@@ -864,7 +863,7 @@ void World::UpdateGatlingPreview(Player& human)
 
 void World::UpdateGxPreview(Player& human)
 {
-	if((i32)human.Main().classType == CLASS_NUM_GATLING) {
+	if(human.Main().classType == ClassType::GATLING) {
 		UpdateGatlingPreview(human);
 		return;
 	}
@@ -940,7 +939,7 @@ void World::UpdateGxPreview(Player& human)
 void World::UpdateGxEmpTest(Player& human)
 {
 	Player* gx = nullptr;
-	foreach(it, players) if(!gx && it->team != human.team && (i32)it->Main().classType == CLASS_NUM_SHUTTLE) gx = &*it;
+	foreach(it, players) if(!gx && it->team != human.team && it->Main().classType == ClassType::SHUTTLE) gx = &*it;
 	if(!gx) {
 		LOG("GxTest :: no enemy GX-09");
 		LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
@@ -987,7 +986,7 @@ void World::UpdateGxTest(Player& human, Player& gx)
 	const vec3 base = showcase.anchor;
 	const vec2 dir = showcase.dir;
 	const vec2 side = vec2(-dir.y, dir.x);
-	const ActiveStatus* passive = FindPassiveOfType(gx, "STATUS_TYPE_GX09");
+	const ActiveStatus* passive = FindPassiveOfType(gx, StatusType::GX09);
 	if(!passive && showcase.gxPhase == 40) {
 		LOG("GxTest :: after gx death human boarded=%d untargetable=%d", human.boardedOn >= 0 ? 1 : 0, human.untargetable ? 1 : 0);
 		LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
@@ -1071,10 +1070,10 @@ void World::UpdateGxTest(Player& human, Player& gx)
 			Player* rider = nullptr;
 			foreach(it, players) {
 				if(it->team == human.team || it->clientHd != ClientHandle::INVALID || it->dead) continue;
-				if(!enemyGx && (i32)it->Main().classType == CLASS_NUM_SHUTTLE) enemyGx = &*it;
-				else if(!rider && (i32)it->Main().classType != CLASS_NUM_SHUTTLE) rider = &*it;
+				if(!enemyGx && it->Main().classType == ClassType::SHUTTLE) enemyGx = &*it;
+				else if(!rider && it->Main().classType != ClassType::SHUTTLE) rider = &*it;
 			}
-			if(!enemyGx || !rider || !FindPassiveOfType(*enemyGx, "STATUS_TYPE_GX09")) {
+			if(!enemyGx || !rider || !FindPassiveOfType(*enemyGx, StatusType::GX09)) {
 				LOG("GxTest :: no enemy GX-09 and rider");
 				LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
 				showcase.done = true;
@@ -1093,7 +1092,7 @@ void World::UpdateGxTest(Player& human, Player& gx)
 		} break;
 		case 6: {
 			Player& enemyGx = players[showcase.gxEnemy];
-			const ActiveStatus* enemyPassive = FindPassiveOfType(enemyGx, "STATUS_TYPE_GX09");
+			const ActiveStatus* enemyPassive = FindPassiveOfType(enemyGx, StatusType::GX09);
 			PlayerCastSkill(enemyGx, SkillID((i32)enemyPassive->info->ParamInt("_ShuttleSkillIndex")), enemyGx.body->GetWorldPos(), Slice<const ActorUID>(), 0);
 			LOG("GxTest :: enemy transport cast wall=%lld", ShowcaseWallMs());
 			showcase.gxPhase = 7;

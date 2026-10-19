@@ -20,7 +20,6 @@ static const f32 DEFENCE_SCALE = 100.0f;
 static const f32 PENETRATION_CAP = 50.0f;
 static const f32 SKILLDAMAGE_REDUCE_CAP = 80.0f;
 static const f32 TOOLTIP_SNIPER_CRIT_PER_MARK = 33.0f;
-static const i32 CLASS_NUM_ELECTRO = 4;
 static const i32 STATUS_ELECTRO_PASSIVE_BUFF_MPREGEN = 1230040011;
 static const i32 RESPAWN_DELAY_MS = 5000;
 
@@ -55,7 +54,7 @@ void World::HealPlayer(Player& healer, Player& target, i32 amount)
 	ActorMaster& chara = target.Main();
 	chara.hp = MIN(chara.hp + amount, chara.hpMax);
 	LOG("Heal :: %ls -> %ls amount=%d hp=%d/%d", healer.name.data(), target.name.data(), amount, chara.hp, chara.hpMax);
-	if(healer.index != target.index && (i32)healer.Main().classType == CLASS_NUM_ELECTRO && FindPassiveOfType(healer, "STATUS_TYPE_ELECTRO")) ApplyStatus(healer, healer, STATUS_ELECTRO_PASSIVE_BUFF_MPREGEN);
+	if(healer.index != target.index && healer.Main().classType == ClassType::ELECTRO && FindPassiveOfType(healer, StatusType::ELECTRO)) ApplyStatus(healer, healer, STATUS_ELECTRO_PASSIVE_BUFF_MPREGEN);
 	replication->SendHpToAll(chara.UID, chara.hp, chara.hpMax);
 }
 
@@ -125,10 +124,10 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		attacker.lastHitTargetIndex = (i32)target.index;
 		attacker.lastHitAt = localTime;
 	}
-	if(HasStatusType(target, "STATUS_TYPE_GODMODE")) return;
+	if(HasStatusType(target, StatusType::GODMODE)) return;
 	const i32 damageIn = damage;
 	f32 elementMul = 1.0f;
-	if(HasStatusType(target, "STATUS_TYPE_EVADE") && attacker.team != target.team) {
+	if(HasStatusType(target, StatusType::EVADE) && attacker.team != target.team) {
 		LOG("Evade :: %ls evaded %ls", target.name.data(), attacker.name.data());
 		return;
 	}
@@ -165,8 +164,8 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		f32 bonus = 0;
 		foreach_const(st, activeStatuses) {
 			if(st->targetIndex != target.index || !st->info || localTime >= st->until) continue;
-			if(st->info->type == "STATUS_TYPE_WEAK_ON_CRITICAL" && attacker.team != target.team) bonus = 100.0f;
-			if(proj && st->info->type == "STATUS_TYPE_STACKBOMB" && st->casterIndex == attacker.index && FindPassiveOfType(attacker, "STATUS_TYPE_SNIPER")) bonus += TOOLTIP_SNIPER_CRIT_PER_MARK * st->overlap;
+			if(st->info->type == StatusType::WEAK_ON_CRITICAL && attacker.team != target.team) bonus = 100.0f;
+			if(proj && st->info->type == StatusType::STACKBOMB && st->casterIndex == attacker.index && FindPassiveOfType(attacker, StatusType::SNIPER)) bonus += TOOLTIP_SNIPER_CRIT_PER_MARK * st->overlap;
 		}
 		if(rate + bonus > 0 && (RandUint() % 10000) < (u32)((rate + bonus) * 100.0f)) {
 			const f32 critDamage = MasterStat(ac, proj ? STAT_CRITICALDAMAGE : STAT_SKILL_CRITICALDAMAGE);
@@ -193,7 +192,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	ShowcaseOnDamage(target, damage);
 	target.damageTaken += damage;
 	target.hitsTaken++;
-	chara.hp = MAX(chara.hp - damage, (HasStatusType(target, "STATUS_TYPE_NEARLY_IMMORTAL") || HasStatusType(target, "STATUS_TYPE_UNDEAD")) ? 1 : 0);
+	chara.hp = MAX(chara.hp - damage, (HasStatusType(target, StatusType::NEARLY_IMMORTAL) || HasStatusType(target, StatusType::UNDEAD)) ? 1 : 0);
 	if(ShowcaseKeepsAlive(target)) chara.hp = MAX(chara.hp, 1);
 	if(chara.hp == 0) PassiveOnLethal(target);
 	if(!reflecting && attacker.team != target.team && attacker.index != target.index && (proj || skillID != SkillID::INVALID)) {

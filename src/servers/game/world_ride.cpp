@@ -50,7 +50,7 @@ void World::PlayerInteract(Player& player, ActorUID targetUID)
 	if(!owner || player.dead || player.boardedOn >= 0) return;
 	Player& gx = *owner;
 	if(gx.index == player.index || gx.team != player.team || gx.dead || localTime >= gx.boardOpenUntil) return;
-	const ActiveStatus* passive = FindPassiveOfType(gx, "STATUS_TYPE_GX09");
+	const ActiveStatus* passive = FindPassiveOfType(gx, StatusType::GX09);
 	if(!passive) return;
 	const f32 reach = GetGameXmlContent().GetInteractionActiveDistance(INTERACTION_SHUTTLE_BOARD);
 	const f32 dist = glm::length(vec2(gx.body->GetWorldPos()) - vec2(player.body->GetWorldPos()));
@@ -77,7 +77,7 @@ void World::Unboard(Player& passenger)
 	Player& gx = players[passenger.boardedOn];
 	passenger.boardedOn = -1;
 	passenger.untargetable = false;
-	if(const ActiveStatus* passive = FindPassiveOfType(gx, "STATUS_TYPE_GX09")) {
+	if(const ActiveStatus* passive = FindPassiveOfType(gx, StatusType::GX09)) {
 		foreach_const(p, passive->info->params) {
 			if(p->name != "DATA") continue;
 			const i32 id = (i32)p->value;
@@ -107,7 +107,7 @@ void World::UpdateRides()
 		}
 		if(it->boardedOn < 0) continue;
 		Player& gx = players[it->boardedOn];
-		const bool shuttle = (i32)gx.Main().classType == CLASS_NUM_SHUTTLE;
+		const bool shuttle = gx.Main().classType == ClassType::SHUTTLE;
 		if(it->dead || gx.dead || !shuttle || gx.Main().stance == 0) {
 			Unboard(*it);
 			continue;

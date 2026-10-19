@@ -46,7 +46,7 @@ void World::UpdateUltimateGauges(f32 delta)
 			const f32 resMax = MasterStat(cls, RESOURCES[r].maxStat);
 			if(resMax <= 0) continue;
 			if(it->res[r] < 0) it->res[r] = RESOURCES[r].startFull ? resMax : 0;
-			const f32 chargingFuel = r == 1 && (i32)cls == CLASS_NUM_SHUTTLE && it->weaponState == WEAPON_STATE_CHARGE ? TOOLTIP_SHUTTLE_CHARGING_FUEL_SEC : 0.0f;
+			const f32 chargingFuel = r == 1 && cls == ClassType::SHUTTLE && it->weaponState == WEAPON_STATE_CHARGE ? TOOLTIP_SHUTTLE_CHARGING_FUEL_SEC : 0.0f;
 			it->res[r] = MIN(MAX(it->res[r] + (MasterStat(cls, RESOURCES[r].regenStat) + chargingFuel) * delta, 0.0f), resMax);
 			if(ShowcaseKeepsFullRes(*it)) it->res[r] = resMax;
 			if(fabsf(it->res[r] - it->resSent[r]) >= 0.01f) resChanged = true;
@@ -105,7 +105,7 @@ bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 	const auto& content = GetGameXmlContent();
 	f32 mp = content.GetSkillConsumeMP(skillID);
 	foreach(it, activeStatuses) {
-		if(it->targetIndex != player.index || !it->info || it->info->type != "STATUS_TYPE_NOCOST" || it->until <= localTime) continue;
+		if(it->targetIndex != player.index || !it->info || it->info->type != StatusType::NOCOST || it->until <= localTime) continue;
 		if(eastl::find(it->info->costSkills.begin(), it->info->costSkills.end(), skillID) == it->info->costSkills.end()) continue;
 		mp = MAX(mp * (1.0f + it->info->costRatioMP / 100.0f), 0.0f);
 		it->until = localTime;
@@ -267,7 +267,7 @@ void World::UpdateCasts()
 		}
 		if(it->massTeleportAt != Time::ZERO && localTime >= it->massTeleportAt) {
 			it->massTeleportAt = Time::ZERO;
-			const ActiveStatus* gx = FindPassiveOfType(*it, "STATUS_TYPE_GX09");
+			const ActiveStatus* gx = FindPassiveOfType(*it, StatusType::GX09);
 			if(gx && !it->dead) MassTeleport(*it, *gx->info);
 		}
 		if(it->comboAutoAt != Time::ZERO && localTime >= it->comboAutoAt) {

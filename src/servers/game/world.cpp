@@ -85,7 +85,7 @@ void World::Update(Time localTime_)
 		if(!p.dead && p.clientHd == ClientHandle::INVALID && localTime < p.ccUntil) {
 			const ActiveStatus* fear = nullptr;
 			foreach_const(st, activeStatuses) {
-				if(st->targetIndex == p.index && st->info && localTime < st->until && st->info->type == "STATUS_TYPE_FEAR") { fear = &*st; break; }
+				if(st->targetIndex == p.index && st->info && localTime < st->until && st->info->type == StatusType::FEAR) { fear = &*st; break; }
 			}
 			if(localTime < p.pushUntil) {
 				p.input.moveTo = p.pushTarget;
@@ -662,7 +662,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 				castCostLevel->consume[1], castCostLevel->consume[2], (i32)castCostLevel->remoteReplace.size(), (i32)castCostLevel->statusReplace.size(), castCostLevel->damageRatio);
 		}
 		PassiveOnSkillCast(player, (i32)skillID);
-		if(const ActiveStatus* gx = FindPassiveOfType(player, "STATUS_TYPE_GX09")) {
+		if(const ActiveStatus* gx = FindPassiveOfType(player, StatusType::GX09)) {
 			if(gx->info->ParamInt("_ShuttleSkillIndex") == (i64)skillID) {
 				player.boardOpenUntil = TimeAdd(localTime, TimeMsToTime(TOOLTIP_SHUTTLE_BOARD_WINDOW_SEC * 1000.0));
 				RemoveBoardPoint(player);
@@ -815,7 +815,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		player.casting.type = (u8)cast->type;
 		player.casting.interruptByMove = cast->interruptByMove;
 		LOG("Cast :: %ls skill=%d start action=%d type=%d wait=%.2f", player.name.data(), (i32)skillID, (i32)cast->action, (i32)cast->type, wait);
-		if(const ActiveStatus* gx = FindPassiveOfType(player, "STATUS_TYPE_GX09")) {
+		if(const ActiveStatus* gx = FindPassiveOfType(player, StatusType::GX09)) {
 			if(gx->info->ParamInt("_MassiveTeleportIndex") == (i64)skillID) {
 				player.massTeleportAt = TimeAdd(localTime, TimeMsToTime(TOOLTIP_SHUTTLE_TELEPORT_SEC * 1000.0));
 				player.massTeleportPos = castPos;

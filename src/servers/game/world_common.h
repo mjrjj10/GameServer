@@ -23,7 +23,6 @@ static const i32 STAT_ULTIMATE = 37;
 static const f32 WEAPON_HIT_TOLERANCE = 50.0f;
 static const f32 OBSTRUCT_JUMPABLE_HEIGHT = 120.0f;
 static const f32 OBSTRUCT_SIDE = 50.0f;
-static const i32 CLASS_NUM_SHUTTLE = 41;
 
 static inline f32 ClassAttackRange(ClassType classType)
 {

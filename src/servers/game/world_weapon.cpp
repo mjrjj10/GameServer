@@ -82,7 +82,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	const ClassType classType = player.Main().classType;
 	if(WeaponIsMelee(player)) return;
 	BotWeaponAnimation(player, replication);
-	if((i32)classType == CLASS_NUM_SHUTTLE && player.chargeLevel > 0) AddFuel(player, TOOLTIP_SHUTTLE_CHARGED_FUEL);
+	if(classType == ClassType::SHUTTLE && player.chargeLevel > 0) AddFuel(player, TOOLTIP_SHUTTLE_CHARGED_FUEL);
 	if(player.clientHd != ClientHandle::INVALID && player.casting.skillID != SkillID::INVALID && player.casting.type == GameXmlContent::SkillCast::LIMIT) {
 		ReleaseCast(player);
 		return;
@@ -237,7 +237,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage)
 		mastersHit++;
 	}
 	if(mastersHit >= 2 && owner.mana >= 0) {
-		if(const ActiveStatus* st = FindPassiveOfType(owner, "STATUS_TYPE_ARTILLERY")) {
+		if(const ActiveStatus* st = FindPassiveOfType(owner, StatusType::ARTILLERY)) {
 			owner.mana = MIN(owner.mana + st->info->Param("_AddValuePC"), MasterStat(owner.Main().classType, STAT_MANA));
 			owner.tNextManaSend = Time::ZERO;
 			LOG("Passive :: %ls hit %d masters -> mana %.0f", owner.name.data(), mastersHit, owner.mana);

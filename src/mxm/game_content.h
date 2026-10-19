@@ -147,6 +147,58 @@ struct StatusMod
 	f32 count = 0;
 };
 
+enum class StatusType: u8
+{
+	OTHER,
+	ACTIONBLOCK,
+	ACTIVATE_UNDEAD,
+	AIRBORNE,
+	ARTILLERY,
+	DEFEAT_CASTER_AURA,
+	DEFENDER,
+	DISPEL,
+	DRAGGED,
+	DRAGGEDBYFORCE,
+	ELECTRO,
+	EVADE,
+	FEAR,
+	FLY,
+	FORCEBACK,
+	GHOSTWIDOW,
+	GODMODE,
+	GX09,
+	HEAL,
+	HIDE,
+	HIT_PLAGUE,
+	HPTRIGGER,
+	KNOCKDOWN,
+	KROMEDE,
+	LINK,
+	MANABURN,
+	NEARLY_IMMORTAL,
+	NOCOST,
+	PUSH,
+	ROOT,
+	SHIELD,
+	SHIELDBOMB,
+	SHOCKED,
+	SKILLSTAMINA,
+	SKILLSTATUS,
+	SLOW,
+	SNIPER,
+	STACKBOMB,
+	STAT,
+	STUN,
+	SUICIDE,
+	SUPERARMOR,
+	TARGET,
+	UNDEAD,
+	UNSHAKABLE,
+	WEAK_ON_CRITICAL,
+};
+
+StatusType StatusTypeFromString(const char* str);
+
 struct StatusInfo
 {
 	enum class Kind: i8 {
@@ -192,7 +244,8 @@ struct StatusInfo
 	f32 explodeDamage = 0;
 	f32 additionalDamageByCaster = 0;
 	NextCondition nextCondition = NextCondition::NONE;
-	eastl::fixed_string<char,40,false> type;
+	StatusType type = StatusType::OTHER;
+	eastl::fixed_string<char,40,false> typeName;
 
 	bool permanent = false;
 	i32 customInit = 0;
@@ -643,7 +696,7 @@ struct GameXmlContent
 	u16 InternNodeName(const char* name);
 	const wchar* GetNodeName(u16 idx) const { return idx < nodeNames.size() ? nodeNames[idx].c_str() : L"Scene Root"; }
 	const StatusInfo* FindStatus(i32 statusID) const;
-	i32 FindSkillStatusOfType(i32 skillIndex, const char* type) const { foreach_const(it, statusMap) { if(it->second.skillIndex == skillIndex && it->second.type == type) return it->first; } return 0; }
+	i32 FindSkillStatusOfType(i32 skillIndex, StatusType type) const { foreach_const(it, statusMap) { if(it->second.skillIndex == skillIndex && it->second.type == type) return it->first; } return 0; }
 	f32 GetWeaponFireDelay(i32 weaponID) const { auto f = weaponFireDelay.find(weaponID); return f == weaponFireDelay.end() ? 0 : f->second; }
 	f32 GetSkillCoolTime(i32 skill) const { auto f = skillCoolTime.find(skill); return f == skillCoolTime.end() ? 0 : f->second; }
 	f32 GetSkillTargetRange(i32 skill) const { auto f = skillTargetRangeX.find(skill); return f == skillTargetRangeX.end() ? 0 : f->second; }

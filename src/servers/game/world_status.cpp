@@ -4,11 +4,6 @@
 #include <mxm/game_content.h>
 
 static const i32 STAT_TOUGHNESS = 65;
-static const i32 CLASS_NUM_LILU = 22;
-static const i32 CLASS_NUM_ANDROB = 30;
-static const i32 CLASS_NUM_ATTACKER = 31;
-static const i32 CLASS_NUM_BOXER = 32;
-static const i32 CLASS_NUM_SHUGOTRADER = 33;
 static const f32 TOOLTIP_DEFENDER_CC_IMMUNE_SEC = 1.0f;
 static const f32 TOOLTIP_DEATHKNIGHT_REVIVE_HP = 0.30f;
 static const i32 TOOLTIP_LILU_EVERY_N = 4;
@@ -20,12 +15,6 @@ static const f32 TOOLTIP_BOXER_MARK_SEC = 1.5f;
 static const f32 TOOLTIP_BOXER_WEAPON_MUL = 1.15f;
 static const i32 TOOLTIP_SHUGO_EVERY_N = 6;
 static const f32 TOOLTIP_SHUGO_WEAPON_MUL = 1.80f;
-static const i32 CLASS_NUM_PHOTOG = 15;
-static const i32 CLASS_NUM_EFREET = 23;
-static const i32 CLASS_NUM_SHADOWHUNTER = 24;
-static const i32 CLASS_NUM_RYTLOCK = 25;
-static const i32 CLASS_NUM_CATTHECAT = 26;
-static const i32 CLASS_NUM_ANDROA = 29;
 static const i32 STATUS_PHOTOG_PASSIVE_MOVESPEED = 1230150010;
 static const i32 STATUS_EFREET_PASSIVE_DOT_FIRE = 1230230001;
 static const i32 STATUS_SHADOWHUNTER_HIDE = 1230240000;
@@ -42,7 +31,7 @@ static const f32 TOOLTIP_SHUTTLE_EMP_DRAIN = 0.30f;
 static const f32 TOOLTIP_RYTLOCK_THIRD_MUL = 1.20f;
 static const f32 STATUS_PUSH_BASE_DISTANCE = 500.0f;
 
-bool World::HasStatusType(const Player& p, const char* type) const
+bool World::HasStatusType(const Player& p, StatusType type) const
 {
 	foreach_const(it, activeStatuses) {
 		if(it->targetIndex == p.index && it->info && it->info->type == type) return true;
@@ -93,7 +82,7 @@ static bool PassiveOfActiveMaster(const World::Player& player, i32 statusID)
 	return list && eastl::find(list->begin(), list->end(), statusID) != list->end();
 }
 
-const World::ActiveStatus* World::FindPassiveOfType(const Player& p, const char* type) const
+const World::ActiveStatus* World::FindPassiveOfType(const Player& p, StatusType type) const
 {
 	foreach_const(it, activeStatuses) {
 		if(it->targetIndex != p.index || !it->info || it->info->type != type) continue;
@@ -110,7 +99,7 @@ bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* duratio
 		LOG("Passive :: %ls immune to status %d", target.name.data(), info.ID);
 		return true;
 	}
-	if(const ActiveStatus* st = FindPassiveOfType(target, "STATUS_TYPE_UNSHAKABLE")) {
+	if(const ActiveStatus* st = FindPassiveOfType(target, StatusType::UNSHAKABLE)) {
 		if(target.cleanseCharges < 0) target.cleanseCharges = st->info->customInit;
 		if(target.cleanseCharges > 0) {
 			target.cleanseCharges--;
@@ -127,7 +116,7 @@ bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* duratio
 
 bool World::PassiveOnLethal(Player& target)
 {
-	const ActiveStatus* st = FindPassiveOfType(target, "STATUS_TYPE_ACTIVATE_UNDEAD");
+	const ActiveStatus* st = FindPassiveOfType(target, StatusType::ACTIVATE_UNDEAD);
 	if(!st || localTime < target.reviveReadyAt) return false;
 	const i32 undead = (i32)st->info->ParamInt("_UndeadStatusIndex");
 	const StatusInfo* undeadInfo = GetGameXmlContent().FindStatus(undead);
@@ -144,7 +133,7 @@ void World::PassiveOnDamaged(Player& target)
 {
 	if(target.dead) return;
 	if(ShowcaseIsDummy(target)) return;
-	const ActiveStatus* st = FindPassiveOfType(target, "STATUS_TYPE_HPTRIGGER");
+	const ActiveStatus* st = FindPassiveOfType(target, StatusType::HPTRIGGER);
 	if(!st) return;
 	const ActorMaster& chara = target.Main();
 	if(chara.hp * 100 >= chara.hpMax * st->info->Param("_CheckVal")) return;
@@ -200,7 +189,7 @@ void World::UpdatePassives()
 			}
 		}
 		if(it->cleanseRefillAt != Time::ZERO && localTime >= it->cleanseRefillAt) {
-			const ActiveStatus* st = FindPassiveOfType(*it, "STATUS_TYPE_UNSHAKABLE");
+			const ActiveStatus* st = FindPassiveOfType(*it, StatusType::UNSHAKABLE);
 			it->cleanseRefillAt = Time::ZERO;
 			if(st && it->cleanseCharges < st->info->customMax) {
 				it->cleanseCharges++;
@@ -217,7 +206,7 @@ void World::PassiveOnSkillCast(Player& player, i32 skillID)
 	foreach(it, activeStatuses) {
 		if(it->targetIndex != player.index || !it->info || it->info->customMax <= 0) continue;
 		if(!PassiveOfActiveMaster(player, it->statusID)) continue;
-		if(it->info->type == "STATUS_TYPE_SKILLSTATUS") {
+		if(it->info->type == StatusType::SKILLSTATUS) {
 			it->custom++;
 			LOG("Passive :: %ls skill counter %d/%d", player.name.data(), it->custom, it->info->customMax);
 			if(it->custom >= it->info->customMax) {
@@ -231,7 +220,7 @@ void World::PassiveOnSkillCast(Player& player, i32 skillID)
 		ApplyStatus(player, player, *id);
 	}
 
-	if(const ActiveStatus* st = FindPassiveOfType(player, "STATUS_TYPE_SKILLSTAMINA")) {
+	if(const ActiveStatus* st = FindPassiveOfType(player, StatusType::SKILLSTAMINA)) {
 		ActiveStatus& counter = const_cast<ActiveStatus&>(*st);
 		counter.custom++;
 		if(st->info->customMax > 0 && counter.custom >= st->info->customMax) {
@@ -244,15 +233,15 @@ void World::PassiveOnSkillCast(Player& player, i32 skillID)
 			LOG("Passive :: %ls stamina restored after %d skills", player.name.data(), st->info->customMax);
 		}
 	}
-	if(const ActiveStatus* st = FindPassiveOfType(player, "STATUS_TYPE_DEFENDER")) {
+	if(const ActiveStatus* st = FindPassiveOfType(player, StatusType::DEFENDER)) {
 		if(st->info->ListHas("DATA", skillID)) {
 			HealPlayer(player, player, (i32)(player.Main().hpMax * st->info->Param("_RecoveryFactorHP") / 100.0f));
 			player.ccImmuneUntil = TimeAdd(localTime, TimeMsToTime(TOOLTIP_DEFENDER_CC_IMMUNE_SEC * 1000.0));
 		}
 	}
-	if((i32)player.Main().classType == CLASS_NUM_CATTHECAT) ApplyStatus(player, player, STATUS_THECAT_PASSIVE_FIREDELAY1);
-	if((i32)player.Main().classType == CLASS_NUM_ANDROA) ApplyStatus(player, player, STATUS_ANDROIDA_PASSIVE_ATTACKSPEED);
-	if((i32)player.Main().classType == CLASS_NUM_ANDROB) {
+	if(player.Main().classType == ClassType::CATTHECAT) ApplyStatus(player, player, STATUS_THECAT_PASSIVE_FIREDELAY1);
+	if(player.Main().classType == ClassType::ANDROA) ApplyStatus(player, player, STATUS_ANDROIDA_PASSIVE_ATTACKSPEED);
+	if(player.Main().classType == ClassType::ANDROB) {
 		Player* lowest = nullptr;
 		foreach(it, players) {
 			if(it->team != player.team || it->dead) continue;
@@ -275,8 +264,8 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 		}
 	}
 
-	if(const ActiveStatus* sniper = FindPassiveOfType(attacker, "STATUS_TYPE_SNIPER")) {
-		const i32 mark = GetGameXmlContent().FindSkillStatusOfType(sniper->info->skillIndex, "STATUS_TYPE_STACKBOMB");
+	if(const ActiveStatus* sniper = FindPassiveOfType(attacker, StatusType::SNIPER)) {
+		const i32 mark = GetGameXmlContent().FindSkillStatusOfType(sniper->info->skillIndex, StatusType::STACKBOMB);
 		if(mark != 0 && !target.dead && target.team != attacker.team) {
 			foreach(st, activeStatuses) {
 				if(st->statusID == mark && st->casterIndex == attacker.index && st->targetIndex != target.index) st->until = localTime;
@@ -290,19 +279,19 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 		if(it->targetIndex != attacker.index || !it->info) continue;
 		if(!PassiveOfActiveMaster(attacker, it->statusID)) continue;
 		const StatusInfo& info = *it->info;
-		if(info.type == "STATUS_TYPE_HIT_PLAGUE" && info.customMax > 0) {
+		if(info.type == StatusType::HIT_PLAGUE && info.customMax > 0) {
 			it->custom++;
 			if(it->custom >= info.customMax) {
 				it->custom = info.customInit;
 				if(info.hitEffectStatus && !toApply.full()) toApply.push_back(info.hitEffectStatus);
 			}
 		}
-		else if(info.type == "STATUS_TYPE_KROMEDE" && info.hitEffectStatus) {
-			if(HasStatusType(target, "STATUS_TYPE_STUN") || HasStatusType(target, "STATUS_TYPE_ROOT") || HasStatusType(target, "STATUS_TYPE_SHOCKED")) {
+		else if(info.type == StatusType::KROMEDE && info.hitEffectStatus) {
+			if(HasStatusType(target, StatusType::STUN) || HasStatusType(target, StatusType::ROOT) || HasStatusType(target, StatusType::SHOCKED)) {
 				if(!toApply.full()) toApply.push_back(info.hitEffectStatus);
 			}
 		}
-		else if(info.type == "STATUS_TYPE_MANABURN" && info.hitEffectStatus) {
+		else if(info.type == StatusType::MANABURN && info.hitEffectStatus) {
 			if(FindActiveStatus(target.index, info.hitEffectStatus)) {
 				ConsumeStatus(target.index, info.hitEffectStatus);
 				f32 stolen = info.hitEffectValue;
@@ -317,11 +306,11 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 		ApplyStatus(attacker, target, *id);
 	}
 
-	if((i32)attacker.Main().classType == CLASS_NUM_RYTLOCK && !target.dead) {
+	if(attacker.Main().classType == ClassType::RYTLOCK && !target.dead) {
 		attacker.weaponHitCounter = attacker.weaponHitCounter % TOOLTIP_RYTLOCK_CHAIN + 1;
 		if(attacker.weaponHitCounter < TOOLTIP_RYTLOCK_CHAIN) ApplyStatus(attacker, target, STATUS_RYTLOCK_ATTACK_BLEEDING);
 	}
-	if((i32)attacker.Main().classType == CLASS_NUM_LILU && !target.dead) {
+	if(attacker.Main().classType == ClassType::LILU && !target.dead) {
 		attacker.weaponHitCounter++;
 		if(attacker.weaponHitCounter >= TOOLTIP_LILU_EVERY_N) {
 			attacker.weaponHitCounter = 0;
@@ -333,20 +322,20 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 
 void World::PassiveOnSkillHit(Player& attacker, Player& target)
 {
-	const i32 skillCls = (i32)attacker.Main().classType;
-	if(skillCls == CLASS_NUM_BOXER) {
+	const ClassType skillCls = attacker.Main().classType;
+	if(skillCls == ClassType::BOXER) {
 		target.skillMarkBy = attacker.index;
 		target.skillMarkUntil = TimeAdd(localTime, TimeMsToTime(TOOLTIP_BOXER_MARK_SEC * 1000.0));
 	}
-	if(skillCls == CLASS_NUM_PHOTOG) ApplyStatus(attacker, attacker, STATUS_PHOTOG_PASSIVE_MOVESPEED);
-	if(skillCls == CLASS_NUM_EFREET) ApplyStatus(attacker, target, STATUS_EFREET_PASSIVE_DOT_FIRE);
-	if(skillCls == CLASS_NUM_SHADOWHUNTER && !FindActiveStatus(attacker.index, STATUS_SHADOWHUNTER_COOLDOWN)) {
+	if(skillCls == ClassType::PHOTOG) ApplyStatus(attacker, attacker, STATUS_PHOTOG_PASSIVE_MOVESPEED);
+	if(skillCls == ClassType::EFREET) ApplyStatus(attacker, target, STATUS_EFREET_PASSIVE_DOT_FIRE);
+	if(skillCls == ClassType::SHADOWHUNTER && !FindActiveStatus(attacker.index, STATUS_SHADOWHUNTER_COOLDOWN)) {
 		ApplyStatus(attacker, attacker, STATUS_SHADOWHUNTER_HIDE);
 		ApplyStatus(attacker, attacker, STATUS_SHADOWHUNTER_COOLDOWN);
 	}
 	foreach_const(it, activeStatuses) {
 		if(it->targetIndex != attacker.index || !it->info) continue;
-		if(it->info->type == "STATUS_TYPE_MANABURN" && it->info->hitEffectStatus && PassiveOfActiveMaster(attacker, it->statusID)) {
+		if(it->info->type == StatusType::MANABURN && it->info->hitEffectStatus && PassiveOfActiveMaster(attacker, it->statusID)) {
 			const i32 mark = it->info->hitEffectStatus;
 			ApplyStatus(attacker, target, mark);
 			return;
@@ -359,7 +348,7 @@ f32 World::PassiveWeaponDamageMul(Player& attacker, Player& target)
 	f32 mul = 1.0f;
 	foreach_const(it, activeStatuses) {
 		if(it->targetIndex != attacker.index || !it->info) continue;
-		if(it->info->type == "STATUS_TYPE_GHOSTWIDOW" && PassiveOfActiveMaster(attacker, it->statusID)) {
+		if(it->info->type == StatusType::GHOSTWIDOW && PassiveOfActiveMaster(attacker, it->statusID)) {
 			i32 debuffs = 0;
 			foreach_const(d, activeStatuses) {
 				if(d->targetIndex == target.index && d->info && d->info->isDebuff && d->until > localTime) debuffs++;
@@ -367,13 +356,13 @@ f32 World::PassiveWeaponDamageMul(Player& attacker, Player& target)
 			mul *= 1.0f + it->info->hitEffectValue * debuffs;
 		}
 	}
-	const i32 cls = (i32)attacker.Main().classType;
-	if(cls == CLASS_NUM_ATTACKER) {
-		const ActiveStatus* st = FindPassiveOfType(attacker, "STATUS_TYPE_HPTRIGGER");
+	const ClassType cls = attacker.Main().classType;
+	if(cls == ClassType::ATTACKER) {
+		const ActiveStatus* st = FindPassiveOfType(attacker, StatusType::HPTRIGGER);
 		if(st && attacker.Main().hp * 100 < attacker.Main().hpMax * st->info->Param("_CheckVal")) mul *= TOOLTIP_ATTACKER_WEAPON_MUL;
 	}
-	if(cls == CLASS_NUM_BOXER && target.skillMarkBy == attacker.index && localTime < target.skillMarkUntil) mul *= TOOLTIP_BOXER_WEAPON_MUL;
-	if(cls == CLASS_NUM_SHUGOTRADER) {
+	if(cls == ClassType::BOXER && target.skillMarkBy == attacker.index && localTime < target.skillMarkUntil) mul *= TOOLTIP_BOXER_WEAPON_MUL;
+	if(cls == ClassType::SHUGOTRADER) {
 		attacker.weaponHitCounter++;
 		if(attacker.weaponHitCounter >= TOOLTIP_SHUGO_EVERY_N) {
 			attacker.weaponHitCounter = 0;
@@ -381,7 +370,7 @@ f32 World::PassiveWeaponDamageMul(Player& attacker, Player& target)
 			ApplyStatus(attacker, target, STATUS_SHUGOTRADER_PASSIVE_REMOTE);
 		}
 	}
-	if(cls == CLASS_NUM_RYTLOCK && attacker.weaponHitCounter + 1 == TOOLTIP_RYTLOCK_CHAIN) mul *= TOOLTIP_RYTLOCK_THIRD_MUL;
+	if(cls == ClassType::RYTLOCK && attacker.weaponHitCounter + 1 == TOOLTIP_RYTLOCK_CHAIN) mul *= TOOLTIP_RYTLOCK_THIRD_MUL;
 	return mul;
 }
 
@@ -409,16 +398,16 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		target.tNextResSend = Time::ZERO;
 		LOG("Status :: %ls drained by %d (mana %.0f -> %.0f, energy %.0f -> %.0f)", target.name.data(), statusID, manaBefore, target.mana, energyBefore, target.res[0]);
 	}
-	else if(info && info->staminaBurn && info->type == "STATUS_TYPE_HEAL" && target.stamina > 0) {
+	else if(info && info->staminaBurn && info->type == StatusType::HEAL && target.stamina > 0) {
 		LOG("Status :: %ls stamina burned by %d (%.0f -> 0)", target.name.data(), statusID, target.stamina);
 		target.stamina = 0;
 		target.tNextStaminaSend = Time::ZERO;
 	}
 
-	const bool dragForce = info && info->type == "STATUS_TYPE_DRAGGEDBYFORCE";
-	const bool displacement = info && (info->type == "STATUS_TYPE_PUSH" || info->type == "STATUS_TYPE_FORCEBACK" ||
-		info->type == "STATUS_TYPE_KNOCKDOWN" || info->type == "STATUS_TYPE_AIRBORNE" || info->type == "STATUS_TYPE_FLY" || info->type == "STATUS_TYPE_DRAGGED" || dragForce);
-	if(displacement && HasStatusType(target, "STATUS_TYPE_SUPERARMOR")) {
+	const bool dragForce = info && info->type == StatusType::DRAGGEDBYFORCE;
+	const bool displacement = info && (info->type == StatusType::PUSH || info->type == StatusType::FORCEBACK ||
+		info->type == StatusType::KNOCKDOWN || info->type == StatusType::AIRBORNE || info->type == StatusType::FLY || info->type == StatusType::DRAGGED || dragForce);
+	if(displacement && HasStatusType(target, StatusType::SUPERARMOR)) {
 		LOG("Status :: %ls resisted %d (superarmor)", target.name.data(), statusID);
 		return;
 	}
@@ -463,7 +452,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	st.nextHealTick = localTime;
 	st.healTicksDone = 0;
 	st.shieldHP = 0;
-	if(info && (info->type == "STATUS_TYPE_SHIELD" || info->type == "STATUS_TYPE_SHIELDBOMB")) {
+	if(info && (info->type == StatusType::SHIELD || info->type == StatusType::SHIELDBOMB)) {
 		f32 dataShield = 0;
 		foreach_const(m, info->mods) {
 			if(m->stat == StatusMod::SHIELD_DEFENCE && !m->mul) dataShield += m->value;
@@ -472,14 +461,14 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	}
 	activeStatuses.push_back(st);
 
-	if(info && info->type == "STATUS_TYPE_LINK" && &caster != &target) {
+	if(info && info->type == StatusType::LINK && &caster != &target) {
 		if(info->linkCasterStatus != 0) ApplyStatus(caster, caster, info->linkCasterStatus, power);
 		if(info->linkTargetStatus != 0) ApplyStatus(caster, target, info->linkTargetStatus, power);
 	}
 
 	if(info && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT)) {
 		Time ccEnd = st.until;
-		if(info->type == "STATUS_TYPE_AIRBORNE" || info->type == "STATUS_TYPE_FLY" || info->type == "STATUS_TYPE_KNOCKDOWN") {
+		if(info->type == StatusType::AIRBORNE || info->type == StatusType::FLY || info->type == StatusType::KNOCKDOWN) {
 			const auto& content = GetGameXmlContent();
 			const f32 recover = info->lyingTime + content.GetLieEndTime(content.GetMaster(target.Main().classType).className.c_str());
 			ccEnd = TimeAdd(ccEnd, TimeMsToTime(recover * 1000.0));
@@ -492,12 +481,12 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	vec3 to = from;
 	vec3 forceCenter = from;
 	const f32 graphDuration = duration * (info && info->timeRatio > 0 ? info->timeRatio : 1.0f);
-	const bool flyMove = info && info->type == "STATUS_TYPE_FLY" && info->distanceRatio != 0;
-	if(info && displacement && info->type != "STATUS_TYPE_AIRBORNE" && (info->type != "STATUS_TYPE_FLY" || flyMove)) {
+	const bool flyMove = info && info->type == StatusType::FLY && info->distanceRatio != 0;
+	if(info && displacement && info->type != StatusType::AIRBORNE && (info->type != StatusType::FLY || flyMove)) {
 		vec2 dir = vec2(from - caster.body->GetWorldPos());
 		const f32 len = glm::length(dir);
 		dir = len > 1.0f ? dir / len : vec2(cosf(caster.input.rot.upperYaw), sinf(caster.input.rot.upperYaw));
-		if(info->type == "STATUS_TYPE_FLY" && statusFromBehind) dir = -dir;
+		if(info->type == StatusType::FLY && statusFromBehind) dir = -dir;
 		if(dragForce) {
 			forceCenter = statusForceCenterSet ? statusForceCenter : caster.body->GetWorldPos();
 			const vec2 rel = vec2(forceCenter) - vec2(from);
@@ -506,7 +495,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			dir = centerDist > 0.001f ? rel / centerDist : vec2(0);
 			to = from + vec3(dir * (travel > centerDist ? centerDist : travel), 0);
 		}
-		else if(info->type == "STATUS_TYPE_DRAGGED" && &caster == &target) {
+		else if(info->type == StatusType::DRAGGED && &caster == &target) {
 			const bool hooked = caster.lastHitTargetIndex >= 0 && caster.lastHitTargetIndex != (i32)caster.index && TimeDiffSec(TimeDiff(caster.lastHitAt, localTime)) <= SELF_DRAG_LINK_SEC;
 			if(hooked) {
 				const Player& hookedPlayer = players[caster.lastHitTargetIndex];
@@ -518,11 +507,11 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			}
 			else to = from;
 		}
-		else if(info->type == "STATUS_TYPE_DRAGGED") {
+		else if(info->type == StatusType::DRAGGED) {
 			to = caster.body->GetWorldPos() + vec3(dir * (info->dragOffset > 0 ? info->dragOffset : 200.0f), 0);
 		}
 		else {
-			f32 dist = info->type == "STATUS_TYPE_FORCEBACK" && info->distance > 0 ? info->distance :
+			f32 dist = info->type == StatusType::FORCEBACK && info->distance > 0 ? info->distance :
 				STATUS_PUSH_BASE_DISTANCE * (info->distanceRatio != 0 ? info->distanceRatio : 1.0f);
 			if(statusID == STATUS_SHUTTLE_SHOCKWAVE) {
 				const Remote* wave = GetGameXmlContent().FindRemote(RemoteIdx(REMOTE_SHUTTLE_SHOCKWAVE));
@@ -570,7 +559,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		}
 	}
 
-	if(info && info->type == "STATUS_TYPE_DISPEL" && info->dispelEffect >= 0) {
+	if(info && info->type == StatusType::DISPEL && info->dispelEffect >= 0) {
 		foreach(it, activeStatuses) {
 			if(it->targetIndex != target.index || !it->info || !it->info->canDispel || it->statusID == statusID) continue;
 			if((it->info->isDebuff ? 1 : 0) != info->dispelEffect) continue;
@@ -579,8 +568,8 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		}
 	}
 
-	LOG("Status :: %ls -> %ls status=%d type=%s duration=%.2f shield=%.0f", caster.name.data(), target.name.data(), statusID, info ? info->type.c_str() : "?", duration, st.shieldHP);
-	if(info && info->type == "STATUS_TYPE_HIDE" && Config().DevHideDetectFlag >= 0) {
+	LOG("Status :: %ls -> %ls status=%d type=%s duration=%.2f shield=%.0f", caster.name.data(), target.name.data(), statusID, info ? info->typeName.c_str() : "?", duration, st.shieldHP);
+	if(info && info->type == StatusType::HIDE && Config().DevHideDetectFlag >= 0) {
 		foreach(viewer, players) {
 			if(viewer->clientHd == ClientHandle::INVALID || viewer->team == target.team) continue;
 			replication->SendHideDetect(viewer->clientHd, viewer->Main().UID, target.Main().UID, (u8)Config().DevHideDetectFlag);
@@ -677,10 +666,10 @@ void World::UpdateStatuses()
 			it->nextAuraPulse = TimeAdd(localTime, TimeMsToTime(500));
 			const StatusInfo* child = GetGameXmlContent().FindStatus(it->info->auraStatus);
 			const f32 range = it->info->targetingRange > 0 ? it->info->targetingRange : (child ? child->targetingRange : 0);
-			if(child && range > 0) PulseAura(it->casterIndex, *it->info, vec2(target.body->GetWorldPos()), range, it->info->type == "STATUS_TYPE_DEFEAT_CASTER_AURA" ? (i32)target.index : -1);
+			if(child && range > 0) PulseAura(it->casterIndex, *it->info, vec2(target.body->GetWorldPos()), range, it->info->type == StatusType::DEFEAT_CASTER_AURA ? (i32)target.index : -1);
 		}
 
-		if(it->info && it->info->type == "STATUS_TYPE_LINK" && localTime < it->until && it->casterIndex != it->targetIndex) {
+		if(it->info && it->info->type == StatusType::LINK && localTime < it->until && it->casterIndex != it->targetIndex) {
 			const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput(it->info->skillIndex);
 			const Player& linker = players[it->casterIndex];
 			if(in && in->maxDistance > 0 && (linker.dead || glm::length(vec2(linker.body->GetWorldPos()) - vec2(target.body->GetWorldPos())) > in->maxDistance)) {
@@ -693,11 +682,11 @@ void World::UpdateStatuses()
 				}
 			}
 		}
-		const bool shieldBomb = it->info && it->info->type == "STATUS_TYPE_SHIELDBOMB";
-		const bool shieldBroken = it->info && ((it->info->type == "STATUS_TYPE_SHIELD" && it->shieldHP <= 0) || (shieldBomb && it->shieldHP <= 0 && it->absorbed > 0));
+		const bool shieldBomb = it->info && it->info->type == StatusType::SHIELDBOMB;
+		const bool shieldBroken = it->info && ((it->info->type == StatusType::SHIELD && it->shieldHP <= 0) || (shieldBomb && it->shieldHP <= 0 && it->absorbed > 0));
 		const bool timeOver = localTime >= it->until;
 		if(timeOver || target.dead || shieldBroken || it->removeOnHit) {
-			if(timeOver && !target.dead && it->info && it->info->type == "STATUS_TYPE_NEARLY_IMMORTAL" && it->info->paramRatio > 0) {
+			if(timeOver && !target.dead && it->info && it->info->type == StatusType::NEARLY_IMMORTAL && it->info->paramRatio > 0) {
 				const i32 taken = MAX(target.damageTaken - it->damageAtStart, 0);
 				const i32 extra = (i32)MIN(taken * it->info->Param("_RecoveryFactorHP") / 100.0f, it->info->Param("_MaxRecoverHP"));
 				const i32 heal = (i32)(target.Main().hpMax * it->info->paramRatio) + extra;
