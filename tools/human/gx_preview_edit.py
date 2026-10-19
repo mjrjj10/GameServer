@@ -6,6 +6,7 @@ import sys
 FFMPEG = r'D:\MxM\showcase_data\venv\Lib\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe'
 WORK = r'D:\MxM\showcase_data\preview_gx09'
 RUNS = r'D:\MxM\showcase_data\runs'
+PREFIX = 'gxp'
 BOLD = 'C\\:/Windows/Fonts/bahnschrift.ttf'
 TEXT = 'C\\:/Windows/Fonts/segoeui.ttf'
 ACCENT = '0x35a6e6'
@@ -34,7 +35,7 @@ def run(args):
 
 def acts(tag):
     out = {}
-    for line in open(os.path.join(RUNS, 'gxp%s_agent.log' % tag[-1]), encoding='utf-8'):
+    for line in open(os.path.join(RUNS, '%s%s_agent.log' % (PREFIX, tag[-1])), encoding='utf-8'):
         m = re.match(r'acted key=(\S+) at=\S+ t=(\d+)', line)
         if m:
             out.setdefault(m.group(1), int(m.group(2)))

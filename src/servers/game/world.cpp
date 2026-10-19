@@ -140,6 +140,7 @@ static const i32 STATUS_ANDROIDA_PASSIVE_ATTACKSPEED = 1230290001;
 static const i32 STATUS_SHUGOTRADER_PASSIVE_REMOTE = 1230330000;
 static const i32 TOOLTIP_RYTLOCK_CHAIN = 3;
 static const i32 CLASS_NUM_SHUTTLE = 41;
+static const i32 CLASS_NUM_GATLING = 43;
 static const i32 WEAPON_STATE_CHARGE = 7;
 static const i32 REMOTE_SHUTTLE_DODGE = 1440410000;
 static const f32 TOOLTIP_SHUTTLE_CHARGED_FUEL = 20.0f;
@@ -178,6 +179,7 @@ static const f32 GX_PREVIEW_CLOSE_DIST = 220.0f;
 static const f32 GX_PREVIEW_SPREAD = 90.0f;
 static const f32 GX_PREVIEW_RIDER_GAP = 250.0f;
 static const f32 GX_PREVIEW_RECALL_DIST = 750.0f;
+static const f32 GATLING_PREVIEW_NEAR_DIST = 160.0f;
 static const f32 TOOLTIP_RYTLOCK_THIRD_MUL = 1.20f;
 static const f32 WEAPON_AOE_RADIUS = 250.0f;
 static const f32 WEAPON_SHOT_RELIABLE_DISTANCE = 100.0f;
@@ -4344,8 +4346,63 @@ void World::GxPreviewPrompt(Player& human, const char* key, i32 click, i32 holdM
 	LOG("Preview :: prompt key=%s click=%d hold=%d count=%d aim=(%.0f, %.0f) wall=%lld", key, click, holdMs, count, aim.x, aim.y, ShowcaseWallMs());
 }
 
+void World::UpdateGatlingPreview(Player& human)
+{
+	const vec3 base = showcase.anchor;
+	const vec2 dir = showcase.dir;
+	const vec3 enemies = base + vec3(dir * GX_PREVIEW_ENEMY_DIST, 0);
+	const bool second = ((i32)human.skills[(i32)human.mainCharaID * 2] % 100) >= 30;
+	auto target = [&]() {
+		const Player* best = nullptr;
+		f32 bestDist = 0;
+		foreach_const(it, players) {
+			if(it->team == human.team || it->dead) continue;
+			const f32 d = glm::length(vec2(it->body->GetWorldPos()) - vec2(human.body->GetWorldPos()));
+			if(!best || d < bestDist) { best = &*it; bestDist = d; }
+		}
+		return best ? best->body->GetWorldPos() : enemies;
+	};
+	auto clip = [&](const char* name, i32 phase, i32 ms) {
+		LOG("Preview :: clip %s wall=%lld", name, ShowcaseWallMs());
+		showcase.gxPhase = phase;
+		showcase.next = TimeAdd(localTime, TimeMsToTime(ms));
+	};
+	switch(showcase.gxPhase) {
+		case 0: {
+			GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST);
+			LOG("Preview :: start pass=%d skills=%d %d wall=%lld", second ? 1 : 0, (i32)human.skills[(i32)human.mainCharaID * 2], (i32)human.skills[(i32)human.mainCharaID * 2 + 1], ShowcaseWallMs());
+			clip("intro", second ? 20 : 10, 3000);
+		} break;
+		case 10: GxPreviewPrompt(human, "lmb", 1, 0, 8, target()); clip("weapon", 11, 5000); break;
+		case 11: GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST); clip("reset", 12, 1500); break;
+		case 12: GxPreviewPrompt(human, "rmb", 1, 0, 1, enemies); clip("dodge", 13, 3500); break;
+		case 13: GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST); clip("reset", 14, 1500); break;
+		case 14: GxPreviewPrompt(human, "q", 1, 0, 1, target()); clip("skill1", 15, 5000); break;
+		case 15: GxPreviewPlace(human, GX_PREVIEW_CLOSE_DIST); clip("reset", 16, 2000); break;
+		case 16: GxPreviewPrompt(human, "e", 1, 0, 1, target()); clip("skill2", 17, 5000); break;
+		case 17: {
+			GxPreviewPlace(human, GATLING_PREVIEW_NEAR_DIST);
+			human.ultGauge = MasterStat(human.Main().classType, STAT_ULTIMATE);
+			clip("reset", 18, 2500);
+		} break;
+		case 18: GxPreviewPrompt(human, "r", 1, 0, 1, target()); clip("ultimate", 99, 7000); break;
+		case 20: GxPreviewPlace(human, GATLING_PREVIEW_NEAR_DIST); clip("reset", 21, 1500); break;
+		case 21: GxPreviewPrompt(human, "q", 1, 0, 1, target()); clip("skill3", 22, 5500); break;
+		case 22: GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST); clip("reset", 23, 2000); break;
+		case 23: GxPreviewPrompt(human, "e", 1, 0, 1, target()); clip("skill4", 99, 5500); break;
+		default: {
+			LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
+			showcase.done = true;
+		} break;
+	}
+}
+
 void World::UpdateGxPreview(Player& human)
 {
+	if((i32)human.Main().classType == CLASS_NUM_GATLING) {
+		UpdateGatlingPreview(human);
+		return;
+	}
 	const vec3 base = showcase.anchor;
 	const vec2 dir = showcase.dir;
 	const vec2 side = vec2(-dir.y, dir.x);
