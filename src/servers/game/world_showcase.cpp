@@ -910,8 +910,8 @@ void World::UpdateGxPreview(Player& human)
 		} break;
 		case 23: GxPreviewPrompt(human, "e", 0, 0, 1, base); clip("skill4", 24, 1200); break;
 		case 24: {
-			if(ally) PlayerInteract(*ally, human.boardPointUID);
-			LOG("Preview :: ally boarded=%d wall=%lld", ally && ally->boardedOn >= 0 ? 1 : 0, ShowcaseWallMs());
+			if(ally) PlayerInteract(*ally, InteractionObjectOf(human));
+			LOG("Preview :: ally boarded=%d wall=%lld", ally && ally->carriedBy >= 0 ? 1 : 0, ShowcaseWallMs());
 			GxPreviewPrompt(human, "drive", 0, 2200, 1, base);
 			clip("ride", 25, 1000);
 		} break;
@@ -995,7 +995,7 @@ void World::UpdateGxTest(Player& human, Player& gx)
 	const vec2 side = vec2(-dir.y, dir.x);
 	const ActiveStatus* passive = FindPassiveOfType(gx, StatusType::GX09);
 	if(!passive && showcase.gxPhase == 40) {
-		LOG("GxTest :: after gx death human boarded=%d untargetable=%d", human.boardedOn >= 0 ? 1 : 0, human.untargetable ? 1 : 0);
+		LOG("GxTest :: after gx death human boarded=%d untargetable=%d", human.carriedBy >= 0 ? 1 : 0, human.untargetable ? 1 : 0);
 		LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
 		showcase.done = true;
 		return;
@@ -1028,7 +1028,7 @@ void World::UpdateGxTest(Player& human, Player& gx)
 		} break;
 		case 2: {
 			GxTestDrive(gx, dir);
-			LOG("GxTest :: drive gx=(%.0f, %.0f) human=(%.0f, %.0f) boarded=%d speed=%.0f", gx.body->GetWorldPos().x, gx.body->GetWorldPos().y, human.body->GetWorldPos().x, human.body->GetWorldPos().y, human.boardedOn >= 0 ? 1 : 0, gx.input.speed);
+			LOG("GxTest :: drive gx=(%.0f, %.0f) human=(%.0f, %.0f) boarded=%d speed=%.0f", gx.body->GetWorldPos().x, gx.body->GetWorldPos().y, human.body->GetWorldPos().x, human.body->GetWorldPos().y, human.carriedBy >= 0 ? 1 : 0, gx.input.speed);
 			if(++showcase.gxStep >= GX_TEST_DRIVE_STEPS) showcase.gxPhase = 3;
 			if(Config().DevGxTest == GX_DEATH_TEST_MODE && showcase.gxStep == GX_TEST_DRIVE_STEPS / 2) {
 				foreach(it, players) {
@@ -1045,7 +1045,7 @@ void World::UpdateGxTest(Player& human, Player& gx)
 			showcase.next = TimeAdd(localTime, TimeMsToTime(500));
 		} break;
 		case 40: {
-			LOG("GxTest :: after gx death human boarded=%d untargetable=%d dist=%.0f", human.boardedOn >= 0 ? 1 : 0, human.untargetable ? 1 : 0, glm::length(vec2(human.body->GetWorldPos()) - vec2(gx.body->GetWorldPos())));
+			LOG("GxTest :: after gx death human boarded=%d untargetable=%d dist=%.0f", human.carriedBy >= 0 ? 1 : 0, human.untargetable ? 1 : 0, glm::length(vec2(human.body->GetWorldPos()) - vec2(gx.body->GetWorldPos())));
 			LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
 			showcase.done = true;
 		} break;
@@ -1056,7 +1056,7 @@ void World::UpdateGxTest(Player& human, Player& gx)
 				return;
 			}
 			gx.input.moveTo = gx.body->GetWorldPos();
-			LOG("GxTest :: transport ended human boarded=%d dist=%.0f", human.boardedOn >= 0 ? 1 : 0, glm::length(vec2(human.body->GetWorldPos()) - vec2(gx.body->GetWorldPos())));
+			LOG("GxTest :: transport ended human boarded=%d dist=%.0f", human.carriedBy >= 0 ? 1 : 0, glm::length(vec2(human.body->GetWorldPos()) - vec2(gx.body->GetWorldPos())));
 			const vec3 away = gx.body->GetWorldPos() + vec3(side * GX_TEST_RECALL_DIST, 0);
 			TeleportPlayer(human, away, 0);
 			replication->SendSelfTeleport(human.clientHd, human.Main().UID, away, 0);
@@ -1108,8 +1108,8 @@ void World::UpdateGxTest(Player& human, Player& gx)
 		case 7: {
 			Player& enemyGx = players[showcase.gxEnemy];
 			Player& rider = players[showcase.gxRider];
-			PlayerInteract(rider, enemyGx.boardPointUID);
-			LOG("GxTest :: enemy rider boarded=%d wall=%lld", rider.boardedOn >= 0 ? 1 : 0, ShowcaseWallMs());
+			PlayerInteract(rider, InteractionObjectOf(enemyGx));
+			LOG("GxTest :: enemy rider boarded=%d wall=%lld", rider.carriedBy >= 0 ? 1 : 0, ShowcaseWallMs());
 			showcase.gxPhase = 8;
 			showcase.gxStep = 0;
 			showcase.next = TimeAdd(localTime, TimeMsToTime(1500));
@@ -1118,7 +1118,7 @@ void World::UpdateGxTest(Player& human, Player& gx)
 			Player& enemyGx = players[showcase.gxEnemy];
 			Player& rider = players[showcase.gxRider];
 			GxTestDrive(enemyGx, dir);
-			LOG("GxTest :: enemy drive step %d gx=(%.0f, %.0f) rider=(%.0f, %.0f) boarded=%d", showcase.gxStep, enemyGx.body->GetWorldPos().x, enemyGx.body->GetWorldPos().y, rider.body->GetWorldPos().x, rider.body->GetWorldPos().y, rider.boardedOn >= 0 ? 1 : 0);
+			LOG("GxTest :: enemy drive step %d gx=(%.0f, %.0f) rider=(%.0f, %.0f) boarded=%d", showcase.gxStep, enemyGx.body->GetWorldPos().x, enemyGx.body->GetWorldPos().y, rider.body->GetWorldPos().x, rider.body->GetWorldPos().y, rider.carriedBy >= 0 ? 1 : 0);
 			if(++showcase.gxStep >= GX_TEST_DRIVE_STEPS) showcase.gxPhase = 9;
 			showcase.next = TimeAdd(localTime, TimeMsToTime(500));
 		} break;
@@ -1131,7 +1131,7 @@ void World::UpdateGxTest(Player& human, Player& gx)
 				return;
 			}
 			enemyGx.input.moveTo = enemyGx.body->GetWorldPos();
-			LOG("GxTest :: enemy transport ended rider boarded=%d dist=%.0f wall=%lld", rider.boardedOn >= 0 ? 1 : 0, glm::length(vec2(rider.body->GetWorldPos()) - vec2(enemyGx.body->GetWorldPos())), ShowcaseWallMs());
+			LOG("GxTest :: enemy transport ended rider boarded=%d dist=%.0f wall=%lld", rider.carriedBy >= 0 ? 1 : 0, glm::length(vec2(rider.body->GetWorldPos()) - vec2(enemyGx.body->GetWorldPos())), ShowcaseWallMs());
 			showcase.gxPhase = 10;
 			showcase.next = TimeAdd(localTime, TimeMsToTime(2000));
 		} break;

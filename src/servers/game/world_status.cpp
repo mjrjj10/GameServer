@@ -24,10 +24,6 @@ static const i32 STATUS_THECAT_PASSIVE_FIREDELAY1 = 1230260000;
 static const i32 STATUS_ANDROIDA_PASSIVE_ATTACKSPEED = 1230290001;
 static const i32 STATUS_SHUGOTRADER_PASSIVE_REMOTE = 1230330000;
 static const i32 TOOLTIP_RYTLOCK_CHAIN = 3;
-static const i32 STATUS_SHUTTLE_EMP_DRAIN = 1230410020;
-static const i32 STATUS_SHUTTLE_SHOCKWAVE = 1230410030;
-static const i32 REMOTE_SHUTTLE_SHOCKWAVE = 1440410030;
-static const f32 TOOLTIP_SHUTTLE_EMP_DRAIN = 0.30f;
 static const f32 TOOLTIP_RYTLOCK_THIRD_MUL = 1.20f;
 static const f32 STATUS_PUSH_BASE_DISTANCE = 500.0f;
 
@@ -89,6 +85,30 @@ const World::ActiveStatus* World::FindPassiveOfType(const Player& p, StatusType 
 		if(PassiveOfActiveMaster(p, it->statusID)) return &*it;
 	}
 	return nullptr;
+}
+
+const World::ActiveStatus* World::FindCarrierPassive(const Player& carrier) const
+{
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex == carrier.index && it->info && it->info->carrier && PassiveOfActiveMaster(carrier, it->statusID)) return &*it;
+	}
+	return nullptr;
+}
+
+const World::ActiveStatus* World::FindGroupTeleportPassive(const Player& caster, SkillID skillID) const
+{
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex == caster.index && it->info && it->info->groupTeleportSkill == (i32)skillID && PassiveOfActiveMaster(caster, it->statusID)) return &*it;
+	}
+	return nullptr;
+}
+
+bool World::HasStatusFromSkill(const Player& target, u32 casterIndex, i32 skillID) const
+{
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex == target.index && it->casterIndex == casterIndex && it->info && it->info->skillIndex == skillID && localTime < it->until) return true;
+	}
+	return false;
 }
 
 bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* duration)
@@ -390,10 +410,11 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		ApplyStatus(caster, caster, info->casterStatus);
 		applyingCasterStatus = false;
 	}
-	if(statusID == STATUS_SHUTTLE_EMP_DRAIN && caster.team != target.team) {
+	const StatusDrainRule* drain = FindStatusDrainRule(statusID);
+	if(drain && caster.team != target.team) {
 		const f32 manaBefore = target.mana, energyBefore = target.res[0];
-		target.mana = MAX(target.mana, 0.0f) * (1.0f - TOOLTIP_SHUTTLE_EMP_DRAIN);
-		if(target.res[0] > 0) target.res[0] *= 1.0f - TOOLTIP_SHUTTLE_EMP_DRAIN;
+		target.mana = MAX(target.mana, 0.0f) * (1.0f - drain->fraction);
+		if(target.res[0] > 0) target.res[0] *= 1.0f - drain->fraction;
 		target.tNextManaSend = Time::ZERO;
 		target.tNextResSend = Time::ZERO;
 		LOG("Status :: %ls drained by %d (mana %.0f -> %.0f, energy %.0f -> %.0f)", target.name.data(), statusID, manaBefore, target.mana, energyBefore, target.res[0]);
@@ -513,8 +534,8 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		else {
 			f32 dist = info->type == StatusType::FORCEBACK && info->distance > 0 ? info->distance :
 				STATUS_PUSH_BASE_DISTANCE * (info->distanceRatio != 0 ? info->distanceRatio : 1.0f);
-			if(statusID == STATUS_SHUTTLE_SHOCKWAVE) {
-				const Remote* wave = GetGameXmlContent().FindRemote(RemoteIdx(REMOTE_SHUTTLE_SHOCKWAVE));
+			if(const PushToEdgeRule* edge = FindPushToEdgeRule(statusID)) {
+				const Remote* wave = GetGameXmlContent().FindRemote(edge->remote);
 				dist = wave ? MAX(wave->boundSize[0] * 0.5f - len, 0.0f) : dist;
 			}
 			to = from + vec3(dir * dist, 0);

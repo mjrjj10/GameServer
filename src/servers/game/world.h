@@ -12,6 +12,7 @@
 #include "replication.h"
 #include "physics.h"
 #include "world_showcase.h"
+#include "world_master_rules.h"
 
 struct StatusInfo;
 
@@ -112,19 +113,17 @@ struct World
 		u8 firingCombo = 0;
 		u8 chargeLevel = 0;
 		i32 weaponState = 0;
-		u32 fuelDodgeCast = 0;
-		eastl::fixed_vector<u32,10,false> fuelDodgeTargets;
+		u32 resourceGainCast = 0;
+		eastl::fixed_vector<u32,10,false> resourceGainTargets;
 		eastl::array<i32,2> shotCount = { 0, 0 };
 		bool passivesApplied = false;
 		i32 damageTaken = 0;
 		i32 hitsTaken = 0;
 		i32 statusesTaken = 0;
 		bool untargetable = false;
-		Time boardOpenUntil = Time::ZERO;
-		i32 boardedOn = -1;
-		Time nextRideSync = Time::ZERO;
-		ActorUID boardPointUID = ActorUID::INVALID;
-		Time boardPointAnnounceAt = Time::ZERO;
+		i32 carriedBy = -1;
+		u8 carrierCharaID = 0;
+		Time nextCarrySync = Time::ZERO;
 		struct Casting {
 			SkillID skillID = SkillID::INVALID;
 			vec3 castPos;
@@ -179,8 +178,6 @@ struct World
 		vec3 comboCastPos = vec3(0);
 		Time comboUntil = Time::ZERO;
 		Time comboAutoAt = Time::ZERO;
-		Time massTeleportAt = Time::ZERO;
-		vec3 massTeleportPos = vec3(0);
 		vec3 placedAt = vec3(0);
 		i32 clientPosCount = 0;
 		i32 kills = 0;
@@ -648,12 +645,25 @@ struct World
 	ActorNpc* FindNpcActorByCreatureID(CreatureIndex docID); // Warning: slow!
 
 	void PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir, f32 distance);
-	void AddFuel(Player& player, f32 amount);
-	void MassTeleport(Player& gx, const StatusInfo& passive);
+	void GainResource(Player& player, i32 slot, f32 amount);
+	void ApplyResourceGain(Player& player, ResourceEvent event);
+	void ApplyRemoteHitResourceGain(Player& owner, RemoteIdx remote, u32 castID, u32 targetIndex);
+	void GroupTeleport(Player& caster, SkillID skillID, const vec3& from);
+	struct PendingInteraction { Time time; u32 ownerIndex; i32 interactionID; };
+	struct OpenInteraction { ActorUID objectUID; u32 ownerIndex; i32 interactionID; Time until; Time announceAt; };
+	eastl::fixed_vector<PendingInteraction,16,false> pendingInteractions;
+	eastl::fixed_vector<OpenInteraction,16,false> openInteractions;
+	i32 nextInteractionLocal = 0;
+	void OpenInteractionObject(Player& owner, i32 interactionID);
+	ActorUID InteractionObjectOf(const Player& owner) const;
+	void RemoveDynamic(ActorUID uid);
 	void PlayerInteract(Player& player, ActorUID targetUID);
-	void Unboard(Player& passenger);
-	void UpdateRides();
-	void RemoveBoardPoint(Player& gx);
+	void BoardCarrier(Player& passenger, Player& carrier, i32 interactionID);
+	void LeaveCarrier(Player& passenger);
+	void UpdateInteractions();
+	const ActiveStatus* FindCarrierPassive(const Player& carrier) const;
+	const ActiveStatus* FindGroupTeleportPassive(const Player& caster, SkillID skillID) const;
+	bool HasStatusFromSkill(const Player& target, u32 casterIndex, i32 skillID) const;
 	void UpdateGxTest(Player& human, Player& gx);
 	void OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize);
 	void OnWeaponAimPacket(Player& player, f32 aimYaw);
@@ -672,9 +682,6 @@ private:
 	void StartCasting(Player& player, SkillID skillID, const GameXmlContent::SkillCast& cast, const vec3& castPos, Slice<const ActorUID> targets, const GameXmlContent::Action& action);
 	void UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType, const vec3& castPos);
 	void QueueChildSkill(Player& player, ActionStateID actionState, const vec3& castPos, Slice<const ActorUID> targets);
-	void OnShuttleSkillCast(Player& player, SkillID skillID);
-	void OnShuttleCastStart(Player& player, SkillID skillID, const vec3& castPos);
-	i32 nextBoardPointLocal = 0;
 	void ExecuteSkillProgram(SkillProgram& prog);
 	void RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 cmdIndex, const vec2& dir);
 	eastl::fixed_vector<SkillAnimPass,8,false> lastAnimPasses;

@@ -253,6 +253,10 @@ struct StatusInfo
 	i32 hitEffectStatus = 0;
 	f32 hitEffectValue = 0;
 	f32 costRatioMP = 0;
+	i32 groupTeleportSkill = 0;
+	f32 groupTeleportRadius = 0;
+	i32 groupTeleportStatus = 0;
+	bool carrier = false;
 	eastl::fixed_vector<i32,8,false> costSkills;
 	struct NamedValue { eastl::fixed_string<char,32,false> name; f64 value; };
 	eastl::fixed_vector<NamedValue,64,false> params;
@@ -575,6 +579,10 @@ struct GameXmlContent
 				} teleport;
 
 				struct {
+					i32 interactionID;
+				} interaction;
+
+				struct {
 					i32 speed;
 				} rotateSpeed;
 			};
@@ -741,8 +749,9 @@ struct GameXmlContent
 		for(const char* c = key; *c; c++) { h ^= (u8)(*c >= 'a' && *c <= 'z' ? *c - 32 : *c); h *= 16777619u; }
 		return ((u64)h << 32) | (u32)seqID;
 	}
-	eastl::hash_map<i32, f32> interactionActiveDistance;
-	f32 GetInteractionActiveDistance(i32 id) const { auto f = interactionActiveDistance.find(id); return f == interactionActiveDistance.end() ? 0 : f->second; }
+	struct InteractionInfo { f32 activeDistance = 0; bool carry = false; CreatureIndex receiver = CreatureIndex::Invalid; };
+	eastl::hash_map<i32, InteractionInfo> interactions;
+	const InteractionInfo* FindInteraction(i32 id) const { auto f = interactions.find(id); return f == interactions.end() ? nullptr : &f->second; }
 	f32 GetAniSeqTime(const char* className, i32 seqID) const { auto f = aniSeqTime.find(AniKey(className, seqID)); return f == aniSeqTime.end() ? 0 : f->second; }
 	struct MoveCurve
 	{
@@ -867,6 +876,7 @@ private:
 	bool LoadWeaponFiring();
 	bool LoadSkillTargeting();
 	bool LoadInteractions();
+	bool LoadInteractionReceivers();
 	bool LoadBotBrain();
 };
 

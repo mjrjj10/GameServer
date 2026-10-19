@@ -202,7 +202,7 @@ void World::Update(Time localTime_)
 	if(!frozen) UpdatePassives();
 	if(!frozen) UpdateStances();
 	if(!frozen) UpdateCasts();
-	if(!frozen) UpdateRides();
+	if(!frozen) UpdateInteractions();
 	if(Config().DevShowcase) { if(!frozen) UpdateShowcase(); }
 	else {
 		if(!frozen) UpdateBotCombat();
@@ -818,7 +818,6 @@ bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos
 			castCostLevel->consume[1], castCostLevel->consume[2], (i32)castCostLevel->remoteReplace.size(), (i32)castCostLevel->statusReplace.size(), castCostLevel->damageRatio);
 	}
 	PassiveOnSkillCast(player, (i32)skillID);
-	OnShuttleSkillCast(player, skillID);
 	return true;
 }
 
@@ -847,7 +846,6 @@ void World::StartCasting(Player& player, SkillID skillID, const GameXmlContent::
 	player.casting.type = (u8)cast.type;
 	player.casting.interruptByMove = cast.interruptByMove;
 	LOG("Cast :: %ls skill=%d start action=%d type=%d wait=%.2f", player.name.data(), (i32)skillID, (i32)cast.action, (i32)cast.type, wait);
-	OnShuttleCastStart(player, skillID, castPos);
 }
 
 void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType, const vec3& castPos)

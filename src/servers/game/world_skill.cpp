@@ -7,7 +7,6 @@ static const i32 STAT_STAMINAREGEN = 5;
 static const i32 STAT_MANAREGEN = 39;
 static const i32 STAT_ULTIMATEREGEN = 42;
 static const i32 WEAPON_STATE_CHARGE = 7;
-static const f32 TOOLTIP_SHUTTLE_CHARGING_FUEL_SEC = 5.0f;
 
 void World::UpdateUltimateGauges(f32 delta)
 {
@@ -46,8 +45,9 @@ void World::UpdateUltimateGauges(f32 delta)
 			const f32 resMax = MasterStat(cls, RESOURCES[r].maxStat);
 			if(resMax <= 0) continue;
 			if(it->res[r] < 0) it->res[r] = RESOURCES[r].startFull ? resMax : 0;
-			const f32 chargingFuel = r == 1 && cls == ClassType::SHUTTLE && it->weaponState == WEAPON_STATE_CHARGE ? TOOLTIP_SHUTTLE_CHARGING_FUEL_SEC : 0.0f;
-			it->res[r] = MIN(MAX(it->res[r] + (MasterStat(cls, RESOURCES[r].regenStat) + chargingFuel) * delta, 0.0f), resMax);
+			const ResourceGainRule* charging = it->weaponState == WEAPON_STATE_CHARGE ? FindResourceGainRule(cls, ResourceEvent::CHARGING_PER_SEC) : nullptr;
+			const f32 chargingGain = charging && charging->slot == r ? charging->amount : 0.0f;
+			it->res[r] = MIN(MAX(it->res[r] + (MasterStat(cls, RESOURCES[r].regenStat) + chargingGain) * delta, 0.0f), resMax);
 			if(ShowcaseKeepsFullRes(*it)) it->res[r] = resMax;
 			if(fabsf(it->res[r] - it->resSent[r]) >= 0.01f) resChanged = true;
 		}
@@ -245,6 +245,7 @@ void World::ReleaseCast(Player& player)
 	auto f = GetGameXmlContent().skillMap.find(c.skillID);
 	if(f == GetGameXmlContent().skillMap.end() || player.dead) return;
 	LOG("Cast :: %ls skill=%d release", player.name.data(), (i32)c.skillID);
+	GroupTeleport(player, c.skillID, c.castPos);
 	if(f->second.action == ActionStateID::INVALID) return;
 	PlayerCastSkill(player, c.skillID, c.castPos, Slice<const ActorUID>(&c.target, c.target != ActorUID::INVALID ? 1 : 0), 0, f->second.action);
 }
@@ -254,7 +255,6 @@ void World::CancelCast(Player& player, const char* reason)
 	LOG("Cast :: %ls skill=%d cancelled (%s)", player.name.data(), (i32)player.casting.skillID, reason);
 	replication->SendCancelSkillToAll(player.Main().UID, player.casting.skillID);
 	player.casting.skillID = SkillID::INVALID;
-	player.massTeleportAt = Time::ZERO;
 }
 
 void World::UpdateCasts()
@@ -264,11 +264,6 @@ void World::UpdateCasts()
 			replication->SendChangeSkillSlot(it->clientHd, it->Main().UID, it->comboSlot, it->comboPending, it->comboResetCooltime);
 			if(it->comboResetCooltime != 0) replication->SendCooltimeReset(it->clientHd, it->Main().UID, Slice<const i32>(&it->comboResetCooltime, 1));
 			it->comboPending = SkillID::INVALID;
-		}
-		if(it->massTeleportAt != Time::ZERO && localTime >= it->massTeleportAt) {
-			it->massTeleportAt = Time::ZERO;
-			const ActiveStatus* gx = FindPassiveOfType(*it, StatusType::GX09);
-			if(gx && !it->dead) MassTeleport(*it, *gx->info);
 		}
 		if(it->comboAutoAt != Time::ZERO && localTime >= it->comboAutoAt) {
 			it->comboAutoAt = Time::ZERO;
@@ -410,6 +405,13 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			scheduled = true;
 		}
 		if(cmd->type == ActionCommand::Type::TELEPORT && cmd->teleport.toLastChild && t <= 0.001f) teleportToChild = true;
+		if(cmd->type == ActionCommand::Type::INTERACTION && cmd->interaction.interactionID != 0 && !pendingInteractions.full()) {
+			PendingInteraction pi;
+			pi.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
+			pi.ownerIndex = player.index;
+			pi.interactionID = cmd->interaction.interactionID;
+			pendingInteractions.push_back(pi);
+		}
 		if(cmd->type == ActionCommand::Type::ENTITY && cmd->entity.entityIndex != 0 && !pendingSummons.full()) {
 			PendingSummon ps;
 			ps.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
@@ -558,4 +560,31 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			if(curve) LOG("Dash :: %ls follows move graph over %.2fs for %.0f", mover.name.data(), moveDuration, moveDist);
 		}
 	}
+}
+
+void World::GainResource(Player& player, i32 slot, f32 amount)
+{
+	const f32 resMax = MasterStat(player.Main().classType, RESOURCES[slot].maxStat);
+	if(resMax <= 0) return;
+	player.res[slot] = MIN(MAX(player.res[slot], 0.0f) + amount, resMax);
+	player.tNextResSend = Time::ZERO;
+	LOG("Resource :: %ls slot %d +%.0f -> %.0f", player.name.data(), slot, amount, player.res[slot]);
+}
+
+void World::ApplyResourceGain(Player& player, ResourceEvent event)
+{
+	if(const ResourceGainRule* rule = FindResourceGainRule(player.Main().classType, event)) GainResource(player, rule->slot, rule->amount);
+}
+
+void World::ApplyRemoteHitResourceGain(Player& owner, RemoteIdx remote, u32 castID, u32 targetIndex)
+{
+	const ResourceGainRule* rule = FindResourceGainRule(owner.Main().classType, ResourceEvent::REMOTE_HIT_ENEMY, remote);
+	if(!rule) return;
+	if(owner.resourceGainCast != castID) {
+		owner.resourceGainCast = castID;
+		owner.resourceGainTargets.clear();
+	}
+	if(owner.resourceGainTargets.full() || eastl::find(owner.resourceGainTargets.begin(), owner.resourceGainTargets.end(), targetIndex) != owner.resourceGainTargets.end()) return;
+	owner.resourceGainTargets.push_back(targetIndex);
+	GainResource(owner, rule->slot, rule->amount);
 }

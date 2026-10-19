@@ -1504,6 +1504,11 @@ bool GameXmlContent::LoadAnimationData()
 					ActionCommand::TargetPresetFromString(TargetPreset) == ActionCommand::TargetPreset::LAST_CHILD_FFF ? 1 : 0;
 			} break;
 
+			case ActionCommand::Type::INTERACTION: {
+				cmd.interaction.interactionID = 0;
+				pActionBase->QueryAttribute("Param1", &cmd.interaction.interactionID);
+			} break;
+
 			case ActionCommand::Type::ENTITY: {
 				cmd.entity.entityIndex = 0;
 				pActionBase->QueryAttribute("EntityIndex", &cmd.entity.entityIndex);
@@ -1901,6 +1906,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadInteractions();
+	if(!r) return false;
+
+	r = LoadInteractionReceivers();
 	if(!r) return false;
 
 	r = LoadBotBrain();
@@ -2362,6 +2370,10 @@ bool GameXmlContent::LoadStatusData()
 			}
 		}
 
+		st.groupTeleportSkill = (i32)st.ParamInt("_MassiveTeleportIndex");
+		st.groupTeleportRadius = (f32)st.Param("_MassiveTeleportRadius");
+		st.groupTeleportStatus = (i32)st.ParamInt("_MassiveTeleportStatus");
+		st.carrier = st.ParamInt("_ShuttleSelfStatusIndex") != 0;
 		statusMap[st.ID] = st;
 	}
 
@@ -2994,10 +3006,26 @@ bool GameXmlContent::LoadInteractions()
 	for(XMLElement* pI = xmlInteraction.FirstChildElement()->FirstChildElement(); pI; pI = pI->NextSiblingElement()) {
 		XMLElement* pData = pI->FirstChildElement("ST_INTERACTION");
 		i32 id = 0;
-		f32 dist = 0;
 		if(!pData || pI->QueryAttribute("ID", &id) != XML_SUCCESS) continue;
-		pData->QueryFloatAttribute("_ActiveDistance", &dist);
-		interactionActiveDistance[id] = dist;
+		InteractionInfo& info = interactions[id];
+		pData->QueryFloatAttribute("_ActiveDistance", &info.activeDistance);
+		const char* action = pData->Attribute("_Action");
+		info.carry = action && EA::StdC::Strcmp(action, "IT_ACTION_TELEPORT") == 0;
+	}
+	return true;
+}
+
+bool GameXmlContent::LoadInteractionReceivers()
+{
+	XMLDocument xmlDynamic;
+	if(!LoadXMLFile(L"/client/DYNAMIC.xml", xmlDynamic)) return false;
+	for(XMLElement* pInfo = xmlDynamic.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+		XMLElement* pRecv = pInfo->FirstChildElement("InteractionRecvComData");
+		i32 id = 0;
+		i32 interaction = 0;
+		if(!pRecv || pInfo->QueryAttribute("ID", &id) != XML_SUCCESS || pRecv->QueryAttribute("_Index", &interaction) != XML_SUCCESS) continue;
+		auto found = interactions.find(interaction);
+		if(found != interactions.end() && found->second.receiver == CreatureIndex::Invalid) found->second.receiver = CreatureIndex(id);
 	}
 	return true;
 }

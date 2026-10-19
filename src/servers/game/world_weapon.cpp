@@ -8,7 +8,6 @@ static const f32 WEAPON_PROJECTILE_SPEED = 4000.0f;
 static const f32 WEAPON_MELEE_MAX_RANGE = 600.0f;
 static const f32 WEAPON_MELEE_HALF_ANGLE = 1.05f;
 static const f32 PROJECTILE_TARGET_RADIUS = 70.0f;
-static const f32 TOOLTIP_SHUTTLE_CHARGED_FUEL = 20.0f;
 static const f32 WEAPON_SHOT_RELIABLE_DISTANCE = 100.0f;
 static const f32 WEAPON_SHOT_MAX_DISTANCE = 2500.0f;
 
@@ -82,7 +81,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	const ClassType classType = player.Main().classType;
 	if(WeaponIsMelee(player)) return;
 	BotWeaponAnimation(player, replication);
-	if(classType == ClassType::SHUTTLE && player.chargeLevel > 0) AddFuel(player, TOOLTIP_SHUTTLE_CHARGED_FUEL);
+	if(player.chargeLevel > 0) ApplyResourceGain(player, ResourceEvent::CHARGED_SHOT);
 	if(player.clientHd != ClientHandle::INVALID && player.casting.skillID != SkillID::INVALID && player.casting.type == GameXmlContent::SkillCast::LIMIT) {
 		ReleaseCast(player);
 		return;
