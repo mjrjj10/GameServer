@@ -19,8 +19,9 @@ SEGMENTS = [
     ('take0', 'q', -1.0, 5.0, 'SKILL 1 - DISRUPTION ROUTE', 'Distorted trail: enemies slowed and pulled to its center'),
     ('take0', 'e', -1.0, 4.5, 'SKILL 2 - B-EMP', 'Drains 30% of the MP and EP of enemy masters within 4 m'),
     ('take1', 'q', -0.8, 3.5, 'SKILL 3 - SHOCKWAVE', 'Knocks enemies back to the edge of the wave'),
-    ('take1', 'e', -0.8, 5.5, 'SKILL 4 - MASTER TRANSPORT', 'Allies board with the interaction key for 3 s - half speed while transforming'),
-    ('take1', 'drive', -3.0, 5.0, 'MASTER TRANSPORT', '+40% move speed after 2 s - the passenger is dropped when the 10 s end'),
+    ('take1', 'e', -0.8, 3.2, 'SKILL 4 - MASTER TRANSPORT', 'Allies board with the interaction key for 3 s'),
+    ('take1', 'e', 5.4, 4.5, 'MASTER TRANSPORT', '+40% move speed while transporting the ally'),
+    ('take1', 'drive', -1.5, 4.0, 'MASTER TRANSPORT', 'The passenger is dropped when the 10 s end'),
     ('take1', 'r', -1.0, 6.0, 'ULTIMATE - TELEPORTER', 'Recalls the allies near the teleporter to GX-09 after 3 s'),
 ]
 
@@ -45,15 +46,15 @@ def video_start(tag):
 
 
 def esc(s):
-    return s.replace('\\', '\\\\').replace(':', '\\:').replace("'", "\u2019").replace('%', '\\%')
+    return s.replace('\\', '\\\\').replace(':', '\\:').replace("'", "\u2019")
 
 
 def caption(title, sub, dur):
     alpha = "if(lt(t,0.25),0,if(lt(t,0.6),(t-0.25)/0.35,if(gt(t,%.2f),max(0,(%.2f-t)/0.35),1)))" % (dur - 0.6, dur - 0.25)
     return ("drawbox=x=0:y=ih-330:w=880:h=120:color=black@0.55:t=fill,"
             "drawbox=x=60:y=ih-318:w=8:h=96:color=%s@1:t=fill,"
-            "drawtext=fontfile='%s':text='%s':fontsize=52:fontcolor=white:x=88:y=h-320:alpha='%s',"
-            "drawtext=fontfile='%s':text='%s':fontsize=26:fontcolor=0xd8e8f4:x=90:y=h-258:alpha='%s'"
+            "drawtext=fontfile='%s':expansion=none:text='%s':fontsize=52:fontcolor=white:x=88:y=h-320:alpha='%s',"
+            "drawtext=fontfile='%s':expansion=none:text='%s':fontsize=26:fontcolor=0xd8e8f4:x=90:y=h-258:alpha='%s'"
             % (ACCENT, BOLD, esc(title), alpha, TEXT, esc(sub), alpha))
 
 
@@ -70,7 +71,7 @@ def card(i, tag, at, dur, lines):
     out = os.path.join(WORK, 'card%02d.mp4' % i)
     draws = []
     for text, size, font, y, color in lines:
-        draws.append("drawtext=fontfile='%s':text='%s':fontsize=%d:fontcolor=%s:x=(w-text_w)/2:y=%s" % (font, esc(text), size, color, y))
+        draws.append("drawtext=fontfile='%s':expansion=none:text='%s':fontsize=%d:fontcolor=%s:x=(w-text_w)/2:y=%s" % (font, esc(text), size, color, y))
     vf = 'fps=%d,scale=1920:1080,boxblur=12:2,eq=brightness=-0.25:saturation=0.8,drawbox=x=(iw-520)/2:y=ih/2+8:w=520:h=6:color=%s@1:t=fill,%s,fade=t=in:st=0:d=0.5,fade=t=out:st=%.2f:d=0.5' % (FPS, ACCENT, ','.join(draws), dur - 0.5)
     run(['-ss', '%.3f' % at, '-i', os.path.join(WORK, tag + '.mkv'), '-t', '%.3f' % dur, '-vf', vf, '-an',
          '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', out])
