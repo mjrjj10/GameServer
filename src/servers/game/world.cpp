@@ -166,6 +166,13 @@ static const i32 GX_TEST_DRIVE_STEPS = 7;
 static const f32 GX_TEST_RECALL_DIST = 1500.0f;
 static const f32 GX_TEST_ENEMY_VIEW_DIST = 350.0f;
 static const f32 GX_TEST_BASE_MOVESPEED = 620.0f;
+static const i32 GX_PREVIEW_MODE = 2;
+static const i32 FIRST_PORTED_CLASS = CLASS_NUM_SHUTTLE;
+static const f32 GX_PREVIEW_ENEMY_DIST = 450.0f;
+static const f32 GX_PREVIEW_CLOSE_DIST = 220.0f;
+static const f32 GX_PREVIEW_SPREAD = 90.0f;
+static const f32 GX_PREVIEW_RIDER_GAP = 250.0f;
+static const f32 GX_PREVIEW_RECALL_DIST = 750.0f;
 static const f32 TOOLTIP_RYTLOCK_THIRD_MUL = 1.20f;
 static const f32 WEAPON_AOE_RADIUS = 250.0f;
 static const f32 WEAPON_SHOT_RELIABLE_DISTANCE = 100.0f;
@@ -3107,6 +3114,10 @@ void World::UpdateShowcase()
 		return;
 	}
 
+	if(Config().DevGxTest == GX_PREVIEW_MODE) {
+		UpdateGxPreview(*human);
+		return;
+	}
 	if(Config().DevGxTest) {
 		foreach_const(b, bots) {
 			if(players[*b].team == human->team && (i32)players[*b].Main().classType == CLASS_NUM_SHUTTLE) { UpdateGxTest(*human, players[*b]); return; }
@@ -4274,7 +4285,7 @@ void World::UpdateRides()
 		}
 		if(it->boardPointAnnounceAt != Time::ZERO && localTime >= it->boardPointAnnounceAt) {
 			it->boardPointAnnounceAt = Time::ZERO;
-			replication->SendInteractionStatusToAll(it->boardPointUID, 1u << (PLAYER_FACTION_BASE + it->team), INTERACTION_SHUTTLE_BOARD, INTERACTION_NOT_OCCUPIED);
+			replication->SendInteractionStatusToAll(it->boardPointUID, 1u << (PLAYER_FACTION_BASE + it->team), INTERACTION_SHUTTLE_BOARD, INTERACTION_NOT_OCCUPIED, it->clientHd);
 		}
 		if(it->boardedOn < 0) continue;
 		Player& gx = players[it->boardedOn];
@@ -4288,6 +4299,109 @@ void World::UpdateRides()
 			it->nextRideSync = TimeAdd(localTime, TimeMsToTime(RIDE_SYNC_SEC * 1000.0));
 			replication->SendSelfMove(it->clientHd, it->Main().UID, gx.body->GetWorldPos(), gx.movement.moveDir, gx.movement.moveSpeed, gx.input.rot.upperYaw);
 		}
+	}
+}
+
+void World::GxPreviewPlace(Player& human, f32 enemyDist)
+{
+	const vec3 base = showcase.anchor;
+	const vec2 dir = showcase.dir;
+	const vec2 side = vec2(-dir.y, dir.x);
+	const f32 yaw = atan2f(dir.y, dir.x);
+	MovePlayer(human, base, yaw, true);
+	human.res[1] = MasterStat(human.Main().classType, RESOURCES[1].maxStat);
+	HealPlayer(human, human, human.Main().hpMax);
+	i32 e = 0;
+	i32 a = 0;
+	foreach(it, players) {
+		if(it->index == human.index || it->dead) continue;
+		if(it->team != human.team) {
+			const f32 lateral = (f32)(e - 1) * GX_PREVIEW_SPREAD;
+			TeleportPlayer(*it, base + vec3(dir * (enemyDist + (e == 1 ? GX_PREVIEW_SPREAD * 0.5f : 0.0f)) + side * lateral, 0), yaw + PI);
+			HealPlayer(*it, *it, it->Main().hpMax);
+			e++;
+		}
+		else {
+			TeleportPlayer(*it, base + vec3(-dir * 600.0f - side * (f32)(a + 1) * 500.0f, 0), yaw);
+			a++;
+		}
+	}
+}
+
+void World::GxPreviewPrompt(Player& human, const char* key, i32 click, i32 holdMs, i32 count, const vec3& target)
+{
+	const vec2 aim = vec2(target) - vec2(human.body->GetWorldPos());
+	LOG("Preview :: prompt key=%s click=%d hold=%d count=%d aim=(%.0f, %.0f) wall=%lld", key, click, holdMs, count, aim.x, aim.y, ShowcaseWallMs());
+}
+
+void World::UpdateGxPreview(Player& human)
+{
+	const vec3 base = showcase.anchor;
+	const vec2 dir = showcase.dir;
+	const vec2 side = vec2(-dir.y, dir.x);
+	const vec3 enemies = base + vec3(dir * GX_PREVIEW_ENEMY_DIST, 0);
+	const bool second = ((i32)human.skills[(i32)human.mainCharaID * 2] % 100) >= 30;
+	Player* ally = nullptr;
+	foreach(it, players) if(it->team == human.team && it->index != human.index && !ally) ally = &*it;
+	auto clip = [&](const char* name, i32 phase, i32 ms) {
+		LOG("Preview :: clip %s wall=%lld", name, ShowcaseWallMs());
+		showcase.gxPhase = phase;
+		showcase.next = TimeAdd(localTime, TimeMsToTime(ms));
+	};
+	switch(showcase.gxPhase) {
+		case 0: {
+			GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST);
+			LOG("Preview :: start pass=%d skills=%d %d wall=%lld", second ? 1 : 0, (i32)human.skills[(i32)human.mainCharaID * 2], (i32)human.skills[(i32)human.mainCharaID * 2 + 1], ShowcaseWallMs());
+			clip("intro", second ? 20 : 10, 3000);
+		} break;
+		case 10: GxPreviewPrompt(human, "lmb", 1, 0, 5, enemies); clip("weapon", 11, 4000); break;
+		case 11: GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST); clip("reset", 12, 1500); break;
+		case 12: GxPreviewPrompt(human, "lmbhold", 1, 1800, 1, enemies); clip("charged", 13, 4000); break;
+		case 13: GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST); clip("reset", 14, 1500); break;
+		case 14: GxPreviewPrompt(human, "rmb", 1, 0, 1, enemies + vec3(dir * 300.0f, 0)); clip("dodge", 15, 3500); break;
+		case 15: GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST); clip("reset", 16, 2000); break;
+		case 16: GxPreviewPrompt(human, "q", 1, 0, 1, enemies); clip("skill1", 17, 5000); break;
+		case 17: GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST); clip("reset", 18, 2000); break;
+		case 18: GxPreviewPrompt(human, "e", 1, 0, 1, enemies); clip("skill2", 99, 5000); break;
+		case 20: GxPreviewPlace(human, GX_PREVIEW_CLOSE_DIST); clip("reset", 21, 1500); break;
+		case 21: GxPreviewPrompt(human, "q", 0, 0, 1, base); clip("skill3", 22, 4500); break;
+		case 22: {
+			GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST * 3.0f);
+			if(ally) TeleportPlayer(*ally, base + vec3(-side * GX_PREVIEW_RIDER_GAP, 0), atan2f(dir.y, dir.x));
+			clip("reset", 23, 2000);
+		} break;
+		case 23: GxPreviewPrompt(human, "e", 0, 0, 1, base); clip("skill4", 24, 1200); break;
+		case 24: {
+			if(ally) PlayerInteract(*ally, human.boardPointUID);
+			LOG("Preview :: ally boarded=%d wall=%lld", ally && ally->boardedOn >= 0 ? 1 : 0, ShowcaseWallMs());
+			GxPreviewPrompt(human, "drive", 0, 2200, 1, base);
+			clip("ride", 25, 1000);
+		} break;
+		case 25: {
+			if(human.Main().stance != 0) {
+				showcase.next = TimeAdd(localTime, TimeMsToTime(300));
+				return;
+			}
+			clip("dropped", 26, 2500);
+		} break;
+		case 26: {
+			GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST * 3.0f);
+			if(ally) TeleportPlayer(*ally, base + vec3(side * GX_PREVIEW_RECALL_DIST, 0), atan2f(dir.y, dir.x));
+			human.ultGauge = MasterStat(human.Main().classType, STAT_ULTIMATE);
+			clip("reset", 27, 2500);
+		} break;
+		case 27: {
+			GxPreviewPrompt(human, "r", 1, 0, 1, ally ? ally->body->GetWorldPos() : base);
+			clip("ultimate", 28, 6000);
+		} break;
+		case 28: {
+			LOG("Preview :: recall dist=%.0f", ally ? glm::length(vec2(ally->body->GetWorldPos()) - vec2(human.body->GetWorldPos())) : -1.0f);
+			clip("end", 99, 1000);
+		} break;
+		default: {
+			LOG("Showcase :: done wall=%lld", ShowcaseWallMs());
+			showcase.done = true;
+		} break;
 	}
 }
 
@@ -4468,8 +4582,11 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	}
 	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty()) return;
 
+	const bool sharedZone = inst.speed <= 0 && remote.lifeTime > remote.hitInvalidTime && inst.castID != 0;
 	foreach(h, castHits) {
-		if(h->instID == inst.instID && h->playerIndex == target.index && localTime < h->until) return;
+		if(h->playerIndex != target.index || localTime >= h->until) continue;
+		if(h->instID == inst.instID) return;
+		if(sharedZone && h->castID == inst.castID && h->remoteID == remote.ID) return;
 	}
 	if(inst.speed <= 0 && enemy) inst.hitsLeft--;
 	if(!castHits.full()) {
@@ -4706,6 +4823,7 @@ void World::UpdateRemotes(f32 delta)
 					t = *e ? e + 1 : e;
 				}
 			}
+			if((i32)players[pr->ownerIndex].Main().classType >= FIRST_PORTED_CLASS) casterLocal = false;
 			RemoteInst* spawned = SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, casterLocal, pr->stopAtTarget);
 			if(spawned) {
 				spawned->sourceUID = pr->sourceUID;

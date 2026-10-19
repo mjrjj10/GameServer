@@ -1431,11 +1431,12 @@ void Replication::SendCancelSkillToAll(ActorUID casterUID, SkillID skillID)
 	}
 }
 
-void Replication::SendInteractionStatusToAll(ActorUID objectUID, u32 allowedTeamMask, i32 interactionID, i32 occupiedTeam)
+void Replication::SendInteractionStatusToAll(ActorUID objectUID, u32 allowedTeamMask, i32 interactionID, i32 occupiedTeam, ClientHandle exclude)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
+		if(clientHd == exclude && exclude != ClientHandle::INVALID) continue;
 		const LocalActorID localID = GetLocalActorID(clientHd, objectUID);
 		if(localID == LocalActorID::INVALID) continue;
 		Sv::SN_InteractionStatus packet;

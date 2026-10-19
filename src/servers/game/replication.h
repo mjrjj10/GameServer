@@ -318,7 +318,7 @@ struct Replication
 	void SendNpcBehaviorToAll(ActorUID actorUID, ActionStateID action, const vec3& pos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID);
 	void SendExecuteSkillAck(ClientHandle clientHd, ActorUID casterUID, SkillID skillID);
 	void SendCancelSkillToAll(ActorUID casterUID, SkillID skillID);
-	void SendInteractionStatusToAll(ActorUID objectUID, u32 allowedTeamMask, i32 interactionID, i32 occupiedTeam);
+	void SendInteractionStatusToAll(ActorUID objectUID, u32 allowedTeamMask, i32 interactionID, i32 occupiedTeam, ClientHandle exclude = ClientHandle::INVALID);
 	void SendInteractionExecuteToAll(ActorUID objectUID, ActorUID targetUID, u32 actionState, u32 castingTimeMS);
 	void SendToggleSkill(ActorUID casterUID, ClientHandle casterHd, SkillID skillID, bool on, ActionStateID action);
 	void SendHideDetect(ClientHandle clientHd, ActorUID detectorUID, ActorUID targetUID, u8 flag);

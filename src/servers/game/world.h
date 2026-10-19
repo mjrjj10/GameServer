@@ -607,6 +607,9 @@ struct World
 	void TeleportPlayer(Player& p, const vec3& pos, f32 yaw);
 	void MovePlayer(Player& p, const vec3& pos, f32 yaw, bool snap);
 	void GxTestDrive(Player& gx, const vec2& dir);
+	void GxPreviewPlace(Player& human, f32 enemyDist);
+	void GxPreviewPrompt(Player& human, const char* key, i32 click, i32 holdMs, i32 count, const vec3& target);
+	void UpdateGxPreview(Player& human);
 	struct Showcase
 	{
 		bool started = false;

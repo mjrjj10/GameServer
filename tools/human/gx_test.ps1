@@ -1,11 +1,11 @@
-﻿param([string]$List = '7,35', [int]$Pass = 0, [string]$Tag = 'm', [string]$Work = 'D:\MxM\showcase_data\runs', [int]$Minutes = 40, [int]$Steps = 0, [int]$Count = 2, [int]$FullRes = 0, [int]$KeepSummons = 0, [int]$UsePakOnly = 1)
+﻿param([string]$List = '7,35', [int]$Pass = 0, [string]$Tag = 'm', [string]$Work = 'D:\MxM\showcase_data\runs', [int]$Minutes = 40, [int]$Steps = 0, [int]$Count = 2, [int]$FullRes = 0, [int]$KeepSummons = 0, [int]$UsePakOnly = 1, [int]$Mode = 1, [string]$Agent = 'gx_agent.py', [string]$Video = '')
 $b = 'D:\MxM\GameServer\build'
 $c = 'D:\MxM\Client\Client.Win32'
 $py = 'D:\MxM\showcase_data\venv\Scripts\python.exe'
 Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile', '-Command', 'Stop-Process -Name MXMClient -Force -ErrorAction SilentlyContinue; Get-CimInstance Win32_Process | Where-Object { $_.Name -eq ''python.exe'' -and $_.CommandLine -match ''mirror_agent'' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }' -Wait -ErrorAction SilentlyContinue
 Set-Content -Path "$b\hub.cfg" -Value "DevShowcase=1`nDevShowcaseStart=0`nDevShowcaseList=$List`nDevMirror=1`nDevMirrorPass=$Pass" -Encoding ascii -NoNewline
 $gc = (Get-Content "$b\game.cfg") | Where-Object { $_ -notmatch '^DevShowcase|^DevMirror|^DevGxTest' }
-$gc += 'DevShowcase=1', "DevShowcaseCount=$Count", 'DevMirror=1', "DevShowcaseSteps=$Steps", "DevShowcaseFullRes=$FullRes", "DevShowcaseKeepSummons=$KeepSummons", 'DevGxTest=1'
+$gc += 'DevShowcase=1', "DevShowcaseCount=$Count", 'DevMirror=1', "DevShowcaseSteps=$Steps", "DevShowcaseFullRes=$FullRes", "DevShowcaseKeepSummons=$KeepSummons", "DevGxTest=$Mode"
 $gc | Set-Content "$b\game.cfg" -Encoding ascii
 Stop-Process -Name login_srv, hub_srv, game_srv, mm_srv -Force -ErrorAction SilentlyContinue
 Start-Sleep 2
@@ -15,7 +15,8 @@ $cl = Start-Process "$c\MXMClient.exe" -ArgumentList '/LogEncryption', '/AuthMet
 Start-Sleep 20
 $clientPid = (Get-Process MXMClient | Sort-Object StartTime -Descending)[0].Id
 $agentLog = "$Work\$Tag`_agent.log"
-Start-Process $py -Verb RunAs -WindowStyle Hidden -ArgumentList '-I', "`"$PSScriptRoot\gx_agent.py`"", $clientPid, "`"$b\game_server.log`"", "`"$agentLog`"", ($Minutes * 60)
+if ($Video) { $ffmpeg = 'D:\MxM\showcase_data\venv\Lib\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe'; $videoStart = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds(); $rec = Start-Process $ffmpeg -ArgumentList '-y', '-f', 'gdigrab', '-framerate', '60', '-draw_mouse', '0', '-offset_x', '0', '-offset_y', '0', '-video_size', '1920x1080', '-i', 'desktop', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '16', '-pix_fmt', 'yuv420p', "`"$Video`"" -WindowStyle Hidden -PassThru; Set-Content "$Video.start" $videoStart }
+Start-Process $py -Verb RunAs -WindowStyle Hidden -ArgumentList '-I', "`"$PSScriptRoot\$Agent`"", $clientPid, "`"$b\game_server.log`"", "`"$agentLog`"", ($Minutes * 60)
 $cap = "$Work\cap_$Tag"
 $job = Start-Job -ScriptBlock { param($f, $o, $s) powershell -ExecutionPolicy Bypass -File $f -OutDir $o -Seconds $s -IntervalMs 100 } -ArgumentList "D:\MxM\GameServer\tools\showcase\capture.ps1", $cap, ($Minutes * 60)
 $t0 = Get-Date
@@ -26,9 +27,10 @@ while ($true) {
     Start-Sleep 10
 }
 Copy-Item "$b\game_server.log" "$Work\$Tag.log"
+if ($Video) { Start-Sleep 2; Stop-Process -Id $rec.Id -Force -ErrorAction SilentlyContinue }
 Stop-Job $job -ErrorAction SilentlyContinue; Remove-Job $job -Force -ErrorAction SilentlyContinue
 Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile', '-Command', 'Stop-Process -Name MXMClient -Force; Get-CimInstance Win32_Process | Where-Object { $_.Name -eq ''python.exe'' -and $_.CommandLine -match ''mirror_agent'' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }' -Wait -ErrorAction SilentlyContinue
-(Get-Content "$b\game.cfg") -replace '^DevShowcase=1', 'DevShowcase=0' -replace '^DevMirror=1', 'DevMirror=0' -replace '^DevGxTest=1', 'DevGxTest=0' | Set-Content "$b\game.cfg" -Encoding ascii
+(Get-Content "$b\game.cfg") -replace '^DevShowcase=1', 'DevShowcase=0' -replace '^DevMirror=1', 'DevMirror=0' -replace '^DevGxTest=\d+', 'DevGxTest=0' | Set-Content "$b\game.cfg" -Encoding ascii
 Set-Content -Path "$b\hub.cfg" -Value "DevShowcase=0`nDevShowcaseStart=0" -Encoding ascii -NoNewline
 Stop-Process -Name login_srv, hub_srv, game_srv, mm_srv -Force -ErrorAction SilentlyContinue
 "gx test $Tag : $status"
