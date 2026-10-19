@@ -12,7 +12,7 @@ foreach ($start in $Starts) {
     Start-Sleep 2
     foreach ($s in 'mm_srv', 'hub_srv', 'game_srv', 'login_srv') { Start-Process "$b\$s.exe" -WorkingDirectory $b -WindowStyle Minimized; Start-Sleep 2 }
     Start-Sleep 3
-    Start-Process 'D:\MxM\Client\Client.Win32\MXMClient.exe' -ArgumentList '/LogEncryption', '/AuthMethod:local', '/Network:dev', '/PacketEncryption:0', '/AutoJoinGame', '/AutoLoginID:alexis' -WorkingDirectory 'D:\MxM\Client\Client.Win32'
+    Start-Process 'D:\MxM\Client\Client.Win32\MXMClient.exe' -ArgumentList '/LogEncryption', '/AuthMethod:local', '/Network:dev', '/PacketEncryption:0', '/AutoJoinGame', '/AutoLoginID:alexis', '/UsePakOnly:0' -WorkingDirectory 'D:\MxM\Client\Client.Win32'
     $t0 = Get-Date
     while (-not (Select-String -Path "$b\game_server.log" -Pattern 'Showcase :: placement' -Quiet -ErrorAction SilentlyContinue)) {
         if (((Get-Date) - $t0).TotalMinutes -gt 10) { break }

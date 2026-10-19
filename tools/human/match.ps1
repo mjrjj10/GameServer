@@ -1,6 +1,6 @@
 param([string]$PickA = '1377 367|524 367', [string]$PickB = '1377 544|1257 367', [string]$Work = 'D:\MxM\showcase_data\human')
 $c = 'D:\MxM\Client\Client.Win32'
-$args0 = '/LogEncryption', '/AuthMethod:local', '/Network:dev', '/PacketEncryption:0', '/AutoJoinGame'
+$args0 = '/LogEncryption', '/AuthMethod:local', '/Network:dev', '/PacketEncryption:0', '/AutoJoinGame', '/UsePakOnly:0'
 New-Item -ItemType Directory -Force $Work | Out-Null
 Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile', '-Command', 'Stop-Process -Name MXMClient -Force' -Wait -ErrorAction SilentlyContinue
 $a = Start-Process "$c\MXMClient.exe" -ArgumentList ($args0 + '/AutoLoginID:alexis') -WorkingDirectory $c -PassThru

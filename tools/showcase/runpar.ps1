@@ -1,4 +1,4 @@
-param([string]$Tag = 'par', [int]$Clients = 4, [int]$Start = 0, [string]$List = '', [int]$Minutes = 60, [string]$Work = 'D:\MxM\showcase_data\runs', [string]$Build = 'D:\MxM\GameServer\build')
+param([string]$Tag = 'par', [int]$Clients = 4, [int]$Start = 0, [string]$List = '', [int]$Minutes = 60, [string]$Work = 'D:\MxM\showcase_data\runs', [string]$Build = 'D:\MxM\GameServer\build', [int]$UsePakOnly = 0)
 $b = $Build
 $c = 'D:\MxM\Client\Client.Win32'
 $py = 'D:\MxM\showcase_data\venv\Scripts\python.exe'
@@ -17,7 +17,7 @@ Start-Sleep 3
 $pids = @()
 for ($i = 0; $i -lt $Clients; $i++) {
     $login = if ($i -eq 0) { 'alexis' } else { "alexis$($i + 1)" }
-    $p = Start-Process "$c\MXMClient.exe" -ArgumentList '/LogEncryption', '/AuthMethod:local', '/Network:dev', '/PacketEncryption:0', '/AutoJoinGame', "/AutoLoginID:$login" -WorkingDirectory $c -PassThru
+    $p = Start-Process "$c\MXMClient.exe" -ArgumentList '/LogEncryption', '/AuthMethod:local', '/Network:dev', '/PacketEncryption:0', '/AutoJoinGame', "/AutoLoginID:$login", "/UsePakOnly:$UsePakOnly" -WorkingDirectory $c -PassThru
     $pids += $p.Id
     Start-Sleep 8
 }

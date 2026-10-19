@@ -1,4 +1,4 @@
-﻿param([string]$List = '7,35', [int]$Pass = 0, [string]$Tag = 'm', [string]$Work = 'D:\MxM\showcase_data\runs', [int]$Minutes = 40, [int]$Steps = 0, [int]$Count = 2, [int]$FullRes = 0, [int]$KeepSummons = 0, [int]$UsePakOnly = 1)
+﻿param([string]$List = '7,35', [int]$Pass = 0, [string]$Tag = 'm', [string]$Work = 'D:\MxM\showcase_data\runs', [int]$Minutes = 40, [int]$Steps = 0, [int]$Count = 2, [int]$FullRes = 0, [int]$KeepSummons = 0, [int]$UsePakOnly = 0)
 $b = 'D:\MxM\GameServer\build'
 $c = 'D:\MxM\Client\Client.Win32'
 $py = 'D:\MxM\showcase_data\venv\Scripts\python.exe'
