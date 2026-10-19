@@ -1,5 +1,5 @@
-param([string]$Tag = 'par', [int]$Clients = 4, [int]$Start = 0, [string]$List = '', [int]$Minutes = 60, [string]$Work = 'D:\MxM\showcase_data\runs')
-$b = 'D:\MxM\GameServer\build'
+param([string]$Tag = 'par', [int]$Clients = 4, [int]$Start = 0, [string]$List = '', [int]$Minutes = 60, [string]$Work = 'D:\MxM\showcase_data\runs', [string]$Build = 'D:\MxM\GameServer\build')
+$b = $Build
 $c = 'D:\MxM\Client\Client.Win32'
 $py = 'D:\MxM\showcase_data\venv\Scripts\python.exe'
 New-Item -ItemType Directory -Force $Work | Out-Null
