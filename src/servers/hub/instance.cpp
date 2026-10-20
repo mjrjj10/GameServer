@@ -303,7 +303,12 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 	}
 
 	if(Config().DevShowcase) {
-		static i32 showcaseNext = Config().DevShowcaseStart;
+		static i32 showcaseRooms = 0;
+		static eastl::fixed_vector<i32,8> showcaseNextBySlice;
+		const i32 slices = eastl::max(1, Config().DevShowcaseSlices);
+		const i32 slice = showcaseRooms++ % slices;
+		if((i32)showcaseNextBySlice.size() < slices) showcaseNextBySlice.resize(slices, Config().DevShowcaseStart);
+		i32& showcaseNext = showcaseNextBySlice[slice];
 		eastl::fixed_vector<ClassType,100,false> all;
 		if(!Config().devShowcaseList.empty()) {
 			for(i32 c : Config().devShowcaseList) all.push_back((ClassType)c);
@@ -311,6 +316,12 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 		else {
 			foreach_const(it, allowedMastersSet) all.push_back(*it);
 			eastl::sort(all.begin(), all.end());
+		}
+		if(slices > 1) {
+			const i32 count = (i32)all.size();
+			all.erase(all.begin() + (slice + 1) * count / slices, all.end());
+			all.erase(all.begin(), all.begin() + slice * count / slices);
+			LOG("[Room] showcase slice %d/%d first %d count %d", slice + 1, slices, all.empty() ? 0 : (i32)all[0], (i32)all.size());
 		}
 		i32 humanTeam = -1;
 		foreach_const(u, userList) if(!u->isBot) humanTeam = (i32)u->team;

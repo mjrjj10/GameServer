@@ -2,8 +2,8 @@
 #include <EASTL/fixed_string.h>
 #include <EAStdC/EASprintf.h>
 
-template<size_t N>
-static bool ParseIdList(const char* line, const char (&key)[N], eastl::fixed_vector<i32,16>& out)
+template<size_t N, size_t C>
+static bool ParseIdList(const char* line, const char (&key)[N], eastl::fixed_vector<i32,C>& out)
 {
 	const size_t keyLen = N - 1;
 	if(strncmp(line, key, keyLen) != 0) return false;
@@ -29,6 +29,7 @@ bool CConfigHub::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "TraceNetwork=%d", &TraceNetwork) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcase=%d", &DevShowcase) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcaseStart=%d", &DevShowcaseStart) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevShowcaseSlices=%d", &DevShowcaseSlices) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevMirror=%d", &DevMirror) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevMirrorPass=%d", &DevMirrorPass) == 1) return true;
 	if(EA::StdC::Sscanf(line, "LobbyMap=%d", &LobbyMap) == 1) return true;
