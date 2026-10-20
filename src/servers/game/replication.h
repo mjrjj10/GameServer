@@ -309,6 +309,9 @@ struct Replication
 
 	void SendPvpLoadingComplete(ClientHandle clientHd);
 	void SendGameReady(ClientHandle clientHd, i32 waitTime, i32 elapsed, UserID userId);
+	void SendSkillPoints(ClientHandle clientHd, UserID userId, i32 points);
+	void SendSkillUpgradeResult(ClientHandle clientHd, i32 result, ActorUID mainUID, SkillID mainSkill, Slice<const i32> mainProps, ActorUID subUID, SkillID subSkill, Slice<const i32> subProps);
+	void SendPlayerSkillUpdateToAll(ActorUID charaUID, SkillID skill, bool active, Slice<const i32> props);
 
 	void SendPreGameLevelEvents(ClientHandle clientHd);
 	void SendGameStart(ClientHandle clientHd);

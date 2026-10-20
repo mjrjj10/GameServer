@@ -646,6 +646,60 @@ void Replication::SendGameReady(ClientHandle clientHd, i32 waitTime, i32 elapsed
 	SendPacket(clientHd, notify);
 }
 
+void Replication::SendSkillPoints(ClientHandle clientHd, UserID userId, i32 points)
+{
+	Sv::SN_NotifyIngameSkillPoint notify;
+	notify.userId = userId;
+	notify.skillPoint = points;
+	SendPacket(clientHd, notify);
+}
+
+static void WriteProfileSkill(PacketWriter<Sv::SA_SkillUpgradeIngame,512>& packet, LocalActorID chara, SkillID skill, bool active, Slice<const i32> props)
+{
+	packet.Write<LocalActorID>(chara);
+	packet.Write<LocalActorID>(chara);
+	packet.Write<SkillID>(skill);
+	packet.Write<u8>(active ? 1 : 0);
+	packet.Write<u8>(1);
+	packet.Write<u16>((u16)props.size());
+	foreach_const(p, props) {
+		packet.Write<u32>((u32)*p);
+		packet.Write<u32>(1);
+	}
+}
+
+void Replication::SendSkillUpgradeResult(ClientHandle clientHd, i32 result, ActorUID mainUID, SkillID mainSkill, Slice<const i32> mainProps, ActorUID subUID, SkillID subSkill, Slice<const i32> subProps)
+{
+	PacketWriter<Sv::SA_SkillUpgradeIngame,512> packet;
+	packet.Write<i32>(result);
+	WriteProfileSkill(packet, GetLocalActorID(clientHd, mainUID), mainSkill, true, mainProps);
+	WriteProfileSkill(packet, GetLocalActorID(clientHd, subUID), subSkill, false, subProps);
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendPlayerSkillUpdateToAll(ActorUID charaUID, SkillID skill, bool active, Slice<const i32> props)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID local = GetLocalActorID(clientHd, charaUID);
+		if(local == LocalActorID::INVALID) continue;
+		PacketWriter<Sv::SN_PlayerSkillUpdate,512> packet;
+		packet.Write<LocalActorID>(local);
+		packet.Write<SkillID>(skill);
+		packet.Write<u32>(0);
+		packet.Write<u8>(1);
+		packet.Write<u16>((u16)props.size());
+		foreach_const(p, props) {
+			packet.Write<u32>((u32)*p);
+			packet.Write<u32>(1);
+		}
+		packet.Write<u8>(active ? 1 : 0);
+		packet.Write<u8>(1);
+		SendPacket(clientHd, packet);
+	}
+}
+
 void Replication::SendPreGameLevelEvents(ClientHandle clientHd)
 {
 	// countdown

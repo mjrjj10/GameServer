@@ -177,6 +177,7 @@ void Game::Update(Time localTime_)
 				}
 				tGameStarted = localTime;
 				world.ApplyAllPassives();
+				world.StartSkillPoints();
 			}
 		} break;
 
@@ -672,6 +673,14 @@ void Game::OnPlayerReturnToChannel(ClientHandle clientHd)
 	i32 hubIP[4] = { Config().HostIP[0], Config().HostIP[1], Config().HostIP[2], Config().HostIP[3] };
 	if(hubIP[0] == 0) { hubIP[0] = 127; hubIP[3] = 1; }
 	replication.SendDoConnectChannel(clientHd, player.name.data(), hubIP, HUB_LISTEN_PORT);
+}
+
+void Game::OnPlayerSkillUpgrade(ClientHandle clientHd, i32 slot)
+{
+	auto found = playerMap.find(clientHd);
+	if(found == playerMap.end()) return;
+	World::Player& player = world.GetPlayer(found->second->playerIndex);
+	if(!world.UpgradeSkillSlot(player, slot)) LOG("Upgrade :: %ls slot %d refused (points %d)", player.name.data(), slot, player.skillPoints);
 }
 
 void Game::OnPlayerJump(ClientHandle clientHd, ActorUID actorUID, f32 rotate, f32 moveDirX, f32 moveDirY)

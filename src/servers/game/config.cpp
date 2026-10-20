@@ -14,6 +14,7 @@ bool CConfigGame::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "DevShowcaseCount=%d", &DevShowcaseCount) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcaseSteps=%d", &DevShowcaseSteps) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcaseFullRes=%d", &DevShowcaseFullRes) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevShowcaseUpgrade=%d", &DevShowcaseUpgrade) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcaseKeepSummons=%d", &DevShowcaseKeepSummons) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevHideDetectFlag=%d", &DevHideDetectFlag) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevGxTest=%d", &DevGxTest) == 1) return true;

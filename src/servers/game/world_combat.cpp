@@ -176,6 +176,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		LOG("Death :: %ls killed by %ls", target.name.data(), attacker.name.data());
 		attacker.kills++;
 		target.deaths++;
+		GrantSkillPoint(target);
 		i32 teamKills = 0;
 		foreach_const(it, players) {
 			if(it->team == attacker.team) teamKills += it->kills;

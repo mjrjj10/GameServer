@@ -12,6 +12,7 @@ static const f32 WEAPON_PROJECTILE_HIT_HEIGHT = 300.0f;
 static const i32 STAT_STAMINA = 2;
 static const i32 STAT_MOVESPEED = 14;
 static const i32 STAT_MANA = 35;
+static const i32 STAT_SKILLPOWER = 8;
 struct ResourceDef { i32 maxStat; i32 regenStat; bool startFull; };
 static const ResourceDef RESOURCES[3] = {
 	{ 17, 41, true },

@@ -1258,8 +1258,8 @@ PUSH_PACKED
 struct CQ_SkillUpgradeIngame
 {
 	enum { NET_ID = 60055 };
-	u32 unkIngameContext; // 4 bytes: session-constant from game context (FUN_01a37e2b); observed 1 (EU/NA) and 8 (Titan Ruins)
-	u32 skillUpgradeId; // 4 bytes: upgraded skill/option id; observed 0, 1 and 12
+	u32 userID; // 4 bytes
+	u32 slot; // 4 bytes
 };
 POP_PACKED
 

@@ -160,6 +160,10 @@ static i64 ShowcaseWallMs()
 
 void World::UpdateShowcase()
 {
+	if(botUpgrades) {
+		botUpgrades = false;
+		foreach(it, players) it->skillLevels.clear();
+	}
 	if(showcase.comboSkill != 0 && localTime >= showcase.comboAt) {
 		Player& comboCaster = players[showcase.comboCaster];
 		LOG("Showcase :: combo skill=%d", showcase.comboSkill);
@@ -671,6 +675,13 @@ void World::UpdateShowcase()
 	for(i32 r = 0; r < 3; r++) {
 		const f32 resMax = MasterStat(caster.Main().classType, RESOURCES[r].maxStat);
 		if(resMax > 0) caster.res[r] = Config().DevShowcaseFullRes != 0 || resMax <= 1.0f ? resMax : resMax - 1.0f;
+	}
+	if(Config().DevShowcaseUpgrade > 0) {
+		foreach_const(c, caster.characters) {
+			foreach_const(sid, content.GetMaster((*c)->classType).skillIDs) {
+				if(const auto* ups = content.FindSkillUpgrades((i32)*sid)) caster.skillLevels[(i32)*sid] = (u8)MIN(Config().DevShowcaseUpgrade, (i32)ups->size());
+			}
+		}
 	}
 	caster.tNextResSend = Time::ZERO;
 	{

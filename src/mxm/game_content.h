@@ -743,6 +743,20 @@ struct GameXmlContent
 		f32 damageRatio = 1.0f;
 	};
 	eastl::hash_map<i32, eastl::fixed_vector<CostLevel,4,false>> skillCostLevels;
+	struct SkillUpgrade {
+		enum class Type: u8 { COST, DAMAGE, EFFECT, RANGE };
+		i32 propertyID = 0;
+		Type type = Type::COST;
+		f32 baseDamage = -1;
+		f32 attackMultiplier = 0;
+		eastl::fixed_vector<eastl::pair<f32,f32>,4,false> costLevelDamage;
+		f32 consumeMP = -1;
+		eastl::fixed_vector<eastl::pair<i32,i32>,8,false> remoteReplace;
+		eastl::fixed_vector<eastl::pair<i32,i32>,8,false> statusReplace;
+	};
+	typedef eastl::fixed_vector<SkillUpgrade,8,false> SkillUpgradeList;
+	eastl::hash_map<i32, SkillUpgradeList> skillUpgrades;
+	const SkillUpgradeList* FindSkillUpgrades(i32 skillID) const { auto f = skillUpgrades.find(skillID); return f == skillUpgrades.end() ? nullptr : &f->second; }
 	const eastl::fixed_vector<CostLevel,4,false>* FindSkillCostLevels(i32 skillID) const { auto f = skillCostLevels.find(skillID); return f == skillCostLevels.end() ? nullptr : &f->second; }
 	f32 GetSkillConsume(i32 skillID, i32 index) const { auto f = skillConsumeRes.find(skillID); return f == skillConsumeRes.end() ? 0 : f->second[index]; }
 	eastl::hash_map<i32, i32> comboAutoCastMs;
@@ -878,6 +892,7 @@ private:
 	bool LoadStatusData();
 	bool LoadSkillTooltips();
 	bool LoadSkillCosts();
+	bool LoadSkillUpgrades();
 	bool LoadCharacterElements();
 	bool LoadSummons();
 	bool LoadStageTimeLimits();

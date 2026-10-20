@@ -118,6 +118,11 @@ struct World
 		i32 weaponState = 0;
 		Time chargeStart = Time::ZERO;
 		u8 chargeAnnounced = 0;
+		eastl::fixed_map<i32,u8,12,false> skillLevels;
+		eastl::fixed_map<u32,GameXmlContent::CostLevel,12,false> castMods;
+		i32 skillPoints = 1;
+		Time nextSkillPointAt = Time::ZERO;
+		u8 botUpgradeTurn = 0;
 		u32 resourceGainCast = 0;
 		eastl::fixed_vector<u32,10,false> resourceGainTargets;
 		eastl::array<i32,2> shotCount = { 0, 0 };
@@ -720,12 +725,21 @@ private:
 public:
 	void ApplyPassives(Player& player);
 	void ApplyAllPassives();
+	void StartSkillPoints();
+	bool botUpgrades = true;
+	void GrantSkillPoint(Player& player);
+	bool UpgradeSkillSlot(Player& player, i32 slot);
+	const GameXmlContent::SkillUpgrade* LatestUpgrade(const Player& player, i32 skillID, GameXmlContent::SkillUpgrade::Type type) const;
+	f32 PlayerSkillDamage(Player& player, SkillID skillID);
+	f32 PlayerSkillConsumeMP(const Player& player, i32 skillID) const;
+	const GameXmlContent::CostLevel* UpgradeCastMods(Player& player, SkillID skillID, const GameXmlContent::CostLevel* costLevel);
 	void ReleaseCast(Player& player);
 	void ComboBaseCooldown(Player& player);
 	void ToggleOn(Player& player, SkillID skillID, const vec3& castPos);
 	void ToggleOff(Player& player);
 	void UpdateToggles();
 	void UpdateWeaponCharges();
+	void UpdateSkillPoints();
 	void SpawnCreatureFromRemote(const RemoteInst& parent, i32 creature, const vec3& pos);
 	f32 WeaponHitDamage(const Player& player, const Remote* remote) const;
 	void PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& center, f32 range, i32 skipDebuffIndex);

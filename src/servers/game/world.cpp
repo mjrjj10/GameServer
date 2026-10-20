@@ -197,6 +197,7 @@ void World::Update(Time localTime_)
 	UpdateStatuses();
 	UpdateToggles();
 	UpdateWeaponCharges();
+	UpdateSkillPoints();
 	UpdateSummons();
 	UpdateSummonAi((f32)tdelta);
 	if(!frozen) UpdatePassives();
@@ -600,6 +601,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	rpCast.castPos = castPos;
 	const auto* costLevels = castCostLevel ? GetGameXmlContent().FindSkillCostLevels((i32)skillID) : nullptr;
 	const i8 costLevelIndex = costLevels ? (i8)(castCostLevel - costLevels->data() + 1) : 0;
+	castCostLevel = UpgradeCastMods(player, skillID, castCostLevel);
 	rpCast.actionID = actionState;
 	rpCast.costLevel = costLevelIndex;
 	rpCast.sendAction = cast != nullptr;

@@ -6,6 +6,9 @@
 static const i32 STAT_STAMINAREGEN = 5;
 static const i32 STAT_MANAREGEN = 39;
 static const i32 STAT_ULTIMATEREGEN = 42;
+static const f64 SKILL_POINT_INTERVAL_MS = 35000.0;
+static const i32 SKILL_UPGRADE_SLOT_ULTIMATE = 12;
+static const i32 ULTIMATE_SKILL_ID_SUFFIX = 50;
 
 void World::UpdateUltimateGauges(f32 delta)
 {
@@ -102,7 +105,7 @@ void World::UpdateUltimateGauges(f32 delta)
 bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 {
 	const auto& content = GetGameXmlContent();
-	f32 mp = content.GetSkillConsumeMP(skillID);
+	f32 mp = PlayerSkillConsumeMP(player, skillID);
 	foreach(it, activeStatuses) {
 		if(it->targetIndex != player.index || !it->info || it->info->type != StatusType::NOCOST || it->until <= localTime) continue;
 		if(eastl::find(it->info->costSkills.begin(), it->info->costSkills.end(), skillID) == it->info->costSkills.end()) continue;
@@ -325,14 +328,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	}
 
 	const u32 castID = nextCastID++;
-	i32 damage = (i32)SkillDamage(skillID);
-	{
-		const f32 skillPower = StatusModSum(player, StatusMod::SKILLPOWER);
-		if(skillPower > 0) {
-			SkillNormalModel& sm = const_cast<SkillNormalModel&>(skill);
-			damage += (i32)(skillPower * sm.getSkillNormalLevelByIndex(0)->getAttackMultiplier());
-		}
-	}
+	const i32 damage = (i32)PlayerSkillDamage(player, skillID);
 	const ActorUID currentTarget = targets.size() > 0 ? targets[0] : ActorUID::INVALID;
 
 	bool scheduled = false;
@@ -586,4 +582,156 @@ void World::ApplyRemoteHitResourceGain(Player& owner, RemoteIdx remote, u32 cast
 	if(owner.resourceGainTargets.full() || eastl::find(owner.resourceGainTargets.begin(), owner.resourceGainTargets.end(), targetIndex) != owner.resourceGainTargets.end()) return;
 	owner.resourceGainTargets.push_back(targetIndex);
 	GainResource(owner, rule->slot, rule->amount);
+}
+
+void World::StartSkillPoints()
+{
+	foreach(it, players) it->nextSkillPointAt = TimeAdd(localTime, TimeMsToTime(SKILL_POINT_INTERVAL_MS));
+}
+
+void World::GrantSkillPoint(Player& player)
+{
+	player.skillPoints++;
+	if(player.clientHd != ClientHandle::INVALID) replication->SendSkillPoints(player.clientHd, player.userID, player.skillPoints);
+	LOG("Upgrade :: %ls skill points %d", player.name.data(), player.skillPoints);
+}
+
+void World::UpdateSkillPoints()
+{
+	static const i32 BOT_UPGRADE_ORDER[] = { SKILL_UPGRADE_SLOT_ULTIMATE, 0, 1 };
+	foreach(it, players) {
+		if(it->nextSkillPointAt != Time::ZERO && localTime >= it->nextSkillPointAt) {
+			it->nextSkillPointAt = TimeAdd(it->nextSkillPointAt, TimeMsToTime(SKILL_POINT_INTERVAL_MS));
+			GrantSkillPoint(*it);
+		}
+		if(!botUpgrades || it->clientHd != ClientHandle::INVALID || it->skillPoints <= 0 || it->dead) continue;
+		for(i32 tries = 0; tries < (i32)ARRAY_COUNT(BOT_UPGRADE_ORDER) && it->skillPoints > 0; tries++) {
+			const i32 slot = BOT_UPGRADE_ORDER[it->botUpgradeTurn++ % ARRAY_COUNT(BOT_UPGRADE_ORDER)];
+			if(UpgradeSkillSlot(*it, slot)) break;
+		}
+	}
+}
+
+static SkillID SlotSkill(const World::Player& player, u32 masterIndex, i32 slot)
+{
+	if(slot == SKILL_UPGRADE_SLOT_ULTIMATE) {
+		foreach_const(sid, GetGameXmlContent().GetMaster(player.characters[masterIndex]->classType).skillIDs) {
+			if((i32)*sid % 100 == ULTIMATE_SKILL_ID_SUFFIX) return *sid;
+		}
+		return SkillID::INVALID;
+	}
+	if(slot < 0 || slot > 1) return SkillID::INVALID;
+	return player.skills[masterIndex * 2 + slot];
+}
+
+static void AcquiredProps(const World::Player& player, SkillID skill, eastl::fixed_vector<i32,8,false>& out)
+{
+	const auto* ups = GetGameXmlContent().FindSkillUpgrades((i32)skill);
+	auto f = player.skillLevels.find((i32)skill);
+	if(!ups || f == player.skillLevels.end()) return;
+	for(u8 i = 0; i < f->second && i < ups->size(); i++) out.push_back((*ups)[i].propertyID);
+}
+
+bool World::UpgradeSkillSlot(Player& player, i32 slot)
+{
+	if(player.skillPoints <= 0) return false;
+	const u32 active = player.mainCharaID;
+	bool upgraded = false;
+	for(u32 m = 0; m < 2; m++) {
+		const SkillID skill = SlotSkill(player, m, slot);
+		const auto* ups = skill != SkillID::INVALID ? GetGameXmlContent().FindSkillUpgrades((i32)skill) : nullptr;
+		if(!ups) continue;
+		u8& level = player.skillLevels[(i32)skill];
+		if(level >= ups->size()) continue;
+		level++;
+		upgraded = true;
+		eastl::fixed_vector<i32,8,false> props;
+		AcquiredProps(player, skill, props);
+		replication->SendPlayerSkillUpdateToAll(player.characters[m]->UID, skill, m == active, Slice<const i32>(props.data(), props.size()));
+		LOG("Upgrade :: %ls slot %d skill %d level %d (property %d)", player.name.data(), slot, (i32)skill, (i32)level, props.back());
+	}
+	if(!upgraded) return false;
+	player.skillPoints--;
+	if(player.clientHd != ClientHandle::INVALID) {
+		eastl::fixed_vector<i32,8,false> mainProps, subProps;
+		const SkillID mainSkill = SlotSkill(player, active, slot);
+		const SkillID subSkill = SlotSkill(player, active ^ 1, slot);
+		AcquiredProps(player, mainSkill, mainProps);
+		AcquiredProps(player, subSkill, subProps);
+		replication->SendSkillUpgradeResult(player.clientHd, 0, player.characters[active]->UID, mainSkill, Slice<const i32>(mainProps.data(), mainProps.size()),
+			player.characters[active ^ 1]->UID, subSkill, Slice<const i32>(subProps.data(), subProps.size()));
+		replication->SendSkillPoints(player.clientHd, player.userID, player.skillPoints);
+	}
+	return true;
+}
+
+const GameXmlContent::SkillUpgrade* World::LatestUpgrade(const Player& player, i32 skillID, GameXmlContent::SkillUpgrade::Type type) const
+{
+	auto f = player.skillLevels.find(skillID);
+	const auto* ups = GetGameXmlContent().FindSkillUpgrades(skillID);
+	if(f == player.skillLevels.end() || !ups) return nullptr;
+	for(i32 i = MIN((i32)f->second, (i32)ups->size()) - 1; i >= 0; i--) {
+		if((*ups)[i].type == type) return &(*ups)[i];
+	}
+	return nullptr;
+}
+
+f32 World::PlayerSkillDamage(Player& player, SkillID skillID)
+{
+	const f32 statusPower = StatusModSum(player, StatusMod::SKILLPOWER);
+	if(const GameXmlContent::SkillUpgrade* up = LatestUpgrade(player, (i32)skillID, GameXmlContent::SkillUpgrade::Type::DAMAGE)) {
+		if(up->baseDamage >= 0) return MAX(up->baseDamage + up->attackMultiplier * (MasterStat(player.Main().classType, STAT_SKILLPOWER) + statusPower), 0.0f);
+	}
+	f32 damage = SkillDamage(skillID);
+	auto found = GetGameXmlContent().skillMap.find(skillID);
+	if(statusPower > 0 && found != GetGameXmlContent().skillMap.end()) {
+		SkillNormalModel& sm = const_cast<SkillNormalModel&>(found->second);
+		damage += statusPower * sm.getSkillNormalLevelByIndex(0)->getAttackMultiplier();
+	}
+	return damage;
+}
+
+f32 World::PlayerSkillConsumeMP(const Player& player, i32 skillID) const
+{
+	const auto* ups = GetGameXmlContent().FindSkillUpgrades(skillID);
+	auto f = player.skillLevels.find(skillID);
+	if(ups && f != player.skillLevels.end()) {
+		for(i32 i = MIN((i32)f->second, (i32)ups->size()) - 1; i >= 0; i--) {
+			if((*ups)[i].consumeMP >= 0) return (*ups)[i].consumeMP;
+		}
+	}
+	return GetGameXmlContent().GetSkillConsumeMP(skillID);
+}
+
+static void MergeReplace(eastl::fixed_vector<eastl::pair<i32,i32>,8,false>& into, const eastl::fixed_vector<eastl::pair<i32,i32>,8,false>& from)
+{
+	foreach_const(r, from) {
+		auto it = eastl::find_if(into.begin(), into.end(), [&](const eastl::pair<i32,i32>& e) { return e.first == r->first; });
+		if(it != into.end()) it->second = r->second;
+		else if(!into.full()) into.push_back(*r);
+	}
+}
+
+const GameXmlContent::CostLevel* World::UpgradeCastMods(Player& player, SkillID skillID, const GameXmlContent::CostLevel* costLevel)
+{
+	auto f = player.skillLevels.find((i32)skillID);
+	const auto* ups = GetGameXmlContent().FindSkillUpgrades((i32)skillID);
+	if(f == player.skillLevels.end() || f->second == 0 || !ups) return costLevel;
+	const auto* levels = costLevel ? GetGameXmlContent().FindSkillCostLevels((i32)skillID) : nullptr;
+	const i32 costIndex = levels ? (i32)(costLevel - levels->data()) : -1;
+	GameXmlContent::CostLevel& mods = player.castMods[((u32)skillID << 3) | (u32)(costIndex + 1)];
+	mods = costLevel ? *costLevel : GameXmlContent::CostLevel();
+	for(u8 i = 0; i < f->second && i < ups->size(); i++) {
+		const GameXmlContent::SkillUpgrade& up = (*ups)[i];
+		MergeReplace(mods.remoteReplace, up.remoteReplace);
+		MergeReplace(mods.statusReplace, up.statusReplace);
+	}
+	const GameXmlContent::SkillUpgrade* dmg = LatestUpgrade(player, (i32)skillID, GameXmlContent::SkillUpgrade::Type::DAMAGE);
+	if(dmg && costIndex >= 0 && costIndex < (i32)dmg->costLevelDamage.size() && dmg->baseDamage > 0 && dmg->costLevelDamage[costIndex].first >= 0) {
+		const f32 skillPower = MasterStat(player.Main().classType, STAT_SKILLPOWER) + StatusModSum(player, StatusMod::SKILLPOWER);
+		const f32 normal = dmg->baseDamage + dmg->attackMultiplier * skillPower;
+		const f32 empowered = dmg->costLevelDamage[costIndex].first + dmg->costLevelDamage[costIndex].second * skillPower;
+		if(normal > 0) mods.damageRatio = empowered / normal;
+	}
+	return &mods;
 }

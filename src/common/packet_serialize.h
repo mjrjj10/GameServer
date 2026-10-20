@@ -1134,6 +1134,52 @@ inline const char* PacketSerialize<Sv::SA_RTT_Time>(const void* packetData, cons
 	return str.data();
 }
 
+inline void SerializeSkillProperties(eastl::fixed_string<char,8192,true>& str, ConstBuffer& buff)
+{
+	const u16 count = buff.Read<u16>();
+	SER("	properties_count=%u", count);
+	for(u16 i = 0; i < count; i++) {
+		const u32 prop = buff.Read<u32>();
+		SER("	property[%u]={ index=%u level=%u }", i, prop, buff.Read<u32>());
+	}
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SA_SkillUpgradeIngame>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SA_SkillUpgradeIngame(%d, %d) :: {", Sv::SA_SkillUpgradeIngame::NET_ID, packetSize);
+	SER("	result=%d", buff.Read<i32>());
+	for(i32 m = 0; m < 2; m++) {
+		SER("	masterID=0x%08x", buff.Read<u32>());
+		SER("	characterID=0x%08x", buff.Read<u32>());
+		SER("	skillIndex=%u", buff.Read<u32>());
+		SER("	isUnlocked=%u", buff.Read<u8>());
+		SER("	isActivated=%u", buff.Read<u8>());
+		SerializeSkillProperties(str, buff);
+	}
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_PlayerSkillUpdate>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_PlayerSkillUpdate(%d, %d) :: {", Sv::SN_PlayerSkillUpdate::NET_ID, packetSize);
+	SER("	characterID=0x%08x", buff.Read<u32>());
+	SER("	nSkillIndex=%u", buff.Read<u32>());
+	SER("	nCoolTime=%u", buff.Read<u32>());
+	SER("	bUnlocked=%u", buff.Read<u8>());
+	SerializeSkillProperties(str, buff);
+	SER("	isUnlocked=%u", buff.Read<u8>());
+	SER("	isActivated=%u", buff.Read<u8>());
+	SER("}");
+	return str.data();
+}
+
 template<>
 inline const char* PacketSerialize<Sv::SN_NotifyIngameSkillPoint>(const void* packetData, const i32 packetSize)
 {
@@ -2408,6 +2454,18 @@ inline const char* PacketSerialize<Cl::CQ_LoadingProgressData>(const void* packe
 	ConstBuffer buff(packetData, packetSize);
 	SER("CQ_LoadingProgressData(%d, %d) :: {", Cl::CQ_LoadingProgressData::NET_ID, packetSize);
 	SER("	progress=%u", buff.Read<u8>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_SkillUpgradeIngame>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_SkillUpgradeIngame(%d, %d) :: {", Cl::CQ_SkillUpgradeIngame::NET_ID, packetSize);
+	SER("	userID=%u", buff.Read<u32>());
+	SER("	slot=%u", buff.Read<u32>());
 	SER("}");
 	return str.data();
 }

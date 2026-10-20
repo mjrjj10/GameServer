@@ -13,6 +13,7 @@ struct CConfigGame
 	i32 DevShowcaseCount = 0;
 	i32 DevShowcaseSteps = 0;
 	i32 DevShowcaseFullRes = 0;
+	i32 DevShowcaseUpgrade = 0;
 	i32 DevShowcaseKeepSummons = 0;
 	i32 DevHideDetectFlag = -1;
 	i32 DevGxTest = 0;

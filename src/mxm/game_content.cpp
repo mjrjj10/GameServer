@@ -1,6 +1,7 @@
 #include <common/utils.h>
 #include <EAStdC/EAString.h>
 #include <EAStdC/EASprintf.h>
+#include <EASTL/sort.h>
 #include <tinyxml2.h>
 
 #include "core.h"
@@ -1642,6 +1643,51 @@ static void ParseHoming(XMLElement* pHoming, Remote& remote)
 	pHoming->QueryBoolAttribute("_LockOn", &remote.homingLockOn);
 }
 
+static void ParseReplaceList(XMLElement* pLevel, const char* name, const char* fromAttr, eastl::fixed_vector<eastl::pair<i32,i32>,8,false>& out)
+{
+	for(XMLElement* p = pLevel->FirstChildElement(name); p; p = p->NextSiblingElement(name)) {
+		const i32 from = p->IntAttribute(fromAttr);
+		const i32 to = p->IntAttribute("_ReplaceIndex");
+		if(from != 0 && to != 0 && !out.full()) out.push_back({ from, to });
+	}
+}
+
+bool GameXmlContent::LoadSkillUpgrades()
+{
+	eastl::hash_map<i32, eastl::fixed_vector<eastl::pair<i32,SkillUpgrade>,8,false>> byPriority;
+	for(XMLElement* pInfo = xmlSKILLPROPERTY.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+		XMLElement* pSP = pInfo->FirstChildElement("ST_SKILL_PROPERTY");
+		if(!pSP) continue;
+		const char* type = pSP->Attribute("_Type");
+		if(!type) continue;
+		SkillUpgrade up;
+		up.propertyID = pSP->IntAttribute("_Index");
+		if(EA::StdC::Strcmp(type, "E_SKILL_PROPERTY_DAMAGE") == 0) up.type = SkillUpgrade::Type::DAMAGE;
+		else if(EA::StdC::Strcmp(type, "E_SKILL_PROPERTY_EFFECT") == 0) up.type = SkillUpgrade::Type::EFFECT;
+		else if(EA::StdC::Strcmp(type, "E_SKILL_PROPERTY_RANGE") == 0) up.type = SkillUpgrade::Type::RANGE;
+		if(XMLElement* pLevel = pSP->FirstChildElement("_PROPERTY_LEVEL")) {
+			pLevel->QueryFloatAttribute("_BaseDamage", &up.baseDamage);
+			pLevel->QueryFloatAttribute("_AttackMultiplier", &up.attackMultiplier);
+			pLevel->QueryFloatAttribute("_ConsumeMP", &up.consumeMP);
+			ParseReplaceList(pLevel, "_REMOTELIST", "_RemoteIndex", up.remoteReplace);
+			ParseReplaceList(pLevel, "_STATUSLIST", "_StatusIndex", up.statusReplace);
+		}
+		for(XMLElement* pCost = pSP->FirstChildElement("_COST_LEVEL"); pCost && !up.costLevelDamage.full(); pCost = pCost->NextSiblingElement("_COST_LEVEL")) {
+			XMLElement* pLevel = pCost->FirstChildElement("_PROPERTY_LEVEL");
+			if(pLevel) up.costLevelDamage.push_back({ pLevel->FloatAttribute("_BaseDamage", -1.0f), pLevel->FloatAttribute("_AttackMultiplier") });
+		}
+		auto& list = byPriority[pSP->IntAttribute("_SkillIndex")];
+		if(!list.full()) list.push_back({ pSP->IntAttribute("_Priority"), up });
+	}
+	foreach(it, byPriority) {
+		eastl::sort(it->second.begin(), it->second.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+		SkillUpgradeList& out = skillUpgrades[it->first];
+		foreach_const(p, it->second) out.push_back(p->second);
+	}
+	LOG("Loaded in-game upgrades for %d skills", (i32)skillUpgrades.size());
+	return true;
+}
+
 bool GameXmlContent::LoadRemoteData()
 {
 	// TODO: use these everywhere?
@@ -1871,6 +1917,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadSkillCosts();
+	if(!r) return false;
+
+	r = LoadSkillUpgrades();
 	if(!r) return false;
 
 	r = LoadCharacterElements();

@@ -110,6 +110,7 @@ struct Game
 	void OnPlayerTag(ClientHandle clientHd, ActorUID actorUID);
 	void OnPlayerReturnToChannel(ClientHandle clientHd);
 	void OnPlayerJump(ClientHandle clientHd, ActorUID actorUID, f32 rotate, f32 moveDirX, f32 moveDirY);
+	void OnPlayerSkillUpgrade(ClientHandle clientHd, i32 slot);
 	void OnPlayerWeaponFire(ClientHandle clientHd, f32 aimYaw);
 	void OnPlayerWeaponStateRelay(ClientHandle clientHd, ActorUID ownerUID, i32 state, u8 chargeLevel, u8 firingCombo);
 	void OnPlayerWeaponShot(ClientHandle clientHd, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize);
