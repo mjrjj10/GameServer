@@ -571,7 +571,7 @@ void World::UpdateShowcase()
 		const f32 splash = bomb ? bomb->boundSize[0] * 0.5f : (wr && wr->behaviorType == Remote::BehaviorType::GRAPH ? wr->boundSize[0] * 0.5f : 0);
 		const f32 front = (wr && wr->boundType == Remote::BoundType::E_BOUND_BOX) ? MAX(wr->offsetY + wr->boundSize[1] * 0.5f, 0.0f) : 0.0f;
 		range = wrange;
-		struct T { f32 dist; f32 side; const char* name; i32 expect; };
+		struct T { f32 dist; f32 side; const char* name; i32 expect; bool shiftDummy = false; };
 		eastl::fixed_vector<T,8,false> tests;
 		if(wrange > 0) {
 			tests.push_back({ wrange - 40.0f, 0, "range_in", 1 });
@@ -579,9 +579,10 @@ void World::UpdateShowcase()
 		}
 		else tests.push_back({ 300.0f, 0, "near", -1 });
 		if(splash > 0) {
-			const f32 d = wrange > 0 ? wrange * 0.6f : 300.0f;
-			tests.push_back({ d, splash - 40.0f, "splash_in", 1 });
-			tests.push_back({ d, splash + dummyRadius + 60.0f, "splash_out", 0 });
+			const bool endBlast = wr && wr->maxSpeed > 0 && wr->behaviorType != Remote::BehaviorType::GRAPH && !wf->spawnAtAim;
+			const f32 d = wrange > 0 ? (endBlast ? wrange : wrange * 0.6f) : 300.0f;
+			tests.push_back({ d, splash - 40.0f, "splash_in", 1, endBlast });
+			tests.push_back({ d, splash + dummyRadius + 60.0f, "splash_out", 0, endBlast });
 		}
 		const Remote* cr = wf && !wf->charge.empty() && wf->chargeTime.size() == wf->charge.size() ? content.FindRemote(wf->charge.back()) : nullptr;
 		if(cr) {
@@ -618,6 +619,7 @@ void World::UpdateShowcase()
 		}
 		dummyPos = showcase.anchor + vec3(showcase.dir * MIN(t.dist, flatLen), 0);
 		castPos = dummyPos + vec3(vec2(-showcase.dir.y, showcase.dir.x) * t.side, 0);
+		if(t.shiftDummy) eastl::swap(dummyPos, castPos);
 		testName = t.dist > flatLen ? "skip_beyond_flat" : t.name;
 		expect = t.dist > flatLen ? -1 : t.expect;
 		TeleportPlayer(dummy, dummyPos, faceCaster);
