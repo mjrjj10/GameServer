@@ -534,7 +534,7 @@ void World::UpdateShowcase()
 			const f32 len = glm::length(rel);
 			if(len > range) castPos = vec3(vec2(casterPos) + rel / len * range, castPos.z);
 		}
-		const bool support = effect == 0;
+		const bool support = effect == 0 || SkillDamage(SkillID(skill)) <= 0;
 		testName = t.dist > flatLen ? "skip_beyond_flat" : (support ? "support" : t.name);
 		expect = (t.dist > flatLen || support) ? -1 : t.expect;
 		TeleportPlayer(dummy, dummyPos, faceCaster);
