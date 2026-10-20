@@ -11,6 +11,7 @@ static const f32 MIRROR_POS_TOLERANCE = 60.0f;
 static const f64 MIRROR_STUCK_STATE_SEC = 3.0;
 static const i32 MIRROR_POS_MAX_WAITS = 12;
 static const f64 MIRROR_POS_RETRY_MS = 400.0;
+static const i32 MIRROR_CHARGE_HOLD_MARGIN_MS = 300;
 static const i32 SHOWCASE_STANCE_SHOTS = 3;
 static const f32 SHOWCASE_STANCE_WINDOW_SEC = 4.0f;
 static const i32 SHOWCASE_STANCE_FIRST_SHOT_MS = 900;
@@ -491,6 +492,8 @@ void World::UpdateShowcase()
 	vec3 castPos = dummyPos;
 	const char* testName = "-";
 	i32 expect = -1;
+	i32 chargeHoldMs = 0;
+	u8 chargeShotLevel = 0;
 	showcase.testCount = 1;
 	if(skill != 0) {
 		range = content.GetSkillRange(skill);
@@ -562,8 +565,19 @@ void World::UpdateShowcase()
 			tests.push_back({ d, splash - 40.0f, "splash_in", 1 });
 			tests.push_back({ d, splash + dummyRadius + 60.0f, "splash_out", 0 });
 		}
+		const Remote* cr = wf && !wf->charge.empty() && wf->chargeTime.size() == wf->charge.size() ? content.FindRemote(wf->charge.back()) : nullptr;
+		if(cr) {
+			f32 crange = cr->maxDistance > 0 ? cr->maxDistance : cr->lifeTime * cr->maxSpeed;
+			if(wf->maxDistance > 0 && cr->behaviorType == Remote::BehaviorType::GRAPH) crange = wf->maxDistance;
+			tests.push_back({ crange > 0 ? crange - 40.0f : 300.0f, 0, "charge", crange > 0 ? 1 : -1 });
+		}
 		showcase.testCount = (i32)tests.size();
 		const T& t = tests[MIN(showcase.rangeIdx, (i32)tests.size() - 1)];
+		if(cr && EA::StdC::Strcmp(t.name, "charge") == 0) {
+			chargeShotLevel = (u8)wf->charge.size();
+			chargeHoldMs = (i32)(wf->chargeTime.back() * 1000.0f) + MIRROR_CHARGE_HOLD_MARGIN_MS;
+			LOG("Showcase :: charge level=%d remote=%d hold=%dms mult=%.2f", (i32)chargeShotLevel, (i32)wf->charge.back(), chargeHoldMs, cr->attackMultiplier);
+		}
 		dummyPos = showcase.anchor + vec3(showcase.dir * MIN(t.dist, flatLen), 0);
 		castPos = dummyPos + vec3(vec2(-showcase.dir.y, showcase.dir.x) * t.side, 0);
 		testName = t.dist > flatLen ? "skip_beyond_flat" : t.name;
@@ -659,7 +673,7 @@ void World::UpdateShowcase()
 	const char* mirrorKey = nullptr;
 	if(mirror) {
 		const i32 base = (i32)human->mainCharaID * 2;
-		if(step == 0) mirrorKey = "lmb";
+		if(step == 0) mirrorKey = chargeHoldMs > 0 ? "lmbhold" : "lmb";
 		else if(step == 5 && skill != 0) mirrorKey = "r";
 		else if(step >= 1 && step <= 4 && skill != 0 && (i32)human->skills[base] == skill) mirrorKey = "q";
 		else if(step >= 1 && step <= 4 && skill != 0 && (i32)human->skills[base + 1] == skill) mirrorKey = "e";
@@ -693,16 +707,18 @@ void World::UpdateShowcase()
 			}
 		}
 		LOG("Mirror :: follow=%s", followKey);
-		LOG("Mirror :: prompt wall=%lld key=%s click=%d combo=%d skill=%d test=%s dist=%.0f aim=(%.0f, %.0f) dironly=%d posdir=%d comboclick=%d combotele=%d pick=%d stance=%d", ShowcaseWallMs(), mirrorKey ? mirrorKey : "none",
-			in && in->needsClick ? 1 : 0, combo != 0 && content.GetComboAutoCastMs(combo) == 0 ? 1 : 0, skill, testName, glm::length(vec2(dummyPos) - vec2(casterPos)), castPos.x - casterPos.x, castPos.y - casterPos.y, in && in->directionOnly ? 1 : 0, in && in->positionDirection ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->needsClick ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->teleportEntity ? 1 : 0, in && in->pickedEntity ? 1 : 0, skill != 0 && content.FindSkillStance(skill) ? 1 : 0);
+		LOG("Mirror :: prompt wall=%lld key=%s click=%d combo=%d skill=%d test=%s dist=%.0f aim=(%.0f, %.0f) dironly=%d posdir=%d comboclick=%d combotele=%d pick=%d stance=%d hold=%d", ShowcaseWallMs(), mirrorKey ? mirrorKey : "none",
+			in && in->needsClick ? 1 : 0, combo != 0 && content.GetComboAutoCastMs(combo) == 0 ? 1 : 0, skill, testName, glm::length(vec2(dummyPos) - vec2(casterPos)), castPos.x - casterPos.x, castPos.y - casterPos.y, in && in->directionOnly ? 1 : 0, in && in->positionDirection ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->needsClick ? 1 : 0, combo != 0 && content.FindSkillInput(combo) && content.FindSkillInput(combo)->teleportEntity ? 1 : 0, in && in->pickedEntity ? 1 : 0, skill != 0 && content.FindSkillStance(skill) ? 1 : 0, chargeHoldMs);
 	}
 	else if(step == 0) {
 		const vec2 rel = vec2(castPos) - vec2(casterPos);
 		const f32 len = glm::length(rel);
 		const vec2 dir = len > 1.0f ? rel / len : vec2(1, 0);
 		caster.weaponAimYaw = atan2f(dir.y, dir.x);
+		caster.chargeLevel = chargeShotLevel;
 		if(WeaponIsMelee(caster)) PlayerWeaponFire(caster);
 		else PlayerWeaponShot(caster, casterPos, dir, len);
+		caster.chargeLevel = 0;
 	}
 	else if(step >= 1 && step <= 6) {
 		const bool targetInRange = range <= 0 || glm::length(vec2(dummyPos) - vec2(casterPos)) <= range;
