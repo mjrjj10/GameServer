@@ -66,9 +66,7 @@ void World::UpdateBotCombat()
 		const ClassType cls = bot.Main().classType;
 		if(WeaponIsMelee(bot)) continue;
 
-		const Remote* remote = content.FindRemote(RemoteIdx(1430000000 + (i32)cls * 10000 + 10));
-		f32 range = ClassAttackRange(cls) * WEAPON_RANGE_SCALE;
-		if(remote && remote->maxDistance > 0) range = remote->maxDistance;
+		const f32 range = WeaponRange(bot);
 
 		const vec3 pos = bot.body->GetWorldPos();
 		Player* target = nullptr;

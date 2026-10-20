@@ -6,14 +6,18 @@
 static const i32 WEAPON_HIT_DAMAGE = 120;
 static const f32 WEAPON_PROJECTILE_SPEED = 4000.0f;
 static const f32 WEAPON_MELEE_MAX_RANGE = 600.0f;
-static const f32 WEAPON_MELEE_HALF_ANGLE = 1.05f;
 static const f32 PROJECTILE_TARGET_RADIUS = 70.0f;
 static const f32 WEAPON_SHOT_RELIABLE_DISTANCE = 100.0f;
 static const f32 WEAPON_SHOT_MAX_DISTANCE = 2500.0f;
 
-static bool ClassIsMelee(ClassType classType)
+static f32 WeaponReach(const Remote& remote, const WeaponFiring& wf)
 {
-	return ClassAttackRange(classType) * WEAPON_RANGE_SCALE <= WEAPON_MELEE_MAX_RANGE;
+	if(remote.behaviorType == Remote::BehaviorType::GRAPH && wf.maxDistance > 0) return wf.maxDistance;
+	if(remote.maxDistance > 0) return remote.maxDistance;
+	if(remote.maxSpeed > 0 && remote.lifeTime > 0) return remote.lifeTime * remote.maxSpeed;
+	if(remote.boundType == Remote::BoundType::E_BOUND_SPHERE) return remote.offsetY + remote.boundSize[0] * 0.5f;
+	if(remote.boundType != Remote::BoundType::E_BOUND_NONE) return remote.offsetY + remote.boundSize[1] * 0.5f;
+	return wf.maxDistance;
 }
 
 static f32 SegmentPointDist2D(const vec2& a, const vec2& b, const vec2& p)
@@ -35,7 +39,6 @@ static void BotWeaponAnimation(const World::Player& player, Replication* replica
 void World::PlayerWeaponFire(Player& player)
 {
 	BotWeaponAnimation(player, replication);
-	const f32 range = ClassAttackRange(player.Main().classType) * WEAPON_RANGE_SCALE;
 	const vec2 dir = vec2(cosf(player.weaponAimYaw), sinf(player.weaponAimYaw));
 	const vec3 origin = player.body->GetWorldPos();
 
@@ -47,31 +50,13 @@ void World::PlayerWeaponFire(Player& player)
 	if(WeaponIsMelee(player)) {
 		const i8 swingStance = player.Main().stance;
 		StanceWeaponUse(player);
-		const auto& content = GetGameXmlContent();
-		const u32 m = player.mainCharaID & 1;
-		const WeaponIndex weapon = m == 0 ? player.mainWeapon : player.subWeapon;
-		const WeaponFiring* wf = content.FindWeaponFiring((i32)weapon, swingStance);
-		RemoteIdx swing = wf ? wf->base : RemoteIdx::INVALID;
-		if(wf && player.firingCombo > 0 && player.firingCombo <= wf->combo.size()) swing = wf->combo[player.firingCombo - 1];
-		const Remote* swingRemote = content.FindRemote(swing);
-		if(swingRemote && swingRemote->boundType != Remote::BoundType::E_BOUND_NONE) {
-			LOG("Shot :: %ls melee swing remote %d (stance %d)", player.name.data(), (i32)swing, (i32)swingStance);
-			SpawnRemote(player.index, swing, origin + vec3(dir * swingRemote->offsetY, 0), dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), true, nullptr, 0, player.clientHd != ClientHandle::INVALID);
-			return;
-		}
-		foreach(it, players) {
-			if(it->team == player.team || it->dead || it->untargetable) continue;
-			const vec3 pos = it->body->GetWorldPos();
-			if(fabsf(pos.z - origin.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
-			const vec2 rel = LagClosestPos(*it, vec2(origin)) - vec2(origin);
-			const f32 dist = glm::length(rel);
-			if(dist > range + HitRadius(*it) + WEAPON_HIT_TOLERANCE) continue;
-			if(dist > HitRadius(*it)) {
-				const f32 cosAngle = glm::dot(rel / dist, dir);
-				if(cosAngle < cosf(WEAPON_MELEE_HALF_ANGLE)) continue;
-			}
-			DamagePlayer(player, *it, SkillID::INVALID, (i32)WeaponHitDamage(player, nullptr));
-		}
+		const WeaponFiring& wf = ActiveWeaponFiring(player, swingStance);
+		if(player.chargeLevel > 0) ApplyResourceGain(player, ResourceEvent::CHARGED_SHOT);
+		const RemoteIdx swing = SelectWeaponRemote(player, wf);
+		const Remote* swingRemote = GetGameXmlContent().FindRemote(swing);
+		ASSERT(swingRemote);
+		LOG("Shot :: %ls melee swing remote %d (stance %d)", player.name.data(), (i32)swing, (i32)swingStance);
+		SpawnRemote(player.index, swing, origin + vec3(dir * swingRemote->offsetY, 0), dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), true, nullptr, 0, player.clientHd != ClientHandle::INVALID);
 	}
 }
 
@@ -92,38 +77,18 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	if(projectileList.full()) return;
 
 	const auto& content = GetGameXmlContent();
-	const Remote* remote = content.FindRemote(RemoteIdx(1430000000 + (i32)classType * 10000 + 10));
-
-	f32 aimMax = WEAPON_SHOT_MAX_DISTANCE;
-	f32 aimMin = 0;
-	bool spawnAtAim = false;
-	{
-		const u32 m = player.mainCharaID & 1;
-		const WeaponIndex weapon = m == 0 ? player.mainWeapon : player.subWeapon;
-		const WeaponFiring* wf = content.FindWeaponFiring((i32)weapon, shotStance);
-		if(wf) {
-			if(wf->maxDistance > 0) aimMax = wf->maxDistance;
-			aimMin = wf->minDistance;
-			spawnAtAim = wf->spawnAtAim;
-			RemoteIdx idx = wf->base;
-			if(player.chargeLevel > 0 && player.chargeLevel <= wf->charge.size()) idx = wf->charge[player.chargeLevel - 1];
-			else if(player.firingCombo > 0 && player.firingCombo <= wf->combo.size()) idx = wf->combo[player.firingCombo - 1];
-			player.shotCount[m]++;
-			if(wf->countRate > 0 && wf->countRemote != RemoteIdx::INVALID && player.shotCount[m] % wf->countRate == 0) idx = wf->countRemote;
-			if(wf->replaceStatus != 0 && wf->replaceRemote != RemoteIdx::INVALID && FindActiveStatus(player.index, wf->replaceStatus)) {
-				idx = wf->replaceRemote;
-				ConsumeStatus(player.index, wf->replaceStatus);
-				LOG("Passive :: %ls weapon status %d used -> remote %d", player.name.data(), wf->replaceStatus, (i32)idx);
-			}
-			const Remote* r = content.FindRemote(idx);
-			if(r) remote = r;
-			LOG("Shot :: %ls firing remote %d (combo %d charge %d count %d)", player.name.data(), (i32)idx, player.firingCombo, player.chargeLevel, player.shotCount[m]);
-		}
-	}
+	const WeaponFiring& wf = ActiveWeaponFiring(player, shotStance);
+	const f32 aimMax = wf.maxDistance > 0 ? wf.maxDistance : WEAPON_SHOT_MAX_DISTANCE;
+	const f32 aimMin = wf.minDistance;
+	const bool spawnAtAim = wf.spawnAtAim;
+	const RemoteIdx idx = SelectWeaponRemote(player, wf);
+	const Remote* remote = content.FindRemote(idx);
+	ASSERT(remote);
+	LOG("Shot :: %ls firing remote %d (combo %d charge %d count %d)", player.name.data(), (i32)idx, player.firingCombo, player.chargeLevel, player.shotCount[player.mainCharaID & 1]);
 
 	const Remote* bomb = remote ? content.FindRemote(remote->destroyCreateRemote) : nullptr;
 	if(spawnAtAim && remote) {
-		f32 reach = MAX(MIN(distance > 1.0f ? distance : ClassAttackRange(classType) * WEAPON_RANGE_SCALE, aimMax), aimMin);
+		f32 reach = MAX(MIN(distance > 1.0f ? distance : WeaponReach(*remote, wf), aimMax), aimMin);
 		const vec3 aimPos = vec3(vec2(origin) + dir * reach, player.body->GetWorldPos().z);
 		replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(dir.y, dir.x)));
 		const bool bot = player.clientHd == ClientHandle::INVALID;
@@ -136,7 +101,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		return;
 	}
 
-	const f32 classRange = ClassAttackRange(classType) * WEAPON_RANGE_SCALE;
+	const f32 classRange = WeaponReach(*remote, wf);
 	const bool reliable = distance >= WEAPON_SHOT_RELIABLE_DISTANCE;
 	const bool graph = remote && remote->behaviorType == Remote::BehaviorType::GRAPH;
 
@@ -443,14 +408,46 @@ void World::OnWeaponAimPacket(Player& player, f32 aimYaw)
 	player.pendingAimTime = localTime;
 }
 
+const WeaponFiring& World::ActiveWeaponFiring(const Player& p, i8 stance) const
+{
+	const WeaponIndex weapon = (p.mainCharaID & 1) == 0 ? p.mainWeapon : p.subWeapon;
+	const WeaponFiring* wf = GetGameXmlContent().FindWeaponFiring((i32)weapon, stance);
+	ASSERT(wf);
+	return *wf;
+}
+
+RemoteIdx World::SelectWeaponRemote(Player& player, const WeaponFiring& wf)
+{
+	const u32 m = player.mainCharaID & 1;
+	RemoteIdx idx = wf.base;
+	if(player.chargeLevel > 0 && player.chargeLevel <= wf.charge.size()) idx = wf.charge[player.chargeLevel - 1];
+	else if(player.firingCombo > 0 && player.firingCombo <= wf.combo.size()) idx = wf.combo[player.firingCombo - 1];
+	player.shotCount[m]++;
+	if(wf.countRate > 0 && wf.countRemote != RemoteIdx::INVALID && player.shotCount[m] % wf.countRate == 0) idx = wf.countRemote;
+	if(wf.replaceStatus != 0 && wf.replaceRemote != RemoteIdx::INVALID && FindActiveStatus(player.index, wf.replaceStatus)) {
+		idx = wf.replaceRemote;
+		ConsumeStatus(player.index, wf.replaceStatus);
+		LOG("Passive :: %ls weapon status %d used -> remote %d", player.name.data(), wf.replaceStatus, (i32)idx);
+	}
+	return idx;
+}
+
+f32 World::WeaponRange(const Player& p) const
+{
+	const WeaponFiring& wf = ActiveWeaponFiring(p, p.Main().stance);
+	const Remote* remote = GetGameXmlContent().FindRemote(wf.base);
+	ASSERT(remote);
+	return WeaponReach(*remote, wf);
+}
+
 bool World::WeaponIsMelee(const Player& p) const
 {
-	const auto& content = GetGameXmlContent();
-	const WeaponIndex weapon = (p.mainCharaID & 1) == 0 ? p.mainWeapon : p.subWeapon;
-	const WeaponFiring* wf = content.FindWeaponFiring((i32)weapon, p.Main().stance);
-	const Remote* wr = wf ? content.FindRemote(wf->base) : nullptr;
-	if(wr && wr->maxSpeed > 0) return false;
-	return ClassIsMelee(p.Main().classType);
+	const WeaponFiring& wf = ActiveWeaponFiring(p, p.Main().stance);
+	const Remote* remote = GetGameXmlContent().FindRemote(wf.base);
+	ASSERT(remote);
+	if(remote->maxSpeed > 0 || remote->behaviorType != Remote::BehaviorType::NONETARGET || wf.spawnAtAim) return false;
+	if(remote->boundType != Remote::BoundType::E_BOUND_BOX && remote->boundType != Remote::BoundType::E_BOUND_SPHERE) return false;
+	return WeaponReach(*remote, wf) <= WEAPON_MELEE_MAX_RANGE;
 }
 
 f32 World::WeaponHitDamage(const Player& player, const Remote* remote) const

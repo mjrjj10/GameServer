@@ -5,7 +5,6 @@
 #include "world.h"
 
 static const f32 COMBAT_ATTACK_STAT = 0.0f;
-static const f32 WEAPON_RANGE_SCALE = 1.1f;
 static const f32 WEAPON_TARGET_RADIUS = 110.0f;
 static const f32 PROJECTILE_HIT_TOLERANCE = 20.0f;
 static const f32 WEAPON_PROJECTILE_HIT_HEIGHT = 300.0f;
@@ -23,20 +22,6 @@ static const i32 STAT_ULTIMATE = 37;
 static const f32 WEAPON_HIT_TOLERANCE = 50.0f;
 static const f32 OBSTRUCT_JUMPABLE_HEIGHT = 120.0f;
 static const f32 OBSTRUCT_SIDE = 50.0f;
-
-static inline f32 ClassAttackRange(ClassType classType)
-{
-	static const f32 ranges[] = {
-		0, 820, 1600, 450, 730, 480, 1100, 300, 600, 400,
-		1200, 900, 380, 1200, 400, 800, 800, 800, 1200, 1000,
-		1500, 800, 800, 550, 300, 300, 300, 1400, 1400, 400,
-		300, 480, 500, 1100, 450, 1100, 300, 300, 300, 1200,
-		950,
-	};
-	const i32 i = (i32)classType;
-	if(i > 0 && i < (i32)(sizeof(ranges)/sizeof(ranges[0]))) return ranges[i];
-	return 800;
-}
 
 static inline f32 SkillMoveDuration(const GameXmlContent& content, ClassType cls, const GameXmlContent::Action& action, i32 animIndex)
 {
