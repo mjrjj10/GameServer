@@ -1897,7 +1897,7 @@ void Replication::FrameDifference()
 				packet.Write<LocalActorID>(localCasterID); // entityID
 				packet.Write<i32>(0); // ret
 				packet.Write<SkillID>(cast.skillID);
-				packet.Write<u8>(0); // costLevel
+				packet.Write<i8>(cast.costLevel);
 				packet.Write<ActionStateID>(cast.sendAction ? cast.actionID : ActionStateID::INVALID);
 				packet.Write<float3>(v2f(cast.castPos));
 
@@ -1936,7 +1936,7 @@ void Replication::FrameDifference()
 				packet.Write<LocalActorID>(localCasterID); // entityID
 				packet.Write<i32>(0); // ret
 				packet.Write<SkillID>(exec.skillID);
-				packet.Write<u8>(0); // costLevel
+				packet.Write<i8>(exec.costLevel);
 				packet.Write<ActionStateID>(exec.actionID);
 				packet.Write<float3>(v2f(exec.castPos));
 

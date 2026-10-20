@@ -117,6 +117,7 @@ struct World
 		u8 chargeLevel = 0;
 		i32 weaponState = 0;
 		Time chargeStart = Time::ZERO;
+		u8 chargeAnnounced = 0;
 		u32 resourceGainCast = 0;
 		eastl::fixed_vector<u32,10,false> resourceGainTargets;
 		eastl::array<i32,2> shotCount = { 0, 0 };
@@ -724,6 +725,7 @@ public:
 	void ToggleOn(Player& player, SkillID skillID, const vec3& castPos);
 	void ToggleOff(Player& player);
 	void UpdateToggles();
+	void UpdateWeaponCharges();
 	void SpawnCreatureFromRemote(const RemoteInst& parent, i32 creature, const vec3& pos);
 	f32 WeaponHitDamage(const Player& player, const Remote* remote) const;
 	void PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& center, f32 range, i32 skipDebuffIndex);

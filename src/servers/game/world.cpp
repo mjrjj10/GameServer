@@ -196,6 +196,7 @@ void World::Update(Time localTime_)
 	UpdateUltimateGauges((f32)tdelta);
 	UpdateStatuses();
 	UpdateToggles();
+	UpdateWeaponCharges();
 	UpdateSummons();
 	UpdateSummonAi((f32)tdelta);
 	if(!frozen) UpdatePassives();
@@ -597,7 +598,10 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	rpCast.casterUID = player.Main().UID;
 	rpCast.skillID = skillID;
 	rpCast.castPos = castPos;
+	const auto* costLevels = castCostLevel ? GetGameXmlContent().FindSkillCostLevels((i32)skillID) : nullptr;
+	const i8 costLevelIndex = costLevels ? (i8)(castCostLevel - costLevels->data() + 1) : 0;
 	rpCast.actionID = actionState;
+	rpCast.costLevel = costLevelIndex;
 	rpCast.sendAction = cast != nullptr;
 
 	rpCast.casterPos = player.body->GetWorldPos();
@@ -678,6 +682,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	rpExec.skillID = skillID;
 	rpExec.castPos = castPos;
 	rpExec.actionID = actionState;
+	rpExec.costLevel = costLevelIndex;
 	eastl::copy(targets.begin(), targets.end(), eastl::back_inserter(rpExec.targetList));
 
 	rpExec.moveDuration = moveDuration;

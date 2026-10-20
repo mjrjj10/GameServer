@@ -6,7 +6,7 @@
 static const f32 WEAPON_NODE_MAX_FORWARD = 250.0f;
 static const i32 ULTIMATE_SKILL_SUFFIX = 50;
 static const f32 REPEAT_HIT_REDUCTION = 0.1f;
-static const f32 REPEAT_HIT_REDUCTION_CAP = 0.4f;
+static const f32 REPEAT_HIT_REDUCTION_CAP = 0.6f;
 static const f32 ORBIT_RADIUS = 150.0f;
 struct WorldRemoteSpawner
 {

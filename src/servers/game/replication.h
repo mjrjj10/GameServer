@@ -157,6 +157,7 @@ struct Replication
 		ActorUID casterUID;
 		SkillID skillID;
 		ActionStateID actionID;
+		i8 costLevel = 0;
 		bool sendAction = false;
 		vec3 castPos;
 		vec3 casterPos;
@@ -172,6 +173,7 @@ struct Replication
 		ActorUID casterUID;
 		SkillID skillID;
 		ActionStateID actionID;
+		i8 costLevel = 0;
 		vec3 castPos;
 		eastl::fixed_vector<ActorUID,10,false> targetList;
 

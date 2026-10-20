@@ -443,16 +443,33 @@ RemoteIdx World::SelectWeaponRemote(Player& player, const WeaponFiring& wf)
 
 void World::OnWeaponState(Player& player, i32 state, u8 chargeLevel, u8 firingCombo)
 {
-	if(state == WEAPON_STATE_CHARGE && player.weaponState != WEAPON_STATE_CHARGE) player.chargeStart = localTime;
-	if(state == WEAPON_STATE_FIRE && player.weaponState == WEAPON_STATE_CHARGE && chargeLevel == 0) {
-		const WeaponFiring& wf = ActiveWeaponFiring(player, player.Main().stance);
-		const f64 held = TimeDiffSec(TimeDiff(player.chargeStart, localTime));
-		while(chargeLevel < wf.chargeTime.size() && chargeLevel < wf.charge.size() && held >= wf.chargeTime[chargeLevel]) chargeLevel++;
-		if(chargeLevel > 0) LOG("Shot :: %ls charged %.2fs -> level %d", player.name.data(), held, (i32)chargeLevel);
+	if(state == WEAPON_STATE_CHARGE && player.weaponState != WEAPON_STATE_CHARGE) {
+		player.chargeStart = localTime;
+		player.chargeAnnounced = 0;
+	}
+	if(state == WEAPON_STATE_FIRE && player.weaponState == WEAPON_STATE_CHARGE) {
+		if(chargeLevel != player.chargeAnnounced) LOG("Shot :: %ls client charge level %d, announced %d", player.name.data(), (i32)chargeLevel, (i32)player.chargeAnnounced);
+		chargeLevel = player.chargeAnnounced;
+		player.chargeAnnounced = 0;
 	}
 	player.firingCombo = firingCombo;
 	player.chargeLevel = chargeLevel;
 	player.weaponState = state;
+}
+
+void World::UpdateWeaponCharges()
+{
+	foreach(it, players) {
+		if(it->weaponState != WEAPON_STATE_CHARGE || it->dead || it->clientHd == ClientHandle::INVALID) continue;
+		const WeaponFiring& wf = ActiveWeaponFiring(*it, it->Main().stance);
+		const f64 held = TimeDiffSec(TimeDiff(it->chargeStart, localTime));
+		while(it->chargeAnnounced < wf.chargeTime.size() && it->chargeAnnounced < wf.charge.size() && held >= wf.chargeTime[it->chargeAnnounced]) {
+			it->chargeAnnounced++;
+			const WeaponIndex weapon = (it->mainCharaID & 1) == 0 ? it->mainWeapon : it->subWeapon;
+			replication->RelayWeaponState(ClientHandle::INVALID, it->Main().UID, (i32)weapon, WEAPON_STATE_CHARGE, it->chargeAnnounced, it->firingCombo);
+			LOG("Shot :: %ls charge level %d after %.2fs", it->name.data(), (i32)it->chargeAnnounced, held);
+		}
+	}
 }
 
 f32 World::WeaponRange(const Player& p) const
