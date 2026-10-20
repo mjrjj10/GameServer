@@ -51,6 +51,9 @@ struct ShowcaseState
 	i32 stanceShots = 0;
 	Time stanceShotAt = Time::ZERO;
 	i32 stanceShooter = -1;
+	i32 evadeProbe = 0;
+	Time evadeProbeAt = Time::ZERO;
+	i32 evadeCaster = -1;
 	vec3 comboPos = vec3(0);
 	i32 comboCaster = -1;
 	ActorUID comboTarget = ActorUID::INVALID;

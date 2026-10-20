@@ -15,6 +15,8 @@ static const i32 MIRROR_CHARGE_HOLD_MARGIN_MS = 300;
 static const i32 SHOWCASE_STANCE_SHOTS = 3;
 static const f32 SHOWCASE_STANCE_WINDOW_SEC = 4.0f;
 static const i32 SHOWCASE_STANCE_FIRST_SHOT_MS = 900;
+static const i32 SHOWCASE_EVADE_HIT_MS = 150;
+static const i32 SHOWCASE_EVADE_COUNTER_MS = 600;
 static const f32 GX_TEST_BOARD_GAP = 250.0f;
 static const f32 GX_TEST_DRIVE_STEP = 150.0f;
 static const i32 GX_TEST_DRIVE_STEPS = 7;
@@ -169,14 +171,8 @@ void World::UpdateShowcase()
 		const Player& aimAt = players[showcase.prevDummy];
 		if(shooter.dead || shooter.Main().stance == 0) showcase.stanceShots = 0;
 		else {
-			const vec3 from = shooter.body->GetWorldPos();
-			const vec2 rel = vec2(aimAt.body->GetWorldPos()) - vec2(from);
-			const f32 len = glm::length(rel);
-			const vec2 dir = len > 1.0f ? rel / len : vec2(cosf(shooter.input.rot.upperYaw), sinf(shooter.input.rot.upperYaw));
-			shooter.weaponAimYaw = atan2f(dir.y, dir.x);
 			LOG("Showcase :: stance %d weapon shot (%d left)", (i32)shooter.Main().stance, showcase.stanceShots - 1);
-			if(WeaponIsMelee(shooter)) PlayerWeaponFire(shooter);
-			else PlayerWeaponShot(shooter, from, dir, len);
+			ShowcaseWeaponAt(shooter, aimAt);
 			const u32 wm = shooter.mainCharaID & 1;
 			const WeaponIndex weapon = wm == 0 ? shooter.mainWeapon : shooter.subWeapon;
 			const f32 stanceDelay = GetGameXmlContent().GetWeaponStanceFireDelay((i32)weapon, shooter.Main().stance);
@@ -185,11 +181,31 @@ void World::UpdateShowcase()
 			showcase.stanceShots--;
 		}
 	}
+	if(showcase.evadeProbe > 0 && localTime >= showcase.evadeProbeAt && showcase.evadeCaster >= 0) {
+		Player& evader = players[showcase.evadeCaster];
+		Player& other = players[showcase.prevDummy];
+		if(showcase.evadeProbe == 2) {
+			bool armed = false;
+			foreach_const(st, activeStatuses) if(st->targetIndex == evader.index && st->info && st->info->type == StatusType::STATUS_ON_EVADE) armed = true;
+			if(!armed || !HasStatusType(evader, StatusType::EVADE) || evader.dead || other.dead) showcase.evadeProbe = 0;
+			else {
+				LOG("Showcase :: evade probe: %ls hits %ls during the evade", other.name.data(), evader.name.data());
+				DamagePlayer(other, evader, SkillID::INVALID, (i32)WeaponHitDamage(other, nullptr));
+				showcase.evadeProbe = 1;
+				showcase.evadeProbeAt = TimeAdd(localTime, TimeMsToTime(SHOWCASE_EVADE_COUNTER_MS));
+			}
+		}
+		else {
+			LOG("Showcase :: evade probe: %ls weapon attack", evader.name.data());
+			if(!evader.dead) ShowcaseWeaponAt(evader, other);
+			showcase.evadeProbe = 0;
+		}
+	}
 	if(showcase.done) return;
 	if(localTime < showcase.next) {
 		if(showcase.minNext == Time::ZERO || localTime < showcase.minNext) return;
 		bool quiet = remoteInsts.empty() && pendingRemotes.empty() && pendingStatuses.empty() && pendingSummons.empty() &&
-			pendingSummonCommands.empty() && skillProgramList.empty() && showcase.comboSkill == 0 && showcase.stanceShots == 0;
+			pendingSummonCommands.empty() && skillProgramList.empty() && showcase.comboSkill == 0 && showcase.stanceShots == 0 && showcase.evadeProbe == 0;
 		const Player& qc = players[showcase.prevCaster];
 		const Player& qd = players[showcase.prevDummy];
 		if(qc.clientHd != ClientHandle::INVALID && !showcase.castSeen) quiet = false;
@@ -494,6 +510,8 @@ void World::UpdateShowcase()
 	i32 expect = -1;
 	i32 chargeHoldMs = 0;
 	u8 chargeShotLevel = 0;
+	bool countShot = false;
+	bool statusShot = false;
 	showcase.testCount = 1;
 	if(skill != 0) {
 		range = content.GetSkillRange(skill);
@@ -550,7 +568,7 @@ void World::UpdateShowcase()
 		f32 wrange = wr ? (wr->maxDistance > 0 ? wr->maxDistance : wr->lifeTime * wr->maxSpeed) : 0;
 		if(wf && wf->maxDistance > 0 && wr && wr->behaviorType == Remote::BehaviorType::GRAPH) wrange = wf->maxDistance;
 		const Remote* bomb = wr ? content.FindRemote(wr->destroyCreateRemote) : nullptr;
-		const f32 splash = bomb ? bomb->boundSize[0] * 0.5f : 0;
+		const f32 splash = bomb ? bomb->boundSize[0] * 0.5f : (wr && wr->behaviorType == Remote::BehaviorType::GRAPH ? wr->boundSize[0] * 0.5f : 0);
 		const f32 front = (wr && wr->boundType == Remote::BoundType::E_BOUND_BOX) ? MAX(wr->offsetY + wr->boundSize[1] * 0.5f, 0.0f) : 0.0f;
 		range = wrange;
 		struct T { f32 dist; f32 side; const char* name; i32 expect; };
@@ -571,8 +589,28 @@ void World::UpdateShowcase()
 			if(wf->maxDistance > 0 && cr->behaviorType == Remote::BehaviorType::GRAPH) crange = wf->maxDistance;
 			tests.push_back({ crange > 0 ? crange - 40.0f : 300.0f, 0, "charge", crange > 0 ? 1 : -1 });
 		}
+		const Remote* countRemote = wf && wf->countRate > 0 ? content.FindRemote(wf->countRemote) : nullptr;
+		if(countRemote) {
+			f32 nrange = countRemote->maxDistance > 0 ? countRemote->maxDistance : countRemote->lifeTime * countRemote->maxSpeed;
+			if(wf->maxDistance > 0 && countRemote->behaviorType == Remote::BehaviorType::GRAPH) nrange = wf->maxDistance;
+			tests.push_back({ nrange > 0 ? nrange - 40.0f : 300.0f, 0, "count", nrange > 0 ? 1 : -1 });
+		}
+		const Remote* statusRemote = wf && wf->replaceStatus != 0 ? content.FindRemote(wf->replaceRemote) : nullptr;
+		if(statusRemote) {
+			f32 srange = statusRemote->maxDistance > 0 ? statusRemote->maxDistance : statusRemote->lifeTime * statusRemote->maxSpeed;
+			if(wf->maxDistance > 0 && statusRemote->behaviorType == Remote::BehaviorType::GRAPH) srange = wf->maxDistance;
+			tests.push_back({ srange > 0 ? MIN(srange, wrange > 0 ? wrange : srange) - 40.0f : 300.0f, 0, "status", srange > 0 ? 1 : -1 });
+		}
 		showcase.testCount = (i32)tests.size();
 		const T& t = tests[MIN(showcase.rangeIdx, (i32)tests.size() - 1)];
+		if(statusRemote && EA::StdC::Strcmp(t.name, "status") == 0) {
+			statusShot = true;
+			LOG("Showcase :: status shot: owner status %d -> remote %d mult=%.2f", wf->replaceStatus, (i32)wf->replaceRemote, statusRemote->attackMultiplier);
+		}
+		if(countRemote && EA::StdC::Strcmp(t.name, "count") == 0) {
+			countShot = true;
+			LOG("Showcase :: count shot every %d -> remote %d mult=%.2f", wf->countRate, (i32)wf->countRemote, countRemote->attackMultiplier);
+		}
 		if(cr && EA::StdC::Strcmp(t.name, "charge") == 0) {
 			chargeShotLevel = (u8)wf->charge.size();
 			chargeHoldMs = (i32)(wf->chargeTime.back() * 1000.0f) + MIRROR_CHARGE_HOLD_MARGIN_MS;
@@ -716,6 +754,11 @@ void World::UpdateShowcase()
 		const vec2 dir = len > 1.0f ? rel / len : vec2(1, 0);
 		caster.weaponAimYaw = atan2f(dir.y, dir.x);
 		caster.chargeLevel = chargeShotLevel;
+		if(statusShot) ApplyStatus(caster, caster, ActiveWeaponFiring(caster, caster.Main().stance).replaceStatus);
+		if(countShot) {
+			const WeaponFiring& cwf = ActiveWeaponFiring(caster, caster.Main().stance);
+			caster.shotCount[caster.mainCharaID & 1] = cwf.countRate - 1;
+		}
 		if(WeaponIsMelee(caster)) PlayerWeaponFire(caster);
 		else PlayerWeaponShot(caster, casterPos, dir, len);
 		caster.chargeLevel = 0;
@@ -723,6 +766,11 @@ void World::UpdateShowcase()
 	else if(step >= 1 && step <= 6) {
 		const bool targetInRange = range <= 0 || glm::length(vec2(dummyPos) - vec2(casterPos)) <= range;
 		if(skill != 0) PlayerCastSkill(caster, SkillID(skill), castPos, Slice<const ActorUID>(&targetUID, targetInRange ? 1 : 0), 0);
+		if(step == 6 && skill != 0 && caster.clientHd == ClientHandle::INVALID) {
+			showcase.evadeProbe = 2;
+			showcase.evadeProbeAt = TimeAdd(localTime, TimeMsToTime(SHOWCASE_EVADE_HIT_MS));
+			showcase.evadeCaster = (i32)caster.index;
+		}
 		showcase.stanceShots = 0;
 		if(skill != 0 && caster.clientHd == ClientHandle::INVALID && content.FindSkillStance(skill) && caster.Main().stance != 0) {
 			showcase.stanceShots = SHOWCASE_STANCE_SHOTS;
@@ -1156,6 +1204,17 @@ void World::UpdateGxTest(Player& human, Player& gx)
 			showcase.done = true;
 		} break;
 	}
+}
+
+void World::ShowcaseWeaponAt(Player& shooter, const Player& target)
+{
+	const vec3 from = shooter.body->GetWorldPos();
+	const vec2 rel = vec2(target.body->GetWorldPos()) - vec2(from);
+	const f32 len = glm::length(rel);
+	const vec2 dir = len > 1.0f ? rel / len : vec2(cosf(shooter.input.rot.upperYaw), sinf(shooter.input.rot.upperYaw));
+	shooter.weaponAimYaw = atan2f(dir.y, dir.x);
+	if(WeaponIsMelee(shooter)) PlayerWeaponFire(shooter);
+	else PlayerWeaponShot(shooter, from, dir, len);
 }
 
 void World::ShowcaseOnCast(const Player& player)
