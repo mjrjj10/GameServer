@@ -1272,7 +1272,7 @@ void Replication::SendAttackActionToOthers(ClientHandle senderHd, ActorUID actor
 	}
 }
 
-void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap)
+void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap, f32 scale)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
@@ -1284,7 +1284,7 @@ void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID 
 		const f32 dist = glm::length(to - from);
 		PacketWriter<Sv::SN_AddStatus,128> packet;
 		packet.Write<u8>(0);
-		packet.Write<f32>(1.0f);
+		packet.Write<f32>(scale);
 		packet.Write<float3>(v2f(from));
 		packet.Write<float3>(v2f(to));
 		packet.Write<f32>(dist);

@@ -261,10 +261,23 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 		if(enemy || friendGroup) {
 			foreach_const(st, remote.statuses) {
 				i32 statusID = st->statusID;
+				f32 durationOverride = 0;
+				f32 distanceOverride = 0;
 				if(inst.costLevel) {
-					foreach_const(sr, inst.costLevel->statusReplace) if(sr->first == statusID) statusID = sr->second;
+					foreach_const(sr, inst.costLevel->statusReplace) {
+						if(sr->statusID != st->statusID) continue;
+						statusID = sr->replaceID;
+						durationOverride = sr->durationSec;
+						distanceOverride = sr->distanceRatio;
+					}
 				}
-				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) { statusCasterOverride = inst.sourceUID; ApplyStatus(owner, target, statusID, (f32)inst.damage); statusCasterOverride = ActorUID::INVALID; }
+				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) {
+					statusCasterOverride = inst.sourceUID;
+					statusDistanceRatioOverride = distanceOverride;
+					ApplyStatus(owner, target, statusID, (f32)inst.damage, durationOverride);
+					statusDistanceRatioOverride = 0;
+					statusCasterOverride = ActorUID::INVALID;
+				}
 			}
 		}
 		if(!enemy) {

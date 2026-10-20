@@ -602,6 +602,7 @@ struct World
 
 	u32 nextActorUID;
 	Time localTime = Time::ZERO;
+	Time gameStartedAt = Time::ZERO;
 
 	PhysicsScene physics;
 
@@ -647,6 +648,7 @@ struct World
 	void RelayWarp(ActorNpc& npc, const vec3& to);
 	void ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos);
 	ActorUID statusCasterOverride = ActorUID::INVALID;
+	f32 statusDistanceRatioOverride = 0;
 	bool statusFromBehind = false;
 	bool statusForceCenterSet = false;
 	vec3 statusForceCenter = vec3(0);
@@ -752,7 +754,7 @@ private:
 	void ApplyPassiveStatusRule(const PassiveStatusRule& rule, Player& owner, Player* hitTarget);
 	f32 PassiveWeaponDamageMul(Player& attacker, Player& target);
 	const ActiveStatus* FindPassiveOfType(const Player& p, StatusType type) const;
-	bool PassiveBlocksCC(Player& target, const StatusInfo& info, f32* duration);
+	bool PassiveBlocksCC(Player& target, const StatusInfo& info, f32* ccScale);
 	void PassiveOnDamaged(Player& target);
 	bool PassiveOnLethal(Player& target);
 	void UpdatePassives();

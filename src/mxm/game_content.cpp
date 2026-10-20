@@ -1652,6 +1652,18 @@ static void ParseReplaceList(XMLElement* pLevel, const char* name, const char* f
 	}
 }
 
+static void ParseStatusReplaceList(XMLElement* pLevel, GameXmlContent::StatusReplaceList& out)
+{
+	for(XMLElement* p = pLevel->FirstChildElement("_STATUSLIST"); p && !out.full(); p = p->NextSiblingElement("_STATUSLIST")) {
+		GameXmlContent::StatusReplace sr;
+		sr.statusID = p->IntAttribute("_StatusIndex");
+		sr.replaceID = p->IntAttribute("_ReplaceIndex", sr.statusID);
+		sr.durationSec = p->FloatAttribute("_DurationTime") / 1000.0f;
+		p->QueryFloatAttribute("_DistanceRatio", &sr.distanceRatio);
+		if(sr.statusID != 0) out.push_back(sr);
+	}
+}
+
 bool GameXmlContent::LoadSkillUpgrades()
 {
 	eastl::hash_map<i32, eastl::fixed_vector<eastl::pair<i32,SkillUpgrade>,8,false>> byPriority;
@@ -1670,7 +1682,7 @@ bool GameXmlContent::LoadSkillUpgrades()
 			pLevel->QueryFloatAttribute("_AttackMultiplier", &up.attackMultiplier);
 			pLevel->QueryFloatAttribute("_ConsumeMP", &up.consumeMP);
 			ParseReplaceList(pLevel, "_REMOTELIST", "_RemoteIndex", up.remoteReplace);
-			ParseReplaceList(pLevel, "_STATUSLIST", "_StatusIndex", up.statusReplace);
+			ParseStatusReplaceList(pLevel, up.statusReplace);
 		}
 		for(XMLElement* pCost = pSP->FirstChildElement("_COST_LEVEL"); pCost && !up.costLevelDamage.full(); pCost = pCost->NextSiblingElement("_COST_LEVEL")) {
 			XMLElement* pLevel = pCost->FirstChildElement("_PROPERTY_LEVEL");
@@ -2607,12 +2619,7 @@ bool GameXmlContent::LoadSkillCosts()
 						pR->QueryAttribute("_ReplaceIndex", &to);
 						if(from != 0 && to != 0 && !lvl.remoteReplace.full()) lvl.remoteReplace.push_back({ from, to });
 					}
-					for(XMLElement* pS = pLvl->FirstChildElement("_STATUSLIST"); pS; pS = pS->NextSiblingElement("_STATUSLIST")) {
-						i32 from = 0, to = 0;
-						pS->QueryAttribute("_StatusIndex", &from);
-						pS->QueryAttribute("_ReplaceIndex", &to);
-						if(from != 0 && to != 0 && !lvl.statusReplace.full()) lvl.statusReplace.push_back({ from, to });
-					}
+					ParseStatusReplaceList(pLvl, lvl.statusReplace);
 					for(XMLElement* pP = xmlSKILLPROPERTY.FirstChildElement()->FirstChildElement(); pP; pP = pP->NextSiblingElement()) {
 						XMLElement* pSP = pP->FirstChildElement("ST_SKILL_PROPERTY");
 						const char* spType = pSP ? pSP->Attribute("_Type") : nullptr;

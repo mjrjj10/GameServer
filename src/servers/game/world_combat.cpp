@@ -21,7 +21,21 @@ static const f32 PENETRATION_CAP = 50.0f;
 static const f32 SKILLDAMAGE_REDUCE_CAP = 80.0f;
 static const f32 TOOLTIP_SNIPER_CRIT_PER_MARK = 33.0f;
 static const i32 STATUS_ELECTRO_PASSIVE_BUFF_MPREGEN = 1230040011;
-static const i32 RESPAWN_DELAY_MS = 5000;
+static const f64 RESPAWN_BASE_UNTIL_SEC[] = { 50.0, 170.0 };
+static const i32 RESPAWN_BASE_MS[] = { 3000, 4000, 5000 };
+static const i32 RESPAWN_LEAD_MIN[] = { 1, 2, 4 };
+static const i32 RESPAWN_LEAD_BONUS_MS[] = { 2000, 4000, 7000 };
+
+static i32 RespawnDelayMs(f64 elapsedSec, i32 lead)
+{
+	i32 step = 0;
+	while(step < (i32)ARRAY_COUNT(RESPAWN_BASE_UNTIL_SEC) && elapsedSec >= RESPAWN_BASE_UNTIL_SEC[step]) step++;
+	i32 delay = RESPAWN_BASE_MS[step];
+	for(i32 i = ARRAY_COUNT(RESPAWN_LEAD_MIN) - 1; i >= 0; i--) {
+		if(lead >= RESPAWN_LEAD_MIN[i]) { delay += RESPAWN_LEAD_BONUS_MS[i]; break; }
+	}
+	return delay;
+}
 
 static bool ElementBeats(Element a, Element b)
 {
@@ -172,16 +186,19 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	if(chara.hp > 0) PassiveOnDamaged(target);
 	if(chara.hp == 0) {
 		target.dead = true;
-		target.tRespawn = TimeAdd(localTime, TimeMsToTime(RESPAWN_DELAY_MS));
-		LOG("Death :: %ls killed by %ls", target.name.data(), attacker.name.data());
 		attacker.kills++;
 		target.deaths++;
 		GrantSkillPoint(target);
 		i32 teamKills = 0;
+		i32 victimTeamKills = 0;
 		foreach_const(it, players) {
 			if(it->team == attacker.team) teamKills += it->kills;
+			if(it->team == target.team) victimTeamKills += it->kills;
 		}
+		const i32 respawnMs = gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills);
+		target.tRespawn = TimeAdd(localTime, TimeMsToTime(respawnMs));
+		LOG("Death :: %ls killed by %ls (respawn %d ms)", target.name.data(), attacker.name.data(), respawnMs);
 		replication->SendScoreToAll(attacker.userID, attacker.team, attacker.kills, teamKills, target.userID, target.deaths);
-		replication->SendDeathToAll(attacker.Main().UID, chara.UID, CreatureIndex(100000000 + (i32)chara.classType), target.userID, RESPAWN_DELAY_MS);
+		replication->SendDeathToAll(attacker.Main().UID, chara.UID, CreatureIndex(100000000 + (i32)chara.classType), target.userID, respawnMs);
 	}
 }

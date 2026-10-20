@@ -176,6 +176,7 @@ void Game::Update(Time localTime_)
 					replication.SendGameStart(p->clientHd);
 				}
 				tGameStarted = localTime;
+				if(!Config().DevShowcase) world.gameStartedAt = localTime;
 				world.ApplyAllPassives();
 				world.StartSkillPoints();
 			}

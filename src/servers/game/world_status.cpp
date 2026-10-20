@@ -8,6 +8,25 @@ static const f32 TOOLTIP_DEFENDER_CC_IMMUNE_SEC = 1.0f;
 static const f32 TOOLTIP_DEATHKNIGHT_REVIVE_HP = 0.30f;
 static const f64 SELF_DRAG_LINK_SEC = 0.6;
 static const f32 STATUS_PUSH_BASE_DISTANCE = 500.0f;
+static const f32 DEFEAT_PUSH_SEC = 1.0f;
+static const f32 DEFEAT_KNOCKDOWN_SEC = 1.5f;
+static const f32 DEFEAT_FLY_START_SEC = 1.0f;
+static const f32 DEFEAT_FLY_END_SEC = 0.5f;
+
+static bool DefeatGraphTimes(const StatusInfo* info, f32* duration, f32* graph)
+{
+	if(!info || info->timeRatio <= 0) return false;
+	switch(info->type) {
+		case StatusType::PUSH: *duration = *graph = DEFEAT_PUSH_SEC * info->timeRatio; return true;
+		case StatusType::KNOCKDOWN: *duration = *graph = DEFEAT_KNOCKDOWN_SEC * info->timeRatio; return true;
+		case StatusType::FLY:
+		case StatusType::AIRBORNE:
+			*graph = DEFEAT_FLY_START_SEC * info->timeRatio;
+			*duration = (DEFEAT_FLY_START_SEC + DEFEAT_FLY_END_SEC) * info->timeRatio;
+			return true;
+		default: return false;
+	}
+}
 
 bool World::HasStatusType(const Player& p, StatusType type) const
 {
@@ -93,7 +112,7 @@ bool World::HasStatusFromSkill(const Player& target, u32 casterIndex, i32 skillI
 	return false;
 }
 
-bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* duration)
+bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* ccScale)
 {
 	if(info.kind != StatusInfo::Kind::HARD_CC && info.kind != StatusInfo::Kind::ROOT) return false;
 	if(ShowcaseIsDummy(target)) return false;
@@ -112,7 +131,7 @@ bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* duratio
 		target.cleanseCharges = MIN(target.cleanseCharges + 1, st->info->customMax);
 	}
 	const f32 toughness = MasterStat(target.Main().classType, STAT_TOUGHNESS);
-	if(toughness > 0 && duration) *duration *= MAX(1.0f - toughness / 100.0f, 0.0f);
+	if(toughness > 0 && ccScale) *ccScale = MAX(1.0f - toughness / 100.0f, 0.0f);
 	return false;
 }
 
@@ -423,8 +442,14 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	if(target.dead || target.untargetable) return;
 	if(caster.team != target.team) target.statusesTaken++;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
-	f32 duration = durationOverride > 0 ? durationOverride : (info && info->durationSec > 0 ? info->durationSec : 1.0f);
-	if(info && caster.team != target.team && PassiveBlocksCC(target, *info, &duration)) return;
+	f32 duration = info && info->durationSec > 0 ? info->durationSec : 1.0f;
+	f32 graphDuration = duration * (info && info->timeRatio > 0 ? info->timeRatio : 1.0f);
+	DefeatGraphTimes(info, &duration, &graphDuration);
+	if(durationOverride > 0) duration = durationOverride;
+	f32 ccScale = 1.0f;
+	if(info && caster.team != target.team && PassiveBlocksCC(target, *info, &ccScale)) return;
+	duration *= ccScale;
+	graphDuration *= ccScale;
 	ShowcaseOnStatus(caster, target, statusID);
 	const bool permanent = info && info->permanent && durationOverride <= 0;
 	if(permanent) duration = 1000000.0f;
@@ -525,8 +550,8 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	const vec3 from = chainedPush ? vec3(vec2(target.pushTarget), target.body->GetWorldPos().z) : target.body->GetWorldPos();
 	vec3 to = from;
 	vec3 forceCenter = from;
-	const f32 graphDuration = duration * (info && info->timeRatio > 0 ? info->timeRatio : 1.0f);
-	const bool flyMove = info && info->type == StatusType::FLY && info->distanceRatio != 0;
+	const f32 distanceRatio = statusDistanceRatioOverride != 0 ? statusDistanceRatioOverride : (info ? info->distanceRatio : 0);
+	const bool flyMove = info && info->type == StatusType::FLY && distanceRatio != 0;
 	if(info && displacement && info->type != StatusType::AIRBORNE && (info->type != StatusType::FLY || flyMove)) {
 		vec2 dir = vec2(from - caster.body->GetWorldPos());
 		const f32 len = glm::length(dir);
@@ -557,7 +582,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		}
 		else {
 			f32 dist = info->type == StatusType::FORCEBACK && info->distance > 0 ? info->distance :
-				STATUS_PUSH_BASE_DISTANCE * (info->distanceRatio != 0 ? info->distanceRatio : 1.0f);
+				STATUS_PUSH_BASE_DISTANCE * (distanceRatio != 0 ? distanceRatio : 1.0f) * ccScale;
 			if(const PushToEdgeRule* edge = FindPushToEdgeRule(statusID)) {
 				const Remote* wave = GetGameXmlContent().FindRemote(edge->remote);
 				dist = wave ? MAX(wave->boundSize[0] * 0.5f - len, 0.0f) : dist;
@@ -621,7 +646,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			LOG("Hide :: sent HideDetect flag=%d about %ls to %ls", Config().DevHideDetectFlag, target.name.data(), viewer->name.data());
 		}
 	}
-	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, dragForce ? forceCenter : to, graphDuration);
+	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, dragForce ? forceCenter : to, graphDuration, 1, ccScale);
 }
 
 bool World::IsBlocked(const Player& p, bool attack, bool skill, bool shirk) const

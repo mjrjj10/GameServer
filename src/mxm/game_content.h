@@ -735,11 +735,18 @@ struct GameXmlContent
 	const eastl::fixed_vector<i32,4,false>* FindPassiveStatuses(ClassType c) const { auto f = passiveStatuses.find((i32)c); return f == passiveStatuses.end() ? nullptr : &f->second; }
 	const WeaponHeatInfo* FindWeaponHeat(i32 weaponID) const { auto f = weaponHeat.find(weaponID); return f == weaponHeat.end() ? nullptr : &f->second; }
 	f32 GetSkillBaseDamage(i32 skillID) const { auto f = skillBaseDamage.find(skillID); return f == skillBaseDamage.end() ? 0 : f->second; }
+	struct StatusReplace {
+		i32 statusID = 0;
+		i32 replaceID = 0;
+		f32 durationSec = 0;
+		f32 distanceRatio = 0;
+	};
+	typedef eastl::fixed_vector<StatusReplace,8,false> StatusReplaceList;
 	struct CostLevel {
 		f32 consume[3] = { 0, 0, 0 };
 		ActionStateID action = ActionStateID::INVALID;
 		eastl::fixed_vector<eastl::pair<i32,i32>,8,false> remoteReplace;
-		eastl::fixed_vector<eastl::pair<i32,i32>,8,false> statusReplace;
+		StatusReplaceList statusReplace;
 		f32 damageRatio = 1.0f;
 	};
 	eastl::hash_map<i32, eastl::fixed_vector<CostLevel,4,false>> skillCostLevels;
@@ -752,7 +759,7 @@ struct GameXmlContent
 		eastl::fixed_vector<eastl::pair<f32,f32>,4,false> costLevelDamage;
 		f32 consumeMP = -1;
 		eastl::fixed_vector<eastl::pair<i32,i32>,8,false> remoteReplace;
-		eastl::fixed_vector<eastl::pair<i32,i32>,8,false> statusReplace;
+		StatusReplaceList statusReplace;
 	};
 	typedef eastl::fixed_vector<SkillUpgrade,8,false> SkillUpgradeList;
 	eastl::hash_map<i32, SkillUpgradeList> skillUpgrades;

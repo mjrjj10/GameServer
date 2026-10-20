@@ -703,11 +703,15 @@ f32 World::PlayerSkillConsumeMP(const Player& player, i32 skillID) const
 	return GetGameXmlContent().GetSkillConsumeMP(skillID);
 }
 
-static void MergeReplace(eastl::fixed_vector<eastl::pair<i32,i32>,8,false>& into, const eastl::fixed_vector<eastl::pair<i32,i32>,8,false>& from)
+static i32 ReplaceKey(const eastl::pair<i32,i32>& e) { return e.first; }
+static i32 ReplaceKey(const GameXmlContent::StatusReplace& e) { return e.statusID; }
+
+template<typename List>
+static void MergeReplace(List& into, const List& from)
 {
 	foreach_const(r, from) {
-		auto it = eastl::find_if(into.begin(), into.end(), [&](const eastl::pair<i32,i32>& e) { return e.first == r->first; });
-		if(it != into.end()) it->second = r->second;
+		auto it = eastl::find_if(into.begin(), into.end(), [&](const auto& e) { return ReplaceKey(e) == ReplaceKey(*r); });
+		if(it != into.end()) *it = *r;
 		else if(!into.full()) into.push_back(*r);
 	}
 }
