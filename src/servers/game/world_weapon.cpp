@@ -3,7 +3,6 @@
 #include "world_common.h"
 #include <mxm/game_content.h>
 
-static const i32 WEAPON_HIT_DAMAGE = 120;
 static const f32 WEAPON_PROJECTILE_SPEED = 4000.0f;
 static const f32 WEAPON_MELEE_MAX_RANGE = 600.0f;
 static const f32 PROJECTILE_TARGET_RADIUS = 70.0f;
@@ -454,8 +453,8 @@ f32 World::WeaponHitDamage(const Player& player, const Remote* remote) const
 {
 	const u32 m = player.mainCharaID & 1;
 	const WeaponIndex weapon = m == 0 ? player.mainWeapon : player.subWeapon;
-	const f32 base = Config().DamageFormula ? GetGameXmlContent().GetWeaponAttack((i32)weapon) : 0.0f;
-	const f32 attack = base > 0 ? base : (f32)WEAPON_HIT_DAMAGE;
-	const f32 mult = Config().DamageFormula && remote && remote->attackMultiplier > 0 ? remote->attackMultiplier : 1.0f;
+	const f32 attack = GetGameXmlContent().GetWeaponAttack((i32)weapon);
+	ASSERT(attack > 0);
+	const f32 mult = remote && remote->attackMultiplier > 0 ? remote->attackMultiplier : 1.0f;
 	return attack * mult * MAX(1.0f + StatusModMulSum(player, StatusMod::ATTACK) / 100.0f, 0.0f);
 }

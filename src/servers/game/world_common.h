@@ -8,7 +8,6 @@ static const f32 COMBAT_ATTACK_STAT = 0.0f;
 static const f32 WEAPON_TARGET_RADIUS = 110.0f;
 static const f32 PROJECTILE_HIT_TOLERANCE = 20.0f;
 static const f32 WEAPON_PROJECTILE_HIT_HEIGHT = 300.0f;
-static const i32 SKILL_FALLBACK_DAMAGE = 250;
 static const i32 STAT_STAMINA = 2;
 static const i32 STAT_MOVESPEED = 14;
 static const i32 STAT_MANA = 35;
@@ -48,13 +47,13 @@ static inline f32 SkillDamage(SkillID skillID)
 {
 	const auto& content = GetGameXmlContent();
 	auto found = content.skillMap.find(skillID);
-	if(found == content.skillMap.end()) return (f32)SKILL_FALLBACK_DAMAGE;
+	if(found == content.skillMap.end()) return 0;
 	SkillNormalModel& skill = const_cast<SkillNormalModel&>(found->second);
 	SkillNormalLevelModel& level = *skill.getSkillNormalLevelByIndex(0);
 	const f32 ttBase = content.GetSkillBaseDamage((i32)skillID);
 	const f32 base = ttBase > 0 ? ttBase : level.getBaseDamage();
 	const f32 damage = base + COMBAT_ATTACK_STAT * level.getAttackMultiplier();
-	return damage > 0 ? damage : (f32)SKILL_FALLBACK_DAMAGE;
+	return MAX(damage, 0.0f);
 }
 
 static inline const WeaponHeatInfo* ActiveWeaponHeat(const World::Player& player)

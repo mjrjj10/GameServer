@@ -701,17 +701,10 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 
 	const bool castRelease = followUp && forcedAction == skill.action;
 	if(castRelease && player.lastComboSkill == skillID) player.lastComboSkill = SkillID::INVALID;
-	const bool remotesScheduled = ScheduleSkillRemotes(player, skillID, castPos, targets, angle, followUp && !castRelease ? 0 : -1, cast ? cast->action : forcedAction);
+	ScheduleSkillRemotes(player, skillID, castPos, targets, angle, followUp && !castRelease ? 0 : -1, cast ? cast->action : forcedAction);
 	castCostLevel = nullptr;
 	if(cast) StartCasting(player, skillID, *cast, castPos, targets, action);
 	skillProgramList.back().passes = lastAnimPasses;
-	bool effectCommands = false;
-	foreach_const(cmd, action.commands) {
-		if(cmd->type == ActionCommand::Type::STATUS || cmd->type == ActionCommand::Type::STATUS_SKILL_TARGET || cmd->type == ActionCommand::Type::ENTITY) effectCommands = true;
-	}
-	if(!remotesScheduled && !followUp && !effectCommands && !cast) {
-		PlayerSkillDamage(player, skillID, castPos, targets, angle);
-	}
 
 	if(!followUp && player.clientHd != ClientHandle::INVALID) UpdateComboSlot(player, skillID, skill.type, castPos);
 	if(!followUp) {

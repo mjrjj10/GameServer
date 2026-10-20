@@ -756,6 +756,5 @@ private:
 	f32 LagDistToPoint(const Player& p, const vec2& point) const;
 	vec2 LagClosestPos(const Player& p, const vec2& point) const;
 	void RemoteHit(RemoteInst& inst, Player& target);
-	void PlayerSkillDamage(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle);
 	void DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 damage, const Projectile* proj = nullptr, u32 remoteID = 0, RemoteIdx remoteDoc = RemoteIdx::INVALID, vec2 remoteDir = vec2(1, 0));
 };

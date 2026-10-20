@@ -40,14 +40,6 @@ static f32 ElementMultiplier(const World::Player& attacker, const World::Player&
 	return 1.0f;
 }
 
-static bool InFrontBox(const vec3& origin, const vec2& dir, f32 length, f32 halfWidth, const vec3& pos)
-{
-	const vec2 rel = vec2(pos - origin);
-	const f32 along = glm::dot(rel, dir);
-	if(along < 0 || along > length) return false;
-	return fabsf(rel.x * dir.y - rel.y * dir.x) <= halfWidth;
-}
-
 void World::HealPlayer(Player& healer, Player& target, i32 amount)
 {
 	if(target.dead || amount <= 0) return;
@@ -68,53 +60,6 @@ f32 World::BodyMidHeight(const Player& p) const
 {
 	if(p.Main().classType == ClassType::NONE) return 0;
 	return (f32)GetGameXmlContent().GetMaster(p.Main().classType).character.getColliderHeight() * 0.5f;
-}
-
-void World::PlayerSkillDamage(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle)
-{
-	const auto& content = GetGameXmlContent();
-	auto found = content.skillMap.find(skillID);
-	if(found == content.skillMap.end()) return;
-
-	SkillNormalModel& skill = const_cast<SkillNormalModel&>(found->second);
-	if(skill.type != SkillType::NORMAL && skill.type != SkillType::COMBO) return;
-
-	SkillNormalLevelModel& level = *skill.getSkillNormalLevelByIndex(0);
-	i32 damage = (i32)(level.getBaseDamage() + COMBAT_ATTACK_STAT * level.getAttackMultiplier());
-	if(damage <= 0) damage = SKILL_FALLBACK_DAMAGE;
-
-	const f32 rangeX = level.getSkillRangeLengthX();
-	const f32 rangeY = level.getSkillRangeLengthY();
-	const vec2 dir = vec2(cosf(angle), sinf(angle));
-	const vec3 origin = player.body->GetWorldPos();
-	const bool targetPosition = glm::length(castPos) > 1.0f;
-
-	foreach(it, players) {
-		if(it->team == player.team || it->dead || it->untargetable) continue;
-		const vec3 pos = it->body->GetWorldPos();
-
-		bool hit = false;
-		foreach_const(t, targets) {
-			const ActorMaster* target = FindMasterActor(*t);
-			if(target && target->parent == &*it) hit = true;
-		}
-
-		if(!hit) {
-			if(targetPosition) {
-				const f32 radius = MAX(rangeX * 0.5f, 300.0f);
-				hit = glm::length(vec2(pos - castPos)) <= radius;
-			}
-			else {
-				const f32 length = rangeY > 0 ? rangeY : 600.0f;
-				const f32 halfWidth = rangeX > 0 ? rangeX * 0.5f + 60.0f : 200.0f;
-				hit = InFrontBox(origin, dir, length, halfWidth, pos);
-			}
-		}
-
-		if(hit) {
-			DamagePlayer(player, *it, skillID, damage);
-		}
-	}
 }
 
 void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 damage, const Projectile* proj, u32 remoteID, RemoteIdx remoteDoc, vec2 remoteDir)
@@ -141,7 +86,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		}
 	}
 
-	if(Config().DamageFormula && attacker.index != target.index) {
+	if(attacker.index != target.index) {
 		const bool skillHit = !proj && skillID != SkillID::INVALID;
 		const f32 def = MasterStat(target.Main().classType, STAT_DEFENCE) * MAX(1.0f + StatusModMulSum(target, StatusMod::DEFENCE) / 100.0f, 0.0f);
 		const f32 pen = MIN(MAX(MasterStat(attacker.Main().classType, skillHit ? STAT_SKILL_PENETRATION : STAT_DEFENCE_PENETRATION), 0.0f), PENETRATION_CAP) / 100.0f;
