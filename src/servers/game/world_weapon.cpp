@@ -149,9 +149,11 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		const u32 seed = nextRemoteSeed;
 		nextRemoteSeed += 2;
 		proj.remoteID = seed + 1;
-		const vec3 firePos = proj.pos + vec3(0, 0, 158.0f);
+		const vec3 firePos = proj.pos + vec3(0, 0, FIRE_NODE_HEIGHT);
 		const vec3 target = firePos + vec3(proj.dir * proj.range, 0);
-		replication->SendRemoteCreateToAll(player.Main().UID, seed, remote->ID, firePos, atan2f(proj.dir.y, proj.dir.x), target, ActorUID::INVALID, L"Attack_Fire_Dummy");
+		eastl::fixed_string<wchar,32,false> fireObject;
+		for(char c : wf.fireDummy) fireObject.push_back((wchar)c);
+		replication->SendRemoteCreateToAll(player.Main().UID, seed, remote->ID, firePos, atan2f(proj.dir.y, proj.dir.x), target, ActorUID::INVALID, fireObject.empty() ? FIRE_OBJECT_SCENE_ROOT : fireObject.c_str());
 	}
 	proj.damage = bomb && remote->attackMultiplier <= 0 ? 0 : (i32)WeaponHitDamage(player, remote);
 	proj.aoeDamage = (i32)WeaponHitDamage(player, bomb && bomb->attackMultiplier > 0 ? bomb : remote);

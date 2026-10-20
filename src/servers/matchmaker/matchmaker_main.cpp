@@ -9,6 +9,9 @@
 #include <EASTL/hash_map.h>
 #include "config.h"
 
+static const i32 TEAM_SIZE = 3;
+static const f64 MATCHING_WAIT_SEC = 10.0;
+
 Server* g_Server = nullptr;
 Listener* g_Listener = nullptr;
 
@@ -470,8 +473,6 @@ struct Matchmaker
 
 	void MatchParties()
 	{
-		const f64 MATCHING_WAIT_SEC = 10.0;
-
 		if(matchingPartyList.empty()) {
 			matchingStartTime = Time::ZERO;
 			return;
@@ -484,7 +485,7 @@ struct Matchmaker
 		foreach_const(puid, matchingPartyList) {
 			humanCount += partyMap.at(*puid)->memberList.size();
 		}
-		if(!Config().SoloRooms && humanCount < 6 && TimeDiffSec(TimeDiff(matchingStartTime, now)) < MATCHING_WAIT_SEC) return;
+		if(!Config().SoloRooms && humanCount < TEAM_SIZE * 2 && TimeDiffSec(TimeDiff(matchingStartTime, now)) < MATCHING_WAIT_SEC) return;
 		matchingStartTime = Time::ZERO;
 		decltype(matchingPartyList) laterParties;
 		if(Config().SoloRooms) {
@@ -514,9 +515,9 @@ struct Matchmaker
 		foreach_const(puid, matchingPartyList) {
 			const Party& party = *partyMap.at(*puid);
 			foreach_const(pl, party.memberList) {
-				if(room.teamRed.size() >= 3 && room.teamBlue.size() >= 3) break;
+				if(room.teamRed.size() >= TEAM_SIZE && room.teamBlue.size() >= TEAM_SIZE) break;
 				Room::Player player(pl->name, pl->accountUID, pl->instanceChd);
-				const bool red = (room.teamBlue.size() >= 3) || (room.teamRed.size() < 3 && (humanIndex % 2) == 0);
+				const bool red = (room.teamBlue.size() >= TEAM_SIZE) || (room.teamRed.size() < TEAM_SIZE && (humanIndex % 2) == 0);
 				player.team = red ? Team::RED : Team::BLUE;
 				room.playerList.push_back(player);
 				if(red) room.teamRed.push_back(&room.playerList.back());
@@ -526,7 +527,7 @@ struct Matchmaker
 		}
 
 		i32 botID = 1;
-		while(room.teamRed.size() < 3) {
+		while(room.teamRed.size() < TEAM_SIZE) {
 			Room::Player player(LFMT(L"Bot%d", botID++), AccountUID::INVALID, ClientHandle::INVALID);
 			player.team = Team::RED;
 			player.isBot = true;
@@ -534,7 +535,7 @@ struct Matchmaker
 			room.playerList.push_back(player);
 			room.teamRed.push_back(&room.playerList.back());
 		}
-		while(room.teamBlue.size() < 3) {
+		while(room.teamBlue.size() < TEAM_SIZE) {
 			Room::Player player(LFMT(L"Bot%d", botID++), AccountUID::INVALID, ClientHandle::INVALID);
 			player.team = Team::BLUE;
 			player.isBot = true;

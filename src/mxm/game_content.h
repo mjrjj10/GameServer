@@ -147,6 +147,8 @@ struct StatusMod
 	f32 count = 0;
 };
 
+enum class Element: u8 { NONE, RED, GREEN, BLUE };
+
 enum class StatusType: u8
 {
 	OTHER,
@@ -791,7 +793,7 @@ struct GameXmlContent
 	}
 	f32 GetStageTimeLimit(i32 stageID) const { auto f = stageTimeLimit.find(stageID); return f == stageTimeLimit.end() ? 0 : f->second; }
 	const SummonInfo* FindSummon(i32 creatureID) const { auto f = summonMap.find(creatureID); return f == summonMap.end() ? nullptr : &f->second; }
-	i32 GetCreatureElement(i32 creatureID) const { auto f = creatureElement.find(creatureID); return f == creatureElement.end() ? 0 : f->second; }
+	Element GetCreatureElement(i32 creatureID) const { auto f = creatureElement.find(creatureID); return f == creatureElement.end() ? Element::NONE : f->second; }
 	i32 FindSkillHitEventRemote(i32 skillID) const { auto f = skillHitEventRemote.find(skillID); return f == skillHitEventRemote.end() ? 0 : f->second; }
 
 private:
@@ -872,7 +874,7 @@ private:
 	eastl::hash_map<u64, MoveCurve> moveCurves;
 	eastl::hash_map<i32, f32> stageTimeLimit;
 	eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,48,false>, f32>,128,true> lieEndTime;
-	eastl::hash_map<i32, i32> creatureElement;
+	eastl::hash_map<i32, Element> creatureElement;
 	bool LoadStatusData();
 	bool LoadSkillTooltips();
 	bool LoadSkillCosts();

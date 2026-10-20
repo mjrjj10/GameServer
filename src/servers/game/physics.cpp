@@ -344,7 +344,7 @@ bool PhysicsScene::RaycastStatic(const vec3& from, const vec3& to, f32* hitDist,
 	return true;
 }
 
-void* PhysicsScene::CreateWall(const vec3& pos, f32 width, f32 depth, f32 height, f32 yaw, i32 team)
+PxRigidStatic* PhysicsScene::CreateWall(const vec3& pos, f32 width, f32 depth, f32 height, f32 yaw, i32 team)
 {
 	auto& ctx = PhysContext();
 	PxShape* shape = ctx.physics->createShape(PxBoxGeometry(depth * 0.5f, width * 0.5f, height * 0.5f), *ctx.matMapSurface, true);
@@ -358,12 +358,11 @@ void* PhysicsScene::CreateWall(const vec3& pos, f32 width, f32 depth, f32 height
 	return wall;
 }
 
-void PhysicsScene::RemoveWall(void* wall)
+void PhysicsScene::RemoveWall(PxRigidStatic* wall)
 {
 	if(!wall) return;
-	PxRigidStatic* actor = (PxRigidStatic*)wall;
-	scene->removeActor(*actor);
-	actor->release();
+	scene->removeActor(*wall);
+	wall->release();
 }
 
 static PhysicsContext* g_Context;

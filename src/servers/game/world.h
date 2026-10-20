@@ -334,7 +334,7 @@ struct World
 		i32 queuedState = -1;
 		Time queuedStateAt = Time::ZERO;
 		vec3 queuedGoal = vec3(0);
-		void* wall = nullptr;
+		PxRigidStatic* wall = nullptr;
 		i32 ownerClass = -1;
 		Time nextPassive = Time::ZERO;
 		Time passiveBlockedUntil = Time::ZERO;

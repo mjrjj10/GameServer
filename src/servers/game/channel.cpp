@@ -318,12 +318,13 @@ void GamePacketHandler::HandlePacket_CQ_PlayerJump(ClientHandle clientHd, const 
 	const u8 excludedFieldBits = buff.Read<u8>();
 	const i32 actionID = buff.Read<i32>();
 	(void)excludedFieldBits;
+	(void)actionID;
 	const LocalActorID actorID = buff.Read<LocalActorID>();
 	const f32 rotate = buff.Read<f32>();
 	const f32 moveDirX = buff.Read<f32>();
 	const f32 moveDirY = buff.Read<f32>();
 
-	game->OnPlayerJump(clientHd, replication->GetWorldActorUID(clientHd, actorID), rotate, moveDirX, moveDirY, actionID);
+	game->OnPlayerJump(clientHd, replication->GetWorldActorUID(clientHd, actorID), rotate, moveDirX, moveDirY);
 }
 
 void GamePacketHandler::HandlePacket_CQ_WeaponState(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
@@ -376,7 +377,7 @@ void GamePacketHandler::HandlePacket_CQ_GamePlayerSyncPhy(ClientHandle clientHd,
 	const vec3 aimOffset = vec3((f32)phy.aimOffsetX, (f32)phy.aimOffsetY, (f32)phy.aimOffsetZ) / SHOT_AIM_SCALE;
 	const u16 nameLen = phy.charNameLen;
 	const wchar* name = phy.charName;
-	const bool isWeapon = (nameLen >= 6 && EA::StdC::Strncmp(name, L"Attack", 6) == 0) || game->IsWeaponFireObject(clientHd, name, nameLen);
+	const bool isWeapon = FireObjectStartsWith(name, nameLen, FIRE_OBJECT_ATTACK_PREFIX) || game->IsWeaponFireObject(clientHd, name, nameLen);
 	if(!isWeapon) {
 		NT_LOG("[client%x] SyncPhy :: non-weapon fire object '%.*ls'", clientHd, nameLen, name);
 		return;
@@ -384,7 +385,7 @@ void GamePacketHandler::HandlePacket_CQ_GamePlayerSyncPhy(ClientHandle clientHd,
 
 	const vec2 dir = vec2(aimOffset);
 	const bool aimless = glm::length(dir) < 0.1f;
-	if(aimless && !(nameLen == 10 && EA::StdC::Strncmp(name, L"Scene Root", 10) == 0)) return;
+	if(aimless && !FireObjectIs(name, nameLen, FIRE_OBJECT_SCENE_ROOT)) return;
 
 	game->OnPlayerWeaponShot(clientHd, origin, aimless ? vec2(0) : glm::normalize(dir), aimless ? 0.0f : glm::length(dir), packetData, packetSize);
 }

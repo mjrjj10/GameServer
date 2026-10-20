@@ -23,17 +23,17 @@ static const f32 TOOLTIP_SNIPER_CRIT_PER_MARK = 33.0f;
 static const i32 STATUS_ELECTRO_PASSIVE_BUFF_MPREGEN = 1230040011;
 static const i32 RESPAWN_DELAY_MS = 5000;
 
-static bool ElementBeats(i32 a, i32 b)
+static bool ElementBeats(Element a, Element b)
 {
-	return (a == 1 && b == 2) || (a == 2 && b == 3) || (a == 3 && b == 1);
+	return (a == Element::RED && b == Element::GREEN) || (a == Element::GREEN && b == Element::BLUE) || (a == Element::BLUE && b == Element::RED);
 }
 
 static f32 ElementMultiplier(const World::Player& attacker, const World::Player& target, bool skill)
 {
 	const auto& content = GetGameXmlContent();
 	const ClassType ac = attacker.Main().classType;
-	const i32 ea = content.GetCreatureElement((i32)content.GetMaster(ac).ID);
-	const i32 et = content.GetCreatureElement((i32)content.GetMaster(target.Main().classType).ID);
+	const Element ea = content.GetCreatureElement((i32)content.GetMaster(ac).ID);
+	const Element et = content.GetCreatureElement((i32)content.GetMaster(target.Main().classType).ID);
 	const i32 stat = skill ? STAT_ELEMENT_SKILL_DAMAGE_BONUS : STAT_ELEMENT_DAMAGE_BONUS;
 	if(ElementBeats(ea, et)) return 1.0f + MasterStat(ac, stat) / 100.0f;
 	if(ElementBeats(et, ea)) return 1.0f - MasterStat(target.Main().classType, stat) / 100.0f;

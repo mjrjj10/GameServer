@@ -13,6 +13,20 @@
 
 struct AccountData;
 
+static const wchar* const FIRE_OBJECT_SCENE_ROOT = L"Scene Root";
+static const wchar* const FIRE_OBJECT_ATTACK_PREFIX = L"Attack";
+
+inline bool FireObjectStartsWith(const wchar* name, u16 len, const wchar* prefix)
+{
+	const u16 n = (u16)EA::StdC::Strlen(prefix);
+	return len >= n && EA::StdC::Strncmp(name, prefix, n) == 0;
+}
+
+inline bool FireObjectIs(const wchar* name, u16 len, const wchar* expected)
+{
+	return len == (u16)EA::StdC::Strlen(expected) && FireObjectStartsWith(name, len, expected);
+}
+
 struct Replication
 {
 	enum

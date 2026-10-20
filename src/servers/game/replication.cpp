@@ -951,7 +951,7 @@ void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKi
 
 	PacketWriter<Sv::SN_ScoreUpdate> killerPacket;
 	killerPacket.Write<u32>((u32)killerID);
-	killerPacket.Write<u32>(0xFFFFFFFF);
+	killerPacket.Write<TeamType>(TeamType::INVALID);
 	killerPacket.Write<u16>(3);
 	killerPacket.Write<u32>(SCORE);             killerPacket.Write<u32>((u32)kills);
 	killerPacket.Write<u32>(KILL_COUNT);        killerPacket.Write<u32>((u32)kills);
@@ -959,7 +959,7 @@ void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKi
 
 	PacketWriter<Sv::SN_ScoreUpdate> victimPacket;
 	victimPacket.Write<u32>((u32)victimID);
-	victimPacket.Write<u32>(0xFFFFFFFF);
+	victimPacket.Write<TeamType>(TeamType::INVALID);
 	victimPacket.Write<u16>(1);
 	victimPacket.Write<u32>(DEAD_COUNT); victimPacket.Write<u32>((u32)victimDeaths);
 
@@ -1148,7 +1148,7 @@ void Replication::RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetD
 }
 void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject, ClientHandle exclude)
 {
-	if(!fireObject || !fireObject[0]) fireObject = L"Scene Root";
+	if(!fireObject || !fireObject[0]) fireObject = FIRE_OBJECT_SCENE_ROOT;
 	RemoteCreate remote;
 	remote.parentUID = ownerUID;
 	remote.ownerUID = ownerUID;

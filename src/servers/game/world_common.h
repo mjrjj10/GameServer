@@ -4,6 +4,7 @@
 #include <mxm/game_content.h>
 #include "world.h"
 
+static const f32 FIRE_NODE_HEIGHT = 158.0f;
 static const f32 COMBAT_ATTACK_STAT = 0.0f;
 static const f32 WEAPON_TARGET_RADIUS = 110.0f;
 static const f32 PROJECTILE_HIT_TOLERANCE = 20.0f;

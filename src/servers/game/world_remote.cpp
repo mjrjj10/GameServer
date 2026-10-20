@@ -416,7 +416,7 @@ void World::UpdateRemotes(f32 delta)
 			else {
 				const f32 yaw = instOwner.input.rot.upperYaw;
 				inst.dir = vec2(cosf(yaw), sinf(yaw));
-				inst.pos = instOwner.body->GetWorldPos() + vec3(inst.dir * (remote.forceTargetDir ? -remote.offsetY : remote.offsetY), 158.0f);
+				inst.pos = instOwner.body->GetWorldPos() + vec3(inst.dir * (remote.forceTargetDir ? -remote.offsetY : remote.offsetY), FIRE_NODE_HEIGHT);
 			}
 		}
 
@@ -468,7 +468,7 @@ void World::SpawnPendingRemotes()
 		const vec2 dir = vec2(cosf(pr->angle), sinf(pr->angle));
 		const Remote* remote = GetGameXmlContent().FindRemote(pr->idx);
 		const f32 offsetY = remote ? (remote->forceTargetDir ? -remote->offsetY : remote->offsetY) : 0;
-		vec3 pos = owner.body->GetWorldPos() + vec3(dir * offsetY, 158.0f);
+		vec3 pos = owner.body->GetWorldPos() + vec3(dir * offsetY, FIRE_NODE_HEIGHT);
 
 		bool atAimedPoint = pr->atTarget;
 		switch((ActionCommand::TargetPreset)pr->preset) {

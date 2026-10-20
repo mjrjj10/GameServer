@@ -96,7 +96,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 
 	foreach_const(m, GetGameXmlContent().masters) {
 		if(m->skillIDs.empty() || m->skinIDs.empty() || m->defaultWeaponIDs.empty()) continue;
-		if(allowedMastersSet.size() >= 100) break;
+		if(allowedMastersSet.size() >= allowedMastersSet.max_size()) break;
 		allowedMastersSet.insert(m->classType);
 	}
 	LOG("[Room] %d pickable characters", (i32)allowedMastersSet.size());

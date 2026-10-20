@@ -13,6 +13,14 @@ static GameXmlContent* g_GameXmlContent = nullptr;
 
 static Path gameDataDir = L"gamedata";
 
+static bool XmlAttrTrue(XMLElement* pElt, const char* name)
+{
+	const char* v = nullptr;
+	pElt->QueryStringAttribute(name, &v);
+	return v && EA::StdC::Stricmp(v, "true") == 0;
+}
+
+
 bool GameXmlContent::LoadMasterDefinitions()
 {
 	// Parse CREATURE_CHARACTER.xml once
@@ -378,9 +386,7 @@ void GameXmlContent::LoadAllSkills()
 				if(const char* os = pTarget->Attribute("_TestObstructSight")) in.obstructSight = EA::StdC::Strcmp(os, "SKILL_OBSTRUCTSIGHT_TYPE_ALL") == 0;
 				pTarget->QueryFloatAttribute("_MinDistance", &in.minDistance);
 				pTarget->QueryFloatAttribute("_MaxDistance", &in.maxDistance);
-				const char* friendly = pTarget->Attribute("_Friendly");
-				const char* unfriendly = pTarget->Attribute("_UnFriendly");
-				in.friendlyOnly = friendly && (friendly[0] == 'T' || friendly[0] == 't') && unfriendly && (unfriendly[0] == 'F' || unfriendly[0] == 'f');
+				in.friendlyOnly = XmlAttrTrue(pTarget, "_Friendly") && pTarget->Attribute("_UnFriendly") && !XmlAttrTrue(pTarget, "_UnFriendly");
 			}
 			const bool self = !ux || EA::StdC::Strcmp(ux, "SKILL_CAST_MY_POSITION") == 0;
 			const bool smartCast = smart && EA::StdC::Strcmp(smart, "SKILL_SMARTCAST_TRUE") == 0;
@@ -1614,11 +1620,26 @@ static void ParseRemoteSpawnRules(XMLElement* pEvent, Remote::SpawnRules& out)
 	}
 }
 
-static bool XmlAttrTrue(XMLElement* pElt, const char* name)
+static void ParseAppliedStatuses(XMLElement* pParent, const char* name, eastl::fixed_vector<Remote::AppliedStatus,4,false>& out)
 {
-	const char* v = nullptr;
-	pElt->QueryStringAttribute(name, &v);
-	return v && EA::StdC::Stricmp(v, "true") == 0;
+	for(XMLElement* pStatus = pParent->FirstChildElement(name); pStatus; pStatus = pStatus->NextSiblingElement(name)) {
+		Remote::AppliedStatus st;
+		st.statusID = 0;
+		st.rate = 100;
+		st.value = 100;
+		pStatus->QueryAttribute("DATAKEY", &st.statusID);
+		pStatus->QueryAttribute("_Rate", &st.rate);
+		pStatus->QueryAttribute("_Value", &st.value);
+		if(st.statusID != 0 && !out.full()) out.push_back(st);
+	}
+}
+
+static void ParseHoming(XMLElement* pHoming, Remote& remote)
+{
+	pHoming->QueryFloatAttribute("_ReactionLength", &remote.homingLength);
+	pHoming->QueryFloatAttribute("_ReactionAngle", &remote.homingAngle);
+	pHoming->QueryFloatAttribute("_ReactionTime", &remote.homingTime);
+	pHoming->QueryBoolAttribute("_LockOn", &remote.homingLockOn);
 }
 
 bool GameXmlContent::LoadRemoteData()
@@ -1690,26 +1711,8 @@ bool GameXmlContent::LoadRemoteData()
 				ELT_GET(pComp, i32, _ActivateCount, 0);
 				ELT_GET(pComp, i32, _AttackMultiplier, 0);
 				ELT_GET(pComp, f32, _LifeTime, 0);
-				for(XMLElement* pStatus = pComp->FirstChildElement("_Status"); pStatus; pStatus = pStatus->NextSiblingElement("_Status")) {
-					Remote::AppliedStatus st;
-					st.statusID = 0;
-					st.rate = 100;
-					st.value = 100;
-					pStatus->QueryAttribute("DATAKEY", &st.statusID);
-					pStatus->QueryAttribute("_Rate", &st.rate);
-					pStatus->QueryAttribute("_Value", &st.value);
-					if(st.statusID != 0 && !remote.statuses.full()) remote.statuses.push_back(st);
-				}
-				for(XMLElement* pStatus = pComp->FirstChildElement("_StatusFriendly"); pStatus; pStatus = pStatus->NextSiblingElement("_StatusFriendly")) {
-					Remote::AppliedStatus st;
-					st.statusID = 0;
-					st.rate = 100;
-					st.value = 100;
-					pStatus->QueryAttribute("DATAKEY", &st.statusID);
-					pStatus->QueryAttribute("_Rate", &st.rate);
-					pStatus->QueryAttribute("_Value", &st.value);
-					if(st.statusID != 0 && !remote.friendlyStatuses.full()) remote.friendlyStatuses.push_back(st);
-				}
+				ParseAppliedStatuses(pComp, "_Status", remote.statuses);
+				ParseAppliedStatuses(pComp, "_StatusFriendly", remote.friendlyStatuses);
 				remote.attachFireObject = XmlAttrTrue(pComp, "_AttachFireObject");
 				remote.attachTargetObject = XmlAttrTrue(pComp, "_AttachTargetObject");
 				pComp->QueryFloatAttribute("_CriticalRate", &remote.criticalRate);
@@ -1743,18 +1746,10 @@ bool GameXmlContent::LoadRemoteData()
 			else if((EA::StdC::Strcmp("RemoteTargetComData", compName) == 0)) {
 				pComp->QueryFloatAttribute("_HitInvalidTime", &remote.hitInvalidTime);
 				pComp->QueryFloatAttribute("_Sight", &remote.sight);
-				if(XMLElement* pHoming = pComp->FirstChildElement("_Homing")) {
-					pHoming->QueryFloatAttribute("_ReactionLength", &remote.homingLength);
-					pHoming->QueryFloatAttribute("_ReactionAngle", &remote.homingAngle);
-					pHoming->QueryFloatAttribute("_ReactionTime", &remote.homingTime);
-					pHoming->QueryBoolAttribute("_LockOn", &remote.homingLockOn);
-				}
+				if(XMLElement* pHoming = pComp->FirstChildElement("_Homing")) ParseHoming(pHoming, remote);
 			}
 			else if((EA::StdC::Strcmp("_Homing", compName) == 0)) {
-				pComp->QueryFloatAttribute("_ReactionLength", &remote.homingLength);
-				pComp->QueryFloatAttribute("_ReactionAngle", &remote.homingAngle);
-				pComp->QueryFloatAttribute("_ReactionTime", &remote.homingTime);
-				pComp->QueryBoolAttribute("_LockOn", &remote.homingLockOn);
+				ParseHoming(pComp, remote);
 			}
 
 			else if((EA::StdC::Strcmp("RemoteGraphComData", compName) == 0)) {
@@ -2612,10 +2607,10 @@ bool GameXmlContent::LoadCharacterElements()
 		for(XMLElement* pComp = pInfo->FirstChildElement(); pComp; pComp = pComp->NextSiblingElement()) {
 			const char* el = nullptr;
 			if(pComp->QueryStringAttribute("_ElementType", &el) != XML_SUCCESS || !el) continue;
-			i32 e = 0;
-			if(EA::StdC::Strcmp(el, "CELEMENT_TYPE_RED") == 0) e = 1;
-			else if(EA::StdC::Strcmp(el, "CELEMENT_TYPE_GREEN") == 0) e = 2;
-			else if(EA::StdC::Strcmp(el, "CELEMENT_TYPE_BLUE") == 0) e = 3;
+			Element e = Element::NONE;
+			if(EA::StdC::Strcmp(el, "CELEMENT_TYPE_RED") == 0) e = Element::RED;
+			else if(EA::StdC::Strcmp(el, "CELEMENT_TYPE_GREEN") == 0) e = Element::GREEN;
+			else if(EA::StdC::Strcmp(el, "CELEMENT_TYPE_BLUE") == 0) e = Element::BLUE;
 			creatureElement[id] = e;
 			break;
 		}

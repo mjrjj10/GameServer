@@ -7,6 +7,10 @@
 #include <mxm/game_content.h>
 #include "config.h"
 
+static const f32 STAGE_TIME_LIMIT_FALLBACK_SEC = 300.0f;
+static const f64 RETURN_TO_LOBBY_DELAY_SEC = 20.0;
+static const u16 HUB_LISTEN_PORT = 11900;
+
 const CreatureIndex CI_DOOR = CreatureIndex(110040546);
 const CreatureIndex CI_WALL = CreatureIndex(110042602);
 
@@ -57,7 +61,6 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 		desc.masterGearNo = p.masterGearNo;
 		desc.characterType = p.characterType;
 
-		LOG("Spawn :: preparing %ls masters=(%d, %d)", desc.name.data(), (i32)p.masters[0], (i32)p.masters[1]);
 		const auto& master0 = xml.GetMaster(p.masters[0]);
 		const auto& master1 = xml.GetMaster(p.masters[1]);
 
@@ -180,11 +183,11 @@ void Game::Update(Time localTime_)
 		case Phase::Game: {
 			if(!gameEnded && tGameStarted != Time::ZERO) {
 				f32 limit = GetGameXmlContent().GetStageTimeLimit((i32)replication.stageIndex);
-				if(limit <= 0) limit = 300.0f;
+				if(limit <= 0) limit = STAGE_TIME_LIMIT_FALLBACK_SEC;
 				if(Config().DevGameTimeSec > 0) limit = (f32)Config().DevGameTimeSec;
 				if(TimeDiffSec(TimeDiff(tGameStarted, localTime)) >= limit) EndGame();
 			}
-			if(gameEnded && !sentBackToLobby && TimeDiffSec(TimeDiff(tGameEnded, localTime)) >= 20.0) {
+			if(gameEnded && !sentBackToLobby && TimeDiffSec(TimeDiff(tGameEnded, localTime)) >= RETURN_TO_LOBBY_DELAY_SEC) {
 				sentBackToLobby = true;
 				foreach_const(p, playerList) {
 					if(p->clientHd != ClientHandle::INVALID) OnPlayerReturnToChannel(p->clientHd);
@@ -668,16 +671,15 @@ void Game::OnPlayerReturnToChannel(ClientHandle clientHd)
 	World::Player& player = world.GetPlayer(found->second->playerIndex);
 	i32 hubIP[4] = { Config().HostIP[0], Config().HostIP[1], Config().HostIP[2], Config().HostIP[3] };
 	if(hubIP[0] == 0) { hubIP[0] = 127; hubIP[3] = 1; }
-	replication.SendDoConnectChannel(clientHd, player.name.data(), hubIP, 11900);
+	replication.SendDoConnectChannel(clientHd, player.name.data(), hubIP, HUB_LISTEN_PORT);
 }
 
-void Game::OnPlayerJump(ClientHandle clientHd, ActorUID actorUID, f32 rotate, f32 moveDirX, f32 moveDirY, i32 actionID)
+void Game::OnPlayerJump(ClientHandle clientHd, ActorUID actorUID, f32 rotate, f32 moveDirX, f32 moveDirY)
 {
 	Player& p = *playerMap.at(clientHd);
 	World::Player& player = world.GetPlayer(p.playerIndex);
 	ASSERT(player.clientHd == clientHd);
 
-	(void)actionID;
 	player.input.jump = 1;
 }
 
@@ -730,7 +732,7 @@ bool Game::IsWeaponFireObject(ClientHandle clientHd, const wchar* name, u16 len)
 	const World::Player& player = world.GetPlayer(found->second->playerIndex);
 	const WeaponIndex weapon = (player.mainCharaID & 1) == 0 ? player.mainWeapon : player.subWeapon;
 	const WeaponFiring* wf = GetGameXmlContent().FindWeaponFiring((i32)weapon, player.Main().stance);
-	if(wf && wf->fireDummy.empty()) return len == 10 && EA::StdC::Strncmp(name, L"Scene Root", 10) == 0;
+	if(wf && wf->fireDummy.empty()) return FireObjectIs(name, len, FIRE_OBJECT_SCENE_ROOT);
 	if(!wf) return false;
 	auto matches = [name, len](const eastl::fixed_string<char,32,false>& dummy) {
 		if(dummy.size() != len) return false;
