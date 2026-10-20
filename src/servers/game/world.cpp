@@ -5,7 +5,6 @@
 
 static const i32 STAT_HEALTH = 0;
 static const f64 WEAPON_HIT_INTERVAL_MS = 80.0;
-static const f32 COMBO_SLOT_WINDOW_SEC = 5.0f;
 static const i32 SKILL_SLOT_ENUM_FIRST = 2;
 static const f32 OBSTRUCT_LOW_HEIGHT = 30.0f;
 static const i32 SKILL_SLOT_ENUM_UG = 6;
@@ -866,7 +865,9 @@ void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType
 			player.comboSlot = slot;
 			player.comboBase = skillID;
 			player.comboCastPos = castPos;
-			player.comboUntil = TimeAdd(localTime, TimeMsToTime(COMBO_SLOT_WINDOW_SEC * 1000.0));
+			const i32 windowMs = content.GetComboDurationMs(combo);
+			ASSERT(windowMs > 0);
+			player.comboUntil = TimeAdd(localTime, TimeMsToTime((f64)windowMs));
 			LOG("Combo :: %ls slot %d -> %d", player.name.data(), slot, combo);
 			const i32 autoMs = content.GetComboAutoCastMs(combo);
 			player.comboAutoAt = autoMs > 0 ? TimeAdd(localTime, TimeMsToTime((f64)autoMs)) : Time::ZERO;

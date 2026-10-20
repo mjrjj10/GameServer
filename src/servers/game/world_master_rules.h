@@ -93,3 +93,60 @@ static inline bool ServerCreatesRemotes(ClassType master)
 	}
 	return false;
 }
+
+enum class PassiveTrigger: u8
+{
+	SKILL_USE,
+	SKILL_HIT,
+};
+
+enum class PassiveTarget: u8
+{
+	SELF,
+	HIT_TARGET,
+	LOWEST_HP_ALLY_IN_STATUS_RANGE,
+};
+
+struct PassiveStatusRule
+{
+	ClassType master;
+	PassiveTrigger trigger;
+	PassiveTarget target;
+	i32 status;
+	i32 cooldownStatus;
+	i32 heal;
+};
+
+static const PassiveStatusRule PASSIVE_STATUS_RULES[] = {
+	{ ClassType::CATTHECAT, PassiveTrigger::SKILL_USE, PassiveTarget::SELF, 1230260000, 0, 0 },
+	{ ClassType::ANDROA, PassiveTrigger::SKILL_USE, PassiveTarget::SELF, 1230290001, 0, 0 },
+	{ ClassType::ANDROB, PassiveTrigger::SKILL_USE, PassiveTarget::LOWEST_HP_ALLY_IN_STATUS_RANGE, 1230300001, 0, 250 },
+	{ ClassType::BOXER, PassiveTrigger::SKILL_HIT, PassiveTarget::HIT_TARGET, 1230320002, 0, 0 },
+	{ ClassType::PHOTOG, PassiveTrigger::SKILL_HIT, PassiveTarget::SELF, 1230150010, 0, 0 },
+	{ ClassType::EFREET, PassiveTrigger::SKILL_HIT, PassiveTarget::HIT_TARGET, 1230230001, 0, 0 },
+	{ ClassType::SHADOWHUNTER, PassiveTrigger::SKILL_HIT, PassiveTarget::SELF, 1230240000, 1230240001, 0 },
+};
+
+enum class WeaponBonus: u8
+{
+	OWNER_BELOW_HP_TRIGGER,
+	TARGET_HAS_OWN_STATUS,
+	EVERY_NTH_HIT,
+	LAST_OF_CHAIN,
+};
+
+struct WeaponBonusRule
+{
+	ClassType master;
+	WeaponBonus condition;
+	i32 count;
+	i32 status;
+	f32 mul;
+};
+
+static const WeaponBonusRule WEAPON_BONUS_RULES[] = {
+	{ ClassType::ATTACKER, WeaponBonus::OWNER_BELOW_HP_TRIGGER, 0, 0, 1.10f },
+	{ ClassType::BOXER, WeaponBonus::TARGET_HAS_OWN_STATUS, 0, 1230320002, 1.15f },
+	{ ClassType::SHUGOTRADER, WeaponBonus::EVERY_NTH_HIT, 6, 1230330000, 1.80f },
+	{ ClassType::RYTLOCK, WeaponBonus::LAST_OF_CHAIN, 3, 1230250002, 1.20f },
+};

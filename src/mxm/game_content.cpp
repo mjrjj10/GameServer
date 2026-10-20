@@ -2539,6 +2539,7 @@ bool GameXmlContent::LoadSkillCosts()
 				const char* selectState = pComboTarget ? pComboTarget->Attribute("_SelectStateType") : nullptr;
 				const bool afterCast = selectState && EA::StdC::Strcmp(selectState, "SKILL_TARGET_SELECT_STATE_AFTERCAST") == 0;
 				if(afterCast && pCombo->BoolAttribute("_AutoCasting")) comboAutoCastMs[skillID] = MAX(pCombo->IntAttribute("_ExecuteTimeMS"), 1);
+				comboDurationMs[skillID] = pCombo->IntAttribute("_DurationTimeMS");
 			}
 			if(XMLElement* pCost = pCommon->FirstChildElement("_COST_PROPERTY")) {
 				for(XMLElement* pLvl = pCost->FirstChildElement("_PROPERTY_LEVEL"); pLvl; pLvl = pLvl->NextSiblingElement("_PROPERTY_LEVEL")) {

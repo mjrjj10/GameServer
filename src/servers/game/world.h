@@ -211,8 +211,6 @@ struct World
 		Time reviveAt = Time::ZERO;
 		f32 reviveRatio = 0;
 		i32 weaponHitCounter = 0;
-		u32 skillMarkBy = 0xFFFFFFFF;
-		Time skillMarkUntil = Time::ZERO;
 		vec2 fearDir = vec2(1, 0);
 		Time tRespawn = Time::ZERO;
 		ActorUID memorizedTarget = ActorUID::INVALID;
@@ -724,6 +722,7 @@ private:
 	void PassiveOnSkillCast(Player& player, i32 skillID);
 	void PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj);
 	void PassiveOnSkillHit(Player& attacker, Player& target);
+	void ApplyPassiveStatusRule(const PassiveStatusRule& rule, Player& owner, Player* hitTarget);
 	f32 PassiveWeaponDamageMul(Player& attacker, Player& target);
 	const ActiveStatus* FindPassiveOfType(const Player& p, StatusType type) const;
 	bool PassiveBlocksCC(Player& target, const StatusInfo& info, f32* duration);

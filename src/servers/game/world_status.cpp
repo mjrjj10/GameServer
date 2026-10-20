@@ -6,25 +6,7 @@
 static const i32 STAT_TOUGHNESS = 65;
 static const f32 TOOLTIP_DEFENDER_CC_IMMUNE_SEC = 1.0f;
 static const f32 TOOLTIP_DEATHKNIGHT_REVIVE_HP = 0.30f;
-static const i32 TOOLTIP_LILU_EVERY_N = 4;
 static const f64 SELF_DRAG_LINK_SEC = 0.6;
-static const i32 TOOLTIP_ANDROB_HEAL = 250;
-static const f32 TOOLTIP_ANDROB_RANGE = 800.0f;
-static const f32 TOOLTIP_ATTACKER_WEAPON_MUL = 1.10f;
-static const f32 TOOLTIP_BOXER_MARK_SEC = 1.5f;
-static const f32 TOOLTIP_BOXER_WEAPON_MUL = 1.15f;
-static const i32 TOOLTIP_SHUGO_EVERY_N = 6;
-static const f32 TOOLTIP_SHUGO_WEAPON_MUL = 1.80f;
-static const i32 STATUS_PHOTOG_PASSIVE_MOVESPEED = 1230150010;
-static const i32 STATUS_EFREET_PASSIVE_DOT_FIRE = 1230230001;
-static const i32 STATUS_SHADOWHUNTER_HIDE = 1230240000;
-static const i32 STATUS_SHADOWHUNTER_COOLDOWN = 1230240001;
-static const i32 STATUS_RYTLOCK_ATTACK_BLEEDING = 1230250002;
-static const i32 STATUS_THECAT_PASSIVE_FIREDELAY1 = 1230260000;
-static const i32 STATUS_ANDROIDA_PASSIVE_ATTACKSPEED = 1230290001;
-static const i32 STATUS_SHUGOTRADER_PASSIVE_REMOTE = 1230330000;
-static const i32 TOOLTIP_RYTLOCK_CHAIN = 3;
-static const f32 TOOLTIP_RYTLOCK_THIRD_MUL = 1.20f;
 static const f32 STATUS_PUSH_BASE_DISTANCE = 500.0f;
 
 bool World::HasStatusType(const Player& p, StatusType type) const
@@ -259,18 +241,32 @@ void World::PassiveOnSkillCast(Player& player, i32 skillID)
 			player.ccImmuneUntil = TimeAdd(localTime, TimeMsToTime(TOOLTIP_DEFENDER_CC_IMMUNE_SEC * 1000.0));
 		}
 	}
-	if(player.Main().classType == ClassType::CATTHECAT) ApplyStatus(player, player, STATUS_THECAT_PASSIVE_FIREDELAY1);
-	if(player.Main().classType == ClassType::ANDROA) ApplyStatus(player, player, STATUS_ANDROIDA_PASSIVE_ATTACKSPEED);
-	if(player.Main().classType == ClassType::ANDROB) {
-		Player* lowest = nullptr;
-		foreach(it, players) {
-			if(it->team != player.team || it->dead) continue;
-			if(glm::length(vec2(it->body->GetWorldPos()) - vec2(player.body->GetWorldPos())) > TOOLTIP_ANDROB_RANGE) continue;
-			const f32 ratio = (f32)it->Main().hp / MAX(it->Main().hpMax, 1);
-			if(!lowest || ratio < (f32)lowest->Main().hp / MAX(lowest->Main().hpMax, 1)) lowest = &*it;
-		}
-		if(lowest) HealPlayer(player, *lowest, TOOLTIP_ANDROB_HEAL);
+	for(const PassiveStatusRule& rule : PASSIVE_STATUS_RULES) {
+		if(rule.master == player.Main().classType && rule.trigger == PassiveTrigger::SKILL_USE) ApplyPassiveStatusRule(rule, player, nullptr);
 	}
+}
+
+void World::ApplyPassiveStatusRule(const PassiveStatusRule& rule, Player& owner, Player* hitTarget)
+{
+	if(rule.cooldownStatus != 0 && FindActiveStatus(owner.index, rule.cooldownStatus)) return;
+	switch(rule.target) {
+		case PassiveTarget::SELF: ApplyStatus(owner, owner, rule.status); break;
+		case PassiveTarget::HIT_TARGET: ASSERT(hitTarget); ApplyStatus(owner, *hitTarget, rule.status); break;
+		case PassiveTarget::LOWEST_HP_ALLY_IN_STATUS_RANGE: {
+			const StatusInfo* info = GetGameXmlContent().FindStatus(rule.status);
+			ASSERT(info);
+			const f32 range = info->Param("_TargetingRange");
+			Player* lowest = nullptr;
+			foreach(it, players) {
+				if(it->team != owner.team || it->dead) continue;
+				if(glm::length(vec2(it->body->GetWorldPos()) - vec2(owner.body->GetWorldPos())) > range) continue;
+				const f32 ratio = (f32)it->Main().hp / MAX(it->Main().hpMax, 1);
+				if(!lowest || ratio < (f32)lowest->Main().hp / MAX(lowest->Main().hpMax, 1)) lowest = &*it;
+			}
+			if(lowest) HealPlayer(owner, *lowest, rule.heal);
+		} break;
+	}
+	if(rule.cooldownStatus != 0) ApplyStatus(owner, owner, rule.cooldownStatus);
 }
 
 void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj)
@@ -326,32 +322,18 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 		ApplyStatus(attacker, target, *id);
 	}
 
-	if(attacker.Main().classType == ClassType::RYTLOCK && !target.dead) {
-		attacker.weaponHitCounter = attacker.weaponHitCounter % TOOLTIP_RYTLOCK_CHAIN + 1;
-		if(attacker.weaponHitCounter < TOOLTIP_RYTLOCK_CHAIN) ApplyStatus(attacker, target, STATUS_RYTLOCK_ATTACK_BLEEDING);
-	}
-	if(attacker.Main().classType == ClassType::LILU && !target.dead) {
-		attacker.weaponHitCounter++;
-		if(attacker.weaponHitCounter >= TOOLTIP_LILU_EVERY_N) {
-			attacker.weaponHitCounter = 0;
-			LOG("Passive :: %ls extra weapon strike on %ls", attacker.name.data(), target.name.data());
-			DamagePlayer(attacker, target, SkillID::INVALID, proj.damage);
-		}
+	if(target.dead) return;
+	for(const WeaponBonusRule& rule : WEAPON_BONUS_RULES) {
+		if(rule.master != attacker.Main().classType || rule.condition != WeaponBonus::LAST_OF_CHAIN) continue;
+		attacker.weaponHitCounter = attacker.weaponHitCounter % rule.count + 1;
+		if(attacker.weaponHitCounter < rule.count) ApplyStatus(attacker, target, rule.status);
 	}
 }
 
 void World::PassiveOnSkillHit(Player& attacker, Player& target)
 {
-	const ClassType skillCls = attacker.Main().classType;
-	if(skillCls == ClassType::BOXER) {
-		target.skillMarkBy = attacker.index;
-		target.skillMarkUntil = TimeAdd(localTime, TimeMsToTime(TOOLTIP_BOXER_MARK_SEC * 1000.0));
-	}
-	if(skillCls == ClassType::PHOTOG) ApplyStatus(attacker, attacker, STATUS_PHOTOG_PASSIVE_MOVESPEED);
-	if(skillCls == ClassType::EFREET) ApplyStatus(attacker, target, STATUS_EFREET_PASSIVE_DOT_FIRE);
-	if(skillCls == ClassType::SHADOWHUNTER && !FindActiveStatus(attacker.index, STATUS_SHADOWHUNTER_COOLDOWN)) {
-		ApplyStatus(attacker, attacker, STATUS_SHADOWHUNTER_HIDE);
-		ApplyStatus(attacker, attacker, STATUS_SHADOWHUNTER_COOLDOWN);
+	for(const PassiveStatusRule& rule : PASSIVE_STATUS_RULES) {
+		if(rule.master == attacker.Main().classType && rule.trigger == PassiveTrigger::SKILL_HIT) ApplyPassiveStatusRule(rule, attacker, &target);
 	}
 	foreach_const(it, activeStatuses) {
 		if(it->targetIndex != attacker.index || !it->info) continue;
@@ -376,21 +358,33 @@ f32 World::PassiveWeaponDamageMul(Player& attacker, Player& target)
 			mul *= 1.0f + it->info->hitEffectValue * debuffs;
 		}
 	}
-	const ClassType cls = attacker.Main().classType;
-	if(cls == ClassType::ATTACKER) {
-		const ActiveStatus* st = FindPassiveOfType(attacker, StatusType::HPTRIGGER);
-		if(st && attacker.Main().hp * 100 < attacker.Main().hpMax * st->info->Param("_CheckVal")) mul *= TOOLTIP_ATTACKER_WEAPON_MUL;
-	}
-	if(cls == ClassType::BOXER && target.skillMarkBy == attacker.index && localTime < target.skillMarkUntil) mul *= TOOLTIP_BOXER_WEAPON_MUL;
-	if(cls == ClassType::SHUGOTRADER) {
-		attacker.weaponHitCounter++;
-		if(attacker.weaponHitCounter >= TOOLTIP_SHUGO_EVERY_N) {
-			attacker.weaponHitCounter = 0;
-			mul *= TOOLTIP_SHUGO_WEAPON_MUL;
-			ApplyStatus(attacker, target, STATUS_SHUGOTRADER_PASSIVE_REMOTE);
+	for(const WeaponBonusRule& rule : WEAPON_BONUS_RULES) {
+		if(rule.master != attacker.Main().classType) continue;
+		switch(rule.condition) {
+			case WeaponBonus::OWNER_BELOW_HP_TRIGGER: {
+				const ActiveStatus* st = FindPassiveOfType(attacker, StatusType::HPTRIGGER);
+				if(st && attacker.Main().hp * 100 < attacker.Main().hpMax * st->info->Param("_CheckVal")) mul *= rule.mul;
+			} break;
+			case WeaponBonus::TARGET_HAS_OWN_STATUS: {
+				foreach_const(st, activeStatuses) {
+					if(st->statusID != rule.status || st->targetIndex != target.index || st->casterIndex != attacker.index || st->until <= localTime) continue;
+					mul *= rule.mul;
+					break;
+				}
+			} break;
+			case WeaponBonus::EVERY_NTH_HIT: {
+				attacker.weaponHitCounter++;
+				if(attacker.weaponHitCounter >= rule.count) {
+					attacker.weaponHitCounter = 0;
+					mul *= rule.mul;
+					ApplyStatus(attacker, target, rule.status);
+				}
+			} break;
+			case WeaponBonus::LAST_OF_CHAIN: {
+				if(attacker.weaponHitCounter + 1 == rule.count) mul *= rule.mul;
+			} break;
 		}
 	}
-	if(cls == ClassType::RYTLOCK && attacker.weaponHitCounter + 1 == TOOLTIP_RYTLOCK_CHAIN) mul *= TOOLTIP_RYTLOCK_THIRD_MUL;
 	return mul;
 }
 
