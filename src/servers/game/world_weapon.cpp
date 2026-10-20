@@ -122,6 +122,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	proj.wallZ = player.body->GetWorldPos().z + BodyMidHeight(player);
 	proj.halfWidth = remote ? remote->boundSize[0] * 0.5f : 20.0f;
 	proj.hitsLeft = remote ? MAX(remote->activateCount, 1) : 1;
+	proj.penetrationLeft = remote && remote->penetrationCount > 0 ? remote->penetrationCount : PENETRATION_UNLIMITED;
 	proj.forwardReach = (remote && remote->boundType == Remote::BoundType::E_BOUND_BOX) ? MAX(remote->offsetY + remote->boundSize[1] * 0.5f, 0.0f) : 0.0f;
 	proj.aoeRadius = bomb ? bomb->boundSize[0] * 0.5f : 0;
 	if(remote && remote->behaviorType == Remote::BehaviorType::HOMING && remote->angularVel > 0) {
@@ -137,6 +138,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	proj.pendingAdvance = player.shotLeadSec * proj.speed;
 	if(player.pendingShotRawSize >= (i32)offsetof(Cl::CQ_GamePlayerSyncPhy, FirePosition)) {
 		proj.remoteID = ((const Cl::CQ_GamePlayerSyncPhy*)player.pendingShotRaw.data())->RemoteSeedID + 1;
+		proj.seedOwnerHd = player.clientHd;
 	}
 	replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(proj.dir.y, proj.dir.x)));
 
@@ -243,6 +245,8 @@ void World::UpdateProjectiles(f32 delta)
 		bool destroyed = false;
 
 		if(!proj->graph) {
+			u32 activationCost = 0;
+			const Player* activationTarget = nullptr;
 			foreach(it, players) {
 				if(it->team == owner.team || it->dead || it->untargetable) continue;
 				if(eastl::find(proj->hitList.begin(), proj->hitList.end(), it->index) != proj->hitList.end()) continue;
@@ -255,12 +259,20 @@ void World::UpdateProjectiles(f32 delta)
 				if(!proj->hitList.full()) proj->hitList.push_back(it->index);
 				if(proj->damage > 0) DamagePlayer(owner, *it, SkillID::INVALID, (i32)(proj->damage * PassiveWeaponDamageMul(owner, *it)), &*proj);
 				PassiveOnWeaponHit(owner, *it, *proj);
+				const i32 cost = PenetrationCost(*it);
+				activationCost += (u32)cost;
+				if(!activationTarget) activationTarget = &*it;
+				proj->penetrationLeft -= cost;
+				if(proj->penetrationLeft <= 0) break;
+			}
+			if(activationTarget) {
+				const vec3 hitPos = vec3(vec2(activationTarget->body->GetWorldPos()), proj->pos.z);
+				if(proj->remoteID != 0) replication->SendRemoteActivatedToAll(proj->remoteID, proj->seedOwnerHd, ClientHandle::INVALID, activationTarget->Main().UID, activationCost, hitPos);
 				proj->hitsLeft--;
-				if(proj->hitsLeft <= 0) {
+				if(proj->hitsLeft <= 0 || proj->penetrationLeft <= 0) {
 					if(proj->remoteID != 0) replication->SendDestroyRemoteToAll(proj->remoteID);
-					proj->pos = vec3(vec2(pos), proj->pos.z);
+					proj->pos = hitPos;
 					destroyed = true;
-					break;
 				}
 			}
 		}

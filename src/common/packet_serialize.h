@@ -2589,6 +2589,31 @@ inline const char* PacketSerialize<Sv::SN_DestroyEntity>(const void* packetData,
 	SER("}");
 	return str.data();
 }
+template<>
+inline const char* PacketSerialize<Sv::SN_RemoteActivated>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	const Sv::SN_RemoteActivated& p = *(Sv::SN_RemoteActivated*)packetData;
+	SER("SN_RemoteActivated(%d, %d) :: {", Sv::SN_RemoteActivated::NET_ID, packetSize);
+	SER("	remoteID=0x%08x", p.remoteID);
+	SER("	defID=%u", p.defID);
+	SER("	penetrationCount=%u", p.penetrationCount);
+	SER("	remotePos=(%f, %f, %f)", p.remotePos.x, p.remotePos.y, p.remotePos.z);
+	SER("}");
+	return str.data();
+}
+template<>
+inline const char* PacketSerialize<Sv::SN_ResistStatus>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	const Sv::SN_ResistStatus& p = *(Sv::SN_ResistStatus*)packetData;
+	SER("SN_ResistStatus(%d, %d) :: {", Sv::SN_ResistStatus::NET_ID, packetSize);
+	SER("	target=%u", p.target);
+	SER("	caster=%u", p.caster);
+	SER("	event=%u", p.event);
+	SER("}");
+	return str.data();
+}
 DEFAULT_SERIALIZE(Sv::SN_RegionServicePolicy);
 DEFAULT_SERIALIZE(Sv::SN_AllCharacterBaseData);
 DEFAULT_SERIALIZE(Sv::SN_MyGuild);

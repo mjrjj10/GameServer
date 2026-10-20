@@ -425,6 +425,8 @@ struct World
 		f32 speed;
 		f32 halfWidth;
 		u32 remoteID = 0;
+		ClientHandle seedOwnerHd = ClientHandle::INVALID;
+		i32 penetrationLeft = 0;
 		f32 pendingAdvance = 0;
 		f32 forwardReach = 70.0f;
 		RemoteIdx remoteDoc = RemoteIdx::INVALID;
@@ -490,6 +492,7 @@ struct World
 		i32 hitsLeft;
 		bool areaDone;
 		u32 clientRemoteID = 0;
+		i32 penetrationLeft = 0;
 		bool destroyedByHit = false;
 		Time nextTimeEvent = Time::ZERO;
 		bool timeEventActive = false;
@@ -648,6 +651,9 @@ struct World
 	void RelayWarp(ActorNpc& npc, const vec3& to);
 	void ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos);
 	ActorUID statusCasterOverride = ActorUID::INVALID;
+	static const i32 PENETRATION_UNLIMITED = 0x7fffffff;
+	struct RemoteActivation { u32 remoteID; ClientHandle skipHd; ActorUID targetUID; u32 penetration; vec3 pos; };
+	RemoteActivation remoteActivation = { 0, ClientHandle::INVALID, ActorUID::INVALID, 0, vec3(0) };
 	f32 statusDistanceRatioOverride = 0;
 	bool statusFromBehind = false;
 	bool statusForceCenterSet = false;
@@ -783,6 +789,10 @@ private:
 	bool LagSegmentHits(const Player& p, const vec2& a, const vec2& b, f32 lateral, f32 forwardReach) const;
 	f32 LagDistToPoint(const Player& p, const vec2& point) const;
 	vec2 LagClosestPos(const Player& p, const vec2& point) const;
-	void RemoteHit(RemoteInst& inst, Player& target);
+	bool RemoteHit(RemoteInst& inst, Player& target);
+	i32 PenetrationCost(const Player& p) const;
+	void BeginRemoteActivation(const RemoteInst& inst);
+	void AddRemoteActivation(const Player& target, f32 z);
+	void FlushRemoteActivation();
 	void DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 damage, const Projectile* proj = nullptr, u32 remoteID = 0, RemoteIdx remoteDoc = RemoteIdx::INVALID, vec2 remoteDir = vec2(1, 0));
 };

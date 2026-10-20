@@ -245,6 +245,7 @@ bool GameXmlContent::LoadMasterDefinitionsModel()
 		pEntityComData->QueryFloatAttribute("_MoveSpeed", &moveSpeed);
 		pEntityComData->QueryFloatAttribute("_RotateSpeed", &rotateSpeed);
 		pEntityComData->QueryFloatAttribute("_Scale", &scale);
+		pEntityComData->QueryIntAttribute("_DensityCount", &master->densityCount);
 
 		
 		XMLElement* pCreatureCompData = pNodeMaster->FirstChildElement("CreatureComData");
@@ -1776,6 +1777,7 @@ bool GameXmlContent::LoadRemoteData()
 				pComp->QueryFloatAttribute("_CriticalRate", &remote.criticalRate);
 				pComp->QueryAttribute("_OnHitOwnerStatusIndex", &remote.onHitOwnerStatus);
 				remote.activateCount = _ActivateCount;
+				pComp->QueryAttribute("_PenetrationCount", &remote.penetrationCount);
 				remote.lifeTime = _LifeTime;
 				pComp->QueryFloatAttribute("_AttackMultiplier", &remote.attackMultiplier);
 				pComp->QueryFloatAttribute("_OffsetY", &remote.offsetY);

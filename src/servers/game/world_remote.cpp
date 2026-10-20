@@ -86,6 +86,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	inst.spawnTime = localTime;
 	inst.target = target;
 	inst.hitsLeft = MAX(remote->activateCount, 1);
+	inst.penetrationLeft = remote->penetrationCount > 0 ? remote->penetrationCount : PENETRATION_UNLIMITED;
 	inst.areaDone = false;
 	inst.casterLocal = casterCreatesLocally;
 	inst.graphStart = pos;
@@ -188,12 +189,43 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 	}
 }
 
-void World::RemoteHit(RemoteInst& inst, Player& target)
+i32 World::PenetrationCost(const Player& p) const
+{
+	if(p.Main().classType == ClassType::NONE) return 0;
+	return GetGameXmlContent().GetMaster(p.Main().classType).densityCount;
+}
+
+void World::BeginRemoteActivation(const RemoteInst& inst)
+{
+	remoteActivation.remoteID = inst.clientRemoteID;
+	remoteActivation.skipHd = inst.casterLocal ? players[inst.ownerIndex].clientHd : ClientHandle::INVALID;
+	remoteActivation.targetUID = ActorUID::INVALID;
+	remoteActivation.penetration = 0;
+}
+
+void World::AddRemoteActivation(const Player& target, f32 z)
+{
+	if(remoteActivation.remoteID == 0) return;
+	if(remoteActivation.targetUID == ActorUID::INVALID) {
+		remoteActivation.targetUID = target.Main().UID;
+		remoteActivation.pos = vec3(vec2(target.body->GetWorldPos()), z);
+	}
+	remoteActivation.penetration += (u32)PenetrationCost(target);
+}
+
+void World::FlushRemoteActivation()
+{
+	if(remoteActivation.remoteID != 0 && remoteActivation.targetUID != ActorUID::INVALID)
+		replication->SendRemoteActivatedToAll(remoteActivation.remoteID, ClientHandle::INVALID, remoteActivation.skipHd, remoteActivation.targetUID, remoteActivation.penetration, remoteActivation.pos);
+	remoteActivation.remoteID = 0;
+}
+
+bool World::RemoteHit(RemoteInst& inst, Player& target)
 {
 	const Remote& remote = *inst.remote;
 	Player& owner = players[inst.ownerIndex];
-	if(!RemoteCanAffect(inst, target, true)) return;
-	if(remote.activateDelay > 0 && TimeDiffSec(TimeDiff(inst.spawnTime, localTime)) < remote.activateDelay) return;
+	if(!RemoteCanAffect(inst, target, true)) return false;
+	if(remote.activateDelay > 0 && TimeDiffSec(TimeDiff(inst.spawnTime, localTime)) < remote.activateDelay) return false;
 	const bool enemy = target.team != owner.team;
 	if(enemy) ApplyRemoteHitResourceGain(owner, remote.ID, inst.castID, target.index);
 
@@ -205,13 +237,16 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 		LOG("Remote :: %ls hit %ls -> caster action %d", owner.name.data(), target.name.data(), (i32)remote.changeCasterAction);
 		PlayerCastSkill(owner, inst.skillID, target.body->GetWorldPos(), Slice<const ActorUID>(&targetUID, 1), 0, remote.changeCasterAction);
 	}
-	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty()) return;
+	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty()) {
+		AddRemoteActivation(target, inst.pos.z);
+		return true;
+	}
 
 	const bool sharedZone = inst.speed <= 0 && remote.lifeTime > remote.hitInvalidTime && inst.castID != 0;
 	foreach(h, castHits) {
 		if(h->playerIndex != target.index || localTime >= h->until) continue;
-		if(h->instID == inst.instID) return;
-		if(sharedZone && h->castID == inst.castID && h->remoteID == remote.ID) return;
+		if(h->instID == inst.instID) return false;
+		if(sharedZone && h->castID == inst.castID && h->remoteID == remote.ID) return false;
 	}
 	if(inst.speed <= 0 && enemy) inst.hitsLeft--;
 	if(!castHits.full()) {
@@ -223,6 +258,7 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 		h.until = TimeAdd(localTime, TimeMsToTime(MAX(remote.hitInvalidTime, 0.1f) * 1000.0));
 		castHits.push_back(h);
 	}
+	AddRemoteActivation(target, inst.pos.z);
 
 	if(amount > 0) {
 		if(enemy && inst.skillID != SkillID::INVALID) PassiveOnSkillHit(owner, target);
@@ -311,6 +347,7 @@ void World::RemoteHit(RemoteInst& inst, Player& target)
 	}
 	statusFromBehind = false;
 	statusForceCenterSet = false;
+	return true;
 }
 
 void World::RemoteHitAlongPath(RemoteInst& inst)
@@ -413,6 +450,7 @@ void World::UpdateRemotes(f32 delta)
 		const f32 elapsed = (f32)TimeDiffSec(TimeDiff(inst.spawnTime, localTime));
 		bool destroyed = inst.killNow;
 		Player& instOwner = players[inst.ownerIndex];
+		BeginRemoteActivation(inst);
 
 		if(remote.attachTargetObject && inst.target != ActorUID::INVALID) {
 			const ActorMaster* targetMaster = FindMasterActor(inst.target);
@@ -451,6 +489,7 @@ void World::UpdateRemotes(f32 delta)
 		if(!destroyed && remote.lifeTime > 0 && elapsed >= remote.lifeTime) destroyed = true;
 		if(!destroyed && remote.lifeTime <= 0 && inst.speed <= 0 && inst.areaDone) destroyed = true;
 
+		FlushRemoteActivation();
 		if(destroyed && inst.speed > 0) ShowcaseOnRemoteEnd(inst);
 
 		if(destroyed) DestroyRemote(i);
@@ -713,21 +752,26 @@ bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
 		const vec2 to = from + inst.dir * step;
 		const f32 halfWidth = remote.boundSize[0] * 0.5f;
 		const f32 boxFront = remote.boundType == Remote::BoundType::E_BOUND_BOX ? MAX(remote.offsetY + remote.boundSize[1] * 0.5f, 0.0f) : 0.0f;
+		const Player* stopPos = nullptr;
 		if(remote.damageGroup != Remote::DamageGroup::eNONE && remote.damageGroup != Remote::DamageGroup::INVALID) {
 			foreach(it, players) {
 				if(!RemoteCanAffect(inst, *it, false)) continue;
 				const vec3 pos = it->body->GetWorldPos();
 				if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 				if(!LagSegmentHits(*it, from, to, halfWidth + HitRadius(*it) + PROJECTILE_HIT_TOLERANCE, boxFront + HitRadius(*it))) continue;
-				RemoteHit(inst, *it);
+				if(!RemoteHit(inst, *it)) continue;
+				if(!stopPos) stopPos = &*it;
+				inst.penetrationLeft -= PenetrationCost(*it);
+				if(inst.stopAtFirstHit && it->team != players[inst.ownerIndex].team) inst.hitsLeft = 1;
+				if(inst.penetrationLeft <= 0) break;
+			}
+			if(stopPos) {
 				inst.hitsLeft--;
-				if(inst.stopAtFirstHit && it->team != players[inst.ownerIndex].team) inst.hitsLeft = 0;
-				if(inst.hitsLeft <= 0) {
+				if(inst.hitsLeft <= 0 || inst.penetrationLeft <= 0) {
 					if(inst.clientRemoteID != 0) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
 					inst.destroyedByHit = true;
-					inst.pos = vec3(vec2(pos), inst.pos.z);
+					inst.pos = vec3(vec2(stopPos->body->GetWorldPos()), inst.pos.z);
 					destroyed = true;
-					break;
 				}
 			}
 		}

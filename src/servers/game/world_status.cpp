@@ -8,6 +8,8 @@ static const f32 TOOLTIP_DEFENDER_CC_IMMUNE_SEC = 1.0f;
 static const f32 TOOLTIP_DEATHKNIGHT_REVIVE_HP = 0.30f;
 static const f64 SELF_DRAG_LINK_SEC = 0.6;
 static const f32 STATUS_PUSH_BASE_DISTANCE = 500.0f;
+static const u32 STATUS_RESIST_EVENT_PASSIVE = 0;
+static const u32 STATUS_RESIST_EVENT_PROTECTED = 2;
 static const f32 DEFEAT_PUSH_SEC = 1.0f;
 static const f32 DEFEAT_KNOCKDOWN_SEC = 1.5f;
 static const f32 DEFEAT_FLY_START_SEC = 1.0f;
@@ -446,8 +448,16 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	f32 graphDuration = duration * (info && info->timeRatio > 0 ? info->timeRatio : 1.0f);
 	DefeatGraphTimes(info, &duration, &graphDuration);
 	if(durationOverride > 0) duration = durationOverride;
+	if(info && info->isDebuff && caster.team != target.team && HasStatusType(target, StatusType::GODMODE)) {
+		LOG("Status :: %ls resisted %d (godmode)", target.name.data(), statusID);
+		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
+		return;
+	}
 	f32 ccScale = 1.0f;
-	if(info && caster.team != target.team && PassiveBlocksCC(target, *info, &ccScale)) return;
+	if(info && caster.team != target.team && PassiveBlocksCC(target, *info, &ccScale)) {
+		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
+		return;
+	}
 	duration *= ccScale;
 	graphDuration *= ccScale;
 	ShowcaseOnStatus(caster, target, statusID);
@@ -479,6 +489,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		info->type == StatusType::KNOCKDOWN || info->type == StatusType::AIRBORNE || info->type == StatusType::FLY || info->type == StatusType::DRAGGED || dragForce);
 	if(displacement && HasStatusType(target, StatusType::SUPERARMOR)) {
 		LOG("Status :: %ls resisted %d (superarmor)", target.name.data(), statusID);
+		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
 		return;
 	}
 

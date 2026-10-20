@@ -372,6 +372,7 @@ struct Remote
 	f32 maxDistance = 0;
 	f32 lifeTime = 0;
 	i32 activateCount = 1;
+	i32 penetrationCount = 0;
 	RemoteIdx destroyCreateRemote = RemoteIdx::INVALID;
 	f32 attackMultiplier = 0;
 	f32 offsetY = 0;
@@ -467,6 +468,7 @@ struct GameXmlContent
 		eastl::fixed_vector<WeaponIndex,3,false> defaultWeaponIDs;
 		eastl::fixed_vector<WeaponIndex,3,false> fairPvpWeaponIDs;
 		eastl::fixed_vector<StatValue,32,false> baseStats;
+		i32 densityCount = 0;
 
 
 
