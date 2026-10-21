@@ -123,10 +123,12 @@ void World::Update(Time localTime_)
 			p.input.tag = 0;
 			p.mainCharaID ^= 1;
 			eastl::swap(p.mana, p.benchMana);
+			eastl::swap(p.stamina, p.benchStamina);
 			eastl::swap(p.res, p.benchRes);
-			p.tNextManaSend = Time::ZERO;
-			p.resSent = { -1, -1, -1 };
-			p.tNextResSend = Time::ZERO;
+			p.manaDirty = true;
+			p.staminaDirty = true;
+			p.resDirty = true;
+			p.ultDirty = true;
 			if(!p.dead) ApplyStatus(p, p, STATUS_PC_TAG_GODMODE);
 		}
 
@@ -825,7 +827,7 @@ bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos
 	if(!PlayerPaySkillCost(player, (i32)skillID)) return false;
 	if(castCostLevel) {
 		for(i32 r = 0; r < 3; r++) {
-			if(castCostLevel->consume[r] > 0 && player.res[r] >= 0) { player.res[r] -= castCostLevel->consume[r]; player.tNextResSend = Time::ZERO; }
+			if(castCostLevel->consume[r] > 0 && player.res[r] >= 0) { player.res[r] -= castCostLevel->consume[r]; player.resDirty = true; }
 		}
 		LOG("Cost :: %ls skill=%d empowered level (consumed rp=%.0f bb=%.0f, %d remotes / %d statuses replaced, damage x%.3f)", player.name.data(), (i32)skillID,
 			castCostLevel->consume[1], castCostLevel->consume[2], (i32)castCostLevel->remoteReplace.size(), (i32)castCostLevel->statusReplace.size(), castCostLevel->damageRatio);
@@ -939,11 +941,11 @@ void World::RespawnPlayer(Player& player)
 	player.mana = -1.0f;
 	player.benchMana = -1.0f;
 	player.stamina = -1.0f;
+	player.benchStamina = -1.0f;
 	player.res = { -1, -1, -1 };
 	player.benchRes = { -1, -1, -1 };
-	player.resSent = { -1, -1, -1 };
-	player.tNextManaSend = Time::ZERO;
-	player.tNextStaminaSend = Time::ZERO;
+	player.manaDirty = true;
+	player.staminaDirty = true;
 	foreach(c, player.characters) {
 		(*c)->hp = (*c)->hpMax;
 	}

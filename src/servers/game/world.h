@@ -154,24 +154,26 @@ struct World
 		Time tNextBotSkill = Time::ZERO;
 		f32 ultGauge = -1.0f;
 		f32 stamina = -1.0f;
+		f32 benchStamina = -1.0f;
 		f32 mana = -1.0f;
 		Time tNextBotShot = Time::ZERO;
 		f32 moveSpeedSent = -1.0f;
-		Time tNextManaSend = Time::ZERO;
+		bool manaDirty = false;
 		eastl::array<f32,3> res = { -1, -1, -1 };
 		f32 benchMana = -1.0f;
 		eastl::array<f32,3> benchRes = { -1, -1, -1 };
-		eastl::array<f32,3> resSent = { -1, -1, -1 };
-		Time tNextResSend = Time::ZERO;
-		Time tNextResRefresh = Time::ZERO;
+		bool resDirty = false;
+		Time tNextChargeSend = Time::ZERO;
+		Time tNextSpeedRefresh = Time::ZERO;
+		Time tNextRegen = Time::ZERO;
+		Time rageGainAt = Time::ZERO;
 		eastl::array<f32,2> heat = { 0, 0 };
 		eastl::array<Time,2> heatLastShot = { Time::ZERO, Time::ZERO };
 		eastl::array<Time,2> overheatUntil = { Time::ZERO, Time::ZERO };
 		i32 heatSent = -1;
 		Time tNextHeatSend = Time::ZERO;
-		Time tNextStaminaSend = Time::ZERO;
-		f32 ultGaugeSent = -1.0f;
-		Time tNextUltSend = Time::ZERO;
+		bool staminaDirty = false;
+		bool ultDirty = false;
 		f32 shotLeadSec = 0;
 		f32 weaponAimYaw = 0;
 		vec3 lastClientPos = vec3(0);
@@ -219,6 +221,8 @@ struct World
 		u8 battleStage = 0;
 		u32 hiddenFrom = 0;
 		ActorUID hiddenUID = ActorUID::INVALID;
+		eastl::fixed_vector<ActorUID,4,false> hideDetectors;
+		ActorUID hideDetectedUID = ActorUID::INVALID;
 		ActorUID chaseTarget = ActorUID::INVALID;
 		ActionStateID chaseAction = ActionStateID::INVALID;
 		Time chaseUntil = Time::ZERO;
@@ -579,6 +583,7 @@ struct World
 		vec3 pos;
 		vec3 rot;
 		ActorUID target = ActorUID::INVALID;
+		bool remove = false;
 	};
 	eastl::fixed_vector<PendingSummon,64,false> pendingSummons;
 
@@ -661,6 +666,7 @@ struct World
 	void RelayWarp(ActorNpc& npc, const vec3& to);
 	void ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos);
 	ActorUID statusCasterOverride = ActorUID::INVALID;
+	ActorUID damageAttackerOverride = ActorUID::INVALID;
 	i32 damageStatusID = 0;
 	static const i32 PENETRATION_UNLIMITED = 0x7fffffff;
 	struct RemoteActivation { u32 remoteID; ClientHandle skipHd; ActorUID targetUID; u32 penetration; vec3 pos; };
@@ -764,6 +770,8 @@ public:
 	void UpdateBattleStates();
 	void BreakHide(Player& player);
 	void UpdateHideVisibility();
+	void ShowHiddenToEnemies(Player& player, ActorUID was, ActorUID hidden);
+	void SendHideDetectToAll(ActorUID detectorUID, ActorUID targetUID, u8 flag);
 	void UpdateWeaponCharges();
 	void UpdateSkillPoints();
 	void SpawnCreatureFromRemote(const RemoteInst& parent, i32 creature, const vec3& pos);
@@ -793,6 +801,7 @@ private:
 	bool HasStatusType(const Player& p, StatusType type) const;
 	f32 StatusModSum(const Player& p, i32 stat) const;
 	f32 StatusModMulSum(const Player& p, i32 stat) const;
+	f32 StatusRegenBonus(const Player& p, i32 stat, bool mul) const;
 	bool IsBlocked(const Player& p, bool attack, bool skill, bool shirk) const;
 	void HealPlayer(Player& healer, Player& target, i32 amount);
 	bool RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const;

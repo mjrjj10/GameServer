@@ -127,6 +127,7 @@ struct SummonInfo
 	f32 lifeTime = 0;
 	f32 moveSpeed = 0;
 	f32 perception = 0;
+	f32 hideDetectRadius = 0;
 	bool targetable = false;
 	eastl::fixed_vector<i32,4,false> skills;
 	enum Ai: u8 { AI_NONE = 0, AI_RELAY, AI_CHASE };
@@ -139,7 +140,7 @@ struct SummonInfo
 
 struct StatusMod
 {
-	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE, ATTACK, MOVESPEED, REFLECT_DAMAGE_RATIO, DEFENCE };
+	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE, ATTACK, MOVESPEED, REFLECT_DAMAGE_RATIO, DEFENCE, MANAREGEN, RAGEREGEN, STAMINA };
 	Stat stat = OTHER;
 	bool regen = false;
 	bool mul = false;
@@ -581,6 +582,7 @@ struct GameXmlContent
 				struct {
 					i32 entityIndex;
 					ActionCommand::TargetPreset targetPreset;
+					u8 remove;
 				} entity;
 
 				struct {

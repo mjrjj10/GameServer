@@ -1435,7 +1435,7 @@ void Replication::SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorU
 	}
 }
 
-void Replication::SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 max)
+void Replication::SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 max, u32 reason)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
@@ -1449,7 +1449,7 @@ void Replication::SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 ma
 		stat._STAT_TYPE = (u32)statType;
 		stat._CUR = cur;
 		stat._MAX = max;
-		stat._ReasonCode = 0;
+		stat._ReasonCode = reason;
 		SendPacket(clientHd, stat);
 	}
 }

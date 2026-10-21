@@ -176,7 +176,13 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	if(attacker.res[1] >= 0) {
 		const ClassType ac = attacker.Main().classType;
 		const f32 rageMax = MasterStat(ac, RESOURCES[1].maxStat);
-		if(rageMax > 0) attacker.res[1] = MIN(attacker.res[1] + MasterStat(ac, STAT_RAGE_ATTACK_RECOVERY_VALUE), rageMax);
+		if(rageMax > 0) {
+			attacker.rageGainAt = localTime;
+			if(attacker.res[1] < rageMax) {
+				attacker.res[1] = MIN(attacker.res[1] + MasterStat(ac, STAT_RAGE_ATTACK_RECOVERY_VALUE), rageMax);
+				attacker.resDirty = true;
+			}
+		}
 	}
 
 	LOG("Damage :: %ls -> %ls skill=%d damage=%d%s hp=%d/%d in=%d remote=%u element=%d", attacker.name.data(), target.name.data(), (i32)skillID, damage, damageType == PACKET_DAMAGE_TYPE_CRITICAL ? " CRIT" : "", chara.hp, chara.hpMax,
@@ -202,7 +208,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		Replication::RemoteDamage hit;
 		hit.remoteID = remoteID;
 		hit.remoteDoc = remoteDoc;
-		hit.attackerUID = attacker.Main().UID;
+		hit.attackerUID = damageAttackerOverride != ActorUID::INVALID ? damageAttackerOverride : attacker.Main().UID;
 		hit.targetUID = chara.UID;
 		hit.remotePos = statusForceCenterSet ? statusForceCenter : target.body->GetWorldPos();
 		hit.targetPos = target.body->GetWorldPos();

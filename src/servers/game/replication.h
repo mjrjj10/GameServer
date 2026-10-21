@@ -330,7 +330,7 @@ struct Replication
 	};
 	void SendGameEnd(const EndPlayer* players, i32 count, i32 redScore, i32 blueScore, u32 playTimeMs);
 	void SendGaugeToAll(UserID userID, u8 updateType, bool overheated, f32 overheatTime, u16 gauge, u16 maxGauge);
-	void SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 max);
+	void SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 max, u32 reason = 0);
 	void SendStanceToAll(ActorUID actorUID, i32 stance, f32 durationSec);
 	void SendNpcBehaviorToAll(ActorUID actorUID, ActionStateID action, const vec3& pos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID);
 	void SendExecuteSkillAck(ClientHandle clientHd, ActorUID casterUID, SkillID skillID);

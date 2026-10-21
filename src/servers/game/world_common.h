@@ -13,11 +13,11 @@ static const i32 STAT_STAMINA = 2;
 static const i32 STAT_MOVESPEED = 14;
 static const i32 STAT_MANA = 35;
 static const i32 STAT_SKILLPOWER = 8;
-struct ResourceDef { i32 maxStat; i32 regenStat; bool startFull; };
+struct ResourceDef { i32 maxStat; i32 regenStat; bool startFull; i32 tagRegenValueStat; i32 tagRegenRatioStat; };
 static const ResourceDef RESOURCES[3] = {
-	{ 17, 41, true },
-	{ 36, 40, false },
-	{ 56, 57, true },
+	{ 17, 41, true, 46, 49 },
+	{ 36, 40, false, 45, 48 },
+	{ 56, 57, true, 26, 30 },
 };
 static const i32 STAT_ULTIMATE = 37;
 static const f32 WEAPON_HIT_TOLERANCE = 50.0f;

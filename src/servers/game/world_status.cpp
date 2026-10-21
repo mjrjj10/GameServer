@@ -314,7 +314,7 @@ void World::PassiveOnSkillCast(Player& player, i32 skillID)
 			const f32 staminaMax = MasterStat(player.Main().classType, STAT_STAMINA);
 			if(staminaMax > 0) {
 				player.stamina = staminaMax;
-				player.tNextStaminaSend = Time::ZERO;
+				player.staminaDirty = true;
 			}
 			LOG("Passive :: %ls stamina restored after %d skills", player.name.data(), st->info->customMax);
 		}
@@ -426,8 +426,8 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 			if(FindActiveStatus(target.index, info.hitEffectStatus)) {
 				ConsumeStatus(target.index, info.hitEffectStatus);
 				f32 stolen = info.hitEffectValue;
-				if(target.mana >= 0) { stolen = MIN(stolen, target.mana); target.mana -= stolen; target.tNextManaSend = Time::ZERO; }
-				if(attacker.mana >= 0) { attacker.mana += stolen; attacker.tNextManaSend = Time::ZERO; }
+				if(target.mana >= 0) { stolen = MIN(stolen, target.mana); target.mana -= stolen; target.manaDirty = true; }
+				if(attacker.mana >= 0) { attacker.mana += stolen; attacker.manaDirty = true; }
 				LOG("Passive :: %ls drained %.0f mana from %ls", attacker.name.data(), stolen, target.name.data());
 			}
 		}
@@ -553,14 +553,14 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		const f32 manaBefore = target.mana, energyBefore = target.res[0];
 		target.mana = MAX(target.mana, 0.0f) * (1.0f - drain->fraction);
 		if(target.res[0] > 0) target.res[0] *= 1.0f - drain->fraction;
-		target.tNextManaSend = Time::ZERO;
-		target.tNextResSend = Time::ZERO;
+		target.manaDirty = true;
+		target.resDirty = true;
 		LOG("Status :: %ls drained by %d (mana %.0f -> %.0f, energy %.0f -> %.0f)", target.name.data(), statusID, manaBefore, target.mana, energyBefore, target.res[0]);
 	}
 	else if(info && info->staminaBurn && info->type == StatusType::HEAL && target.stamina > 0) {
 		LOG("Status :: %ls stamina burned by %d (%.0f -> 0)", target.name.data(), statusID, target.stamina);
 		target.stamina = 0;
-		target.tNextStaminaSend = Time::ZERO;
+		target.staminaDirty = true;
 	}
 
 	const bool dragForce = info && info->type == StatusType::DRAGGEDBYFORCE;
@@ -745,13 +745,6 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	}
 
 	LOG("Status :: %ls -> %ls status=%d type=%s duration=%.2f shield=%.0f", caster.name.data(), target.name.data(), statusID, info ? info->typeName.c_str() : "?", duration, st.shieldHP);
-	if(info && info->type == StatusType::HIDE && Config().DevHideDetectFlag >= 0) {
-		foreach(viewer, players) {
-			if(viewer->clientHd == ClientHandle::INVALID || viewer->team == target.team) continue;
-			replication->SendHideDetect(viewer->clientHd, viewer->Main().UID, target.Main().UID, (u8)Config().DevHideDetectFlag);
-			LOG("Hide :: sent HideDetect flag=%d about %ls to %ls", Config().DevHideDetectFlag, target.name.data(), viewer->name.data());
-		}
-	}
 	vec3 sentTo = dragForce ? forceCenter : to;
 	if(info && (info->type == StatusType::AIRBORNE || info->type == StatusType::FLY) && info->heightRatio > 0) sentTo.z = from.z + STATUS_LIFT_BASE_HEIGHT * info->heightRatio * ccScale;
 	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, sentTo, graphDuration, 1, ccScale, nominalDist, StatusSendsGraph(info));
@@ -781,6 +774,18 @@ f32 World::StatusModMulSum(const Player& p, i32 stat) const
 		if(it->targetIndex != p.index || !it->info || localTime >= it->until) continue;
 		foreach_const(m, it->info->mods) {
 			if((i32)m->stat == stat && !m->regen && m->mul) sum += m->value * it->overlap;
+		}
+	}
+	return sum;
+}
+
+f32 World::StatusRegenBonus(const Player& p, i32 stat, bool mul) const
+{
+	f32 sum = 0;
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex != p.index || !it->info || localTime >= it->until) continue;
+		foreach_const(m, it->info->mods) {
+			if((i32)m->stat == stat && m->mul == mul) sum += m->value * it->overlap;
 		}
 	}
 	return sum;

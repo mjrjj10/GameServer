@@ -6,6 +6,16 @@
 static const i32 STAT_STAMINAREGEN = 5;
 static const i32 STAT_MANAREGEN = 39;
 static const i32 STAT_ULTIMATEREGEN = 42;
+static const i32 STAT_TAG_HEALTHREGEN_VALUE = 23;
+static const i32 STAT_TAG_STAMINAREGEN_VALUE = 25;
+static const i32 STAT_TAG_HEALTHREGEN_RATIO = 27;
+static const i32 STAT_TAG_STAMINAREGEN_RATIO = 29;
+static const i32 STAT_TAG_MANAREGEN_VALUE = 44;
+static const i32 STAT_TAG_MANAREGEN_RATIO = 47;
+static const u32 STAT_REASON_REGEN = 4;
+static const f64 REGEN_INTERVAL_MS = 1000.0;
+static const f64 RAGE_DECAY_DELAY_MS = 6000.0;
+static const f32 HIDE_DETECT_RADIUS_UNIT = 100.0f;
 static const f64 SKILL_POINT_INTERVAL_MS = 35000.0;
 static const f64 CHASE_UPDATE_INTERVAL_MS = 200.0;
 static const f64 BATTLE_STAGE_SEC = 1.0;
@@ -19,9 +29,14 @@ void World::UpdateUltimateGauges(f32 delta)
 	foreach(it, players) {
 		if(it->clientHd == ClientHandle::INVALID) continue;
 		const ClassType cls = it->Main().classType;
+		const ClassType benchCls = it->Sub().classType;
 
 		UpdateWeaponHeat(*it);
 
+		if(localTime >= it->tNextSpeedRefresh) {
+			it->tNextSpeedRefresh = TimeAdd(localTime, TimeMsToTime(1000));
+			it->moveSpeedSent = -1.0f;
+		}
 		{
 			const f32 base = MasterStat(cls, STAT_MOVESPEED);
 			const f32 speed = MAX(base * (1.0f + StatusModMulSum(*it, StatusMod::MOVESPEED) / 100.0f), 0.0f);
@@ -33,76 +48,101 @@ void World::UpdateUltimateGauges(f32 delta)
 		}
 
 		const f32 ultMax = MAX(MasterStat(cls, STAT_ULTIMATE), 1.0f);
-		if(it->ultGauge < 0) it->ultGauge = ultMax;
-		it->ultGauge = MIN(it->ultGauge + MasterStat(cls, STAT_ULTIMATEREGEN) * delta, ultMax);
-
 		const f32 staminaMax = MasterStat(cls, STAT_STAMINA);
-		if(staminaMax > 0) {
-			if(it->stamina < 0) it->stamina = staminaMax;
-			it->stamina = MIN(it->stamina + MasterStat(cls, STAT_STAMINAREGEN) * delta, staminaMax);
-			if(localTime >= it->tNextStaminaSend) {
-				it->tNextStaminaSend = TimeAdd(localTime, TimeMsToTime(250));
-				replication->SendStatToAll(it->Main().UID, STAT_STAMINA, it->stamina, staminaMax);
-			}
-		}
-
-		bool resChanged = false;
-		for(int r = 0; r < 3; r++) {
-			const f32 resMax = MasterStat(cls, RESOURCES[r].maxStat);
-			if(resMax <= 0) continue;
-			if(it->res[r] < 0) it->res[r] = RESOURCES[r].startFull ? resMax : 0;
-			const ResourceGainRule* charging = it->weaponState == WEAPON_STATE_CHARGE ? FindResourceGainRule(cls, ResourceEvent::CHARGING_PER_SEC) : nullptr;
-			const f32 chargingGain = charging && charging->slot == r ? charging->amount : 0.0f;
-			it->res[r] = MIN(MAX(it->res[r] + (MasterStat(cls, RESOURCES[r].regenStat) + chargingGain) * delta, 0.0f), resMax);
-			if(ShowcaseKeepsFullRes(*it)) it->res[r] = resMax;
-			if(fabsf(it->res[r] - it->resSent[r]) >= 0.01f) resChanged = true;
-		}
-		if(localTime >= it->tNextResRefresh) {
-			it->tNextResRefresh = TimeAdd(localTime, TimeMsToTime(1000));
-			resChanged = true;
-			it->moveSpeedSent = -1.0f;
-		}
-		if(resChanged && localTime >= it->tNextResSend) {
-			it->tNextResSend = TimeAdd(localTime, TimeMsToTime(250));
-			for(int r = 0; r < 3; r++) {
-				const f32 resMax = MasterStat(cls, RESOURCES[r].maxStat);
-				if(resMax <= 0) continue;
-				it->resSent[r] = it->res[r];
-				replication->SendStatToAll(it->Main().UID, RESOURCES[r].maxStat, it->res[r], resMax);
-			}
-		}
-
 		const f32 manaMax = MasterStat(cls, STAT_MANA);
-		if(manaMax > 0) {
-			if(it->mana < 0) it->mana = manaMax;
-			it->mana = MIN(it->mana + MasterStat(cls, STAT_MANAREGEN) * delta, manaMax);
-			if(localTime >= it->tNextManaSend) {
-				it->tNextManaSend = TimeAdd(localTime, TimeMsToTime(250));
-				replication->SendStatToAll(it->Main().UID, STAT_MANA, it->mana, manaMax);
+		eastl::array<f32,3> resMax;
+		for(int r = 0; r < 3; r++) resMax[r] = MasterStat(cls, RESOURCES[r].maxStat);
+		if(it->ultGauge < 0) { it->ultGauge = ultMax; it->ultDirty = true; }
+		if(staminaMax > 0 && it->stamina < 0) { it->stamina = staminaMax; it->staminaDirty = true; }
+		if(manaMax > 0 && it->mana < 0) { it->mana = manaMax; it->manaDirty = true; }
+		for(int r = 0; r < 3; r++) {
+			if(resMax[r] > 0 && it->res[r] < 0) { it->res[r] = RESOURCES[r].startFull ? resMax[r] : 0; it->resDirty = true; }
+		}
+
+		const ActorMaster& sub = it->Sub();
+		const f32 benchStaminaMax = MasterStat(benchCls, STAT_STAMINA);
+		const f32 benchManaMax = MasterStat(benchCls, STAT_MANA);
+		eastl::array<f32,3> benchResMax;
+		for(int r = 0; r < 3; r++) benchResMax[r] = MasterStat(benchCls, RESOURCES[r].maxStat);
+		if(benchStaminaMax > 0 && it->benchStamina < 0) {
+			it->benchStamina = benchStaminaMax;
+			replication->SendStatToAll(sub.UID, STAT_STAMINA, it->benchStamina, benchStaminaMax);
+		}
+		if(benchManaMax > 0 && it->benchMana < 0) {
+			it->benchMana = benchManaMax;
+			replication->SendStatToAll(sub.UID, STAT_MANA, it->benchMana, benchManaMax);
+		}
+		for(int r = 0; r < 3; r++) {
+			if(benchResMax[r] <= 0 || it->benchRes[r] >= 0) continue;
+			it->benchRes[r] = RESOURCES[r].startFull ? benchResMax[r] : 0;
+			replication->SendStatToAll(sub.UID, RESOURCES[r].maxStat, it->benchRes[r], benchResMax[r]);
+		}
+
+		const ResourceGainRule* charging = it->weaponState == WEAPON_STATE_CHARGE ? FindResourceGainRule(cls, ResourceEvent::CHARGING_PER_SEC) : nullptr;
+		if(charging && charging->slot >= 0 && charging->slot < 3 && resMax[charging->slot] > 0) {
+			f32& pool = it->res[charging->slot];
+			pool = MIN(MAX(pool + charging->amount * delta, 0.0f), resMax[charging->slot]);
+			if(localTime >= it->tNextChargeSend) {
+				it->tNextChargeSend = TimeAdd(localTime, TimeMsToTime(250));
+				it->resDirty = true;
 			}
 		}
 
-		{
-			const ClassType benchCls = it->Sub().classType;
-			const f32 benchManaMax = MasterStat(benchCls, STAT_MANA);
-			if(benchManaMax > 0) {
-				if(it->benchMana < 0) it->benchMana = benchManaMax;
-				it->benchMana = MIN(it->benchMana + MasterStat(benchCls, STAT_MANAREGEN) * delta, benchManaMax);
+		if(localTime >= it->tNextRegen) {
+			it->tNextRegen = TimeAdd(localTime, TimeMsToTime(REGEN_INTERVAL_MS));
+			auto regen = [&](ActorUID uid, i32 stat, f32& value, f32 max, f32 amount) {
+				if(value < 0 || max <= 0 || amount == 0) return;
+				const f32 next = MIN(MAX(value + amount, 0.0f), max);
+				if(next == value) return;
+				value = next;
+				replication->SendStatToAll(uid, stat, value, max, STAT_REASON_REGEN);
+			};
+			if(!it->dead) {
+				const ActorUID mainUID = it->Main().UID;
+				regen(mainUID, (i32)StatType::STAT_TYPE_ULTIMATE, it->ultGauge, ultMax, MasterStat(cls, STAT_ULTIMATEREGEN));
+				regen(mainUID, STAT_STAMINA, it->stamina, staminaMax, MasterStat(cls, STAT_STAMINAREGEN) * MAX(1.0f + StatusRegenBonus(*it, StatusMod::STAMINA, true) / 100.0f, 0.0f));
+				regen(mainUID, STAT_MANA, it->mana, manaMax, MasterStat(cls, STAT_MANAREGEN) + StatusRegenBonus(*it, StatusMod::MANAREGEN, false));
+				for(int r = 0; r < 3; r++) {
+					f32 amount = MasterStat(cls, RESOURCES[r].regenStat) + (r == 1 ? StatusRegenBonus(*it, StatusMod::RAGEREGEN, false) : 0.0f);
+					if(r == 1 && amount < 0 && localTime < TimeAdd(it->rageGainAt, TimeMsToTime(RAGE_DECAY_DELAY_MS))) amount = 0;
+					regen(mainUID, RESOURCES[r].maxStat, it->res[r], resMax[r], amount);
+				}
+
+				ActorMaster& bench = it->Sub();
+				if(bench.hp > 0 && bench.hp < bench.hpMax) {
+					const i32 hpGain = (i32)(MasterStat(benchCls, STAT_TAG_HEALTHREGEN_VALUE) + MasterStat(benchCls, STAT_TAG_HEALTHREGEN_RATIO) * bench.hpMax / 100.0f);
+					if(hpGain > 0) {
+						bench.hp = MIN(bench.hp + hpGain, bench.hpMax);
+						replication->SendStatToAll(bench.UID, (i32)StatType::STAT_TYPE_HEALTH, (f32)bench.hp, (f32)bench.hpMax, STAT_REASON_REGEN);
+					}
+				}
+				regen(bench.UID, STAT_STAMINA, it->benchStamina, benchStaminaMax, MasterStat(benchCls, STAT_TAG_STAMINAREGEN_VALUE) + MasterStat(benchCls, STAT_TAG_STAMINAREGEN_RATIO) * benchStaminaMax / 100.0f);
+				regen(bench.UID, STAT_MANA, it->benchMana, benchManaMax, MasterStat(benchCls, STAT_TAG_MANAREGEN_VALUE) + MasterStat(benchCls, STAT_TAG_MANAREGEN_RATIO) * benchManaMax / 100.0f);
+				for(int r = 0; r < 3; r++) {
+					regen(bench.UID, RESOURCES[r].maxStat, it->benchRes[r], benchResMax[r], MasterStat(benchCls, RESOURCES[r].tagRegenValueStat) + MasterStat(benchCls, RESOURCES[r].tagRegenRatioStat) * benchResMax[r] / 100.0f);
+				}
 			}
+		}
+
+		if(ShowcaseKeepsFullRes(*it)) {
 			for(int r = 0; r < 3; r++) {
-				const f32 resMax = MasterStat(benchCls, RESOURCES[r].maxStat);
-				if(resMax <= 0) continue;
-				if(it->benchRes[r] < 0) it->benchRes[r] = RESOURCES[r].startFull ? resMax : 0;
-				it->benchRes[r] = MIN(MAX(it->benchRes[r] + MasterStat(benchCls, RESOURCES[r].regenStat) * delta, 0.0f), resMax);
+				if(resMax[r] > 0 && it->res[r] != resMax[r]) { it->res[r] = resMax[r]; it->resDirty = true; }
 			}
 		}
 
-		if(localTime < it->tNextUltSend) continue;
-		it->tNextUltSend = TimeAdd(localTime, TimeMsToTime(1000));
-		it->ultGaugeSent = it->ultGauge;
-		foreach(c, it->characters) {
-			replication->SendStatToAll((*c)->UID, (i32)StatType::STAT_TYPE_ULTIMATE, it->ultGauge, ultMax);
+		const ActorUID mainUID = it->Main().UID;
+		if(it->ultDirty) replication->SendStatToAll(mainUID, (i32)StatType::STAT_TYPE_ULTIMATE, it->ultGauge, ultMax);
+		if(it->staminaDirty && staminaMax > 0) replication->SendStatToAll(mainUID, STAT_STAMINA, it->stamina, staminaMax);
+		if(it->manaDirty && manaMax > 0) replication->SendStatToAll(mainUID, STAT_MANA, it->mana, manaMax);
+		if(it->resDirty) {
+			for(int r = 0; r < 3; r++) {
+				if(resMax[r] > 0) replication->SendStatToAll(mainUID, RESOURCES[r].maxStat, it->res[r], resMax[r]);
+			}
 		}
+		it->ultDirty = false;
+		it->staminaDirty = false;
+		it->manaDirty = false;
+		it->resDirty = false;
 	}
 }
 
@@ -140,11 +180,11 @@ bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 		mp, player.mana, ug, player.ultGauge, st, player.stamina, ok ? "paid" : "REFUSED");
 	if(!ok) return false;
 
-	if(mp > 0 && player.mana >= 0) { player.mana -= mp; player.tNextManaSend = Time::ZERO; }
-	if(ug > 0 && player.ultGauge >= 0) { player.ultGauge -= ug; player.tNextUltSend = Time::ZERO; }
-	if(st > 0 && player.stamina >= 0) { player.stamina -= st; player.tNextStaminaSend = Time::ZERO; }
+	if(mp > 0 && player.mana >= 0) { player.mana -= mp; player.manaDirty = true; }
+	if(ug > 0 && player.ultGauge >= 0) { player.ultGauge -= ug; player.ultDirty = true; }
+	if(st > 0 && player.stamina >= 0) { player.stamina -= st; player.staminaDirty = true; }
 	for(int r = 0; r < 3; r++) {
-		if(resCost[r] > 0 && player.res[r] >= 0) { player.res[r] -= resCost[r]; player.tNextResSend = Time::ZERO; }
+		if(resCost[r] > 0 && player.res[r] >= 0) { player.res[r] -= resCost[r]; player.resDirty = true; }
 	}
 	if(hpCost > 0) {
 		ActorMaster& chara = player.Main();
@@ -229,9 +269,9 @@ void World::UpdateToggles()
 		if(!pool || *pool < 0) continue;
 		if(*pool < tg->value) { ToggleOff(p); continue; }
 		*pool -= tg->value;
-		p.tNextManaSend = Time::ZERO;
-		p.tNextResSend = Time::ZERO;
-		p.tNextStaminaSend = Time::ZERO;
+		p.manaDirty = true;
+		p.resDirty = true;
+		p.staminaDirty = true;
 	}
 }
 
@@ -434,6 +474,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			ps.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
 			ps.creature = cmd->entity.entityIndex;
 			ps.ownerIndex = player.index;
+			ps.remove = cmd->entity.remove != 0;
 			const auto preset = cmd->entity.targetPreset;
 			vec3 pos = player.body->GetWorldPos();
 			if(preset == ActionCommand::TargetPreset::POS_FFF || preset == ActionCommand::TargetPreset::POS_TFF ||
@@ -584,7 +625,8 @@ void World::GainResource(Player& player, i32 slot, f32 amount)
 	const f32 resMax = MasterStat(player.Main().classType, RESOURCES[slot].maxStat);
 	if(resMax <= 0) return;
 	player.res[slot] = MIN(MAX(player.res[slot], 0.0f) + amount, resMax);
-	player.tNextResSend = Time::ZERO;
+	player.resDirty = true;
+	if(slot == 1 && amount > 0) player.rageGainAt = localTime;
 	LOG("Resource :: %ls slot %d +%.0f -> %.0f", player.name.data(), slot, amount, player.res[slot]);
 }
 
@@ -664,28 +706,65 @@ void World::UpdateHideVisibility()
 				}
 			}
 		}
-		if(hidden == it->hiddenUID) continue;
-		const ActorUID was = it->hiddenUID;
-		it->hiddenUID = hidden;
-		foreach(viewer, players) {
-			if(viewer->clientHd == ClientHandle::INVALID || viewer->team == it->team) continue;
-			const u32 bit = 1u << viewer->index;
-			if(was != ActorUID::INVALID && (it->hiddenFrom & bit)) {
-				const ActorMaster* chara = FindMasterActor(was);
-				if(chara) {
-					const f32 baseSpeed = const_cast<CharacterModel&>(GetGameXmlContent().GetMaster(chara->classType).character).getMoveSpeed();
-					const f32 speed = baseSpeed * (it->battleStage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (it->battleStage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f));
-					replication->SendEnterActor(viewer->clientHd, was, chara->classType, it->body->GetWorldPos(), it->input.rot.bodyYaw, it->input.rot.upperYaw, it->input.moveTo, it->battleStage > 0, speed, chara->actionState != ActionStateID::INVALID ? chara->actionState : ActionStateID::NONE_BEHAVIORSTATE, chara->hp, chara->hpMax);
-				}
-				it->hiddenFrom &= ~bit;
-			}
-			if(hidden != ActorUID::INVALID) {
-				replication->SendLeaveActor(viewer->clientHd, hidden);
-				it->hiddenFrom |= bit;
+		eastl::fixed_vector<ActorUID,4,false> detectors;
+		if(hidden != ActorUID::INVALID) {
+			const vec2 at = vec2(it->body->GetWorldPos());
+			const Faction mine = it->team == 0 ? Faction::RED : Faction::BLUE;
+			foreach_const(npc, actorNpcList) {
+				if(npc->ownerUID == ActorUID::INVALID || npc->faction == mine || localTime >= npc->despawnAt || detectors.full()) continue;
+				const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc->docID);
+				if(!info || info->hideDetectRadius <= 0) continue;
+				if(glm::length(vec2(npc->pos) - at) <= info->hideDetectRadius * HIDE_DETECT_RADIUS_UNIT) detectors.push_back(npc->UID);
 			}
 		}
-		LOG("Hide :: %ls %s from enemies", it->name.data(), hidden != ActorUID::INVALID ? "hidden" : "visible");
+		const ActorUID concealed = detectors.empty() ? hidden : ActorUID::INVALID;
+		if(concealed != it->hiddenUID) {
+			const ActorUID was = it->hiddenUID;
+			it->hiddenUID = concealed;
+			ShowHiddenToEnemies(*it, was, concealed);
+		}
+		foreach_const(d, it->hideDetectors) {
+			if(eastl::find(detectors.begin(), detectors.end(), *d) != detectors.end() && hidden == it->hideDetectedUID) continue;
+			SendHideDetectToAll(*d, it->hideDetectedUID, 0);
+		}
+		foreach_const(d, detectors) {
+			if(eastl::find(it->hideDetectors.begin(), it->hideDetectors.end(), *d) != it->hideDetectors.end() && hidden == it->hideDetectedUID) continue;
+			SendHideDetectToAll(*d, hidden, 1);
+			LOG("Hide :: %ls detected by summon %u", it->name.data(), (u32)*d);
+		}
+		it->hideDetectors = detectors;
+		it->hideDetectedUID = hidden;
 	}
+}
+
+void World::SendHideDetectToAll(ActorUID detectorUID, ActorUID targetUID, u8 flag)
+{
+	foreach(viewer, players) {
+		if(viewer->clientHd == ClientHandle::INVALID) continue;
+		replication->SendHideDetect(viewer->clientHd, detectorUID, targetUID, flag);
+	}
+}
+
+void World::ShowHiddenToEnemies(Player& player, ActorUID was, ActorUID hidden)
+{
+	foreach(viewer, players) {
+		if(viewer->clientHd == ClientHandle::INVALID || viewer->team == player.team) continue;
+		const u32 bit = 1u << viewer->index;
+		if(was != ActorUID::INVALID && (player.hiddenFrom & bit)) {
+			const ActorMaster* chara = FindMasterActor(was);
+			if(chara) {
+				const f32 baseSpeed = const_cast<CharacterModel&>(GetGameXmlContent().GetMaster(chara->classType).character).getMoveSpeed();
+				const f32 speed = baseSpeed * (player.battleStage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (player.battleStage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f));
+				replication->SendEnterActor(viewer->clientHd, was, chara->classType, player.body->GetWorldPos(), player.input.rot.bodyYaw, player.input.rot.upperYaw, player.input.moveTo, player.battleStage > 0, speed, chara->actionState != ActionStateID::INVALID ? chara->actionState : ActionStateID::NONE_BEHAVIORSTATE, chara->hp, chara->hpMax);
+			}
+			player.hiddenFrom &= ~bit;
+		}
+		if(hidden != ActorUID::INVALID) {
+			replication->SendLeaveActor(viewer->clientHd, hidden);
+			player.hiddenFrom |= bit;
+		}
+	}
+	LOG("Hide :: %ls %s from enemies", player.name.data(), hidden != ActorUID::INVALID ? "hidden" : "visible");
 }
 
 void World::StartSkillPoints()

@@ -1523,6 +1523,9 @@ bool GameXmlContent::LoadAnimationData()
 				const char* TargetPreset = nullptr;
 				pActionBase->QueryStringAttribute("TargetPreset", &TargetPreset);
 				cmd.entity.targetPreset = TargetPreset ? ActionCommand::TargetPresetFromString(TargetPreset) : ActionCommand::TargetPreset::SELF_FFF;
+				const char* Param2 = nullptr;
+				pActionBase->QueryStringAttribute("Param2", &Param2);
+				cmd.entity.remove = Param2 && EA::StdC::Strcmp(Param2, "Remove") == 0 ? 1 : 0;
 			} break;
 
 			case ActionCommand::Type::STATUS:
@@ -2527,6 +2530,9 @@ bool GameXmlContent::LoadSkillTooltips()
 				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_ATTACK") == 0) mod.stat = StatusMod::ATTACK;
 				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_MOVESPEED") == 0) mod.stat = StatusMod::MOVESPEED;
 				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_DEFENCE") == 0) mod.stat = StatusMod::DEFENCE;
+				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_MANAREGEN") == 0) mod.stat = StatusMod::MANAREGEN;
+				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_RAGEREGEN") == 0) mod.stat = StatusMod::RAGEREGEN;
+				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_STAMINA") == 0) mod.stat = StatusMod::STAMINA;
 				if(mod.mul && mod.stat != StatusMod::OTHER && !skillMulStats.full()) skillMulStats.push_back({ skillID, statusID, (u8)mod.stat, mod.value });
 				if(!found->second.mods.full()) { found->second.mods.push_back(mod); modCount++; }
 				touched.insert(statusID);
@@ -2701,6 +2707,9 @@ bool GameXmlContent::LoadSummons()
 			si.targetable = t && EA::StdC::Stricmp(t, "true") == 0;
 		}
 		if(XMLElement* p = pInfo->FirstChildElement("LifeTime_ComData")) p->QueryFloatAttribute("LifeTime", &si.lifeTime);
+		if(XMLElement* p = pInfo->FirstChildElement("CreatureComData")) {
+			if(XMLElement* d = p->FirstChildElement("_HideDetector")) d->QueryFloatAttribute("_Radius", &si.hideDetectRadius);
+		}
 		if(XMLElement* p = pInfo->FirstChildElement("Kfm_ComData")) {
 			const char* key = nullptr;
 			p->QueryStringAttribute("KeyName", &key);

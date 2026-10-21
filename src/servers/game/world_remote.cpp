@@ -318,8 +318,10 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 			rh->count++;
 			rh->at = localTime;
 		}
+		damageAttackerOverride = inst.sourceUID;
 		if(enemy) DamagePlayer(owner, target, inst.skillID, dealt, nullptr, inst.clientRemoteID, remote.ID, inst.dir);
 		else if(remote.damageGroup == Remote::DamageGroup::eFRIEND) HealPlayer(owner, target, amount);
+		damageAttackerOverride = ActorUID::INVALID;
 	}
 
 	inst.lastHitIndex = (i32)target.index;
@@ -493,7 +495,12 @@ void World::UpdateRemotes(f32 delta)
 		if(remote.behaviorType == Remote::BehaviorType::CASTER_TARGET && !instOwner.dead) MoveCasterTargetRemote(inst, instOwner, delta);
 		const bool attached = remote.attachFireObject || remote.behaviorType == Remote::BehaviorType::ORBIT ||
 			remote.behaviorType == Remote::BehaviorType::BEAM;
-		if(attached) {
+		const ActorNpc* fireNpc = attached && inst.sourceUID != ActorUID::INVALID ? FindNpcActor(inst.sourceUID) : nullptr;
+		if(attached && inst.sourceUID != ActorUID::INVALID) {
+			if(!fireNpc || localTime >= fireNpc->despawnAt) destroyed = true;
+			else inst.pos = fireNpc->pos;
+		}
+		else if(attached) {
 			if(instOwner.dead) {
 				destroyed = true;
 			}

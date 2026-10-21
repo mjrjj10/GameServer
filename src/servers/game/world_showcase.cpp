@@ -683,7 +683,7 @@ void World::UpdateShowcase()
 			}
 		}
 	}
-	caster.tNextResSend = Time::ZERO;
+	caster.resDirty = true;
 	{
 		const f32 cd = glm::length(vec2(caster.body->GetWorldPos()) - vec2(casterPos));
 		const f32 dd = glm::length(vec2(dummy.body->GetWorldPos()) - vec2(dummyPos));
@@ -735,8 +735,11 @@ void World::UpdateShowcase()
 	if(&caster == human) {
 		const ClassType hc = human->Main().classType;
 		human->mana = MasterStat(hc, STAT_MANA);
+		human->manaDirty = true;
 		human->stamina = MasterStat(hc, STAT_STAMINA);
+		human->staminaDirty = true;
 		human->ultGauge = MasterStat(hc, STAT_ULTIMATE);
+		human->ultDirty = true;
 
 		eastl::fixed_vector<i32,8,false> cools;
 		foreach_const(sid, content.GetMaster(hc).skillIDs) {
@@ -870,6 +873,7 @@ void World::GxPreviewPlace(Player& human, f32 enemyDist)
 	const f32 yaw = atan2f(dir.y, dir.x);
 	MovePlayer(human, base, yaw, true);
 	human.res[1] = MasterStat(human.Main().classType, RESOURCES[1].maxStat);
+	human.resDirty = true;
 	HealPlayer(human, human, human.Main().hpMax);
 	i32 e = 0;
 	i32 a = 0;
@@ -931,6 +935,7 @@ void World::UpdateGatlingPreview(Player& human)
 		case 17: {
 			GxPreviewPlace(human, GATLING_PREVIEW_NEAR_DIST);
 			human.ultGauge = MasterStat(human.Main().classType, STAT_ULTIMATE);
+			human.ultDirty = true;
 			clip("reset", 18, 2500);
 		} break;
 		case 18: GxPreviewPrompt(human, "r", 1, 0, 1, target(), 1); clip("ultimate", 99, 7000); break;
@@ -1003,6 +1008,7 @@ void World::UpdateGxPreview(Player& human)
 			GxPreviewPlace(human, GX_PREVIEW_ENEMY_DIST * 3.0f);
 			if(ally) TeleportPlayer(*ally, base + vec3(side * GX_PREVIEW_RECALL_DIST, 0), atan2f(dir.y, dir.x));
 			human.ultGauge = MasterStat(human.Main().classType, STAT_ULTIMATE);
+			human.ultDirty = true;
 			clip("reset", 27, 2500);
 		} break;
 		case 27: {
@@ -1091,7 +1097,9 @@ void World::UpdateGxTest(Player& human, Player& gx)
 			TeleportPlayer(human, humanPos, atan2f(-dir.y, -dir.x));
 			replication->SendSelfTeleport(human.clientHd, human.Main().UID, humanPos, 0);
 			gx.res[1] = MasterStat(gx.Main().classType, RESOURCES[1].maxStat);
+			gx.resDirty = true;
 			gx.ultGauge = MasterStat(gx.Main().classType, STAT_ULTIMATE);
+			gx.ultDirty = true;
 			LOG("GxTest :: phase board gx=%ls human=%ls gap=%.0f", gx.name.data(), human.name.data(), GX_TEST_BOARD_GAP);
 			showcase.gxPhase = 1;
 			showcase.next = TimeAdd(localTime, TimeMsToTime(2000));
@@ -1143,6 +1151,7 @@ void World::UpdateGxTest(Player& human, Player& gx)
 		case 4: {
 			const ActorUID target = human.Main().UID;
 			gx.ultGauge = MasterStat(gx.Main().classType, STAT_ULTIMATE);
+			gx.ultDirty = true;
 			PlayerCastSkill(gx, teleporter, human.body->GetWorldPos(), Slice<const ActorUID>(&target, 1), 0);
 			LOG("GxTest :: teleporter cast on human at %.0f", glm::length(vec2(human.body->GetWorldPos()) - vec2(gx.body->GetWorldPos())));
 			showcase.gxPhase = 5;
@@ -1170,6 +1179,7 @@ void World::UpdateGxTest(Player& human, Player& gx)
 			TeleportPlayer(*enemyGx, start, atan2f(dir.y, dir.x));
 			TeleportPlayer(*rider, start - vec3(dir * GX_TEST_BOARD_GAP, 0), atan2f(dir.y, dir.x));
 			enemyGx->res[1] = MasterStat(enemyGx->Main().classType, RESOURCES[1].maxStat);
+			enemyGx->resDirty = true;
 			LOG("GxTest :: enemy phase gx=%ls rider=%ls", enemyGx->name.data(), rider->name.data());
 			showcase.gxPhase = 6;
 			showcase.next = TimeAdd(localTime, TimeMsToTime(2000));

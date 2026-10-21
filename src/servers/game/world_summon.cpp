@@ -296,6 +296,15 @@ void World::UpdateSummonAi(f32 delta)
 void World::UpdateSummons()
 {
 	for(auto ps = pendingSummons.begin(); ps != pendingSummons.end(); ) {
+		if(!ps->remove || localTime < ps->time) { ++ps; continue; }
+		foreach(npc, actorNpcList) {
+			if(npc->ownerIndex != ps->ownerIndex || npc->ownerUID == ActorUID::INVALID || (i32)npc->docID != ps->creature || localTime >= npc->despawnAt) continue;
+			npc->despawnAt = localTime;
+			LOG("Summon :: %ls removes creature=%d", players[ps->ownerIndex].name.data(), ps->creature);
+		}
+		ps = pendingSummons.erase_unsorted(ps);
+	}
+	for(auto ps = pendingSummons.begin(); ps != pendingSummons.end(); ) {
 		if(localTime < ps->time) { ++ps; continue; }
 		Player& owner = players[ps->ownerIndex];
 		const SummonInfo* info = GetGameXmlContent().FindSummon(ps->creature);
@@ -368,6 +377,7 @@ void World::UpdateSummons()
 						pc.index = c->index;
 						pc.pos = ps->pos;
 						pc.yaw = ps->rot.z;
+						pc.source = actor.UID;
 						pc.skill = info->skills.empty() ? 0 : info->skills[0];
 						pc.until = actor.despawnAt;
 						pendingSummonCommands.push_back(pc);
@@ -376,6 +386,19 @@ void World::UpdateSummons()
 				}
 			}
 			LOG("Summon :: %ls creature=%d at (%.0f, %.0f) life=%.1fs known=%d", owner.name.data(), ps->creature, ps->pos.x, ps->pos.y, life, info != nullptr);
+			if(Config().DevHideDetectTest > 0 && info && info->hideDetectRadius > 0 && !reuse) {
+				Player* nearest = nullptr;
+				f32 best = 0;
+				foreach(e, players) {
+					if(e->team == owner.team || e->dead) continue;
+					const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(ps->pos));
+					if(!nearest || d < best) { nearest = &*e; best = d; }
+				}
+				if(nearest) {
+					LOG("Hide :: dev test hides %ls at %.0f from detector", nearest->name.data(), best);
+					ApplyStatus(*nearest, *nearest, Config().DevHideDetectTest);
+				}
+			}
 		}
 		ps = pendingSummons.erase_unsorted(ps);
 	}

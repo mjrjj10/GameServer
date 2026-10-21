@@ -190,7 +190,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 	if(mastersHit >= 2 && owner.mana >= 0) {
 		if(const ActiveStatus* st = FindPassiveOfType(owner, StatusType::ARTILLERY)) {
 			owner.mana = MIN(owner.mana + st->info->Param("_AddValuePC"), MasterStat(owner.Main().classType, STAT_MANA));
-			owner.tNextManaSend = Time::ZERO;
+			owner.manaDirty = true;
 			LOG("Passive :: %ls hit %d masters -> mana %.0f", owner.name.data(), mastersHit, owner.mana);
 		}
 	}
