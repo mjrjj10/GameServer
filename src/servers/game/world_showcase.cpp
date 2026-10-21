@@ -3,8 +3,34 @@
 #include "world_common.h"
 #include <mxm/game_content.h>
 #include <chrono>
+#include <cstdio>
+#include <EASTL/hash_map.h>
 
 static const i32 GX_DEATH_TEST_MODE = 4;
+static const f32 VALIDATE_CASTER_HP = 0.6f;
+static const f32 VALIDATE_EXTRA_SIDE = 180.0f;
+static const f32 VALIDATE_ALLY_SIDE = 250.0f;
+static const i32 VALIDATE_FOLLOW_SHOT_MS = 1500;
+static const i32 VALIDATE_COMBO_DELAY_MS = 700;
+static const i32 VALIDATE_COMBO_MAX_DEPTH = 4;
+
+struct ValidateAim { f32 dist; i32 expect; };
+
+static const eastl::hash_map<i32, ValidateAim>& ValidateAims()
+{
+	static eastl::hash_map<i32, ValidateAim> aims;
+	static bool loaded = false;
+	if(!loaded) {
+		loaded = true;
+		if(FILE* f = fopen("validate_aim.txt", "r")) {
+			i32 skill = 0, expect = 0;
+			f32 dist = 0;
+			while(fscanf(f, "%d %f %d", &skill, &dist, &expect) == 3) aims[skill] = { dist, expect };
+			fclose(f);
+		}
+	}
+	return aims;
+}
 static const f32 SHOWCASE_MIN_MEASURE_SEC = 2.5f;
 static const f32 SHOWCASE_QUIET_SEC = 0.5f;
 static const f32 MIRROR_POS_TOLERANCE = 60.0f;
@@ -168,7 +194,21 @@ void World::UpdateShowcase()
 		Player& comboCaster = players[showcase.comboCaster];
 		LOG("Showcase :: combo skill=%d", showcase.comboSkill);
 		if(!comboCaster.dead) PlayerCastSkill(comboCaster, SkillID(showcase.comboSkill), showcase.comboPos, Slice<const ActorUID>(&showcase.comboTarget, showcase.comboTarget != ActorUID::INVALID ? 1 : 0), 0);
-		showcase.comboSkill = 0;
+		const i32 nextCombo = Config().DevValidate && showcase.comboDepth < VALIDATE_COMBO_MAX_DEPTH ? GetGameXmlContent().GetFirstComboSkill(showcase.comboSkill) : 0;
+		if(nextCombo != 0 && nextCombo != showcase.comboSkill && !comboCaster.dead) {
+			showcase.comboSkill = nextCombo;
+			showcase.comboAt = TimeAdd(localTime, TimeMsToTime(VALIDATE_COMBO_DELAY_MS));
+			showcase.comboDepth++;
+		}
+		else showcase.comboSkill = 0;
+	}
+	if(showcase.followShooter >= 0 && localTime >= showcase.followShotAt) {
+		Player& shooter = players[showcase.followShooter];
+		showcase.followShooter = -1;
+		if(!shooter.dead) {
+			LOG("Showcase :: follow-up weapon shot");
+			ShowcaseWeaponAt(shooter, players[showcase.prevDummy]);
+		}
 	}
 	if(showcase.stanceShots > 0 && localTime >= showcase.stanceShotAt && showcase.stanceShooter >= 0) {
 		Player& shooter = players[showcase.stanceShooter];
@@ -209,7 +249,7 @@ void World::UpdateShowcase()
 	if(localTime < showcase.next) {
 		if(showcase.minNext == Time::ZERO || localTime < showcase.minNext) return;
 		bool quiet = remoteInsts.empty() && pendingRemotes.empty() && pendingStatuses.empty() && pendingSummons.empty() &&
-			pendingSummonCommands.empty() && skillProgramList.empty() && showcase.comboSkill == 0 && showcase.stanceShots == 0 && showcase.evadeProbe == 0;
+			pendingSummonCommands.empty() && skillProgramList.empty() && showcase.comboSkill == 0 && showcase.stanceShots == 0 && showcase.evadeProbe == 0 && showcase.followShooter < 0;
 		const Player& qc = players[showcase.prevCaster];
 		const Player& qd = players[showcase.prevDummy];
 		if(qc.clientHd != ClientHandle::INVALID && !showcase.castSeen) quiet = false;
@@ -550,6 +590,12 @@ void World::UpdateShowcase()
 			tests.push_back({ d, zone - 40.0f, "zone_in", 1 });
 			tests.push_back({ d, zone + dummyRadius + 60.0f, "zone_out", 0 });
 		}
+		if(Config().DevValidate) {
+			const auto& aims = ValidateAims();
+			const auto f = aims.find(skill);
+			tests.clear();
+			tests.push_back({ f != aims.end() && f->second.dist > 50.0f ? f->second.dist : 300.0f, 0, "official", f != aims.end() ? f->second.expect : -1 });
+		}
 		showcase.testCount = (i32)tests.size();
 		const T& t = tests[MIN(showcase.rangeIdx, (i32)tests.size() - 1)];
 		dummyPos = showcase.anchor + vec3(showcase.dir * MIN(t.dist, flatLen), 0);
@@ -627,6 +673,26 @@ void World::UpdateShowcase()
 		testName = t.dist > flatLen ? "skip_beyond_flat" : t.name;
 		expect = t.dist > flatLen ? -1 : t.expect;
 		TeleportPlayer(dummy, dummyPos, faceCaster);
+	}
+	if(Config().DevValidate && !mirror) {
+		const vec2 side = Perp(showcase.dir);
+		i32 extra = 0;
+		bool ally = false;
+		foreach(it, players) {
+			if(it->index == dummy.index || it->index == caster.index || it->clientHd != ClientHandle::INVALID || it->dead) continue;
+			if(it->team != caster.team && extra < 2) {
+				TeleportPlayer(*it, dummyPos + vec3(side * (extra == 0 ? VALIDATE_EXTRA_SIDE : -VALIDATE_EXTRA_SIDE), 0), faceCaster);
+				foreach(c, it->characters) { (*c)->hp = (*c)->hpMax; replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax); }
+				extra++;
+			}
+			else if(it->team == caster.team && !ally) {
+				TeleportPlayer(*it, casterPos + vec3(side * VALIDATE_ALLY_SIDE, 0), faceDummy);
+				foreach(c, it->characters) { (*c)->hp = (i32)((*c)->hpMax * VALIDATE_CASTER_HP); replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax); }
+				ally = true;
+			}
+		}
+		foreach(c, caster.characters) { (*c)->hp = (i32)((*c)->hpMax * VALIDATE_CASTER_HP); replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax); }
+		LOG("Validate :: step master=%d step=%d extra=%d ally=%d", (i32)caster.Main().classType, step, extra, ally ? 1 : 0);
 	}
 	if(&caster == human || &dummy == human) human->untargetable = false;
 	else {
@@ -804,7 +870,13 @@ void World::UpdateShowcase()
 				if(ShowcaseSkillAction(content, cls, f->second.action, st->stance).stance == st->stance) { combo = (i32)*sid; comboDelayMs = 1000; break; }
 			}
 		}
+		if(Config().DevValidate && skill != 0 && step >= 1 && step <= 5 && caster.clientHd == ClientHandle::INVALID) {
+			showcase.followShotAt = TimeAdd(localTime, TimeMsToTime(VALIDATE_FOLLOW_SHOT_MS));
+			showcase.followShooter = (i32)caster.index;
+		}
+		if(Config().DevValidate && combo != 0 && !content.FindSkillStance(skill) && (showcase.validateCasts++ & 1)) combo = 0;
 		if(combo != 0) {
+			showcase.comboDepth = 0;
 			showcase.comboSkill = combo;
 			showcase.comboAt = TimeAdd(localTime, TimeMsToTime(comboDelayMs));
 			showcase.comboPos = castPos;

@@ -508,13 +508,21 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			PendingStatus ps;
 			ps.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
 			ps.statusID = cmd->status.statusIndex;
+			f32 replaceDuration = -1.0f;
+			if(castCostLevel) {
+				foreach_const(sr, castCostLevel->statusReplace) {
+					if(sr->statusID != cmd->status.statusIndex) continue;
+					ps.statusID = sr->replaceID;
+					if(sr->durationSec > 0) replaceDuration = sr->durationSec;
+				}
+			}
 			ps.casterIndex = player.index;
 			const auto preset = cmd->status.targetPreset;
 			const bool self = preset == ActionCommand::TargetPreset::SELF_FFF || preset == ActionCommand::TargetPreset::SELF_FFF_1 ||
 				preset == ActionCommand::TargetPreset::SELF_TFF || preset == ActionCommand::TargetPreset::SELF_TTF || preset == ActionCommand::TargetPreset::SELF_TTT;
 			const bool lastChild = preset == ActionCommand::TargetPreset::LAST_CHILD_FFF || preset == ActionCommand::TargetPreset::LAST_CHILD_TFF || preset == ActionCommand::TargetPreset::CHILD_INDEX_FFF;
 			ps.targetUID = lastChild ? ActorUID::INVALID : self ? player.Main().UID : currentTarget;
-			ps.duration = cmd->status.removeAtEnd ? MAX(action.seqLength - t, 0.3f) : -1.0f;
+			ps.duration = cmd->status.removeAtEnd ? MAX(action.seqLength - t, 0.3f) : replaceDuration;
 			ps.power = (f32)damage;
 			ps.remove = cmd->status.remove != 0;
 			if(cmd->type == ActionCommand::Type::STATUS_SKILL_TARGET && targets.size() > 1) {
@@ -905,6 +913,7 @@ f32 World::PlayerSkillConsumeMP(const Player& player, i32 skillID) const
 
 static i32 ReplaceKey(const eastl::pair<i32,i32>& e) { return e.first; }
 static i32 ReplaceKey(const GameXmlContent::StatusReplace& e) { return e.statusID; }
+static i32 ReplaceKey(const eastl::pair<i32,const Remote*>& e) { return e.first; }
 
 template<typename List>
 static void MergeReplace(List& into, const List& from)
@@ -929,6 +938,7 @@ const GameXmlContent::CostLevel* World::UpgradeCastMods(Player& player, SkillID 
 		const GameXmlContent::SkillUpgrade& up = (*ups)[i];
 		MergeReplace(mods.remoteReplace, up.remoteReplace);
 		MergeReplace(mods.statusReplace, up.statusReplace);
+		MergeReplace(mods.remoteResize, up.remoteResize);
 	}
 	const GameXmlContent::SkillUpgrade* dmg = LatestUpgrade(player, (i32)skillID, GameXmlContent::SkillUpgrade::Type::DAMAGE);
 	if(dmg && costIndex >= 0 && costIndex < (i32)dmg->costLevelDamage.size() && dmg->baseDamage > 0 && dmg->costLevelDamage[costIndex].first >= 0) {

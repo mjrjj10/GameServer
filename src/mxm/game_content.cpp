@@ -1686,6 +1686,15 @@ bool GameXmlContent::LoadSkillUpgrades()
 			pLevel->QueryFloatAttribute("_AttackMultiplier", &up.attackMultiplier);
 			pLevel->QueryFloatAttribute("_ConsumeMP", &up.consumeMP);
 			ParseReplaceList(pLevel, "_REMOTELIST", "_RemoteIndex", up.remoteReplace);
+			for(XMLElement* p = pLevel->FirstChildElement("_REMOTELIST"); p && !up.remoteResize.full(); p = p->NextSiblingElement("_REMOTELIST")) {
+				const i32 id = p->IntAttribute("_RemoteIndex");
+				const Remote* base = id != 0 && !p->Attribute("_ReplaceIndex") && p->Attribute("_LengthX") ? FindRemote(RemoteIdx(id)) : nullptr;
+				if(!base) continue;
+				Remote& variant = remoteVariants[(i32)remoteVariants.size()];
+				variant = *base;
+				variant.boundSize = { (u16)p->IntAttribute("_LengthX"), (u16)p->IntAttribute("_LengthY", base->boundSize[1]), (u16)p->IntAttribute("_LengthZ", base->boundSize[2]) };
+				up.remoteResize.push_back({ id, &variant });
+			}
 			ParseStatusReplaceList(pLevel, up.statusReplace);
 		}
 		for(XMLElement* pCost = pSP->FirstChildElement("_COST_LEVEL"); pCost && !up.costLevelDamage.full(); pCost = pCost->NextSiblingElement("_COST_LEVEL")) {

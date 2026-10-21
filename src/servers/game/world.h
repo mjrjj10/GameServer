@@ -680,6 +680,9 @@ struct World
 	ActorUID statusCasterOverride = ActorUID::INVALID;
 	ActorUID damageAttackerOverride = ActorUID::INVALID;
 	ActorUID remoteParentOverride = ActorUID::INVALID;
+	ActorUID remoteTargetEntityOverride = ActorUID::INVALID;
+	vec3 remoteSendFrom = vec3(0);
+	bool remoteSendFromSet = false;
 	i32 damageStatusID = 0;
 	static const i32 PENETRATION_UNLIMITED = 0x7fffffff;
 	struct RemoteActivation { u32 remoteID; ClientHandle skipHd; ActorUID targetUID; u32 penetration; vec3 pos; };
@@ -691,6 +694,7 @@ struct World
 	bool statusForceCenterSet = false;
 	vec3 statusForceCenter = vec3(0);
 	const GameXmlContent::CostLevel* castCostLevel = nullptr;
+	const GameXmlContent::CostLevel* spawnCostLevel = nullptr;
 	bool reflecting = false;
 	bool frozen = false;
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;

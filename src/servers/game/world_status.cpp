@@ -544,9 +544,16 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	if(permanent) duration = 1000000.0f;
 	const f32 sentDuration = durationOverride > 0 || !info || info->durationSec > 0 ? duration : (info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f);
 	if(info && info->casterStatus != 0 && info->casterStatus != statusID && !caster.dead && !applyingCasterStatus) {
-		applyingCasterStatus = true;
-		ApplyStatus(caster, caster, info->casterStatus);
-		applyingCasterStatus = false;
+		bool refresh = false;
+		foreach_const(it, activeStatuses) if(it->statusID == statusID && it->targetIndex == target.index) { refresh = true; break; }
+		if(!refresh) {
+			applyingCasterStatus = true;
+			const ActorUID prevCaster = statusCasterOverride;
+			statusCasterOverride = target.Main().UID;
+			ApplyStatus(caster, caster, info->casterStatus);
+			statusCasterOverride = prevCaster;
+			applyingCasterStatus = false;
+		}
 	}
 	const StatusDrainRule* drain = FindStatusDrainRule(statusID);
 	if(drain && caster.team != target.team) {
@@ -582,13 +589,17 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			const vec3 pos = target.body->GetWorldPos();
 			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, sentDuration, pos, pos, 0, it->overlap, 1.0f, -1.0f, false, true);
 			if(info && it->overlap >= info->maxOverlap && info->maxOverlap > 1) {
+				i32 full = 0;
 				foreach_const(ps, activeStatuses) {
 					if(ps->targetIndex != caster.index || !ps->info || ps->info->stackStatus != statusID || ps->info->stackFullStatus == 0) continue;
-					const i32 full = ps->info->stackFullStatus;
-					it->until = localTime;
-					LOG("Passive :: %ls full stack of %d on %ls -> %d", caster.name.data(), statusID, target.name.data(), full);
-					ApplyStatus(caster, target, full);
+					full = ps->info->stackFullStatus;
 					break;
+				}
+				if(full != 0) {
+					LOG("Passive :: %ls full stack of %d on %ls -> %d", caster.name.data(), statusID, target.name.data(), full);
+					replication->SendRemoveStatusToAll(it->statusID, it->targetUID, it->casterUID);
+					activeStatuses.erase_unsorted(it);
+					ApplyStatus(caster, target, full);
 				}
 			}
 			return;
@@ -899,7 +910,7 @@ void World::UpdateStatuses()
 					DamagePlayer(owner, *e, bombSkill, boom);
 				}
 			}
-			for(i32 k = 0; k < MAX(it->overlap, 1); k++) replication->SendRemoveStatusToAll(it->statusID, it->targetUID, it->casterUID);
+			replication->SendRemoveStatusToAll(it->statusID, it->targetUID, it->casterUID);
 			i32 next = 0;
 			if(it->info && it->info->nextStatus != 0 && !target.dead) {
 				const auto cond = it->info->nextCondition;

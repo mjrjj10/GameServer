@@ -57,6 +57,10 @@ struct ShowcaseState
 	vec3 comboPos = vec3(0);
 	i32 comboCaster = -1;
 	ActorUID comboTarget = ActorUID::INVALID;
+	Time followShotAt = Time::ZERO;
+	i32 comboDepth = 0;
+	u32 validateCasts = 0;
+	i32 followShooter = -1;
 	f32 flatLen = 2050.0f;
 	Time minNext = Time::ZERO;
 	i32 gxPhase = 0;

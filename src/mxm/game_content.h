@@ -758,6 +758,7 @@ struct GameXmlContent
 		ActionStateID action = ActionStateID::INVALID;
 		eastl::fixed_vector<eastl::pair<i32,i32>,8,false> remoteReplace;
 		StatusReplaceList statusReplace;
+		eastl::fixed_vector<eastl::pair<i32,const Remote*>,4,false> remoteResize;
 		f32 damageRatio = 1.0f;
 	};
 	eastl::hash_map<i32, eastl::fixed_vector<CostLevel,4,false>> skillCostLevels;
@@ -771,8 +772,10 @@ struct GameXmlContent
 		f32 consumeMP = -1;
 		eastl::fixed_vector<eastl::pair<i32,i32>,8,false> remoteReplace;
 		StatusReplaceList statusReplace;
+		eastl::fixed_vector<eastl::pair<i32,const Remote*>,4,false> remoteResize;
 	};
 	typedef eastl::fixed_vector<SkillUpgrade,8,false> SkillUpgradeList;
+	eastl::hash_map<i32, Remote> remoteVariants;
 	eastl::hash_map<i32, SkillUpgradeList> skillUpgrades;
 	const SkillUpgradeList* FindSkillUpgrades(i32 skillID) const { auto f = skillUpgrades.find(skillID); return f == skillUpgrades.end() ? nullptr : &f->second; }
 	const eastl::fixed_vector<CostLevel,4,false>* FindSkillCostLevels(i32 skillID) const { auto f = skillCostLevels.find(skillID); return f == skillCostLevels.end() ? nullptr : &f->second; }
