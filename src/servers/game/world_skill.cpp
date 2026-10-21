@@ -211,14 +211,39 @@ bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 	return true;
 }
 
+void World::RunStanceOut(Player& player, i8 oldStance)
+{
+	const auto& content = GetGameXmlContent();
+	const GameXmlContent::Action* action = content.FindSkillAction(player.Main().classType, ActionStateID::STANCE_OUT_BEHAVIORSTATE, oldStance);
+	if(!action) return;
+	foreach_const(cmd, action->commands) {
+		if(cmd->type == ActionCommand::Type::STATUS && cmd->status.statusIndex != 0) {
+			if(cmd->status.remove) {
+				foreach(it, activeStatuses) {
+					if(it->targetIndex == player.index && it->statusID == cmd->status.statusIndex && localTime < it->until) it->until = localTime;
+				}
+			}
+			else if(!player.dead) ApplyStatus(player, player, cmd->status.statusIndex);
+		}
+		else if(cmd->type == ActionCommand::Type::REMOTE && cmd->remote.remove) {
+			foreach(ri, remoteInsts) {
+				if(ri->ownerIndex == player.index && ri->remote && ri->remote->ID == cmd->remote.idx && !ri->killNow) ri->killNow = true;
+			}
+		}
+	}
+	LOG("Stance :: %ls stance %d out", player.name.data(), (i32)oldStance);
+}
+
 void World::SetStance(ActorMaster& master, i8 stance, f32 duration, i32 weaponFireCount, bool cancelByDefeat)
 {
+	const i8 oldStance = master.stance;
 	master.stance = stance;
 	master.stanceUntil = stance != 0 && duration > 0 ? TimeAdd(localTime, TimeMsToTime((i64)(duration * 1000.0f))) : Time::ZERO;
 	master.stanceShotsLeft = stance != 0 && weaponFireCount > 0 ? weaponFireCount : -1;
 	master.stanceCancelByDefeat = stance != 0 && cancelByDefeat;
 	replication->SendStanceToAll(master.UID, stance, stance != 0 ? duration : 0.0f);
 	LOG("Stance :: %ls stance=%d duration=%.1f weaponFireCount=%d", master.parent ? master.parent->name.data() : L"?", (i32)stance, duration, weaponFireCount);
+	if(oldStance != 0 && stance == 0 && master.parent) RunStanceOut(*master.parent, oldStance);
 }
 
 void World::StanceWeaponUse(Player& player)
@@ -313,6 +338,26 @@ void World::ReleaseCast(Player& player)
 	GroupTeleport(player, c.skillID, c.castPos);
 	if(f->second.action == ActionStateID::INVALID) return;
 	PlayerCastSkill(player, c.skillID, c.castPos, Slice<const ActorUID>(&c.target, c.target != ActorUID::INVALID ? 1 : 0), 0, f->second.action);
+}
+
+void World::DropPendingActions(Player& player)
+{
+	i32 dropped = 0;
+	for(auto pr = pendingRemotes.begin(); pr != pendingRemotes.end(); ) {
+		if(pr->ownerIndex == player.index && pr->sourceUID == ActorUID::INVALID && !pr->remove && localTime < pr->time) {
+			pr = pendingRemotes.erase_unsorted(pr);
+			dropped++;
+		}
+		else ++pr;
+	}
+	for(auto ps = pendingStatuses.begin(); ps != pendingStatuses.end(); ) {
+		if(ps->casterIndex == player.index && ps->sourceUID == ActorUID::INVALID && !ps->remove && localTime < ps->time) {
+			ps = pendingStatuses.erase_unsorted(ps);
+			dropped++;
+		}
+		else ++ps;
+	}
+	if(dropped > 0) LOG("Skill :: %ls new action, %d pending commands dropped", player.name.data(), dropped);
 }
 
 void World::InterruptSkills(Player& player)
@@ -447,7 +492,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			}
 		}
 	}
-	if(animPasses.empty()) animPasses.push_back({ anim, 0.0f });
+	if(animPasses.empty()) animPasses.push_back({ anim, schedulePassOffset });
 	anim = animPasses[0].index;
 
 	const i32 passes = (i32)animPasses.size();
@@ -530,6 +575,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			ps.duration = cmd->status.removeAtEnd ? MAX(action.seqLength - t, 0.3f) : replaceDuration;
 			ps.power = (f32)damage;
 			ps.remove = cmd->status.remove != 0;
+			ps.aniEnd = cmd->status.removeAtEnd != 0;
 			if(cmd->type == ActionCommand::Type::STATUS_SKILL_TARGET && targets.size() > 1) {
 				foreach_const(tg, targets) {
 					if(pendingStatuses.full()) break;
@@ -628,7 +674,7 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 					if(len > 1.0f) moveDir = rel / len;
 					const bool through = preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH || preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE;
 					if(!through) moveDist = MIN(moveDist, MAX(len - HitRadius(*tm->parent) - HitRadius(mover), 0.0f));
-					else if(moveDist > 999990.0f) moveDist = len;
+					else if(moveDist > 999990.0f) moveDist = len + HitRadius(*tm->parent) + HitRadius(mover);
 				}
 			}
 		}
@@ -909,6 +955,21 @@ const GameXmlContent::SkillUpgrade* World::LatestUpgradeWith(const Player& playe
 		if(has((*ups)[i])) return &(*ups)[i];
 	}
 	return nullptr;
+}
+
+f32 World::ComboPassOffset(const Player& player, SkillID skillID) const
+{
+	const auto& content = GetGameXmlContent();
+	for(i32 i = (i32)skillProgramList.size() - 1; i >= 0; i--) {
+		const SkillProgram& pg = skillProgramList[i];
+		if(pg.casterUID != player.Main().UID || pg.skillID != skillID) continue;
+		const GameXmlContent::Action* action = content.FindSkillAction(player.Main().classType, pg.actionID, pg.stance);
+		if(!action) return 0;
+		f32 first = 0;
+		foreach_const(st, action->anims) if(st->index == 0) first = content.GetAniSeqTime(content.GetMaster(player.Main().classType).className.c_str(), st->animationId) * (f32)MAX(st->loop, 1);
+		return MAX(first - TimeDiffSec(TimeDiff(pg.startTime, localTime)), 0.0f);
+	}
+	return 0;
 }
 
 i32 World::UpgradeSummon(const Player& player, i32 skillID) const

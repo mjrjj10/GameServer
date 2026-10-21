@@ -373,6 +373,7 @@ struct Replication
 	void SendEvadeToAll(ActorUID attackerUID, ActorUID defenderUID, u32 remoteID, RemoteIdx remoteDoc, ClientHandle seedOwnerHd);
 	void SendModifyStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, u8 overlap, u8 customValue);
 	void SendAttackActionToOthers(ClientHandle senderHd, ActorUID actorUID, f32 mxmYaw);
+	void SendActionStateOnlyToAll(ActorUID actorUID, ActionStateID state, f32 mxmYaw, bool move, const vec3& startPos, const vec3& endPos, f32 durationSec);
 	void SendDestroyRemoteToAll(u32 remoteID);
 	void SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed);
 	void SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject = L"Scene Root", ClientHandle exclude = ClientHandle::INVALID);

@@ -528,6 +528,7 @@ struct World
 		vec3 graphStart = vec3(0);
 		bool stopAtFirstHit = false;
 		vec2 graphDir = vec2(1, 0);
+		f32 graphArc = 0;
 		bool hasLandZ = false;
 		bool centeredBox = false;
 		f32 wallZ = 0;
@@ -582,9 +583,13 @@ struct World
 		f32 duration;
 		f32 power;
 		bool remove = false;
+		bool aniEnd = false;
 		ActorUID sourceUID = ActorUID::INVALID;
 	};
 	eastl::fixed_vector<PendingStatus,256,false> pendingStatuses;
+	bool statusAniEnd = false;
+	bool hitActionOnly = false;
+	f32 schedulePassOffset = 0;
 
 	struct PendingSummon
 	{
@@ -779,6 +784,9 @@ public:
 	ActionStateID UpgradeAction(const Player& player, i32 skillID) const;
 	i32 ComboSkillFor(const Player& player, i32 skillID) const;
 	i32 UpgradeSummon(const Player& player, i32 skillID) const;
+	f32 ComboPassOffset(const Player& player, SkillID skillID) const;
+	void RunStanceOut(Player& player, i8 oldStance);
+	void DropPendingActions(Player& player);
 	const GameXmlContent::SkillUpgrade* LatestUpgradeWith(const Player& player, i32 skillID, bool (*has)(const GameXmlContent::SkillUpgrade&)) const;
 	f32 PlayerSkillDamage(Player& player, SkillID skillID);
 	f32 PlayerSkillConsumeMP(const Player& player, i32 skillID) const;

@@ -364,6 +364,10 @@ void GameXmlContent::LoadAllSkills()
 		if(actionStr) {
 			skill.action = ActionStateFromString(actionStr);
 		}
+		for(XMLElement* pR = pNodeCommonSkill->FirstChildElement("_RandomAction"); pR; pR = pR->NextSiblingElement("_RandomAction")) {
+			RandomActionList& list = skillRandomActions[skillID];
+			if(const char* a = pR->Attribute("DATA")) if(!list.full()) list.push_back(ActionStateFromString(a));
+		}
 		{
 			i32 baseCombo = 0;
 			pNodeCommonSkill->QueryIntAttribute("_BaseComboSkill", &baseCombo);
@@ -1686,6 +1690,7 @@ bool GameXmlContent::LoadSkillUpgrades()
 			pLevel->QueryFloatAttribute("_AttackMultiplier", &up.attackMultiplier);
 			pLevel->QueryFloatAttribute("_ConsumeMP", &up.consumeMP);
 			if(const char* act = pLevel->Attribute("_Action")) up.action = ActionStateFromString(act);
+			for(XMLElement* pR = pLevel->FirstChildElement("_RandomAction"); pR && !up.randomActions.full(); pR = pR->NextSiblingElement("_RandomAction")) if(const char* a = pR->Attribute("DATA")) up.randomActions.push_back(ActionStateFromString(a));
 			pLevel->QueryAttribute("_NextComboSkill", &up.nextCombo);
 			pLevel->QueryAttribute("_SummonIndex", &up.summon);
 			pLevel->QueryFloatAttribute("_ConsumeEP", &up.consume[0]);
@@ -2651,6 +2656,7 @@ bool GameXmlContent::LoadSkillCosts()
 					pLvl->QueryFloatAttribute("_ConsumeRP", &lvl.consume[1]);
 					pLvl->QueryFloatAttribute("_ConsumeBB", &lvl.consume[2]);
 					if(const char* act = pLvl->Attribute("_Action")) lvl.action = ActionStateFromString(act);
+					for(XMLElement* pR = pLvl->FirstChildElement("_RandomAction"); pR && !lvl.randomActions.full(); pR = pR->NextSiblingElement("_RandomAction")) if(const char* a = pR->Attribute("DATA")) lvl.randomActions.push_back(ActionStateFromString(a));
 					for(XMLElement* pR = pLvl->FirstChildElement("_REMOTELIST"); pR; pR = pR->NextSiblingElement("_REMOTELIST")) {
 						i32 from = 0, to = 0;
 						pR->QueryAttribute("_RemoteIndex", &from);

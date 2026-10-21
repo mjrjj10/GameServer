@@ -595,10 +595,21 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	}
 	const GameXmlContent::SkillCast* cast = followUp ? nullptr : content.FindSkillCast((i32)skillID);
 	castCostLevel = followUp ? nullptr : PickCostLevel(player, skillID);
-	const ActionStateID upgradeAction = followUp ? ActionStateID::INVALID : UpgradeAction(player, (i32)skillID);
-	const ActionStateID actionState = followUp ? forcedAction : castCostLevel && castCostLevel->action != ActionStateID::INVALID ? castCostLevel->action : upgradeAction != ActionStateID::INVALID ? upgradeAction : (cast ? cast->action : skill.action);
+	const GameXmlContent::SkillUpgrade* actionUpgrade = followUp ? nullptr : LatestUpgradeWith(player, (i32)skillID, [](const GameXmlContent::SkillUpgrade& u) { return u.action != ActionStateID::INVALID; });
+	ActionStateID actionState = skill.action;
+	const GameXmlContent::RandomActionList* randomActions = nullptr;
+	if(followUp) actionState = forcedAction;
+	else if(castCostLevel && castCostLevel->action != ActionStateID::INVALID) { actionState = castCostLevel->action; randomActions = &castCostLevel->randomActions; }
+	else if(actionUpgrade) { actionState = actionUpgrade->action; randomActions = &actionUpgrade->randomActions; }
+	else if(cast) actionState = cast->action;
+	else randomActions = content.FindSkillRandomActions((i32)skillID);
+	if(randomActions && !randomActions->empty()) {
+		const u32 pick = RandUint() % (u32)(randomActions->size() + 1);
+		if(pick > 0) actionState = (*randomActions)[pick - 1];
+	}
 
 	if(!followUp && !CheckAndPayCast(player, skillID, castPos, targets)) return;
+	if(!followUp) DropPendingActions(player);
 	BreakHide(player);
 
 	f32 angle = player.input.rot.upperYaw;
@@ -628,7 +639,9 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 
 	eastl::copy(targets.begin(), targets.end(), eastl::back_inserter(rpCast.targetList));
 
-	if(!castRelease) replication->FramePushSkillCast(rpCast);
+	const bool actionOnly = hitActionOnly && followUp;
+	hitActionOnly = false;
+	if(!castRelease && !actionOnly) replication->FramePushSkillCast(rpCast);
 
 
 	/*
@@ -684,7 +697,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 							if(len > 1.0f) {
 								const bool through = cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH || cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE;
 								gotoDir = rel / len;
-								distance = through ? len : MAX(len - HitRadius(*tm->parent) - HitRadius(player), 0.0f);
+								distance = through ? len + HitRadius(*tm->parent) + HitRadius(player) : MAX(len - HitRadius(*tm->parent) - HitRadius(player), 0.0f);
 								moveDuration = SkillMoveDuration(content, player.Main().classType, action, cmd->animIndex);
 								if(cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_CHASE || cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE) chaseTarget = targets[0];
 							}
@@ -717,7 +730,8 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		rpExec.endPos = endPos;
 	}
 
-	if(!cast) replication->FramePushSkillExec(rpExec);
+	if(actionOnly) replication->SendActionStateOnlyToAll(player.Main().UID, actionState, WorldYawToMxmYaw(angle), distance != 0, rpExec.startPos, distance != 0 ? rpExec.endPos : rpExec.startPos, moveDuration);
+	else if(!cast) replication->FramePushSkillExec(rpExec);
 	if(chaseTarget != ActorUID::INVALID && player.clientHd != ClientHandle::INVALID && moveDuration > 0) {
 		player.chaseTarget = chaseTarget;
 		player.chaseAction = actionState;

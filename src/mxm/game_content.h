@@ -706,6 +706,8 @@ struct GameXmlContent
 
 	const Master& GetMaster(ClassType classType) const;
 	i32 GetFirstComboSkill(i32 baseSkill) const { auto f = firstComboSkill.find(baseSkill); return f == firstComboSkill.end() ? 0 : f->second; }
+	typedef eastl::fixed_vector<ActionStateID,4,false> RandomActionList;
+	const RandomActionList* FindSkillRandomActions(i32 skillID) const { auto f = skillRandomActions.find(skillID); return f == skillRandomActions.end() ? nullptr : &f->second; }
 	i32 WeaponTypeOf(ClassType classType, WeaponIndex weaponIndex) const;
 	const Action& GetSkillAction(ClassType classType, ActionStateID actionID, i8 stance = 0) const;
 	const Action* FindSkillAction(ClassType classType, ActionStateID actionID, i8 stance = 0) const;
@@ -757,6 +759,7 @@ struct GameXmlContent
 	struct CostLevel {
 		f32 consume[3] = { 0, 0, 0 };
 		ActionStateID action = ActionStateID::INVALID;
+		eastl::fixed_vector<ActionStateID,4,false> randomActions;
 		eastl::fixed_vector<eastl::pair<i32,i32>,8,false> remoteReplace;
 		StatusReplaceList statusReplace;
 		eastl::fixed_vector<eastl::pair<i32,const Remote*>,4,false> remoteResize;
@@ -775,6 +778,7 @@ struct GameXmlContent
 		StatusReplaceList statusReplace;
 		eastl::fixed_vector<eastl::pair<i32,const Remote*>,4,false> remoteResize;
 		ActionStateID action = ActionStateID::INVALID;
+		eastl::fixed_vector<ActionStateID,4,false> randomActions;
 		i32 nextCombo = 0;
 		i32 summon = 0;
 		eastl::array<f32,5> consume = { -1, -1, -1, -1, -1 };
@@ -895,6 +899,7 @@ private:
 	eastl::hash_map<i32, eastl::array<i32,5>> botSkills;
 	eastl::hash_map<i32, f32> skillCoolTime;
 	eastl::hash_map<i32, i32> firstComboSkill;
+	eastl::hash_map<i32, RandomActionList> skillRandomActions;
 	eastl::hash_map<i32, SkillStance> skillStance;
 	eastl::hash_map<i32, SkillCast> skillCast;
 	eastl::hash_map<i32, SkillToggle> skillToggle;

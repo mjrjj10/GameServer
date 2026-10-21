@@ -34,7 +34,17 @@ static bool StatusSendsGraph(const StatusInfo* info)
 
 static bool StatusGraphTimed(const StatusInfo* info)
 {
-	return info && info->type != StatusType::ROOT && info->type != StatusType::STUN && info->type != StatusType::FREEZE;
+	if(!info) return false;
+	switch(info->type) {
+		case StatusType::ROOT:
+		case StatusType::STUN:
+		case StatusType::FREEZE:
+		case StatusType::SHOCKED:
+		case StatusType::TARGET:
+		case StatusType::UNDEAD:
+			return false;
+		default: return true;
+	}
 }
 static const i32 STATUS_PC_DEFEAT_SUPERARMOR = 1230000101;
 static const i32 STATUS_PC_DEFEAT_AND_LIE_SUPERARMOR = 1230000102;
@@ -548,7 +558,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	ShowcaseOnStatus(caster, target, statusID);
 	const bool permanent = info && info->permanent && durationOverride <= 0;
 	if(permanent) duration = 1000000.0f;
-	const f32 sentDuration = durationOverride > 0 || !info || info->durationSec > 0 ? duration : (info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f);
+	const f32 sentDuration = statusAniEnd && info ? (info->durationSec > 0 ? info->durationSec : info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f) : durationOverride > 0 || !info || info->durationSec > 0 ? duration : (info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f);
 	if(info && info->casterStatus != 0 && info->casterStatus != statusID && !caster.dead && !applyingCasterStatus) {
 		bool refresh = false;
 		foreach_const(it, activeStatuses) if(it->statusID == statusID && it->targetIndex == target.index) { refresh = true; break; }
@@ -835,7 +845,9 @@ void World::UpdateStatuses()
 		}
 		else if(!caster.dead && targetMaster) {
 			statusCasterOverride = ps->sourceUID;
+			statusAniEnd = ps->aniEnd;
 			ApplyStatus(caster, *targetMaster->parent, ps->statusID, ps->power, ps->duration);
+			statusAniEnd = false;
 			statusCasterOverride = ActorUID::INVALID;
 		}
 		ps = pendingStatuses.erase_unsorted(ps);

@@ -8,6 +8,7 @@ static const i32 ULTIMATE_SKILL_SUFFIX = 50;
 static const f32 REPEAT_HIT_REDUCTION = 0.1f;
 static const f32 REPEAT_HIT_REDUCTION_CAP = 0.6f;
 static const f32 ORBIT_RADIUS = 150.0f;
+static const i32 BEZIER_ARC_SAMPLES = 24;
 
 static bool RemoteCreateSendsEntity(ActionCommand::TargetPreset preset, Remote::BehaviorType behavior)
 {
@@ -54,6 +55,27 @@ bool World::RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includ
 	const bool enemy = p.team != owner.team;
 	if(enemy) return group == Remote::DamageGroup::eENEMY || group == Remote::DamageGroup::eALL;
 	return friendContact;
+}
+
+static f32 BezierArcLength(const Remote& remote, f32 range)
+{
+	vec2 c[4];
+	c[0] = vec2(0);
+	c[3] = vec2(range, 0);
+	for(int k = 0; k < 2; k++) {
+		const f32 a = remote.bezierRotate[k] * PI / 180.0f;
+		c[k + 1] = vec2(range * (k + 1) / 3.0f + remote.bezierFront[k], remote.bezierUp[k] * sinf(a));
+	}
+	f32 length = 0;
+	vec2 prev = c[0];
+	for(int i = 1; i <= BEZIER_ARC_SAMPLES; i++) {
+		const f32 u = (f32)i / BEZIER_ARC_SAMPLES;
+		const f32 v = 1.0f - u;
+		const vec2 p = c[0] * (v * v * v) + c[1] * (3 * v * v * u) + c[2] * (3 * v * u * u) + c[3] * (u * u * u);
+		length += glm::length(p - prev);
+		prev = p;
+	}
+	return length;
 }
 
 static f32 WeaponNodeForward(const GameXmlContent& content, ClassType cls, SkillID skillID, const Remote& remote, u16 nodeName)
@@ -118,6 +140,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	inst.casterLocal = casterCreatesLocally;
 	inst.graphStart = pos;
 	inst.graphDir = dir;
+	inst.graphArc = remote->behaviorType == Remote::BehaviorType::GRAPH && remote->bezier && inst.range > 0 ? BezierArcLength(*remote, inst.range) : 0;
 	if(remote->timeEventDelay >= 0) {
 		inst.timeEventActive = true;
 		inst.nextTimeEvent = TimeAdd(localTime, TimeMsToTime(remote->timeEventDelay * 1000.0));
@@ -273,7 +296,9 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 		inst.actionChanged = true;
 		const ActorUID targetUID = target.Main().UID;
 		LOG("Remote :: %ls hit %ls -> caster action %d", owner.name.data(), target.name.data(), (i32)remote.changeCasterAction);
+		hitActionOnly = true;
 		PlayerCastSkill(owner, inst.skillID, target.body->GetWorldPos(), Slice<const ActorUID>(&targetUID, 1), 0, remote.changeCasterAction);
+		hitActionOnly = false;
 	}
 	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty()) {
 		AddRemoteActivation(target, inst.pos.z);
@@ -333,7 +358,12 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	}
 
 	inst.lastHitIndex = (i32)target.index;
-	if(enemy && remote.onHitOwnerStatus != 0 && !owner.dead) ApplyStatus(owner, owner, remote.onHitOwnerStatus);
+	if(enemy && remote.onHitOwnerStatus != 0 && !owner.dead) {
+		const ActorUID prevCaster = statusCasterOverride;
+		statusCasterOverride = target.Main().UID;
+		ApplyStatus(owner, owner, remote.onHitOwnerStatus);
+		statusCasterOverride = prevCaster;
+	}
 	if(!target.dead) {
 		const bool friendGroup = remote.damageGroup == Remote::DamageGroup::eFRIEND;
 		if(enemy || friendGroup) {
@@ -383,7 +413,9 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 			const vec2 rel = vec2(target.body->GetWorldPos() - owner.body->GetWorldPos());
 			LOG("ComboHit :: %ls skill=%d remote=%d -> next part", owner.name.data(), (i32)inst.skillID, (i32)remote.ID);
 			castCostLevel = inst.costLevel;
+			schedulePassOffset = ComboPassOffset(owner, inst.skillID);
 			ScheduleSkillRemotes(owner, inst.skillID, target.body->GetWorldPos(), Slice<const ActorUID>(&targetUID, 1), atan2f(rel.y, rel.x), 1);
+			schedulePassOffset = 0;
 			castCostLevel = nullptr;
 		}
 	}
@@ -523,7 +555,10 @@ void World::UpdateRemotes(f32 delta)
 
 		if(!destroyed) {
 			if(remote.behaviorType == Remote::BehaviorType::CHAIN) destroyed = UpdateChainRemote(inst);
-			else if(attached) ApplyAttachedRemote(inst, instOwner);
+			else if(attached) {
+				ApplyAttachedRemote(inst, instOwner);
+				if(remote.behaviorType == Remote::BehaviorType::ORBIT && inst.hitsLeft <= 0) destroyed = true;
+			}
 			else switch(remote.behaviorType) {
 				case Remote::BehaviorType::CASTER_TARGET: break;
 				case Remote::BehaviorType::TARGET:
@@ -764,7 +799,8 @@ bool World::UpdateTargetRemote(RemoteInst& inst, f32 delta)
 bool World::UpdateGraphRemote(RemoteInst& inst, f32 delta)
 {
 	const Remote& remote = *inst.remote;
-	const f32 step = MIN(inst.speed * delta, inst.range - inst.travelled);
+	const f32 total = inst.graphArc > 0 ? inst.graphArc : inst.range;
+	const f32 step = MIN(inst.speed * delta, total - inst.travelled);
 	inst.travelled += step;
 	if(remote.bezier && inst.range > 0) {
 		const vec2 f = inst.graphDir;
@@ -776,7 +812,7 @@ bool World::UpdateGraphRemote(RemoteInst& inst, f32 delta)
 			const f32 a = remote.bezierRotate[k] * PI / 180.0f;
 			c[k] = p0 + f * (inst.range * (k + 1) / 3.0f + remote.bezierFront[k]) + side * (remote.bezierUp[k] * sinf(a));
 		}
-		const f32 u = MIN(inst.travelled / inst.range, 1.0f);
+		const f32 u = MIN(inst.travelled / total, 1.0f);
 		const f32 v = 1.0f - u;
 		const vec2 p = p0 * (v * v * v) + c[0] * (3 * v * v * u) + c[1] * (3 * v * u * u) + p3 * (u * u * u);
 		const vec2 tangent = (c[0] - p0) * (3 * v * v) + (c[1] - c[0]) * (6 * v * u) + (p3 - c[1]) * (3 * u * u);
@@ -787,7 +823,7 @@ bool World::UpdateGraphRemote(RemoteInst& inst, f32 delta)
 		inst.pos += vec3(inst.dir * step, 0);
 	}
 	RemoteHitAlongPath(inst);
-	const bool arrived = inst.travelled >= inst.range - 0.01f;
+	const bool arrived = inst.travelled >= total - 0.01f;
 	if(arrived && inst.hasLandZ) inst.pos.z = inst.landZ;
 	return arrived;
 }

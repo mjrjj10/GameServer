@@ -1460,6 +1460,31 @@ void Replication::SendAttackActionToOthers(ClientHandle senderHd, ActorUID actor
 	}
 }
 
+void Replication::SendActionStateOnlyToAll(ActorUID actorUID, ActionStateID state, f32 mxmYaw, bool move, const vec3& startPos, const vec3& endPos, f32 durationSec)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+
+		Sv::SN_PlayerSyncActionStateOnly packet;
+		memset(&packet, 0, sizeof(packet));
+		packet.characterID = localID;
+		packet.state = state;
+		packet.rotate = mxmYaw;
+		packet.upperRotate = mxmYaw;
+		packet.graphMove.bApply = move ? 1 : 0;
+		if(move) {
+			packet.graphMove.startPos = v2f(startPos);
+			packet.graphMove.endPos = v2f(endPos);
+			packet.graphMove.durationTimeS = durationSec;
+			packet.graphMove.originDistance = glm::distance(startPos, endPos);
+		}
+		SendPacket(clientHd, packet);
+	}
+}
+
 void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap, f32 scale, f32 nominalDist, bool withGraph, bool refresh)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
