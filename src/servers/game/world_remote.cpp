@@ -787,8 +787,6 @@ bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
 			if(stopPos) {
 				inst.hitsLeft--;
 				if(inst.hitsLeft <= 0 || inst.penetrationLeft <= 0) {
-					if(inst.clientRemoteID != 0) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
-					inst.destroyedByHit = true;
 					inst.pos = vec3(vec2(stopPos->body->GetWorldPos()), inst.pos.z);
 					destroyed = true;
 				}
@@ -811,8 +809,6 @@ bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
 		RemoteApplyArea(inst);
 	}
 	if(inst.hitsLeft <= 0 && remote.lifeTime > 0) {
-		if(inst.clientRemoteID != 0) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
-		inst.destroyedByHit = true;
 		destroyed = true;
 	}
 	return destroyed;
@@ -824,8 +820,6 @@ void World::DestroyRemote(i32 index)
 	const Remote& remote = *inst.remote;
 	const i32 i = index;
 	if(inst.hasLandZ) inst.pos.z = inst.landZ;
-	const bool destroySent = inst.clientRemoteID != 0 && (inst.destroyedByHit || inst.speed > 0 || inst.killNow);
-	if(!inst.destroyedByHit && destroySent) replication->SendDestroyRemoteToAll(inst.clientRemoteID);
 	{
 		const RemoteIdx next = remote.destroyCreateRemote;
 		const RemoteInst copy = inst;
@@ -842,7 +836,7 @@ void World::DestroyRemote(i32 index)
 					child->centeredBox = copy.centeredBox;
 				}
 			}
-			SpawnRemoteRules(*this, copy, remote.onDestroy, copy.pos, childExclude, next, !destroySent);
+			SpawnRemoteRules(*this, copy, remote.onDestroy, copy.pos, childExclude, next, true);
 		}
 	}
 }

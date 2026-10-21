@@ -278,7 +278,6 @@ void World::UpdateProjectiles(f32 delta)
 				if(proj->remoteID != 0) replication->SendRemoteActivatedToAll(proj->remoteID, proj->seedOwnerHd, ClientHandle::INVALID, activationTarget->Main().UID, activationCost, hitPos);
 				proj->hitsLeft--;
 				if(proj->hitsLeft <= 0 || proj->penetrationLeft <= 0) {
-					if(proj->remoteID != 0) replication->SendDestroyRemoteToAll(proj->remoteID);
 					proj->pos = hitPos;
 					destroyed = true;
 				}

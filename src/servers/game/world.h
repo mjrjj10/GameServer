@@ -504,7 +504,6 @@ struct World
 		bool areaDone;
 		u32 clientRemoteID = 0;
 		i32 penetrationLeft = 0;
-		bool destroyedByHit = false;
 		Time nextTimeEvent = Time::ZERO;
 		bool timeEventActive = false;
 		i32 excludeIndex = -1;
