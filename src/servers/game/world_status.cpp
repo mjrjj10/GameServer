@@ -518,6 +518,15 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
 		return;
 	}
+	if(info && info->type != StatusType::OTHER) {
+		foreach_const(it, activeStatuses) {
+			if(it->targetIndex != target.index || !it->info || it->until <= localTime) continue;
+			if(eastl::find(it->info->defenseTypes.begin(), it->info->defenseTypes.end(), info->type) == it->info->defenseTypes.end()) continue;
+			LOG("Status :: %ls refused %d (blocked by %d)", target.name.data(), statusID, it->statusID);
+			replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
+			return;
+		}
+	}
 	f32 ccScale = 1.0f;
 	if(info && caster.team != target.team && PassiveBlocksCC(target, *info, &ccScale)) {
 		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
@@ -719,6 +728,13 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		}
 	}
 
+	if(info && info->type == StatusType::DISPEL && info->dispelStatusType != StatusType::OTHER) {
+		foreach(it, activeStatuses) {
+			if(it->targetIndex != target.index || !it->info || !it->info->canDispel || it->info->type != info->dispelStatusType || it->until <= localTime) continue;
+			it->until = localTime;
+			LOG("Dispel :: %ls removed status %d (type %s) from %ls", caster.name.data(), it->statusID, it->info->typeName.c_str(), target.name.data());
+		}
+	}
 	if(info && info->type == StatusType::DISPEL && info->dispelEffect >= 0) {
 		foreach(it, activeStatuses) {
 			if(it->targetIndex != target.index || !it->info || !it->info->canDispel || it->statusID == statusID) continue;

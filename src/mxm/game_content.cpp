@@ -2325,6 +2325,14 @@ bool GameXmlContent::LoadStatusData()
 			const char* dispelType = nullptr;
 			pCommon->QueryStringAttribute("_DispelEffectType", &dispelType);
 			if(dispelType) st.dispelEffect = EA::StdC::Strcmp(dispelType, "STATUS_EFFECT_DEBUFF") == 0 ? 1 : 0;
+			const char* dispelStatus = nullptr;
+			pCommon->QueryStringAttribute("_DispelStatusType", &dispelStatus);
+			if(dispelStatus) st.dispelStatusType = StatusTypeFromString(dispelStatus);
+			for(XMLElement* pDefense = pCommon->FirstChildElement("_ADD_DF_STATUS"); pDefense; pDefense = pDefense->NextSiblingElement("_ADD_DF_STATUS")) {
+				const char* defense = nullptr;
+				pDefense->QueryStringAttribute("DATAKEY", &defense);
+				if(defense && !st.defenseTypes.full()) st.defenseTypes.push_back(StatusTypeFromString(defense));
+			}
 			XMLElement* pBlock = pCommon->FirstChildElement("_INPUT_STATE_BLOCK");
 			if(pBlock) {
 				i32 v = 0;

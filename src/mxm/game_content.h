@@ -239,6 +239,8 @@ struct StatusInfo
 	bool isDebuff = false;
 	bool canDispel = false;
 	i8 dispelEffect = -1;
+	StatusType dispelStatusType = StatusType::OTHER;
+	eastl::fixed_vector<StatusType,4,false> defenseTypes;
 	i32 auraStatus = 0;
 	eastl::fixed_vector<i32,8,false> auraStatuses;
 	bool auraAll = false;
