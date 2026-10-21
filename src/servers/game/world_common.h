@@ -26,22 +26,14 @@ static const f32 OBSTRUCT_SIDE = 50.0f;
 
 static inline f32 SkillMoveDuration(const GameXmlContent& content, ClassType cls, const GameXmlContent::Action& action, i32 animIndex)
 {
-	f32 animLen = 0;
+	const char* className = content.GetMaster(cls).className.c_str();
 	foreach_const(st, action.anims) {
 		if(st->index != animIndex) continue;
-		animLen = content.GetAniSeqTime(content.GetMaster(cls).className.c_str(), st->animationId) * (f32)MAX(st->loop, 1);
-		if(animLen > 0) break;
+		const GameXmlContent::MoveCurve* curve = content.GetMoveCurve(className, st->animationId);
+		if(curve && curve->time > 0) return curve->time;
+		const f32 animLen = content.GetAniSeqTime(className, st->animationId) * (f32)MAX(st->loop, 1);
+		if(animLen > 0) return animLen;
 	}
-	f32 attachedLife = 0;
-	foreach_const(cmd, action.commands) {
-		if(cmd->type != ActionCommand::Type::REMOTE || (cmd->animIndex != animIndex && cmd->animIndex != -1)) continue;
-		const Remote* r = content.FindRemote(cmd->remote.idx);
-		if(!r || !r->attachFireObject || r->lifeTime <= 0) continue;
-		const f32 life = (cmd->remote.removeAtAnimEnd && animLen > 0) ? MIN(r->lifeTime, animLen) : r->lifeTime;
-		attachedLife = MAX(attachedLife, life);
-	}
-	if(attachedLife > 0) return attachedLife;
-	if(animLen > 0) return animLen;
 	return action.seqLength;
 }
 

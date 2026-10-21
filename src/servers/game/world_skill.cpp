@@ -7,6 +7,10 @@ static const i32 STAT_STAMINAREGEN = 5;
 static const i32 STAT_MANAREGEN = 39;
 static const i32 STAT_ULTIMATEREGEN = 42;
 static const f64 SKILL_POINT_INTERVAL_MS = 35000.0;
+static const f64 CHASE_UPDATE_INTERVAL_MS = 200.0;
+static const f64 BATTLE_STAGE_SEC = 1.0;
+static const f32 BATTLE_SPEED_RATIO_ACTIVE = 535.0f / 620.0f;
+static const f32 BATTLE_SPEED_RATIO_RECENT = 578.0f / 620.0f;
 static const i32 SKILL_UPGRADE_SLOT_ULTIMATE = 12;
 static const i32 ULTIMATE_SKILL_ID_SUFFIX = 50;
 
@@ -250,6 +254,20 @@ void World::ReleaseCast(Player& player)
 	GroupTeleport(player, c.skillID, c.castPos);
 	if(f->second.action == ActionStateID::INVALID) return;
 	PlayerCastSkill(player, c.skillID, c.castPos, Slice<const ActorUID>(&c.target, c.target != ActorUID::INVALID ? 1 : 0), 0, f->second.action);
+}
+
+void World::InterruptSkills(Player& player)
+{
+	i32 dropped = 0;
+	for(auto pr = pendingRemotes.begin(); pr != pendingRemotes.end(); ) {
+		if(pr->ownerIndex == player.index && pr->sourceUID == ActorUID::INVALID && !pr->remove && localTime < pr->time) {
+			pr = pendingRemotes.erase_unsorted(pr);
+			dropped++;
+		}
+		else ++pr;
+	}
+	if(dropped > 0) LOG("Skill :: %ls interrupted, %d pending remotes dropped", player.name.data(), dropped);
+	if(player.casting.skillID != SkillID::INVALID) CancelCast(player, "interrupted");
 }
 
 void World::CancelCast(Player& player, const char* reason)
@@ -582,6 +600,88 @@ void World::ApplyRemoteHitResourceGain(Player& owner, RemoteIdx remote, u32 cast
 	if(owner.resourceGainTargets.full() || eastl::find(owner.resourceGainTargets.begin(), owner.resourceGainTargets.end(), targetIndex) != owner.resourceGainTargets.end()) return;
 	owner.resourceGainTargets.push_back(targetIndex);
 	GainResource(owner, rule->slot, rule->amount);
+}
+
+void World::UpdateChases()
+{
+	foreach(it, players) {
+		if(it->chaseTarget == ActorUID::INVALID) continue;
+		const ActorMaster* tm = FindMasterActor(it->chaseTarget);
+		if(it->dead || !tm || tm->parent->dead || localTime >= it->chaseUntil) {
+			it->chaseTarget = ActorUID::INVALID;
+			continue;
+		}
+		if(localTime < it->chaseNext) continue;
+		it->chaseNext = TimeAdd(localTime, TimeMsToTime(CHASE_UPDATE_INTERVAL_MS));
+		replication->SendTargetGraphMoveToAll(it->Main().UID, it->body->GetWorldPos(), it->chaseTarget, tm->parent->body->GetWorldPos(), it->chaseAction);
+	}
+}
+
+void World::MarkInBattle(Player& player)
+{
+	player.battleActionAt = localTime;
+}
+
+void World::UpdateBattleStates()
+{
+	foreach(it, players) {
+		if(it->Main().classType == ClassType::NONE) continue;
+		u8 stage = 0;
+		if(it->battleActionAt != Time::ZERO && !it->dead) {
+			const f64 since = TimeDiffSec(TimeDiff(it->battleActionAt, localTime));
+			stage = since < BATTLE_STAGE_SEC ? 2 : (since < 2 * BATTLE_STAGE_SEC ? 1 : 0);
+		}
+		if(stage == it->battleStage) continue;
+		it->battleStage = stage;
+		const f32 baseSpeed = const_cast<CharacterModel&>(GetGameXmlContent().GetMaster(it->Main().classType).character).getMoveSpeed();
+		const f32 speed = baseSpeed * (stage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (stage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f));
+		replication->SendBattleStateToAll(it->Main().UID, stage > 0, speed);
+	}
+}
+
+void World::BreakHide(Player& player)
+{
+	foreach(it, activeStatuses) {
+		if(it->targetIndex != player.index || !it->info || it->info->type != StatusType::HIDE || it->appliedAt >= localTime || it->until <= localTime) continue;
+		it->until = localTime;
+		LOG("Hide :: %ls cast ends status %d", player.name.data(), it->statusID);
+	}
+}
+
+void World::UpdateHideVisibility()
+{
+	foreach(it, players) {
+		ActorUID hidden = ActorUID::INVALID;
+		if(!it->dead) {
+			foreach_const(st, activeStatuses) {
+				if(st->targetIndex == it->index && st->info && st->info->type == StatusType::HIDE && st->until > localTime) {
+					hidden = st->targetUID;
+					break;
+				}
+			}
+		}
+		if(hidden == it->hiddenUID) continue;
+		const ActorUID was = it->hiddenUID;
+		it->hiddenUID = hidden;
+		foreach(viewer, players) {
+			if(viewer->clientHd == ClientHandle::INVALID || viewer->team == it->team) continue;
+			const u32 bit = 1u << viewer->index;
+			if(was != ActorUID::INVALID && (it->hiddenFrom & bit)) {
+				const ActorMaster* chara = FindMasterActor(was);
+				if(chara) {
+					const f32 baseSpeed = const_cast<CharacterModel&>(GetGameXmlContent().GetMaster(chara->classType).character).getMoveSpeed();
+					const f32 speed = baseSpeed * (it->battleStage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (it->battleStage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f));
+					replication->SendEnterActor(viewer->clientHd, was, chara->classType, it->body->GetWorldPos(), it->input.rot.bodyYaw, it->input.rot.upperYaw, it->input.moveTo, it->battleStage > 0, speed, chara->actionState != ActionStateID::INVALID ? chara->actionState : ActionStateID::NONE_BEHAVIORSTATE, chara->hp, chara->hpMax);
+				}
+				it->hiddenFrom &= ~bit;
+			}
+			if(hidden != ActorUID::INVALID) {
+				replication->SendLeaveActor(viewer->clientHd, hidden);
+				it->hiddenFrom |= bit;
+			}
+		}
+		LOG("Hide :: %ls %s from enemies", it->name.data(), hidden != ActorUID::INVALID ? "hidden" : "visible");
+	}
 }
 
 void World::StartSkillPoints()

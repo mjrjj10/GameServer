@@ -62,6 +62,7 @@ void World::PlayerWeaponFire(Player& player)
 void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir, f32 distance)
 {
 	if(player.dead) return;
+	MarkInBattle(player);
 	const ClassType classType = player.Main().classType;
 	if(WeaponIsMelee(player)) return;
 	BotWeaponAnimation(player, replication);
@@ -125,6 +126,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	proj.penetrationLeft = remote && remote->penetrationCount > 0 ? remote->penetrationCount : PENETRATION_UNLIMITED;
 	proj.forwardReach = (remote && remote->boundType == Remote::BoundType::E_BOUND_BOX) ? MAX(remote->offsetY + remote->boundSize[1] * 0.5f, 0.0f) : 0.0f;
 	proj.aoeRadius = bomb ? bomb->boundSize[0] * 0.5f : 0;
+	proj.bombDoc = bomb ? bomb->ID : RemoteIdx::INVALID;
 	if(remote && remote->behaviorType == Remote::BehaviorType::HOMING && remote->angularVel > 0) {
 		proj.angularVel = remote->angularVel;
 		proj.homingLength = remote->homingLength;
@@ -167,8 +169,14 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	projectileList.push_back(proj);
 }
 
-void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage)
+void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, const Projectile* source)
 {
+	Projectile hitInfo;
+	if(source) {
+		hitInfo = *source;
+		if(source->bombDoc != RemoteIdx::INVALID) hitInfo.remoteDoc = source->bombDoc;
+		hitInfo.pos = center;
+	}
 	LOG("Explosion :: at (%.0f, %.0f) radius=%.0f", center.x, center.y, radius);
 	i32 mastersHit = 0;
 	foreach(it, players) {
@@ -176,7 +184,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage)
 		const vec3 pos = it->body->GetWorldPos();
 		if(fabsf(pos.z - center.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 		if(LagDistToPoint(*it, vec2(center)) > radius + HitRadius(*it) + WEAPON_HIT_TOLERANCE) continue;
-		DamagePlayer(owner, *it, SkillID::INVALID, damage);
+		DamagePlayer(owner, *it, SkillID::INVALID, damage, source ? &hitInfo : nullptr);
 		mastersHit++;
 	}
 	if(mastersHit >= 2 && owner.mana >= 0) {
@@ -303,10 +311,10 @@ void World::UpdateProjectiles(f32 delta)
 				SpawnRemote(proj->ownerIndex, proj->zoneRemote, proj->pos, proj->dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, proj->zoneDamage, false);
 			}
 			else if(proj->aoeRadius > 0) {
-				Explode(owner, proj->pos, proj->aoeRadius, proj->aoeDamage);
+				Explode(owner, proj->pos, proj->aoeRadius, proj->aoeDamage, &*proj);
 			}
 			else if(proj->graph && proj->hitsLeft > 0) {
-				Explode(owner, proj->pos, proj->halfWidth, proj->aoeDamage);
+				Explode(owner, proj->pos, proj->halfWidth, proj->aoeDamage, &*proj);
 			}
 			proj = projectileList.erase_unsorted(proj);
 		}
@@ -455,6 +463,7 @@ RemoteIdx World::SelectWeaponRemote(Player& player, const WeaponFiring& wf)
 
 void World::OnWeaponState(Player& player, i32 state, u8 chargeLevel, u8 firingCombo)
 {
+	if(state != 0) MarkInBattle(player);
 	if(state == WEAPON_STATE_CHARGE && player.weaponState != WEAPON_STATE_CHARGE) {
 		player.chargeStart = localTime;
 		player.chargeAnnounced = 0;

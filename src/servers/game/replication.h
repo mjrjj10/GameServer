@@ -317,7 +317,7 @@ struct Replication
 	void SendGameStart(ClientHandle clientHd);
 	void SendPlayerTag(ClientHandle clientHd, ActorUID mainActorUID, ActorUID subActorUID);
 	void SendPlayerJump(ClientHandle clientHd, ActorUID mainActorUID, f32 rotate, f32 moveDirX, f32 moveDirY);
-	void SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, SkillID skillID, i32 damage, i32 hp, i32 hpMax, u32 damageType = 0);
+	void SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, SkillID skillID, i32 damage, i32 hp, i32 hpMax, u32 damageType = 0, i32 statusID = 0);
 	void SendHpToAll(ActorUID actorUID, i32 hp, i32 hpMax);
 	void SendDoConnectChannel(ClientHandle clientHd, const wchar* nickname, const i32 hubIP[4], u16 hubPort);
 	struct EndPlayer
@@ -341,15 +341,39 @@ struct Replication
 	void SendInteractionExecuteToAll(ActorUID objectUID, ActorUID targetUID, u32 actionState, u32 castingTimeMS);
 	void SendToggleSkill(ActorUID casterUID, ClientHandle casterHd, SkillID skillID, bool on, ActionStateID action);
 	void SendHideDetect(ClientHandle clientHd, ActorUID detectorUID, ActorUID targetUID, u8 flag);
+	void SendLeaveActor(ClientHandle clientHd, ActorUID actorUID);
+	void SendEnterActor(ClientHandle clientHd, ActorUID actorUID, ClassType classType, const vec3& pos, f32 bodyYaw, f32 upperYaw, const vec3& moveTo, bool battle, f32 speed, ActionStateID action, i32 hp, i32 hpMax);
 	void SendChangeSkillSlot(ClientHandle clientHd, ActorUID actorUID, i32 slot, SkillID skill, i32 resetCooltimeID);
 	void SendSelfTeleport(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, f32 worldYaw, const vec3* clientPos = nullptr);
 	void SendSelfMove(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, const vec2& moveDir, f32 speed, f32 worldYaw);
 	void SendCooltimeReset(ClientHandle clientHd, ActorUID characterUID, Slice<const i32> coolTimeIDs, u32 leftMs = 1, u32 totalMs = 1);
-	void SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap = 1, f32 scale = 1.0f);
+	void SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap = 1, f32 scale = 1.0f, f32 nominalDist = -1.0f);
 	void SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID);
-	void SendRemoteDamageToAll(u32 remoteID, RemoteIdx remoteDoc, ActorUID attackerUID, ActorUID targetUID, const vec3& hitPos, const vec2& hitDir, i32 damage, i32 hp, i32 hpMax, u32 damageType = 0, ClientHandle seedOwnerHd = ClientHandle::INVALID);
+	struct RemoteDamage
+	{
+		u32 remoteID = 0;
+		RemoteIdx remoteDoc = RemoteIdx::INVALID;
+		ActorUID attackerUID = ActorUID::INVALID;
+		ActorUID targetUID = ActorUID::INVALID;
+		vec3 remotePos = vec3(0);
+		vec3 targetPos = vec3(0);
+		vec2 dir = vec2(1, 0);
+		bool weapon = false;
+		SkillID skillID = SkillID::INVALID;
+		u32 damageType = 0;
+		u32 elementRelation = 0;
+		i32 damage = 0;
+		i32 hp = 0;
+		i32 hpMax = 0;
+		ClientHandle seedOwnerHd = ClientHandle::INVALID;
+	};
+	void SendRemoteDamageToAll(const RemoteDamage& hit);
 	void SendRemoteActivatedToAll(u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, ActorUID targetUID, u32 penetration, const vec3& pos);
 	void SendResistStatusToAll(ActorUID targetUID, ActorUID casterUID, u32 event);
+	void SendBattleStateToAll(ActorUID actorUID, bool inBattle, f32 baseMoveSpeed);
+	void SendTargetGraphMoveToAll(ActorUID casterUID, const vec3& casterPos, ActorUID targetUID, const vec3& targetPos, ActionStateID actionID);
+	void SendEvadeToAll(ActorUID attackerUID, ActorUID defenderUID, u32 remoteID, RemoteIdx remoteDoc, ClientHandle seedOwnerHd);
+	void SendModifyStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, u8 overlap, u8 customValue);
 	void SendAttackActionToOthers(ClientHandle senderHd, ActorUID actorUID, f32 mxmYaw);
 	void SendDestroyRemoteToAll(u32 remoteID);
 	void SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed);

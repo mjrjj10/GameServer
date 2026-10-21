@@ -294,7 +294,7 @@ void Server::SendPacketData(ClientHandle clientHd, u16 netID, u16 packetSize, co
 	if(doTraceNetwork) {
 		static Mutex mutexFile;
 		mutexFile.Lock();
-		fileSaveBuff(FormatPath(FMT("trace/game_%d_sv_%d.raw", packetCounter, header.netID)), sendBuff, header.size);
+		fileSaveBuff(FormatPath(FMT("trace/game_%d_sv_%d_c%d.raw", packetCounter, header.netID, clientID)), sendBuff, header.size);
 		packetCounter++;
 		mutexFile.Unlock();
 	}

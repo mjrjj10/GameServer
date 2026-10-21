@@ -2603,6 +2603,57 @@ inline const char* PacketSerialize<Sv::SN_RemoteActivated>(const void* packetDat
 	return str.data();
 }
 template<>
+inline const char* PacketSerialize<Sv::SN_ChangeBattleState>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	const Sv::SN_ChangeBattleState& p = *(Sv::SN_ChangeBattleState*)packetData;
+	SER("SN_ChangeBattleState(%d, %d) :: {", Sv::SN_ChangeBattleState::NET_ID, packetSize);
+	SER("	objectID=%u", p.objectID);
+	SER("	isInBattle=%u", p.isInBattle);
+	SER("	baseMoveSpeed=%f", p.baseMoveSpeed);
+	SER("}");
+	return str.data();
+}
+template<>
+inline const char* PacketSerialize<Sv::SN_UpdateTargetGraphMove>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	const Sv::SN_UpdateTargetGraphMove& p = *(Sv::SN_UpdateTargetGraphMove*)packetData;
+	SER("SN_UpdateTargetGraphMove(%d, %d) :: {", Sv::SN_UpdateTargetGraphMove::NET_ID, packetSize);
+	SER("	characterID=%u", p.characterID);
+	SER("	targetID=%u", p.targetID);
+	SER("	targetPos=(%f, %f, %f)", p.targetPos.x, p.targetPos.y, p.targetPos.z);
+	SER("	curActionID=%u", p.curActionID);
+	SER("}");
+	return str.data();
+}
+template<>
+inline const char* PacketSerialize<Sv::SN_BroadcastEvade>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	const Sv::SN_BroadcastEvade& p = *(Sv::SN_BroadcastEvade*)packetData;
+	SER("SN_BroadcastEvade(%d, %d) :: {", Sv::SN_BroadcastEvade::NET_ID, packetSize);
+	SER("	attID=%u", p.attID);
+	SER("	defID=%u", p.defID);
+	SER("	remoteID=0x%08x", p.remoteID);
+	SER("	remoteDocIndex=%u", p.remoteDocIndex);
+	SER("}");
+	return str.data();
+}
+template<>
+inline const char* PacketSerialize<Sv::SN_ModifyStatus>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	const Sv::SN_ModifyStatus& p = *(Sv::SN_ModifyStatus*)packetData;
+	SER("SN_ModifyStatus(%d, %d) :: {", Sv::SN_ModifyStatus::NET_ID, packetSize);
+	SER("	statusID=%u", p.statusID);
+	SER("	targetID=%u", p.targetID);
+	SER("	overlapCount=%u", p.overlapCount);
+	SER("	customValue=%u", p.customValue);
+	SER("}");
+	return str.data();
+}
+template<>
 inline const char* PacketSerialize<Sv::SN_ResistStatus>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

@@ -8,11 +8,33 @@ static const i32 ULTIMATE_SKILL_SUFFIX = 50;
 static const f32 REPEAT_HIT_REDUCTION = 0.1f;
 static const f32 REPEAT_HIT_REDUCTION_CAP = 0.6f;
 static const f32 ORBIT_RADIUS = 150.0f;
+
+static bool RemoteCreateSendsEntity(ActionCommand::TargetPreset preset, Remote::BehaviorType behavior)
+{
+	switch(behavior) {
+		case Remote::BehaviorType::FOLLOW_TARGET:
+		case Remote::BehaviorType::ATTACH_TARGET:
+		case Remote::BehaviorType::TARGET:
+		case Remote::BehaviorType::CHAIN:
+		case Remote::BehaviorType::HOMING:
+			return true;
+		default: break;
+	}
+	switch(preset) {
+		case ActionCommand::TargetPreset::SELF_FFF:
+		case ActionCommand::TargetPreset::SELF_FFF_1:
+		case ActionCommand::TargetPreset::SELF_TFF:
+		case ActionCommand::TargetPreset::SELF_TTF:
+		case ActionCommand::TargetPreset::POS_FFF:
+			return false;
+		default: return true;
+	}
+}
 struct WorldRemoteSpawner
 {
 	static World::RemoteInst* Spawn(World& w, u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast, bool casterLocal)
 	{
-		return w.SpawnRemote(ownerIndex, idx, pos, dir, target, skillID, castID, damage, broadcast, nullptr, 0, casterLocal);
+		return w.SpawnRemote(ownerIndex, idx, pos, dir, target, skillID, castID, damage, broadcast, nullptr, 0, casterLocal, false, true);
 	}
 };
 
@@ -52,7 +74,7 @@ static f32 WeaponNodeForward(const GameXmlContent& content, ClassType cls, Skill
 	return forward > 0 && forward <= WEAPON_NODE_MAX_FORWARD ? forward : 0;
 }
 
-World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast, const vec3* aimPos, u16 nodeName, bool casterCreatesLocally, bool stopAtTarget)
+World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast, const vec3* aimPos, u16 nodeName, bool casterCreatesLocally, bool stopAtTarget, bool child, bool sendEntity)
 {
 	const Remote* remote = GetGameXmlContent().FindRemote(idx);
 	if(!remote || remoteInsts.full()) return nullptr;
@@ -103,6 +125,14 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		vec3 targetPos = pos + vec3(dir * (inst.range > 0 ? inst.range : 1000.0f), 0);
 		const ActorMaster* targetMaster = target != ActorUID::INVALID ? FindMasterActor(target) : nullptr;
 		if(targetMaster) targetPos = targetMaster->parent->body->GetWorldPos();
+		if(child && (remote->behaviorType == Remote::BehaviorType::NONETARGET || remote->behaviorType == Remote::BehaviorType::HOMING)) {
+			targetMaster = nullptr;
+			targetPos = pos;
+		}
+		if(!sendEntity) {
+			targetMaster = nullptr;
+			if(remote->behaviorType != Remote::BehaviorType::GRAPH && aimPos && glm::length(vec2(*aimPos)) > 1.0f) targetPos = *aimPos;
+		}
 		if(remote->behaviorType == Remote::BehaviorType::GRAPH && aimPos && glm::length(vec2(*aimPos)) > 1.0f) {
 			targetPos = pos + vec3(dir * inst.range, 0);
 			targetPos.z = aimPos->z;
@@ -179,7 +209,7 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 				if(glm::length(rel) > 1.0f) dir = glm::normalize(rel);
 			}
 			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, CostReplacedRemote(parent.costLevel, rule->idx), at + vec3(dir * child->offsetY, 0), dir, childTarget, parent.skillID, parent.castID, parent.damage,
-				parent.clientRemoteID != 0 && !(clientChains && rule->kind != Remote::SPAWN_SINGLE && !rule->targetOwner), parent.casterLocal);
+				parent.clientRemoteID != 0 && !(clientChains && rule->kind != Remote::SPAWN_SINGLE && !rule->targetOwner), false);
 			if(inst) {
 				inst->excludeIndex = excludeIndex;
 				inst->costLevel = parent.costLevel;
@@ -259,6 +289,11 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 		castHits.push_back(h);
 	}
 	AddRemoteActivation(target, inst.pos.z);
+	statusFromBehind = remote.offsetY < 0;
+	statusForceCenter = inst.pos;
+	statusForceCenterSet = true;
+	statusPushDir = inst.dir;
+	statusPushDirSet = glm::length(inst.dir) > 0.5f;
 
 	if(amount > 0) {
 		if(enemy && inst.skillID != SkillID::INVALID) PassiveOnSkillHit(owner, target);
@@ -288,9 +323,6 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	}
 
 	inst.lastHitIndex = (i32)target.index;
-	statusFromBehind = remote.offsetY < 0;
-	statusForceCenter = inst.pos;
-	statusForceCenterSet = true;
 	if(enemy && remote.onHitOwnerStatus != 0 && !owner.dead) ApplyStatus(owner, owner, remote.onHitOwnerStatus);
 	if(!target.dead) {
 		const bool friendGroup = remote.damageGroup == Remote::DamageGroup::eFRIEND;
@@ -347,6 +379,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	}
 	statusFromBehind = false;
 	statusForceCenterSet = false;
+	statusPushDirSet = false;
 	return true;
 }
 
@@ -560,21 +593,7 @@ void World::SpawnPendingRemotes()
 			}
 		}
 		if(!owner.dead) {
-			bool casterLocal = false;
-			{
-				const char* name = ActionCommand::TargetPresetToString((ActionCommand::TargetPreset)pr->preset);
-				for(const char* t = name; t && *t; ) {
-					const char* e = t;
-					while(*e && *e != '_') e++;
-					if(e - t == 3 && (t[0] == 'T' || t[0] == 'F') && (t[1] == 'T' || t[1] == 'F') && (t[2] == 'T' || t[2] == 'F')) {
-						casterLocal = t[0] == 'T';
-						break;
-					}
-					t = *e ? e + 1 : e;
-				}
-			}
-			if(ServerCreatesRemotes(players[pr->ownerIndex].Main().classType)) casterLocal = false;
-			RemoteInst* spawned = SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, casterLocal, pr->stopAtTarget);
+			RemoteInst* spawned = SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, false, pr->stopAtTarget, false, !remote || RemoteCreateSendsEntity((ActionCommand::TargetPreset)pr->preset, remote->behaviorType));
 			if(spawned) {
 				spawned->sourceUID = pr->sourceUID;
 				spawned->costLevel = pr->costLevel;
@@ -816,7 +835,7 @@ void World::DestroyRemote(i32 index)
 			if(next != RemoteIdx::INVALID) {
 				const Remote* nextRemote = GetGameXmlContent().FindRemote(next);
 				const f32 nextOffset = nextRemote ? nextRemote->offsetY : 0;
-				RemoteInst* child = SpawnRemote(copy.ownerIndex, CostReplacedRemote(copy.costLevel, next), copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, 0, copy.casterLocal);
+				RemoteInst* child = SpawnRemote(copy.ownerIndex, CostReplacedRemote(copy.costLevel, next), copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, 0, false, false, true);
 				if(child) {
 					child->excludeIndex = childExclude;
 					child->costLevel = copy.costLevel;

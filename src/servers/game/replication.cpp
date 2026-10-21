@@ -7,6 +7,8 @@
 #include <mxm/game_content.h>
 #include "config.h"
 
+static const u32 PACKET_DAMAGE_TYPE_STATUS = 1;
+
 void Replication::Frame::Clear()
 {
 	playerList.clear();
@@ -848,7 +850,7 @@ void Replication::SendPlayerJump(ClientHandle clientHd, ActorUID mainActorUID, f
 	SendPacket(clientHd, packet);
 }
 
-void Replication::SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, SkillID skillID, i32 damage, i32 hp, i32 hpMax, u32 damageType)
+void Replication::SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, SkillID skillID, i32 damage, i32 hp, i32 hpMax, u32 damageType, i32 statusID)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
@@ -861,11 +863,12 @@ void Replication::SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, Skil
 		Sv::SN_BroadcastNonRemoteDamage dmg;
 		dmg.defID = (u32)targetLocalID;
 		dmg.attID = (u32)attackerLocalID;
-		dmg.statusDocID = 0;
-		dmg.skillDocID = skillID == SkillID::INVALID ? 0 : (u32)skillID;
-		dmg.damageType = damageType;
+		const StatusInfo* status = statusID != 0 ? GetGameXmlContent().FindStatus(statusID) : nullptr;
+		dmg.statusDocID = (u32)statusID;
+		dmg.skillDocID = status ? (u32)status->skillIndex : (skillID == SkillID::INVALID ? 0 : (u32)skillID);
+		dmg.damageType = status ? PACKET_DAMAGE_TYPE_STATUS : damageType;
 		dmg.damage = (u32)damage;
-		dmg.masterGroupingDamage = (u32)damage;
+		dmg.masterGroupingDamage = status ? 0 : (u32)damage;
 		SendPacket(clientHd, dmg);
 	}
 
@@ -1113,45 +1116,48 @@ void Replication::RelayWeaponState(ClientHandle senderHd, ActorUID ownerUID, i32
 	}
 }
 
-void Replication::SendRemoteDamageToAll(u32 remoteID, RemoteIdx remoteDoc, ActorUID attackerUID, ActorUID targetUID, const vec3& hitPos, const vec2& hitDir, i32 damage, i32 hp, i32 hpMax, u32 damageType, ClientHandle seedOwnerHd)
+void Replication::SendRemoteDamageToAll(const RemoteDamage& hit)
 {
 	static u32 damageSeq = 1;
 	const u32 seq = damageSeq++;
-	const float3 dir3 = { hitDir.x, hitDir.y, 0 };
-	const float3 pos3 = v2f(hitPos);
+	const float3 dir3 = { hit.dir.x, hit.dir.y, 0 };
+	const float3 back3 = { -hit.dir.x, -hit.dir.y, 0 };
+	const float3 zero3 = { 0, 0, 0 };
+	const float3 remote3 = v2f(hit.remotePos);
+	const float3 target3 = v2f(hit.targetPos);
 
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 
 		const ClientHandle clientHd = clientHandle[clientID];
-		const LocalActorID targetLocalID = GetLocalActorID(clientHd, targetUID);
+		const LocalActorID targetLocalID = GetLocalActorID(clientHd, hit.targetUID);
 		if(targetLocalID == LocalActorID::INVALID) continue;
 
 		PacketWriter<Sv::SN_BroadcastDamage,256> packet;
 		packet.Write<u32>(seq);
-		packet.Write<u32>(clientHd == seedOwnerHd ? remoteID - 1 : remoteID);
+		packet.Write<u32>(clientHd == hit.seedOwnerHd ? hit.remoteID - 1 : hit.remoteID);
 		packet.Write<u32>((u32)targetLocalID);
-		packet.Write<u32>((u32)GetLocalActorID(clientHd, attackerUID));
-		packet.Write<u32>((u32)remoteDoc);
-		packet.Write<float3>(pos3);
+		packet.Write<u32>((u32)GetLocalActorID(clientHd, hit.attackerUID));
+		packet.Write<u32>((u32)hit.remoteDoc);
+		packet.Write<float3>(remote3);
+		packet.Write<float3>(back3);
 		packet.Write<float3>(dir3);
-		packet.Write<float3>(dir3);
-		packet.Write<float3>(pos3);
-		packet.Write<float3>(dir3);
-		packet.Write<u32>(damageType);
+		packet.Write<float3>(target3);
+		packet.Write<float3>(hit.weapon ? back3 : zero3);
+		packet.Write<u32>(hit.damageType);
+		packet.Write<u32>(hit.weapon ? 0xFFFFFFFF : (u32)hit.skillID);
 		packet.Write<u32>(0);
-		packet.Write<u32>(0);
-		packet.Write<u32>(0);
+		packet.Write<u32>(hit.elementRelation);
 		packet.Write<u16>(0);
-		packet.Write<u32>((u32)damage);
+		packet.Write<u32>((u32)hit.damage);
 		packet.Write<u16>(0);
 		packet.Write<u32>(0);
-		packet.Write<u32>((u32)damage);
+		packet.Write<u32>((u32)hit.damage);
 		packet.Write<u32>(0);
 		SendPacket(clientHd, packet);
 	}
 
-	SendHpToAll(targetUID, hp, hpMax);
+	SendHpToAll(hit.targetUID, hit.hp, hit.hpMax);
 }
 
 void Replication::RelayRemoteSyncCreateFromRemoteDoc(ClientHandle senderHd, const u8* packetData, i32 packetSize)
@@ -1272,6 +1278,77 @@ void Replication::SendResistStatusToAll(ActorUID targetUID, ActorUID casterUID, 
 	}
 }
 
+void Replication::SendBattleStateToAll(ActorUID actorUID, bool inBattle, f32 baseMoveSpeed)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+		PacketWriter<Sv::SN_ChangeBattleState,16> packet;
+		packet.Write<u32>((u32)localID);
+		packet.Write<u8>(inBattle ? 1 : 0);
+		packet.Write<f32>(baseMoveSpeed);
+		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendTargetGraphMoveToAll(ActorUID casterUID, const vec3& casterPos, ActorUID targetUID, const vec3& targetPos, ActionStateID actionID)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID casterLocal = GetLocalActorID(clientHd, casterUID);
+		if(casterLocal == LocalActorID::INVALID) continue;
+		const LocalActorID targetLocal = GetLocalActorID(clientHd, targetUID);
+		PacketWriter<Sv::SN_UpdateTargetGraphMove,48> packet;
+		packet.Write<u32>((u32)casterLocal);
+		packet.Write<float3>(v2f(casterPos));
+		packet.Write<u32>(targetLocal != LocalActorID::INVALID ? (u32)targetLocal : 0);
+		packet.Write<float3>(v2f(targetPos));
+		packet.Write<u32>((u32)actionID);
+		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendEvadeToAll(ActorUID attackerUID, ActorUID defenderUID, u32 remoteID, RemoteIdx remoteDoc, ClientHandle seedOwnerHd)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID defLocal = GetLocalActorID(clientHd, defenderUID);
+		if(defLocal == LocalActorID::INVALID) continue;
+		const LocalActorID attLocal = GetLocalActorID(clientHd, attackerUID);
+		PacketWriter<Sv::SN_BroadcastEvade,32> packet;
+		packet.Write<u32>(attLocal != LocalActorID::INVALID ? (u32)attLocal : 0);
+		packet.Write<u32>((u32)defLocal);
+		packet.Write<u32>(remoteID != 0 && clientHd == seedOwnerHd ? remoteID - 1 : remoteID);
+		packet.Write<u32>((u32)remoteDoc);
+		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendModifyStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, u8 overlap, u8 customValue)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID targetLocal = GetLocalActorID(clientHd, targetUID);
+		if(targetLocal == LocalActorID::INVALID) continue;
+		const LocalActorID casterLocal = GetLocalActorID(clientHd, casterUID);
+		PacketWriter<Sv::SN_ModifyStatus,32> packet;
+		packet.Write<u32>((u32)statusID);
+		packet.Write<u8>(1);
+		packet.Write<u32>((u32)targetLocal);
+		packet.Write<u32>(casterLocal != LocalActorID::INVALID ? (u32)casterLocal : 0);
+		packet.Write<u32>(0);
+		packet.Write<u8>(overlap);
+		packet.Write<u8>(customValue);
+		packet.Write<u8>(0);
+		SendPacket(clientHd, packet);
+	}
+}
+
 void Replication::SendDestroyRemoteToAll(u32 remoteID)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
@@ -1305,7 +1382,7 @@ void Replication::SendAttackActionToOthers(ClientHandle senderHd, ActorUID actor
 	}
 }
 
-void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap, f32 scale)
+void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap, f32 scale, f32 nominalDist)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
@@ -1314,14 +1391,14 @@ void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID 
 		if(targetLocal == LocalActorID::INVALID) continue;
 		const LocalActorID casterLocal = GetLocalActorID(clientHd, casterUID);
 
-		const f32 dist = glm::length(to - from);
+		const f32 dist = glm::length(vec2(to - from));
 		PacketWriter<Sv::SN_AddStatus,128> packet;
 		packet.Write<u8>(0);
 		packet.Write<f32>(scale);
 		packet.Write<float3>(v2f(from));
 		packet.Write<float3>(v2f(to));
 		packet.Write<f32>(dist);
-		packet.Write<f32>(dist);
+		packet.Write<f32>(nominalDist >= 0 ? nominalDist : dist);
 		packet.Write<f32>(graphDuration);
 		packet.Write<u32>((u32)statusID);
 		packet.Write<u8>(1);
@@ -1393,6 +1470,47 @@ void Replication::SendHideDetect(ClientHandle clientHd, ActorUID detectorUID, Ac
 	packet.targetID = (u32)GetLocalActorID(clientHd, targetUID);
 	packet.flag = flag;
 	SendPacket(clientHd, packet);
+}
+
+void Replication::SendLeaveActor(ClientHandle clientHd, ActorUID actorUID)
+{
+	const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+	if(localID == LocalActorID::INVALID) return;
+	Sv::SN_GameLeaveActor packet;
+	packet.objectID = localID;
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendEnterActor(ClientHandle clientHd, ActorUID actorUID, ClassType classType, const vec3& pos, f32 bodyYaw, f32 upperYaw, const vec3& moveTo, bool battle, f32 speed, ActionStateID action, i32 hp, i32 hpMax)
+{
+	const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+	if(localID == LocalActorID::INVALID) return;
+	PacketWriter<Sv::SN_GameEnterActor,512> packet;
+	packet.Write<u8>(1);
+	packet.Write<LocalActorID>(localID);
+	packet.Write<float3>(v2f(pos));
+	packet.Write<float3>(float3{ cosf(bodyYaw), sinf(bodyYaw), 0 });
+	const vec2 moving = vec2(moveTo) - vec2(pos);
+	const vec2 moveDir = glm::length(moving) > 1.0f ? glm::normalize(moving) : vec2(0);
+	packet.Write<float2>(float2{ moveDir.x, moveDir.y });
+	packet.Write<float2>(float2{ cosf(upperYaw), sinf(upperYaw) });
+	packet.Write<float3>(v2f(moveTo));
+	packet.Write<u8>(battle ? 1 : 0);
+	packet.Write<f32>(speed);
+	packet.Write<ActionStateID>(action);
+	packet.Write<i32>(0);
+	WriteInitStat(packet, GetGameXmlContent().GetMaster(classType).baseStats);
+	packet.Write<u16>(0);
+	packet.Write<u16>(0);
+	SendPacket(clientHd, packet);
+
+	Sv::SN_UpdateStat stat;
+	stat.characterID = (u32)localID;
+	stat._STAT_TYPE = 0;
+	stat._CUR = (f32)hp;
+	stat._MAX = (f32)hpMax;
+	stat._ReasonCode = 0;
+	SendPacket(clientHd, stat);
 }
 
 void Replication::SendChangeSkillSlot(ClientHandle clientHd, ActorUID actorUID, i32 slot, SkillID skill, i32 resetCooltimeID)

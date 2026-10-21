@@ -81,19 +81,6 @@ static inline bool IsChainedZoneRemote(RemoteIdx remote)
 	return false;
 }
 
-static const ClassType SERVER_CREATED_REMOTE_MASTERS[] = {
-	ClassType::SHUTTLE,
-	ClassType::GATLING,
-};
-
-static inline bool ServerCreatesRemotes(ClassType master)
-{
-	for(ClassType c : SERVER_CREATED_REMOTE_MASTERS) {
-		if(c == master) return true;
-	}
-	return false;
-}
-
 enum class PassiveTrigger: u8
 {
 	SKILL_USE,

@@ -4,6 +4,8 @@
 #include "world_common.h"
 
 static const i32 STAT_HEALTH = 0;
+static const i32 STATUS_PC_RESPAWN_INVICIBLE_3S = 1230000010;
+static const i32 STATUS_PC_TAG_GODMODE = 1230000020;
 static const f64 WEAPON_HIT_INTERVAL_MS = 80.0;
 static const i32 SKILL_SLOT_ENUM_FIRST = 2;
 static const f32 OBSTRUCT_LOW_HEIGHT = 30.0f;
@@ -125,6 +127,7 @@ void World::Update(Time localTime_)
 			p.tNextManaSend = Time::ZERO;
 			p.resSent = { -1, -1, -1 };
 			p.tNextResSend = Time::ZERO;
+			if(!p.dead) ApplyStatus(p, p, STATUS_PC_TAG_GODMODE);
 		}
 
 		// cast skills
@@ -195,7 +198,10 @@ void World::Update(Time localTime_)
 	UpdateRemotes((f32)tdelta);
 	UpdateUltimateGauges((f32)tdelta);
 	UpdateStatuses();
+	UpdateHideVisibility();
 	UpdateToggles();
+	UpdateChases();
+	UpdateBattleStates();
 	UpdateWeaponCharges();
 	UpdateSkillPoints();
 	UpdateSummons();
@@ -549,6 +555,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 {
 	const SkillID skillID = ResolveComboRecast(player, skillIn, forcedAction);
 	const vec3 castPos = ResolveCastPos(player, skillID, castPosIn, forcedAction);
+	MarkInBattle(player);
 	if(frozen) return;
 	if(!SkillTargetsAllowed(player, skillID, targets)) return;
 	eastl::fixed_vector<ActorUID,10,false> allEnemyTargets;
@@ -586,6 +593,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	const ActionStateID actionState = followUp ? forcedAction : castCostLevel && castCostLevel->action != ActionStateID::INVALID ? castCostLevel->action : (cast ? cast->action : skill.action);
 
 	if(!followUp && !CheckAndPayCast(player, skillID, castPos, targets)) return;
+	BreakHide(player);
 
 	f32 angle = player.input.rot.upperYaw;
 	if(skill.type == SkillType::SHIRK) {
@@ -642,6 +650,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	f32 distance = 0;
 	f32 moveDuration = 0;
 	vec2 gotoDir = vec2(0);
+	ActorUID chaseTarget = ActorUID::INVALID;
 
 	const auto& action = content.GetSkillAction(player.Main().classType, actionState, player.Main().stance);
 
@@ -670,7 +679,8 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 								const bool through = cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH || cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE;
 								gotoDir = rel / len;
 								distance = through ? len : MAX(len - HitRadius(*tm->parent) - HitRadius(player), 0.0f);
-								moveDuration = action.seqLength;
+								moveDuration = SkillMoveDuration(content, player.Main().classType, action, cmd->animIndex);
+								if(cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_CHASE || cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE) chaseTarget = targets[0];
 							}
 						}
 					} break;
@@ -695,7 +705,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	rpExec.rot = { angle, 0, angle };
 	rpExec.speed = player.input.speed; // FIXME: should not come from input
 
-	if(distance > 0 && glm::length(gotoDir) < 0.5f && glm::length(vec2(castPos)) > 1.0f) TargetPositionMove(player, action, castPos, &distance, &gotoDir);
+	if(distance > 0 && glm::length(gotoDir) < 0.5f && glm::length(vec2(castPos)) > 1.0f) TargetPositionMove(player, skillID, action, castPos, &distance, &gotoDir);
 	if(distance != 0) {
 		const vec2 moveDir = glm::length(gotoDir) > 0.5f ? gotoDir : dir;
 		const vec3 endPos = physics.FindMovePos(player.body, vec3(moveDir * distance, 0), moveDuration);
@@ -704,6 +714,12 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	}
 
 	replication->FramePushSkillExec(rpExec);
+	if(chaseTarget != ActorUID::INVALID && player.clientHd != ClientHandle::INVALID && moveDuration > 0) {
+		player.chaseTarget = chaseTarget;
+		player.chaseAction = actionState;
+		player.chaseUntil = TimeAdd(localTime, TimeMsToTime(moveDuration * 1000.0));
+		player.chaseNext = localTime;
+	}
 
 	const bool castRelease = followUp && forcedAction == skill.action;
 	if(castRelease && player.lastComboSkill == skillID) player.lastComboSkill = SkillID::INVALID;
@@ -820,13 +836,14 @@ bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos
 	return true;
 }
 
-void World::TargetPositionMove(const Player& player, const GameXmlContent::Action& action, const vec3& castPos, f32* distance, vec2* gotoDir) const
+void World::TargetPositionMove(const Player& player, SkillID skillID, const GameXmlContent::Action& action, const vec3& castPos, f32* distance, vec2* gotoDir) const
 {
+	const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput((i32)skillID);
 	foreach_const(cmd, action.commands) {
 		if(cmd->type == ActionCommand::Type::MOVE && (cmd->move.preset == ActionCommand::MovePreset::TARGET_POS || cmd->move.preset == ActionCommand::MovePreset::TARGET_POS_LEAP)) {
 			const vec2 rel = vec2(castPos) - vec2(player.body->GetWorldPos());
 			const f32 len = glm::length(rel);
-			*distance = len;
+			*distance = in && in->maxDistance > 0 ? MIN(len, in->maxDistance) : len;
 			if(len > 1.0f) *gotoDir = rel / len;
 		}
 	}
@@ -943,6 +960,7 @@ void World::RespawnPlayer(Player& player)
 		replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax);
 	}
 	if(player.passivesApplied) ApplyPassives(player);
+	ApplyStatus(player, player, STATUS_PC_RESPAWN_INVICIBLE_3S);
 }
 
 void World::ExecuteSkillProgram(SkillProgram& prog)

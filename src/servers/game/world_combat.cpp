@@ -42,6 +42,11 @@ static bool ElementBeats(Element a, Element b)
 	return (a == Element::RED && b == Element::GREEN) || (a == Element::GREEN && b == Element::BLUE) || (a == Element::BLUE && b == Element::RED);
 }
 
+static u32 ElementRelation(f32 elementMul)
+{
+	return elementMul > 1.0f ? 1 : (elementMul < 1.0f ? 2 : 0);
+}
+
 static f32 ElementMultiplier(const World::Player& attacker, const World::Player& target, bool skill)
 {
 	const auto& content = GetGameXmlContent();
@@ -82,12 +87,15 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	if(attacker.index != target.index) {
 		attacker.lastHitTargetIndex = (i32)target.index;
 		attacker.lastHitAt = localTime;
+		MarkInBattle(attacker);
+		MarkInBattle(target);
 	}
 	if(HasStatusType(target, StatusType::GODMODE)) return;
 	const i32 damageIn = damage;
 	f32 elementMul = 1.0f;
 	if(HasStatusType(target, StatusType::EVADE) && attacker.team != target.team) {
 		LOG("Evade :: %ls evaded %ls", target.name.data(), attacker.name.data());
+		replication->SendEvadeToAll(attacker.Main().UID, target.Main().UID, proj ? proj->remoteID : remoteID, proj ? proj->remoteDoc : remoteDoc, proj ? proj->seedOwnerHd : ClientHandle::INVALID);
 		OnEvade(target);
 		return;
 	}
@@ -174,13 +182,42 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	LOG("Damage :: %ls -> %ls skill=%d damage=%d%s hp=%d/%d in=%d remote=%u element=%d", attacker.name.data(), target.name.data(), (i32)skillID, damage, damageType == PACKET_DAMAGE_TYPE_CRITICAL ? " CRIT" : "", chara.hp, chara.hpMax,
 		damageIn, (u32)(proj ? proj->remoteDoc : remoteDoc), (i32)(elementMul * 100.0f));
 	if(proj && proj->remoteID != 0) {
-		replication->SendRemoteDamageToAll(proj->remoteID, proj->remoteDoc, attacker.Main().UID, chara.UID, target.body->GetWorldPos(), proj->dir, damage, chara.hp, chara.hpMax, damageType, proj->seedOwnerHd);
+		Replication::RemoteDamage hit;
+		hit.remoteID = proj->remoteID;
+		hit.remoteDoc = proj->remoteDoc;
+		hit.attackerUID = attacker.Main().UID;
+		hit.targetUID = chara.UID;
+		hit.remotePos = vec3(vec2(proj->pos), target.body->GetWorldPos().z);
+		hit.targetPos = target.body->GetWorldPos();
+		hit.dir = proj->dir;
+		hit.weapon = true;
+		hit.damageType = damageType;
+		hit.elementRelation = ElementRelation(elementMul);
+		hit.damage = damage;
+		hit.hp = chara.hp;
+		hit.hpMax = chara.hpMax;
+		hit.seedOwnerHd = proj->seedOwnerHd;
+		replication->SendRemoteDamageToAll(hit);
 	}
 	else if(remoteID != 0) {
-		replication->SendRemoteDamageToAll(remoteID, remoteDoc, attacker.Main().UID, chara.UID, target.body->GetWorldPos(), remoteDir, damage, chara.hp, chara.hpMax, damageType);
+		Replication::RemoteDamage hit;
+		hit.remoteID = remoteID;
+		hit.remoteDoc = remoteDoc;
+		hit.attackerUID = attacker.Main().UID;
+		hit.targetUID = chara.UID;
+		hit.remotePos = statusForceCenterSet ? statusForceCenter : target.body->GetWorldPos();
+		hit.targetPos = target.body->GetWorldPos();
+		hit.dir = remoteDir;
+		hit.skillID = skillID;
+		hit.damageType = damageType;
+		hit.elementRelation = ElementRelation(elementMul);
+		hit.damage = damage;
+		hit.hp = chara.hp;
+		hit.hpMax = chara.hpMax;
+		replication->SendRemoteDamageToAll(hit);
 	}
 	else {
-		replication->SendDamageToAll(attacker.Main().UID, chara.UID, skillID, damage, chara.hp, chara.hpMax, damageType);
+		replication->SendDamageToAll(attacker.Main().UID, chara.UID, skillID, damage, chara.hp, chara.hpMax, damageType, damageStatusID);
 	}
 
 	if(chara.hp > 0) PassiveOnDamaged(target);

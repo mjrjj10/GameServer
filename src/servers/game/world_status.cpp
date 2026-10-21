@@ -8,12 +8,27 @@ static const f32 TOOLTIP_DEFENDER_CC_IMMUNE_SEC = 1.0f;
 static const f32 TOOLTIP_DEATHKNIGHT_REVIVE_HP = 0.30f;
 static const f64 SELF_DRAG_LINK_SEC = 0.6;
 static const f32 STATUS_PUSH_BASE_DISTANCE = 500.0f;
+static const f32 STATUS_LIFT_BASE_HEIGHT = 400.0f;
+static const i32 STATUS_PC_DEFEAT_SUPERARMOR = 1230000101;
+static const i32 STATUS_PC_DEFEAT_AND_LIE_SUPERARMOR = 1230000102;
 static const u32 STATUS_RESIST_EVENT_PASSIVE = 0;
 static const u32 STATUS_RESIST_EVENT_PROTECTED = 2;
 static const f32 DEFEAT_PUSH_SEC = 1.0f;
 static const f32 DEFEAT_KNOCKDOWN_SEC = 1.5f;
 static const f32 DEFEAT_FLY_START_SEC = 1.0f;
 static const f32 DEFEAT_FLY_END_SEC = 0.5f;
+
+static i32 DefeatGuardStatus(const StatusInfo* info)
+{
+	if(!info) return 0;
+	switch(info->type) {
+		case StatusType::PUSH: return STATUS_PC_DEFEAT_SUPERARMOR;
+		case StatusType::KNOCKDOWN:
+		case StatusType::AIRBORNE:
+		case StatusType::FLY: return STATUS_PC_DEFEAT_AND_LIE_SUPERARMOR;
+		default: return 0;
+	}
+}
 
 static bool DefeatGraphTimes(const StatusInfo* info, f32* duration, f32* graph)
 {
@@ -114,6 +129,11 @@ bool World::HasStatusFromSkill(const Player& target, u32 casterIndex, i32 skillI
 	return false;
 }
 
+void World::SendPassiveCounter(const ActiveStatus& st, i32 value)
+{
+	replication->SendModifyStatusToAll(st.statusID, st.targetUID, st.casterUID, (u8)MAX(st.overlap, 1), (u8)MAX(value, 0));
+}
+
 bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* ccScale)
 {
 	if(info.kind != StatusInfo::Kind::HARD_CC && info.kind != StatusInfo::Kind::ROOT) return false;
@@ -128,9 +148,11 @@ bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* ccScale
 			target.cleanseCharges--;
 			if(target.cleanseRefillAt == Time::ZERO) target.cleanseRefillAt = TimeAdd(localTime, TimeMsToTime(st->info->Param("_RefillDuration")));
 			LOG("Passive :: %ls blocked status %d (charges left %d)", target.name.data(), info.ID, target.cleanseCharges);
+			SendPassiveCounter(*st, target.cleanseCharges);
 			return true;
 		}
 		target.cleanseCharges = MIN(target.cleanseCharges + 1, st->info->customMax);
+		SendPassiveCounter(*st, target.cleanseCharges);
 	}
 	const f32 toughness = MasterStat(target.Main().classType, STAT_TOUGHNESS);
 	if(toughness > 0 && ccScale) *ccScale = MAX(1.0f - toughness / 100.0f, 0.0f);
@@ -216,6 +238,7 @@ void World::UpdatePassives()
 			it->cleanseRefillAt = Time::ZERO;
 			if(st && it->cleanseCharges < st->info->customMax) {
 				it->cleanseCharges++;
+				SendPassiveCounter(*st, it->cleanseCharges);
 				if(it->cleanseCharges < st->info->customMax) it->cleanseRefillAt = TimeAdd(localTime, TimeMsToTime(st->info->Param("_RefillDuration")));
 			}
 		}
@@ -236,6 +259,7 @@ void World::PassiveOnSkillCast(Player& player, i32 skillID)
 				it->custom = it->info->customInit;
 				foreach_const(id, it->info->auraStatuses) if(!toApply.full()) toApply.push_back(*id);
 			}
+			SendPassiveCounter(*it, it->custom);
 		}
 	}
 	foreach_const(id, toApply) {
@@ -246,8 +270,9 @@ void World::PassiveOnSkillCast(Player& player, i32 skillID)
 	if(const ActiveStatus* st = FindPassiveOfType(player, StatusType::SKILLSTAMINA)) {
 		ActiveStatus& counter = const_cast<ActiveStatus&>(*st);
 		counter.custom++;
-		if(st->info->customMax > 0 && counter.custom >= st->info->customMax) {
-			counter.custom = 0;
+		if(st->info->customMax > 0 && counter.custom >= st->info->customMax) counter.custom = 0;
+		SendPassiveCounter(counter, counter.custom);
+		if(counter.custom == 0) {
 			const f32 staminaMax = MasterStat(player.Main().classType, STAT_STAMINA);
 			if(staminaMax > 0) {
 				player.stamina = staminaMax;
@@ -352,6 +377,7 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 				it->custom = info.customInit;
 				if(info.hitEffectStatus && !toApply.full()) toApply.push_back(info.hitEffectStatus);
 			}
+			SendPassiveCounter(*it, it->custom);
 		}
 		else if(info.type == StatusType::KROMEDE && info.hitEffectStatus) {
 			if(HasStatusType(target, StatusType::STUN) || HasStatusType(target, StatusType::ROOT) || HasStatusType(target, StatusType::SHOCKED)) {
@@ -448,6 +474,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	f32 graphDuration = duration * (info && info->timeRatio > 0 ? info->timeRatio : 1.0f);
 	DefeatGraphTimes(info, &duration, &graphDuration);
 	if(durationOverride > 0) duration = durationOverride;
+	if(caster.team != target.team) MarkInBattle(target);
 	if(info && info->isDebuff && caster.team != target.team && HasStatusType(target, StatusType::GODMODE)) {
 		LOG("Status :: %ls resisted %d (godmode)", target.name.data(), statusID);
 		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
@@ -456,6 +483,11 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	f32 ccScale = 1.0f;
 	if(info && caster.team != target.team && PassiveBlocksCC(target, *info, &ccScale)) {
 		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
+		return;
+	}
+	if(info && caster.team != target.team && target.defeatGuardSource == statusID && localTime < target.defeatGuardUntil) {
+		LOG("Status :: %ls resisted %d (defeat guard)", target.name.data(), statusID);
+		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
 		return;
 	}
 	duration *= ccScale;
@@ -501,7 +533,6 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			if(stacked) it->overlap++;
 			LOG("Status :: %ls -> %ls status=%d refreshed overlap=%d", caster.name.data(), target.name.data(), statusID, it->overlap);
 			const vec3 pos = target.body->GetWorldPos();
-			if(!stacked) replication->SendRemoveStatusToAll(statusID, it->targetUID, it->casterUID);
 			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, sentDuration, pos, pos, 0, it->overlap);
 			if(info && it->overlap >= info->maxOverlap && info->maxOverlap > 1) {
 				foreach_const(ps, activeStatuses) {
@@ -560,6 +591,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	const bool chainedPush = target.clientHd == ClientHandle::INVALID ? localTime < target.pushUntil : localTime < target.clientPushUntil;
 	const vec3 from = chainedPush ? vec3(vec2(target.pushTarget), target.body->GetWorldPos().z) : target.body->GetWorldPos();
 	vec3 to = from;
+	f32 nominalDist = -1.0f;
 	vec3 forceCenter = from;
 	const f32 distanceRatio = statusDistanceRatioOverride != 0 ? statusDistanceRatioOverride : (info ? info->distanceRatio : 0);
 	const bool flyMove = info && info->type == StatusType::FLY && distanceRatio != 0;
@@ -567,6 +599,11 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		vec2 dir = vec2(from - caster.body->GetWorldPos());
 		const f32 len = glm::length(dir);
 		dir = len > 1.0f ? dir / len : vec2(cosf(caster.input.rot.upperYaw), sinf(caster.input.rot.upperYaw));
+		if((info->type == StatusType::PUSH || info->type == StatusType::FLY) && statusPushDirSet) dir = glm::normalize(statusPushDir);
+		if(info->type == StatusType::KNOCKDOWN && statusForceCenterSet) {
+			const vec2 radial = vec2(from) - vec2(statusForceCenter);
+			if(glm::length(radial) > 1.0f) dir = glm::normalize(radial);
+		}
 		if(info->type == StatusType::FLY && statusFromBehind) dir = -dir;
 		if(dragForce) {
 			forceCenter = statusForceCenterSet ? statusForceCenter : caster.body->GetWorldPos();
@@ -599,6 +636,10 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 				dist = wave ? MAX(wave->boundSize[0] * 0.5f - len, 0.0f) : dist;
 			}
 			to = from + vec3(dir * dist, 0);
+			nominalDist = fabsf(dist);
+			f32 wallDist = 0;
+			const vec3 mid = vec3(0, 0, BodyMidHeight(target));
+			if(nominalDist > 1.0f && physics.RaycastStatic(from + mid, to + mid, &wallDist, (i32)target.team)) to = from + vec3(glm::normalize(vec2(to - from)) * wallDist, 0);
 		}
 		LOG("Push :: %ls -> %ls status=%d sep=%.0f dir=(%.2f, %.2f) to=(%.0f, %.0f)", caster.name.data(), target.name.data(), statusID, len, dir.x, dir.y, to.x, to.y);
 		if(dragForce && target.clientHd == ClientHandle::INVALID) {
@@ -657,7 +698,17 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			LOG("Hide :: sent HideDetect flag=%d about %ls to %ls", Config().DevHideDetectFlag, target.name.data(), viewer->name.data());
 		}
 	}
-	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, dragForce ? forceCenter : to, graphDuration, 1, ccScale);
+	vec3 sentTo = dragForce ? forceCenter : to;
+	if(info && (info->type == StatusType::AIRBORNE || info->type == StatusType::FLY) && info->heightRatio > 0) sentTo.z = from.z + STATUS_LIFT_BASE_HEIGHT * info->heightRatio * ccScale;
+	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, sentTo, graphDuration, 1, ccScale, nominalDist);
+	if(info && info->blockSkill && caster.team != target.team && !target.dead) InterruptSkills(target);
+	const i32 guard = DefeatGuardStatus(info);
+	if(guard != 0 && caster.team != target.team && !target.dead) {
+		const StatusInfo* guardInfo = GetGameXmlContent().FindStatus(guard);
+		target.defeatGuardSource = statusID;
+		target.defeatGuardUntil = TimeAdd(localTime, TimeMsToTime((guardInfo ? guardInfo->durationSec : 0) * 1000.0));
+		ApplyStatus(target, target, guard);
+	}
 }
 
 bool World::IsBlocked(const Player& p, bool attack, bool skill, bool shirk) const
@@ -718,7 +769,9 @@ void World::UpdateStatuses()
 			while(localTime >= it->nextTick && it->nextTick <= it->until && !target.dead) {
 				it->nextTick = TimeAdd(it->nextTick, TimeMsToTime(it->info->intervalSec * 1000.0));
 				const i32 hpBefore = target.Main().hp;
+				damageStatusID = it->statusID;
 				DamagePlayer(players[it->casterIndex], target, SkillID::INVALID, (i32)(it->info->dotDamage * it->overlap));
+				damageStatusID = 0;
 				Player& drainer = players[it->casterIndex];
 				const i32 drained = hpBefore - target.Main().hp;
 				if(it->info->drainMultiplier > 0 && drained > 0 && !drainer.dead) {
