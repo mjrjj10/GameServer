@@ -592,6 +592,15 @@ void World::SpawnPendingRemotes()
 			else if(glm::length(vec2(pr->castPos)) > 1.0f) pos = vec3(vec2(pr->castPos), owner.body->GetWorldPos().z);
 		}
 
+		const ActionCommand::TargetPreset firePreset = (ActionCommand::TargetPreset)pr->preset;
+		const bool fromCaster = !atAimedPoint && !pr->atTarget && pr->sourceUID == ActorUID::INVALID && firePreset != ActionCommand::TargetPreset::CURRENT_FFF &&
+			firePreset != ActionCommand::TargetPreset::LAST_CHILD_FFF && firePreset != ActionCommand::TargetPreset::LAST_CHILD_TFF;
+		const FireNodeRule* fireNode = fromCaster && remote ? FindFireNodeRule(remote->ID) : nullptr;
+		if(fireNode) {
+			pos += vec3(dir * fireNode->forward + Perp(dir) * fireNode->side, 0);
+			pos.z = owner.body->GetWorldPos().z + fireNode->up;
+		}
+
 		if(remote && IsChainedZoneRemote(remote->ID)) {
 			const f32 length = (f32)remote->boundSize[1];
 			foreach_const(ri, remoteInsts) {
@@ -608,7 +617,7 @@ void World::SpawnPendingRemotes()
 				spawned->sourceUID = pr->sourceUID;
 				spawned->costLevel = pr->costLevel;
 				spawned->centeredBox = atAimedPoint;
-				const f32 nodeForward = atAimedPoint ? 0 : WeaponNodeForward(GetGameXmlContent(), owner.Main().classType, pr->skillID, *spawned->remote, pr->nodeName);
+				const f32 nodeForward = atAimedPoint || fireNode ? 0 : WeaponNodeForward(GetGameXmlContent(), owner.Main().classType, pr->skillID, *spawned->remote, pr->nodeName);
 				if(nodeForward > 0) {
 					spawned->pos += vec3(dir * nodeForward, 0);
 					LOG("Remote :: %d weapon node forward %.0f (skill indicator)", (i32)pr->idx, nodeForward);

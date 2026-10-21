@@ -33,6 +33,84 @@ static inline const ResourceGainRule* FindResourceGainRule(ClassType master, Res
 	return nullptr;
 }
 
+struct FireNodeRule
+{
+	RemoteIdx remote;
+	f32 forward;
+	f32 side;
+	f32 up;
+};
+
+static const FireNodeRule FIRE_NODE_RULES[] = {
+	{ RemoteIdx(1440010030), 56.0f, -19.0f, 133.0f },
+	{ RemoteIdx(1440010050), 126.0f, -34.0f, 165.0f },
+	{ RemoteIdx(1440010060), 107.0f, 5.0f, 153.0f },
+	{ RemoteIdx(1440010061), 107.0f, 5.0f, 153.0f },
+	{ RemoteIdx(1440010062), 107.0f, 5.0f, 153.0f },
+	{ RemoteIdx(1440010063), 107.0f, 5.0f, 153.0f },
+	{ RemoteIdx(1440010064), 107.0f, 5.0f, 153.0f },
+	{ RemoteIdx(1440040020), 73.0f, 2.0f, -2.0f },
+	{ RemoteIdx(1440050050), 201.0f, -1.0f, 212.0f },
+	{ RemoteIdx(1440060020), 181.0f, -9.0f, 152.0f },
+	{ RemoteIdx(1440060040), 215.0f, -1.0f, 127.0f },
+	{ RemoteIdx(1440060050), 211.0f, -7.0f, 152.0f },
+	{ RemoteIdx(1440060052), 211.0f, -7.0f, 152.0f },
+	{ RemoteIdx(1440090000), 0.0f, 0.0f, 248.0f },
+	{ RemoteIdx(1440090050), 45.0f, -87.0f, 252.0f },
+	{ RemoteIdx(1440090052), 45.0f, 81.0f, 252.0f },
+	{ RemoteIdx(1440110020), 43.0f, -4.0f, 155.0f },
+	{ RemoteIdx(1440110030), 115.0f, -18.0f, 194.0f },
+	{ RemoteIdx(1440110031), 111.0f, 16.0f, 202.0f },
+	{ RemoteIdx(1440110040), 120.0f, 0.0f, 156.0f },
+	{ RemoteIdx(1440120010), 95.0f, 0.0f, 152.0f },
+	{ RemoteIdx(1440120022), 194.0f, 2.0f, 166.0f },
+	{ RemoteIdx(1440120023), 21.0f, 61.0f, 203.0f },
+	{ RemoteIdx(1440130010), 43.0f, -23.0f, 209.0f },
+	{ RemoteIdx(1440140010), 199.0f, -1.0f, 137.0f },
+	{ RemoteIdx(1440140050), 88.0f, -14.0f, 191.0f },
+	{ RemoteIdx(1440150020), 30.0f, 4.0f, 155.0f },
+	{ RemoteIdx(1440160020), 121.0f, -1.0f, 211.0f },
+	{ RemoteIdx(1440170010), 45.0f, 10.0f, 171.0f },
+	{ RemoteIdx(1440170030), 85.0f, 2.0f, 165.0f },
+	{ RemoteIdx(1440180010), 105.0f, -9.0f, 128.0f },
+	{ RemoteIdx(1440190010), 0.0f, -57.0f, 170.0f },
+	{ RemoteIdx(1440190040), 90.0f, 1.0f, 182.0f },
+	{ RemoteIdx(1440220030), 108.0f, 0.0f, 98.0f },
+	{ RemoteIdx(1440220040), 100.0f, 0.0f, 157.0f },
+	{ RemoteIdx(1440220041), 78.0f, -4.0f, 94.0f },
+	{ RemoteIdx(1440240011), 73.0f, 7.0f, 188.0f },
+	{ RemoteIdx(1440250020), 103.0f, 4.0f, 192.0f },
+	{ RemoteIdx(1440250040), 149.0f, 0.0f, 201.0f },
+	{ RemoteIdx(1440260010), 76.0f, 4.0f, 88.0f },
+	{ RemoteIdx(1440260030), 76.0f, 4.0f, 88.0f },
+	{ RemoteIdx(1440280080), 51.0f, 2.0f, 222.0f },
+	{ RemoteIdx(1440290052), -40.0f, -103.0f, 271.0f },
+	{ RemoteIdx(1440310022), 71.0f, -1.0f, 168.0f },
+	{ RemoteIdx(1440320010), 133.0f, -2.0f, 191.0f },
+	{ RemoteIdx(1440320020), 138.0f, -5.0f, 172.0f },
+	{ RemoteIdx(1440320021), 133.0f, 32.0f, 198.0f },
+	{ RemoteIdx(1440320022), 137.0f, 17.0f, 287.0f },
+	{ RemoteIdx(1440330030), 39.0f, 1.0f, 168.0f },
+	{ RemoteIdx(1440330032), 37.0f, 1.0f, 169.0f },
+	{ RemoteIdx(1440330034), 42.0f, 2.0f, 168.0f },
+	{ RemoteIdx(1440330040), 90.0f, 1.0f, 139.0f },
+	{ RemoteIdx(1440330044), 90.0f, 2.0f, 139.0f },
+	{ RemoteIdx(1440330048), 90.0f, 1.0f, 139.0f },
+	{ RemoteIdx(1440330050), 50.0f, -1.0f, 132.0f },
+	{ RemoteIdx(1440350010), 114.0f, 3.0f, 160.0f },
+	{ RemoteIdx(1440350050), 80.0f, 13.0f, 127.0f },
+	{ RemoteIdx(1440370030), 36.0f, 7.0f, 128.0f },
+	{ RemoteIdx(1440370050), 95.0f, 8.0f, 131.0f },
+};
+
+static inline const FireNodeRule* FindFireNodeRule(RemoteIdx remote)
+{
+	for(const FireNodeRule& rule : FIRE_NODE_RULES) {
+		if(rule.remote == remote) return &rule;
+	}
+	return nullptr;
+}
+
 struct SummonAttackRule
 {
 	const char* summonClass;
