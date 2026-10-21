@@ -2135,7 +2135,6 @@ void Replication::FrameDifference()
 		for(int pi = 0; pi < MAX_PLAYERS; pi++) {
 			if(playerState[pi].cur < PlayerState::IN_GAME) continue;
 			const ClientHandle clientHd = clientHandle[pi];
-			if(exec.castStart && clientHd == exec.casterClientHd) continue;
 
 			LocalActorID localCasterID = GetLocalActorID(clientHd, exec.casterUID);
 

@@ -576,6 +576,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	}
 	const auto& skill = skillFound->second;
 	const bool followUp = forcedAction != ActionStateID::INVALID;
+	const bool castRelease = followUp && forcedAction == skill.action;
 	if(!followUp) ShowcaseOnCast(player);
 	if(!followUp && content.FindSkillToggle((i32)skillID)) {
 		if(player.toggleSkill == skillID) {
@@ -622,7 +623,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 
 	eastl::copy(targets.begin(), targets.end(), eastl::back_inserter(rpCast.targetList));
 
-	replication->FramePushSkillCast(rpCast);
+	if(!castRelease) replication->FramePushSkillCast(rpCast);
 
 
 	/*
@@ -698,8 +699,6 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	eastl::copy(targets.begin(), targets.end(), eastl::back_inserter(rpExec.targetList));
 
 	rpExec.moveDuration = moveDuration;
-	rpExec.casterClientHd = player.clientHd;
-	rpExec.castStart = cast != nullptr;
 	rpExec.startPos = player.body->GetWorldPos();
 	rpExec.moveDir = dir;
 	rpExec.rot = { angle, 0, angle };
@@ -713,7 +712,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		rpExec.endPos = endPos;
 	}
 
-	replication->FramePushSkillExec(rpExec);
+	if(!cast) replication->FramePushSkillExec(rpExec);
 	if(chaseTarget != ActorUID::INVALID && player.clientHd != ClientHandle::INVALID && moveDuration > 0) {
 		player.chaseTarget = chaseTarget;
 		player.chaseAction = actionState;
@@ -721,7 +720,6 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		player.chaseNext = localTime;
 	}
 
-	const bool castRelease = followUp && forcedAction == skill.action;
 	if(castRelease && player.lastComboSkill == skillID) player.lastComboSkill = SkillID::INVALID;
 	ScheduleSkillRemotes(player, skillID, castPos, targets, angle, followUp && !castRelease ? 0 : -1, cast ? cast->action : forcedAction);
 	castCostLevel = nullptr;
