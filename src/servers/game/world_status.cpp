@@ -9,6 +9,28 @@ static const f32 TOOLTIP_DEATHKNIGHT_REVIVE_HP = 0.30f;
 static const f64 SELF_DRAG_LINK_SEC = 0.6;
 static const f32 STATUS_PUSH_BASE_DISTANCE = 500.0f;
 static const f32 STATUS_LIFT_BASE_HEIGHT = 400.0f;
+static const f32 STATUS_INFINITE_DURATION_SEC = 4294967.295f;
+
+static bool StatusSendsGraph(const StatusInfo* info)
+{
+	if(!info) return false;
+	switch(info->type) {
+		case StatusType::ROOT:
+		case StatusType::STUN:
+		case StatusType::AIRBORNE:
+		case StatusType::PUSH:
+		case StatusType::TARGET:
+		case StatusType::FORCEBACK:
+		case StatusType::DRAGGEDBYFORCE:
+		case StatusType::FLY:
+		case StatusType::DRAGGED:
+		case StatusType::KNOCKDOWN:
+		case StatusType::SHOCKED:
+		case StatusType::UNDEAD:
+			return true;
+		default: return false;
+	}
+}
 static const i32 STATUS_PC_DEFEAT_SUPERARMOR = 1230000101;
 static const i32 STATUS_PC_DEFEAT_AND_LIE_SUPERARMOR = 1230000102;
 static const u32 STATUS_RESIST_EVENT_PASSIVE = 0;
@@ -202,22 +224,37 @@ void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& cente
 	foreach_const(id, aura.auraStatuses) {
 		const StatusInfo* child = GetGameXmlContent().FindStatus(*id);
 		if(!child) continue;
+		const bool bound = child->durationSec <= 0;
 		foreach(p, players) {
-			if(p->dead) continue;
 			const bool casterAlly = p->team == casterTeam;
-			if(child->isDebuff ? casterAlly : (!casterAlly && !aura.auraAll)) continue;
-			if(child->isDebuff && (i32)p->index == skipDebuffIndex) continue;
-			if(glm::length(vec2(p->body->GetWorldPos()) - center) > range + HitRadius(*p)) continue;
-			if(FindActiveStatus(p->index, *id)) continue;
+			bool inside = !p->dead;
+			if(child->isDebuff ? casterAlly : (!casterAlly && !aura.auraAll)) inside = false;
+			if(child->isDebuff && (i32)p->index == skipDebuffIndex) inside = false;
+			if(inside && glm::length(vec2(p->body->GetWorldPos()) - center) > range + HitRadius(*p)) inside = false;
+			ActiveStatus* cur = FindActiveStatus(p->index, *id);
+			if(!inside) {
+				if(bound && cur && cur->casterIndex == casterIndex) cur->until = localTime;
+				continue;
+			}
+			if(cur) continue;
 			if(pendingStatuses.full()) return;
 			PendingStatus ps;
 			ps.time = localTime;
 			ps.statusID = *id;
 			ps.casterIndex = casterIndex;
 			ps.targetUID = p->Main().UID;
-			ps.duration = child->durationSec > 0 ? child->durationSec : 1.0f;
+			ps.duration = bound ? STATUS_INFINITE_DURATION_SEC : child->durationSec;
 			ps.power = 0;
 			pendingStatuses.push_back(ps);
+		}
+	}
+}
+
+void World::EndAura(u32 casterIndex, const StatusInfo& aura)
+{
+	foreach_const(id, aura.auraStatuses) {
+		foreach(it, activeStatuses) {
+			if(it->statusID == *id && it->casterIndex == casterIndex && it->info && it->info->durationSec <= 0) it->until = localTime;
 		}
 	}
 }
@@ -496,7 +533,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	ShowcaseOnStatus(caster, target, statusID);
 	const bool permanent = info && info->permanent && durationOverride <= 0;
 	if(permanent) duration = 1000000.0f;
-	const f32 sentDuration = permanent ? -1.0f : duration;
+	const f32 sentDuration = durationOverride > 0 || !info || info->durationSec > 0 ? duration : (info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f);
 	if(info && info->casterStatus != 0 && info->casterStatus != statusID && !caster.dead && !applyingCasterStatus) {
 		applyingCasterStatus = true;
 		ApplyStatus(caster, caster, info->casterStatus);
@@ -534,7 +571,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			if(stacked) it->overlap++;
 			LOG("Status :: %ls -> %ls status=%d refreshed overlap=%d", caster.name.data(), target.name.data(), statusID, it->overlap);
 			const vec3 pos = target.body->GetWorldPos();
-			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, sentDuration, pos, pos, 0, it->overlap);
+			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, sentDuration, pos, pos, 0, it->overlap, 1.0f, -1.0f, false, true);
 			if(info && it->overlap >= info->maxOverlap && info->maxOverlap > 1) {
 				foreach_const(ps, activeStatuses) {
 					if(ps->targetIndex != caster.index || !ps->info || ps->info->stackStatus != statusID || ps->info->stackFullStatus == 0) continue;
@@ -701,7 +738,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	}
 	vec3 sentTo = dragForce ? forceCenter : to;
 	if(info && (info->type == StatusType::AIRBORNE || info->type == StatusType::FLY) && info->heightRatio > 0) sentTo.z = from.z + STATUS_LIFT_BASE_HEIGHT * info->heightRatio * ccScale;
-	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, sentTo, graphDuration, 1, ccScale, nominalDist);
+	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, sentTo, graphDuration, 1, ccScale, nominalDist, StatusSendsGraph(info));
 	if(info && info->blockSkill && caster.team != target.team && !target.dead) InterruptSkills(target);
 	const i32 guard = DefeatGuardStatus(info);
 	if(guard != 0 && caster.team != target.team && !target.dead) {
@@ -848,6 +885,7 @@ void World::UpdateStatuses()
 				   (cond == StatusInfo::NextCondition::REMOVE_ONHIT && it->removeOnHit)) next = it->info->nextStatus;
 			}
 			const u32 casterIndex = it->casterIndex;
+			if(it->info && it->info->auraStatus != 0) EndAura(casterIndex, *it->info);
 			it = activeStatuses.erase_unsorted(it);
 			if(next != 0 && !pendingStatuses.full()) {
 				PendingStatus ps;

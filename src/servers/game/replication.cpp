@@ -1385,7 +1385,7 @@ void Replication::SendAttackActionToOthers(ClientHandle senderHd, ActorUID actor
 	}
 }
 
-void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap, f32 scale, f32 nominalDist)
+void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap, f32 scale, f32 nominalDist, bool withGraph, bool refresh)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
@@ -1396,18 +1396,20 @@ void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID 
 
 		const f32 dist = glm::length(vec2(to - from));
 		PacketWriter<Sv::SN_AddStatus,128> packet;
-		packet.Write<u8>(0);
-		packet.Write<f32>(scale);
-		packet.Write<float3>(v2f(from));
-		packet.Write<float3>(v2f(to));
-		packet.Write<f32>(dist);
-		packet.Write<f32>(nominalDist >= 0 ? nominalDist : dist);
-		packet.Write<f32>(graphDuration);
+		packet.Write<u8>(withGraph ? 0 : 1);
+		if(withGraph) {
+			packet.Write<f32>(scale);
+			packet.Write<float3>(v2f(from));
+			packet.Write<float3>(v2f(to));
+			packet.Write<f32>(dist);
+			packet.Write<f32>(nominalDist >= 0 ? nominalDist : dist);
+			packet.Write<f32>(graphDuration);
+		}
 		packet.Write<u32>((u32)statusID);
 		packet.Write<u8>(1);
 		packet.Write<u32>((u32)targetLocal);
 		packet.Write<u32>(casterLocal != LocalActorID::INVALID ? (u32)casterLocal : 0);
-		packet.Write<u8>(overlap > 1 ? 1 : 0);
+		packet.Write<u8>(refresh ? 1 : 0);
 		packet.Write<u8>((u8)MAX(overlap, 1));
 		packet.Write<u8>(0);
 		packet.Write<f32>(durationSec);

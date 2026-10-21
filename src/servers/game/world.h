@@ -770,6 +770,7 @@ public:
 	void SpawnCreatureFromRemote(const RemoteInst& parent, i32 creature, const vec3& pos);
 	f32 WeaponHitDamage(const Player& player, const Remote* remote) const;
 	void PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& center, f32 range, i32 skipDebuffIndex);
+	void EndAura(u32 casterIndex, const StatusInfo& aura);
 private:
 	void PassiveOnSkillCast(Player& player, i32 skillID);
 	void OnEvade(Player& target);

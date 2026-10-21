@@ -104,7 +104,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			const StatusInfo* st = GetGameXmlContent().FindStatus(c->index);
 			if(!st) continue;
 			const f32 duration = st->durationSec > 0 ? st->durationSec : 1.0f;
-			replication->SendAddStatusToAll(c->index, npc.UID, owner.Main().UID, duration, npc.pos, npc.pos, 0);
+			replication->SendAddStatusToAll(c->index, npc.UID, owner.Main().UID, duration, npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false);
 			if(st->type == StatusType::SUICIDE) {
 				const Time at = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
 				if(npc.despawnAt == Time::ZERO || at < npc.despawnAt) npc.despawnAt = at;
@@ -424,7 +424,11 @@ void World::UpdateSummons()
 	}
 
 	for(auto ga = groundAuras.begin(); ga != groundAuras.end(); ) {
-		if(localTime >= ga->until) { ga = groundAuras.erase_unsorted(ga); continue; }
+		if(localTime >= ga->until) {
+			if(const StatusInfo* aura = GetGameXmlContent().FindStatus(ga->auraStatus)) EndAura(ga->ownerIndex, *aura);
+			ga = groundAuras.erase_unsorted(ga);
+			continue;
+		}
 		if(localTime >= ga->nextPulse) {
 			ga->nextPulse = TimeAdd(localTime, TimeMsToTime(500));
 			const StatusInfo* aura = GetGameXmlContent().FindStatus(ga->auraStatus);
