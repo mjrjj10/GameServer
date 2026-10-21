@@ -1776,6 +1776,7 @@ bool GameXmlContent::LoadRemoteData()
 				remote.attachTargetObject = XmlAttrTrue(pComp, "_AttachTargetObject");
 				pComp->QueryFloatAttribute("_CriticalRate", &remote.criticalRate);
 				pComp->QueryAttribute("_OnHitOwnerStatusIndex", &remote.onHitOwnerStatus);
+				pComp->QueryAttribute("_SkillIndex", &remote.skillIndex);
 				remote.activateCount = _ActivateCount;
 				pComp->QueryAttribute("_PenetrationCount", &remote.penetrationCount);
 				remote.lifeTime = _LifeTime;

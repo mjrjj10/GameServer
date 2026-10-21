@@ -370,6 +370,7 @@ struct Remote
 
 	f32 maxSpeed = 0;
 	f32 maxDistance = 0;
+	i32 skillIndex = 0;
 	f32 lifeTime = 0;
 	i32 activateCount = 1;
 	i32 penetrationCount = 0;

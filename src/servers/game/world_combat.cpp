@@ -190,7 +190,6 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		hit.remotePos = vec3(vec2(proj->pos), target.body->GetWorldPos().z);
 		hit.targetPos = target.body->GetWorldPos();
 		hit.dir = proj->dir;
-		hit.weapon = true;
 		hit.damageType = damageType;
 		hit.elementRelation = ElementRelation(elementMul);
 		hit.damage = damage;
@@ -208,7 +207,6 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		hit.remotePos = statusForceCenterSet ? statusForceCenter : target.body->GetWorldPos();
 		hit.targetPos = target.body->GetWorldPos();
 		hit.dir = remoteDir;
-		hit.skillID = skillID;
 		hit.damageType = damageType;
 		hit.elementRelation = ElementRelation(elementMul);
 		hit.damage = damage;

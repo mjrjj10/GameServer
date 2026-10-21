@@ -358,8 +358,6 @@ struct Replication
 		vec3 remotePos = vec3(0);
 		vec3 targetPos = vec3(0);
 		vec2 dir = vec2(1, 0);
-		bool weapon = false;
-		SkillID skillID = SkillID::INVALID;
 		u32 damageType = 0;
 		u32 elementRelation = 0;
 		i32 damage = 0;

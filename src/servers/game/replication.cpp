@@ -1122,9 +1122,12 @@ void Replication::SendRemoteDamageToAll(const RemoteDamage& hit)
 	const u32 seq = damageSeq++;
 	const float3 dir3 = { hit.dir.x, hit.dir.y, 0 };
 	const float3 back3 = { -hit.dir.x, -hit.dir.y, 0 };
-	const float3 zero3 = { 0, 0, 0 };
+	const float3 up3 = { 0, 0, 1 };
 	const float3 remote3 = v2f(hit.remotePos);
 	const float3 target3 = v2f(hit.targetPos);
+	const Remote* remote = GetGameXmlContent().FindRemote(hit.remoteDoc);
+	const float3 hitDir3 = remote && remote->maxSpeed > 0 ? back3 : up3;
+	const u32 skillField = remote && remote->skillIndex != 0 ? (u32)remote->skillIndex : 0xFFFFFFFF;
 
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
@@ -1143,9 +1146,9 @@ void Replication::SendRemoteDamageToAll(const RemoteDamage& hit)
 		packet.Write<float3>(back3);
 		packet.Write<float3>(dir3);
 		packet.Write<float3>(target3);
-		packet.Write<float3>(hit.weapon ? back3 : zero3);
+		packet.Write<float3>(hitDir3);
 		packet.Write<u32>(hit.damageType);
-		packet.Write<u32>(hit.weapon ? 0xFFFFFFFF : (u32)hit.skillID);
+		packet.Write<u32>(skillField);
 		packet.Write<u32>(0);
 		packet.Write<u32>(hit.elementRelation);
 		packet.Write<u16>(0);
