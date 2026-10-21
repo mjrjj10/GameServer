@@ -6,6 +6,7 @@
 static const i32 STAT_CRITICALRATE = 9;
 static const i32 STAT_CRITICALDAMAGE = 10;
 static const i32 STAT_RAGE_ATTACK_RECOVERY_VALUE = 51;
+static const u32 STAT_REASON_HIT = 1;
 static const i32 STAT_SKILL_CRITICALRATE = 63;
 static const i32 STAT_SKILL_CRITICALDAMAGE = 64;
 static const u32 PACKET_DAMAGE_TYPE_NORMAL = 0;
@@ -57,6 +58,20 @@ static f32 ElementMultiplier(const World::Player& attacker, const World::Player&
 	if(ElementBeats(ea, et)) return 1.0f + MasterStat(ac, stat) / 100.0f;
 	if(ElementBeats(et, ea)) return 1.0f - MasterStat(target.Main().classType, stat) / 100.0f;
 	return 1.0f;
+}
+
+void World::PassiveOnWeaponHit(Player& attacker)
+{
+	if(attacker.dead || localTime < attacker.hitRecoverReadyAt) return;
+	const ActiveStatus* st = FindPassiveOfType(attacker, StatusType::HIT_RECOVER);
+	const HitRecoverRule* rule = st ? FindHitRecoverRule(st->statusID) : nullptr;
+	ActorMaster& chara = attacker.Main();
+	if(!rule || chara.hp >= chara.hpMax) return;
+	attacker.hitRecoverReadyAt = TimeAdd(localTime, TimeMsToTime(rule->cooldownMs));
+	const i32 amount = (i32)(chara.hpMax * rule->hpRatio);
+	chara.hp = MIN(chara.hp + amount, chara.hpMax);
+	replication->SendStatToAll(chara.UID, (i32)StatType::STAT_TYPE_HEALTH, (f32)chara.hp, (f32)chara.hpMax, STAT_REASON_HIT);
+	LOG("Passive :: %ls weapon hit recovers %d hp (status %d)", attacker.name.data(), amount, st->statusID);
 }
 
 void World::HealPlayer(Player& healer, Player& target, i32 amount)
@@ -223,6 +238,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	else {
 		replication->SendDamageToAll(attacker.Main().UID, chara.UID, skillID, damage, chara.hp, chara.hpMax, damageType, damageStatusID);
 	}
+	if(proj && attacker.index != target.index && attacker.team != target.team) PassiveOnWeaponHit(attacker);
 
 	if(chara.hp > 0) PassiveOnDamaged(target);
 	if(chara.hp == 0) {

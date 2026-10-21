@@ -127,7 +127,10 @@ struct SummonInfo
 	f32 lifeTime = 0;
 	f32 moveSpeed = 0;
 	f32 perception = 0;
+	f32 targetLost = 0;
 	f32 hideDetectRadius = 0;
+	f32 destroyTime = 0;
+	i32 spawnAnim = 0;
 	bool targetable = false;
 	eastl::fixed_vector<i32,4,false> skills;
 	enum Ai: u8 { AI_NONE = 0, AI_RELAY, AI_CHASE };
@@ -172,6 +175,7 @@ enum class StatusType: u8
 	GX09,
 	HEAL,
 	HIDE,
+	HIT_RECOVER,
 	HIT_PLAGUE,
 	HPTRIGGER,
 	KNOCKDOWN,

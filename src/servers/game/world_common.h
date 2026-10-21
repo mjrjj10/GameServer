@@ -21,6 +21,12 @@ static const ResourceDef RESOURCES[3] = {
 };
 static const i32 STAT_ULTIMATE = 37;
 static const f32 WEAPON_HIT_TOLERANCE = 50.0f;
+static const f32 STATUS_INFINITE_DURATION_SEC = 4294967.295f;
+
+static inline f32 StatusSentDuration(const StatusInfo& st)
+{
+	return st.durationSec > 0 ? st.durationSec : (st.durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f);
+}
 static const f32 OBSTRUCT_JUMPABLE_HEIGHT = 120.0f;
 static const f32 OBSTRUCT_SIDE = 50.0f;
 

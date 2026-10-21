@@ -174,6 +174,8 @@ struct World
 		Time tNextHeatSend = Time::ZERO;
 		bool staminaDirty = false;
 		bool ultDirty = false;
+		eastl::array<f32,3> regenSent = { -1, -1, -1 };
+		bool regenResend = false;
 		f32 shotLeadSec = 0;
 		f32 weaponAimYaw = 0;
 		vec3 lastClientPos = vec3(0);
@@ -229,6 +231,7 @@ struct World
 		Time chaseNext = Time::ZERO;
 		i32 defeatGuardSource = 0;
 		Time defeatGuardUntil = Time::ZERO;
+		Time hitRecoverReadyAt = Time::ZERO;
 		i32 cleanseCharges = -1;
 		Time cleanseRefillAt = Time::ZERO;
 		Time reviveReadyAt = Time::ZERO;
@@ -337,6 +340,12 @@ struct World
 		i32 entityType = 1;
 		ActorUID ownerUID = ActorUID::INVALID;
 		Time despawnAt = Time::ZERO;
+		Time spawnedAt = Time::ZERO;
+		Time standAt = Time::ZERO;
+		Time dieStandAt = Time::ZERO;
+		Time removeAt = Time::ZERO;
+		const SummonAttackRule* attackRule = nullptr;
+		Time nextAttack = Time::ZERO;
 		u32 ownerIndex = 0;
 		u8 ai = 0;
 		ActorUID chaseTarget = ActorUID::INVALID;
@@ -572,6 +581,7 @@ struct World
 		f32 duration;
 		f32 power;
 		bool remove = false;
+		ActorUID sourceUID = ActorUID::INVALID;
 	};
 	eastl::fixed_vector<PendingStatus,256,false> pendingStatuses;
 
@@ -611,6 +621,7 @@ struct World
 		vec3 pos;
 		Time until;
 		Time nextPulse;
+		ActorUID sourceUID = ActorUID::INVALID;
 	};
 	eastl::fixed_vector<GroundAura,64,false> groundAuras;
 	i32 nextSummonLocalID = 900000;
@@ -642,6 +653,7 @@ struct World
 	void UpdateBotCombat();
 	void UpdateBotSkills();
 	void UpdateSummonAi(f32 delta);
+	void UpdateSummonAttack(ActorNpc& npc, f32 delta);
 	void UpdateShowcase();
 	void ShowcaseOnCast(const Player& player);
 	bool ShowcaseKeepsFullRes(const Player& player) const;
@@ -667,6 +679,7 @@ struct World
 	void ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos);
 	ActorUID statusCasterOverride = ActorUID::INVALID;
 	ActorUID damageAttackerOverride = ActorUID::INVALID;
+	ActorUID remoteParentOverride = ActorUID::INVALID;
 	i32 damageStatusID = 0;
 	static const i32 PENETRATION_UNLIMITED = 0x7fffffff;
 	struct RemoteActivation { u32 remoteID; ClientHandle skipHd; ActorUID targetUID; u32 penetration; vec3 pos; };
@@ -776,7 +789,7 @@ public:
 	void UpdateSkillPoints();
 	void SpawnCreatureFromRemote(const RemoteInst& parent, i32 creature, const vec3& pos);
 	f32 WeaponHitDamage(const Player& player, const Remote* remote) const;
-	void PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& center, f32 range, i32 skipDebuffIndex);
+	void PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& center, f32 range, i32 skipDebuffIndex, ActorUID sourceUID = ActorUID::INVALID);
 	void EndAura(u32 casterIndex, const StatusInfo& aura);
 private:
 	void PassiveOnSkillCast(Player& player, i32 skillID);
@@ -784,6 +797,7 @@ private:
 	void PassiveStackOnHit(Player& attacker, Player& target, i32 remoteID, SkillID skillID);
 	void PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj);
 	void PassiveOnSkillHit(Player& attacker, Player& target);
+	void PassiveOnWeaponHit(Player& attacker);
 	void ApplyPassiveStatusRule(const PassiveStatusRule& rule, Player& owner, Player* hitTarget);
 	f32 PassiveWeaponDamageMul(Player& attacker, Player& target);
 	const ActiveStatus* FindPassiveOfType(const Player& p, StatusType type) const;

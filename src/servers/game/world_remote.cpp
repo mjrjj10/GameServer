@@ -145,7 +145,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		const bool atAimedPoint = aimPos && glm::length(vec2(*aimPos)) > 1.0f && glm::length(vec2(pos) - vec2(*aimPos)) < 1.0f;
 		if(plainStaticBox && !flip && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY), 0);
 		else if(plainStaticBox && flip && !atAimedPoint) sendPos += vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY), 0);
-		replication->SendRemoteCreateToAll(players[ownerIndex].Main().UID, seed, idx, sendPos, sendYaw, targetPos, targetMaster ? target : ActorUID::INVALID, Config().DevNoFireNode ? GetGameXmlContent().GetNodeName(0) : GetGameXmlContent().GetNodeName(nodeName), casterCreatesLocally ? players[ownerIndex].clientHd : ClientHandle::INVALID);
+		replication->SendRemoteCreateToAll(remoteParentOverride != ActorUID::INVALID ? remoteParentOverride : players[ownerIndex].Main().UID, seed, idx, sendPos, sendYaw, targetPos, targetMaster ? target : ActorUID::INVALID, Config().DevNoFireNode ? GetGameXmlContent().GetNodeName(0) : GetGameXmlContent().GetNodeName(nodeName), casterCreatesLocally ? players[ownerIndex].clientHd : ClientHandle::INVALID);
 	}
 
 	remoteInsts.push_back(inst);
@@ -214,6 +214,7 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 				inst->excludeIndex = excludeIndex;
 				inst->costLevel = parent.costLevel;
 				inst->centeredBox = parent.centeredBox;
+				inst->sourceUID = parent.sourceUID;
 			}
 		}
 	}
@@ -497,7 +498,7 @@ void World::UpdateRemotes(f32 delta)
 			remote.behaviorType == Remote::BehaviorType::BEAM;
 		const ActorNpc* fireNpc = attached && inst.sourceUID != ActorUID::INVALID ? FindNpcActor(inst.sourceUID) : nullptr;
 		if(attached && inst.sourceUID != ActorUID::INVALID) {
-			if(!fireNpc || localTime >= fireNpc->despawnAt) destroyed = true;
+			if(!fireNpc || (fireNpc->removeAt != Time::ZERO && localTime >= fireNpc->removeAt)) destroyed = true;
 			else inst.pos = fireNpc->pos;
 		}
 		else if(attached) {
@@ -600,7 +601,9 @@ void World::SpawnPendingRemotes()
 			}
 		}
 		if(!owner.dead) {
+			remoteParentOverride = pr->sourceUID;
 			RemoteInst* spawned = SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, false, pr->stopAtTarget, false, !remote || RemoteCreateSendsEntity((ActionCommand::TargetPreset)pr->preset, remote->behaviorType));
+			remoteParentOverride = ActorUID::INVALID;
 			if(spawned) {
 				spawned->sourceUID = pr->sourceUID;
 				spawned->costLevel = pr->costLevel;
@@ -841,6 +844,7 @@ void World::DestroyRemote(i32 index)
 					child->excludeIndex = childExclude;
 					child->costLevel = copy.costLevel;
 					child->centeredBox = copy.centeredBox;
+					child->sourceUID = copy.sourceUID;
 				}
 			}
 			SpawnRemoteRules(*this, copy, remote.onDestroy, copy.pos, childExclude, next, true);

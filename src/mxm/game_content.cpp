@@ -2240,6 +2240,7 @@ StatusType StatusTypeFromString(const char* str)
 		"STATUS_TYPE_GX09",
 		"STATUS_TYPE_HEAL",
 		"STATUS_TYPE_HIDE",
+		"STATUS_TYPE_HIT_RECOVER",
 		"STATUS_TYPE_HIT_PLAGUE",
 		"STATUS_TYPE_HPTRIGGER",
 		"STATUS_TYPE_KNOCKDOWN",
@@ -2717,6 +2718,7 @@ bool GameXmlContent::LoadSummons()
 		}
 		if(XMLElement* p = pInfo->FirstChildElement("Ai_ComData")) {
 			p->QueryFloatAttribute("_PerceptionLength", &si.perception);
+			p->QueryFloatAttribute("_TargetLostLength", &si.targetLost);
 			const char* ai = nullptr;
 			p->QueryStringAttribute("_AiIndex", &ai);
 			if(ai && EA::StdC::Strcmp(ai, "AI_PC_MONDOZAX_ROBOT") == 0) si.ai = SummonInfo::AI_RELAY;
@@ -2724,7 +2726,10 @@ bool GameXmlContent::LoadSummons()
 				EA::StdC::Strcmp(ai, "AI_PC_ELECTRO_ENERGYBALL") == 0)) si.ai = SummonInfo::AI_CHASE;
 		}
 		if(XMLElement* p = pInfo->FirstChildElement("MoveController_ComData")) p->QueryFloatAttribute("_AIDistanceWidth", &si.aiDistance);
-		if(XMLElement* p = pInfo->FirstChildElement("StatsComData")) p->QueryAttribute("_VariationType", &si.variation);
+		if(XMLElement* p = pInfo->FirstChildElement("StatsComData")) {
+			p->QueryAttribute("_VariationType", &si.variation);
+			p->QueryFloatAttribute("_DestroyTime", &si.destroyTime);
+		}
 		if(XMLElement* p = pInfo->FirstChildElement("SkillComData")) {
 			for(XMLElement* s = p->FirstChildElement("_SkillID"); s; s = s->NextSiblingElement("_SkillID")) {
 				i32 sk = 0;
@@ -2837,11 +2842,15 @@ bool GameXmlContent::LoadSummonActions()
 		if(!cls || !state || !type) continue;
 		const bool spawn = EA::StdC::Strcmp(state, "SPAWN_BEHAVIORSTATE") == 0;
 		const bool die = EA::StdC::Strcmp(state, "DIE_BEHAVIORSTATE") == 0;
+		const bool attack = EA::StdC::Strcmp(state, "ATTACK_BEHAVIORSTATE") == 0;
 		i32 skillState = 0;
-		if(!spawn && !die && EA::StdC::Sscanf(state, "SKILL_%d_BEHAVIORSTATE", &skillState) != 1) continue;
+		if(!spawn && !die && !attack && EA::StdC::Sscanf(state, "SKILL_%d_BEHAVIORSTATE", &skillState) != 1) continue;
 		if(skillState < 0 || skillState > 20) continue;
 		i32 stateAnimId = 0;
 		pA->QueryAttribute("AnimationId", &stateAnimId);
+		if(spawn && stateAnimId != 0) {
+			foreach(it, summonMap) if(it->second.className == cls && it->second.spawnAnim == 0) it->second.spawnAnim = stateAnimId;
+		}
 		if(!spawn && !die && stateAnimId != 0) {
 			foreach(it, summonMap) if(it->second.className == cls && it->second.stateAnim[skillState] == 0) it->second.stateAnim[skillState] = stateAnimId;
 		}

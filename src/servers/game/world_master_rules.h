@@ -33,6 +33,47 @@ static inline const ResourceGainRule* FindResourceGainRule(ClassType master, Res
 	return nullptr;
 }
 
+struct SummonAttackRule
+{
+	const char* summonClass;
+	f32 attackRange;
+	f64 cooldownMs;
+	f64 firstDelayMs;
+};
+
+static const SummonAttackRule SUMMON_ATTACK_RULES[] = {
+	{ "PC_MissileTurret", 1000.0f, 420.0, 400.0 },
+	{ "SOULMASTER_GIANTSOUL", 400.0f, 2000.0, 1500.0 },
+	{ "SLIME_MINI", 1000.0f, 2200.0, 140.0 },
+};
+
+static inline const SummonAttackRule* FindSummonAttackRule(const char* summonClass)
+{
+	for(const SummonAttackRule& rule : SUMMON_ATTACK_RULES) {
+		if(EA::StdC::Strcmp(rule.summonClass, summonClass) == 0) return &rule;
+	}
+	return nullptr;
+}
+
+struct HitRecoverRule
+{
+	i32 status;
+	f32 hpRatio;
+	f64 cooldownMs;
+};
+
+static const HitRecoverRule HIT_RECOVER_RULES[] = {
+	{ 1230070005, 0.08f, 1000.0 },
+};
+
+static inline const HitRecoverRule* FindHitRecoverRule(i32 status)
+{
+	for(const HitRecoverRule& rule : HIT_RECOVER_RULES) {
+		if(rule.status == status) return &rule;
+	}
+	return nullptr;
+}
+
 struct StatusDrainRule
 {
 	i32 status;

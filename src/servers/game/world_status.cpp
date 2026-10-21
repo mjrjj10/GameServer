@@ -9,7 +9,6 @@ static const f32 TOOLTIP_DEATHKNIGHT_REVIVE_HP = 0.30f;
 static const f64 SELF_DRAG_LINK_SEC = 0.6;
 static const f32 STATUS_PUSH_BASE_DISTANCE = 500.0f;
 static const f32 STATUS_LIFT_BASE_HEIGHT = 400.0f;
-static const f32 STATUS_INFINITE_DURATION_SEC = 4294967.295f;
 
 static bool StatusSendsGraph(const StatusInfo* info)
 {
@@ -218,7 +217,7 @@ void World::PassiveOnDamaged(Player& target)
 	LOG("Passive :: %ls low health -> summon %d", target.name.data(), creature);
 }
 
-void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& center, f32 range, i32 skipDebuffIndex)
+void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& center, f32 range, i32 skipDebuffIndex, ActorUID sourceUID)
 {
 	const u8 casterTeam = players[casterIndex].team;
 	foreach_const(id, aura.auraStatuses) {
@@ -245,6 +244,7 @@ void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& cente
 			ps.targetUID = p->Main().UID;
 			ps.duration = bound ? STATUS_INFINITE_DURATION_SEC : child->durationSec;
 			ps.power = 0;
+			ps.sourceUID = sourceUID;
 			pendingStatuses.push_back(ps);
 		}
 	}
@@ -817,7 +817,9 @@ void World::UpdateStatuses()
 			}
 		}
 		else if(!caster.dead && targetMaster) {
+			statusCasterOverride = ps->sourceUID;
 			ApplyStatus(caster, *targetMaster->parent, ps->statusID, ps->power, ps->duration);
+			statusCasterOverride = ActorUID::INVALID;
 		}
 		ps = pendingStatuses.erase_unsorted(ps);
 	}

@@ -129,6 +129,7 @@ void World::Update(Time localTime_)
 			p.staminaDirty = true;
 			p.resDirty = true;
 			p.ultDirty = true;
+			p.regenResend = true;
 			if(!p.dead) ApplyStatus(p, p, STATUS_PC_TAG_GODMODE);
 		}
 
@@ -493,6 +494,7 @@ World::ActorNpc& World::SpawnNpcActor(CreatureIndex docID, i32 localID)
 	ActorNpc& actor = actorNpcList.back();
 	actor.docID = (CreatureIndex)docID;
 	actor.localID = localID;
+	actor.spawnedAt = localTime;
 
 	actorNpcMap.emplace(actorUID, --actorNpcList.end());
 	return actor;

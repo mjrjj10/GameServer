@@ -1051,6 +1051,34 @@ void Replication::SendRemoteCreate(const RemoteCreate& remote, ClientHandle excl
 		if(parentLocal == LocalActorID::INVALID || ownerLocal == LocalActorID::INVALID) continue;
 		const LocalActorID targetLocal = remote.targetUID != ActorUID::INVALID ? GetLocalActorID(clientHd, remote.targetUID) : LocalActorID::INVALID;
 
+		if(remote.creator != 0) {
+			PacketWriter<Sv::SN_RemoteSyncCreateFromCreatorId,512> packet;
+			packet.Write<u32>((u32)parentLocal);
+			packet.Write<u32>((u32)ownerLocal);
+			packet.Write<u32>(remote.seed);
+			packet.Write<float3>(v2f(remote.firePos));
+			packet.Write<u16>(remote.fireRotation[0]);
+			packet.Write<u16>(remote.fireRotation[1]);
+			packet.Write<u16>(remote.fireRotation[2]);
+			packet.Write<float3>(v2f(remote.targetPos));
+			packet.Write<u16>(remote.fireObjectLen);
+			packet.WriteRaw(remote.fireObject, remote.fireObjectLen * sizeof(wchar));
+			packet.Write<u16>(remote.scale);
+			packet.Write<f32>(remote.lifeTime);
+			packet.Write<u32>(remote.hitInvalidTarget);
+			packet.Write<u16>(remote.creator);
+			packet.Write<u16>(remote.errorAngle[0]);
+			packet.Write<u16>(remote.errorAngle[1]);
+			packet.Write<u8>(remote.chargingLevel);
+			packet.Write<u8>(remote.gaugeLevel);
+			packet.Write<u16>(remote.firingCount);
+			packet.Write<u8>(remote.comboCount);
+			packet.Write<u32>((u32)targetLocal);
+			packet.Write<u8>(remote.flags);
+			SendPacket(clientHd, packet);
+			continue;
+		}
+
 		PacketWriter<Sv::SN_RemoteSyncCreateFromRemoteDoc,512> packet;
 		packet.Write<u32>((u32)parentLocal);
 		packet.Write<u32>((u32)ownerLocal);
@@ -1087,6 +1115,20 @@ void Replication::RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i
 	remote.fireObject = (const wchar*)buff.ReadRaw(remote.fireObjectLen * sizeof(wchar));
 	remote.scale = buff.Read<u16>();
 	if(remote.parentUID == ActorUID::INVALID || remote.ownerUID == ActorUID::INVALID) return;
+	if(buff.CanRead(sizeof(f32) + sizeof(u32) * 2 + sizeof(u16) * 4 + sizeof(u8) * 4)) {
+		remote.lifeTime = buff.Read<f32>();
+		buff.Read<u32>();
+		remote.creator = buff.Read<u16>();
+		remote.errorAngle[0] = buff.Read<u16>();
+		remote.errorAngle[1] = buff.Read<u16>();
+		remote.chargingLevel = buff.Read<u8>();
+		remote.gaugeLevel = buff.Read<u8>();
+		remote.firingCount = buff.Read<u16>();
+		remote.comboCount = buff.Read<u8>();
+		const LocalActorID shotTarget = buff.Read<LocalActorID>();
+		remote.targetUID = shotTarget != LocalActorID::INVALID ? GetWorldActorUID(senderHd, shotTarget) : ActorUID::INVALID;
+		remote.flags = buff.Read<u8>();
+	}
 
 	remote.fireRotation[2] = (u16)WorldYawToCentiDegrees(atan2f(target.y - clientFirePos.y, target.x - clientFirePos.x));
 	remote.firePos = clientFirePos + vec3(0, 0, REMOTE_FIRE_HEIGHT);
@@ -1225,6 +1267,39 @@ void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx d
 	remote.targetUID = targetUID;
 	SendRemoteCreate(remote, exclude);
 }
+void Replication::SendAiActionStateToAll(ActorUID actorUID, ActionStateID action, f32 worldYaw, const vec3& pos)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+		Sv::SN_AiSetActionState packet;
+		packet.excludedFieldBits = 0;
+		packet.entityID = (u32)localID;
+		packet.motionType = (i16)action;
+		packet.lowerBodyYaw = WorldYawToCentiDegrees(worldYaw);
+		packet.moveSpeed = 0;
+		packet.pos = v2f(pos);
+		SendPacketData<Sv::SN_AiSetActionState>(clientHd, sizeof(packet), &packet);
+	}
+}
+
+void Replication::SendAiSetTargetToAll(ActorUID actorUID, ActorUID targetUID)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+		Sv::SN_AiSetTarget packet;
+		packet.entityID = (u32)localID;
+		const LocalActorID targetLocal = targetUID != ActorUID::INVALID ? GetLocalActorID(clientHd, targetUID) : LocalActorID::INVALID;
+		packet.targetEntityID = targetLocal != LocalActorID::INVALID ? (u32)targetLocal : 0;
+		SendPacketData<Sv::SN_AiSetTarget>(clientHd, sizeof(packet), &packet);
+	}
+}
+
 void Replication::SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed)
 {
 	const i16 yaw = WorldYawToCentiDegrees(worldYaw);

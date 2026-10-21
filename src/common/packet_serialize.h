@@ -2853,6 +2853,34 @@ inline const char* PacketSerialize<Sv::SN_RemoteSyncTarget>(const void* packetDa
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_AiSetTarget>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_AiSetTarget(%d, %d) :: {", Sv::SN_AiSetTarget::NET_ID, packetSize);
+	SER("	entityID=0x%08x", buff.Read<u32>());
+	SER("	targetEntityID=0x%08x", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_AiSetActionState>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_AiSetActionState(%d, %d) :: {", Sv::SN_AiSetActionState::NET_ID, packetSize);
+	SER("	excludedFieldBits=%u", buff.Read<u8>());
+	SER("	entityID=0x%08x", buff.Read<u32>());
+	SER("	motionType=%d", buff.Read<i16>());
+	SER("	lowerBodyYaw=%d", buff.Read<i16>());
+	SER("	moveSpeed=%u", buff.Read<u16>());
+	SER("	pos=%s", PS::ToStr(buff.Read<float3>()));
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_BroadcastDamage>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

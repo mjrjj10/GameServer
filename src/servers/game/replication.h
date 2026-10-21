@@ -333,6 +333,8 @@ struct Replication
 	void SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 max, u32 reason = 0);
 	void SendStanceToAll(ActorUID actorUID, i32 stance, f32 durationSec);
 	void SendNpcBehaviorToAll(ActorUID actorUID, ActionStateID action, const vec3& pos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID);
+	void SendAiActionStateToAll(ActorUID actorUID, ActionStateID action, f32 worldYaw, const vec3& pos);
+	void SendAiSetTargetToAll(ActorUID actorUID, ActorUID targetUID);
 	void SendExecuteSkillAck(ClientHandle clientHd, ActorUID casterUID, SkillID skillID);
 	void SendCancelSkillToAll(ActorUID casterUID, SkillID skillID);
 	void SendInteractionStatusToAll(ActorUID objectUID, u32 allowedTeamMask, i32 interactionID, i32 occupiedTeam, ClientHandle exclude = ClientHandle::INVALID);
@@ -390,6 +392,12 @@ struct Replication
 		RemoteIdx doc = RemoteIdx::INVALID;
 		ActorUID targetUID = ActorUID::INVALID;
 		u8 flags = 0;
+		u16 creator = 0;
+		eastl::array<u16,2> errorAngle = { 0, 0 };
+		u8 chargingLevel = 0;
+		u8 gaugeLevel = 0;
+		u16 firingCount = 0;
+		u8 comboCount = 0;
 	};
 	void SendRemoteCreate(const RemoteCreate& remote, ClientHandle exclude);
 	void RelayRemoteSyncCreateFromRemoteDoc(ClientHandle senderHd, const u8* packetData, i32 packetSize);

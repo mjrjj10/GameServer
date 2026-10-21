@@ -88,6 +88,23 @@ void World::UpdateUltimateGauges(f32 delta)
 			}
 		}
 
+		const f32 staminaRegen = MasterStat(cls, STAT_STAMINAREGEN) * MAX(1.0f + StatusRegenBonus(*it, StatusMod::STAMINA, true) / 100.0f, 0.0f);
+		const f32 manaRegen = MasterStat(cls, STAT_MANAREGEN) + StatusRegenBonus(*it, StatusMod::MANAREGEN, false);
+		const f32 rageRegen = MasterStat(cls, RESOURCES[1].regenStat) + StatusRegenBonus(*it, StatusMod::RAGEREGEN, false);
+		{
+			const f32 rates[3] = { staminaRegen, manaRegen, rageRegen };
+			const i32 statIDs[3] = { STAT_STAMINAREGEN, STAT_MANAREGEN, RESOURCES[1].regenStat };
+			const bool used[3] = { staminaMax > 0, manaMax > 0, resMax[1] > 0 };
+			for(int k = 0; k < 3; k++) {
+				if(!used[k]) continue;
+				if(it->regenSent[k] < 0 && !it->regenResend) it->regenSent[k] = rates[k];
+				if(!it->regenResend && fabsf(rates[k] - it->regenSent[k]) < 0.001f) continue;
+				it->regenSent[k] = rates[k];
+				replication->SendStatToAll(it->Main().UID, statIDs[k], 0.0f, rates[k]);
+			}
+			it->regenResend = false;
+		}
+
 		if(localTime >= it->tNextRegen) {
 			it->tNextRegen = TimeAdd(localTime, TimeMsToTime(REGEN_INTERVAL_MS));
 			auto regen = [&](ActorUID uid, i32 stat, f32& value, f32 max, f32 amount) {
@@ -100,10 +117,10 @@ void World::UpdateUltimateGauges(f32 delta)
 			if(!it->dead) {
 				const ActorUID mainUID = it->Main().UID;
 				regen(mainUID, (i32)StatType::STAT_TYPE_ULTIMATE, it->ultGauge, ultMax, MasterStat(cls, STAT_ULTIMATEREGEN));
-				regen(mainUID, STAT_STAMINA, it->stamina, staminaMax, MasterStat(cls, STAT_STAMINAREGEN) * MAX(1.0f + StatusRegenBonus(*it, StatusMod::STAMINA, true) / 100.0f, 0.0f));
-				regen(mainUID, STAT_MANA, it->mana, manaMax, MasterStat(cls, STAT_MANAREGEN) + StatusRegenBonus(*it, StatusMod::MANAREGEN, false));
+				regen(mainUID, STAT_STAMINA, it->stamina, staminaMax, staminaRegen);
+				regen(mainUID, STAT_MANA, it->mana, manaMax, manaRegen);
 				for(int r = 0; r < 3; r++) {
-					f32 amount = MasterStat(cls, RESOURCES[r].regenStat) + (r == 1 ? StatusRegenBonus(*it, StatusMod::RAGEREGEN, false) : 0.0f);
+					f32 amount = r == 1 ? rageRegen : MasterStat(cls, RESOURCES[r].regenStat);
 					if(r == 1 && amount < 0 && localTime < TimeAdd(it->rageGainAt, TimeMsToTime(RAGE_DECAY_DELAY_MS))) amount = 0;
 					regen(mainUID, RESOURCES[r].maxStat, it->res[r], resMax[r], amount);
 				}

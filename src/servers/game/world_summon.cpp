@@ -13,6 +13,7 @@ static const struct { i32 creature; f32 width; f32 depth; } WALL_FOOTPRINTS[] = 
 static const i32 RELAY_BRUISER_MODE = 1;
 static const f32 RELAY_LIFE_SEC = 3600.0f;
 static const f32 RELAY_PASSIVE_SEC = 3.2f;
+static const f64 SUMMON_DIE_STAND_MS = 90.0;
 static const i32 RELAY_STEALTH_STATUS = 1230210030;
 
 void World::SpawnCreatureFromRemote(const RemoteInst& parent, i32 creature, const vec3& pos)
@@ -98,13 +99,17 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 		}
 		else if(c->kind == SummonCommand::STATUS) {
 			if(c->onCurrent) {
-				if(current && !current->dead) ApplyStatus(owner, *current, c->index);
+				if(current && !current->dead) {
+					statusCasterOverride = npc.UID;
+					ApplyStatus(owner, *current, c->index);
+					statusCasterOverride = ActorUID::INVALID;
+				}
 				continue;
 			}
 			const StatusInfo* st = GetGameXmlContent().FindStatus(c->index);
 			if(!st) continue;
 			const f32 duration = st->durationSec > 0 ? st->durationSec : 1.0f;
-			replication->SendAddStatusToAll(c->index, npc.UID, owner.Main().UID, duration, npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false);
+			replication->SendAddStatusToAll(c->index, npc.UID, npc.UID, StatusSentDuration(*st), npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false);
 			if(st->type == StatusType::SUICIDE) {
 				const Time at = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
 				if(npc.despawnAt == Time::ZERO || at < npc.despawnAt) npc.despawnAt = at;
@@ -118,6 +123,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 				ga.pos = npc.pos;
 				ga.until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
 				ga.nextPulse = localTime;
+				ga.sourceUID = npc.UID;
 				groundAuras.push_back(ga);
 			}
 		}
@@ -204,6 +210,57 @@ void World::RelayPassive(ActorNpc& npc, const SummonInfo& info, Player& owner)
 	npc.skillTarget = ActorUID::INVALID;
 }
 
+void World::UpdateSummonAttack(ActorNpc& npc, f32 delta)
+{
+	const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc.docID);
+	if(!info || npc.spawnedAt >= localTime) return;
+	const Player& owner = players[npc.ownerIndex];
+	ActorMaster* tm = FindMasterActor(npc.chaseTarget);
+	Player* target = tm && !tm->parent->dead && tm->parent->team != owner.team ? tm->parent : nullptr;
+	const f32 lost = info->targetLost > 0 ? info->targetLost : info->perception;
+	if(target && glm::length(vec2(target->body->GetWorldPos()) - vec2(npc.pos)) > lost) target = nullptr;
+	if(!target) {
+		f32 best = info->perception;
+		foreach(e, players) {
+			if(e->dead || e->team == owner.team) continue;
+			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(npc.pos));
+			if(d < best) { best = d; target = &*e; }
+		}
+	}
+	const ActorUID chosen = target ? target->Main().UID : ActorUID::INVALID;
+	if(chosen != npc.chaseTarget) {
+		replication->SendAiSetTargetToAll(npc.UID, chosen);
+		npc.chaseTarget = chosen;
+	}
+	if(!target) return;
+	const vec3 goal = target->body->GetWorldPos();
+	const vec2 rel = vec2(goal) - vec2(npc.pos);
+	const f32 dist = glm::length(rel);
+	const f32 yaw = dist > 1.0f ? atan2f(rel.y, rel.x) : npc.rot.z;
+	if(dist > npc.attackRule->attackRange) {
+		if(info->moveSpeed <= 0) return;
+		const f32 step = MIN(info->moveSpeed * delta, dist - npc.attackRule->attackRange);
+		npc.pos = vec3(vec2(npc.pos) + rel / dist * step, goal.z);
+		npc.rot.z = yaw;
+		if(localTime >= npc.nextMoveSync) {
+			npc.nextMoveSync = TimeAdd(localTime, TimeMsToTime(200));
+			replication->SendNpcMoveToAll(npc.UID, npc.pos, goal, yaw, info->moveSpeed);
+		}
+		return;
+	}
+	if(localTime < npc.nextAttack) return;
+	npc.nextAttack = TimeAdd(localTime, TimeMsToTime(npc.attackRule->cooldownMs));
+	npc.rot.z = yaw;
+	npc.skillTarget = chosen;
+	npc.aimPos = goal;
+	npc.actionState = ActionStateID::ATTACK_BEHAVIORSTATE;
+	replication->SendAiActionStateToAll(npc.UID, ActionStateID::ATTACK_BEHAVIORSTATE, yaw, npc.pos);
+	RunSummonState(npc, 0);
+	const f32 animSec = GetGameXmlContent().GetAniSeqTime(info->className.c_str(), info->stateAnim[0]);
+	if(animSec > 0) npc.standAt = TimeAdd(localTime, TimeMsToTime(animSec * 1000.0));
+	LOG("Summon :: creature=%d attacks %ls at %.0f", (i32)npc.docID, target->name.data(), dist);
+}
+
 void World::UpdateSummonAi(f32 delta)
 {
 	const auto& content = GetGameXmlContent();
@@ -221,6 +278,11 @@ void World::UpdateSummonAi(f32 delta)
 			const i32 state = npc.queuedState;
 			npc.queuedState = -1;
 			RunSummonState(npc, state);
+		}
+		if(npc.spawnedAt >= localTime) continue;
+		if(npc.attackRule && npc.removeAt == Time::ZERO && (npc.despawnAt == Time::ZERO || localTime < npc.despawnAt)) {
+			UpdateSummonAttack(npc, delta);
+			continue;
 		}
 		if(npc.ai == SummonInfo::AI_NONE) continue;
 		if(npc.despawnAt != Time::ZERO && localTime >= npc.despawnAt) continue;
@@ -248,7 +310,12 @@ void World::UpdateSummonAi(f32 delta)
 			ActorMaster* tm = FindMasterActor(npc.chaseTarget);
 			Player* target = tm ? tm->parent : nullptr;
 			if(npc.stuck) {
-				if(!target || target->dead) { npc.stuck = false; npc.chaseTarget = ActorUID::INVALID; continue; }
+				if(!target || target->dead) {
+					npc.stuck = false;
+					if(npc.chaseTarget != ActorUID::INVALID) replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
+					npc.chaseTarget = ActorUID::INVALID;
+					continue;
+				}
 				npc.pos = target->body->GetWorldPos();
 				continue;
 			}
@@ -265,7 +332,9 @@ void World::UpdateSummonAi(f32 delta)
 					const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(npc.pos));
 					if(d < best) { best = d; target = &*e; }
 				}
-				npc.chaseTarget = target ? target->Main().UID : ActorUID::INVALID;
+				const ActorUID chosen = target ? target->Main().UID : ActorUID::INVALID;
+				if(chosen != npc.chaseTarget) replication->SendAiSetTargetToAll(npc.UID, chosen);
+				npc.chaseTarget = chosen;
 			}
 			if(!target) continue;
 			goal = target->body->GetWorldPos();
@@ -334,6 +403,11 @@ void World::UpdateSummons()
 					LOG("Summon :: creature=%d is a wall %.0fx%.0f", ps->creature, w.width, w.depth);
 				}
 				actor.nextPassive = TimeAdd(localTime, TimeMsToTime(RELAY_PASSIVE_SEC * 1000.0));
+				if(actor.actionState == ActionStateID::INVALID) actor.actionState = ActionStateID::SPAWN_BEHAVIORSTATE;
+				const f32 spawnSec = info && info->spawnAnim != 0 ? GetGameXmlContent().GetAniSeqTime(info->className.c_str(), info->spawnAnim) : 0.0f;
+				if(spawnSec > 0 && spawnSec < life) actor.standAt = TimeAdd(localTime, TimeMsToTime(spawnSec * 1000.0));
+				actor.attackRule = info ? FindSummonAttackRule(info->className.c_str()) : nullptr;
+				if(actor.attackRule) actor.nextAttack = TimeAdd(localTime, TimeMsToTime(actor.attackRule->firstDelayMs));
 			}
 			actor.skillTarget = ps->target;
 			owner.lastChildUID = actor.UID;
@@ -405,6 +479,10 @@ void World::UpdateSummons()
 
 	for(auto pc = pendingSummonCommands.begin(); pc != pendingSummonCommands.end(); ) {
 		if(localTime < pc->time) { ++pc; continue; }
+		if(pc->source != ActorUID::INVALID) {
+			const ActorNpc* fresh = FindNpcActor(pc->source);
+			if(fresh && fresh->spawnedAt >= localTime) { ++pc; continue; }
+		}
 		Player& owner = players[pc->ownerIndex];
 		if(pc->kind == SummonCommand::REMOTE) {
 			if(!pendingRemotes.full()) {
@@ -430,6 +508,8 @@ void World::UpdateSummons()
 		}
 		else {
 			const StatusInfo* st = GetGameXmlContent().FindStatus(pc->index);
+			const ActorNpc* source = pc->source != ActorUID::INVALID ? FindNpcActor(pc->source) : nullptr;
+			if(st && source && localTime < source->despawnAt) replication->SendAddStatusToAll(pc->index, source->UID, source->UID, StatusSentDuration(*st), source->pos, source->pos, 0, 1, 1.0f, -1.0f, false);
 			if(st && st->auraStatus != 0 && !groundAuras.full()) {
 				GroundAura ga;
 				ga.ownerIndex = pc->ownerIndex;
@@ -439,6 +519,7 @@ void World::UpdateSummons()
 				const Time statusEnd = st->durationSec > 0 ? TimeAdd(localTime, TimeMsToTime(st->durationSec * 1000.0)) : pc->until;
 				ga.until = pc->until < statusEnd ? pc->until : statusEnd;
 				ga.nextPulse = localTime;
+				ga.sourceUID = pc->source;
 				groundAuras.push_back(ga);
 				LOG("Summon :: %ls aura %d (gives %d statuses within %.0f%s)", owner.name.data(), pc->index, (i32)st->auraStatuses.size(), st->targetingRange, st->auraAll ? ", everyone" : "");
 			}
@@ -455,12 +536,31 @@ void World::UpdateSummons()
 		if(localTime >= ga->nextPulse) {
 			ga->nextPulse = TimeAdd(localTime, TimeMsToTime(500));
 			const StatusInfo* aura = GetGameXmlContent().FindStatus(ga->auraStatus);
-			if(aura && ga->range > 0) PulseAura(ga->ownerIndex, *aura, vec2(ga->pos), ga->range, -1);
+			if(aura && ga->range > 0) PulseAura(ga->ownerIndex, *aura, vec2(ga->pos), ga->range, -1, ga->sourceUID);
 		}
 		++ga;
 	}
 
 	for(auto it = actorNpcList.begin(); it != actorNpcList.end(); ) {
+		if(it->removeAt != Time::ZERO) {
+			if(it->dieStandAt != Time::ZERO && localTime >= it->dieStandAt) {
+				it->dieStandAt = Time::ZERO;
+				replication->SendAiActionStateToAll(it->UID, ActionStateID::NONE_BEHAVIORSTATE, it->rot.z, it->pos);
+			}
+			if(localTime >= it->removeAt) {
+				actorNpcMap.erase(it->UID);
+				it = actorNpcList.erase(it);
+			}
+			else ++it;
+			continue;
+		}
+		if(it->standAt != Time::ZERO && localTime >= it->standAt) {
+			it->standAt = Time::ZERO;
+			if(it->actionState == ActionStateID::SPAWN_BEHAVIORSTATE || it->actionState == ActionStateID::ATTACK_BEHAVIORSTATE) {
+				it->actionState = ActionStateID::NONE_BEHAVIORSTATE;
+				replication->SendAiActionStateToAll(it->UID, ActionStateID::NONE_BEHAVIORSTATE, it->rot.z, it->pos);
+			}
+		}
 		if(it->despawnAt != Time::ZERO && localTime >= it->despawnAt) {
 			LOG("Summon :: creature=%d despawned", (i32)it->docID);
 			physics.RemoveWall(it->wall);
@@ -482,10 +582,19 @@ void World::UpdateSummons()
 						pc.yaw = it->rot.z;
 						pc.skill = info->skills.empty() ? 0 : info->skills[0];
 						pc.until = localTime;
+						if(it->ownerUID != ActorUID::INVALID) pc.source = it->UID;
 						pendingSummonCommands.push_back(pc);
 					}
 					t += c->delay;
 				}
+			}
+			if(it->ownerUID != ActorUID::INVALID) {
+				it->actionState = ActionStateID::DIE_BEHAVIORSTATE;
+				replication->SendAiActionStateToAll(it->UID, ActionStateID::DIE_BEHAVIORSTATE, it->rot.z, it->pos);
+				it->dieStandAt = TimeAdd(localTime, TimeMsToTime(SUMMON_DIE_STAND_MS));
+				it->removeAt = TimeAdd(localTime, TimeMsToTime(MAX((f64)(info ? info->destroyTime : 0.0f) * 1000.0, SUMMON_DIE_STAND_MS)));
+				++it;
+				continue;
 			}
 			actorNpcMap.erase(it->UID);
 			it = actorNpcList.erase(it);
