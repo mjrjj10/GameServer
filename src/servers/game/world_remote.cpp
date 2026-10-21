@@ -359,7 +359,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 		const RemoteInst copy = inst;
 		const vec3 at = vec3(vec2(target.body->GetWorldPos()), inst.pos.z);
 		SpawnRemoteRules(*this, copy, remote.onActivate, at, -1, RemoteIdx::INVALID);
-		SpawnRemoteRules(*this, copy, remote.onHitCharacter, at, (i32)target.index, RemoteIdx::INVALID);
+		SpawnRemoteRules(*this, copy, remote.onHitCharacter, at, (i32)target.index, RemoteIdx::INVALID, true);
 	}
 
 	if(enemy) {
@@ -638,7 +638,7 @@ void World::RunRemoteTimeEvent(RemoteInst& inst, f32 elapsed)
 		if(remote.maxDistance <= 0 && remote.lifeTime > 0) inst.range = inst.travelled + MAX(remote.lifeTime - elapsed, 0.0f) * inst.speed;
 	}
 	const RemoteInst copy = inst;
-	SpawnRemoteRules(*this, copy, remote.onTime, copy.pos, copy.excludeIndex, RemoteIdx::INVALID);
+	SpawnRemoteRules(*this, copy, remote.onTime, copy.pos, copy.excludeIndex, RemoteIdx::INVALID, true);
 }
 
 bool World::UpdateChainRemote(RemoteInst& inst)

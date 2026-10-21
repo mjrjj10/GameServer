@@ -208,6 +208,7 @@ void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& cente
 			if(child->isDebuff ? casterAlly : (!casterAlly && !aura.auraAll)) continue;
 			if(child->isDebuff && (i32)p->index == skipDebuffIndex) continue;
 			if(glm::length(vec2(p->body->GetWorldPos()) - center) > range + HitRadius(*p)) continue;
+			if(FindActiveStatus(p->index, *id)) continue;
 			if(pendingStatuses.full()) return;
 			PendingStatus ps;
 			ps.time = localTime;
