@@ -874,7 +874,7 @@ void World::UpdateShowcase()
 			showcase.followShotAt = TimeAdd(localTime, TimeMsToTime(VALIDATE_FOLLOW_SHOT_MS));
 			showcase.followShooter = (i32)caster.index;
 		}
-		if(Config().DevValidate && combo != 0 && !content.FindSkillStance(skill) && (showcase.validateCasts++ & 1)) combo = 0;
+		if(Config().DevValidate && combo != 0 && !content.FindSkillStance(skill) && (caster.index & 1)) combo = 0;
 		if(combo != 0) {
 			showcase.comboDepth = 0;
 			showcase.comboSkill = combo;
