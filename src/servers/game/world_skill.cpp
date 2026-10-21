@@ -357,6 +357,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		const bool hitEventCombo = GetGameXmlContent().FindSkillHitEventRemote((i32)skillID) != 0;
 		bool regCombo = false;
 		bool acts[8] = {};
+		bool visuals[8] = {};
 		foreach_const(cmd, action.commands) {
 			if(cmd->type == ActionCommand::Type::REGCOMBO) regCombo = true;
 			bool a = cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET ||
@@ -365,7 +366,10 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 				const Remote* r = content.FindRemote(cmd->remote.idx);
 				const bool visualOnly = r && r->boundType == Remote::BoundType::E_BOUND_NONE && r->onDestroy.empty() && r->onTime.empty() && r->onActivate.empty() &&
 					(r->damageGroup == Remote::DamageGroup::eNONE || r->damageGroup == Remote::DamageGroup::INVALID);
-				if(visualOnly) a = false;
+				if(visualOnly) {
+					a = false;
+					if(cmd->animIndex >= 0 && cmd->animIndex < 8) visuals[cmd->animIndex] = true;
+				}
 			}
 			if(cmd->animIndex >= 0 && cmd->animIndex < 8) acts[cmd->animIndex] |= a;
 		}
@@ -375,7 +379,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		if((!regCombo || !acts[0]) && (!hitEventCombo || !acts[0])) {
 			f32 start = 0;
 			for(i32 i = 0; i <= lastActing && (!regCombo || i <= 1); i++) {
-				if(acts[i] && !animPasses.full()) animPasses.push_back({ i, start });
+				if((acts[i] || visuals[i]) && !animPasses.full()) animPasses.push_back({ i, start });
 				i32 animId = 0, loop = 1;
 				foreach_const(st, action.anims) if(st->index == i) { animId = st->animationId; loop = MAX(st->loop, 1); }
 				start += content.GetAniSeqTime(className, animId) * (f32)loop;
