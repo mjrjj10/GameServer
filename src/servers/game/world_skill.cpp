@@ -175,10 +175,10 @@ bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 		LOG("Passive :: %ls skill %d mana cost %.0f (status %d used)", player.name.data(), skillID, mp, it->statusID);
 		break;
 	}
-	const f32 ug = content.GetSkillConsumeUG(skillID);
+	const f32 ug = PlayerSkillConsume(player, skillID, 4);
 	const f32 st = content.GetSkillConsumeStamina(skillID);
-	const f32 resCost[3] = { content.GetSkillConsume(skillID, 0), content.GetSkillConsume(skillID, 1), content.GetSkillConsume(skillID, 2) };
-	const f32 hpCost = content.GetSkillConsume(skillID, 3);
+	const f32 resCost[3] = { PlayerSkillConsume(player, skillID, 0), PlayerSkillConsume(player, skillID, 1), PlayerSkillConsume(player, skillID, 2) };
+	const f32 hpCost = PlayerSkillConsume(player, skillID, 3);
 	if(mp <= 0 && ug <= 0 && st <= 0 && resCost[0] <= 0 && resCost[1] <= 0 && resCost[2] <= 0 && hpCost <= 0) return true;
 	if(player.clientHd == ClientHandle::INVALID) return true;
 
@@ -284,8 +284,10 @@ void World::UpdateToggles()
 		else if(tg->consume == GameXmlContent::SkillToggle::RAGE) pool = &p.res[1];
 		else if(tg->consume == GameXmlContent::SkillToggle::STAMINA) pool = &p.stamina;
 		if(!pool || *pool < 0) continue;
-		if(*pool < tg->value) { ToggleOff(p); continue; }
-		*pool -= tg->value;
+		const GameXmlContent::SkillUpgrade* tu = LatestUpgradeWith(p, (i32)p.toggleSkill, [](const GameXmlContent::SkillUpgrade& u) { return u.toggleValue >= 0; });
+		const f32 cost = tu ? tu->toggleValue : tg->value;
+		if(*pool < cost) { ToggleOff(p); continue; }
+		*pool -= cost;
 		p.manaDirty = true;
 		p.resDirty = true;
 		p.staminaDirty = true;
@@ -405,6 +407,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	const u32 castID = nextCastID++;
 	const i32 damage = (i32)PlayerSkillDamage(player, skillID);
 	const ActorUID currentTarget = targets.size() > 0 ? targets[0] : ActorUID::INVALID;
+	const i32 upgradeSummon = UpgradeSummon(player, (i32)skillID);
 
 	bool scheduled = false;
 	bool teleportToChild = false;
@@ -460,6 +463,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.costLevel = castCostLevel;
 			if(castCostLevel) {
 				foreach_const(rr, castCostLevel->remoteReplace) if(rr->first == (i32)pr.idx) pr.idx = RemoteIdx(rr->second);
+				if(pr.idx != cmd->remote.idx) pr.sendIdx = cmd->remote.idx;
 			}
 			pr.preset = (i32)cmd->remote.targetPreset;
 			pr.offsetSide = cmd->remote.offsetSide;
@@ -490,6 +494,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			PendingSummon ps;
 			ps.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
 			ps.creature = cmd->entity.entityIndex;
+			if(upgradeSummon != 0 && upgradeSummon / 10 == ps.creature / 10) ps.creature = upgradeSummon;
 			ps.ownerIndex = player.index;
 			ps.remove = cmd->entity.remove != 0;
 			const auto preset = cmd->entity.targetPreset;
@@ -884,6 +889,51 @@ const GameXmlContent::SkillUpgrade* World::LatestUpgrade(const Player& player, i
 	return nullptr;
 }
 
+ActionStateID World::UpgradeAction(const Player& player, i32 skillID) const
+{
+	auto f = player.skillLevels.find(skillID);
+	const auto* ups = GetGameXmlContent().FindSkillUpgrades(skillID);
+	if(f == player.skillLevels.end() || !ups) return ActionStateID::INVALID;
+	for(i32 i = MIN((i32)f->second, (i32)ups->size()) - 1; i >= 0; i--) {
+		if((*ups)[i].action != ActionStateID::INVALID) return (*ups)[i].action;
+	}
+	return ActionStateID::INVALID;
+}
+
+const GameXmlContent::SkillUpgrade* World::LatestUpgradeWith(const Player& player, i32 skillID, bool (*has)(const GameXmlContent::SkillUpgrade&)) const
+{
+	auto f = player.skillLevels.find(skillID);
+	const auto* ups = GetGameXmlContent().FindSkillUpgrades(skillID);
+	if(f == player.skillLevels.end() || !ups) return nullptr;
+	for(i32 i = MIN((i32)f->second, (i32)ups->size()) - 1; i >= 0; i--) {
+		if(has((*ups)[i])) return &(*ups)[i];
+	}
+	return nullptr;
+}
+
+i32 World::UpgradeSummon(const Player& player, i32 skillID) const
+{
+	auto f = player.skillLevels.find(skillID);
+	const auto* ups = GetGameXmlContent().FindSkillUpgrades(skillID);
+	if(f == player.skillLevels.end() || !ups) return 0;
+	for(i32 i = MIN((i32)f->second, (i32)ups->size()) - 1; i >= 0; i--) {
+		if((*ups)[i].summon != 0) return (*ups)[i].summon;
+	}
+	return 0;
+}
+
+i32 World::ComboSkillFor(const Player& player, i32 skillID) const
+{
+	auto f = player.skillLevels.find(skillID);
+	const auto* ups = GetGameXmlContent().FindSkillUpgrades(skillID);
+	if(f != player.skillLevels.end() && ups) {
+		for(i32 i = MIN((i32)f->second, (i32)ups->size()) - 1; i >= 0; i--) {
+			if((*ups)[i].nextCombo != 0) return (*ups)[i].nextCombo;
+		}
+	}
+	return GetGameXmlContent().GetFirstComboSkill(skillID);
+}
+
 f32 World::PlayerSkillDamage(Player& player, SkillID skillID)
 {
 	const f32 statusPower = StatusModSum(player, StatusMod::SKILLPOWER);
@@ -897,6 +947,18 @@ f32 World::PlayerSkillDamage(Player& player, SkillID skillID)
 		damage += statusPower * sm.getSkillNormalLevelByIndex(0)->getAttackMultiplier();
 	}
 	return damage;
+}
+
+f32 World::PlayerSkillConsume(const Player& player, i32 skillID, i32 index) const
+{
+	const auto* ups = GetGameXmlContent().FindSkillUpgrades(skillID);
+	auto f = player.skillLevels.find(skillID);
+	if(ups && f != player.skillLevels.end()) {
+		for(i32 i = MIN((i32)f->second, (i32)ups->size()) - 1; i >= 0; i--) {
+			if((*ups)[i].consume[index] >= 0) return (*ups)[i].consume[index];
+		}
+	}
+	return index == 4 ? GetGameXmlContent().GetSkillConsumeUG(skillID) : GetGameXmlContent().GetSkillConsume(skillID, index);
 }
 
 f32 World::PlayerSkillConsumeMP(const Player& player, i32 skillID) const

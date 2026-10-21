@@ -16,6 +16,7 @@ static bool StatusSendsGraph(const StatusInfo* info)
 	switch(info->type) {
 		case StatusType::ROOT:
 		case StatusType::STUN:
+		case StatusType::FREEZE:
 		case StatusType::AIRBORNE:
 		case StatusType::PUSH:
 		case StatusType::TARGET:
@@ -29,6 +30,11 @@ static bool StatusSendsGraph(const StatusInfo* info)
 			return true;
 		default: return false;
 	}
+}
+
+static bool StatusGraphTimed(const StatusInfo* info)
+{
+	return info && info->type != StatusType::ROOT && info->type != StatusType::STUN && info->type != StatusType::FREEZE;
 }
 static const i32 STATUS_PC_DEFEAT_SUPERARMOR = 1230000101;
 static const i32 STATUS_PC_DEFEAT_AND_LIE_SUPERARMOR = 1230000102;
@@ -758,7 +764,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	LOG("Status :: %ls -> %ls status=%d type=%s duration=%.2f shield=%.0f", caster.name.data(), target.name.data(), statusID, info ? info->typeName.c_str() : "?", duration, st.shieldHP);
 	vec3 sentTo = dragForce ? forceCenter : to;
 	if(info && (info->type == StatusType::AIRBORNE || info->type == StatusType::FLY) && info->heightRatio > 0) sentTo.z = from.z + STATUS_LIFT_BASE_HEIGHT * info->heightRatio * ccScale;
-	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, sentTo, graphDuration, 1, ccScale, nominalDist, StatusSendsGraph(info));
+	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, sentTo, StatusGraphTimed(info) ? graphDuration : 0.0f, 1, ccScale, nominalDist, StatusSendsGraph(info));
 	if(info && info->blockSkill && caster.team != target.team && !target.dead) InterruptSkills(target);
 	const i32 guard = DefeatGuardStatus(info);
 	if(guard != 0 && caster.team != target.team && !target.dead) {

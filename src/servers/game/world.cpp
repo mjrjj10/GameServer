@@ -595,7 +595,8 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	}
 	const GameXmlContent::SkillCast* cast = followUp ? nullptr : content.FindSkillCast((i32)skillID);
 	castCostLevel = followUp ? nullptr : PickCostLevel(player, skillID);
-	const ActionStateID actionState = followUp ? forcedAction : castCostLevel && castCostLevel->action != ActionStateID::INVALID ? castCostLevel->action : (cast ? cast->action : skill.action);
+	const ActionStateID upgradeAction = followUp ? ActionStateID::INVALID : UpgradeAction(player, (i32)skillID);
+	const ActionStateID actionState = followUp ? forcedAction : castCostLevel && castCostLevel->action != ActionStateID::INVALID ? castCostLevel->action : upgradeAction != ActionStateID::INVALID ? upgradeAction : (cast ? cast->action : skill.action);
 
 	if(!followUp && !CheckAndPayCast(player, skillID, castPos, targets)) return;
 	BreakHide(player);
@@ -732,7 +733,10 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 
 	if(!followUp && player.clientHd != ClientHandle::INVALID) UpdateComboSlot(player, skillID, skill.type, castPos);
 	if(!followUp) {
-		if(const GameXmlContent::SkillStance* st = content.FindSkillStance((i32)skillID)) SetStance(player.Main(), st->stance, st->duration, st->weaponFireCount, st->cancelByDefeat);
+		if(const GameXmlContent::SkillStance* st = content.FindSkillStance((i32)skillID)) {
+			const GameXmlContent::SkillUpgrade* su = LatestUpgradeWith(player, (i32)skillID, [](const GameXmlContent::SkillUpgrade& u) { return u.stanceDuration > 0; });
+			SetStance(player.Main(), st->stance, su ? su->stanceDuration : st->duration, st->weaponFireCount, st->cancelByDefeat);
+		}
 	}
 
 	QueueChildSkill(player, actionState, castPos, targets);
@@ -875,7 +879,7 @@ void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType
 		LOG("Combo :: %ls slot %d back to %d", player.name.data(), player.comboSlot, (i32)player.comboBase);
 		player.comboSlot = -1;
 	}
-	const i32 combo = content.GetFirstComboSkill((i32)skillID);
+	const i32 combo = ComboSkillFor(player, (i32)skillID);
 	if(combo != 0) {
 		const i32 base = (i32)player.mainCharaID * 2;
 		i32 slot = -1;

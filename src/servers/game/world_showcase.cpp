@@ -194,7 +194,7 @@ void World::UpdateShowcase()
 		Player& comboCaster = players[showcase.comboCaster];
 		LOG("Showcase :: combo skill=%d", showcase.comboSkill);
 		if(!comboCaster.dead) PlayerCastSkill(comboCaster, SkillID(showcase.comboSkill), showcase.comboPos, Slice<const ActorUID>(&showcase.comboTarget, showcase.comboTarget != ActorUID::INVALID ? 1 : 0), 0);
-		const i32 nextCombo = Config().DevValidate && showcase.comboDepth < VALIDATE_COMBO_MAX_DEPTH ? GetGameXmlContent().GetFirstComboSkill(showcase.comboSkill) : 0;
+		const i32 nextCombo = Config().DevValidate && showcase.comboDepth < VALIDATE_COMBO_MAX_DEPTH ? ComboSkillFor(comboCaster, showcase.comboSkill) : 0;
 		if(nextCombo != 0 && nextCombo != showcase.comboSkill && !comboCaster.dead) {
 			showcase.comboSkill = nextCombo;
 			showcase.comboAt = TimeAdd(localTime, TimeMsToTime(VALIDATE_COMBO_DELAY_MS));
@@ -859,7 +859,7 @@ void World::UpdateShowcase()
 			showcase.stanceShotAt = TimeAdd(localTime, TimeMsToTime(SHOWCASE_STANCE_FIRST_SHOT_MS));
 			showcase.stanceShooter = (i32)caster.index;
 		}
-		i32 combo = skill != 0 ? content.GetFirstComboSkill(skill) : 0;
+		i32 combo = skill != 0 ? ComboSkillFor(caster, skill) : 0;
 		i32 comboDelayMs = 700;
 		if(const GameXmlContent::SkillStance* st = skill != 0 ? content.FindSkillStance(skill) : nullptr) {
 			const i32 hb = (i32)human->mainCharaID * 2;

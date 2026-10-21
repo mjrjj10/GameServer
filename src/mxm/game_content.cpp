@@ -1685,6 +1685,16 @@ bool GameXmlContent::LoadSkillUpgrades()
 			pLevel->QueryFloatAttribute("_BaseDamage", &up.baseDamage);
 			pLevel->QueryFloatAttribute("_AttackMultiplier", &up.attackMultiplier);
 			pLevel->QueryFloatAttribute("_ConsumeMP", &up.consumeMP);
+			if(const char* act = pLevel->Attribute("_Action")) up.action = ActionStateFromString(act);
+			pLevel->QueryAttribute("_NextComboSkill", &up.nextCombo);
+			pLevel->QueryAttribute("_SummonIndex", &up.summon);
+			pLevel->QueryFloatAttribute("_ConsumeEP", &up.consume[0]);
+			pLevel->QueryFloatAttribute("_ConsumeRP", &up.consume[1]);
+			pLevel->QueryFloatAttribute("_ConsumeBB", &up.consume[2]);
+			pLevel->QueryFloatAttribute("_ConsumeHP", &up.consume[3]);
+			pLevel->QueryFloatAttribute("_ConsumeUG", &up.consume[4]);
+			pLevel->QueryFloatAttribute("_StanceDuration", &up.stanceDuration);
+			pLevel->QueryFloatAttribute("_ToggleConsumeValuePerInterval", &up.toggleValue);
 			ParseReplaceList(pLevel, "_REMOTELIST", "_RemoteIndex", up.remoteReplace);
 			for(XMLElement* p = pLevel->FirstChildElement("_REMOTELIST"); p && !up.remoteResize.full(); p = p->NextSiblingElement("_REMOTELIST")) {
 				const i32 id = p->IntAttribute("_RemoteIndex");
@@ -2244,6 +2254,7 @@ StatusType StatusTypeFromString(const char* str)
 		"STATUS_TYPE_FEAR",
 		"STATUS_TYPE_FLY",
 		"STATUS_TYPE_FORCEBACK",
+		"STATUS_TYPE_FREEZE",
 		"STATUS_TYPE_GHOSTWIDOW",
 		"STATUS_TYPE_GODMODE",
 		"STATUS_TYPE_GX09",

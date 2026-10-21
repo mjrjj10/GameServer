@@ -170,6 +170,7 @@ enum class StatusType: u8
 	FEAR,
 	FLY,
 	FORCEBACK,
+	FREEZE,
 	GHOSTWIDOW,
 	GODMODE,
 	GX09,
@@ -773,6 +774,12 @@ struct GameXmlContent
 		eastl::fixed_vector<eastl::pair<i32,i32>,8,false> remoteReplace;
 		StatusReplaceList statusReplace;
 		eastl::fixed_vector<eastl::pair<i32,const Remote*>,4,false> remoteResize;
+		ActionStateID action = ActionStateID::INVALID;
+		i32 nextCombo = 0;
+		i32 summon = 0;
+		eastl::array<f32,5> consume = { -1, -1, -1, -1, -1 };
+		f32 stanceDuration = -1;
+		f32 toggleValue = -1;
 	};
 	typedef eastl::fixed_vector<SkillUpgrade,8,false> SkillUpgradeList;
 	eastl::hash_map<i32, Remote> remoteVariants;

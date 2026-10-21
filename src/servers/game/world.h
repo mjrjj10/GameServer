@@ -479,6 +479,7 @@ struct World
 		const GameXmlContent::CostLevel* costLevel = nullptr;
 		Time time;
 		RemoteIdx idx;
+		RemoteIdx sendIdx = RemoteIdx::INVALID;
 		i32 preset;
 		f32 offsetSide;
 		f32 offsetFront;
@@ -695,6 +696,7 @@ struct World
 	vec3 statusForceCenter = vec3(0);
 	const GameXmlContent::CostLevel* castCostLevel = nullptr;
 	const GameXmlContent::CostLevel* spawnCostLevel = nullptr;
+	RemoteIdx remoteSendIdxOverride = RemoteIdx::INVALID;
 	bool reflecting = false;
 	bool frozen = false;
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;
@@ -774,8 +776,13 @@ public:
 	void GrantSkillPoint(Player& player);
 	bool UpgradeSkillSlot(Player& player, i32 slot);
 	const GameXmlContent::SkillUpgrade* LatestUpgrade(const Player& player, i32 skillID, GameXmlContent::SkillUpgrade::Type type) const;
+	ActionStateID UpgradeAction(const Player& player, i32 skillID) const;
+	i32 ComboSkillFor(const Player& player, i32 skillID) const;
+	i32 UpgradeSummon(const Player& player, i32 skillID) const;
+	const GameXmlContent::SkillUpgrade* LatestUpgradeWith(const Player& player, i32 skillID, bool (*has)(const GameXmlContent::SkillUpgrade&)) const;
 	f32 PlayerSkillDamage(Player& player, SkillID skillID);
 	f32 PlayerSkillConsumeMP(const Player& player, i32 skillID) const;
+	f32 PlayerSkillConsume(const Player& player, i32 skillID, i32 index) const;
 	const GameXmlContent::CostLevel* UpgradeCastMods(Player& player, SkillID skillID, const GameXmlContent::CostLevel* costLevel);
 	void ReleaseCast(Player& player);
 	void ComboBaseCooldown(Player& player);
