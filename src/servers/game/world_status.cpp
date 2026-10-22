@@ -28,6 +28,7 @@ static bool StatusSendsGraph(const StatusInfo* info)
 		case StatusType::KNOCKDOWN:
 		case StatusType::SHOCKED:
 		case StatusType::UNDEAD:
+		case StatusType::DANCE:
 			return true;
 		default: return false;
 	}
@@ -43,8 +44,24 @@ static bool StatusGraphTimed(const StatusInfo* info)
 		case StatusType::SHOCKED:
 		case StatusType::TARGET:
 		case StatusType::UNDEAD:
+		case StatusType::DANCE:
 			return false;
 		default: return true;
+	}
+}
+
+static bool StatusGraphAnchorOnly(const StatusInfo* info)
+{
+	if(!info) return false;
+	switch(info->type) {
+		case StatusType::ROOT:
+		case StatusType::STUN:
+		case StatusType::FREEZE:
+		case StatusType::SHOCKED:
+		case StatusType::TARGET:
+		case StatusType::DANCE:
+			return true;
+		default: return false;
 	}
 }
 static const i32 STATUS_PC_DEFEAT_SUPERARMOR = 1230000101;
@@ -629,7 +646,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			if(info && info->dotDamage > 0 && info->intervalSec <= 0) it->dotDone = false;
 			LOG("Status :: %ls -> %ls status=%d refreshed overlap=%d", caster.name.data(), target.name.data(), statusID, it->overlap);
 			const vec3 pos = target.body->GetWorldPos();
-			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, sentDuration, pos, pos, 0, it->overlap, 1.0f, -1.0f, false, true);
+			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, sentDuration, pos, StatusGraphAnchorOnly(info) ? vec3(0) : pos, 0, it->overlap, 1.0f, -1.0f, StatusGraphAnchorOnly(info), true);
 			if(info && it->overlap >= info->maxOverlap && info->maxOverlap > 1) {
 				i32 full = 0;
 				foreach_const(ps, activeStatuses) {
@@ -800,7 +817,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	LOG("Status :: %ls -> %ls status=%d type=%s duration=%.2f shield=%.0f", caster.name.data(), target.name.data(), statusID, info ? info->typeName.c_str() : "?", duration, st.shieldHP);
 	vec3 sentTo = dragForce ? forceCenter : to;
 	if(info && (info->type == StatusType::AIRBORNE || info->type == StatusType::FLY) && info->heightRatio > 0) sentTo.z = from.z + STATUS_LIFT_BASE_HEIGHT * info->heightRatio * ccScale;
-	if(info && info->attachToCaster) sentTo = vec3(0);
+	if(info && (info->attachToCaster || StatusGraphAnchorOnly(info))) sentTo = vec3(0);
 	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, sentTo, StatusGraphTimed(info) ? graphDuration : 0.0f, 1, ccScale, nominalDist, StatusSendsGraph(info));
 	if(info && info->blockSkill && caster.team != target.team && !target.dead) InterruptSkills(target);
 	const i32 guard = DefeatGuardStatus(info);

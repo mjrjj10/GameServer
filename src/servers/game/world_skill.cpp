@@ -503,6 +503,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		const f32 t = animPasses[pass].start + cmd->delay;
 		if((cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) && !pendingRemotes.full()) {
 			PendingRemote pr;
+			pr.casterMasterUID = player.Main().UID;
 			pr.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
 			pr.idx = cmd->remote.idx;
 			pr.costLevel = castCostLevel;

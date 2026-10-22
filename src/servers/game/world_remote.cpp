@@ -111,6 +111,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	inst.instID = nextRemoteInstID++;
 	inst.remote = remote;
 	inst.ownerIndex = ownerIndex;
+	inst.casterMasterUID = players[ownerIndex].Main().UID;
 	inst.skillID = skillID;
 	inst.castID = castID;
 	inst.damage = damage;
@@ -290,7 +291,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 
 	const i32 amount = (i32)(inst.damage * remote.attackMultiplier);
 	if(enemy && remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;
-	if(enemy && remote.changeCasterAction != ActionStateID::INVALID && !inst.actionChanged && !owner.dead) {
+	if(enemy && remote.changeCasterAction != ActionStateID::INVALID && !inst.actionChanged && !owner.dead && owner.Main().UID == inst.casterMasterUID) {
 		inst.actionChanged = true;
 		const ActorUID targetUID = target.Main().UID;
 		LOG("Remote :: %ls hit %ls -> caster action %d", owner.name.data(), target.name.data(), (i32)remote.changeCasterAction);
@@ -675,6 +676,7 @@ void World::SpawnPendingRemotes()
 			remoteSendFromSet = false;
 			if(spawned) {
 				spawned->sourceUID = pr->sourceUID;
+				if(pr->casterMasterUID != ActorUID::INVALID) spawned->casterMasterUID = pr->casterMasterUID;
 				spawned->costLevel = pr->costLevel;
 				spawned->centeredBox = atAimedPoint;
 				spawned->aniEndAt = pr->aniEndAt;

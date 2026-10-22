@@ -480,6 +480,7 @@ struct World
 	{
 		bool remove = false;
 		ActorUID sourceUID = ActorUID::INVALID;
+		ActorUID casterMasterUID = ActorUID::INVALID;
 		const GameXmlContent::CostLevel* costLevel = nullptr;
 		Time time;
 		RemoteIdx idx;
@@ -503,6 +504,7 @@ struct World
 	struct RemoteInst
 	{
 		ActorUID sourceUID = ActorUID::INVALID;
+		ActorUID casterMasterUID = ActorUID::INVALID;
 		const GameXmlContent::CostLevel* costLevel = nullptr;
 		f32 followDist = -1.0f;
 		u32 instID = 0;

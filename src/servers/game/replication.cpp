@@ -1518,7 +1518,7 @@ void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID 
 		if(targetLocal == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(targetUID)) continue;
 		const LocalActorID casterLocal = GetLocalActorID(clientHd, casterUID);
 
-		const f32 dist = glm::length(vec2(to - from));
+		const f32 dist = to == vec3(0) ? 0.0f : glm::length(vec2(to - from));
 		PacketWriter<Sv::SN_AddStatus,128> packet;
 		packet.Write<u8>(withGraph ? 0 : 1);
 		if(withGraph) {

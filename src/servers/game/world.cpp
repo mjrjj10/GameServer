@@ -119,6 +119,11 @@ void World::Update(Time localTime_)
 		}
 
 		// tag
+		if(p.input.tag && p.clientHd == ClientHandle::INVALID) {
+			foreach_const(pr, pendingRemotes) {
+				if(!pr->remove && pr->ownerIndex == p.index) { p.input.tag = 0; break; }
+			}
+		}
 		if(p.input.tag) {
 			p.input.tag = 0;
 			if(p.casting.skillID != SkillID::INVALID) CancelCast(p, "tag");
