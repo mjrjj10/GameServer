@@ -1033,6 +1033,14 @@ void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKi
 static const f32 REMOTE_FIRE_HEIGHT = 158.0f;
 static const u16 MAX_FIRE_OBJECT_LEN = 64;
 
+static i16 WorldYawToMonsterDeciDegrees(f32 worldYaw)
+{
+	f32 deciDeg = (worldYaw * 180.0f / PI + 90.0f) * 10.0f;
+	while(deciDeg >= 3600.0f) deciDeg -= 3600.0f;
+	while(deciDeg < 0.0f) deciDeg += 3600.0f;
+	return (i16)deciDeg;
+}
+
 static i16 WorldYawToCentiDegrees(f32 worldYaw)
 {
 	f32 yawDeg = 90.0f - worldYaw * 180.0f / PI;
@@ -1349,10 +1357,7 @@ void Replication::SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec
 
 void Replication::SendNpcTurnToAll(ActorUID actorUID, f32 worldYaw)
 {
-	f32 deciDeg = (worldYaw * 180.0f / PI + 90.0f) * 10.0f;
-	while(deciDeg >= 3600.0f) deciDeg -= 3600.0f;
-	while(deciDeg < 0.0f) deciDeg += 3600.0f;
-	const i16 yaw = (i16)deciDeg;
+	const i16 yaw = WorldYawToMonsterDeciDegrees(worldYaw);
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
@@ -2589,7 +2594,7 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 		packet.Write(actor.pos);
 		packet.Write(actor.dir);
 		packet.Write<i32>(actor.spawnAnim);
-		packet.Write<ActionStateID>(actor.actionState);
+		packet.Write<ActionStateID>(actor.ownerUID != ActorUID::INVALID ? ActionStateID::SPAWN_BEHAVIORSTATE : actor.actionState);
 		packet.Write<i32>(actor.ownerUID != ActorUID::INVALID ? (i32)GetLocalActorID(clientHd, actor.ownerUID) : actor.ownerID);
 		packet.Write<u8>(actor.dirToNearPC);
 		packet.Write<i32>(actor.wanderDist);
@@ -2625,6 +2630,17 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 		packet.Write<LocalActorID>(localActorID); // objectID
 		packet.Write(actor.pos); // p3nPos
 
+		SendPacket(clientHd, packet);
+	}
+	if(actor.ownerUID != ActorUID::INVALID) {
+		const SummonInfo* info = GetGameXmlContent().FindSummon((i32)actor.docID);
+		PacketWriter<Sv::SN_AiSetActionState,32> packet;
+		packet.Write<u8>(0);
+		packet.Write<LocalActorID>(localActorID);
+		packet.Write<i16>((i16)ActionStateID::SPAWN_BEHAVIORSTATE);
+		packet.Write<i16>(WorldYawToMonsterDeciDegrees(actor.dir.z));
+		packet.Write<u16>((u16)MIN((info ? info->moveSpeed : 0.0f) * 5.0f, 65535.0f));
+		packet.Write(actor.pos);
 		SendPacket(clientHd, packet);
 	}
 }
