@@ -111,6 +111,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			if(!st) continue;
 			const f32 duration = st->durationSec > 0 ? st->durationSec : 1.0f;
 			replication->SendAddStatusToAll(c->index, npc.UID, npc.UID, StatusSentDuration(*st), npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false);
+			TrackNpcSelfStatus(npc.UID, *st);
 			if(st->type == StatusType::SUICIDE) {
 				const Time at = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
 				if(npc.despawnAt == Time::ZERO || at < npc.despawnAt) npc.despawnAt = at;
@@ -186,6 +187,12 @@ void World::ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos)
 	RunSummonState(*npc, child);
 }
 
+static bool NpcKeepsSpeed(const World::ActorNpc& npc)
+{
+	const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc.docID);
+	return info && info->moveSpeed > 0;
+}
+
 void World::RelayWarp(ActorNpc& npc, const vec3& to)
 {
 	LOG("Summon :: relay robot warps from (%.0f, %.0f) to (%.0f, %.0f)", npc.pos.x, npc.pos.y, to.x, to.y);
@@ -228,6 +235,7 @@ void World::RelayPassive(ActorNpc& npc, const SummonInfo& info, Player& owner)
 static const f32 NPC_LEG_RETARGET_DIST = 100.0f;
 static const i32 NPC_LEG_MIN_INTERVAL_MS = 100;
 static const i32 NPC_FOLLOW_LEG_MIN_INTERVAL_MS = 800;
+static const u8 SUMMON_DEFENCE_STAT = 7;
 static const f32 NPC_WANDER_MIN_RADIUS = 100.0f;
 static const f32 NPC_WANDER_MAX_RADIUS = 300.0f;
 static const f32 NPC_WANDER_MIN_PAUSE_MS = 250.0f;
@@ -317,7 +325,7 @@ void World::UpdateSummonAttack(ActorNpc& npc, f32 delta)
 	npc.skillTarget = chosen;
 	npc.aimPos = goal;
 	npc.actionState = ActionStateID::ATTACK_BEHAVIORSTATE;
-	replication->SendAiActionStateToAll(npc.UID, ActionStateID::ATTACK_BEHAVIORSTATE, yaw, npc.pos);
+	replication->SendAiActionStateToAll(npc.UID, ActionStateID::ATTACK_BEHAVIORSTATE, yaw, npc.pos, info->moveSpeed > 0);
 	RunSummonState(npc, 0);
 	const f32 animSec = GetGameXmlContent().GetAniSeqTime(info->className.c_str(), info->stateAnim[0]);
 	if(animSec > 0) npc.standAt = TimeAdd(localTime, TimeMsToTime(animSec * 1000.0));
@@ -472,10 +480,16 @@ void World::UpdateSummons()
 					actor.wall = physics.CreateWall(actor.pos, w.width, w.depth, WALL_HEIGHT, actor.rot.z, (i32)owner.team);
 					LOG("Summon :: creature=%d is a wall %.0fx%.0f", ps->creature, w.width, w.depth);
 				}
+				if(info && (info->targetable || actor.wall)) {
+					foreach_const(st, info->baseStats) {
+						if(st->type == (u8)StatType::STAT_TYPE_HEALTH) actor.hp = actor.hpMax = (i32)st->value;
+						if(st->type == SUMMON_DEFENCE_STAT) actor.defence = st->value;
+					}
+				}
 				actor.nextPassive = TimeAdd(localTime, TimeMsToTime(RELAY_PASSIVE_SEC * 1000.0));
 				if(actor.actionState == ActionStateID::INVALID) actor.actionState = ActionStateID::SPAWN_BEHAVIORSTATE;
 				const f32 spawnSec = info && info->spawnAnim != 0 ? GetGameXmlContent().GetAniSeqTime(info->className.c_str(), info->spawnAnim) : 0.0f;
-				if(spawnSec > 0 && spawnSec < life) actor.standAt = TimeAdd(localTime, TimeMsToTime(spawnSec * 1000.0));
+				if(spawnSec < life) actor.standAt = TimeAdd(localTime, TimeMsToTime(MAX(spawnSec, 0.0f) * 1000.0));
 				actor.attackRule = info ? FindSummonAttackRule(info->className.c_str()) : nullptr;
 				if(actor.attackRule) actor.nextAttack = TimeAdd(localTime, TimeMsToTime(actor.attackRule->firstDelayMs));
 			}
@@ -581,7 +595,10 @@ void World::UpdateSummons()
 		else {
 			const StatusInfo* st = GetGameXmlContent().FindStatus(pc->index);
 			const ActorNpc* source = pc->source != ActorUID::INVALID ? FindNpcActor(pc->source) : nullptr;
-			if(st && source && localTime < source->despawnAt) replication->SendAddStatusToAll(pc->index, source->UID, source->UID, StatusSentDuration(*st), source->pos, source->pos, 0, 1, 1.0f, -1.0f, false);
+			if(st && source && localTime < source->despawnAt) {
+				replication->SendAddStatusToAll(pc->index, source->UID, source->UID, StatusSentDuration(*st), source->pos, source->pos, 0, 1, 1.0f, -1.0f, false);
+				TrackNpcSelfStatus(source->UID, *st);
+			}
 			if(st && st->auraStatus != 0 && !groundAuras.full()) {
 				GroundAura ga;
 				ga.ownerIndex = pc->ownerIndex;
@@ -617,7 +634,7 @@ void World::UpdateSummons()
 		if(it->removeAt != Time::ZERO) {
 			if(it->dieStandAt != Time::ZERO && localTime >= it->dieStandAt) {
 				it->dieStandAt = Time::ZERO;
-				replication->SendAiActionStateToAll(it->UID, ActionStateID::NONE_BEHAVIORSTATE, it->rot.z, it->pos);
+				replication->SendAiActionStateToAll(it->UID, ActionStateID::NONE_BEHAVIORSTATE, it->rot.z, it->pos, NpcKeepsSpeed(*it));
 			}
 			if(localTime >= it->removeAt) {
 				actorNpcMap.erase(it->UID);
@@ -630,7 +647,7 @@ void World::UpdateSummons()
 			it->standAt = Time::ZERO;
 			if(it->actionState == ActionStateID::SPAWN_BEHAVIORSTATE || it->actionState == ActionStateID::ATTACK_BEHAVIORSTATE) {
 				it->actionState = ActionStateID::NONE_BEHAVIORSTATE;
-				replication->SendAiActionStateToAll(it->UID, ActionStateID::NONE_BEHAVIORSTATE, it->rot.z, it->pos);
+				replication->SendAiActionStateToAll(it->UID, ActionStateID::NONE_BEHAVIORSTATE, it->rot.z, it->pos, NpcKeepsSpeed(*it));
 			}
 		}
 		if(it->despawnAt != Time::ZERO && localTime >= it->despawnAt) {
@@ -663,7 +680,7 @@ void World::UpdateSummons()
 			}
 			if(it->ownerUID != ActorUID::INVALID) {
 				it->actionState = ActionStateID::DIE_BEHAVIORSTATE;
-				replication->SendAiActionStateToAll(it->UID, ActionStateID::DIE_BEHAVIORSTATE, it->rot.z, it->pos);
+				replication->SendAiActionStateToAll(it->UID, ActionStateID::DIE_BEHAVIORSTATE, it->rot.z, it->pos, NpcKeepsSpeed(*it));
 				it->dieStandAt = TimeAdd(localTime, TimeMsToTime(SUMMON_DIE_STAND_MS));
 				it->removeAt = TimeAdd(localTime, TimeMsToTime(MAX((f64)(info ? info->destroyTime : 0.0f) * 1000.0, SUMMON_DIE_STAND_MS)));
 				++it;

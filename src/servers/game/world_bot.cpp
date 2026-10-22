@@ -164,7 +164,7 @@ void World::UpdateBotCombat()
 		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(delay * 1000.0));
 		if(!target) continue;
 
-		if(!WeaponHeatShot(bot, localTime, replication)) continue;
+		if(!WeaponHeatShot(bot, localTime, replication, WeaponHeatScale(bot))) continue;
 		const vec2 rel = vec2(target->body->GetWorldPos()) - vec2(pos);
 		const vec2 dir = glm::length(rel) > 1.0f ? glm::normalize(rel) : vec2(1, 0);
 		bot.weaponAimYaw = atan2f(dir.y, dir.x);

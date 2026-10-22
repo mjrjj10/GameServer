@@ -263,3 +263,20 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		replication->SendDeathToAll(attacker.Main().UID, chara.UID, CreatureIndex(100000000 + (i32)chara.classType), target.userID, respawnMs);
 	}
 }
+
+bool World::NpcHittableBy(const ActorNpc& npc, const Player& attacker) const
+{
+	if(npc.hp <= 0 || npc.ownerUID == ActorUID::INVALID || npc.removeAt != Time::ZERO) return false;
+	if(npc.despawnAt != Time::ZERO && localTime >= npc.despawnAt) return false;
+	return players[npc.ownerIndex].team != attacker.team;
+}
+
+void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage)
+{
+	if(damage <= 0 || !NpcHittableBy(npc, attacker)) return;
+	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence, 0.0f)) + 0.5f), 1);
+	npc.hp = MAX(npc.hp - dealt, 0);
+	replication->SendDamageToAll(attacker.Main().UID, npc.UID, skillID, dealt, npc.hp, npc.hpMax);
+	LOG("Summon :: creature=%d takes %d from %ls hp=%d/%d", (i32)npc.docID, dealt, attacker.name.data(), npc.hp, npc.hpMax);
+	if(npc.hp <= 0) npc.despawnAt = localTime;
+}

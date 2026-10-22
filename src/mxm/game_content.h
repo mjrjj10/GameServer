@@ -123,6 +123,8 @@ struct SummonCommand
 struct SummonInfo
 {
 	eastl::fixed_string<char,48,false> className;
+	eastl::fixed_vector<StatValue,24,false> baseStats;
+	f32 colliderRadius = 0;
 	eastl::fixed_vector<SummonCommand,12,false> onSpawn;
 	eastl::fixed_vector<SummonCommand,12,false> onDie;
 	f32 lifeTime = 0;
@@ -166,6 +168,7 @@ enum class StatusType: u8
 	DEFEAT_CASTER_AURA,
 	DEFENDER,
 	DISPEL,
+	DOUBLEGUN,
 	DRAGGED,
 	DRAGGEDBYFORCE,
 	ELECTRO,
@@ -210,6 +213,8 @@ enum class StatusType: u8
 	UNDEAD,
 	UNSHAKABLE,
 	WEAK_ON_CRITICAL,
+	WEAPON_GAUGE,
+	WEAPON_GAUGE_RECOVERY,
 };
 
 StatusType StatusTypeFromString(const char* str);
@@ -272,6 +277,8 @@ struct StatusInfo
 	i32 hitEffectStatus = 0;
 	f32 hitEffectValue = 0;
 	f32 costRatioMP = 0;
+	f32 stackDurationSec = 0;
+	i32 stackMax = 0;
 	i32 groupTeleportSkill = 0;
 	f32 groupTeleportRadius = 0;
 	i32 groupTeleportStatus = 0;
@@ -396,6 +403,8 @@ struct Remote
 	bool forceTargetDir = false;
 	f32 offsetZ = 0;
 	f32 groundMoveOffsetZ = -1;
+	f32 damageDistStart = 0;
+	f32 damageOnBound = 100;
 	f32 distPenaltyRate = 0;
 	f32 penaltyApplyDistance = 0;
 	f32 boundOffsetY = 0;
@@ -444,6 +453,7 @@ struct Remote
 
 	bool contactFriend = false;
 	bool vsOwner = false;
+	bool includeParty = false;
 	bool monsterOnly = false;
 	bool attachFireObject = false;
 	bool ignoreGround = false;
@@ -890,7 +900,7 @@ struct GameXmlContent
 	i32 FindSkillHitEventRemote(i32 skillID) const { auto f = skillHitEventRemote.find(skillID); return f == skillHitEventRemote.end() ? 0 : f->second; }
 
 private:
-	bool LoadXMLFile(const wchar* fileName, tinyxml2::XMLDocument& xmlData);
+	bool LoadXMLFile(const wchar* fileName, tinyxml2::XMLDocument& xmlData, bool optional = false);
 
 	bool LoadMasterDefinitions();
 	bool LoadEntrySystems();
@@ -981,6 +991,7 @@ private:
 	bool LoadAnimationSequenceTimes();
 	bool LoadMoveGraphs();
 	bool LoadSummonActions();
+	bool LoadSummonBaseStats();
 	bool LoadGroundItems();
 	bool LoadLevelEvents(Map* map, const wchar* levelDir);
 	bool LoadChildSkills();

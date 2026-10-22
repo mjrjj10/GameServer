@@ -1105,6 +1105,8 @@ static const u8 NPC_MOVE_FLAG_STOPPED = 31;
 static const u8 NPC_MOVE_FLAG_MOVING = 32;
 static const f32 SUMMON_SPAWN_HEIGHT = 50.0f;
 static const f32 NPC_SPEED_SCALE = 5.0f;
+static const u8 NPC_STATE_KEEP_SPEED = 0x04;
+static const u8 SUMMON_OWNER_SKILLPOWER_STAT = 8;
 
 static i16 WorldYawToMonsterDeciDegrees(f32 worldYaw)
 {
@@ -1352,21 +1354,21 @@ void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx d
 	remote.targetUID = targetUID;
 	SendRemoteCreate(remote, exclude);
 }
-void Replication::SendAiActionStateToAll(ActorUID actorUID, ActionStateID action, f32 worldYaw, const vec3& pos)
+void Replication::SendAiActionStateToAll(ActorUID actorUID, ActionStateID action, f32 worldYaw, const vec3& pos, bool keepSpeed)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
-		Sv::SN_AiSetActionState packet;
-		packet.excludedFieldBits = 0;
-		packet.entityID = (u32)localID;
-		packet.motionType = (i16)action;
-		packet.lowerBodyYaw = WorldYawToCentiDegrees(worldYaw);
-		packet.moveSpeed = 0;
-		packet.pos = v2f(pos);
-		SendPacketData<Sv::SN_AiSetActionState>(clientHd, sizeof(packet), &packet);
+		PacketWriter<Sv::SN_AiSetActionState,32> packet;
+		packet.Write<u8>(keepSpeed ? NPC_STATE_KEEP_SPEED : 0);
+		packet.Write<LocalActorID>(localID);
+		packet.Write<i16>((i16)action);
+		packet.Write<i16>(WorldYawToMonsterDeciDegrees(worldYaw));
+		if(!keepSpeed) packet.Write<u16>(0);
+		packet.Write(pos);
+		SendPacket(clientHd, packet);
 	}
 }
 
@@ -1407,7 +1409,7 @@ void Replication::SendAiMoveTargetToAll(ActorUID actorUID, const vec3& goal, u32
 
 void Replication::SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed)
 {
-	const i16 yaw = WorldYawToCentiDegrees(worldYaw);
+	const i16 yaw = WorldYawToMonsterDeciDegrees(worldYaw);
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
@@ -2715,11 +2717,26 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 		packet.Write<SkinIndex>(SkinIndex::DEFAULT);
 		packet.Write<i32>(actor.seed);
 
-		const f32 hp = actor.ownerUID != ActorUID::INVALID ? 1.0f : 0.0f;
-		packet.Write<u16>(hp > 0 ? 1 : 0);
-		if(hp > 0) { packet.Write<u8>(0); packet.Write<f32>(hp); }
-		packet.Write<u16>(hp > 0 ? 1 : 0);
-		if(hp > 0) { packet.Write<u8>(0); packet.Write<f32>(hp); }
+		const SummonInfo* summon = actor.ownerUID != ActorUID::INVALID ? GetGameXmlContent().FindSummon((i32)actor.docID) : nullptr;
+		if(summon && !summon->baseStats.empty()) {
+			f32 hp = 1.0f;
+			packet.Write<u16>((u16)summon->baseStats.size());
+			foreach_const(st, summon->baseStats) {
+				if(st->type == (u8)StatType::STAT_TYPE_HEALTH) hp = st->value;
+				packet.Write<u8>(st->type);
+				packet.Write<f32>(st->type == SUMMON_OWNER_SKILLPOWER_STAT && actor.ownerSkillPower > 0 ? actor.ownerSkillPower : st->value);
+			}
+			packet.Write<u16>(1);
+			packet.Write<u8>((u8)StatType::STAT_TYPE_HEALTH);
+			packet.Write<f32>(hp);
+		}
+		else {
+			const f32 hp = actor.ownerUID != ActorUID::INVALID ? 1.0f : 0.0f;
+			packet.Write<u16>(hp > 0 ? 1 : 0);
+			if(hp > 0) { packet.Write<u8>(0); packet.Write<f32>(hp); }
+			packet.Write<u16>(hp > 0 ? 1 : 0);
+			if(hp > 0) { packet.Write<u8>(0); packet.Write<f32>(hp); }
+		}
 
 
 

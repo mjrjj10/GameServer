@@ -330,6 +330,16 @@ void World::UpdatePassives()
 void World::PassiveOnSkillCast(Player& player, i32 skillID)
 {
 	if(GetGameXmlContent().GetSkillConsumeStamina(skillID) > 0) return;
+	if(const ActiveStatus* stacking = FindPassiveOfType(player, StatusType::DOUBLEGUN)) {
+		const StatusInfo& info = *stacking->info;
+		if(eastl::find(info.costSkills.begin(), info.costSkills.end(), skillID) != info.costSkills.end() && info.stackMax > 0) {
+			player.skillStacks = localTime < player.skillStacksUntil ? (u8)MIN((i32)player.skillStacks + 1, info.stackMax) : 1;
+			player.skillStacksUntil = TimeAdd(localTime, TimeMsToTime(info.stackDurationSec * 1000.0));
+			const i32 passiveID = stacking->statusID;
+			LOG("Passive :: %ls skill stack %d/%d", player.name.data(), (i32)player.skillStacks, info.stackMax);
+			for(i32 k = 1; k <= (i32)player.skillStacks; k++) ApplyStatus(player, player, passiveID + k);
+		}
+	}
 	eastl::fixed_vector<i32,4,false> toApply;
 	foreach(it, activeStatuses) {
 		if(it->targetIndex != player.index || !it->info || it->info->customMax <= 0) continue;
@@ -450,9 +460,13 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 
 	eastl::fixed_vector<i32,4,false> toApply;
 	foreach(it, activeStatuses) {
-		if(it->targetIndex != attacker.index || !it->info) continue;
-		if(!PassiveOfActiveMaster(attacker, it->statusID)) continue;
+		if(it->targetIndex != attacker.index || !it->info || it->until <= localTime) continue;
 		const StatusInfo& info = *it->info;
+		if(info.type == StatusType::HIT_PLAGUE && info.customMax <= 0 && !info.permanent) {
+			if(info.hitEffectStatus && !toApply.full()) toApply.push_back(info.hitEffectStatus);
+			continue;
+		}
+		if(!PassiveOfActiveMaster(attacker, it->statusID)) continue;
 		if(info.type == StatusType::HIT_PLAGUE && info.customMax > 0) {
 			it->custom++;
 			if(it->custom >= info.customMax) {
@@ -804,6 +818,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		}
 	}
 
+	if(info && info->type == StatusType::WEAPON_GAUGE_RECOVERY) RecoverWeaponHeat(target, info->paramRatio);
 	if(info && info->type == StatusType::DISPEL && info->dispelStatusType != StatusType::OTHER) {
 		foreach(it, activeStatuses) {
 			if(it->targetIndex != target.index || !it->info || !it->info->canDispel || it->info->type != info->dispelStatusType || it->until <= localTime) continue;

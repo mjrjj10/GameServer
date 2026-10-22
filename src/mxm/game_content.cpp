@@ -183,7 +183,7 @@ bool GameXmlContent::LoadMasterWeaponDefinitions()
 	return true;
 }
 
-bool GameXmlContent::LoadXMLFile(const wchar* fileName, tinyxml2::XMLDocument& xmlData)
+bool GameXmlContent::LoadXMLFile(const wchar* fileName, tinyxml2::XMLDocument& xmlData, bool optional)
 {
 	// Find a better way to check this
 	// Simple path hash map?
@@ -195,7 +195,7 @@ bool GameXmlContent::LoadXMLFile(const wchar* fileName, tinyxml2::XMLDocument& x
 	i32 fileSize;
 	u8* fileData = FileOpenAndReadAll(filePath.data(), &fileSize);
 	if (!fileData) {
-		LOG("ERROR(LoadXMLFile): failed to open '%ls'", filePath.data());
+		if(!optional) LOG("ERROR(LoadXMLFile): failed to open '%ls'", filePath.data());
 		return false;
 	}
 	defer(memFree(fileData));
@@ -1795,6 +1795,7 @@ bool GameXmlContent::LoadRemoteData()
 				pComp->QueryStringAttribute("_AddContactGroup", &_AddContactGroup);
 				remote.contactFriend = _AddContactGroup && (EA::StdC::Strcmp(_AddContactGroup, "eFRIEND") == 0 || EA::StdC::Strcmp(_AddContactGroup, "eALL") == 0);
 				remote.vsOwner = XmlAttrTrue(pComp, "_VsOwner");
+				remote.includeParty = XmlAttrTrue(pComp, "_IncludeParty");
 				remote.monsterOnly = XmlAttrTrue(pComp, "_VsNPC_Monster") && !XmlAttrTrue(pComp, "_VsPC");
 				remote.ignoreGround = XmlAttrTrue(pComp, "_IgnoreGround");
 				pComp->QueryFloatAttribute("_ActivateDelayTime", &remote.activateDelay);
@@ -1832,6 +1833,8 @@ bool GameXmlContent::LoadRemoteData()
 				}
 				pComp->QueryFloatAttribute("_OffsetZ", &remote.offsetZ);
 				pComp->QueryFloatAttribute("_DistPenaltyRate", &remote.distPenaltyRate);
+				pComp->QueryFloatAttribute("_DamageDistStart", &remote.damageDistStart);
+				pComp->QueryFloatAttribute("_DamageOnBound", &remote.damageOnBound);
 				pComp->QueryFloatAttribute("_PenaltyApplyDistance", &remote.penaltyApplyDistance);
 				const char* _OnHitOwnerMemorizeTarget = nullptr;
 				pComp->QueryStringAttribute("_OnHitOwnerMemorizeTarget", &_OnHitOwnerMemorizeTarget);
@@ -1997,6 +2000,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadSummonActions();
+	if(!r) return false;
+
+	r = LoadSummonBaseStats();
 	if(!r) return false;
 
 	r = LoadGroundItems();
@@ -2278,6 +2284,7 @@ StatusType StatusTypeFromString(const char* str)
 		"STATUS_TYPE_DEFEAT_CASTER_AURA",
 		"STATUS_TYPE_DEFENDER",
 		"STATUS_TYPE_DISPEL",
+		"STATUS_TYPE_DOUBLEGUN",
 		"STATUS_TYPE_DRAGGED",
 		"STATUS_TYPE_DRAGGEDBYFORCE",
 		"STATUS_TYPE_ELECTRO",
@@ -2322,6 +2329,8 @@ StatusType StatusTypeFromString(const char* str)
 		"STATUS_TYPE_UNDEAD",
 		"STATUS_TYPE_UNSHAKABLE",
 		"STATUS_TYPE_WEAK_ON_CRITICAL",
+		"STATUS_TYPE_WEAPON_GAUGE",
+		"STATUS_TYPE_WEAPON_GAUGE_RECOVERY",
 	};
 	if(!str) return StatusType::OTHER;
 	for(i32 i = 0; i < (i32)ARRAY_COUNT(names); i++) {
@@ -2455,9 +2464,11 @@ bool GameXmlContent::LoadStatusData()
 				pIce->QueryAttribute("_Index", &st.stackStatus);
 				pIce->QueryAttribute("_FreezeStatusIndex", &st.stackFullStatus);
 			}
-			if(st.type == StatusType::NOCOST) {
+			if(st.type == StatusType::NOCOST || st.type == StatusType::DOUBLEGUN) {
 				if(XMLElement* pCost = pCommon->FirstChildElement("_DOUBLEGUN")) {
 					pCost->QueryFloatAttribute("_AddRatioCostMP", &st.costRatioMP);
+					st.stackDurationSec = pCost->FloatAttribute("_Duration") / 1000.0f;
+					pCost->QueryAttribute("_MaxOverlapCount", &st.stackMax);
 					for(XMLElement* pS = pCost->FirstChildElement("_SkillList"); pS; pS = pS->NextSiblingElement("_SkillList")) {
 						i32 v = 0;
 						pS->QueryAttribute("DATA", &v);
@@ -2765,6 +2776,7 @@ bool GameXmlContent::LoadSummons()
 			si.targetable = t && EA::StdC::Stricmp(t, "true") == 0;
 		}
 		if(XMLElement* p = pInfo->FirstChildElement("LifeTime_ComData")) p->QueryFloatAttribute("LifeTime", &si.lifeTime);
+		if(XMLElement* p = pInfo->FirstChildElement("PhysXMeshComData")) p->QueryFloatAttribute("_ColliderRadius", &si.colliderRadius);
 		if(XMLElement* p = pInfo->FirstChildElement("CreatureComData")) {
 			if(XMLElement* d = p->FirstChildElement("_HideDetector")) d->QueryFloatAttribute("_Radius", &si.hideDetectRadius);
 		}
@@ -2957,7 +2969,7 @@ bool GameXmlContent::LoadGroundItems()
 bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 {
 	XMLDocument doc;
-	if(!LoadXMLFile(LFMT(L"/%s/EVENTNODES/LEVELEVENT_SERVER.XML", levelDir), doc)) return true;
+	if(!LoadXMLFile(LFMT(L"/%s/EVENTNODES/LEVELEVENT_SERVER.XML", levelDir), doc, true)) return true;
 	XMLElement* list = doc.FirstChildElement() ? doc.FirstChildElement()->FirstChildElement() : nullptr;
 	if(!list) return true;
 	for(XMLElement* pNode = list->FirstChildElement("_LevelEventData"); pNode; pNode = pNode->NextSiblingElement("_LevelEventData")) {
@@ -2972,6 +2984,24 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		map->levelEvents.push_back(node);
 	}
 	LOG("Loaded %d level event nodes", (i32)map->levelEvents.size());
+	return true;
+}
+
+bool GameXmlContent::LoadSummonBaseStats()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/SUMMON_BASE_STATS.xml", doc)) return false;
+	i32 count = 0;
+	for(XMLElement* info = doc.FirstChildElement()->FirstChildElement("INFO"); info; info = info->NextSiblingElement("INFO")) {
+		auto found = summonMap.find(info->IntAttribute("ID"));
+		if(found == summonMap.end()) continue;
+		SummonInfo& summon = found->second;
+		for(XMLElement* st = info->FirstChildElement("STAT"); st && !summon.baseStats.full(); st = st->NextSiblingElement("STAT")) {
+			summon.baseStats.push_back({ (u8)st->IntAttribute("type"), st->FloatAttribute("value") });
+		}
+		count++;
+	}
+	LOG("Loaded base stats of %d summons", count);
 	return true;
 }
 

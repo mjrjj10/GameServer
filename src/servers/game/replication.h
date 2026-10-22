@@ -127,6 +127,7 @@ struct Replication
 		i32 seed = 0;
 		i32 entityType = 1;
 		ActorUID ownerUID = ActorUID::INVALID;
+		f32 ownerSkillPower = 0;
 
 
 		vec3 pos;
@@ -348,7 +349,7 @@ struct Replication
 	void SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 max, u32 reason = 0);
 	void SendStanceToAll(ActorUID actorUID, i32 stance, f32 durationSec);
 	void SendNpcBehaviorToAll(ActorUID actorUID, ActionStateID action, const vec3& pos, const vec3& targetPos, ActorUID targetUID, f32 moveSpeed);
-	void SendAiActionStateToAll(ActorUID actorUID, ActionStateID action, f32 worldYaw, const vec3& pos);
+	void SendAiActionStateToAll(ActorUID actorUID, ActionStateID action, f32 worldYaw, const vec3& pos, bool keepSpeed);
 	void SendAiSetTargetToAll(ActorUID actorUID, ActorUID targetUID);
 	void SendExecuteSkillAck(ClientHandle clientHd, ActorUID casterUID, SkillID skillID);
 	void SendCancelSkillToAll(ActorUID casterUID, SkillID skillID);

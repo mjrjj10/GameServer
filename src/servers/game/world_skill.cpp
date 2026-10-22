@@ -175,6 +175,10 @@ bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 		LOG("Passive :: %ls skill %d mana cost %.0f (status %d used)", player.name.data(), skillID, mp, it->statusID);
 		break;
 	}
+	if(const ActiveStatus* stacking = FindPassiveOfType(player, StatusType::DOUBLEGUN)) {
+		const auto& list = stacking->info->costSkills;
+		if(player.skillStacks > 0 && localTime < player.skillStacksUntil && eastl::find(list.begin(), list.end(), skillID) != list.end()) mp = MAX(mp * (1.0f + stacking->info->costRatioMP * player.skillStacks / 100.0f), 0.0f);
+	}
 	const f32 ug = PlayerSkillConsume(player, skillID, 4);
 	const f32 st = content.GetSkillConsumeStamina(skillID);
 	const f32 resCost[3] = { PlayerSkillConsume(player, skillID, 0), PlayerSkillConsume(player, skillID, 1), PlayerSkillConsume(player, skillID, 2) };
@@ -344,6 +348,25 @@ void World::ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID)
 	npcStatuses.push_back(ns);
 }
 
+void World::TrackNpcSelfStatus(ActorUID npcUID, const StatusInfo& info)
+{
+	if(info.durationSec <= 0) return;
+	const Time until = TimeAdd(localTime, TimeMsToTime(info.durationSec * 1000.0));
+	foreach(ns, npcStatuses) {
+		if(ns->npcUID != npcUID || ns->statusID != info.ID || ns->linked) continue;
+		ns->until = until;
+		return;
+	}
+	if(npcStatuses.full()) return;
+	NpcStatus ns;
+	ns.npcUID = npcUID;
+	ns.statusID = info.ID;
+	ns.casterUID = npcUID;
+	ns.until = until;
+	ns.linked = false;
+	npcStatuses.push_back(ns);
+}
+
 void World::UpdateNpcStatuses()
 {
 	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
@@ -352,7 +375,7 @@ void World::UpdateNpcStatuses()
 		foreach_const(st, activeStatuses) {
 			if(st->casterUID == ns.npcUID && st->targetUID == ns.casterUID && st->info && st->info->type == StatusType::TARGET && st->until > localTime) { linked = true; break; }
 		}
-		if(linked && localTime < ns.until && FindNpcActor(ns.npcUID)) { i++; continue; }
+		if((linked || !ns.linked) && localTime < ns.until && FindNpcActor(ns.npcUID)) { i++; continue; }
 		replication->SendRemoveStatusToAll(ns.statusID, ns.npcUID, ns.casterUID);
 		npcStatuses.erase(npcStatuses.begin() + i);
 	}

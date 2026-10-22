@@ -114,6 +114,8 @@ struct World
 
 		bool weaponFired = false;
 		u8 firingCombo = 0;
+		u8 skillStacks = 0;
+		Time skillStacksUntil = Time::ZERO;
 		Time botComboShotAt = Time::ZERO;
 		u8 chargeLevel = 0;
 		i32 weaponState = 0;
@@ -175,8 +177,6 @@ struct World
 		eastl::array<f32,2> heat = { 0, 0 };
 		eastl::array<Time,2> heatLastShot = { Time::ZERO, Time::ZERO };
 		eastl::array<Time,2> overheatUntil = { Time::ZERO, Time::ZERO };
-		i32 heatSent = -1;
-		Time tNextHeatSend = Time::ZERO;
 		bool staminaDirty = false;
 		bool ultDirty = false;
 		eastl::array<f32,3> regenSent = { -1, -1, -1 };
@@ -333,6 +333,9 @@ struct World
 	struct ActorNpc
 	{
 		const ActorUID UID;
+		i32 hp = 0;
+		i32 hpMax = 0;
+		f32 defence = 0;
 		CreatureIndex docID;
 		i32 localID;
 		Faction faction;
@@ -457,6 +460,9 @@ struct World
 		i32 aoeDamage = 0;
 		RemoteIdx zoneRemote = RemoteIdx::INVALID;
 		RemoteIdx bombDoc = RemoteIdx::INVALID;
+		RemoteIdx chainRemote = RemoteIdx::INVALID;
+		i32 chainDamage = 0;
+		bool chained = false;
 		i32 zoneDamage = 0;
 		f32 speed;
 		f32 halfWidth;
@@ -480,6 +486,7 @@ struct World
 		bool homingLockOn = false;
 		i32 homingTarget = -1;
 		eastl::fixed_vector<u32,16,false> hitList;
+		eastl::fixed_vector<ActorUID,4,false> npcHitList;
 	};
 
 	eastl::fixed_vector<Projectile,256,false> projectileList;
@@ -540,6 +547,7 @@ struct World
 		i32 excludeIndex = -1;
 		i32 lastHitIndex = -1;
 		bool chainEnded = false;
+		eastl::fixed_vector<ActorUID,8,false> npcHits;
 		bool casterLocal = false;
 		f32 landZ = 0;
 		vec3 graphStart = vec3(0);
@@ -809,6 +817,9 @@ public:
 	i32 UpgradeSummon(const Player& player, i32 skillID) const;
 	f32 ComboPassOffset(const Player& player, SkillID skillID) const;
 	void RunStanceOut(Player& player, i8 oldStance);
+	void RunWeaponActionStatuses(Player& player, i8 stance);
+	f32 WeaponHeatScale(const Player& player) const;
+	void RecoverWeaponHeat(Player& player, f32 amount);
 	void DropPendingActions(Player& player);
 	const GameXmlContent::SkillUpgrade* LatestUpgradeWith(const Player& player, i32 skillID, bool (*has)(const GameXmlContent::SkillUpgrade&)) const;
 	f32 PlayerSkillDamage(Player& player, SkillID skillID);
@@ -822,6 +833,10 @@ public:
 	bool IsCarrying(const Player& player) const;
 	void ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID);
 	void UpdateNpcStatuses();
+	void TrackNpcSelfStatus(ActorUID npcUID, const StatusInfo& info);
+	bool NpcHittableBy(const ActorNpc& npc, const Player& attacker) const;
+	void DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage);
+	void RemoteHitNpcs(RemoteInst& inst);
 	void StartLevelEvents();
 	void UpdateLevelEvents();
 	void FireLevelEvent(i32 nodeID);
@@ -833,8 +848,8 @@ public:
 	eastl::fixed_vector<LevelEventTimer,128,false> levelEventTimers;
 	u32 nextGroundItemUID = 0xC0000400;
 	bool levelEventsStarted = false;
-	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; };
-	eastl::fixed_vector<NpcStatus,32,false> npcStatuses;
+	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; };
+	eastl::fixed_vector<NpcStatus,128,false> npcStatuses;
 	void ComboBaseCooldown(Player& player);
 	void ToggleOn(Player& player, SkillID skillID, const vec3& castPos);
 	void ToggleOff(Player& player);

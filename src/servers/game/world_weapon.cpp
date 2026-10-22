@@ -3,6 +3,8 @@
 #include "world_common.h"
 #include <mxm/game_content.h>
 
+static const i32 WEAPON_ACTION_MAX_STEP = 9;
+static const f32 WALL_HIT_SEARCH_RADIUS = 300.0f;
 static const f32 WEAPON_PROJECTILE_SPEED = 4000.0f;
 static const f32 WEAPON_MELEE_MAX_RANGE = 600.0f;
 static const f32 PROJECTILE_TARGET_RADIUS = 70.0f;
@@ -54,6 +56,7 @@ void World::PlayerWeaponFire(Player& player)
 		if(player.chargeLevel > 0) ApplyResourceGain(player, ResourceEvent::CHARGED_SHOT);
 		const RemoteIdx swing = SelectWeaponRemote(player, wf);
 		BotWeaponAnimation(player, replication);
+		RunWeaponActionStatuses(player, swingStance);
 		const Remote* swingRemote = GetGameXmlContent().FindRemote(swing);
 		ASSERT(swingRemote);
 		LOG("Shot :: %ls melee swing remote %d (stance %d)", player.name.data(), (i32)swing, (i32)swingStance);
@@ -85,6 +88,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	const bool spawnAtAim = wf.spawnAtAim;
 	const RemoteIdx idx = SelectWeaponRemote(player, wf);
 	BotWeaponAnimation(player, replication);
+	RunWeaponActionStatuses(player, shotStance);
 	const Remote* remote = content.FindRemote(idx);
 	ASSERT(remote);
 	LOG("Shot :: %ls firing remote %d (combo %d charge %d count %d)", player.name.data(), (i32)idx, player.firingCombo, player.chargeLevel, player.shotCount[player.mainCharaID & 1]);
@@ -165,6 +169,12 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	}
 	proj.damage = bomb && remote->attackMultiplier <= 0 ? 0 : (i32)WeaponHitDamage(player, remote);
 	proj.aoeDamage = (i32)WeaponHitDamage(player, bomb && bomb->attackMultiplier > 0 ? bomb : remote);
+	if(bomb && bomb->behaviorType == Remote::BehaviorType::CHAIN) {
+		proj.chainRemote = bomb->ID;
+		proj.chainDamage = (i32)WeaponHitDamage(player, nullptr);
+		proj.aoeRadius = 0;
+		proj.bombDoc = RemoteIdx::INVALID;
+	}
 	if(bomb && bomb->timeEventDelay >= 0) {
 		proj.zoneRemote = bomb->ID;
 		proj.zoneDamage = (i32)WeaponHitDamage(player, nullptr);
@@ -182,14 +192,23 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 		hitInfo.pos = center;
 	}
 	LOG("Explosion :: at (%.0f, %.0f) radius=%.0f", center.x, center.y, radius);
+	const Remote* bombRemote = source && source->bombDoc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(source->bombDoc) : nullptr;
 	i32 mastersHit = 0;
 	foreach(it, players) {
 		if(it->team == owner.team || it->dead || it->untargetable) continue;
 		const vec3 pos = it->body->GetWorldPos();
 		if(fabsf(pos.z - center.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 		if(LagDistToPoint(*it, vec2(center)) > radius + HitRadius(*it) + WEAPON_HIT_TOLERANCE) continue;
-		DamagePlayer(owner, *it, SkillID::INVALID, damage, source ? &hitInfo : nullptr);
+		const f32 falloff = bombRemote ? RemoteDistanceFalloff(*bombRemote, glm::length(vec2(pos) - vec2(center))) : 1.0f;
+		DamagePlayer(owner, *it, SkillID::INVALID, (i32)(damage * falloff), source ? &hitInfo : nullptr);
 		mastersHit++;
+	}
+	foreach(npc, actorNpcList) {
+		if(!NpcHittableBy(*npc, owner)) continue;
+		const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc->docID);
+		const f32 d = glm::length(vec2(npc->pos) - vec2(center));
+		if(d > radius + (info ? info->colliderRadius : 0.0f)) continue;
+		DamageNpc(owner, *npc, SkillID::INVALID, (i32)(damage * (bombRemote ? RemoteDistanceFalloff(*bombRemote, d) : 1.0f)));
 	}
 	if(mastersHit >= 2 && owner.mana >= 0) {
 		if(const ActiveStatus* st = FindPassiveOfType(owner, StatusType::ARTILLERY)) {
@@ -280,9 +299,27 @@ void World::UpdateProjectiles(f32 delta)
 			if(activationTarget) {
 				const vec3 hitPos = vec3(vec2(activationTarget->body->GetWorldPos()), proj->pos.z);
 				if(proj->remoteID != 0) replication->SendRemoteActivatedToAll(proj->remoteID, proj->seedOwnerHd, ClientHandle::INVALID, activationTarget->Main().UID, activationCost, hitPos);
+				if(proj->chainRemote != RemoteIdx::INVALID && !proj->chained) {
+					proj->chained = true;
+					RemoteInst* chain = SpawnRemote(proj->ownerIndex, proj->chainRemote, hitPos, proj->dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, proj->chainDamage, true, nullptr, proj->nodeName, false, false, true);
+					if(chain) chain->excludeIndex = (i32)activationTarget->index;
+				}
 				proj->hitsLeft--;
 				if(proj->hitsLeft <= 0 || proj->penetrationLeft <= 0) {
 					proj->pos = hitPos;
+					destroyed = true;
+				}
+			}
+			foreach(npc, actorNpcList) {
+				if(destroyed || proj->npcHitList.full() || proj->damage <= 0 || !NpcHittableBy(*npc, owner)) continue;
+				if(eastl::find(proj->npcHitList.begin(), proj->npcHitList.end(), npc->UID) != proj->npcHitList.end()) continue;
+				const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc->docID);
+				if(SegmentPointDist2D(from, to, vec2(npc->pos)) > proj->halfWidth + (info ? info->colliderRadius : 0.0f)) continue;
+				proj->npcHitList.push_back(npc->UID);
+				DamageNpc(owner, *npc, SkillID::INVALID, proj->damage);
+				proj->hitsLeft--;
+				if(proj->hitsLeft <= 0) {
+					proj->pos = vec3(vec2(npc->pos), proj->pos.z);
 					destroyed = true;
 				}
 			}
@@ -292,7 +329,17 @@ void World::UpdateProjectiles(f32 delta)
 			proj->pos += vec3(proj->dir * step, 0);
 			proj->travelled += step;
 			destroyed = hitWall || proj->travelled >= proj->range - 0.01f;
-			if(hitWall) LOG("Shot :: projectile stopped by a wall after %.0f", proj->travelled);
+			if(hitWall) {
+				LOG("Shot :: projectile stopped by a wall after %.0f", proj->travelled);
+				ActorNpc* wallNpc = nullptr;
+				f32 best = WALL_HIT_SEARCH_RADIUS;
+				foreach(npc, actorNpcList) {
+					if(!npc->wall || !NpcHittableBy(*npc, owner)) continue;
+					const f32 d = glm::length(vec2(npc->pos) - vec2(proj->pos));
+					if(d < best) { best = d; wallNpc = &*npc; }
+				}
+				if(wallNpc && proj->damage > 0) DamageNpc(owner, *wallNpc, SkillID::INVALID, proj->damage);
+			}
 		}
 
 		if(destroyed) {
@@ -392,18 +439,9 @@ void World::UpdateWeaponHeat(Player& player)
 		player.overheatUntil[m] = Time::ZERO;
 		player.heat[m] = h->overheatResetGauge;
 		player.heatLastShot[m] = TimeAdd(localTime, TimeMsToTime(-h->autoRegenDelay * 1000.0));
-		replication->SendGaugeToAll(player.userID, 1, false, 0, (u16)player.heat[m], (u16)h->maxGauge);
-		player.heatSent = (i32)player.heat[m];
+		replication->SendGaugeToAll(player.userID, 1, false, 0, (u16)h->maxGauge, (u16)h->maxGauge);
 		LOG("Overheat :: %ls weapon cooled down", player.name.data());
 	}
-
-	if(localTime < player.tNextHeatSend) return;
-	player.tNextHeatSend = TimeAdd(localTime, TimeMsToTime(100));
-	const i32 cur = (i32)CurrentHeat(player, *h, localTime);
-	if(cur == player.heatSent) return;
-	player.heatSent = cur;
-	const bool overheated = player.overheatUntil[m] != Time::ZERO;
-	replication->SendGaugeToAll(player.userID, 0, overheated, 0, (u16)cur, (u16)h->maxGauge);
 }
 
 void World::OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize)
@@ -413,7 +451,7 @@ void World::OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& d
 		LOG("Blocked :: %ls shot ignored (attack blocked by a status)", player.name.data());
 		return;
 	}
-	if(!WeaponHeatShot(player, localTime, replication)) {
+	if(!WeaponHeatShot(player, localTime, replication, WeaponHeatScale(player))) {
 		LOG("Overheat :: %ls shot ignored (weapon overheated)", player.name.data());
 		return;
 	}
@@ -533,4 +571,40 @@ f32 World::WeaponHitDamage(const Player& player, const Remote* remote) const
 	ASSERT(attack > 0);
 	const f32 mult = remote && remote->attackMultiplier > 0 ? remote->attackMultiplier : 1.0f;
 	return attack * mult * MAX(1.0f + StatusModMulSum(player, StatusMod::ATTACK) / 100.0f, 0.0f);
+}
+
+void World::RunWeaponActionStatuses(Player& player, i8 stance)
+{
+	const auto& content = GetGameXmlContent();
+	const i32 step = player.chargeLevel > 0 ? 1 : (i32)player.firingCombo;
+	const ActionStateID state = (ActionStateID)((i32)ActionStateID::ATTACK_BEHAVIORSTATE + MIN(step, WEAPON_ACTION_MAX_STEP));
+	const GameXmlContent::Action* action = content.FindSkillAction(player.Main().classType, state, stance);
+	if(!action) return;
+	foreach_const(cmd, action->commands) {
+		if(cmd->type != ActionCommand::Type::STATUS || cmd->status.statusIndex == 0 || cmd->status.removeAtEnd || cmd->status.remove) continue;
+		const auto preset = cmd->status.targetPreset;
+		if(preset != ActionCommand::TargetPreset::SELF_FFF && preset != ActionCommand::TargetPreset::SELF_TFF) continue;
+		if(!player.dead) ApplyStatus(player, player, cmd->status.statusIndex);
+	}
+}
+
+f32 World::WeaponHeatScale(const Player& player) const
+{
+	f32 scale = 1.0f;
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex != player.index || !it->info || it->info->type != StatusType::WEAPON_GAUGE || it->until <= localTime) continue;
+		if(it->info->paramRatio > 0) scale *= it->info->paramRatio;
+	}
+	return scale;
+}
+
+void World::RecoverWeaponHeat(Player& player, f32 amount)
+{
+	const WeaponHeatInfo* h = ActiveWeaponHeat(player);
+	if(!h || amount <= 0) return;
+	const u32 m = player.mainCharaID & 1;
+	player.heat[m] = MAX(CurrentHeat(player, *h, localTime) - amount, 0.0f);
+	player.heatLastShot[m] = localTime;
+	if(player.overheatUntil[m] != Time::ZERO && player.heat[m] < h->maxGauge) player.overheatUntil[m] = localTime;
+	LOG("Overheat :: %ls weapon gauge recovered %.0f", player.name.data(), amount);
 }

@@ -43,6 +43,16 @@ static inline f32 SkillMoveDuration(const GameXmlContent& content, ClassType cls
 	return action.seqLength;
 }
 
+static inline f32 RemoteDistanceFalloff(const Remote& remote, f32 dist)
+{
+	if(remote.damageDistStart <= 0 || remote.boundType != Remote::BoundType::E_BOUND_SPHERE) return 1.0f;
+	const f32 inner = remote.damageDistStart * 0.5f;
+	const f32 outer = remote.boundSize[0] * 0.5f;
+	if(dist <= inner || outer <= inner) return 1.0f;
+	const f32 edge = remote.damageOnBound / 100.0f;
+	return MAX(edge, 1.0f - (1.0f - edge) * (dist - inner) / (outer - inner));
+}
+
 static inline f32 SkillDamage(SkillID skillID)
 {
 	const auto& content = GetGameXmlContent();
@@ -76,20 +86,19 @@ static inline f32 CurrentHeat(const World::Player& player, const WeaponHeatInfo&
 	return MIN(MAX(player.heat[m] + h.autoRegen * (idle - h.autoRegenDelay) / h.autoRegenInterval, 0.0f), h.maxGauge);
 }
 
-static inline bool WeaponHeatShot(World::Player& player, Time now, Replication* replication)
+static inline bool WeaponHeatShot(World::Player& player, Time now, Replication* replication, f32 consumptionScale)
 {
 	const WeaponHeatInfo* h = ActiveWeaponHeat(player);
 	if(!h) return true;
 	const u32 m = player.mainCharaID & 1;
 	if(player.overheatUntil[m] != Time::ZERO) return false;
 
-	player.heat[m] = CurrentHeat(player, *h, now) + h->consumption;
+	player.heat[m] = CurrentHeat(player, *h, now) + h->consumption * consumptionScale;
 	player.heatLastShot[m] = now;
 	if(player.heat[m] >= h->maxGauge) {
 		player.heat[m] = h->maxGauge;
 		player.overheatUntil[m] = TimeAdd(now, TimeMsToTime(h->overheatDuration * 1000.0));
 		replication->SendGaugeToAll(player.userID, 1, true, h->overheatDuration, (u16)h->maxGauge, (u16)h->maxGauge);
-		player.heatSent = (i32)h->maxGauge;
 		LOG("Overheat :: %ls locked %.1fs", player.name.data(), h->overheatDuration);
 	}
 	return true;
