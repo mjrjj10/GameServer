@@ -804,6 +804,11 @@ public:
 	f32 PlayerSkillConsume(const Player& player, i32 skillID, i32 index) const;
 	const GameXmlContent::CostLevel* UpgradeCastMods(Player& player, SkillID skillID, const GameXmlContent::CostLevel* costLevel);
 	void ReleaseCast(Player& player);
+	bool IsCarrying(const Player& player) const;
+	void ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID);
+	void UpdateNpcStatuses();
+	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; };
+	eastl::fixed_vector<NpcStatus,32,false> npcStatuses;
 	void ComboBaseCooldown(Player& player);
 	void ToggleOn(Player& player, SkillID skillID, const vec3& castPos);
 	void ToggleOff(Player& player);

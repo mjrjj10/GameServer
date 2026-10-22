@@ -193,7 +193,9 @@ void World::UpdateShowcase()
 	if(showcase.comboSkill != 0 && localTime >= showcase.comboAt) {
 		Player& comboCaster = players[showcase.comboCaster];
 		LOG("Showcase :: combo skill=%d", showcase.comboSkill);
-		if(!comboCaster.dead) PlayerCastSkill(comboCaster, SkillID(showcase.comboSkill), showcase.comboPos, Slice<const ActorUID>(&showcase.comboTarget, showcase.comboTarget != ActorUID::INVALID ? 1 : 0), 0);
+		const GameXmlContent::SkillInput* comboIn = GetGameXmlContent().FindSkillInput(showcase.comboSkill);
+		const vec3 comboPos = comboIn && comboIn->petCaster && comboIn->needsClick && comboCaster.body && IsCarrying(comboCaster) ? comboCaster.body->GetWorldPos() : showcase.comboPos;
+		if(!comboCaster.dead) PlayerCastSkill(comboCaster, SkillID(showcase.comboSkill), comboPos, Slice<const ActorUID>(&showcase.comboTarget, showcase.comboTarget != ActorUID::INVALID ? 1 : 0), 0);
 		const i32 nextCombo = Config().DevValidate && showcase.comboDepth < VALIDATE_COMBO_MAX_DEPTH ? ComboSkillFor(comboCaster, showcase.comboSkill) : 0;
 		if(nextCombo != 0 && nextCombo != showcase.comboSkill && !comboCaster.dead) {
 			showcase.comboSkill = nextCombo;

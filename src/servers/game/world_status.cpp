@@ -601,7 +601,10 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			LOG("Status :: %ls released from %d by %d", target.name.data(), it->statusID, statusID);
 		}
 	}
-	if(info && info->casterStatus != 0 && info->casterStatus != statusID && !caster.dead && !applyingCasterStatus) {
+	const ActorUID npcCaster = statusCasterOverride != ActorUID::INVALID && FindNpcActor(statusCasterOverride) ? statusCasterOverride : ActorUID::INVALID;
+	i32 npcCasterStatus = 0;
+	if(info && info->casterStatus != 0 && info->casterStatus != statusID && npcCaster != ActorUID::INVALID) npcCasterStatus = info->casterStatus;
+	else if(info && info->casterStatus != 0 && info->casterStatus != statusID && !caster.dead && !applyingCasterStatus) {
 		bool refresh = false;
 		foreach_const(it, activeStatuses) if(it->statusID == statusID && it->targetIndex == target.index) { refresh = true; break; }
 		if(!refresh) {
@@ -819,6 +822,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	if(info && (info->type == StatusType::AIRBORNE || info->type == StatusType::FLY) && info->heightRatio > 0) sentTo.z = from.z + STATUS_LIFT_BASE_HEIGHT * info->heightRatio * ccScale;
 	if(info && (info->attachToCaster || StatusGraphAnchorOnly(info))) sentTo = vec3(0);
 	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, sentTo, StatusGraphTimed(info) ? graphDuration : 0.0f, 1, ccScale, nominalDist, StatusSendsGraph(info));
+	if(npcCasterStatus != 0) ApplyNpcOwnerStatus(npcCaster, target, npcCasterStatus);
 	if(info && info->blockSkill && caster.team != target.team && !target.dead) InterruptSkills(target);
 	const i32 guard = DefeatGuardStatus(info);
 	if(guard != 0 && caster.team != target.team && !target.dead) {

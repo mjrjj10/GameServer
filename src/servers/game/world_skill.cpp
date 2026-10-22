@@ -328,6 +328,44 @@ void World::ComboBaseCooldown(Player& player)
 	replication->SendCooltimeReset(player.clientHd, player.Main().UID, Slice<const i32>(&id, 1), ms, ms);
 }
 
+void World::ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID)
+{
+	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
+	const f32 duration = info && info->durationSec > 0 ? info->durationSec : 0.0f;
+	const vec3 pos = carrier.body->GetWorldPos();
+	replication->SendAddStatusToAll(statusID, npcUID, carrier.Main().UID, duration, pos, pos, 0, 1, 1.0f, -1.0f, false, false);
+	LOG("Status :: summon %u carries %ls status=%d duration=%.2f", (u32)npcUID, carrier.name.data(), statusID, duration);
+	if(npcStatuses.full()) return;
+	NpcStatus ns;
+	ns.npcUID = npcUID;
+	ns.statusID = statusID;
+	ns.casterUID = carrier.Main().UID;
+	ns.until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
+	npcStatuses.push_back(ns);
+}
+
+void World::UpdateNpcStatuses()
+{
+	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
+		const NpcStatus& ns = npcStatuses[i];
+		bool linked = false;
+		foreach_const(st, activeStatuses) {
+			if(st->casterUID == ns.npcUID && st->targetUID == ns.casterUID && st->info && st->info->type == StatusType::TARGET && st->until > localTime) { linked = true; break; }
+		}
+		if(linked && localTime < ns.until && FindNpcActor(ns.npcUID)) { i++; continue; }
+		replication->SendRemoveStatusToAll(ns.statusID, ns.npcUID, ns.casterUID);
+		npcStatuses.erase(npcStatuses.begin() + i);
+	}
+}
+
+bool World::IsCarrying(const Player& player) const
+{
+	foreach_const(st, activeStatuses) {
+		if(st->casterIndex == player.index && st->info && st->info->type == StatusType::TARGET && st->until > localTime) return true;
+	}
+	return false;
+}
+
 void World::ReleaseCast(Player& player)
 {
 	const Player::Casting c = player.casting;
@@ -392,8 +430,11 @@ void World::UpdateCasts()
 		if(it->comboAutoAt != Time::ZERO && localTime >= it->comboAutoAt) {
 			it->comboAutoAt = Time::ZERO;
 			if(it->comboSlot >= 0 && it->comboSkill != SkillID::INVALID && !it->dead) {
-				LOG("Combo :: %ls auto-cast %d", it->name.data(), (i32)it->comboSkill);
-				PlayerCastSkill(*it, it->comboSkill, it->comboCastPos, Slice<const ActorUID>(), 0);
+				const GameXmlContent::SkillInput* comboIn = GetGameXmlContent().FindSkillInput((i32)it->comboSkill);
+				const bool petToCaster = it->clientHd == ClientHandle::INVALID && comboIn && comboIn->petCaster && comboIn->needsClick && IsCarrying(*it);
+				const vec3 comboPos = petToCaster ? it->body->GetWorldPos() : it->comboCastPos;
+				LOG("Combo :: %ls auto-cast %d at (%.0f, %.0f)", it->name.data(), (i32)it->comboSkill, comboPos.x, comboPos.y);
+				PlayerCastSkill(*it, it->comboSkill, comboPos, Slice<const ActorUID>(), 0);
 			}
 		}
 		if(it->comboSlot >= 0 && localTime >= it->comboUntil) {

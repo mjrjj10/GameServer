@@ -1347,6 +1347,26 @@ void Replication::SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec
 	}
 }
 
+void Replication::SendNpcTurnToAll(ActorUID actorUID, f32 worldYaw)
+{
+	f32 deciDeg = (worldYaw * 180.0f / PI + 90.0f) * 10.0f;
+	while(deciDeg >= 3600.0f) deciDeg -= 3600.0f;
+	while(deciDeg < 0.0f) deciDeg += 3600.0f;
+	const i16 yaw = (i16)deciDeg;
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+		PacketWriter<Sv::SN_AIMonsterSyncTurn,32> packet;
+		packet.Write<u8>(0x12);
+		packet.Write<u32>((u32)localID);
+		packet.Write<i16>(yaw);
+		packet.Write<i16>(yaw);
+		SendPacket(clientHd, packet);
+	}
+}
+
 void Replication::SendRemoteActivatedToAll(u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, ActorUID targetUID, u32 penetration, const vec3& pos)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
@@ -1821,25 +1841,33 @@ void Replication::SendInteractionExecuteToAll(ActorUID objectUID, ActorUID targe
 	}
 }
 
-void Replication::SendNpcBehaviorToAll(ActorUID actorUID, ActionStateID action, const vec3& pos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID)
+void Replication::SendNpcBehaviorToAll(ActorUID actorUID, ActionStateID action, const vec3& pos, const vec3& targetPos, ActorUID targetUID, f32 moveSpeed)
 {
-	const float3 dir = v2f(vec3(cosf(worldYaw), sinf(worldYaw), 0));
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
 		const LocalActorID targetLocal = targetUID != ActorUID::INVALID ? GetLocalActorID(clientHd, targetUID) : LocalActorID::INVALID;
-		PacketWriter<Sv::SN_AiSyncBehaviorMotion,128> packet;
+		if(targetLocal != LocalActorID::INVALID) {
+			Sv::SN_AiSetTarget target;
+			target.entityID = (u32)localID;
+			target.targetEntityID = (u32)targetLocal;
+			SendPacketData<Sv::SN_AiSetTarget>(clientHd, sizeof(target), &target);
+		}
+		else if(glm::length(vec2(targetPos) - vec2(pos)) > 1.0f) {
+			Sv::SN_AiSyncMonsterSkillTarget target;
+			target.entityID = (u32)localID;
+			target.targetID = 0;
+			target.targetPos = v2f(targetPos);
+			SendPacket(clientHd, target);
+		}
+		PacketWriter<Sv::SN_AiSetActionState,32> packet;
+		packet.Write<u8>(0x04);
 		packet.Write<u32>((u32)localID);
-		packet.Write<u32>((u32)action);
-		packet.Write<u8>(0);
+		packet.Write<i16>((i16)action);
+		packet.Write<u16>((u16)MIN(moveSpeed * 5.0f, 65535.0f));
 		packet.Write<float3>(v2f(pos));
-		packet.Write<float3>(dir);
-		packet.Write<float3>(dir);
-		packet.Write<float3>(v2f(targetPos));
-		packet.Write<u32>(1);
-		packet.Write<u32>(targetLocal != LocalActorID::INVALID ? (u32)targetLocal : 0);
 		SendPacket(clientHd, packet);
 	}
 }
@@ -2566,7 +2594,7 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 		packet.Write<u8>(actor.dirToNearPC);
 		packet.Write<i32>(actor.wanderDist);
 		packet.Write<i32>(actor.tagID);
-		packet.Write<Faction>(actor.faction);
+		packet.Write<Faction>(actor.ownerUID != ActorUID::INVALID && actor.faction != Faction::DYNAMIC ? (Faction)(3 + (actor.faction == Faction::BLUE ? 1 : 0)) : actor.faction);
 		packet.Write<ClassType>(ClassType::NONE);
 		packet.Write<SkinIndex>(SkinIndex::DEFAULT);
 		packet.Write<i32>(actor.seed);

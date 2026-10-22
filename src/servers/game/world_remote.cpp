@@ -357,7 +357,8 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	}
 
 	inst.lastHitIndex = (i32)target.index;
-	if(enemy && remote.onHitOwnerStatus != 0 && !owner.dead) {
+	const bool npcOwnerStatus = enemy && remote.onHitOwnerStatus != 0 && inst.sourceUID != ActorUID::INVALID && FindNpcActor(inst.sourceUID);
+	if(enemy && remote.onHitOwnerStatus != 0 && !owner.dead && !npcOwnerStatus) {
 		const ActorUID prevCaster = statusCasterOverride;
 		statusCasterOverride = target.Main().UID;
 		ApplyStatus(owner, owner, remote.onHitOwnerStatus);
@@ -393,6 +394,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 			}
 		}
 	}
+	if(npcOwnerStatus) ApplyNpcOwnerStatus(inst.sourceUID, target, remote.onHitOwnerStatus);
 
 	if(!remote.onActivate.empty() || !remote.onHitCharacter.empty()) {
 		const RemoteInst copy = inst;
@@ -638,6 +640,13 @@ void World::SpawnPendingRemotes()
 			else if(glm::length(vec2(pr->castPos)) > 1.0f) pos = vec3(vec2(pr->castPos), owner.body->GetWorldPos().z);
 		}
 
+		if(const SummonFireRule* summonFire = remote && pr->sourceUID != ActorUID::INVALID ? FindSummonFireRule(remote->ID) : nullptr) {
+			if(const ActorNpc* source = FindNpcActor(pr->sourceUID)) {
+				const vec2 toOwner = vec2(owner.body->GetWorldPos()) - vec2(source->pos);
+				const vec2 back = glm::length(toOwner) > 1.0f ? glm::normalize(toOwner) : -dir;
+				pos = vec3(vec2(source->pos) + back * summonFire->towardOwner, source->pos.z + summonFire->up);
+			}
+		}
 		const ActionCommand::TargetPreset firePreset = (ActionCommand::TargetPreset)pr->preset;
 		const bool fromCaster = !atAimedPoint && !pr->atTarget && pr->sourceUID == ActorUID::INVALID && firePreset != ActionCommand::TargetPreset::CURRENT_FFF &&
 			firePreset != ActionCommand::TargetPreset::LAST_CHILD_FFF && firePreset != ActionCommand::TargetPreset::LAST_CHILD_TFF;

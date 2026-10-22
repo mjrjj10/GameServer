@@ -120,6 +120,25 @@ static inline const FireNodeRule* FindFireNodeRule(RemoteIdx remote)
 	return nullptr;
 }
 
+struct SummonFireRule
+{
+	RemoteIdx remote;
+	f32 towardOwner;
+	f32 up;
+};
+
+static const SummonFireRule SUMMON_FIRE_RULES[] = {
+	{ RemoteIdx(1440220010), 643.0f, 635.0f },
+};
+
+static inline const SummonFireRule* FindSummonFireRule(RemoteIdx remote)
+{
+	for(const SummonFireRule& rule : SUMMON_FIRE_RULES) {
+		if(rule.remote == remote) return &rule;
+	}
+	return nullptr;
+}
+
 struct SummonAttackRule
 {
 	const char* summonClass;

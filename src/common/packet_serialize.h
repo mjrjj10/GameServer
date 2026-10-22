@@ -2770,6 +2770,14 @@ inline const char* PacketSerialize<Sv::SN_AIMonsterSyncMove>(const void* packetD
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_AIMonsterSyncTurn>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	SER("SN_AIMonsterSyncTurn(%d, %d) :: {}", Sv::SN_AIMonsterSyncTurn::NET_ID, packetSize);
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SA_RestartPvpEntryLeave>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();
@@ -2896,11 +2904,12 @@ inline const char* PacketSerialize<Sv::SN_AiSetActionState>(const void* packetDa
 	SER_BEGIN();
 	ConstBuffer buff(packetData, packetSize);
 	SER("SN_AiSetActionState(%d, %d) :: {", Sv::SN_AiSetActionState::NET_ID, packetSize);
-	SER("	excludedFieldBits=%u", buff.Read<u8>());
+	const u8 excluded = buff.Read<u8>();
+	SER("	excludedFieldBits=%u", excluded);
 	SER("	entityID=0x%08x", buff.Read<u32>());
 	SER("	motionType=%d", buff.Read<i16>());
-	SER("	lowerBodyYaw=%d", buff.Read<i16>());
-	SER("	moveSpeed=%u", buff.Read<u16>());
+	if(!(excluded & 0x04)) SER("	lowerBodyYaw=%d", buff.Read<i16>());
+	if(!(excluded & 0x02)) SER("	moveSpeed=%u", buff.Read<u16>());
 	SER("	pos=%s", PS::ToStr(buff.Read<float3>()));
 	SER("}");
 	return str.data();

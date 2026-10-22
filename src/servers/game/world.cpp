@@ -208,6 +208,7 @@ void World::Update(Time localTime_)
 	UpdateUltimateGauges((f32)tdelta);
 	UpdateStatuses();
 	UpdateHideVisibility();
+	UpdateNpcStatuses();
 	UpdateToggles();
 	UpdateChases();
 	UpdateBattleStates();

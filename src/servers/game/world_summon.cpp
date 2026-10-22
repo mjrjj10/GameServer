@@ -162,7 +162,11 @@ void World::ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos)
 	const vec3 goal = vec3(vec2(pos), npc->pos.z);
 	const f32 dist = glm::length(vec2(goal) - vec2(npc->pos));
 	LOG("Summon :: %ls child SKILL_%d on its creature=%d, flies %.0f in %.2fs", owner.name.data(), child, (i32)npc->docID, dist, travel);
-	if(dist > 1.0f) replication->SendAiMoveTargetToAll(npc->UID, goal, (u32)ActionCommand::MovePreset::TARGET_POS);
+	if(dist > 1.0f) {
+		replication->SendAiMoveTargetToAll(npc->UID, goal, (u32)ActionCommand::MovePreset::TARGET_POS);
+		npc->rot.z = atan2f(goal.y - npc->pos.y, goal.x - npc->pos.x);
+		replication->SendNpcTurnToAll(npc->UID, npc->rot.z);
+	}
 	foreach(st, activeStatuses) {
 		if(st->casterIndex != owner.index || !st->info || st->info->type != StatusType::TARGET || localTime >= st->until) continue;
 		Player& carried = players[st->targetIndex];
@@ -183,7 +187,8 @@ void World::ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos)
 void World::RelayWarp(ActorNpc& npc, const vec3& to)
 {
 	LOG("Summon :: relay robot warps from (%.0f, %.0f) to (%.0f, %.0f)", npc.pos.x, npc.pos.y, to.x, to.y);
-	replication->SendNpcBehaviorToAll(npc.UID, ActionStateID::EXTRAMOTION_2_BEHAVIORSTATE, npc.pos, npc.rot.z, to, ActorUID::INVALID);
+	const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc.docID);
+	replication->SendNpcBehaviorToAll(npc.UID, ActionStateID::EXTRAMOTION_2_BEHAVIORSTATE, npc.pos, to, ActorUID::INVALID, info ? info->moveSpeed : 0.0f);
 	npc.pos = to;
 }
 
@@ -275,7 +280,8 @@ void World::UpdateSummonAi(f32 delta)
 	foreach(it, actorNpcList) {
 		ActorNpc& npc = *it;
 		if(npc.pendingMotion != ActionStateID::INVALID && localTime >= npc.motionAt) {
-			replication->SendNpcBehaviorToAll(npc.UID, npc.pendingMotion, npc.pos, npc.motionYaw, npc.motionTarget, npc.motionTargetUID);
+			const SummonInfo* motionInfo = content.FindSummon((i32)npc.docID);
+			replication->SendNpcBehaviorToAll(npc.UID, npc.pendingMotion, npc.pos, npc.motionTarget, npc.motionTargetUID, motionInfo ? motionInfo->moveSpeed : 0.0f);
 			npc.pendingMotion = ActionStateID::INVALID;
 		}
 		if(npc.queuedState >= 0 && localTime >= npc.queuedStateAt && npc.pendingMotion == ActionStateID::INVALID) {
