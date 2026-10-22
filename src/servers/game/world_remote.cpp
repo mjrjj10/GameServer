@@ -9,6 +9,7 @@ static const f32 REPEAT_HIT_REDUCTION = 0.1f;
 static const f32 REPEAT_HIT_REDUCTION_CAP = 0.6f;
 static const f32 ORBIT_RADIUS = 150.0f;
 static const i32 BEZIER_ARC_SAMPLES = 24;
+static const f32 REMOTE_DESTROY_CHILD_DELAY = 0.05f;
 
 static bool RemoteCreateSendsEntity(ActionCommand::TargetPreset preset, Remote::BehaviorType behavior)
 {
@@ -166,13 +167,10 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 			targetPos.z = aimPos->z;
 		}
 		const bool plainStaticBox = inst.speed <= 0 && remote->boundType == Remote::BoundType::E_BOUND_BOX && remote->angle <= 0;
-		const bool chained = remote->destroyCreateRemote != RemoteIdx::INVALID || !remote->onDestroy.empty() || !remote->onTime.empty() || !remote->onActivate.empty();
-		const bool flip = plainStaticBox && (chained || nodeName == 0);
-		const f32 sendYaw = atan2f(dir.y, dir.x) + (flip ? PI : 0.0f);
+		const f32 sendYaw = atan2f(dir.y, dir.x);
 		vec3 sendPos = pos - vec3(0, 0, remote->offsetZ);
 		const bool atAimedPoint = aimPos && glm::length(vec2(*aimPos)) > 1.0f && glm::length(vec2(pos) - vec2(*aimPos)) < 1.0f;
-		if(plainStaticBox && !flip && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY), 0);
-		else if(plainStaticBox && flip && !atAimedPoint) sendPos += vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY), 0);
+		if(plainStaticBox && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY), 0);
 		if(remoteTargetEntityOverride != ActorUID::INVALID) targetPos = pos;
 		replication->SendRemoteCreateToAll(remoteParentOverride != ActorUID::INVALID ? remoteParentOverride : players[ownerIndex].Main().UID, seed, sendIdx, remoteSendFromSet ? remoteSendFrom : sendPos, sendYaw, targetPos,
 			remoteTargetEntityOverride != ActorUID::INVALID ? remoteTargetEntityOverride : (targetMaster ? target : ActorUID::INVALID), Config().DevNoFireNode ? GetGameXmlContent().GetNodeName(0) : GetGameXmlContent().GetNodeName(nodeName), casterCreatesLocally ? players[ownerIndex].clientHd : ClientHandle::INVALID);
@@ -551,12 +549,13 @@ void World::UpdateRemotes(f32 delta)
 			}
 		}
 
+		if(!destroyed && inst.aniEndAt != Time::ZERO && localTime >= inst.aniEndAt) destroyed = true;
 		if(!destroyed && inst.timeEventActive && localTime >= inst.nextTimeEvent) RunRemoteTimeEvent(inst, elapsed);
 
 		if(!destroyed) {
 			if(remote.behaviorType == Remote::BehaviorType::CHAIN) destroyed = UpdateChainRemote(inst);
 			else if(attached) {
-				ApplyAttachedRemote(inst, instOwner);
+				if(remote.lifeTime <= 0 || elapsed < remote.lifeTime) ApplyAttachedRemote(inst, instOwner);
 				if(remote.behaviorType == Remote::BehaviorType::ORBIT && inst.hitsLeft <= 0) destroyed = true;
 			}
 			else switch(remote.behaviorType) {
@@ -569,8 +568,9 @@ void World::UpdateRemotes(f32 delta)
 			}
 		}
 
-		if(!destroyed && remote.lifeTime > 0 && elapsed >= remote.lifeTime) destroyed = true;
-		if(!destroyed && remote.lifeTime <= 0 && inst.speed <= 0 && inst.areaDone) destroyed = true;
+		const f32 destroyDelay = inst.speed <= 0 && (remote.destroyCreateRemote != RemoteIdx::INVALID || !remote.onDestroy.empty()) ? REMOTE_DESTROY_CHILD_DELAY : 0.0f;
+		if(!destroyed && remote.lifeTime > 0 && elapsed >= remote.lifeTime + destroyDelay) destroyed = true;
+		if(!destroyed && remote.lifeTime <= 0 && inst.speed <= 0 && inst.areaDone && elapsed >= destroyDelay) destroyed = true;
 
 		FlushRemoteActivation();
 		if(destroyed && inst.speed > 0) ShowcaseOnRemoteEnd(inst);
@@ -661,6 +661,10 @@ void World::SpawnPendingRemotes()
 				remoteSendFrom = owner.body->GetWorldPos();
 				remoteSendFromSet = true;
 			}
+			else if(fromCaster && remote && remote->maxSpeed > 0 && offsetY != 0 && pr->offsetFront == 0 && pr->offsetSide == 0) {
+				remoteSendFrom = pos - vec3(dir * offsetY, remote->offsetZ);
+				remoteSendFromSet = true;
+			}
 			spawnCostLevel = pr->costLevel;
 			remoteSendIdxOverride = pr->sendIdx;
 			RemoteInst* spawned = SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, false, pr->stopAtTarget, false, !remote || RemoteCreateSendsEntity((ActionCommand::TargetPreset)pr->preset, remote->behaviorType));
@@ -673,6 +677,7 @@ void World::SpawnPendingRemotes()
 				spawned->sourceUID = pr->sourceUID;
 				spawned->costLevel = pr->costLevel;
 				spawned->centeredBox = atAimedPoint;
+				spawned->aniEndAt = pr->aniEndAt;
 				const f32 nodeForward = atAimedPoint || fireNode ? 0 : WeaponNodeForward(GetGameXmlContent(), owner.Main().classType, pr->skillID, *spawned->remote, pr->nodeName);
 				if(nodeForward > 0) {
 					spawned->pos += vec3(dir * nodeForward, 0);
@@ -881,7 +886,7 @@ bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
 			RemoteApplyArea(inst);
 		}
 	}
-	else if(remote.lifeTime > 0 && inst.hitsLeft > 0) {
+	else if(remote.lifeTime > 0 && inst.hitsLeft > 0 && elapsed < remote.lifeTime) {
 		RemoteApplyArea(inst);
 	}
 	if(inst.hitsLeft <= 0 && remote.lifeTime > 0) {

@@ -202,6 +202,7 @@ enum class StatusType: u8
 	SUICIDE,
 	SUPERARMOR,
 	TARGET,
+	TOGGLE,
 	UNDEAD,
 	UNSHAKABLE,
 	WEAK_ON_CRITICAL,
@@ -225,6 +226,7 @@ struct StatusInfo
 	f32 heightRatio = 0;
 	f32 lyingTime = 0;
 	f32 dotDamage = 0;
+	bool attachToCaster = false;
 	f32 drainMultiplier = 0;
 	i32 skillIndex = 0;
 	f32 intervalSec = 0;

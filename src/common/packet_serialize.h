@@ -2865,6 +2865,32 @@ inline const char* PacketSerialize<Sv::SN_AiSetTarget>(const void* packetData, c
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_AiSyncMonsterSkillTarget>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_AiSyncMonsterSkillTarget(%d, %d) :: {", Sv::SN_AiSyncMonsterSkillTarget::NET_ID, packetSize);
+	SER("	entityID=0x%08x", buff.Read<u32>());
+	SER("	targetID=0x%08x", buff.Read<u32>());
+	SER("	targetPos=%s", PS::ToStr(buff.Read<float3>()));
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_AiSetMovetargetpos>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_AiSetMovetargetpos(%d, %d) :: {", Sv::SN_AiSetMovetargetpos::NET_ID, packetSize);
+	SER("	entityID=0x%08x", buff.Read<u32>());
+	SER("	movePresetType=%u", buff.Read<u32>());
+	SER("	moveTargetPos=%s", PS::ToStr(buff.Read<float3>()));
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_AiSetActionState>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

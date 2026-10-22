@@ -416,7 +416,7 @@ void GameXmlContent::LoadAllSkills()
 			pCast->QueryFloatAttribute("_CastTime", &sc.time);
 			pCast->QueryBoolAttribute("_InterruptByMove", &sc.interruptByMove);
 			sc.action = castAction ? ActionStateFromString(castAction) : ActionStateID::INVALID;
-			if(castType && sc.action != ActionStateID::INVALID && sc.time > 0) skillCast[skillID] = sc;
+			if(castType && sc.time > 0 && (sc.action != ActionStateID::INVALID || sc.type == SkillCast::LIMIT)) skillCast[skillID] = sc;
 			if(type == SkillType::TOGGLE && skill.action == ActionStateID::INVALID) skill.action = sc.action;
 		}
 		if(type == SkillType::TOGGLE) {
@@ -2291,6 +2291,7 @@ StatusType StatusTypeFromString(const char* str)
 		"STATUS_TYPE_SUICIDE",
 		"STATUS_TYPE_SUPERARMOR",
 		"STATUS_TYPE_TARGET",
+		"STATUS_TYPE_TOGGLE",
 		"STATUS_TYPE_UNDEAD",
 		"STATUS_TYPE_UNSHAKABLE",
 		"STATUS_TYPE_WEAK_ON_CRITICAL",
@@ -2329,6 +2330,7 @@ bool GameXmlContent::LoadStatusData()
 		pCommon->QueryFloatAttribute("_HeightRatio", &st.heightRatio);
 		pCommon->QueryFloatAttribute("_LyingTime", &st.lyingTime);
 		pCommon->QueryFloatAttribute("_DotBaseDamage", &st.dotDamage);
+		st.attachToCaster = pCommon->Attribute("_AttachNodeName") != nullptr;
 		pCommon->QueryFloatAttribute("_DotDrainMultiplier", &st.drainMultiplier);
 		pCommon->QueryIntAttribute("_SkillIndex", &st.skillIndex);
 		f32 intervalMs = 0;

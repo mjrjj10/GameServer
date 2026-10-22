@@ -362,6 +362,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 				}
 				if(u->Main().classType == ClassType::NONE) TryPickMaster(u, ClassType::STRIKER);
 				if(u->Sub().classType == ClassType::NONE) TryPickMaster(u, ClassType::LAUNCHER);
+				if(u->Sub().classType == ClassType::NONE) TryPickMaster(u, ClassType::STRIKER);
 				u->replicate.masterPick = true;
 			}
 			if(!u->isBot || all.empty()) continue;
@@ -380,9 +381,28 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 		}
 	}
 
+	if(!Config().DevShowcase && !Config().devHumanPick.empty()) {
+		foreach(u, userList) {
+			if(u->isBot || u->Main().classType != ClassType::NONE) continue;
+			foreach_const(c, Config().devHumanPick) TryPickMaster(u, (ClassType)*c);
+			u->replicate.masterPick = true;
+			u->isReady = true;
+			LOG("[Room] dev human masters %d %d", (i32)u->Main().classType, (i32)u->Sub().classType);
+		}
+	}
+	if(!Config().DevShowcase && !Config().devBotPool.empty()) {
+		static u32 poolNext = 0;
+		foreach(u, userList) {
+			if(!u->isBot) continue;
+			for(u32 tries = 0; tries < Config().devBotPool.size() * 2 && u->Sub().classType == ClassType::NONE; tries++) TryPickMaster(u, (ClassType)Config().devBotPool[poolNext++ % Config().devBotPool.size()]);
+			u->replicate.masterPick = true;
+			LOG("[Room] dev bot masters %d %d", (i32)u->Main().classType, (i32)u->Sub().classType);
+		}
+	}
+
 	// make bots pick random masters
 	foreach(u, userList) {
-		if(u->isBot && !Config().DevShowcase) {
+		if(u->isBot && !Config().DevShowcase && Config().devBotPool.empty()) {
 			static const ClassType botMasters[] = {
 				ClassType::STRIKER, ClassType::ARTILLERY, ClassType::ASSASSIN, ClassType::ELECTRO,
 				ClassType::DEFENDER, ClassType::SNIPER, ClassType::LAUNCHER,

@@ -32,6 +32,7 @@ void Replication::PlayerLocalInfo::Reset()
 {
 	localActorIDMap.clear();
 	actorUIDSet.clear();
+	hiddenActors.clear();
 	nextPlayerLocalActorID = LocalActorID::FIRST_OTHER_PLAYER;
 	nextNpcLocalActorID = LocalActorID::FIRST_NPC;
 	nextMonsterLocalActorID = LocalActorID::INVALID;
@@ -858,6 +859,7 @@ void Replication::SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, Skil
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID targetLocalID = GetLocalActorID(clientHd, targetUID);
 		if(targetLocalID == LocalActorID::INVALID) continue;
+		if(playerLocalInfo[clientID].hiddenActors.count(targetUID)) continue;
 		const LocalActorID attackerLocalID = GetLocalActorID(clientHd, attackerUID);
 
 		Sv::SN_BroadcastNonRemoteDamage dmg;
@@ -1177,6 +1179,7 @@ void Replication::SendRemoteDamageToAll(const RemoteDamage& hit)
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID targetLocalID = GetLocalActorID(clientHd, hit.targetUID);
 		if(targetLocalID == LocalActorID::INVALID) continue;
+		if(playerLocalInfo[clientID].hiddenActors.count(hit.targetUID)) continue;
 
 		PacketWriter<Sv::SN_BroadcastDamage,256> packet;
 		packet.Write<u32>(seq);
@@ -1300,6 +1303,26 @@ void Replication::SendAiSetTargetToAll(ActorUID actorUID, ActorUID targetUID)
 	}
 }
 
+void Replication::SendAiMoveTargetToAll(ActorUID actorUID, const vec3& goal, u32 movePreset)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+		Sv::SN_AiSyncMonsterSkillTarget target;
+		target.entityID = (u32)localID;
+		target.targetID = 0;
+		target.targetPos = v2f(goal);
+		SendPacket(clientHd, target);
+		Sv::SN_AiSetMovetargetpos move;
+		move.entityID = (u32)localID;
+		move.movePresetType = movePreset;
+		move.moveTargetPos = v2f(goal);
+		SendPacket(clientHd, move);
+	}
+}
+
 void Replication::SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed)
 {
 	const i16 yaw = WorldYawToCentiDegrees(worldYaw);
@@ -1362,7 +1385,7 @@ void Replication::SendBattleStateToAll(ActorUID actorUID, bool inBattle, f32 bas
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
-		if(localID == LocalActorID::INVALID) continue;
+		if(localID == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 		PacketWriter<Sv::SN_ChangeBattleState,16> packet;
 		packet.Write<u32>((u32)localID);
 		packet.Write<u8>(inBattle ? 1 : 0);
@@ -1584,12 +1607,16 @@ void Replication::SendLeaveActor(ClientHandle clientHd, ActorUID actorUID)
 	Sv::SN_GameLeaveActor packet;
 	packet.objectID = localID;
 	SendPacket(clientHd, packet);
+	auto found = playerMap.find(clientHd);
+	if(found != playerMap.end()) playerLocalInfo[found->second].hiddenActors.insert(actorUID);
 }
 
 void Replication::SendEnterActor(ClientHandle clientHd, ActorUID actorUID, ClassType classType, const vec3& pos, f32 bodyYaw, f32 upperYaw, const vec3& moveTo, bool battle, f32 speed, ActionStateID action, i32 hp, i32 hpMax)
 {
 	const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 	if(localID == LocalActorID::INVALID) return;
+	auto found = playerMap.find(clientHd);
+	if(found != playerMap.end()) playerLocalInfo[found->second].hiddenActors.erase(actorUID);
 	PacketWriter<Sv::SN_GameEnterActor,512> packet;
 	packet.Write<u8>(1);
 	packet.Write<LocalActorID>(localID);
@@ -1630,6 +1657,9 @@ void Replication::SendChangeSkillSlot(ClientHandle clientHd, ActorUID actorUID, 
 }
 
 static const f32 CLIENT_SELF_SNAP_DIST = 180.0f;
+static const i32 SYNC_STOP_STILL_FRAMES = 4;
+static const f32 SYNC_TURN_COS = 0.985f;
+static const f32 SYNC_HEARTBEAT_SEC = 0.67f;
 
 void Replication::SendSelfTeleport(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, f32 worldYaw, const vec3* clientPos)
 {
@@ -1661,6 +1691,41 @@ void Replication::SendSelfMove(ClientHandle clientHd, ActorUID actorUID, const v
 	sync.flags = 0;
 	sync.actionStateID = ActionStateID::NONE_BEHAVIORSTATE;
 	SendPacket(clientHd, sync);
+}
+
+void Replication::RelayPlayerMove(ClientHandle fromHd, ActorUID actorUID, const Cl::CN_GameUpdatePosition& update)
+{
+	Sv::SN_PlayerSyncMove sync;
+	sync.DestPos = update.p3nPos;
+	sync.MoveDir = update.p3nDir;
+	sync.UpperDir = { update.upperYaw, update.upperPitch };
+	sync.nRotate = update.bodyYaw;
+	sync.nSpeed = update.nSpeed;
+	sync.flags = update.unk1;
+	sync.actionStateID = update.actionState;
+	for(int pi = 0; pi < MAX_PLAYERS; pi++) {
+		if(playerState[pi].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[pi];
+		if(clientHd == fromHd || playerLocalInfo[pi].hiddenActors.count(actorUID)) continue;
+		sync.entityID = GetLocalActorID(clientHd, actorUID);
+		if(sync.entityID == LocalActorID::INVALID) continue;
+		SendPacket(clientHd, sync);
+	}
+}
+
+void Replication::RelayPlayerTurn(ClientHandle fromHd, ActorUID actorUID, const Cl::CN_GameUpdateRotation& update)
+{
+	Sv::SN_PlayerSyncTurn sync;
+	sync.UpperDir = { update.upperYaw, update.upperPitch };
+	sync.nRotate = update.bodyYaw;
+	for(int pi = 0; pi < MAX_PLAYERS; pi++) {
+		if(playerState[pi].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[pi];
+		if(clientHd == fromHd || playerLocalInfo[pi].hiddenActors.count(actorUID)) continue;
+		sync.entityID = GetLocalActorID(clientHd, actorUID);
+		if(sync.entityID == LocalActorID::INVALID) continue;
+		SendPacket(clientHd, sync);
+	}
 }
 
 void Replication::SendExecuteSkillAck(ClientHandle clientHd, ActorUID casterUID, SkillID skillID)
@@ -2063,6 +2128,7 @@ void Replication::FrameDifference()
 			for(int pi = 0; pi < MAX_PLAYERS; pi++) {
 				if(playerState[pi].cur < PlayerState::IN_GAME) continue;
 				const ClientHandle clientHd = clientHandle[pi];
+				if(playerLocalInfo[pi].hiddenActors.count(actorUID)) continue;
 
 				PacketWriter<Sv::SA_ResultSpAction> packet;
 
@@ -2094,16 +2160,28 @@ void Replication::FrameDifference()
 
 		// position
 		const f32 posEpsilon = 0.5f;
-		const f32 dirEpsilon = 0.001f;
 		const f32 speedEpsilon = 0.001f;
-		if(!positionUpdated && !cur.skillMoving &&
-		   (fabs(cur.pos.x - prev.pos.x) > posEpsilon ||
-		   fabs(cur.pos.y - prev.pos.y) > posEpsilon ||
-		   fabs(cur.pos.z - prev.pos.z) > posEpsilon ||
-		   fabs(cur.moveDir.x - prev.moveDir.x) > dirEpsilon ||
-		   fabs(cur.moveDir.y - prev.moveDir.y) > dirEpsilon ||
-		   fabs(cur.speed - prev.speed) > speedEpsilon))
+		const bool moved = fabs(cur.pos.x - prev.pos.x) > posEpsilon || fabs(cur.pos.y - prev.pos.y) > posEpsilon || fabs(cur.pos.z - prev.pos.z) > posEpsilon;
+		SentMove& sent = sentMoves[cur.actorUID];
+		sent.stillFrames = moved ? 0 : sent.stillFrames + 1;
+		const bool stopped = !moved && sent.stillFrames >= SYNC_STOP_STILL_FRAMES;
+		const vec2 step = vec2(cur.pos - prev.pos);
+		const f32 stepLen = glm::length(step);
+		const vec2 realDir = stepLen > 0.01f ? step / stepLen : cur.moveDir;
+		const vec2 sendDir = stopped ? vec2(0) : (moved ? realDir : sent.moveDir);
+		const f32 sendSpeed = stopped ? 0.0f : (moved ? cur.speed * MAX(glm::dot(cur.moveDir, realDir), 0.0f) : sent.speed);
+		const bool dirNow = glm::length(sendDir) > 0.01f;
+		const bool dirSent = glm::length(sent.moveDir) > 0.01f;
+		const bool turned = dirNow != dirSent || (dirNow && glm::dot(glm::normalize(sendDir), glm::normalize(sent.moveDir)) < SYNC_TURN_COS);
+		const bool heartbeat = dirNow && TimeDiffSec(TimeDiff(sent.at, TimeRelNow())) >= SYNC_HEARTBEAT_SEC;
+		const bool cadenceSend = Config().BotSyncCadence ? (turned || heartbeat || (prev.skillMoving && moved)) : (moved || turned);
+		if(cur.clientHd == ClientHandle::INVALID && !positionUpdated && !cur.skillMoving &&
+		   (cadenceSend ||
+		   fabs(sendSpeed - sent.speed) > speedEpsilon))
 		{
+			sent.moveDir = sendDir;
+			sent.speed = sendSpeed;
+			sent.at = TimeRelNow();
 			ActionStateID action = cur.actionState;
 			if(action == ActionStateID::INVALID) {
 				action = ActionStateID::NONE_BEHAVIORSTATE;
@@ -2111,10 +2189,10 @@ void Replication::FrameDifference()
 
 			Sv::SN_PlayerSyncMove sync;
 			sync.DestPos = v2f(cur.pos);
-			sync.MoveDir = v2f(cur.moveDir);
+			sync.MoveDir = v2f(sendDir);
 			sync.UpperDir = { WorldYawToMxmYaw(cur.rotation.upperYaw), WorldPitchToMxmPitch(cur.rotation.upperPitch) };
 			sync.nRotate = WorldYawToMxmYaw(cur.rotation.bodyYaw);
-			sync.nSpeed = cur.speed;
+			sync.nSpeed = sendSpeed;
 			sync.flags = 0;
 			sync.actionStateID = action;
 
@@ -2122,6 +2200,7 @@ void Replication::FrameDifference()
 				if(playerState[pi].cur < PlayerState::IN_GAME) continue;
 				const ClientHandle clientHd = clientHandle[pi];
 				if(clientHd == cur.clientHd) continue; // ignore self
+				if(playerLocalInfo[pi].hiddenActors.count(cur.actorUID)) continue;
 				sync.entityID = GetLocalActorID(clientHd, cur.actorUID);
 				SendPacket(clientHd, sync);
 			}
@@ -2131,7 +2210,7 @@ void Replication::FrameDifference()
 
 		// rotation
 		const f32 rotEpsilon = 0.1f;
-		if(!rotationUpdated &&
+		if(cur.clientHd == ClientHandle::INVALID && !rotationUpdated &&
 		   (fabs(cur.rotation.upperYaw - prev.rotation.upperYaw) > rotEpsilon ||
 		   fabs(cur.rotation.upperPitch - prev.rotation.upperPitch) > rotEpsilon ||
 		   fabs(cur.rotation.bodyYaw - prev.rotation.bodyYaw) > rotEpsilon))
@@ -2144,6 +2223,7 @@ void Replication::FrameDifference()
 				if(playerState[pi].cur < PlayerState::IN_GAME) continue;
 				const ClientHandle clientHd = clientHandle[pi];
 				if(clientHd == cur.clientHd) continue; // ignore self
+				if(playerLocalInfo[pi].hiddenActors.count(cur.actorUID)) continue;
 
 				sync.entityID = GetLocalActorID(clientHd, cur.actorUID);
 				SendPacket(clientHd, sync);
@@ -2198,6 +2278,7 @@ void Replication::FrameDifference()
 			if(playerState[pi].cur < PlayerState::IN_GAME) continue;
 			const ClientHandle clientHd = clientHandle[pi];
 
+			if(playerLocalInfo[pi].hiddenActors.count(cast.casterUID)) continue;
 			LocalActorID localCasterID = GetLocalActorID(clientHd, cast.casterUID);
 
 			// SN_CastSkill
@@ -2236,6 +2317,7 @@ void Replication::FrameDifference()
 			if(playerState[pi].cur < PlayerState::IN_GAME) continue;
 			const ClientHandle clientHd = clientHandle[pi];
 
+			if(playerLocalInfo[pi].hiddenActors.count(exec.casterUID)) continue;
 			LocalActorID localCasterID = GetLocalActorID(clientHd, exec.casterUID);
 
 			// SN_ExecuteSkill

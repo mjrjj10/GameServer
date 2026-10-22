@@ -524,6 +524,12 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.stopAtTarget = cmd->remote.stopAtTarget;
 			pr.remove = cmd->remote.remove != 0;
 			pr.nodeName = cmd->nodeName;
+			if(cmd->remote.removeAtAnimEnd) {
+				i32 animId = 0, loop = 1;
+				foreach_const(st, action.anims) if(st->index == curAnim) { animId = st->animationId; loop = MAX(st->loop, 1); }
+				const f32 passEnd = animPasses[pass].start + content.GetAniSeqTime(content.GetMaster(player.Main().classType).className.c_str(), animId) * (f32)loop;
+				if(passEnd > t) pr.aniEndAt = TimeAdd(localTime, TimeMsToTime(passEnd * 1000.0));
+			}
 			pendingRemotes.push_back(pr);
 			scheduled = true;
 		}
@@ -742,6 +748,12 @@ void World::UpdateChases()
 void World::MarkInBattle(Player& player)
 {
 	player.battleActionAt = localTime;
+}
+
+f32 World::PlayerMoveSpeed(const Player& p) const
+{
+	const f32 baseSpeed = const_cast<CharacterModel&>(GetGameXmlContent().GetMaster(p.Main().classType).character).getMoveSpeed();
+	return baseSpeed * (p.battleStage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (p.battleStage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f));
 }
 
 void World::UpdateBattleStates()

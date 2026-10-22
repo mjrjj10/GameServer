@@ -8,11 +8,14 @@ struct CConfigHub
 	i32 DevQuickConnect = false;
 	i32 TraceNetwork = false;
 	i32 DevShowcase = false;
+	i32 DevAutoQueue = 0;
 	i32 DevShowcaseStart = 0;
 	i32 DevShowcaseSlices = 1;
 	i32 LobbyMap = 160000042; // TODO: restore
 	eastl::fixed_vector<i32,16> regionBanMaster = {};
 	eastl::fixed_vector<i32,64> devShowcaseList = {};
+	eastl::fixed_vector<i32,64> devHumanPick = {};
+	eastl::fixed_vector<i32,64> devBotPool = {};
 	i32 DevMirror = 0;
 	i32 DevMirrorPass = 0;
 	eastl::fixed_vector<i32,16> regionNewMaster = {};

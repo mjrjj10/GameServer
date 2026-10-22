@@ -242,6 +242,7 @@ struct Replication
 		LocalActorID nextPlayerLocalActorID;
 		LocalActorID nextNpcLocalActorID;
 		LocalActorID nextMonsterLocalActorID;
+		eastl::fixed_set<ActorUID,16> hiddenActors;
 
 		void Reset();
 	};
@@ -263,6 +264,15 @@ struct Replication
 	eastl::array<ClientHandle,MAX_PLAYERS> clientHandle;
 	eastl::array<PlayerStatePair,MAX_PLAYERS> playerState;
 	eastl::array<PlayerLocalInfo,MAX_PLAYERS> playerLocalInfo;
+
+	struct SentMove
+	{
+		vec2 moveDir = vec2(0);
+		f32 speed = 0;
+		i32 stillFrames = 0;
+		Time at = Time::ZERO;
+	};
+	eastl::fixed_map<ActorUID,SentMove,64> sentMoves;
 
 	hash_map<ClientHandle, i32, MAX_PLAYERS> playerMap;
 
@@ -346,6 +356,8 @@ struct Replication
 	void SendChangeSkillSlot(ClientHandle clientHd, ActorUID actorUID, i32 slot, SkillID skill, i32 resetCooltimeID);
 	void SendSelfTeleport(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, f32 worldYaw, const vec3* clientPos = nullptr);
 	void SendSelfMove(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, const vec2& moveDir, f32 speed, f32 worldYaw);
+	void RelayPlayerMove(ClientHandle fromHd, ActorUID actorUID, const Cl::CN_GameUpdatePosition& update);
+	void RelayPlayerTurn(ClientHandle fromHd, ActorUID actorUID, const Cl::CN_GameUpdateRotation& update);
 	void SendCooltimeReset(ClientHandle clientHd, ActorUID characterUID, Slice<const i32> coolTimeIDs, u32 leftMs = 1, u32 totalMs = 1);
 	void SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap = 1, f32 scale = 1.0f, f32 nominalDist = -1.0f, bool withGraph = true, bool refresh = false);
 	void SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID);
@@ -376,6 +388,7 @@ struct Replication
 	void SendActionStateOnlyToAll(ActorUID actorUID, ActionStateID state, f32 mxmYaw, bool move, const vec3& startPos, const vec3& endPos, f32 durationSec);
 	void SendDestroyRemoteToAll(u32 remoteID);
 	void SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed);
+	void SendAiMoveTargetToAll(ActorUID actorUID, const vec3& goal, u32 movePreset);
 	void SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject = L"Scene Root", ClientHandle exclude = ClientHandle::INVALID);
 	struct RemoteCreate
 	{

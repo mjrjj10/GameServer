@@ -215,6 +215,7 @@ void World::Update(Time localTime_)
 	if(!frozen) UpdateInteractions();
 	if(Config().DevShowcase) { if(!frozen) UpdateShowcase(); }
 	else {
+		if(!frozen) UpdateBotMovement();
 		if(!frozen) UpdateBotCombat();
 		if(!frozen) UpdateBotSkills();
 	}
@@ -324,7 +325,7 @@ void World::Replicate()
 			rch.moveDir = player.movement.moveDir;
 			rch.speed = player.input.speed;
 			rch.rotation = player.movement.rot;
-			rch.skillMoving = localTime < player.dashUntil;
+			rch.skillMoving = localTime < player.dashUntil || AttachedToCaster(player);
 
 			rch.actionState = chara.actionState;
 			rch.actionParam1 = chara.actionParam1;
@@ -642,6 +643,13 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	const bool actionOnly = hitActionOnly && followUp;
 	hitActionOnly = false;
 	if(!castRelease && !actionOnly) replication->FramePushSkillCast(rpCast);
+	if(cast && cast->action == ActionStateID::INVALID) {
+		static const GameXmlContent::Action noCastAction = {};
+		castCostLevel = nullptr;
+		StartCasting(player, skillID, *cast, castPos, targets, noCastAction);
+		if(player.clientHd != ClientHandle::INVALID) UpdateComboSlot(player, skillID, skill.type, castPos);
+		return;
+	}
 
 
 	/*
@@ -718,6 +726,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 
 	rpExec.moveDuration = moveDuration;
 	rpExec.startPos = player.body->GetWorldPos();
+	rpExec.endPos = rpExec.startPos;
 	rpExec.moveDir = dir;
 	rpExec.rot = { angle, 0, angle };
 	rpExec.speed = player.input.speed; // FIXME: should not come from input

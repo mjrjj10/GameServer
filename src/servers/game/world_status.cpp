@@ -9,6 +9,7 @@ static const f32 TOOLTIP_DEATHKNIGHT_REVIVE_HP = 0.30f;
 static const f64 SELF_DRAG_LINK_SEC = 0.6;
 static const f32 STATUS_PUSH_BASE_DISTANCE = 500.0f;
 static const f32 STATUS_LIFT_BASE_HEIGHT = 400.0f;
+static const f32 FLY_PULL_MAX_SCALE = 2.0f;
 
 static bool StatusSendsGraph(const StatusInfo* info)
 {
@@ -80,6 +81,14 @@ static bool DefeatGraphTimes(const StatusInfo* info, f32* duration, f32* graph)
 			return true;
 		default: return false;
 	}
+}
+
+bool World::AttachedToCaster(const Player& p) const
+{
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex == p.index && it->info && it->info->attachToCaster && it->until > localTime) return true;
+	}
+	return false;
 }
 
 bool World::HasStatusType(const Player& p, StatusType type) const
@@ -553,12 +562,28 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
 		return;
 	}
+	if(info && info->type == StatusType::FLY) {
+		const f32 ratio = statusDistanceRatioOverride != 0 ? statusDistanceRatioOverride : info->distanceRatio;
+		if(ratio < 0) {
+			const vec3 center = statusForceCenterSet ? statusForceCenter : caster.body->GetWorldPos();
+			const f32 rc = glm::length(vec2(target.body->GetWorldPos()) - vec2(center));
+			ccScale *= MIN(MAX(-ratio + rc / STATUS_PUSH_BASE_DISTANCE, 1.0f), FLY_PULL_MAX_SCALE);
+		}
+	}
 	duration *= ccScale;
 	graphDuration *= ccScale;
 	ShowcaseOnStatus(caster, target, statusID);
 	const bool permanent = info && info->permanent && durationOverride <= 0;
 	if(permanent) duration = 1000000.0f;
 	const f32 sentDuration = statusAniEnd && info ? (info->durationSec > 0 ? info->durationSec : info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f) : durationOverride > 0 || !info || info->durationSec > 0 ? duration : (info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f);
+	if(info && info->type == StatusType::TOGGLE && info->durationSec <= 0 && info->skillIndex != 0) {
+		foreach(it, activeStatuses) {
+			if(it->targetIndex != target.index || !it->info || it->info->type != StatusType::TARGET || it->info->skillIndex != info->skillIndex || it->until <= localTime) continue;
+			const Time applied = it->appliedAt;
+			foreach(w, activeStatuses) if(w->targetIndex == target.index && w->appliedAt == applied && w->until > localTime) w->until = localTime;
+			LOG("Status :: %ls released from %d by %d", target.name.data(), it->statusID, statusID);
+		}
+	}
 	if(info && info->casterStatus != 0 && info->casterStatus != statusID && !caster.dead && !applyingCasterStatus) {
 		bool refresh = false;
 		foreach_const(it, activeStatuses) if(it->statusID == statusID && it->targetIndex == target.index) { refresh = true; break; }
@@ -601,6 +626,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			if(until > it->until) it->until = until;
 			const bool stacked = info && it->overlap < info->maxOverlap;
 			if(stacked) it->overlap++;
+			if(info && info->dotDamage > 0 && info->intervalSec <= 0) it->dotDone = false;
 			LOG("Status :: %ls -> %ls status=%d refreshed overlap=%d", caster.name.data(), target.name.data(), statusID, it->overlap);
 			const vec3 pos = target.body->GetWorldPos();
 			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, sentDuration, pos, pos, 0, it->overlap, 1.0f, -1.0f, false, true);
@@ -774,6 +800,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	LOG("Status :: %ls -> %ls status=%d type=%s duration=%.2f shield=%.0f", caster.name.data(), target.name.data(), statusID, info ? info->typeName.c_str() : "?", duration, st.shieldHP);
 	vec3 sentTo = dragForce ? forceCenter : to;
 	if(info && (info->type == StatusType::AIRBORNE || info->type == StatusType::FLY) && info->heightRatio > 0) sentTo.z = from.z + STATUS_LIFT_BASE_HEIGHT * info->heightRatio * ccScale;
+	if(info && info->attachToCaster) sentTo = vec3(0);
 	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, sentTo, StatusGraphTimed(info) ? graphDuration : 0.0f, 1, ccScale, nominalDist, StatusSendsGraph(info));
 	if(info && info->blockSkill && caster.team != target.team && !target.dead) InterruptSkills(target);
 	const i32 guard = DefeatGuardStatus(info);
@@ -855,6 +882,12 @@ void World::UpdateStatuses()
 
 	for(auto it = activeStatuses.begin(); it != activeStatuses.end(); ) {
 		Player& target = players[it->targetIndex];
+		if(it->info && it->info->dotDamage > 0 && it->info->intervalSec <= 0 && !it->dotDone && !target.dead) {
+			it->dotDone = true;
+			damageStatusID = it->statusID;
+			DamagePlayer(players[it->casterIndex], target, SkillID::INVALID, (i32)(it->info->dotDamage * it->overlap));
+			damageStatusID = 0;
+		}
 		if(it->info && it->info->dotDamage > 0 && it->info->intervalSec > 0) {
 			while(localTime >= it->nextTick && it->nextTick <= it->until && !target.dead) {
 				it->nextTick = TimeAdd(it->nextTick, TimeMsToTime(it->info->intervalSec * 1000.0));

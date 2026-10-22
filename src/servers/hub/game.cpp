@@ -246,7 +246,7 @@ void HubGame::OnPlayerChatWhisper(ClientHandle clientHd, const wchar* destNick, 
 void HubGame::OnPlayerEnterCity(ClientHandle clientHd)
 {
 	const i32 userID = plidMap->Get(clientHd);
-	if(Config().DevShowcase && playerAccountData[userID] && playerMap[userID]->partyUID == PartyUID::INVALID) {
+	if((Config().DevShowcase || Config().DevAutoQueue) && playerAccountData[userID] && playerMap[userID]->partyUID == PartyUID::INVALID) {
 		LOG("[client%x] HubGame :: showcase, auto dispatch", clientHd);
 		OnCreateParty(clientHd, EntrySystemID::ARENA_3v3, StageType::PVP_GAME);
 	}
@@ -387,7 +387,7 @@ void HubGame::OnSortieRoomFound(ClientHandle clientHd, SortieUID sortieID)
 
 	const i32 userID = plidMap->Get(clientHd);
 	matchmaker->QueryPlayerNotifyRoomFound(playerAccountData[userID]->UID, sortieID);
-	if(Config().DevShowcase) {
+	if(Config().DevShowcase || Config().DevAutoQueue) {
 		playerMap[userID]->sortieUID = sortieID;
 		matchmaker->QueryPlayerRoomConfirm(playerAccountData[userID]->UID, sortieID, true);
 	}
@@ -427,7 +427,7 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 	party.mapIndex = mapID;
 
 	replication.SendPartyCreateSucess(clientHd, UserID(userID + 1), StageType::PVP_GAME);
-	if(Config().DevShowcase) OnEnqueueGame(clientHd);
+	if(Config().DevShowcase || Config().DevAutoQueue) OnEnqueueGame(clientHd);
 }
 
 void HubGame::MmOnPartyEnqueued(PartyUID partyUID)

@@ -22,6 +22,7 @@ struct CConfigGame
 	i32 DevNoFireNode = 0;
 	i32 HostIP[4] = { 0, 0, 0, 0 };
 	i32 TraceNetwork = false;
+	i32 BotSyncCadence = 0;
 	i32 WindowWidth = 1280;
 	i32 WindowHeight = 720;
 	f32 DbgCamPosX = 0;

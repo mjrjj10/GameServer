@@ -233,16 +233,7 @@ void Game::Update(Time localTime_)
 					}
 
 					switch(actionID) {
-						case Action::Move: {
-							f32 angle = Randf01() * 2*PI;
-							f32 dist = (f32)RandInt(250, 1000);
-							vec2 off = vec2(cosf(angle) * dist, sinf(angle) * dist);
-							wpl.input.moveTo = wpl.body->GetWorldPos() + vec3(off, 0);
-							wpl.input.rot.upperYaw = angle;
-							wpl.input.rot.upperPitch = 0;
-							wpl.input.rot.bodyYaw = angle;
-							wpl.input.speed = 600;
-						} break;
+						case Action::Move: break;
 
 						case Action::Tag: {
 							wpl.input.tag = true;

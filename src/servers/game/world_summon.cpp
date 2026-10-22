@@ -115,6 +115,17 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 				if(npc.despawnAt == Time::ZERO || at < npc.despawnAt) npc.despawnAt = at;
 			}
 			LOG("Summon :: creature=%d self status %d (%s)", (i32)npc.docID, c->index, st->typeName.c_str());
+			if(st->type == StatusType::TOGGLE && st->auraStatus == 0 && st->targetingRange > 0) {
+				foreach(p, players) {
+					if(p->dead) continue;
+					bool attached = false;
+					foreach_const(as, activeStatuses) if(as->targetIndex == p->index && as->casterUID == npc.UID && as->info && as->info->attachToCaster && as->until > localTime) attached = true;
+					if(!attached && glm::length(vec2(p->body->GetWorldPos()) - vec2(npc.pos)) > st->targetingRange) continue;
+					statusCasterOverride = npc.UID;
+					ApplyStatus(owner, *p, c->index);
+					statusCasterOverride = ActorUID::INVALID;
+				}
+			}
 			if(st->auraStatus != 0 && st->targetingRange > 0 && !groundAuras.full()) {
 				GroundAura ga;
 				ga.ownerIndex = npc.ownerIndex;
@@ -151,14 +162,11 @@ void World::ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos)
 	const vec3 goal = vec3(vec2(pos), npc->pos.z);
 	const f32 dist = glm::length(vec2(goal) - vec2(npc->pos));
 	LOG("Summon :: %ls child SKILL_%d on its creature=%d, flies %.0f in %.2fs", owner.name.data(), child, (i32)npc->docID, dist, travel);
-	if(dist > 1.0f) replication->SendNpcMoveToAll(npc->UID, npc->pos, goal, atan2f(goal.y - npc->pos.y, goal.x - npc->pos.x), travel > 0 ? dist / travel : dist);
+	if(dist > 1.0f) replication->SendAiMoveTargetToAll(npc->UID, goal, (u32)ActionCommand::MovePreset::TARGET_POS);
 	foreach(st, activeStatuses) {
 		if(st->casterIndex != owner.index || !st->info || st->info->type != StatusType::TARGET || localTime >= st->until) continue;
 		Player& carried = players[st->targetIndex];
 		const Time drop = TimeAdd(localTime, TimeMsToTime(travel * 1000.0));
-		foreach(with, activeStatuses) {
-			if(with->targetIndex == st->targetIndex && with->casterIndex == owner.index && with->appliedAt == st->appliedAt && with->until > drop) with->until = drop;
-		}
 		if(carried.clientHd == ClientHandle::INVALID && !carried.dead) {
 			carried.pushTarget = vec3(vec2(pos), carried.body->GetWorldPos().z);
 			carried.pushUntil = drop;

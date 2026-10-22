@@ -255,6 +255,10 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		const i32 respawnMs = gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills);
 		target.tRespawn = TimeAdd(localTime, TimeMsToTime(respawnMs));
 		LOG("Death :: %ls killed by %ls (respawn %d ms)", target.name.data(), attacker.name.data(), respawnMs);
+		if(target.hiddenUID != ActorUID::INVALID) {
+			ShowHiddenToEnemies(target, target.hiddenUID, ActorUID::INVALID);
+			target.hiddenUID = ActorUID::INVALID;
+		}
 		replication->SendScoreToAll(attacker.userID, attacker.team, attacker.kills, teamKills, target.userID, target.deaths);
 		replication->SendDeathToAll(attacker.Main().UID, chara.UID, CreatureIndex(100000000 + (i32)chara.classType), target.userID, respawnMs);
 	}

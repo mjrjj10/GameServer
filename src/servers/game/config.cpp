@@ -23,6 +23,7 @@ bool CConfigGame::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "DevNoFireNode=%d", &DevNoFireNode) == 1) return true;
 	if(EA::StdC::Sscanf(line, "HostIP=%d.%d.%d.%d", &HostIP[0], &HostIP[1], &HostIP[2], &HostIP[3]) == 4) return true;
 	if(EA::StdC::Sscanf(line, "TraceNetwork=%d", &TraceNetwork) == 1) return true;
+	if(EA::StdC::Sscanf(line, "BotSyncCadence=%d", &BotSyncCadence) == 1) return true;
 	if(EA::StdC::Sscanf(line, "WindowWidth=%d", &WindowWidth) == 1) return true;
 	if(EA::StdC::Sscanf(line, "WindowHeight=%d", &WindowHeight) == 1) return true;
 

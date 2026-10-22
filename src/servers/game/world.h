@@ -157,6 +157,10 @@ struct World
 		f32 benchStamina = -1.0f;
 		f32 mana = -1.0f;
 		Time tNextBotShot = Time::ZERO;
+		Time botMoveAt = Time::ZERO;
+		Time botStuckCheck = Time::ZERO;
+		vec2 botLastPos = vec2(0);
+		f32 botStrafe = 1.0f;
 		f32 moveSpeedSent = -1.0f;
 		bool manaDirty = false;
 		eastl::array<f32,3> res = { -1, -1, -1 };
@@ -493,6 +497,7 @@ struct World
 		bool atTarget = false;
 		bool stopAtTarget = false;
 		u16 nodeName = 0;
+		Time aniEndAt = Time::ZERO;
 	};
 
 	struct RemoteInst
@@ -533,6 +538,7 @@ struct World
 		bool centeredBox = false;
 		f32 wallZ = 0;
 		bool actionChanged = false;
+		Time aniEndAt = Time::ZERO;
 	};
 
 	struct CastHit
@@ -561,6 +567,7 @@ struct World
 		ActorUID casterUID;
 		Time until;
 		Time nextTick;
+		bool dotDone = false;
 		i32 overlap;
 		f32 shieldHP;
 		Time nextHealTick;
@@ -657,6 +664,8 @@ struct World
 	void UpdateWeaponHeat(Player& player);
 	void UpdateSummons();
 	void UpdateBotCombat();
+	void UpdateBotMovement();
+	f32 PlayerMoveSpeed(const Player& p) const;
 	void UpdateBotSkills();
 	void UpdateSummonAi(f32 delta);
 	void UpdateSummonAttack(ActorNpc& npc, f32 delta);
@@ -832,6 +841,7 @@ private:
 	void InterruptSkills(Player& player);
 	void UpdateCasts();
 	bool HasStatusType(const Player& p, StatusType type) const;
+	bool AttachedToCaster(const Player& p) const;
 	f32 StatusModSum(const Player& p, i32 stat) const;
 	f32 StatusModMulSum(const Player& p, i32 stat) const;
 	f32 StatusRegenBonus(const Player& p, i32 stat, bool mul) const;

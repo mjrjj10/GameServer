@@ -28,6 +28,7 @@ bool CConfigHub::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "DevQuickConnect=%d", &DevQuickConnect) == 1) return true;
 	if(EA::StdC::Sscanf(line, "TraceNetwork=%d", &TraceNetwork) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcase=%d", &DevShowcase) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevAutoQueue=%d", &DevAutoQueue) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcaseStart=%d", &DevShowcaseStart) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcaseSlices=%d", &DevShowcaseSlices) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevMirror=%d", &DevMirror) == 1) return true;
@@ -35,6 +36,8 @@ bool CConfigHub::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "LobbyMap=%d", &LobbyMap) == 1) return true;
 	if(ParseIdList(line, "RegionBanMaster=", regionBanMaster)) return true;
 	if(ParseIdList(line, "DevShowcaseList=", devShowcaseList)) return true;
+	if(ParseIdList(line, "DevHumanPick=", devHumanPick)) return true;
+	if(ParseIdList(line, "DevBotPool=", devBotPool)) return true;
 	if(ParseIdList(line, "RegionNewMaster=", regionNewMaster)) return true;
 	if(ParseIdList(line, "EventBanMaster=", eventBanMaster)) return true;
 	return false;
