@@ -37,6 +37,7 @@ static void BotWeaponAnimation(const World::Player& player, Replication* replica
 
 void World::PlayerWeaponFire(Player& player)
 {
+	BreakHide(player);
 	BotWeaponAnimation(player, replication);
 	const vec2 dir = vec2(cosf(player.weaponAimYaw), sinf(player.weaponAimYaw));
 	const vec3 origin = player.body->GetWorldPos();
@@ -63,6 +64,7 @@ void World::PlayerWeaponFire(Player& player)
 void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir, f32 distance)
 {
 	if(player.dead) return;
+	BreakHide(player);
 	MarkInBattle(player);
 	const ClassType classType = player.Main().classType;
 	if(WeaponIsMelee(player)) return;
@@ -414,6 +416,7 @@ void World::OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& d
 		LOG("Overheat :: %ls shot ignored (weapon overheated)", player.name.data());
 		return;
 	}
+	BreakHide(player);
 
 	player.pendingShotRawSize = MIN(rawSize, (i32)player.pendingShotRaw.size());
 	memmove(player.pendingShotRaw.data(), rawPacket, player.pendingShotRawSize);

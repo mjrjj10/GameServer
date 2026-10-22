@@ -121,6 +121,7 @@ void World::Update(Time localTime_)
 		// tag
 		if(p.input.tag) {
 			p.input.tag = 0;
+			if(p.casting.skillID != SkillID::INVALID) CancelCast(p, "tag");
 			p.mainCharaID ^= 1;
 			eastl::swap(p.mana, p.benchMana);
 			eastl::swap(p.stamina, p.benchStamina);

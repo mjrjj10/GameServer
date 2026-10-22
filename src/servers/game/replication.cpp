@@ -1051,6 +1051,7 @@ void Replication::SendRemoteCreate(const RemoteCreate& remote, ClientHandle excl
 		const LocalActorID parentLocal = GetLocalActorID(clientHd, remote.parentUID);
 		const LocalActorID ownerLocal = GetLocalActorID(clientHd, remote.ownerUID);
 		if(parentLocal == LocalActorID::INVALID || ownerLocal == LocalActorID::INVALID) continue;
+		if(playerLocalInfo[clientID].hiddenActors.count(remote.ownerUID) || playerLocalInfo[clientID].hiddenActors.count(remote.parentUID)) continue;
 		const LocalActorID targetLocal = remote.targetUID != ActorUID::INVALID ? GetLocalActorID(clientHd, remote.targetUID) : LocalActorID::INVALID;
 
 		if(remote.creator != 0) {
@@ -1147,7 +1148,7 @@ void Replication::RelayWeaponState(ClientHandle senderHd, ActorUID ownerUID, i32
 		if(clientHd == senderHd) continue;
 
 		const LocalActorID ownerLocal = GetLocalActorID(clientHd, ownerUID);
-		if(ownerLocal == LocalActorID::INVALID) continue;
+		if(ownerLocal == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(ownerUID)) continue;
 
 		Sv::SN_WeaponState packet;
 		packet.ownerID = ownerLocal;
@@ -1468,7 +1469,7 @@ void Replication::SendAttackActionToOthers(ClientHandle senderHd, ActorUID actor
 		if(clientHd == senderHd) continue;
 
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
-		if(localID == LocalActorID::INVALID) continue;
+		if(localID == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 
 		Sv::SN_PlayerSyncActionStateOnly packet;
 		memset(&packet, 0, sizeof(packet));
@@ -1489,7 +1490,7 @@ void Replication::SendActionStateOnlyToAll(ActorUID actorUID, ActionStateID stat
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
-		if(localID == LocalActorID::INVALID) continue;
+		if(localID == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 
 		Sv::SN_PlayerSyncActionStateOnly packet;
 		memset(&packet, 0, sizeof(packet));
@@ -1514,7 +1515,7 @@ void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID 
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID targetLocal = GetLocalActorID(clientHd, targetUID);
-		if(targetLocal == LocalActorID::INVALID) continue;
+		if(targetLocal == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(targetUID)) continue;
 		const LocalActorID casterLocal = GetLocalActorID(clientHd, casterUID);
 
 		const f32 dist = glm::length(vec2(to - from));
@@ -1547,7 +1548,7 @@ void Replication::SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorU
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID targetLocal = GetLocalActorID(clientHd, targetUID);
-		if(targetLocal == LocalActorID::INVALID) continue;
+		if(targetLocal == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(targetUID)) continue;
 		const LocalActorID casterLocal = GetLocalActorID(clientHd, casterUID);
 
 		Sv::SN_RemoveStatus packet;
@@ -1565,7 +1566,7 @@ void Replication::SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 ma
 
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
-		if(localID == LocalActorID::INVALID) continue;
+		if(localID == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 
 		Sv::SN_UpdateStat stat;
 		stat.characterID = (u32)localID;
@@ -1631,7 +1632,14 @@ void Replication::SendEnterActor(ClientHandle clientHd, ActorUID actorUID, Class
 	packet.Write<f32>(speed);
 	packet.Write<ActionStateID>(action);
 	packet.Write<i32>(0);
-	WriteInitStat(packet, GetGameXmlContent().GetMaster(classType).baseStats);
+	const auto& baseStats = GetGameXmlContent().GetMaster(classType).baseStats;
+	for(int list = 0; list < 2; list++) {
+		packet.Write<u16>((u16)baseStats.size());
+		foreach_const(st, baseStats) {
+			packet.Write<u8>(st->type);
+			packet.Write<f32>(list == 1 && st->type == (u8)StatType::STAT_TYPE_HEALTH ? (f32)hp : st->value);
+		}
+	}
 	packet.Write<u16>(0);
 	packet.Write<u16>(0);
 	SendPacket(clientHd, packet);
@@ -1860,7 +1868,7 @@ void Replication::SendHpToAll(ActorUID actorUID, i32 hp, i32 hpMax)
 
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
-		if(localID == LocalActorID::INVALID) continue;
+		if(localID == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 
 		Sv::SN_UpdateStat stat;
 		stat.characterID = (u32)localID;
