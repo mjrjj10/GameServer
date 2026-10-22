@@ -2459,6 +2459,50 @@ inline const char* PacketSerialize<Cl::CQ_LoadingProgressData>(const void* packe
 }
 
 template<>
+inline const char* PacketSerialize<Cl::CQ_GetGroundItem>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_GetGroundItem(%d, %d) :: {", Cl::CQ_GetGroundItem::NET_ID, packetSize);
+	SER("	srcEntityId=%u", buff.Read<u32>());
+	SER("	targetEntityId=0x%08x", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_CreateGroundItem>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	SER("SN_CreateGroundItem(%d, %d) :: {}", Sv::SN_CreateGroundItem::NET_ID, packetSize);
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SA_GetGroundItem>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	SER("SA_GetGroundItem(%d, %d) :: {}", Sv::SA_GetGroundItem::NET_ID, packetSize);
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_GetPublicGroundItem>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	SER("SN_GetPublicGroundItem(%d, %d) :: {}", Sv::SN_GetPublicGroundItem::NET_ID, packetSize);
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_DestroyGroundItem>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	SER("SN_DestroyGroundItem(%d, %d) :: {}", Sv::SN_DestroyGroundItem::NET_ID, packetSize);
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Cl::CQ_SkillUpgradeIngame>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

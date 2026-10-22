@@ -172,6 +172,7 @@ void World::ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos)
 		if(st->casterIndex != owner.index || !st->info || st->info->type != StatusType::TARGET || localTime >= st->until) continue;
 		Player& carried = players[st->targetIndex];
 		const Time drop = TimeAdd(localTime, TimeMsToTime(travel * 1000.0));
+		carried.carryReleaseAt = drop;
 		if(carried.clientHd == ClientHandle::INVALID && !carried.dead) {
 			carried.pushTarget = vec3(vec2(pos), carried.body->GetWorldPos().z);
 			carried.pushUntil = drop;
@@ -226,6 +227,7 @@ void World::RelayPassive(ActorNpc& npc, const SummonInfo& info, Player& owner)
 
 static const f32 NPC_LEG_RETARGET_DIST = 100.0f;
 static const i32 NPC_LEG_MIN_INTERVAL_MS = 100;
+static const i32 NPC_FOLLOW_LEG_MIN_INTERVAL_MS = 800;
 static const f32 NPC_WANDER_MIN_RADIUS = 100.0f;
 static const f32 NPC_WANDER_MAX_RADIUS = 300.0f;
 static const f32 NPC_WANDER_MIN_PAUSE_MS = 250.0f;
@@ -233,7 +235,8 @@ static const f32 NPC_WANDER_MAX_PAUSE_MS = 900.0f;
 
 void World::SyncNpcLeg(ActorNpc& npc, const vec3& goal)
 {
-	const bool retarget = npc.legMoving && glm::length(vec2(goal) - vec2(npc.legGoal)) > NPC_LEG_RETARGET_DIST && localTime >= TimeAdd(npc.legAt, TimeMsToTime(NPC_LEG_MIN_INTERVAL_MS));
+	const i32 minInterval = npc.ai == SummonInfo::AI_RELAY ? NPC_FOLLOW_LEG_MIN_INTERVAL_MS : NPC_LEG_MIN_INTERVAL_MS;
+	const bool retarget = npc.legMoving && glm::length(vec2(goal) - vec2(npc.legGoal)) > NPC_LEG_RETARGET_DIST && localTime >= TimeAdd(npc.legAt, TimeMsToTime(minInterval));
 	if(npc.legMoving && !retarget) return;
 	npc.legMoving = true;
 	npc.legGoal = goal;
@@ -416,11 +419,15 @@ void World::UpdateSummonAi(f32 delta)
 		const vec2 rel = vec2(goal) - vec2(npc.pos);
 		const f32 dist = glm::length(rel);
 		if(dist <= stopDist + 1.0f) { StopNpcLeg(npc); continue; }
-		const f32 step = MIN(info->moveSpeed * delta, dist - stopDist);
 		const vec2 dir = rel / dist;
 		SyncNpcLeg(npc, vec3(vec2(goal) - dir * stopDist, goal.z));
-		npc.pos = vec3(vec2(npc.pos) + dir * step, goal.z);
-		npc.rot.z = atan2f(dir.y, dir.x);
+		const vec2 legRel = vec2(npc.legGoal) - vec2(npc.pos);
+		const f32 legDist = glm::length(legRel);
+		if(legDist > 1.0f) {
+			const vec2 legDir = legRel / legDist;
+			npc.pos = vec3(vec2(npc.pos) + legDir * MIN(info->moveSpeed * delta, legDist), goal.z);
+			npc.rot.z = atan2f(legDir.y, legDir.x);
+		}
 	}
 }
 

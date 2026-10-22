@@ -3,6 +3,7 @@
 #include "world_common.h"
 #include <mxm/game_content.h>
 
+static const u16 SCENE_ROOT_NODE = 0;
 static const f32 WEAPON_NODE_MAX_FORWARD = 250.0f;
 static const i32 ULTIMATE_SKILL_SUFFIX = 50;
 static const f32 REPEAT_HIT_REDUCTION = 0.1f;
@@ -117,6 +118,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	inst.castID = castID;
 	inst.damage = damage;
 	inst.pos = pos;
+	if(child && remote->groundMoveOffsetZ >= 0) inst.pos.z = players[ownerIndex].body->GetWorldPos().z + remote->groundMoveOffsetZ;
 	inst.dir = dir;
 	inst.travelled = 0;
 	inst.wallZ = players[ownerIndex].body->GetWorldPos().z + BodyMidHeight(players[ownerIndex]);
@@ -141,7 +143,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	inst.penetrationLeft = remote->penetrationCount > 0 ? remote->penetrationCount : PENETRATION_UNLIMITED;
 	inst.areaDone = false;
 	inst.casterLocal = casterCreatesLocally;
-	inst.graphStart = pos;
+	inst.graphStart = inst.pos;
 	inst.graphDir = dir;
 	inst.graphArc = remote->behaviorType == Remote::BehaviorType::GRAPH && remote->bezier && inst.range > 0 ? BezierArcLength(*remote, inst.range) : 0;
 	if(remote->timeEventDelay >= 0) {
@@ -169,8 +171,8 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 			targetPos.z = aimPos->z;
 		}
 		const bool plainStaticBox = inst.speed <= 0 && remote->boundType == Remote::BoundType::E_BOUND_BOX && remote->angle <= 0;
-		const f32 sendYaw = atan2f(dir.y, dir.x);
-		vec3 sendPos = pos - vec3(0, 0, remote->offsetZ);
+		const f32 sendYaw = atan2f(dir.y, dir.x) + (remoteSendRootDir ? PI : 0.0f);
+		vec3 sendPos = vec3(vec2(pos), inst.pos.z) - vec3(0, 0, remote->offsetZ);
 		const bool atAimedPoint = aimPos && glm::length(vec2(*aimPos)) > 1.0f && glm::length(vec2(pos) - vec2(*aimPos)) < 1.0f;
 		if(plainStaticBox && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY), 0);
 		if(remoteTargetEntityOverride != ActorUID::INVALID) targetPos = pos;
@@ -607,7 +609,7 @@ void World::SpawnPendingRemotes()
 		const vec2 dir = vec2(cosf(pr->angle), sinf(pr->angle));
 		const Remote* remote = GetGameXmlContent().FindRemote(pr->idx);
 		const f32 offsetY = remote ? (remote->forceTargetDir ? -remote->offsetY : remote->offsetY) : 0;
-		vec3 pos = owner.body->GetWorldPos() + vec3(dir * offsetY, FIRE_NODE_HEIGHT);
+		vec3 pos = owner.body->GetWorldPos() + vec3(dir * offsetY, pr->nodeName == SCENE_ROOT_NODE ? 0.0f : FIRE_NODE_HEIGHT);
 
 		bool atAimedPoint = pr->atTarget;
 		switch((ActionCommand::TargetPreset)pr->preset) {
@@ -678,10 +680,12 @@ void World::SpawnPendingRemotes()
 			}
 			spawnCostLevel = pr->costLevel;
 			remoteSendIdxOverride = pr->sendIdx;
+			remoteSendRootDir = pr->rootDummyDir;
 			RemoteInst* spawned = SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, false, pr->stopAtTarget, false, !remote || RemoteCreateSendsEntity((ActionCommand::TargetPreset)pr->preset, remote->behaviorType));
 			remoteParentOverride = ActorUID::INVALID;
 			spawnCostLevel = nullptr;
 			remoteSendIdxOverride = RemoteIdx::INVALID;
+			remoteSendRootDir = false;
 			remoteTargetEntityOverride = ActorUID::INVALID;
 			remoteSendFromSet = false;
 			if(spawned) {

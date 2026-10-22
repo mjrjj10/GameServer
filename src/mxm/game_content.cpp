@@ -895,6 +895,7 @@ bool GameXmlContent::LoadMapByID(Map* map, MapIndex index)
 		map->areas.push_back(area);
 	}
 
+	if(!LoadLevelEvents(map, tempPathData)) return false;
 	return true;
 }
 
@@ -1456,6 +1457,7 @@ bool GameXmlContent::LoadAnimationData()
 			const char* P2 = nullptr;
 			pActionBase->QueryStringAttribute("Param2", &P2);
 			cmd.byDummyDir = P2 && EA::StdC::Strstr(P2, "ByDummyDir") ? 1 : 0;
+			cmd.rootDummyDir = cmd.byDummyDir && NodeName && EA::StdC::Strcmp(NodeName, "Scene Root") == 0 ? 1 : 0;
 		}
 		if(pActionBase->QueryAttribute("Delay", &cmd.delay) != XMLError::XML_SUCCESS) {
 			cmd.delay = 0.0f;
@@ -1875,6 +1877,7 @@ bool GameXmlContent::LoadRemoteData()
 				remote.maxSpeed = _MaxSpeed;
 				remote.maxDistance = _MaxDistance;
 				pComp->QueryFloatAttribute("_AngularVel", &remote.angularVel);
+				if(pComp->Attribute("_GroundMoveType")) remote.groundMoveOffsetZ = pComp->FloatAttribute("_GroundMoveOffsetZ", 0.0f);
 			}
 
 			else if((EA::StdC::Strcmp("RemoteSystemComData", compName) == 0)) {
@@ -1994,6 +1997,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadSummonActions();
+	if(!r) return false;
+
+	r = LoadGroundItems();
 	if(!r) return false;
 
 	r = LoadChildSkills();
@@ -2292,6 +2298,7 @@ StatusType StatusTypeFromString(const char* str)
 		"STATUS_TYPE_KROMEDE",
 		"STATUS_TYPE_LINK",
 		"STATUS_TYPE_MANABURN",
+		"STATUS_TYPE_MOTION",
 		"STATUS_TYPE_NEARLY_IMMORTAL",
 		"STATUS_TYPE_NOCOST",
 		"STATUS_TYPE_PUSH",
@@ -2393,6 +2400,7 @@ bool GameXmlContent::LoadStatusData()
 				pBlock->QueryAttribute("_MovingShirk", &m);
 				pBlock->QueryAttribute("_StandingShirk", &s2);
 				st.blockShirk = m != 0 || s2 != 0;
+				v = 0; pBlock->QueryAttribute("_Move", &v); st.blockMove = v != 0;
 			}
 			for(XMLElement* pAura = pCommon->FirstChildElement("_AuraStatusIndex"); pAura; pAura = pAura->NextSiblingElement("_AuraStatusIndex")) {
 				i32 id = 0;
@@ -2878,6 +2886,95 @@ bool GameXmlContent::LoadMoveGraphs()
 	return true;
 }
 
+static u8 ConsumableStatType(const char* name)
+{
+	static const struct { const char* name; StatType type; } STATS[] = {
+		{ "STAT_TYPE_HEALTH", StatType::STAT_TYPE_HEALTH },
+		{ "STAT_TYPE_STAMINA", StatType::STAT_TYPE_STAMINA },
+		{ "STAT_TYPE_ENERGY", StatType::STAT_TYPE_ENERGY },
+		{ "STAT_TYPE_MANA", StatType::STAT_TYPE_MANA },
+		{ "STAT_TYPE_RAGE", StatType::STAT_TYPE_RAGE },
+		{ "STAT_TYPE_ULTIMATE", StatType::STAT_TYPE_ULTIMATE },
+	};
+	if(!name) return 0xff;
+	for(const auto& s : STATS) if(EA::StdC::Strcmp(name, s.name) == 0) return (u8)s.type;
+	return 0xff;
+}
+
+bool GameXmlContent::LoadGroundItems()
+{
+	XMLDocument items;
+	if(!LoadXMLFile(L"/client/ITEM_BASIC.xml", items)) return false;
+	for(XMLElement* pInfo = items.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+		XMLElement* etc = pInfo->FirstChildElement("EtcItemComData");
+		const char* etcType = etc ? etc->Attribute("_Type") : nullptr;
+		if(!etcType || EA::StdC::Strcmp(etcType, "ETC_TYPE_FOOD") != 0) continue;
+		GroundItemInfo info;
+		pInfo->QueryAttribute("ID", &info.id);
+		if(XMLElement* item = pInfo->FirstChildElement("ItemComData")) {
+			if(XMLElement* effect = item->FirstChildElement("_Effect")) {
+				for(XMLElement* e = effect->FirstChildElement(); e; e = e->NextSiblingElement()) {
+					const u8 type = ConsumableStatType(e->Attribute("DATAKEY"));
+					if(type == 0xff) continue;
+					StatValue v = { type, e->FloatAttribute("DATA") };
+					if(EA::StdC::Strcmp(e->Name(), "_STAT_MUL") == 0 && !info.statMul.full()) info.statMul.push_back(v);
+					else if(EA::StdC::Strcmp(e->Name(), "_STAT_ADD") == 0 && !info.statAdd.full()) info.statAdd.push_back(v);
+				}
+			}
+		}
+		for(XMLElement* s = etc->FirstChildElement("_StatusIndex"); s; s = s->NextSiblingElement("_StatusIndex")) {
+			if(!info.statuses.full()) info.statuses.push_back(s->IntAttribute("DATA"));
+		}
+		if(XMLElement* life = pInfo->FirstChildElement("LifeTime_ComData")) life->QueryFloatAttribute("LifeTime", &info.lifeTime);
+		groundItemMap[info.id] = info;
+	}
+
+	XMLDocument drops;
+	if(!LoadXMLFile(L"/client/DROPITEM.xml", drops)) return false;
+	for(XMLElement* pInfo = drops.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+		XMLElement* common = pInfo->FirstChildElement("ST_COMMONDROPITEMINFO");
+		XMLElement* list = common ? common->FirstChildElement("_DROPITEMLIST") : nullptr;
+		if(!list) continue;
+		DropGroup group;
+		const char* dropType = list->Attribute("_Droptype");
+		group.piece = dropType && EA::StdC::Strcmp(dropType, "DROP_PIECE") == 0;
+		for(XMLElement* e = list->FirstChildElement("_DROPITEMINFO"); e && !group.entries.full(); e = e->NextSiblingElement("_DROPITEMINFO")) {
+			const char* dataType = e->Attribute("_DataType");
+			if(!dataType || EA::StdC::Strcmp(dataType, "ItemIndex") != 0) continue;
+			DropGroup::Entry entry;
+			entry.item = e->IntAttribute("_DataKey");
+			entry.minCount = e->IntAttribute("_Min", 1);
+			entry.maxCount = e->IntAttribute("_Max", 1);
+			entry.rate = e->FloatAttribute("_DropRate", 100.0f);
+			if(groundItemMap.find(entry.item) != groundItemMap.end()) group.entries.push_back(entry);
+		}
+		if(!group.entries.empty()) dropGroupMap[pInfo->IntAttribute("ID")] = group;
+	}
+	LOG("Loaded %d ground items, %d drop groups", (i32)groundItemMap.size(), (i32)dropGroupMap.size());
+	return true;
+}
+
+bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(LFMT(L"/%s/EVENTNODES/LEVELEVENT_SERVER.XML", levelDir), doc)) return true;
+	XMLElement* list = doc.FirstChildElement() ? doc.FirstChildElement()->FirstChildElement() : nullptr;
+	if(!list) return true;
+	for(XMLElement* pNode = list->FirstChildElement("_LevelEventData"); pNode; pNode = pNode->NextSiblingElement("_LevelEventData")) {
+		LevelEventNode node;
+		node.id = pNode->IntAttribute("_ConvertedEventDataID");
+		for(XMLElement* out = pNode->FirstChildElement("_OutputLink"); out && !node.outputs.full(); out = out->NextSiblingElement("_OutputLink")) node.outputs.push_back(out->IntAttribute("_ConvertedEventDataID"));
+		if(pNode->FirstChildElement("_LevelStartTriggerData")) node.kind = LevelEventNode::LEVEL_START;
+		else if(XMLElement* e = pNode->FirstChildElement("_TakeItemTriggerData")) { node.kind = LevelEventNode::TAKE_ITEM; node.tagID = e->IntAttribute("_TagID", -1); }
+		else if(XMLElement* e = pNode->FirstChildElement("_DelaySeqInfo")) { node.kind = LevelEventNode::DELAY; node.delay = e->FloatAttribute("_DelayTime"); node.variance = e->FloatAttribute("_RandomDelayTimeVariance"); }
+		else if(pNode->FirstChildElement("_CallSFXInfo")) node.kind = LevelEventNode::CALL_SFX;
+		else if(XMLElement* e = pNode->FirstChildElement("_CallItemInfo")) { node.kind = LevelEventNode::CALL_ITEM; node.dropIndex = e->IntAttribute("_Index"); node.areaID = e->IntAttribute("_SpawnAreaID"); node.tagID = e->IntAttribute("_TagID", -1); }
+		map->levelEvents.push_back(node);
+	}
+	LOG("Loaded %d level event nodes", (i32)map->levelEvents.size());
+	return true;
+}
+
 bool GameXmlContent::LoadSummonActions()
 {
 	XMLDocument xmlMobActions;
@@ -3007,6 +3104,9 @@ bool GameXmlContent::LoadWeaponFiring()
 			WeaponFiring wf;
 			if(fireDummy) { wf.fireDummy = fireDummy; InternNodeName(fireDummy); }
 			wf.spawnAtAim = pData && XmlAttrTrue(pData, "_RemoteSpawnAimPosition");
+			if(XMLElement* pCombo = pData ? pData->FirstChildElement("_COMBO") : nullptr) {
+				for(XMLElement* pLevel = pCombo->FirstChildElement("_LEVEL"); pLevel && !wf.comboValid.full(); pLevel = pLevel->NextSiblingElement("_LEVEL")) wf.comboValid.push_back(pLevel->FloatAttribute("_ValidTime"));
+			}
 			if(XMLElement* pCharge = pData ? pData->FirstChildElement("_CHARGE") : nullptr) {
 				for(XMLElement* pLevel = pCharge->FirstChildElement("_LEVEL"); pLevel && !wf.chargeTime.full(); pLevel = pLevel->NextSiblingElement("_LEVEL")) wf.chargeTime.push_back(pLevel->FloatAttribute("_ChargingTime"));
 			}

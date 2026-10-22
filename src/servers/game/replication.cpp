@@ -283,6 +283,71 @@ void Replication::SendClientLevelEvent(ClientHandle clientHd, i32 eventID)
 	SendPacket(clientHd, event);
 }
 
+void Replication::SendClientLevelEventToAll(i32 eventID)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		SendClientLevelEvent(clientHandle[clientID], eventID);
+	}
+}
+
+void Replication::SendCreateGroundItemToAll(u32 itemUID, i32 itemIndex, const vec3& pos)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		PacketWriter<Sv::SN_CreateGroundItem,64> packet;
+		packet.Write<u8>(0);
+		packet.Write<float3>(v2f(pos));
+		packet.Write<float3>(v2f(pos));
+		packet.Write<u32>(itemUID);
+		packet.Write<u32>(0);
+		packet.Write<u32>((u32)itemIndex);
+		packet.Write<u32>(1);
+		packet.Write<u32>(0);
+		packet.Write<i32>(0);
+		packet.Write<i32>(-1);
+		packet.Write<u8>(0);
+		packet.Write<u8>(1);
+		SendPacket(clientHandle[clientID], packet);
+	}
+}
+
+void Replication::SendGroundItemTaken(ClientHandle clientHd, ActorUID takerUID, u32 itemUID)
+{
+	Sv::SA_GetGroundItem answer;
+	answer.playerID = (u32)GetLocalActorID(clientHd, takerUID);
+	answer.itemID = itemUID;
+	answer.itemISN = 0;
+	answer.nErrorType = 0;
+	SendPacket(clientHd, answer);
+	SendPacket(clientHd, answer);
+}
+
+void Replication::SendPublicGroundItemTaken(ClientHandle takerHd, ActorUID takerUID, u32 itemUID)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		if(clientHd == takerHd) continue;
+		const LocalActorID local = GetLocalActorID(clientHd, takerUID);
+		if(local == LocalActorID::INVALID) continue;
+		Sv::SN_GetPublicGroundItem notify;
+		notify.playerID = (u32)local;
+		notify.itemID = (GroundItemUID)itemUID;
+		SendPacket(clientHd, notify);
+	}
+}
+
+void Replication::SendDestroyGroundItemToAll(u32 itemUID)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		Sv::SN_DestroyGroundItem destroy;
+		destroy.itemID = (GroundItemUID)itemUID;
+		SendPacket(clientHandle[clientID], destroy);
+	}
+}
+
 void Replication::SendClientLevelEventSeq(ClientHandle clientHd, i32 eventID)
 {
 	Sv::SN_RunClientLevelEventSeq seq;
@@ -1038,6 +1103,7 @@ static const u8 NPC_MOVE_YAW_AND_POSITIONS = 0x32;
 static const u8 NPC_MOVE_POSITIONS_ONLY = 0x3e;
 static const u8 NPC_MOVE_FLAG_STOPPED = 31;
 static const u8 NPC_MOVE_FLAG_MOVING = 32;
+static const f32 SUMMON_SPAWN_HEIGHT = 50.0f;
 static const f32 NPC_SPEED_SCALE = 5.0f;
 
 static i16 WorldYawToMonsterDeciDegrees(f32 worldYaw)
@@ -2624,6 +2690,7 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 	ASSERT(found != playerLocalInfo[clientID].localActorIDMap.end());
 
 	const LocalActorID localActorID = found->second;
+	const vec3 spawnPos = actor.ownerUID != ActorUID::INVALID ? actor.pos + vec3(0, 0, SUMMON_SPAWN_HEIGHT) : actor.pos;
 
 	LOG("[client%03d] Replication :: SendActorNpcSpawn :: actorUID=%u localActorID=%u", clientID, (u32)actor.actorUID, (u32)localActorID);
 
@@ -2635,7 +2702,7 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 		packet.Write<i32>(actor.entityType);
 		packet.Write<CreatureIndex>(actor.docID);
 		packet.Write<i32>(actor.localID);
-		packet.Write(actor.pos);
+		packet.Write(spawnPos);
 		packet.Write(actor.dir);
 		packet.Write<i32>(actor.spawnAnim);
 		packet.Write<ActionStateID>(actor.ownerUID != ActorUID::INVALID ? ActionStateID::SPAWN_BEHAVIORSTATE : actor.actionState);
@@ -2684,7 +2751,7 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 		packet.Write<i16>((i16)ActionStateID::SPAWN_BEHAVIORSTATE);
 		packet.Write<i16>(WorldYawToMonsterDeciDegrees(actor.dir.z));
 		packet.Write<u16>((u16)MIN((info ? info->moveSpeed : 0.0f) * NPC_SPEED_SCALE, 65535.0f));
-		packet.Write(actor.pos);
+		packet.Write(spawnPos);
 		SendPacket(clientHd, packet);
 		if(info && (info->moveSpeed > 0 || info->rotateSpeed > 0)) {
 			PacketWriter<Sv::SN_AIMonsterSyncMove,48> move;

@@ -165,6 +165,7 @@ struct Server
 	EA::Thread::Thread thread;
 
 	i32 packetCounter = 0;
+	i32 traceServerID = -1;
 	bool doTraceNetwork = false;
 
 	bool Init();

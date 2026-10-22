@@ -1,6 +1,8 @@
 #include "network.h"
 #include "protocol.h"
 
+static const i32 TRACE_CLIENTS_PER_SERVER = 1000;
+
 const char* IpToString(const u8* ip)
 {
 	return FMT("%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
@@ -293,8 +295,12 @@ void Server::SendPacketData(ClientHandle clientHd, u16 netID, u16 packetSize, co
 
 	if(doTraceNetwork) {
 		static Mutex mutexFile;
+		static i32 traceCounter = 0;
+		static i32 traceServers = 0;
 		mutexFile.Lock();
-		fileSaveBuff(FormatPath(FMT("trace/game_%d_sv_%d_c%d.raw", packetCounter, header.netID, clientID)), sendBuff, header.size);
+		if(traceServerID < 0) traceServerID = traceServers++;
+		fileSaveBuff(FormatPath(FMT("trace/game_%d_sv_%d_c%d.raw", traceCounter, header.netID, traceServerID * TRACE_CLIENTS_PER_SERVER + clientID)), sendBuff, header.size);
+		traceCounter++;
 		packetCounter++;
 		mutexFile.Unlock();
 	}

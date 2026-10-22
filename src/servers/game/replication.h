@@ -308,6 +308,11 @@ struct Replication
 	void SendChatMessageToClient(ClientHandle toClientHd, const wchar* senderName, EChatType chatType, const wchar* msg, i32 msgLen = -1);
 
 	void SendClientLevelEvent(ClientHandle clientHd, i32 eventID);
+	void SendClientLevelEventToAll(i32 eventID);
+	void SendCreateGroundItemToAll(u32 itemUID, i32 itemIndex, const vec3& pos);
+	void SendGroundItemTaken(ClientHandle clientHd, ActorUID takerUID, u32 itemUID);
+	void SendPublicGroundItemTaken(ClientHandle takerHd, ActorUID takerUID, u32 itemUID);
+	void SendDestroyGroundItemToAll(u32 itemUID);
 	void SendClientLevelEventSeq(ClientHandle clientHd, i32 eventID);
 
 	void SendChatWhisperConfirmToClient(ClientHandle senderClientHd, const wchar* destNick, const wchar* msg, ErrorType retval);

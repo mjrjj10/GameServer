@@ -65,6 +65,7 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 		CASE(CQ_GamePlayerTag);
 		CASE(CQ_PlayerJump);
 		CASE(CQ_SkillUpgradeIngame);
+		CASE(CQ_GetGroundItem);
 		CASE(CQ_PlayerCastSkill);
 		CASE(CQ_WeaponState);
 		CASE(CQ_InteractionCasting);
@@ -319,6 +320,17 @@ void GamePacketHandler::HandlePacket_CQ_SkillUpgradeIngame(ClientHandle clientHd
 	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_SkillUpgradeIngame>(packetData, packetSize));
 	const Cl::CQ_SkillUpgradeIngame& upgrade = SafeCast<Cl::CQ_SkillUpgradeIngame>(packetData, packetSize);
 	game->OnPlayerSkillUpgrade(clientHd, (i32)upgrade.slot);
+}
+
+void GamePacketHandler::HandlePacket_CQ_GetGroundItem(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_GetGroundItem>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_GetGroundItem (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_GetGroundItem>(packetData, packetSize));
+	const Cl::CQ_GetGroundItem& request = SafeCast<Cl::CQ_GetGroundItem>(packetData, packetSize);
+	game->OnPlayerTakeGroundItem(clientHd, request.targetEntityId);
 }
 
 void GamePacketHandler::HandlePacket_CQ_PlayerJump(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

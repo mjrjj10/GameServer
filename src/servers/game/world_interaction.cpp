@@ -2,6 +2,7 @@
 #include "world.h"
 #include "world_common.h"
 #include <mxm/game_content.h>
+#include <EASTL/algorithm.h>
 
 static const f32 TELEPORT_SPREAD = 80.0f;
 static const i32 INTERACTION_NOT_OCCUPIED = -1;
@@ -166,6 +167,152 @@ void World::UpdateInteractions()
 		if(it->clientHd != ClientHandle::INVALID && localTime >= it->nextCarrySync) {
 			it->nextCarrySync = TimeAdd(localTime, TimeMsToTime(CARRY_SYNC_SEC * 1000.0));
 			replication->SendSelfMove(it->clientHd, it->Main().UID, carrier.body->GetWorldPos(), carrier.movement.moveDir, carrier.movement.moveSpeed, carrier.input.rot.upperYaw);
+		}
+	}
+}
+
+static const u32 STAT_REASON_ITEM = 3;
+static const f32 BOT_ITEM_PICKUP_RADIUS = 100.0f;
+
+void World::StartLevelEvents()
+{
+	if(levelEventsStarted) return;
+	levelEventsStarted = true;
+	foreach_const(n, GetGameXmlContent().mapPvpDeathMatch.levelEvents) {
+		if(n->kind != GameXmlContent::LevelEventNode::LEVEL_START) continue;
+		foreach_const(o, n->outputs) FireLevelEvent(*o);
+	}
+}
+
+void World::FireLevelEvent(i32 nodeID)
+{
+	const GameXmlContent::LevelEventNode* node = GetGameXmlContent().mapPvpDeathMatch.FindLevelEvent(nodeID);
+	if(!node) return;
+	switch(node->kind) {
+		case GameXmlContent::LevelEventNode::DELAY: {
+			const f32 jitter = node->variance > 0 ? ((f32)(RandUint() % 2001) / 1000.0f - 1.0f) * node->variance : 0.0f;
+			const Time at = TimeAdd(localTime, TimeMsToTime(MAX(node->delay + jitter, 0.0f) * 1000.0));
+			foreach_const(o, node->outputs) {
+				if(!levelEventTimers.full()) levelEventTimers.push_back({ *o, at });
+			}
+			return;
+		}
+		case GameXmlContent::LevelEventNode::CALL_SFX: replication->SendClientLevelEventToAll(node->id); break;
+		case GameXmlContent::LevelEventNode::CALL_ITEM: SpawnGroundItems(node->dropIndex, node->areaID, node->tagID); break;
+		default: return;
+	}
+	foreach_const(o, node->outputs) FireLevelEvent(*o);
+}
+
+void World::SpawnGroundItems(i32 dropIndex, i32 areaID, i32 tagID)
+{
+	const auto& content = GetGameXmlContent();
+	const GameXmlContent::DropGroup* group = content.FindDropGroup(dropIndex);
+	const GameXmlContent::Map::Area* area = content.mapPvpDeathMatch.FindArea(areaID);
+	if(!group || !area) {
+		LOG("GroundItem :: drop group %d or area %d not found", dropIndex, areaID);
+		return;
+	}
+	foreach_const(e, group->entries) {
+		if(group->piece && (f32)(RandUint() % 10000) / 100.0f >= e->rate) continue;
+		const GameXmlContent::GroundItemInfo* info = content.FindGroundItem(e->item);
+		if(!info) continue;
+		const i32 count = e->minCount + (e->maxCount > e->minCount ? (i32)(RandUint() % (u32)(e->maxCount - e->minCount + 1)) : 0);
+		for(i32 k = 0; k < count && !groundItems.full(); k++) {
+			GroundItem item;
+			item.uid = nextGroundItemUID++;
+			item.itemIndex = e->item;
+			item.pos = area->pos;
+			item.tagID = tagID;
+			item.expireAt = info->lifeTime > 0 ? TimeAdd(localTime, TimeMsToTime(info->lifeTime * 1000.0)) : Time::ZERO;
+			groundItems.push_back(item);
+			replication->SendCreateGroundItemToAll(item.uid, item.itemIndex, item.pos);
+			LOG("GroundItem :: item %d spawned at area %d (%.0f, %.0f) tag %d", item.itemIndex, areaID, item.pos.x, item.pos.y, tagID);
+		}
+	}
+}
+
+static f32 ItemStatMax(const World::Player& player, u8 type)
+{
+	const ClassType cls = player.Main().classType;
+	if(type == (u8)StatType::STAT_TYPE_HEALTH) return (f32)player.Main().hpMax;
+	return MasterStat(cls, type);
+}
+
+bool World::TakeGroundItem(Player& player, u32 itemUID)
+{
+	auto found = eastl::find_if(groundItems.begin(), groundItems.end(), [itemUID](const GroundItem& g) { return g.uid == itemUID; });
+	if(found == groundItems.end() || player.dead) return false;
+	const GroundItem item = *found;
+	groundItems.erase(found);
+	const GameXmlContent::GroundItemInfo* info = GetGameXmlContent().FindGroundItem(item.itemIndex);
+	if(info) {
+		auto apply = [&](u8 type, f32 amount) {
+			const f32 max = ItemStatMax(player, type);
+			if(max <= 0 || amount == 0) return;
+			const ActorUID uid = player.Main().UID;
+			if(type == (u8)StatType::STAT_TYPE_HEALTH) {
+				ActorMaster& chara = player.Main();
+				chara.hp = MIN(chara.hp + (i32)amount, chara.hpMax);
+				replication->SendStatToAll(uid, type, (f32)chara.hp, (f32)chara.hpMax, STAT_REASON_ITEM);
+			}
+			else if(type == (u8)StatType::STAT_TYPE_ULTIMATE) {
+				player.ultGauge = MIN(MAX(player.ultGauge, 0.0f) + amount, max);
+				replication->SendStatToAll(uid, type, player.ultGauge, max, STAT_REASON_ITEM);
+			}
+			else if(type == (u8)StatType::STAT_TYPE_MANA) {
+				player.mana = MIN(MAX(player.mana, 0.0f) + amount, max);
+				replication->SendStatToAll(uid, type, player.mana, max, STAT_REASON_ITEM);
+			}
+			else if(type == (u8)StatType::STAT_TYPE_STAMINA) {
+				player.stamina = MIN(MAX(player.stamina, 0.0f) + amount, max);
+				replication->SendStatToAll(uid, type, player.stamina, max, STAT_REASON_ITEM);
+			}
+			else {
+				for(int r = 0; r < 3; r++) {
+					if(RESOURCES[r].maxStat != (i32)type) continue;
+					player.res[r] = MIN(MAX(player.res[r], 0.0f) + amount, max);
+					replication->SendStatToAll(uid, type, player.res[r], max, STAT_REASON_ITEM);
+				}
+			}
+		};
+		foreach_const(m, info->statMul) apply(m->type, ItemStatMax(player, m->type) * m->value / 100.0f);
+		foreach_const(a, info->statAdd) apply(a->type, a->value);
+		foreach_const(st, info->statuses) ApplyStatus(player, player, *st);
+	}
+	if(player.clientHd != ClientHandle::INVALID) replication->SendGroundItemTaken(player.clientHd, player.Main().UID, itemUID);
+	replication->SendPublicGroundItemTaken(player.clientHd, player.Main().UID, itemUID);
+	LOG("GroundItem :: %ls takes item %d (tag %d)", player.name.data(), item.itemIndex, item.tagID);
+	foreach_const(n, GetGameXmlContent().mapPvpDeathMatch.levelEvents) {
+		if(n->kind != GameXmlContent::LevelEventNode::TAKE_ITEM || n->tagID != item.tagID || item.tagID < 0) continue;
+		foreach_const(o, n->outputs) FireLevelEvent(*o);
+	}
+	return true;
+}
+
+void World::UpdateLevelEvents()
+{
+	for(i32 i = 0; i < (i32)levelEventTimers.size(); ) {
+		if(localTime < levelEventTimers[i].at) { i++; continue; }
+		const i32 node = levelEventTimers[i].node;
+		levelEventTimers.erase(levelEventTimers.begin() + i);
+		FireLevelEvent(node);
+	}
+	for(i32 i = 0; i < (i32)groundItems.size(); ) {
+		if(groundItems[i].expireAt != Time::ZERO && localTime >= groundItems[i].expireAt) {
+			replication->SendDestroyGroundItemToAll(groundItems[i].uid);
+			groundItems.erase(groundItems.begin() + i);
+			continue;
+		}
+		i++;
+	}
+	foreach(p, players) {
+		if(p->clientHd != ClientHandle::INVALID || p->dead || !p->body) continue;
+		const vec2 at = vec2(p->body->GetWorldPos());
+		for(i32 i = 0; i < (i32)groundItems.size(); i++) {
+			if(glm::length(vec2(groundItems[i].pos) - at) > BOT_ITEM_PICKUP_RADIUS) continue;
+			TakeGroundItem(*p, groundItems[i].uid);
+			break;
 		}
 	}
 }

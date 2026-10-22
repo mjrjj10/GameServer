@@ -209,6 +209,7 @@ void World::Update(Time localTime_)
 	UpdateStatuses();
 	UpdateHideVisibility();
 	UpdateNpcStatuses();
+	UpdateLevelEvents();
 	UpdateToggles();
 	UpdateChases();
 	UpdateBattleStates();

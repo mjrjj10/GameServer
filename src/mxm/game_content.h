@@ -186,6 +186,7 @@ enum class StatusType: u8
 	KROMEDE,
 	LINK,
 	MANABURN,
+	MOTION,
 	NEARLY_IMMORTAL,
 	NOCOST,
 	PUSH,
@@ -247,6 +248,7 @@ struct StatusInfo
 	bool blockAttack = false;
 	bool blockSkill = false;
 	bool blockShirk = false;
+	bool blockMove = false;
 	bool isDebuff = false;
 	bool canDispel = false;
 	i8 dispelEffect = -1;
@@ -304,7 +306,8 @@ struct StatusInfo
 struct WeaponFiring
 {
 	RemoteIdx base = RemoteIdx::INVALID;
-	eastl::fixed_vector<RemoteIdx,4,false> combo;
+	eastl::fixed_vector<RemoteIdx,8,false> combo;
+	eastl::fixed_vector<f32,8,false> comboValid;
 	eastl::fixed_vector<RemoteIdx,4,false> charge;
 	eastl::fixed_vector<f32,4,false> chargeTime;
 	eastl::fixed_string<char,32,false> chargeDummy;
@@ -392,6 +395,7 @@ struct Remote
 	f32 offsetY = 0;
 	bool forceTargetDir = false;
 	f32 offsetZ = 0;
+	f32 groundMoveOffsetZ = -1;
 	f32 distPenaltyRate = 0;
 	f32 penaltyApplyDistance = 0;
 	f32 boundOffsetY = 0;
@@ -490,6 +494,35 @@ struct GameXmlContent
 		CharacterModel character;
 	};
 
+	struct GroundItemInfo
+	{
+		i32 id = 0;
+		eastl::fixed_vector<StatValue,4,false> statMul;
+		eastl::fixed_vector<StatValue,4,false> statAdd;
+		eastl::fixed_vector<i32,4,false> statuses;
+		f32 lifeTime = 0;
+	};
+
+	struct DropGroup
+	{
+		struct Entry { i32 item = 0; i32 minCount = 1; i32 maxCount = 1; f32 rate = 100; };
+		bool piece = false;
+		eastl::fixed_vector<Entry,8,false> entries;
+	};
+
+	struct LevelEventNode
+	{
+		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM };
+		i32 id = 0;
+		Kind kind = OTHER;
+		i32 tagID = -1;
+		f32 delay = 0;
+		f32 variance = 0;
+		i32 dropIndex = 0;
+		i32 areaID = 0;
+		eastl::fixed_vector<i32,8,false> outputs;
+	};
+
 	struct Map
 	{
 		struct Spawn
@@ -530,6 +563,10 @@ struct GameXmlContent
 		eastl::fixed_vector<Spawn,512> creatures;
 		eastl::fixed_vector<Spawn,512> dynamic;
 		eastl::fixed_vector<Area,512> areas;
+		eastl::vector<LevelEventNode> levelEvents;
+
+		const Area* FindArea(i32 id) const { foreach_const(a, areas) if(a->ID == id) return &*a; return nullptr; }
+		const LevelEventNode* FindLevelEvent(i32 id) const { foreach_const(n, levelEvents) if(n->id == id) return &*n; return nullptr; }
 	};
 
 	struct MapList
@@ -557,6 +594,7 @@ struct GameXmlContent
 			i32 animationId = 0;
 			u16 nodeName = 0;
 			u8 byDummyDir = 0;
+			u8 rootDummyDir = 0;
 
 			union {
 				struct {
@@ -845,6 +883,8 @@ struct GameXmlContent
 		return 0;
 	}
 	f32 GetStageTimeLimit(i32 stageID) const { auto f = stageTimeLimit.find(stageID); return f == stageTimeLimit.end() ? 0 : f->second; }
+	const GroundItemInfo* FindGroundItem(i32 id) const { auto f = groundItemMap.find(id); return f == groundItemMap.end() ? nullptr : &f->second; }
+	const DropGroup* FindDropGroup(i32 id) const { auto f = dropGroupMap.find(id); return f == dropGroupMap.end() ? nullptr : &f->second; }
 	const SummonInfo* FindSummon(i32 creatureID) const { auto f = summonMap.find(creatureID); return f == summonMap.end() ? nullptr : &f->second; }
 	Element GetCreatureElement(i32 creatureID) const { auto f = creatureElement.find(creatureID); return f == creatureElement.end() ? Element::NONE : f->second; }
 	i32 FindSkillHitEventRemote(i32 skillID) const { auto f = skillHitEventRemote.find(skillID); return f == skillHitEventRemote.end() ? 0 : f->second; }
@@ -924,6 +964,8 @@ private:
 	eastl::hash_map<i32, f32> skillBaseDamage;
 	eastl::hash_map<i32, f32> skillConsumeUG;
 	eastl::hash_map<i32, SummonInfo> summonMap;
+	eastl::hash_map<i32, GroundItemInfo> groundItemMap;
+	eastl::hash_map<i32, DropGroup> dropGroupMap;
 	eastl::hash_map<u64, f32> aniSeqTime;
 	eastl::hash_map<u64, MoveCurve> moveCurves;
 	eastl::hash_map<i32, f32> stageTimeLimit;
@@ -939,6 +981,8 @@ private:
 	bool LoadAnimationSequenceTimes();
 	bool LoadMoveGraphs();
 	bool LoadSummonActions();
+	bool LoadGroundItems();
+	bool LoadLevelEvents(Map* map, const wchar* levelDir);
 	bool LoadChildSkills();
 	bool LoadWeaponFiring();
 	bool LoadSkillTargeting();

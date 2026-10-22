@@ -14,7 +14,9 @@ static const f32 FLY_PULL_MAX_SCALE = 2.0f;
 static bool StatusSendsGraph(const StatusInfo* info)
 {
 	if(!info) return false;
+	if(info->blockMove) return true;
 	switch(info->type) {
+		case StatusType::MOTION:
 		case StatusType::ROOT:
 		case StatusType::STUN:
 		case StatusType::FREEZE:
@@ -597,7 +599,8 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		foreach(it, activeStatuses) {
 			if(it->targetIndex != target.index || !it->info || it->info->type != StatusType::TARGET || it->info->skillIndex != info->skillIndex || it->until <= localTime) continue;
 			const Time applied = it->appliedAt;
-			foreach(w, activeStatuses) if(w->targetIndex == target.index && w->appliedAt == applied && w->until > localTime) w->until = localTime;
+			const Time release = target.carryReleaseAt > localTime ? target.carryReleaseAt : localTime;
+			foreach(w, activeStatuses) if(w->targetIndex == target.index && w->appliedAt == applied && w->until > release) w->until = release;
 			LOG("Status :: %ls released from %d by %d", target.name.data(), it->statusID, statusID);
 		}
 	}
@@ -821,7 +824,9 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	vec3 sentTo = dragForce ? forceCenter : to;
 	if(info && (info->type == StatusType::AIRBORNE || info->type == StatusType::FLY) && info->heightRatio > 0) sentTo.z = from.z + STATUS_LIFT_BASE_HEIGHT * info->heightRatio * ccScale;
 	if(info && (info->attachToCaster || StatusGraphAnchorOnly(info))) sentTo = vec3(0);
-	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, from, sentTo, StatusGraphTimed(info) ? graphDuration : 0.0f, 1, ccScale, nominalDist, StatusSendsGraph(info));
+	const bool motionGraph = info && info->type == StatusType::MOTION;
+	if(motionGraph) sentTo = vec3(0);
+	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, motionGraph ? vec3(0) : from, sentTo, StatusGraphTimed(info) ? graphDuration : 0.0f, 1, ccScale, nominalDist, StatusSendsGraph(info));
 	if(npcCasterStatus != 0) ApplyNpcOwnerStatus(npcCaster, target, npcCasterStatus);
 	if(info && info->blockSkill && caster.team != target.team && !target.dead) InterruptSkills(target);
 	const i32 guard = DefeatGuardStatus(info);

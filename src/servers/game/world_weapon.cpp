@@ -38,7 +38,6 @@ static void BotWeaponAnimation(const World::Player& player, Replication* replica
 void World::PlayerWeaponFire(Player& player)
 {
 	BreakHide(player);
-	BotWeaponAnimation(player, replication);
 	const vec2 dir = vec2(cosf(player.weaponAimYaw), sinf(player.weaponAimYaw));
 	const vec3 origin = player.body->GetWorldPos();
 
@@ -54,6 +53,7 @@ void World::PlayerWeaponFire(Player& player)
 		const WeaponFiring& wf = ActiveWeaponFiring(player, swingStance);
 		if(player.chargeLevel > 0) ApplyResourceGain(player, ResourceEvent::CHARGED_SHOT);
 		const RemoteIdx swing = SelectWeaponRemote(player, wf);
+		BotWeaponAnimation(player, replication);
 		const Remote* swingRemote = GetGameXmlContent().FindRemote(swing);
 		ASSERT(swingRemote);
 		LOG("Shot :: %ls melee swing remote %d (stance %d)", player.name.data(), (i32)swing, (i32)swingStance);
@@ -68,7 +68,6 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	MarkInBattle(player);
 	const ClassType classType = player.Main().classType;
 	if(WeaponIsMelee(player)) return;
-	BotWeaponAnimation(player, replication);
 	if(player.chargeLevel > 0) ApplyResourceGain(player, ResourceEvent::CHARGED_SHOT);
 	if(player.clientHd != ClientHandle::INVALID && player.casting.skillID != SkillID::INVALID && player.casting.type == GameXmlContent::SkillCast::LIMIT) {
 		ReleaseCast(player);
@@ -85,6 +84,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	const f32 aimMin = wf.minDistance;
 	const bool spawnAtAim = wf.spawnAtAim;
 	const RemoteIdx idx = SelectWeaponRemote(player, wf);
+	BotWeaponAnimation(player, replication);
 	const Remote* remote = content.FindRemote(idx);
 	ASSERT(remote);
 	LOG("Shot :: %ls firing remote %d (combo %d charge %d count %d)", player.name.data(), (i32)idx, player.firingCombo, player.chargeLevel, player.shotCount[player.mainCharaID & 1]);
@@ -457,6 +457,11 @@ const WeaponFiring& World::ActiveWeaponFiring(const Player& p, i8 stance) const
 RemoteIdx World::SelectWeaponRemote(Player& player, const WeaponFiring& wf)
 {
 	const u32 m = player.mainCharaID & 1;
+	if(player.clientHd == ClientHandle::INVALID && !wf.combo.empty()) {
+		const bool chained = player.firingCombo < wf.comboValid.size() && player.botComboShotAt != Time::ZERO && localTime <= TimeAdd(player.botComboShotAt, TimeMsToTime(wf.comboValid[player.firingCombo] * 1000.0));
+		player.firingCombo = chained && player.firingCombo < wf.combo.size() ? player.firingCombo + 1 : 0;
+		player.botComboShotAt = localTime;
+	}
 	RemoteIdx idx = wf.base;
 	if(player.chargeLevel > 0 && player.chargeLevel <= wf.charge.size()) idx = wf.charge[player.chargeLevel - 1];
 	else if(player.firingCombo > 0 && player.firingCombo <= wf.combo.size()) idx = wf.combo[player.firingCombo - 1];

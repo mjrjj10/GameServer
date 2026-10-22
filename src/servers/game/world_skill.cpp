@@ -571,6 +571,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.stopAtTarget = cmd->remote.stopAtTarget;
 			pr.remove = cmd->remote.remove != 0;
 			pr.nodeName = cmd->nodeName;
+			pr.rootDummyDir = cmd->rootDummyDir != 0;
 			if(cmd->remote.removeAtAnimEnd) {
 				i32 animId = 0, loop = 1;
 				foreach_const(st, action.anims) if(st->index == curAnim) { animId = st->animationId; loop = MAX(st->loop, 1); }

@@ -14,6 +14,8 @@ static const u16 HUB_LISTEN_PORT = 11900;
 const CreatureIndex CI_DOOR = CreatureIndex(110040546);
 const CreatureIndex CI_WALL = CreatureIndex(110042602);
 
+static const f64 LEVEL_START_BEFORE_GAME_MS = 5000.0;
+
 void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl::array<ClientHandle, MAX_PLAYERS>& playerClientHdList)
 {
 	replication.Init(server_);
@@ -155,6 +157,7 @@ void Game::Update(Time localTime_)
 		} break;
 
 		case Phase::PreGame: {
+			if(TimeAdd(localTime, TimeMsToTime(LEVEL_START_BEFORE_GAME_MS)) >= phaseTime) world.StartLevelEvents();
 			if(phaseTime < localTime) {
 				phase = Phase::Game;
 
@@ -665,6 +668,14 @@ void Game::OnPlayerReturnToChannel(ClientHandle clientHd)
 	i32 hubIP[4] = { Config().HostIP[0], Config().HostIP[1], Config().HostIP[2], Config().HostIP[3] };
 	if(hubIP[0] == 0) { hubIP[0] = 127; hubIP[3] = 1; }
 	replication.SendDoConnectChannel(clientHd, player.name.data(), hubIP, HUB_LISTEN_PORT);
+}
+
+void Game::OnPlayerTakeGroundItem(ClientHandle clientHd, u32 itemUID)
+{
+	auto found = playerMap.find(clientHd);
+	if(found == playerMap.end()) return;
+	World::Player& player = world.GetPlayer(found->second->playerIndex);
+	if(!world.TakeGroundItem(player, itemUID)) LOG("GroundItem :: %ls take 0x%08x refused", player.name.data(), itemUID);
 }
 
 void Game::OnPlayerSkillUpgrade(ClientHandle clientHd, i32 slot)

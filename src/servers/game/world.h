@@ -114,6 +114,7 @@ struct World
 
 		bool weaponFired = false;
 		u8 firingCombo = 0;
+		Time botComboShotAt = Time::ZERO;
 		u8 chargeLevel = 0;
 		i32 weaponState = 0;
 		Time chargeStart = Time::ZERO;
@@ -207,6 +208,7 @@ struct World
 		vec3 pushTarget = vec3(0);
 		f32 pushSpeed = 0;
 		Time pushUntil = Time::ZERO;
+		Time carryReleaseAt = Time::ZERO;
 		vec2 dragCenter = vec2(0);
 		f32 dragMin = 0;
 		f32 dragMax = 0;
@@ -504,6 +506,7 @@ struct World
 		bool atTarget = false;
 		bool stopAtTarget = false;
 		u16 nodeName = 0;
+		bool rootDummyDir = false;
 		Time aniEndAt = Time::ZERO;
 	};
 
@@ -721,6 +724,7 @@ struct World
 	const GameXmlContent::CostLevel* castCostLevel = nullptr;
 	const GameXmlContent::CostLevel* spawnCostLevel = nullptr;
 	RemoteIdx remoteSendIdxOverride = RemoteIdx::INVALID;
+	bool remoteSendRootDir = false;
 	bool reflecting = false;
 	bool frozen = false;
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;
@@ -818,6 +822,17 @@ public:
 	bool IsCarrying(const Player& player) const;
 	void ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID);
 	void UpdateNpcStatuses();
+	void StartLevelEvents();
+	void UpdateLevelEvents();
+	void FireLevelEvent(i32 nodeID);
+	void SpawnGroundItems(i32 dropIndex, i32 areaID, i32 tagID);
+	bool TakeGroundItem(Player& player, u32 itemUID);
+	struct GroundItem { u32 uid; i32 itemIndex; vec3 pos; i32 tagID; Time expireAt; };
+	eastl::fixed_vector<GroundItem,64,false> groundItems;
+	struct LevelEventTimer { i32 node; Time at; };
+	eastl::fixed_vector<LevelEventTimer,128,false> levelEventTimers;
+	u32 nextGroundItemUID = 0xC0000400;
+	bool levelEventsStarted = false;
 	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; };
 	eastl::fixed_vector<NpcStatus,32,false> npcStatuses;
 	void ComboBaseCooldown(Player& player);
