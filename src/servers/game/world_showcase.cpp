@@ -752,6 +752,8 @@ void World::UpdateShowcase()
 		}
 	}
 	caster.resDirty = true;
+	caster.ultGauge = MasterStat(caster.Main().classType, STAT_ULTIMATE);
+	caster.ultDirty = true;
 	{
 		const f32 cd = glm::length(vec2(caster.body->GetWorldPos()) - vec2(casterPos));
 		const f32 dd = glm::length(vec2(dummy.body->GetWorldPos()) - vec2(dummyPos));

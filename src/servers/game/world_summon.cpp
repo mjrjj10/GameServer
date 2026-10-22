@@ -224,6 +224,54 @@ void World::RelayPassive(ActorNpc& npc, const SummonInfo& info, Player& owner)
 	npc.skillTarget = ActorUID::INVALID;
 }
 
+static const f32 NPC_LEG_RETARGET_DIST = 100.0f;
+static const i32 NPC_LEG_MIN_INTERVAL_MS = 100;
+static const f32 NPC_WANDER_MIN_RADIUS = 100.0f;
+static const f32 NPC_WANDER_MAX_RADIUS = 300.0f;
+static const f32 NPC_WANDER_MIN_PAUSE_MS = 250.0f;
+static const f32 NPC_WANDER_MAX_PAUSE_MS = 900.0f;
+
+void World::SyncNpcLeg(ActorNpc& npc, const vec3& goal)
+{
+	const bool retarget = npc.legMoving && glm::length(vec2(goal) - vec2(npc.legGoal)) > NPC_LEG_RETARGET_DIST && localTime >= TimeAdd(npc.legAt, TimeMsToTime(NPC_LEG_MIN_INTERVAL_MS));
+	if(npc.legMoving && !retarget) return;
+	npc.legMoving = true;
+	npc.legGoal = goal;
+	npc.legAt = localTime;
+	replication->SendNpcLegStartToAll(npc.UID, npc.pos, goal);
+	replication->SendNpcTurnToAll(npc.UID, atan2f(goal.y - npc.pos.y, goal.x - npc.pos.x));
+}
+
+void World::WanderNpc(ActorNpc& npc, f32 moveSpeed, f32 delta)
+{
+	if(!npc.legMoving) {
+		if(localTime < npc.wanderResumeAt) return;
+		const f32 angle = (f32)(RandUint() % 3600) * PI / 1800.0f;
+		const f32 radius = NPC_WANDER_MIN_RADIUS + (f32)(RandUint() % 1000) / 1000.0f * (NPC_WANDER_MAX_RADIUS - NPC_WANDER_MIN_RADIUS);
+		SyncNpcLeg(npc, vec3(vec2(npc.home) + vec2(cosf(angle), sinf(angle)) * radius, npc.pos.z));
+		return;
+	}
+	const vec2 rel = vec2(npc.legGoal) - vec2(npc.pos);
+	const f32 dist = glm::length(rel);
+	const f32 step = moveSpeed * delta;
+	if(dist <= step) {
+		npc.pos = vec3(vec2(npc.legGoal), npc.pos.z);
+		StopNpcLeg(npc);
+		const f32 pause = NPC_WANDER_MIN_PAUSE_MS + (f32)(RandUint() % 1000) / 1000.0f * (NPC_WANDER_MAX_PAUSE_MS - NPC_WANDER_MIN_PAUSE_MS);
+		npc.wanderResumeAt = TimeAdd(localTime, TimeMsToTime(pause));
+		return;
+	}
+	npc.pos += vec3(rel / dist * step, 0);
+	npc.rot.z = atan2f(rel.y, rel.x);
+}
+
+void World::StopNpcLeg(ActorNpc& npc)
+{
+	if(!npc.legMoving) return;
+	npc.legMoving = false;
+	replication->SendNpcLegStopToAll(npc.UID, npc.pos, npc.rot.z);
+}
+
 void World::UpdateSummonAttack(ActorNpc& npc, f32 delta)
 {
 	const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc.docID);
@@ -246,7 +294,7 @@ void World::UpdateSummonAttack(ActorNpc& npc, f32 delta)
 		replication->SendAiSetTargetToAll(npc.UID, chosen);
 		npc.chaseTarget = chosen;
 	}
-	if(!target) return;
+	if(!target) { StopNpcLeg(npc); return; }
 	const vec3 goal = target->body->GetWorldPos();
 	const vec2 rel = vec2(goal) - vec2(npc.pos);
 	const f32 dist = glm::length(rel);
@@ -254,14 +302,12 @@ void World::UpdateSummonAttack(ActorNpc& npc, f32 delta)
 	if(dist > npc.attackRule->attackRange) {
 		if(info->moveSpeed <= 0) return;
 		const f32 step = MIN(info->moveSpeed * delta, dist - npc.attackRule->attackRange);
+		SyncNpcLeg(npc, vec3(vec2(goal) - rel / dist * npc.attackRule->attackRange, goal.z));
 		npc.pos = vec3(vec2(npc.pos) + rel / dist * step, goal.z);
 		npc.rot.z = yaw;
-		if(localTime >= npc.nextMoveSync) {
-			npc.nextMoveSync = TimeAdd(localTime, TimeMsToTime(200));
-			replication->SendNpcMoveToAll(npc.UID, npc.pos, goal, yaw, info->moveSpeed);
-		}
 		return;
 	}
+	StopNpcLeg(npc);
 	if(localTime < npc.nextAttack) return;
 	npc.nextAttack = TimeAdd(localTime, TimeMsToTime(npc.attackRule->cooldownMs));
 	npc.rot.z = yaw;
@@ -351,7 +397,11 @@ void World::UpdateSummonAi(f32 delta)
 				if(chosen != npc.chaseTarget) replication->SendAiSetTargetToAll(npc.UID, chosen);
 				npc.chaseTarget = chosen;
 			}
-			if(!target) continue;
+			if(!target) {
+				if(info->moveSpeed > 0) WanderNpc(npc, info->moveSpeed, delta);
+				else StopNpcLeg(npc);
+				continue;
+			}
 			goal = target->body->GetWorldPos();
 			const f32 d = glm::length(vec2(goal) - vec2(npc.pos));
 			if(d <= WEAPON_TARGET_RADIUS) {
@@ -365,15 +415,12 @@ void World::UpdateSummonAi(f32 delta)
 		if(info->moveSpeed <= 0) continue;
 		const vec2 rel = vec2(goal) - vec2(npc.pos);
 		const f32 dist = glm::length(rel);
-		if(dist <= stopDist + 1.0f) continue;
+		if(dist <= stopDist + 1.0f) { StopNpcLeg(npc); continue; }
 		const f32 step = MIN(info->moveSpeed * delta, dist - stopDist);
 		const vec2 dir = rel / dist;
+		SyncNpcLeg(npc, vec3(vec2(goal) - dir * stopDist, goal.z));
 		npc.pos = vec3(vec2(npc.pos) + dir * step, goal.z);
 		npc.rot.z = atan2f(dir.y, dir.x);
-		if(localTime >= npc.nextMoveSync) {
-			npc.nextMoveSync = TimeAdd(localTime, TimeMsToTime(200));
-			replication->SendNpcMoveToAll(npc.UID, npc.pos, goal, npc.rot.z, info->moveSpeed);
-		}
 	}
 }
 
@@ -404,6 +451,7 @@ void World::UpdateSummons()
 			const f32 life = relay ? RELAY_LIFE_SEC : info && info->lifeTime > 0 ? info->lifeTime : 5.0f;
 			if(!reuse) {
 				actor.pos = ps->pos;
+				actor.home = ps->pos;
 				actor.rot = ps->rot;
 				actor.faction = owner.team == 0 ? Faction::RED : Faction::BLUE;
 				actor.ownerUID = owner.Main().UID;

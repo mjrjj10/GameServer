@@ -389,6 +389,8 @@ struct Replication
 	void SendDestroyRemoteToAll(u32 remoteID);
 	void SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed);
 	void SendNpcTurnToAll(ActorUID actorUID, f32 worldYaw);
+	void SendNpcLegStartToAll(ActorUID actorUID, const vec3& pos, const vec3& goal);
+	void SendNpcLegStopToAll(ActorUID actorUID, const vec3& pos, f32 worldYaw);
 	void SendAiMoveTargetToAll(ActorUID actorUID, const vec3& goal, u32 movePreset);
 	void SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject = L"Scene Root", ClientHandle exclude = ClientHandle::INVALID);
 	struct RemoteCreate

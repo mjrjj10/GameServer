@@ -2751,6 +2751,7 @@ bool GameXmlContent::LoadSummons()
 		SummonInfo si;
 		if(XMLElement* p = pInfo->FirstChildElement("EntityComData")) {
 			p->QueryFloatAttribute("_MoveSpeed", &si.moveSpeed);
+			p->QueryFloatAttribute("_RotateSpeed", &si.rotateSpeed);
 			const char* t = nullptr;
 			p->QueryStringAttribute("_IsTargetable", &t);
 			si.targetable = t && EA::StdC::Stricmp(t, "true") == 0;

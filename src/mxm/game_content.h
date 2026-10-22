@@ -127,6 +127,7 @@ struct SummonInfo
 	eastl::fixed_vector<SummonCommand,12,false> onDie;
 	f32 lifeTime = 0;
 	f32 moveSpeed = 0;
+	f32 rotateSpeed = 0;
 	f32 perception = 0;
 	f32 targetLost = 0;
 	f32 hideDetectRadius = 0;

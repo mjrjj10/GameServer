@@ -1033,6 +1033,13 @@ void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKi
 static const f32 REMOTE_FIRE_HEIGHT = 158.0f;
 static const u16 MAX_FIRE_OBJECT_LEN = 64;
 
+static const u8 NPC_MOVE_FULL = 0x02;
+static const u8 NPC_MOVE_YAW_AND_POSITIONS = 0x32;
+static const u8 NPC_MOVE_POSITIONS_ONLY = 0x3e;
+static const u8 NPC_MOVE_FLAG_STOPPED = 31;
+static const u8 NPC_MOVE_FLAG_MOVING = 32;
+static const f32 NPC_SPEED_SCALE = 5.0f;
+
 static i16 WorldYawToMonsterDeciDegrees(f32 worldYaw)
 {
 	f32 deciDeg = (worldYaw * 180.0f / PI + 90.0f) * 10.0f;
@@ -1368,6 +1375,43 @@ void Replication::SendNpcTurnToAll(ActorUID actorUID, f32 worldYaw)
 		packet.Write<u32>((u32)localID);
 		packet.Write<i16>(yaw);
 		packet.Write<i16>(yaw);
+		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendNpcLegStartToAll(ActorUID actorUID, const vec3& pos, const vec3& goal)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+		PacketWriter<Sv::SN_AIMonsterSyncMove,48> packet;
+		packet.Write<u8>(NPC_MOVE_POSITIONS_ONLY);
+		packet.Write<u32>((u32)localID);
+		packet.Write<float3>(v2f(pos));
+		packet.Write<float3>(v2f(goal));
+		packet.Write<u8>(NPC_MOVE_FLAG_MOVING);
+		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendNpcLegStopToAll(ActorUID actorUID, const vec3& pos, f32 worldYaw)
+{
+	const i16 yaw = WorldYawToMonsterDeciDegrees(worldYaw);
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+		PacketWriter<Sv::SN_AIMonsterSyncMove,48> packet;
+		packet.Write<u8>(NPC_MOVE_YAW_AND_POSITIONS);
+		packet.Write<u32>((u32)localID);
+		packet.Write<i16>(yaw);
+		packet.Write<i16>(yaw);
+		packet.Write<float3>(v2f(pos));
+		packet.Write<float3>(v2f(pos));
+		packet.Write<u8>(NPC_MOVE_FLAG_STOPPED);
 		SendPacket(clientHd, packet);
 	}
 }
@@ -2639,9 +2683,23 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 		packet.Write<LocalActorID>(localActorID);
 		packet.Write<i16>((i16)ActionStateID::SPAWN_BEHAVIORSTATE);
 		packet.Write<i16>(WorldYawToMonsterDeciDegrees(actor.dir.z));
-		packet.Write<u16>((u16)MIN((info ? info->moveSpeed : 0.0f) * 5.0f, 65535.0f));
+		packet.Write<u16>((u16)MIN((info ? info->moveSpeed : 0.0f) * NPC_SPEED_SCALE, 65535.0f));
 		packet.Write(actor.pos);
 		SendPacket(clientHd, packet);
+		if(info && (info->moveSpeed > 0 || info->rotateSpeed > 0)) {
+			PacketWriter<Sv::SN_AIMonsterSyncMove,48> move;
+			const i16 yaw = WorldYawToMonsterDeciDegrees(actor.dir.z);
+			move.Write<u8>(NPC_MOVE_FULL);
+			move.Write<LocalActorID>(localActorID);
+			move.Write<i16>(yaw);
+			move.Write<i16>(yaw);
+			move.Write<i16>((i16)MIN(info->rotateSpeed * NPC_SPEED_SCALE, 32767.0f));
+			move.Write<u16>((u16)MIN(info->moveSpeed * NPC_SPEED_SCALE, 65535.0f));
+			move.Write(actor.pos);
+			move.Write(actor.pos);
+			move.Write<u8>(NPC_MOVE_FLAG_STOPPED);
+			SendPacket(clientHd, move);
+		}
 	}
 }
 

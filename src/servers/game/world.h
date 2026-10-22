@@ -357,6 +357,11 @@ struct World
 		bool stuck = false;
 		u8 dieMode = 0;
 		Time nextMoveSync = Time::ZERO;
+		bool legMoving = false;
+		vec3 home = vec3(0);
+		Time wanderResumeAt = Time::ZERO;
+		vec3 legGoal = vec3(0);
+		Time legAt = Time::ZERO;
 		ActionStateID pendingMotion = ActionStateID::INVALID;
 		vec3 aimPos = vec3(0);
 		Time motionAt = Time::ZERO;
@@ -807,6 +812,9 @@ public:
 	f32 PlayerSkillConsume(const Player& player, i32 skillID, i32 index) const;
 	const GameXmlContent::CostLevel* UpgradeCastMods(Player& player, SkillID skillID, const GameXmlContent::CostLevel* costLevel);
 	void ReleaseCast(Player& player);
+	void SyncNpcLeg(ActorNpc& npc, const vec3& goal);
+	void StopNpcLeg(ActorNpc& npc);
+	void WanderNpc(ActorNpc& npc, f32 moveSpeed, f32 delta);
 	bool IsCarrying(const Player& player) const;
 	void ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID);
 	void UpdateNpcStatuses();

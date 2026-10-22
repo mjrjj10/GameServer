@@ -52,7 +52,7 @@ void World::UpdateUltimateGauges(f32 delta)
 		const f32 manaMax = MasterStat(cls, STAT_MANA);
 		eastl::array<f32,3> resMax;
 		for(int r = 0; r < 3; r++) resMax[r] = MasterStat(cls, RESOURCES[r].maxStat);
-		if(it->ultGauge < 0) { it->ultGauge = ultMax; it->ultDirty = true; }
+		if(it->ultGauge < 0) { it->ultGauge = 0; it->ultDirty = true; }
 		if(staminaMax > 0 && it->stamina < 0) { it->stamina = staminaMax; it->staminaDirty = true; }
 		if(manaMax > 0 && it->mana < 0) { it->mana = manaMax; it->manaDirty = true; }
 		for(int r = 0; r < 3; r++) {
