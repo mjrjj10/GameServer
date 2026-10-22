@@ -2208,6 +2208,11 @@ const GameXmlContent::Action* GameXmlContent::FindSkillAction(ClassType classTyp
 	return nullptr;
 }
 
+bool GameXmlContent::SkillActionKnown(ClassType classType, ActionStateID actionID, i8 stance) const
+{
+	return FindSkillAction(classType, actionID, stance) || skillActionGaps.find(SkillActionKey(classType, actionID)) != skillActionGaps.end();
+}
+
 const GameXmlContent::Action& GameXmlContent::GetSkillAction(ClassType classType, ActionStateID actionID, i8 stance) const
 {
 	static const Action noServerAction = {};

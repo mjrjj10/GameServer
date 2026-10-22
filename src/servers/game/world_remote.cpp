@@ -403,7 +403,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 
 	if(enemy) {
 		const i32 hitEventRemote = GetGameXmlContent().FindSkillHitEventRemote((i32)inst.skillID);
-		if(hitEventRemote != 0 && hitEventRemote == (i32)remote.ID &&
+		if(hitEventRemote != 0 && hitEventRemote == (i32)remote.ID && owner.Main().UID == inst.casterMasterUID &&
 		   eastl::find(comboTriggeredCasts.begin(), comboTriggeredCasts.end(), inst.castID) == comboTriggeredCasts.end()) {
 			if(comboTriggeredCasts.full()) comboTriggeredCasts.erase(comboTriggeredCasts.begin());
 			comboTriggeredCasts.push_back(inst.castID);

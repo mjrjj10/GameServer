@@ -427,7 +427,12 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	auto skillFound = content.skillMap.find(skillID);
 	if(skillFound == content.skillMap.end()) return false;
 	const auto& skill = skillFound->second;
-	const auto& action = content.GetSkillAction(player.Main().classType, forcedAction != ActionStateID::INVALID ? forcedAction : skill.action, player.Main().stance);
+	const ActionStateID actionID = forcedAction != ActionStateID::INVALID ? forcedAction : skill.action;
+	if(!content.SkillActionKnown(player.Main().classType, actionID, player.Main().stance)) {
+		LOG("Skill :: %ls skill=%d action %d not on active master %d, dropped", player.name.data(), (i32)skillID, (i32)actionID, (i32)player.Main().classType);
+		return false;
+	}
+	const auto& action = content.GetSkillAction(player.Main().classType, actionID, player.Main().stance);
 
 	i32 anim = 0;
 	if(player.lastComboSkill == skillID && TimeDiffSec(TimeDiff(player.lastComboTime, localTime)) < 3.0) {

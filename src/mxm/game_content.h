@@ -714,6 +714,7 @@ struct GameXmlContent
 	i32 WeaponTypeOf(ClassType classType, WeaponIndex weaponIndex) const;
 	const Action& GetSkillAction(ClassType classType, ActionStateID actionID, i8 stance = 0) const;
 	const Action* FindSkillAction(ClassType classType, ActionStateID actionID, i8 stance = 0) const;
+	bool SkillActionKnown(ClassType classType, ActionStateID actionID, i8 stance = 0) const;
 	bool CheckSkillActions();
 	eastl::hash_set<u64> skillActionGaps;
 	struct SkillInput { bool needsClick = false; bool directionOnly = false; bool friendlyOnly = false; bool positionDirection = false; bool selfPosition = false; bool teleportEntity = false; bool allEnemies = false; bool pickedEntity = false; bool lockOn = false; bool takesTarget = false; i32 checkStatus = 0; u8 obstructMove = 0; bool obstructSight = false; i32 coolTimeID = 0; f32 coolTime = 0; f32 minDistance = 0; f32 maxDistance = 0; };
