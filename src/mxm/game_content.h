@@ -117,6 +117,7 @@ struct SummonCommand
 	u8 dieMode = 0;
 	i32 index = 0;
 	f32 delay = 0;
+	u16 nodeName = 0;
 };
 
 struct SummonInfo
@@ -731,6 +732,7 @@ struct GameXmlContent
 	const Remote* FindRemote(RemoteIdx remoteID) const;
 	eastl::fixed_vector<eastl::fixed_string<wchar,48,false>,512,true> nodeNames;
 	u16 InternNodeName(const char* name);
+	u16 FindNodeName(const char* name) const;
 	const wchar* GetNodeName(u16 idx) const { return idx < nodeNames.size() ? nodeNames[idx].c_str() : L"Scene Root"; }
 	const StatusInfo* FindStatus(i32 statusID) const;
 	i32 FindSkillStatusOfType(i32 skillIndex, StatusType type) const { foreach_const(it, statusMap) { if(it->second.skillIndex == skillIndex && it->second.type == type) return it->first; } return 0; }

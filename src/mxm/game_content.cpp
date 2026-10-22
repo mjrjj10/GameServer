@@ -1268,6 +1268,17 @@ bool GameXmlContent::LoadCollisionMeshes()
 	return true;
 }
 
+u16 GameXmlContent::FindNodeName(const char* name) const
+{
+	if(!name || !name[0]) return 0;
+	eastl::fixed_string<wchar,48,false> w;
+	for(const char* c = name; *c && w.size() < 47; c++) w.push_back((wchar)*c);
+	for(u16 i = 0; i < (u16)nodeNames.size(); i++) {
+		if(nodeNames[i] == w) return i;
+	}
+	return 0;
+}
+
 u16 GameXmlContent::InternNodeName(const char* name)
 {
 	if(nodeNames.empty()) nodeNames.push_back(L"Scene Root");
@@ -2895,7 +2906,7 @@ bool GameXmlContent::LoadSummonActions()
 		pA->QueryStringAttribute("Param2", &p2);
 		if(p2 && EA::StdC::Strcmp(p2, "Remove") == 0) continue;
 		SummonCommand cmd;
-		if(EA::StdC::Strcmp(type, "REMOTE") == 0) { cmd.kind = SummonCommand::REMOTE; pA->QueryAttribute("RemoteIndex", &cmd.index); }
+		if(EA::StdC::Strcmp(type, "REMOTE") == 0) { cmd.kind = SummonCommand::REMOTE; pA->QueryAttribute("RemoteIndex", &cmd.index); cmd.nodeName = InternNodeName(pA->Attribute("NodeName")); }
 		else if(EA::StdC::Strcmp(type, "STATUS") == 0) { cmd.kind = SummonCommand::STATUS; pA->QueryAttribute("StatusIndex", &cmd.index); }
 		else if(EA::StdC::Strcmp(type, "DIE_MODE") == 0) {
 			cmd.kind = SummonCommand::DIE;
@@ -2993,7 +3004,7 @@ bool GameXmlContent::LoadWeaponFiring()
 		}
 		{
 			WeaponFiring wf;
-			if(fireDummy) wf.fireDummy = fireDummy;
+			if(fireDummy) { wf.fireDummy = fireDummy; InternNodeName(fireDummy); }
 			wf.spawnAtAim = pData && XmlAttrTrue(pData, "_RemoteSpawnAimPosition");
 			if(XMLElement* pCharge = pData ? pData->FirstChildElement("_CHARGE") : nullptr) {
 				for(XMLElement* pLevel = pCharge->FirstChildElement("_LEVEL"); pLevel && !wf.chargeTime.full(); pLevel = pLevel->NextSiblingElement("_LEVEL")) wf.chargeTime.push_back(pLevel->FloatAttribute("_ChargingTime"));

@@ -34,9 +34,9 @@ static bool RemoteCreateSendsEntity(ActionCommand::TargetPreset preset, Remote::
 }
 struct WorldRemoteSpawner
 {
-	static World::RemoteInst* Spawn(World& w, u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast, bool casterLocal)
+	static World::RemoteInst* Spawn(World& w, u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast, bool casterLocal, u16 nodeName)
 	{
-		return w.SpawnRemote(ownerIndex, idx, pos, dir, target, skillID, castID, damage, broadcast, nullptr, 0, casterLocal, false, true);
+		return w.SpawnRemote(ownerIndex, idx, pos, dir, target, skillID, castID, damage, broadcast, nullptr, nodeName, casterLocal, false, true);
 	}
 };
 
@@ -111,6 +111,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	inst.instID = nextRemoteInstID++;
 	inst.remote = remote;
 	inst.ownerIndex = ownerIndex;
+	inst.nodeName = nodeName;
 	inst.casterMasterUID = players[ownerIndex].Main().UID;
 	inst.skillID = skillID;
 	inst.castID = castID;
@@ -238,7 +239,7 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 				if(glm::length(rel) > 1.0f) dir = glm::normalize(rel);
 			}
 			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, CostReplacedRemote(parent.costLevel, rule->idx), at + vec3(dir * child->offsetY, 0), dir, childTarget, parent.skillID, parent.castID, parent.damage,
-				parent.clientRemoteID != 0 && !(clientChains && rule->kind != Remote::SPAWN_SINGLE && !rule->targetOwner), false);
+				parent.clientRemoteID != 0 && !(clientChains && rule->kind != Remote::SPAWN_SINGLE && !rule->targetOwner), false, parent.nodeName);
 			if(inst) {
 				inst->excludeIndex = excludeIndex;
 				inst->costLevel = parent.costLevel;
@@ -921,7 +922,7 @@ void World::DestroyRemote(i32 index)
 			if(next != RemoteIdx::INVALID) {
 				const Remote* nextRemote = GetGameXmlContent().FindRemote(next);
 				const f32 nextOffset = nextRemote ? nextRemote->offsetY : 0;
-				RemoteInst* child = SpawnRemote(copy.ownerIndex, CostReplacedRemote(copy.costLevel, next), copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, 0, false, false, true);
+				RemoteInst* child = SpawnRemote(copy.ownerIndex, CostReplacedRemote(copy.costLevel, next), copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, copy.nodeName, false, false, true);
 				if(child) {
 					child->excludeIndex = childExclude;
 					child->costLevel = copy.costLevel;

@@ -88,6 +88,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			pc.ownerIndex = npc.ownerIndex;
 			pc.kind = c->kind;
 			pc.index = c->index;
+			pc.nodeName = c->nodeName;
 			pc.pos = npc.pos;
 			pc.yaw = yaw;
 			pc.skill = info->skills.empty() ? 0 : info->skills[0];
@@ -463,6 +464,7 @@ void World::UpdateSummons()
 						pc.ownerIndex = ps->ownerIndex;
 						pc.kind = c->kind;
 						pc.index = c->index;
+						pc.nodeName = c->nodeName;
 						pc.pos = ps->pos;
 						pc.yaw = ps->rot.z;
 						pc.source = actor.UID;
@@ -517,6 +519,7 @@ void World::UpdateSummons()
 				if(aimedGraph) pr.preset = (i32)ActionCommand::TargetPreset::SELF_FFF;
 				pr.target = pc->target;
 				pr.sourceUID = pc->source;
+				pr.nodeName = pc->nodeName;
 				pendingRemotes.push_back(pr);
 			}
 		}
@@ -592,6 +595,7 @@ void World::UpdateSummons()
 						pc.ownerIndex = it->ownerIndex;
 						pc.kind = c->kind;
 						pc.index = c->index;
+						pc.nodeName = c->nodeName;
 						pc.pos = it->pos;
 						pc.yaw = it->rot.z;
 						pc.skill = info->skills.empty() ? 0 : info->skills[0];

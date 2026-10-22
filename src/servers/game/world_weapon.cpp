@@ -140,6 +140,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	}
 
 	proj.remoteDoc = remote ? remote->ID : RemoteIdx::INVALID;
+	proj.nodeName = GetGameXmlContent().FindNodeName(wf.fireDummy.c_str());
 	proj.pendingAdvance = player.shotLeadSec * proj.speed;
 	if(player.pendingShotRawSize >= (i32)offsetof(Cl::CQ_GamePlayerSyncPhy, FirePosition)) {
 		proj.remoteID = ((const Cl::CQ_GamePlayerSyncPhy*)player.pendingShotRaw.data())->RemoteSeedID + 1;
@@ -310,13 +311,13 @@ void World::UpdateProjectiles(f32 delta)
 				LOG("ProjectileEnd :: start=(%.0f, %.0f, %.0f) dir=(%.2f, %.2f) travelled=%.0f hit=%d nearest=%ls at (%.0f, %.0f, %.0f) along=%.0f side=%.0f lagClosest=%.0f", proj->start.x, proj->start.y, proj->start.z, proj->dir.x, proj->dir.y, proj->travelled, proj->hitsLeft <= 0, nearPlayer->name.data(), nearPlayer->body->GetWorldPos().x, nearPlayer->body->GetWorldPos().y, nearPlayer->body->GetWorldPos().z, glm::dot(rel, proj->dir), glm::dot(rel, vec2(-proj->dir.y, proj->dir.x)), proj->closest);
 			}
 			if(proj->zoneRemote != RemoteIdx::INVALID) {
-				SpawnRemote(proj->ownerIndex, proj->zoneRemote, proj->pos, proj->dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, proj->zoneDamage, true);
+				SpawnRemote(proj->ownerIndex, proj->zoneRemote, proj->pos, proj->dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, proj->zoneDamage, true, nullptr, proj->nodeName);
 			}
 			else if(proj->aoeRadius > 0) {
 				if(proj->bombDoc != RemoteIdx::INVALID) {
 					const u32 seed = nextRemoteSeed;
 					nextRemoteSeed += 2;
-					replication->SendRemoteCreateToAll(owner.Main().UID, seed, proj->bombDoc, proj->pos, atan2f(proj->dir.y, proj->dir.x), proj->pos, ActorUID::INVALID, FIRE_OBJECT_SCENE_ROOT);
+					replication->SendRemoteCreateToAll(owner.Main().UID, seed, proj->bombDoc, proj->pos, atan2f(proj->dir.y, proj->dir.x), proj->pos, ActorUID::INVALID, GetGameXmlContent().GetNodeName(proj->nodeName));
 				}
 				Explode(owner, proj->pos, proj->aoeRadius, proj->aoeDamage, &*proj);
 			}

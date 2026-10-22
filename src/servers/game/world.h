@@ -440,6 +440,7 @@ struct World
 	struct Projectile
 	{
 		u32 ownerIndex;
+		u16 nodeName = 0;
 		vec3 pos;
 		vec2 dir;
 		f32 travelled;
@@ -505,6 +506,7 @@ struct World
 	{
 		ActorUID sourceUID = ActorUID::INVALID;
 		ActorUID casterMasterUID = ActorUID::INVALID;
+		u16 nodeName = 0;
 		const GameXmlContent::CostLevel* costLevel = nullptr;
 		f32 followDist = -1.0f;
 		u32 instID = 0;
@@ -625,6 +627,7 @@ struct World
 		ActorUID source = ActorUID::INVALID;
 		vec3 aim = vec3(0);
 		Time until;
+		u16 nodeName = 0;
 	};
 	eastl::fixed_vector<PendingSummonCommand,128,false> pendingSummonCommands;
 
