@@ -117,6 +117,11 @@ struct World
 		u8 skillStacks = 0;
 		Time skillStacksUntil = Time::ZERO;
 		Time botComboShotAt = Time::ZERO;
+		ActionStateID botAttackState = ActionStateID::INVALID;
+		i32 killStreak = 0;
+		i32 multiKill = 0;
+		Time lastKillAt = Time::ZERO;
+		Time botAttackStateUntil = Time::ZERO;
 		u8 chargeLevel = 0;
 		i32 weaponState = 0;
 		Time chargeStart = Time::ZERO;
@@ -551,6 +556,8 @@ struct World
 		u8 enemiesHit = 0;
 		u32 reflectGroupSeed = 0;
 		bool casterLocal = false;
+		ClientHandle seedOwnerHd = ClientHandle::INVALID;
+		u32 damageRemoteID = 0;
 		f32 landZ = 0;
 		vec3 graphStart = vec3(0);
 		bool stopAtFirstHit = false;
@@ -718,6 +725,10 @@ struct World
 	void ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos);
 	ActorUID statusCasterOverride = ActorUID::INVALID;
 	ActorUID damageAttackerOverride = ActorUID::INVALID;
+	ClientHandle damageSeedOwnerOverride = ClientHandle::INVALID;
+	struct ClientRemoteSeed { u32 playerIndex; RemoteIdx doc; u32 seed; Time at; };
+	eastl::fixed_vector<ClientRemoteSeed,32,false> clientRemoteSeeds;
+	void BindClientRemote(Player& player, RemoteIdx doc, u32 seed);
 	ActorUID remoteParentOverride = ActorUID::INVALID;
 	ActorUID remoteTargetEntityOverride = ActorUID::INVALID;
 	vec3 remoteSendFrom = vec3(0);

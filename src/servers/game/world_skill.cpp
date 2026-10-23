@@ -22,6 +22,7 @@ static const f64 BATTLE_STAGE_SEC = 1.0;
 static const f32 BATTLE_SPEED_RATIO_ACTIVE = 535.0f / 620.0f;
 static const f32 BATTLE_SPEED_RATIO_RECENT = 578.0f / 620.0f;
 static const i32 SKILL_UPGRADE_SLOT_ULTIMATE = 12;
+static const f32 STANCE_EXIT_DURATION = -1.0f;
 static const f32 MOVEMENT_YAW_MIN_DIST = 10.0f;
 static const i32 ULTIMATE_SKILL_ID_SUFFIX = 50;
 
@@ -252,7 +253,7 @@ void World::SetStance(ActorMaster& master, i8 stance, f32 duration, i32 weaponFi
 	master.stanceUntil = stance != 0 && duration > 0 ? TimeAdd(localTime, TimeMsToTime((i64)(duration * 1000.0f))) : Time::ZERO;
 	master.stanceShotsLeft = stance != 0 && weaponFireCount > 0 ? weaponFireCount : -1;
 	master.stanceCancelByDefeat = stance != 0 && cancelByDefeat;
-	replication->SendStanceToAll(master.UID, stance, stance != 0 ? duration : 0.0f);
+	if(stance == 0 && oldStance != 0) replication->SendStanceToAll(master.UID, 0, STANCE_EXIT_DURATION);
 	LOG("Stance :: %ls stance=%d duration=%.1f weaponFireCount=%d", master.parent ? master.parent->name.data() : L"?", (i32)stance, duration, weaponFireCount);
 	if(oldStance != 0 && stance == 0 && master.parent) RunStanceOut(*master.parent, oldStance);
 }

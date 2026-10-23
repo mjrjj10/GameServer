@@ -162,10 +162,20 @@ void World::UpdateBotCombat()
 		const f32 stanceDelay = content.GetWeaponStanceFireDelay((i32)weapon, bot.Main().stance);
 		const f32 delay = MAX(stanceDelay > 0 ? stanceDelay : content.GetWeaponFireDelay((i32)weapon), 0.15f) * WeaponFireDelayScale(bot);
 		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(delay * 1000.0));
-		if(!target) continue;
+		vec3 aim = target ? target->body->GetWorldPos() : vec3(0);
+		if(!target && !Config().DevShowcase) {
+			f32 bestNpc = range;
+			foreach_const(npc, actorNpcList) {
+				if(!NpcHittableBy(*npc, bot)) continue;
+				const f32 d = glm::length(vec2(npc->pos) - vec2(pos));
+				if(d < bestNpc) { bestNpc = d; best = d; aim = npc->pos; }
+			}
+			if(bestNpc >= range) continue;
+		}
+		else if(!target) continue;
 
 		if(!WeaponHeatShot(bot, localTime, replication, WeaponHeatScale(bot))) continue;
-		const vec2 rel = vec2(target->body->GetWorldPos()) - vec2(pos);
+		const vec2 rel = vec2(aim) - vec2(pos);
 		const vec2 dir = glm::length(rel) > 1.0f ? glm::normalize(rel) : vec2(1, 0);
 		bot.weaponAimYaw = atan2f(dir.y, dir.x);
 		PlayerWeaponShot(bot, pos, dir, best);

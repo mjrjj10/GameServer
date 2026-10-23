@@ -45,15 +45,20 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 		if(m && !m->parent->dead) current = m->parent;
 	}
 	f32 yaw = owner.input.rot.upperYaw;
+	const ActorNpc* targetNpc = npc.skillTarget != ActorUID::INVALID && (!current || current == &owner) ? FindNpcActor(npc.skillTarget) : nullptr;
 	if(current && current != &owner) {
 		const vec2 rel = vec2(current->body->GetWorldPos()) - vec2(npc.pos);
+		if(glm::length(rel) > 1.0f) yaw = atan2f(rel.y, rel.x);
+	}
+	else if(targetNpc) {
+		const vec2 rel = vec2(targetNpc->pos) - vec2(npc.pos);
 		if(glm::length(rel) > 1.0f) yaw = atan2f(rel.y, rel.x);
 	}
 	{
 		eastl::fixed_string<char,48,false> name;
 		name.sprintf("SKILL_%d_BEHAVIORSTATE", state);
 		const ActionStateID action = ActionStateFromString(name.c_str());
-		const vec3 targetPos = current ? current->body->GetWorldPos() : npc.pos;
+		const vec3 targetPos = targetNpc ? targetNpc->pos : (current ? current->body->GetWorldPos() : npc.pos);
 		if(npc.skillTarget != ActorUID::INVALID && current && current != &owner) {
 			f32 speed = 0;
 			foreach_const(c, info->skillStates[state]) {
@@ -73,7 +78,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			npc.pendingMotion = action;
 			npc.motionAt = TimeAdd(localTime, TimeMsToTime(50.0));
 			npc.motionTarget = targetPos;
-			npc.motionTargetUID = current ? current->Main().UID : ActorUID::INVALID;
+			npc.motionTargetUID = targetNpc ? targetNpc->UID : (current ? current->Main().UID : ActorUID::INVALID);
 			npc.motionYaw = yaw;
 		}
 		LOG("Summon :: creature=%d plays %s", (i32)npc.docID, name.c_str());
@@ -301,13 +306,22 @@ void World::UpdateSummonAttack(ActorNpc& npc, f32 delta)
 			if(d < best) { best = d; target = &*e; }
 		}
 	}
-	const ActorUID chosen = target ? target->Main().UID : ActorUID::INVALID;
+	ActorNpc* targetNpc = nullptr;
+	if(!target) {
+		f32 best = info->perception;
+		foreach(e, actorNpcList) {
+			if(&*e == &npc || !NpcHittableBy(*e, owner)) continue;
+			const f32 d = glm::length(vec2(e->pos) - vec2(npc.pos));
+			if(d < best) { best = d; targetNpc = &*e; }
+		}
+	}
+	const ActorUID chosen = target ? target->Main().UID : (targetNpc ? targetNpc->UID : ActorUID::INVALID);
 	if(chosen != npc.chaseTarget) {
 		replication->SendAiSetTargetToAll(npc.UID, chosen);
 		npc.chaseTarget = chosen;
 	}
-	if(!target) { StopNpcLeg(npc); return; }
-	const vec3 goal = target->body->GetWorldPos();
+	if(!target && !targetNpc) { StopNpcLeg(npc); return; }
+	const vec3 goal = target ? target->body->GetWorldPos() : targetNpc->pos;
 	const vec2 rel = vec2(goal) - vec2(npc.pos);
 	const f32 dist = glm::length(rel);
 	const f32 yaw = dist > 1.0f ? atan2f(rel.y, rel.x) : npc.rot.z;
@@ -330,7 +344,7 @@ void World::UpdateSummonAttack(ActorNpc& npc, f32 delta)
 	RunSummonState(npc, 0);
 	const f32 animSec = GetGameXmlContent().GetAniSeqTime(info->className.c_str(), info->stateAnim[0]);
 	if(animSec > 0) npc.standAt = TimeAdd(localTime, TimeMsToTime(animSec * 1000.0));
-	LOG("Summon :: creature=%d attacks %ls at %.0f", (i32)npc.docID, target->name.data(), dist);
+	LOG("Summon :: creature=%d attacks %s %d at %.0f", (i32)npc.docID, target ? "master" : "creature", target ? (i32)target->index : (i32)targetNpc->docID, dist);
 }
 
 void World::UpdateSummonAi(f32 delta)

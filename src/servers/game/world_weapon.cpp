@@ -7,6 +7,7 @@ static const i32 WEAPON_ACTION_MAX_STEP = 9;
 static const f32 WALL_HIT_SEARCH_RADIUS = 300.0f;
 static const f32 REFLECT_SAMPLE_STEP = 25.0f;
 static const i32 WEAPON_ATTACK_STATE_MAX_COMBO = 4;
+static const f64 BOT_ATTACK_STATE_MS = 300.0;
 static const f32 WEAPON_PROJECTILE_SPEED = 4000.0f;
 static const f32 WEAPON_MELEE_MAX_RANGE = 600.0f;
 static const f32 PROJECTILE_TARGET_RADIUS = 70.0f;
@@ -95,6 +96,10 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	const bool spawnAtAim = wf.spawnAtAim;
 	const RemoteIdx idx = SelectWeaponRemote(player, wf);
 	BotWeaponAnimation(player, replication);
+	if(player.clientHd == ClientHandle::INVALID) {
+		player.botAttackState = WeaponAttackState(player);
+		player.botAttackStateUntil = TimeAdd(localTime, TimeMsToTime(BOT_ATTACK_STATE_MS));
+	}
 	RunWeaponActionStatuses(player, shotStance);
 	const Remote* remote = content.FindRemote(idx);
 	ASSERT(remote);

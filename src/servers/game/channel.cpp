@@ -19,6 +19,8 @@ bool GamePacketHandler::Init(Game* game_)
 	return true;
 }
 
+static const i32 REMOTE_CREATE_DOC_AFTER_NAME = 10;
+
 void GamePacketHandler::Cleanup()
 {
 	LOG("Channel cleanup...");
@@ -484,6 +486,9 @@ void GamePacketHandler::HandlePacket_CQ_RemoteSyncCreateFromRemoteDoc(ClientHand
 	}
 	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_RemoteSyncCreateFromRemoteDoc>(packetData, packetSize));
 	replication->RelayRemoteSyncCreateFromRemoteDoc(clientHd, packetData, packetSize);
+	const Cl::CQ_RemoteSyncCreateFromRemoteDoc& create = SafeCast<Cl::CQ_RemoteSyncCreateFromRemoteDoc>(packetData, packetSize);
+	const i32 docOffset = (i32)offsetof(Cl::CQ_RemoteSyncCreateFromRemoteDoc, FireObject) + create.FireObject_len * (i32)sizeof(wchar_t) + REMOTE_CREATE_DOC_AFTER_NAME;
+	if(packetSize >= docOffset + (i32)sizeof(u32)) game->OnClientRemoteCreated(clientHd, create.RemoteSeedID, (RemoteIdx)*(const u32*)(packetData + docOffset));
 }
 
 void GamePacketHandler::HandlePacket_CQ_RemoteSyncTarget(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

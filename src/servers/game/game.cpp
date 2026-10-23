@@ -671,6 +671,13 @@ void Game::OnPlayerReturnToChannel(ClientHandle clientHd)
 	replication.SendDoConnectChannel(clientHd, player.name.data(), hubIP, HUB_LISTEN_PORT);
 }
 
+void Game::OnClientRemoteCreated(ClientHandle clientHd, u32 seed, RemoteIdx doc)
+{
+	auto found = playerMap.find(clientHd);
+	if(found == playerMap.end()) return;
+	world.BindClientRemote(world.GetPlayer(found->second->playerIndex), doc, seed);
+}
+
 void Game::OnPlayerTakeGroundItem(ClientHandle clientHd, u32 itemUID)
 {
 	auto found = playerMap.find(clientHd);

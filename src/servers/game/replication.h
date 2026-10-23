@@ -428,7 +428,7 @@ struct Replication
 	void RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetData, i32 packetSize);
 	void RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, RemoteIdx remoteDoc);
 	void RelayWeaponState(ClientHandle senderHd, ActorUID ownerUID, i32 weaponID, i32 state, u8 chargeLevel, u8 firingCombo);
-	void SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKills, UserID victimID, i32 victimDeaths);
+	void SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKills, UserID victimID, u8 victimTeam, i32 victimDeaths, i32 victimTeamDeaths);
 	void SendDeathToAll(ActorUID killerUID, ActorUID targetUID, CreatureIndex killerDocID, u32 remoteID, RemoteIdx remoteDoc, UserID targetUserID, i32 respawnDelayMs);
 	void SendPvpAnnouncementToAll(u32 type, u32 data, ActorUID attackerUID, ActorUID victimUID);
 	void SendNpcDeadAckToAll(ActorUID npcUID, ActorUID killerUID, u32 killerDoc);

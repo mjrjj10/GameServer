@@ -20,6 +20,10 @@ static const i32 STAT_SKILLDAMAGE_REDUCE_RATIO = 58;
 static const f32 DEFENCE_SCALE = 100.0f;
 static const u32 PVP_ANNOUNCE_KILL = 1;
 static const u32 PVP_ANNOUNCE_FIRST_BLOOD = 2;
+static const u32 PVP_ANNOUNCE_MULTI_KILL = 3;
+static const u32 PVP_ANNOUNCE_KILL_STREAK = 4;
+static const u32 PVP_ANNOUNCE_SHUTDOWN = 7;
+static const f64 MULTI_KILL_WINDOW_MS = 15000.0;
 static const f32 PENETRATION_CAP = 50.0f;
 static const f32 SKILLDAMAGE_REDUCE_CAP = 80.0f;
 static const f32 TOOLTIP_SNIPER_CRIT_PER_MARK = 33.0f;
@@ -253,6 +257,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		hit.damage = damage;
 		hit.hp = chara.hp;
 		hit.hpMax = chara.hpMax;
+		hit.seedOwnerHd = damageSeedOwnerOverride;
 		replication->SendRemoteDamageToAll(hit);
 	}
 	else {
@@ -279,12 +284,24 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			ShowHiddenToEnemies(target, target.hiddenUID, ActorUID::INVALID);
 			target.hiddenUID = ActorUID::INVALID;
 		}
-		replication->SendScoreToAll(attacker.userID, attacker.team, attacker.kills, teamKills, target.userID, target.deaths);
+		i32 victimTeamDeaths = 0;
+		foreach_const(it, players) if(it->team == target.team) victimTeamDeaths += it->deaths;
+		replication->SendScoreToAll(attacker.userID, attacker.team, attacker.kills, teamKills, target.userID, target.team, target.deaths, victimTeamDeaths);
 		replication->SendDeathToAll(attacker.Main().UID, chara.UID, CreatureIndex(100000000 + (i32)attacker.Main().classType), proj ? proj->remoteID : remoteID, proj ? proj->remoteDoc : remoteDoc, target.userID, respawnMs);
-		if(!firstBloodDone && attacker.team != target.team) {
-			firstBloodDone = true;
-			replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_FIRST_BLOOD, 0, attacker.Main().UID, chara.UID);
+		if(attacker.team != target.team) {
+			if(!firstBloodDone) {
+				firstBloodDone = true;
+				replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_FIRST_BLOOD, 0, attacker.Main().UID, chara.UID);
+			}
+			const bool chained = attacker.lastKillAt != Time::ZERO && localTime < TimeAdd(attacker.lastKillAt, TimeMsToTime(MULTI_KILL_WINDOW_MS));
+			attacker.multiKill = chained ? attacker.multiKill + 1 : 1;
+			attacker.lastKillAt = localTime;
+			attacker.killStreak++;
+			if(attacker.multiKill >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_MULTI_KILL, (u32)attacker.multiKill, attacker.Main().UID, chara.UID);
+			if(attacker.killStreak >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_KILL_STREAK, (u32)attacker.killStreak, attacker.Main().UID, chara.UID);
+			if(target.killStreak >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_SHUTDOWN, 0, attacker.Main().UID, chara.UID);
 		}
+		target.killStreak = 0;
 		replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_KILL, 0, attacker.Main().UID, chara.UID);
 	}
 }

@@ -5,6 +5,7 @@
 
 static const u16 SCENE_ROOT_NODE = 0;
 static const wchar* CHAIN_CHILD_NODE = L"";
+static const f64 CLIENT_SEED_BIND_MS = 1000.0;
 static const f32 WEAPON_NODE_MAX_FORWARD = 250.0f;
 static const i32 ULTIMATE_SKILL_SUFFIX = 50;
 static const f32 REPEAT_HIT_REDUCTION = 0.1f;
@@ -145,6 +146,16 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	inst.penetrationLeft = remote->penetrationCount > 0 ? remote->penetrationCount : PENETRATION_UNLIMITED;
 	inst.areaDone = false;
 	inst.casterLocal = casterCreatesLocally;
+	if(casterCreatesLocally && players[ownerIndex].clientHd != ClientHandle::INVALID) {
+		for(i32 k = 0; k < (i32)clientRemoteSeeds.size(); k++) {
+			const ClientRemoteSeed& cs = clientRemoteSeeds[k];
+			if(cs.playerIndex != ownerIndex || cs.doc != idx || localTime > TimeAdd(cs.at, TimeMsToTime(CLIENT_SEED_BIND_MS))) continue;
+			inst.clientRemoteID = cs.seed + 1;
+			inst.seedOwnerHd = players[ownerIndex].clientHd;
+			clientRemoteSeeds.erase(clientRemoteSeeds.begin() + k);
+			break;
+		}
+	}
 	inst.graphStart = inst.pos;
 	inst.graphDir = dir;
 	inst.graphArc = remote->behaviorType == Remote::BehaviorType::GRAPH && remote->bezier && inst.range > 0 ? BezierArcLength(*remote, inst.range) : 0;
@@ -153,6 +164,10 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		inst.nextTimeEvent = TimeAdd(localTime, TimeMsToTime(remote->timeEventDelay * 1000.0));
 	}
 
+	if(!broadcast && child && !casterCreatesLocally) {
+		inst.damageRemoteID = nextRemoteSeed + 1;
+		nextRemoteSeed += 2;
+	}
 	if(broadcast) {
 		const u32 seed = nextRemoteSeed;
 		nextRemoteSeed += 2;
@@ -367,9 +382,11 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 			if(inst.enemiesHit < 255) inst.enemiesHit++;
 		}
 		damageAttackerOverride = inst.sourceUID;
-		if(enemy) DamagePlayer(owner, target, inst.skillID, dealt, nullptr, inst.clientRemoteID, remote.ID, inst.dir);
+		damageSeedOwnerOverride = inst.seedOwnerHd;
+		if(enemy) DamagePlayer(owner, target, inst.skillID, dealt, nullptr, inst.clientRemoteID != 0 ? inst.clientRemoteID : inst.damageRemoteID, remote.ID, inst.dir);
 		else if(remote.damageGroup == Remote::DamageGroup::eFRIEND) HealPlayer(owner, target, amount);
 		damageAttackerOverride = ActorUID::INVALID;
+		damageSeedOwnerOverride = ClientHandle::INVALID;
 	}
 
 	inst.lastHitIndex = (i32)target.index;
@@ -997,4 +1014,23 @@ void World::ExpireHitRecords()
 		if(localTime >= h->until) h = castHits.erase_unsorted(h);
 		else ++h;
 	}
+}
+
+void World::BindClientRemote(Player& player, RemoteIdx doc, u32 seed)
+{
+	RemoteInst* best = nullptr;
+	foreach(inst, remoteInsts) {
+		if(inst->ownerIndex != player.index || !inst->casterLocal || inst->clientRemoteID != 0 || !inst->remote || inst->remote->ID != doc) continue;
+		if(!best || inst->instID > best->instID) best = &*inst;
+	}
+	if(best) {
+		best->clientRemoteID = seed + 1;
+		best->seedOwnerHd = player.clientHd;
+		return;
+	}
+	for(i32 k = 0; k < (i32)clientRemoteSeeds.size(); ) {
+		if(localTime > TimeAdd(clientRemoteSeeds[k].at, TimeMsToTime(CLIENT_SEED_BIND_MS))) clientRemoteSeeds.erase(clientRemoteSeeds.begin() + k);
+		else k++;
+	}
+	if(!clientRemoteSeeds.full()) clientRemoteSeeds.push_back({ player.index, doc, seed, localTime });
 }

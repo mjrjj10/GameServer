@@ -335,7 +335,8 @@ void World::Replicate()
 			rch.rotation = player.movement.rot;
 			rch.skillMoving = localTime < player.dashUntil || AttachedToCaster(player);
 
-			rch.actionState = chara.actionState;
+			const bool idle = chara.actionState == ActionStateID::INVALID || chara.actionState == ActionStateID::NONE_BEHAVIORSTATE;
+			rch.actionState = idle && player.clientHd == ClientHandle::INVALID && localTime < player.botAttackStateUntil ? player.botAttackState : chara.actionState;
 			rch.actionParam1 = chara.actionParam1;
 			rch.actionParam2 = chara.actionParam2;
 

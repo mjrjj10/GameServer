@@ -1062,12 +1062,12 @@ void Replication::SendGaugeToAll(UserID userID, u8 updateType, bool overheated, 
 	}
 }
 
-void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKills, UserID victimID, i32 victimDeaths)
+void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKills, UserID victimID, u8 victimTeam, i32 victimDeaths, i32 victimTeamDeaths)
 {
 	enum : u32 { SCORE = 0, KILL_COUNT = 1, PLAYER_KILL_COUNT = 3, DEAD_COUNT = 14 };
 
 	PacketWriter<Sv::SN_ScoreUpdate> teamPacket;
-	teamPacket.Write<u32>((u32)killerID);
+	teamPacket.Write<u32>(0);
 	teamPacket.Write<TeamType>(team == 0 ? TeamType::RED : TeamType::BLUE);
 	teamPacket.Write<u16>(2);
 	teamPacket.Write<u32>(SCORE);      teamPacket.Write<u32>((u32)teamKills);
@@ -1087,11 +1087,18 @@ void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKi
 	victimPacket.Write<u16>(1);
 	victimPacket.Write<u32>(DEAD_COUNT); victimPacket.Write<u32>((u32)victimDeaths);
 
+	PacketWriter<Sv::SN_ScoreUpdate> victimTeamPacket;
+	victimTeamPacket.Write<u32>(0);
+	victimTeamPacket.Write<TeamType>(victimTeam == 0 ? TeamType::RED : TeamType::BLUE);
+	victimTeamPacket.Write<u16>(1);
+	victimTeamPacket.Write<u32>(DEAD_COUNT); victimTeamPacket.Write<u32>((u32)victimTeamDeaths);
+
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		SendPacket(clientHandle[clientID], teamPacket);
 		SendPacket(clientHandle[clientID], killerPacket);
 		SendPacket(clientHandle[clientID], victimPacket);
+		SendPacket(clientHandle[clientID], victimTeamPacket);
 	}
 }
 
