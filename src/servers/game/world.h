@@ -497,6 +497,7 @@ struct World
 		f32 homingTimer = 0;
 		bool homingLockOn = false;
 		i32 homingTarget = -1;
+		u32 volleyID = 0;
 		eastl::fixed_vector<u32,16,false> hitList;
 		eastl::fixed_vector<ActorUID,4,false> npcHitList;
 	};
@@ -910,6 +911,7 @@ private:
 	void SendPassiveCounter(const ActiveStatus& st, i32 value);
 	void PassiveOnDamaged(Player& target);
 	bool PassiveOnLethal(Player& target);
+	void CounterAttack(Player& attacker, Player& target, bool weaponHit);
 	void UpdatePassives();
 	void SetStance(ActorMaster& master, i8 stance, f32 duration, i32 weaponFireCount, bool cancelByDefeat);
 	void StanceWeaponUse(Player& player);

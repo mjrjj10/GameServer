@@ -173,6 +173,7 @@ enum class StatusType: u8
 	AIRBORNE,
 	ARTILLERY,
 	BURROW,
+	COUNTERSTATUS,
 	DANCE,
 	DEFEAT_CASTER_AURA,
 	DEFENDER,
@@ -201,6 +202,7 @@ enum class StatusType: u8
 	KROMEDE,
 	LINK,
 	MANABURN,
+	MORPH,
 	MOTION,
 	NEARLY_IMMORTAL,
 	NOCOST,
@@ -347,6 +349,8 @@ struct WeaponFiring
 	f32 minDistance = 0;
 	eastl::fixed_string<char,32,false> fireDummy;
 	bool spawnAtAim = false;
+	i32 radiateNum = 1;
+	f32 radiateAngle = 0;
 };
 
 struct Remote

@@ -96,7 +96,7 @@ static f32 WeaponNodeForward(const GameXmlContent& content, ClassType cls, Skill
 		if(cmd->type == ActionCommand::Type::GRAPH_MOVE_HORZ && cmd->graphMoveHorz.distance > 0) return 0;
 		if(cmd->type == ActionCommand::Type::MOVE && cmd->move.preset != ActionCommand::MovePreset::MOVE_NONE) return 0;
 	}
-	const f32 forward = indicator - (remote.offsetY + remote.boundSize[1] * 0.5f);
+	const f32 forward = indicator - (remote.offsetY + RemoteBoundOffset(remote) + remote.boundSize[1] * 0.5f);
 	return forward > 0 && forward <= WEAPON_NODE_MAX_FORWARD ? forward : 0;
 }
 
@@ -469,10 +469,11 @@ void World::RemoteHitAlongPath(RemoteInst& inst)
 	if(remote.damageGroup == Remote::DamageGroup::eNONE || remote.damageGroup == Remote::DamageGroup::INVALID) return;
 	if(remote.attackMultiplier <= 0 && remote.statuses.empty()) return;
 	const f32 radius = remote.boundSize[0] * 0.5f;
+	const vec2 origin = vec2(inst.pos) + inst.dir * RemoteBoundOffset(remote);
 	foreach(it, players) {
 		if(!RemoteCanAffect(inst, *it, false)) continue;
 		if(it->team == players[inst.ownerIndex].team) continue;
-		if(glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos)) > radius + HitRadius(*it)) continue;
+		if(glm::length(vec2(it->body->GetWorldPos()) - origin) > radius + HitRadius(*it)) continue;
 		RemoteHit(inst, *it);
 	}
 }
@@ -520,13 +521,14 @@ void World::RemoteApplyArea(RemoteInst& inst)
 		return;
 	}
 	const bool fanBox = remote.boundType == Remote::BoundType::E_BOUND_BOX && remote.angle > 0;
+	const vec2 origin = vec2(inst.pos) + inst.dir * RemoteBoundOffset(remote);
 	if(remote.boundType == Remote::BoundType::E_BOUND_SPHERE || fanBox) {
 		const bool cone = remote.angle > 0;
 		const f32 radius = remote.boundSize[0] * 0.5f;
 		foreach(it, players) {
 			const vec3 pos = it->body->GetWorldPos();
 			if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
-			const vec2 rel = LagClosestPos(*it, vec2(inst.pos)) - vec2(inst.pos);
+			const vec2 rel = LagClosestPos(*it, origin) - origin;
 			const f32 dist = glm::length(rel);
 			if(dist > radius + HitRadius(*it)) continue;
 			if(remote.angle > 0 && dist > HitRadius(*it)) {
@@ -542,8 +544,8 @@ void World::RemoteApplyArea(RemoteInst& inst)
 			const vec3 pos = it->body->GetWorldPos();
 			if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 			const f32 back = length * 0.5f;
-			const vec2 center = vec2(inst.pos) + inst.dir * (length * 0.5f - back);
-			const vec2 rel = LagClosestPos(*it, center) - vec2(inst.pos) + inst.dir * back;
+			const vec2 center = origin + inst.dir * (length * 0.5f - back);
+			const vec2 rel = LagClosestPos(*it, center) - origin + inst.dir * back;
 			const f32 along = glm::dot(rel, inst.dir);
 			const f32 side = fabsf(glm::dot(rel, Perp(inst.dir)));
 			if(along < -HitRadius(*it) || along > length + HitRadius(*it)) continue;
@@ -566,7 +568,7 @@ void World::RemoteHitNpcs(RemoteInst& inst)
 		if(eastl::find(inst.npcHits.begin(), inst.npcHits.end(), npc->UID) != inst.npcHits.end()) continue;
 		const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc->docID);
 		const f32 r = info ? info->colliderRadius : 0.0f;
-		const vec2 rel = vec2(npc->pos) - vec2(inst.pos);
+		const vec2 rel = vec2(npc->pos) - vec2(inst.pos) - inst.dir * RemoteBoundOffset(remote);
 		const f32 dist = glm::length(rel);
 		if(sphere) {
 			if(dist > remote.boundSize[0] * 0.5f + r) continue;
@@ -934,7 +936,7 @@ bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
 		const vec2 from = vec2(inst.pos);
 		const vec2 to = from + inst.dir * step;
 		const f32 halfWidth = remote.boundSize[0] * 0.5f;
-		const f32 boxFront = remote.boundType == Remote::BoundType::E_BOUND_BOX ? MAX(remote.offsetY + remote.boundSize[1] * 0.5f, 0.0f) : 0.0f;
+		const f32 boxFront = remote.boundType == Remote::BoundType::E_BOUND_BOX ? MAX(remote.offsetY + RemoteBoundOffset(remote) + remote.boundSize[1] * 0.5f, 0.0f) : 0.0f;
 		const Player* stopPos = nullptr;
 		if(remote.damageGroup != Remote::DamageGroup::eNONE && remote.damageGroup != Remote::DamageGroup::INVALID) {
 			foreach(it, players) {

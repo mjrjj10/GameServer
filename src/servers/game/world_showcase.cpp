@@ -90,7 +90,7 @@ static f32 RemoteReach(const GameXmlContent& content, RemoteIdx idx, i32 depth)
 	const bool vsEnemy = r->damageGroup == Remote::DamageGroup::eENEMY || r->damageGroup == Remote::DamageGroup::eALL;
 	const bool offensive = vsEnemy && (r->attackMultiplier > 0 || !r->statuses.empty() || r->changeCasterAction != ActionStateID::INVALID);
 	f32 front = 0;
-	if(offensive) front = r->boundType == Remote::BoundType::E_BOUND_BOX ? MAX(r->offsetY + r->boundSize[1] * 0.5f, r->boundSize[0] * 0.5f) : r->boundSize[0] * 0.5f;
+	if(offensive) front = r->boundType == Remote::BoundType::E_BOUND_BOX ? MAX(r->offsetY + RemoteBoundOffset(*r) + r->boundSize[1] * 0.5f, r->boundSize[0] * 0.5f) : r->boundSize[0] * 0.5f + RemoteBoundOffset(*r);
 	f32 children = 0;
 	const Remote::SpawnRules* lists[4] = { &r->onDestroy, &r->onTime, &r->onActivate, &r->onHitCharacter };
 	for(const Remote::SpawnRules* l : lists) {
@@ -621,7 +621,7 @@ void World::UpdateShowcase()
 		if(wf && wf->maxDistance > 0 && wr && wr->behaviorType == Remote::BehaviorType::GRAPH) wrange = wf->maxDistance;
 		const Remote* bomb = wr ? content.FindRemote(wr->destroyCreateRemote) : nullptr;
 		const f32 splash = bomb ? bomb->boundSize[0] * 0.5f : (wr && wr->behaviorType == Remote::BehaviorType::GRAPH ? wr->boundSize[0] * 0.5f : 0);
-		const f32 front = (wr && wr->boundType == Remote::BoundType::E_BOUND_BOX) ? MAX(wr->offsetY + wr->boundSize[1] * 0.5f, 0.0f) : 0.0f;
+		const f32 front = (wr && wr->boundType == Remote::BoundType::E_BOUND_BOX) ? MAX(wr->offsetY + RemoteBoundOffset(*wr) + wr->boundSize[1] * 0.5f, 0.0f) : 0.0f;
 		range = wrange;
 		struct T { f32 dist; f32 side; const char* name; i32 expect; bool shiftDummy = false; };
 		eastl::fixed_vector<T,8,false> tests;

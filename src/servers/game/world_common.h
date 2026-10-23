@@ -44,6 +44,11 @@ static inline f32 SkillMoveDuration(const GameXmlContent& content, ClassType cls
 	return action.seqLength;
 }
 
+static inline f32 RemoteBoundOffset(const Remote& remote)
+{
+	return remote.forceTargetDir ? -remote.boundOffsetY : remote.boundOffsetY;
+}
+
 static inline f32 RemoteDistanceFalloff(const Remote& remote, f32 dist)
 {
 	if(remote.damageDistStart <= 0 || remote.boundType != Remote::BoundType::E_BOUND_SPHERE) return 1.0f;

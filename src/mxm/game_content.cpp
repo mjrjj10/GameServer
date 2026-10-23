@@ -2304,6 +2304,7 @@ StatusType StatusTypeFromString(const char* str)
 		"STATUS_TYPE_AIRBORNE",
 		"STATUS_TYPE_ARTILLERY",
 		"STATUS_TYPE_BURROW",
+		"STATUS_TYPE_COUNTERSTATUS",
 		"STATUS_TYPE_DANCE",
 		"STATUS_TYPE_DEFEAT_CASTER_AURA",
 		"STATUS_TYPE_DEFENDER",
@@ -2332,6 +2333,7 @@ StatusType StatusTypeFromString(const char* str)
 		"STATUS_TYPE_KROMEDE",
 		"STATUS_TYPE_LINK",
 		"STATUS_TYPE_MANABURN",
+		"STATUS_TYPE_MORPH",
 		"STATUS_TYPE_MOTION",
 		"STATUS_TYPE_NEARLY_IMMORTAL",
 		"STATUS_TYPE_NOCOST",
@@ -3220,6 +3222,8 @@ bool GameXmlContent::LoadWeaponFiring()
 				i32 v = 0;
 				pRad->QueryAttribute("_Index", &v);
 				wf.base = (RemoteIdx)v;
+				pRad->QueryAttribute("_MaxNum", &wf.radiateNum);
+				pRad->QueryFloatAttribute("_MaxAngle", &wf.radiateAngle);
 			}
 			wf.maxDistance = fireMaxDistance;
 			wf.minDistance = fireMinDistance;

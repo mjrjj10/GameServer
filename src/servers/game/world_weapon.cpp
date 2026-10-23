@@ -19,8 +19,8 @@ static f32 WeaponReach(const Remote& remote, const WeaponFiring& wf)
 	if(remote.behaviorType == Remote::BehaviorType::GRAPH && wf.maxDistance > 0) return wf.maxDistance;
 	if(remote.maxDistance > 0) return remote.maxDistance;
 	if(remote.maxSpeed > 0 && remote.lifeTime > 0) return remote.lifeTime * remote.maxSpeed;
-	if(remote.boundType == Remote::BoundType::E_BOUND_SPHERE) return remote.offsetY + remote.boundSize[0] * 0.5f;
-	if(remote.boundType != Remote::BoundType::E_BOUND_NONE) return remote.offsetY + remote.boundSize[1] * 0.5f;
+	if(remote.boundType == Remote::BoundType::E_BOUND_SPHERE) return remote.offsetY + RemoteBoundOffset(remote) + remote.boundSize[0] * 0.5f;
+	if(remote.boundType != Remote::BoundType::E_BOUND_NONE) return remote.offsetY + RemoteBoundOffset(remote) + remote.boundSize[1] * 0.5f;
 	return wf.maxDistance;
 }
 
@@ -149,7 +149,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	proj.halfWidth = remote ? remote->boundSize[0] * 0.5f : 20.0f;
 	proj.hitsLeft = remote ? MAX(remote->activateCount, 1) : 1;
 	proj.penetrationLeft = remote && remote->penetrationCount > 0 ? remote->penetrationCount : PENETRATION_UNLIMITED;
-	proj.forwardReach = (remote && remote->boundType == Remote::BoundType::E_BOUND_BOX) ? MAX(remote->offsetY + remote->boundSize[1] * 0.5f, 0.0f) : 0.0f;
+	proj.forwardReach = (remote && remote->boundType == Remote::BoundType::E_BOUND_BOX) ? MAX(remote->offsetY + RemoteBoundOffset(*remote) + remote->boundSize[1] * 0.5f, 0.0f) : 0.0f;
 	proj.aoeRadius = bomb ? bomb->boundSize[0] * 0.5f : 0;
 	proj.bombDoc = bomb ? bomb->ID : RemoteIdx::INVALID;
 	if(remote && remote->behaviorType == Remote::BehaviorType::HOMING && remote->angularVel > 0) {
@@ -178,7 +178,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	}
 	else if(player.clientHd == ClientHandle::INVALID && remote) {
 		const u32 seed = nextRemoteSeed;
-		nextRemoteSeed += 2;
+		nextRemoteSeed += 1 + MAX(wf.radiateNum, 1);
 		proj.remoteID = seed + 1;
 		const vec3 firePos = proj.pos + vec3(0, 0, FIRE_NODE_HEIGHT);
 		const vec3 target = firePos + vec3(proj.dir * proj.range, 0);
@@ -201,7 +201,19 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		proj.zoneDamage = (i32)WeaponHitDamage(player, nullptr);
 	}
 	LOG("Shot :: %ls class=%d remote=%d graph=%d reliable=%d dist=%.0f range=%.0f speed=%.0f width=%.0f hits=%d aoe=%.0f", player.name.data(), (i32)classType, remote ? (i32)remote->ID : -1, graph, reliable, distance, proj.range, proj.speed, proj.halfWidth, proj.hitsLeft, proj.aoeRadius);
-	projectileList.push_back(proj);
+	if(wf.radiateNum <= 1) {
+		projectileList.push_back(proj);
+		return;
+	}
+	proj.volleyID = nextCastID++;
+	const vec2 aim = proj.dir;
+	const u32 firstID = proj.remoteID;
+	for(i32 k = 0; k < wf.radiateNum && !projectileList.full(); k++) {
+		const f32 a = ((f32)k + 0.5f - (f32)wf.radiateNum * 0.5f) * wf.radiateAngle / (f32)wf.radiateNum * PI / 180.0f;
+		proj.dir = vec2(aim.x * cosf(a) - aim.y * sinf(a), aim.x * sinf(a) + aim.y * cosf(a));
+		if(firstID != 0) proj.remoteID = firstID + (u32)k;
+		projectileList.push_back(proj);
+	}
 }
 
 void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, const Projectile* source)
@@ -319,7 +331,14 @@ void World::UpdateProjectiles(f32 delta)
 				if(!LagSegmentHits(*it, from, to, proj->halfWidth + HitRadius(*it) + PROJECTILE_HIT_TOLERANCE, lastStep ? proj->forwardReach + HitRadius(*it) : HitRadius(*it))) continue;
 
 				if(!proj->hitList.full()) proj->hitList.push_back(it->index);
-				if(proj->damage > 0) DamagePlayer(owner, *it, SkillID::INVALID, (i32)(proj->damage * PassiveWeaponDamageMul(owner, *it)), &*proj);
+				f32 volleyMul = 1.0f;
+				if(proj->volleyID != 0) {
+					bool repeated = false;
+					foreach(r, repeatHits) if(r->castID == proj->volleyID && r->targetIndex == it->index) repeated = true;
+					if(repeated) volleyMul = MEASURED_RADIATE_REPEAT_HIT_RATIO;
+					else repeatHits.push_back({ proj->volleyID, it->index, 1, localTime });
+				}
+				if(proj->damage > 0) DamagePlayer(owner, *it, SkillID::INVALID, (i32)(proj->damage * volleyMul * PassiveWeaponDamageMul(owner, *it)), &*proj);
 				PassiveOnWeaponHit(owner, *it, *proj);
 				const i32 cost = PenetrationCost(*it);
 				activationCost += (u32)cost;
@@ -668,7 +687,7 @@ World::RemoteInst* World::FindProjectileReflector(const Projectile& proj, const 
 		const Remote& r = *inst->remote;
 		for(i32 k = 0; k <= steps; k++) {
 			const vec2 p = from + (to - from) * ((f32)k / (f32)steps);
-			const vec2 rel = p - vec2(inst->pos);
+			const vec2 rel = p - vec2(inst->pos) - inst->dir * RemoteBoundOffset(r);
 			bool inside;
 			if(r.boundType == Remote::BoundType::E_BOUND_SPHERE) inside = glm::length(rel) <= r.boundSize[0] * 0.5f + proj.halfWidth;
 			else {

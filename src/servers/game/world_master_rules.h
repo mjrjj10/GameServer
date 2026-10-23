@@ -78,6 +78,8 @@ static inline const RepeatHitDecayRule* FindRepeatHitDecay(RemoteIdx remote)
 	return nullptr;
 }
 
+static const f32 MEASURED_RADIATE_REPEAT_HIT_RATIO = 0.5f;
+
 static const RemoteIdx MEASURED_REFLECTORS[] = {
 	RemoteIdx(1440050050),
 };

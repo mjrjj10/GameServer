@@ -104,6 +104,24 @@ f32 World::BodyMidHeight(const Player& p) const
 	return (f32)GetGameXmlContent().GetMaster(p.Main().classType).character.getColliderHeight() * 0.5f;
 }
 
+void World::CounterAttack(Player& attacker, Player& target, bool weaponHit)
+{
+	i32 stun = 0;
+	SkillID skill = SkillID::INVALID;
+	foreach(it, activeStatuses) {
+		if(it->targetIndex != target.index || !it->info || it->info->type != StatusType::COUNTERSTATUS || it->until <= localTime) continue;
+		it->until = localTime;
+		stun = (i32)it->info->ParamInt("_CustomAddStatusIndex");
+		skill = SkillID(it->info->skillIndex);
+		break;
+	}
+	if(skill == SkillID::INVALID || !weaponHit || attacker.dead || !WeaponIsMelee(attacker)) return;
+	LOG("Status :: %ls counters %ls (skill %d, status %d)", target.name.data(), attacker.name.data(), (i32)skill, stun);
+	const ActorUID attackerUID = attacker.Main().UID;
+	PlayerCastSkill(target, skill, attacker.body->GetWorldPos(), Slice<const ActorUID>(&attackerUID, 1), 0, ActionStateID::EXTRAMOTION_3_BEHAVIORSTATE);
+	if(stun != 0) ApplyStatus(target, attacker, stun);
+}
+
 void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 damage, const Projectile* proj, u32 remoteID, RemoteIdx remoteDoc, vec2 remoteDir)
 {
 	if(target.dead || target.untargetable) return;
@@ -184,6 +202,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		if(it->targetIndex != target.index || it->shieldHits <= 0 || it->until <= localTime || attacker.team == target.team) continue;
 		it->shieldHits--;
 		LOG("Status :: %ls shield %d absorbs a hit (%d left)", target.name.data(), it->statusID, it->shieldHits);
+		CounterAttack(attacker, target, proj != nullptr);
 		return;
 	}
 	foreach(it, activeStatuses) {
