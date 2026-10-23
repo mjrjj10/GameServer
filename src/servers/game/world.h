@@ -192,7 +192,6 @@ struct World
 		SkillID comboPending = SkillID::INVALID;
 		SkillID comboSkill = SkillID::INVALID;
 		Time comboSendAt = Time::ZERO;
-		i32 comboResetCooltime = 0;
 		SkillID comboBase = SkillID::INVALID;
 		vec3 comboCastPos = vec3(0);
 		Time comboUntil = Time::ZERO;
@@ -336,6 +335,7 @@ struct World
 		i32 hp = 0;
 		i32 hpMax = 0;
 		f32 defence = 0;
+		ActorUID killerUID = ActorUID::INVALID;
 		CreatureIndex docID;
 		i32 localID;
 		Faction faction;
@@ -548,6 +548,8 @@ struct World
 		i32 lastHitIndex = -1;
 		bool chainEnded = false;
 		eastl::fixed_vector<ActorUID,8,false> npcHits;
+		u8 enemiesHit = 0;
+		u32 reflectGroupSeed = 0;
 		bool casterLocal = false;
 		f32 landZ = 0;
 		vec3 graphStart = vec3(0);
@@ -595,6 +597,7 @@ struct World
 		Time nextAuraPulse = Time::ZERO;
 		Time appliedAt = Time::ZERO;
 		f32 absorbed = 0;
+		i32 shieldHits = 0;
 		bool removeOnHit = false;
 		i32 custom = 0;
 		i32 damageAtStart = 0;
@@ -735,6 +738,8 @@ struct World
 	bool remoteSendRootDir = false;
 	bool reflecting = false;
 	bool frozen = false;
+	bool combatLocked = false;
+	bool firstBloodDone = false;
 	ActorMaster* FindMasterActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActor(ActorUID actorUID) const;
 	ActorNpc* FindNpcActorByCreatureID(CreatureIndex docID); // Warning: slow!
@@ -819,6 +824,9 @@ public:
 	void RunStanceOut(Player& player, i8 oldStance);
 	void RunWeaponActionStatuses(Player& player, i8 stance);
 	f32 WeaponHeatScale(const Player& player) const;
+	f32 WeaponFireDelayScale(const Player& player) const;
+	RemoteInst* FindProjectileReflector(const Projectile& proj, const vec2& from, const vec2& to, vec2* contact);
+	void ReflectProjectile(const Projectile& src, RemoteInst& reflector, const vec2& contact);
 	void RecoverWeaponHeat(Player& player, f32 amount);
 	void DropPendingActions(Player& player);
 	const GameXmlContent::SkillUpgrade* LatestUpgradeWith(const Player& player, i32 skillID, bool (*has)(const GameXmlContent::SkillUpgrade&)) const;
@@ -850,7 +858,6 @@ public:
 	bool levelEventsStarted = false;
 	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; };
 	eastl::fixed_vector<NpcStatus,128,false> npcStatuses;
-	void ComboBaseCooldown(Player& player);
 	void ToggleOn(Player& player, SkillID skillID, const vec3& castPos);
 	void ToggleOff(Player& player);
 	void UpdateToggles();

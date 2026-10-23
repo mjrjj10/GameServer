@@ -160,7 +160,7 @@ void World::UpdateBotCombat()
 		const u32 m = bot.mainCharaID & 1;
 		const WeaponIndex weapon = m == 0 ? bot.mainWeapon : bot.subWeapon;
 		const f32 stanceDelay = content.GetWeaponStanceFireDelay((i32)weapon, bot.Main().stance);
-		const f32 delay = MAX(stanceDelay > 0 ? stanceDelay : content.GetWeaponFireDelay((i32)weapon), 0.15f);
+		const f32 delay = MAX(stanceDelay > 0 ? stanceDelay : content.GetWeaponFireDelay((i32)weapon), 0.15f) * WeaponFireDelayScale(bot);
 		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(delay * 1000.0));
 		if(!target) continue;
 

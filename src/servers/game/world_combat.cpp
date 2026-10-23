@@ -18,6 +18,8 @@ static const i32 STAT_DEFENCE_PENETRATION = 20;
 static const i32 STAT_SKILL_PENETRATION = 21;
 static const i32 STAT_SKILLDAMAGE_REDUCE_RATIO = 58;
 static const f32 DEFENCE_SCALE = 100.0f;
+static const u32 PVP_ANNOUNCE_KILL = 1;
+static const u32 PVP_ANNOUNCE_FIRST_BLOOD = 2;
 static const f32 PENETRATION_CAP = 50.0f;
 static const f32 SKILLDAMAGE_REDUCE_CAP = 80.0f;
 static const f32 TOOLTIP_SNIPER_CRIT_PER_MARK = 33.0f;
@@ -106,6 +108,11 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		MarkInBattle(target);
 	}
 	if(HasStatusType(target, StatusType::GODMODE)) return;
+	if(attacker.team != target.team && HasStatusType(target, StatusType::BURROW)) return;
+	if(attacker.team != target.team && !proj && skillID != SkillID::INVALID && HasStatusType(target, StatusType::IMMUNESKILL)) {
+		LOG("Status :: %ls immune to skill %d", target.name.data(), (i32)skillID);
+		return;
+	}
 	const i32 damageIn = damage;
 	f32 elementMul = 1.0f;
 	if(HasStatusType(target, StatusType::EVADE) && attacker.team != target.team) {
@@ -121,6 +128,13 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		if(pr && pr->distPenaltyRate > 0 && pr->penaltyApplyDistance > 0 &&
 		   glm::length(vec2(target.body->GetWorldPos()) - vec2(attacker.body->GetWorldPos())) < pr->penaltyApplyDistance) {
 			damage = (i32)(damage * (1.0f - pr->distPenaltyRate / 100.0f));
+		}
+		if(pr && pr->statusTypeMultiplyKey != 0 && pr->statusTypeMultiplier != 1.0f) {
+			foreach_const(st, activeStatuses) {
+				if(st->targetIndex != target.index || !st->info || st->info->typeKey != pr->statusTypeMultiplyKey || st->until <= localTime) continue;
+				damage = (i32)(damage * pr->statusTypeMultiplier);
+				break;
+			}
 		}
 	}
 
@@ -161,6 +175,12 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		if(it->targetIndex == target.index && it->info && it->info->nextCondition == StatusInfo::NextCondition::REMOVE_ONHIT) it->removeOnHit = true;
 	}
 
+	foreach(it, activeStatuses) {
+		if(it->targetIndex != target.index || it->shieldHits <= 0 || it->until <= localTime || attacker.team == target.team) continue;
+		it->shieldHits--;
+		LOG("Status :: %ls shield %d absorbs a hit (%d left)", target.name.data(), it->statusID, it->shieldHits);
+		return;
+	}
 	foreach(it, activeStatuses) {
 		if(damage <= 0) break;
 		if(it->targetIndex != target.index || it->shieldHP <= 0) continue;
@@ -260,7 +280,12 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			target.hiddenUID = ActorUID::INVALID;
 		}
 		replication->SendScoreToAll(attacker.userID, attacker.team, attacker.kills, teamKills, target.userID, target.deaths);
-		replication->SendDeathToAll(attacker.Main().UID, chara.UID, CreatureIndex(100000000 + (i32)chara.classType), target.userID, respawnMs);
+		replication->SendDeathToAll(attacker.Main().UID, chara.UID, CreatureIndex(100000000 + (i32)attacker.Main().classType), proj ? proj->remoteID : remoteID, proj ? proj->remoteDoc : remoteDoc, target.userID, respawnMs);
+		if(!firstBloodDone && attacker.team != target.team) {
+			firstBloodDone = true;
+			replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_FIRST_BLOOD, 0, attacker.Main().UID, chara.UID);
+		}
+		replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_KILL, 0, attacker.Main().UID, chara.UID);
 	}
 }
 
@@ -278,5 +303,8 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	npc.hp = MAX(npc.hp - dealt, 0);
 	replication->SendDamageToAll(attacker.Main().UID, npc.UID, skillID, dealt, npc.hp, npc.hpMax);
 	LOG("Summon :: creature=%d takes %d from %ls hp=%d/%d", (i32)npc.docID, dealt, attacker.name.data(), npc.hp, npc.hpMax);
-	if(npc.hp <= 0) npc.despawnAt = localTime;
+	if(npc.hp <= 0) {
+		npc.killerUID = attacker.Main().UID;
+		npc.despawnAt = localTime;
+	}
 }

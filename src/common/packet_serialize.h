@@ -2495,6 +2495,14 @@ inline const char* PacketSerialize<Sv::SN_GetPublicGroundItem>(const void* packe
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_PvpEventAnnouncement>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	SER("SN_PvpEventAnnouncement(%d, %d) :: {}", Sv::SN_PvpEventAnnouncement::NET_ID, packetSize);
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_DestroyGroundItem>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

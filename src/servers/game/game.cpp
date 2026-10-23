@@ -179,6 +179,7 @@ void Game::Update(Time localTime_)
 					replication.SendGameStart(p->clientHd);
 				}
 				tGameStarted = localTime;
+				world.combatLocked = false;
 				if(!Config().DevShowcase) world.gameStartedAt = localTime;
 				world.ApplyAllPassives();
 				world.StartSkillPoints();
@@ -812,6 +813,7 @@ void Game::OnPlayerGameIsReady(ClientHandle clientHd)
 	if(phase == Phase::WaitingForFirstPlayer) {
 		phase = Phase::WaitingForReady;
 		phaseTime = TimeAdd(localTime, TimeMsToTime(READY_WAIT));
+		world.combatLocked = !Config().DevShowcase;
 		replication.SendGameReady(clientHd, READY_WAIT, 0, player.userID);
 	}
 	else {

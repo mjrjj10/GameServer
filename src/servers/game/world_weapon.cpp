@@ -5,6 +5,8 @@
 
 static const i32 WEAPON_ACTION_MAX_STEP = 9;
 static const f32 WALL_HIT_SEARCH_RADIUS = 300.0f;
+static const f32 REFLECT_SAMPLE_STEP = 25.0f;
+static const i32 WEAPON_ATTACK_STATE_MAX_COMBO = 4;
 static const f32 WEAPON_PROJECTILE_SPEED = 4000.0f;
 static const f32 WEAPON_MELEE_MAX_RANGE = 600.0f;
 static const f32 PROJECTILE_TARGET_RADIUS = 70.0f;
@@ -28,6 +30,11 @@ static f32 SegmentPointDist2D(const vec2& a, const vec2& b, const vec2& p)
 	f32 t = len2 > 0 ? glm::dot(p - a, ab) / len2 : 0;
 	t = clamp(t, 0.0f, 1.0f);
 	return glm::length(p - (a + ab * t));
+}
+
+static ActionStateID WeaponAttackState(const World::Player& player)
+{
+	return (ActionStateID)((i32)ActionStateID::ATTACK_BEHAVIORSTATE + MIN((i32)player.firingCombo, WEAPON_ATTACK_STATE_MAX_COMBO));
 }
 
 static void BotWeaponAnimation(const World::Player& player, Replication* replication)
@@ -97,7 +104,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	if(spawnAtAim && remote) {
 		f32 reach = MAX(MIN(distance > 1.0f ? distance : WeaponReach(*remote, wf), aimMax), aimMin);
 		const vec3 aimPos = vec3(vec2(origin) + dir * reach, player.body->GetWorldPos().z);
-		replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(dir.y, dir.x)));
+		replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(dir.y, dir.x)), WeaponAttackState(player));
 		const bool bot = player.clientHd == ClientHandle::INVALID;
 		if(!bot && player.pendingShotRawSize > 0) {
 			replication->RelayWeaponShot(player.clientHd, player.pendingShotRaw.data(), player.pendingShotRawSize, aimPos, remote->ID);
@@ -150,7 +157,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		proj.remoteID = ((const Cl::CQ_GamePlayerSyncPhy*)player.pendingShotRaw.data())->RemoteSeedID + 1;
 		proj.seedOwnerHd = player.clientHd;
 	}
-	replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(proj.dir.y, proj.dir.x)));
+	replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(proj.dir.y, proj.dir.x)), WeaponAttackState(player));
 
 	if(player.pendingShotRawSize > 0) {
 		const vec3 target = vec3(vec2(origin) + proj.dir * proj.range, origin.z);
@@ -276,6 +283,16 @@ void World::UpdateProjectiles(f32 delta)
 		bool destroyed = false;
 
 		if(!proj->graph) {
+			const Remote* shotRemote = GetGameXmlContent().FindRemote(proj->remoteDoc);
+			vec2 contact;
+			RemoteInst* reflector = shotRemote && shotRemote->canReflect ? FindProjectileReflector(*proj, from, to, &contact) : nullptr;
+			if(reflector) {
+				const Projectile src = *proj;
+				proj = projectileList.erase_unsorted(proj);
+				if(reflector->remote->reflectUse || IsMeasuredReflector(reflector->remote->ID)) ReflectProjectile(src, *reflector, contact);
+				else LOG("Shot :: remote %d absorbed by %d", (i32)src.remoteDoc, (i32)reflector->remote->ID);
+				continue;
+			}
 			u32 activationCost = 0;
 			const Player* activationTarget = nullptr;
 			foreach(it, players) {
@@ -446,7 +463,7 @@ void World::UpdateWeaponHeat(Player& player)
 
 void World::OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize)
 {
-	if(frozen) return;
+	if(frozen || combatLocked) return;
 	if(IsBlocked(player, true, false, false)) {
 		LOG("Blocked :: %ls shot ignored (attack blocked by a status)", player.name.data());
 		return;
@@ -607,4 +624,79 @@ void World::RecoverWeaponHeat(Player& player, f32 amount)
 	player.heatLastShot[m] = localTime;
 	if(player.overheatUntil[m] != Time::ZERO && player.heat[m] < h->maxGauge) player.overheatUntil[m] = localTime;
 	LOG("Overheat :: %ls weapon gauge recovered %.0f", player.name.data(), amount);
+}
+
+f32 World::WeaponFireDelayScale(const Player& player) const
+{
+	f32 scale = 1.0f;
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex != player.index || !it->info || it->info->type != StatusType::FIREDELAY || it->until <= localTime) continue;
+		if(it->info->timeRatio > 0) scale *= it->info->timeRatio;
+	}
+	return scale;
+}
+
+World::RemoteInst* World::FindProjectileReflector(const Projectile& proj, const vec2& from, const vec2& to, vec2* contact)
+{
+	const Player& shooter = players[proj.ownerIndex];
+	const f32 len = glm::length(to - from);
+	const i32 steps = MAX((i32)(len / REFLECT_SAMPLE_STEP), 1);
+	foreach(inst, remoteInsts) {
+		if(!inst->remote || !inst->remote->vsRemote || inst->killNow) continue;
+		const Player& owner = players[inst->ownerIndex];
+		if(owner.team == shooter.team || owner.dead) continue;
+		if(fabsf(inst->pos.z - proj.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT + FIRE_NODE_HEIGHT) continue;
+		const Remote& r = *inst->remote;
+		for(i32 k = 0; k <= steps; k++) {
+			const vec2 p = from + (to - from) * ((f32)k / (f32)steps);
+			const vec2 rel = p - vec2(inst->pos);
+			bool inside;
+			if(r.boundType == Remote::BoundType::E_BOUND_SPHERE) inside = glm::length(rel) <= r.boundSize[0] * 0.5f + proj.halfWidth;
+			else {
+				const f32 length = r.boundSize[1];
+				const vec2 local = rel + inst->dir * (length * 0.5f);
+				const f32 along = glm::dot(local, inst->dir);
+				inside = along >= -proj.halfWidth && along <= length + proj.halfWidth && fabsf(glm::dot(local, Perp(inst->dir))) <= r.boundSize[0] * 0.5f + proj.halfWidth;
+			}
+			if(!inside) continue;
+			*contact = p;
+			return &*inst;
+		}
+	}
+	return nullptr;
+}
+
+void World::ReflectProjectile(const Projectile& src, RemoteInst& reflector, const vec2& contact)
+{
+	if(projectileList.full()) return;
+	Player& r = players[reflector.ownerIndex];
+	const Remote* doc = GetGameXmlContent().FindRemote(src.remoteDoc);
+	if(!doc) return;
+	const f32 yaw = reflector.remote->reflectBack ? atan2f(-src.dir.y, -src.dir.x) : r.input.rot.upperYaw;
+	Projectile p = src;
+	p.ownerIndex = r.index;
+	p.dir = vec2(cosf(yaw), sinf(yaw));
+	p.pos = vec3(contact, src.pos.z);
+	p.start = p.pos;
+	p.travelled = 0;
+	p.range = doc->maxDistance > 0 ? doc->maxDistance : (doc->lifeTime > 0 ? doc->lifeTime * p.speed : src.range);
+	p.wallZ = r.body->GetWorldPos().z + BodyMidHeight(r);
+	p.hitList.clear();
+	p.npcHitList.clear();
+	p.hitsLeft = MAX(doc->activateCount, 1);
+	p.penetrationLeft = doc->penetrationCount > 0 ? doc->penetrationCount : PENETRATION_UNLIMITED;
+	p.damage = (i32)(WeaponHitDamage(r, doc) * reflector.remote->reflectDamage);
+	p.aoeRadius = 0;
+	p.bombDoc = RemoteIdx::INVALID;
+	p.zoneRemote = RemoteIdx::INVALID;
+	p.chainRemote = RemoteIdx::INVALID;
+	p.pendingAdvance = 0;
+	const u32 seed = nextRemoteSeed;
+	nextRemoteSeed += 2;
+	p.remoteID = seed + 1;
+	p.seedOwnerHd = ClientHandle::INVALID;
+	if(reflector.reflectGroupSeed == 0) reflector.reflectGroupSeed = seed;
+	replication->SendReflectedShotToAll(players[src.ownerIndex].Main().UID, r.Main().UID, seed, p.pos + vec3(0, 0, FIRE_NODE_HEIGHT), yaw, GetGameXmlContent().GetNodeName(src.nodeName), reflector.reflectGroupSeed, src.remoteDoc);
+	LOG("Shot :: %ls reflects remote %d with %d", r.name.data(), (i32)src.remoteDoc, (i32)reflector.remote->ID);
+	projectileList.push_back(p);
 }

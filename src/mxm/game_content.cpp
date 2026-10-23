@@ -1458,6 +1458,7 @@ bool GameXmlContent::LoadAnimationData()
 			pActionBase->QueryStringAttribute("Param2", &P2);
 			cmd.byDummyDir = P2 && EA::StdC::Strstr(P2, "ByDummyDir") ? 1 : 0;
 			cmd.rootDummyDir = cmd.byDummyDir && NodeName && EA::StdC::Strcmp(NodeName, "Scene Root") == 0 ? 1 : 0;
+			cmd.lowerDummyDir = P2 && EA::StdC::Strstr(P2, "ByLowerDummyDir") ? 1 : 0;
 		}
 		if(pActionBase->QueryAttribute("Delay", &cmd.delay) != XMLError::XML_SUCCESS) {
 			cmd.delay = 0.0f;
@@ -1558,7 +1559,7 @@ bool GameXmlContent::LoadAnimationData()
 				if(cmd.type == ActionCommand::Type::STATUS_SKILL_TARGET) cmd.status.targetPreset = ActionCommand::TargetPreset::CURRENT_FFF;
 				const char* Param2 = nullptr;
 				pActionBase->QueryStringAttribute("Param2", &Param2);
-				cmd.status.removeAtEnd = Param2 && EA::StdC::Strstr(Param2, "RemoveWhenAniEnd") ? 1 : 0;
+				cmd.status.removeAtEnd = Param2 && (EA::StdC::Strstr(Param2, "RemoveWhenAniEnd") || EA::StdC::Strstr(Param2, "RemoveWhenActionEnd") || EA::StdC::Strstr(Param2, "CleanUpWhenActionEnd")) ? 1 : 0;
 				cmd.status.remove = Param2 && EA::StdC::Strcmp(Param2, "Remove") == 0 ? 1 : 0;
 			} break;
 
@@ -1796,6 +1797,7 @@ bool GameXmlContent::LoadRemoteData()
 				remote.contactFriend = _AddContactGroup && (EA::StdC::Strcmp(_AddContactGroup, "eFRIEND") == 0 || EA::StdC::Strcmp(_AddContactGroup, "eALL") == 0);
 				remote.vsOwner = XmlAttrTrue(pComp, "_VsOwner");
 				remote.includeParty = XmlAttrTrue(pComp, "_IncludeParty");
+				remote.vsRemote = XmlAttrTrue(pComp, "_VsRemote");
 				remote.monsterOnly = XmlAttrTrue(pComp, "_VsNPC_Monster") && !XmlAttrTrue(pComp, "_VsPC");
 				remote.ignoreGround = XmlAttrTrue(pComp, "_IgnoreGround");
 				pComp->QueryFloatAttribute("_ActivateDelayTime", &remote.activateDelay);
@@ -1830,10 +1832,22 @@ bool GameXmlContent::LoadRemoteData()
 					const char* fdType = nullptr;
 					pFd->QueryStringAttribute("_Type", &fdType);
 					remote.forceTargetDir = fdType && EA::StdC::Strcmp(fdType, "REMOTE_FORCE_DIRECTION_TYPE_TARGET_DIR") == 0;
+					if(fdType && EA::StdC::Strcmp(fdType, "REMOTE_FORCE_DIRECTION_TYPE_FIXED_ANGLE") == 0) remote.forceFixedAngle = pFd->FloatAttribute("_Angle");
 				}
 				pComp->QueryFloatAttribute("_OffsetZ", &remote.offsetZ);
 				pComp->QueryFloatAttribute("_DistPenaltyRate", &remote.distPenaltyRate);
 				pComp->QueryFloatAttribute("_DamageDistStart", &remote.damageDistStart);
+				pComp->QueryFloatAttribute("_StatusTypeMultiplier", &remote.statusTypeMultiplier);
+				remote.canReflect = XmlAttrTrue(pComp, "_CanReflect");
+				if(XMLElement* pReflect = pComp->FirstChildElement("_Reflect")) {
+					remote.reflectUse = XmlAttrTrue(pReflect, "_Use");
+					remote.reflectDamage = pReflect->FloatAttribute("_Damage", 1.0f);
+					const char* rt = pReflect->Attribute("_ReflectType");
+					remote.reflectBack = rt && EA::StdC::Strstr(rt, "180");
+				}
+				pComp->QueryFloatAttribute("_HitDamageMultiplier", &remote.hitDamageMultiplier);
+				pComp->QueryFloatAttribute("_MaxHitDamageMultiplier", &remote.maxHitDamageMultiplier);
+				if(const char* mt = pComp->Attribute("_StatusTypeToMultiplyDamage")) remote.statusTypeMultiplyKey = StatusTypeKey(mt);
 				pComp->QueryFloatAttribute("_DamageOnBound", &remote.damageOnBound);
 				pComp->QueryFloatAttribute("_PenaltyApplyDistance", &remote.penaltyApplyDistance);
 				const char* _OnHitOwnerMemorizeTarget = nullptr;
@@ -1853,6 +1867,7 @@ bool GameXmlContent::LoadRemoteData()
 			else if((EA::StdC::Strcmp("RemoteTargetComData", compName) == 0)) {
 				pComp->QueryFloatAttribute("_HitInvalidTime", &remote.hitInvalidTime);
 				pComp->QueryFloatAttribute("_Sight", &remote.sight);
+				remote.targetOnly = XmlAttrTrue(pComp, "_TargetOnly");
 				if(XMLElement* pHoming = pComp->FirstChildElement("_Homing")) ParseHoming(pHoming, remote);
 			}
 			else if((EA::StdC::Strcmp("_Homing", compName) == 0)) {
@@ -2280,6 +2295,7 @@ StatusType StatusTypeFromString(const char* str)
 		"STATUS_TYPE_ACTIVATE_UNDEAD",
 		"STATUS_TYPE_AIRBORNE",
 		"STATUS_TYPE_ARTILLERY",
+		"STATUS_TYPE_BURROW",
 		"STATUS_TYPE_DANCE",
 		"STATUS_TYPE_DEFEAT_CASTER_AURA",
 		"STATUS_TYPE_DEFENDER",
@@ -2290,6 +2306,7 @@ StatusType StatusTypeFromString(const char* str)
 		"STATUS_TYPE_ELECTRO",
 		"STATUS_TYPE_EVADE",
 		"STATUS_TYPE_FEAR",
+		"STATUS_TYPE_FIREDELAY",
 		"STATUS_TYPE_FLY",
 		"STATUS_TYPE_FORCEBACK",
 		"STATUS_TYPE_FREEZE",
@@ -2301,6 +2318,7 @@ StatusType StatusTypeFromString(const char* str)
 		"STATUS_TYPE_HIT_RECOVER",
 		"STATUS_TYPE_HIT_PLAGUE",
 		"STATUS_TYPE_HPTRIGGER",
+		"STATUS_TYPE_IMMUNESKILL",
 		"STATUS_TYPE_KNOCKDOWN",
 		"STATUS_TYPE_KROMEDE",
 		"STATUS_TYPE_LINK",
@@ -2310,6 +2328,7 @@ StatusType StatusTypeFromString(const char* str)
 		"STATUS_TYPE_NOCOST",
 		"STATUS_TYPE_PUSH",
 		"STATUS_TYPE_ROOT",
+		"STATUS_TYPE_SECOND_CHANCE",
 		"STATUS_TYPE_SHIELD",
 		"STATUS_TYPE_SHIELDBOMB",
 		"STATUS_TYPE_SHOCKED",
@@ -2440,6 +2459,7 @@ bool GameXmlContent::LoadStatusData()
 		pCommon->QueryStringAttribute("_Type", &type);
 		if(type) {
 			st.typeName = type;
+			st.typeKey = StatusTypeKey(type);
 			st.type = StatusTypeFromString(type);
 		}
 
@@ -2449,6 +2469,7 @@ bool GameXmlContent::LoadStatusData()
 			st.permanent = durationMs <= 0 && pas && EA::StdC::Stricmp(pas, "true") == 0;
 			pCommon->QueryAttribute("_InitCustomValue", &st.customInit);
 			pCommon->QueryAttribute("_MaxCustomValue", &st.customMax);
+			pCommon->QueryAttribute("_ShieldCount", &st.shieldCount);
 			pCommon->QueryAttribute("_CasterStatusIndex", &st.casterStatus);
 			if(XMLElement* pHit = pCommon->FirstChildElement("_HITEFFECT")) {
 				pHit->QueryAttribute("_StatusDocIndex", &st.hitEffectStatus);
@@ -2778,6 +2799,7 @@ bool GameXmlContent::LoadSummons()
 		if(XMLElement* p = pInfo->FirstChildElement("LifeTime_ComData")) p->QueryFloatAttribute("LifeTime", &si.lifeTime);
 		if(XMLElement* p = pInfo->FirstChildElement("PhysXMeshComData")) p->QueryFloatAttribute("_ColliderRadius", &si.colliderRadius);
 		if(XMLElement* p = pInfo->FirstChildElement("CreatureComData")) {
+			p->QueryAttribute("_ClearComboOnDeath", &si.clearComboOnDeath);
 			if(XMLElement* d = p->FirstChildElement("_HideDetector")) d->QueryFloatAttribute("_Radius", &si.hideDetectRadius);
 		}
 		if(XMLElement* p = pInfo->FirstChildElement("Kfm_ComData")) {

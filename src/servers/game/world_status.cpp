@@ -226,6 +226,14 @@ bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* ccScale
 
 bool World::PassiveOnLethal(Player& target)
 {
+	foreach(it, activeStatuses) {
+		if(it->targetIndex != target.index || !it->info || it->info->type != StatusType::SECOND_CHANCE || it->until <= localTime) continue;
+		ActorMaster& chara = target.Main();
+		chara.hp = MAX((i32)(chara.hpMax * it->info->paramRatio), 1);
+		it->until = localTime;
+		LOG("Status :: %ls second chance %d -> hp %d", target.name.data(), it->statusID, chara.hp);
+		return true;
+	}
 	const ActiveStatus* st = FindPassiveOfType(target, StatusType::ACTIVATE_UNDEAD);
 	if(!st || localTime < target.reviveReadyAt) return false;
 	const i32 undead = (i32)st->info->ParamInt("_UndeadStatusIndex");
@@ -708,6 +716,8 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		}
 		st.shieldHP = dataShield > 0 ? dataShield : MAX(power, 100.0f) * (info->paramRatio > 0 ? info->paramRatio : 1.0f);
 	}
+	st.shieldHits = info ? info->shieldCount : 0;
+	if(st.shieldHits > 0) st.shieldHP = 0;
 	activeStatuses.push_back(st);
 
 	if(info && info->type == StatusType::LINK && &caster != &target) {
@@ -981,7 +991,8 @@ void World::UpdateStatuses()
 			}
 		}
 		const bool shieldBomb = it->info && it->info->type == StatusType::SHIELDBOMB;
-		const bool shieldBroken = it->info && ((it->info->type == StatusType::SHIELD && it->shieldHP <= 0) || (shieldBomb && it->shieldHP <= 0 && it->absorbed > 0));
+		const bool countShield = it->info && it->info->shieldCount > 0;
+		const bool shieldBroken = it->info && (countShield ? it->shieldHits <= 0 : ((it->info->type == StatusType::SHIELD && it->shieldHP <= 0) || (shieldBomb && it->shieldHP <= 0 && it->absorbed > 0)));
 		const bool timeOver = localTime >= it->until;
 		if(timeOver || target.dead || shieldBroken || it->removeOnHit) {
 			if(timeOver && !target.dead && it->info && it->info->type == StatusType::NEARLY_IMMORTAL && it->info->paramRatio > 0) {

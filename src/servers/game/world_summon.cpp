@@ -236,6 +236,7 @@ static const f32 NPC_LEG_RETARGET_DIST = 100.0f;
 static const i32 NPC_LEG_MIN_INTERVAL_MS = 100;
 static const i32 NPC_FOLLOW_LEG_MIN_INTERVAL_MS = 800;
 static const u8 SUMMON_DEFENCE_STAT = 7;
+static const u32 NPC_DEAD_NO_KILLER = 0xFFFFFFFF;
 static const f32 NPC_WANDER_MIN_RADIUS = 100.0f;
 static const f32 NPC_WANDER_MAX_RADIUS = 300.0f;
 static const f32 NPC_WANDER_MIN_PAUSE_MS = 250.0f;
@@ -655,6 +656,16 @@ void World::UpdateSummons()
 			physics.RemoveWall(it->wall);
 			it->wall = nullptr;
 			const SummonInfo* info = GetGameXmlContent().FindSummon((i32)it->docID);
+			if(info && info->clearComboOnDeath != 0 && it->ownerUID != ActorUID::INVALID) {
+				Player& owner = players[it->ownerIndex];
+				if(owner.comboSlot >= 0 && (i32)owner.comboSkill == info->clearComboOnDeath) {
+					replication->SendChangeSkillSlot(owner.clientHd, owner.Main().UID, owner.comboSlot, owner.comboBase, 0);
+					LOG("Combo :: %ls combo %d cleared by the death of creature %d", owner.name.data(), info->clearComboOnDeath, (i32)it->docID);
+					owner.comboSlot = -1;
+					owner.comboAutoAt = Time::ZERO;
+					owner.comboPending = SkillID::INVALID;
+				}
+			}
 			if(info) {
 				f32 t = 0;
 				u8 wanted = 0;
@@ -681,6 +692,8 @@ void World::UpdateSummons()
 			if(it->ownerUID != ActorUID::INVALID) {
 				it->actionState = ActionStateID::DIE_BEHAVIORSTATE;
 				replication->SendAiActionStateToAll(it->UID, ActionStateID::DIE_BEHAVIORSTATE, it->rot.z, it->pos, NpcKeepsSpeed(*it));
+				const ActorMaster* killer = it->killerUID != ActorUID::INVALID ? FindMasterActor(it->killerUID) : nullptr;
+				replication->SendNpcDeadAckToAll(it->UID, killer ? it->killerUID : ActorUID::INVALID, killer ? (u32)(100000000 + (i32)killer->classType) : NPC_DEAD_NO_KILLER);
 				it->dieStandAt = TimeAdd(localTime, TimeMsToTime(SUMMON_DIE_STAND_MS));
 				it->removeAt = TimeAdd(localTime, TimeMsToTime(MAX((f64)(info ? info->destroyTime : 0.0f) * 1000.0, SUMMON_DIE_STAND_MS)));
 				++it;

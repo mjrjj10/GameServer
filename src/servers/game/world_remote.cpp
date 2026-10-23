@@ -292,6 +292,10 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	const Remote& remote = *inst.remote;
 	Player& owner = players[inst.ownerIndex];
 	if(!RemoteCanAffect(inst, target, true)) return false;
+	if(remote.targetOnly && inst.target != ActorUID::INVALID) {
+		const ActorMaster* designated = FindMasterActor(inst.target);
+		if(designated && designated->parent != &target) return false;
+	}
 	if(remote.activateDelay > 0 && TimeDiffSec(TimeDiff(inst.spawnTime, localTime)) < remote.activateDelay) return false;
 	const bool enemy = target.team != owner.team;
 	if(enemy) ApplyRemoteHitResourceGain(owner, remote.ID, inst.castID, target.index);
@@ -358,6 +362,10 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 			rh->at = localTime;
 		}
 		if(enemy) dealt = (i32)(dealt * RemoteDistanceFalloff(remote, glm::length(vec2(target.body->GetWorldPos()) - vec2(inst.pos))));
+		if(enemy && remote.hitDamageMultiplier != 0) {
+			dealt = (i32)(dealt * MAX(1.0f + remote.hitDamageMultiplier * inst.enemiesHit, 1.0f + remote.maxHitDamageMultiplier));
+			if(inst.enemiesHit < 255) inst.enemiesHit++;
+		}
 		damageAttackerOverride = inst.sourceUID;
 		if(enemy) DamagePlayer(owner, target, inst.skillID, dealt, nullptr, inst.clientRemoteID, remote.ID, inst.dir);
 		else if(remote.damageGroup == Remote::DamageGroup::eFRIEND) HealPlayer(owner, target, amount);

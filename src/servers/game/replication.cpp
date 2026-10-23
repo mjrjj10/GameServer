@@ -1107,6 +1107,8 @@ static const f32 SUMMON_SPAWN_HEIGHT = 50.0f;
 static const f32 NPC_SPEED_SCALE = 5.0f;
 static const u8 NPC_STATE_KEEP_SPEED = 0x04;
 static const u8 SUMMON_OWNER_SKILLPOWER_STAT = 8;
+static const f32 REFLECT_TARGET_DISTANCE = 10000.0f;
+static const u8 REFLECT_CREATE_FLAGS = 2;
 
 static i16 WorldYawToMonsterDeciDegrees(f32 worldYaw)
 {
@@ -1122,6 +1124,23 @@ static i16 WorldYawToCentiDegrees(f32 worldYaw)
 	while(yawDeg > 180.0f) yawDeg -= 360.0f;
 	while(yawDeg < -180.0f) yawDeg += 360.0f;
 	return (i16)(yawDeg * 100.0f);
+}
+
+void Replication::SendReflectedShotToAll(ActorUID shooterUID, ActorUID reflectorUID, u32 seed, const vec3& firePos, f32 worldYaw, const wchar* fireObject, u32 groupSeed, RemoteIdx doc)
+{
+	RemoteCreate remote;
+	remote.parentUID = shooterUID;
+	remote.ownerUID = reflectorUID;
+	remote.seed = seed;
+	remote.firePos = firePos;
+	remote.fireRotation[2] = (u16)WorldYawToCentiDegrees(worldYaw);
+	remote.targetPos = firePos + vec3(cosf(worldYaw), sinf(worldYaw), 0) * REFLECT_TARGET_DISTANCE;
+	remote.fireObject = fireObject;
+	remote.fireObjectLen = fireObject ? (u16)EA::StdC::Strlen(fireObject) : 0;
+	remote.hitInvalidTarget = groupSeed;
+	remote.doc = doc;
+	remote.flags = REFLECT_CREATE_FLAGS;
+	SendRemoteCreate(remote, ClientHandle::INVALID);
 }
 
 void Replication::SendRemoteCreate(const RemoteCreate& remote, ClientHandle exclude)
@@ -1248,12 +1267,14 @@ void Replication::SendRemoteDamageToAll(const RemoteDamage& hit)
 {
 	static u32 damageSeq = 1;
 	const u32 seq = damageSeq++;
-	const float3 dir3 = { hit.dir.x, hit.dir.y, 0 };
-	const float3 back3 = { -hit.dir.x, -hit.dir.y, 0 };
+	const Remote* remote = GetGameXmlContent().FindRemote(hit.remoteDoc);
+	const f32 fixedAngle = remote ? remote->forceFixedAngle * PI / 180.0f : 0.0f;
+	const vec2 dir = fixedAngle != 0 ? vec2(hit.dir.x * cosf(fixedAngle) - hit.dir.y * sinf(fixedAngle), hit.dir.x * sinf(fixedAngle) + hit.dir.y * cosf(fixedAngle)) : vec2(hit.dir);
+	const float3 dir3 = { dir.x, dir.y, 0 };
+	const float3 back3 = { -dir.x, -dir.y, 0 };
 	const float3 up3 = { 0, 0, 1 };
 	const float3 remote3 = v2f(hit.remotePos);
 	const float3 target3 = v2f(hit.targetPos);
-	const Remote* remote = GetGameXmlContent().FindRemote(hit.remoteDoc);
 	const float3 hitDir3 = remote && remote->maxSpeed > 0 ? back3 : up3;
 	const u32 skillField = remote && remote->skillIndex != 0 ? (u32)remote->skillIndex : 0xFFFFFFFF;
 
@@ -1598,7 +1619,7 @@ void Replication::SendDestroyRemoteToAll(u32 remoteID)
 	}
 }
 
-void Replication::SendAttackActionToOthers(ClientHandle senderHd, ActorUID actorUID, f32 mxmYaw)
+void Replication::SendAttackActionToOthers(ClientHandle senderHd, ActorUID actorUID, f32 mxmYaw, ActionStateID state)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
@@ -1611,7 +1632,7 @@ void Replication::SendAttackActionToOthers(ClientHandle senderHd, ActorUID actor
 		Sv::SN_PlayerSyncActionStateOnly packet;
 		memset(&packet, 0, sizeof(packet));
 		packet.characterID = localID;
-		packet.state = ActionStateID::ATTACK_BEHAVIORSTATE;
+		packet.state = state;
 		packet.param1 = 0;
 		packet.param2 = 0;
 		packet.rotate = mxmYaw;
@@ -2025,7 +2046,41 @@ void Replication::SendHpToAll(ActorUID actorUID, i32 hp, i32 hpMax)
 	}
 }
 
-void Replication::SendDeathToAll(ActorUID killerUID, ActorUID targetUID, CreatureIndex targetDocID, UserID targetUserID, i32 respawnDelayMs)
+void Replication::SendNpcDeadAckToAll(ActorUID npcUID, ActorUID killerUID, u32 killerDoc)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID npcLocal = GetLocalActorID(clientHd, npcUID);
+		if(npcLocal == LocalActorID::INVALID) continue;
+		Sv::SN_DeadAck dead;
+		dead.sourceID = (u32)npcLocal;
+		dead.targetID = killerUID != ActorUID::INVALID ? (u32)GetLocalActorID(clientHd, killerUID) : 0;
+		dead.targetDocIndex = killerDoc;
+		dead.dwRemoteID = 0;
+		dead.dwRemoteDocIndex = killerUID != ActorUID::INVALID ? 0 : 0xFFFFFFFF;
+		dead.isPast = 0;
+		SendPacket(clientHd, dead);
+	}
+}
+
+void Replication::SendPvpAnnouncementToAll(u32 type, u32 data, ActorUID attackerUID, ActorUID victimUID)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		Sv::SN_PvpEventAnnouncement packet;
+		packet.stAnnounceMent.announcementType = type;
+		packet.stAnnounceMent.announcementData = data;
+		packet.stAnnounceMent.score = 1;
+		packet.stAnnounceMent.attackerID = (u32)GetLocalActorID(clientHd, attackerUID);
+		packet.stAnnounceMent.attackeeID = (u32)GetLocalActorID(clientHd, victimUID);
+		packet.stAnnounceMent.isAllDead = 0;
+		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendDeathToAll(ActorUID killerUID, ActorUID targetUID, CreatureIndex killerDocID, u32 remoteID, RemoteIdx remoteDoc, UserID targetUserID, i32 respawnDelayMs)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
@@ -2037,9 +2092,9 @@ void Replication::SendDeathToAll(ActorUID killerUID, ActorUID targetUID, Creatur
 		Sv::SN_DeadAck dead;
 		dead.sourceID = (u32)targetLocalID;
 		dead.targetID = (u32)GetLocalActorID(clientHd, killerUID);
-		dead.targetDocIndex = (u32)targetDocID;
-		dead.dwRemoteID = 0;
-		dead.dwRemoteDocIndex = 0;
+		dead.targetDocIndex = (u32)killerDocID;
+		dead.dwRemoteID = remoteID;
+		dead.dwRemoteDocIndex = remoteDoc != RemoteIdx::INVALID ? (u32)remoteDoc : 0;
 		dead.isPast = 0;
 		SendPacket(clientHd, dead);
 

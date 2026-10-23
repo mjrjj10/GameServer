@@ -22,12 +22,19 @@ static const f64 BATTLE_STAGE_SEC = 1.0;
 static const f32 BATTLE_SPEED_RATIO_ACTIVE = 535.0f / 620.0f;
 static const f32 BATTLE_SPEED_RATIO_RECENT = 578.0f / 620.0f;
 static const i32 SKILL_UPGRADE_SLOT_ULTIMATE = 12;
+static const f32 MOVEMENT_YAW_MIN_DIST = 10.0f;
 static const i32 ULTIMATE_SKILL_ID_SUFFIX = 50;
+
+static f32 MovementYaw(const World::Player& player, f32 fallback)
+{
+	const vec2 moving = vec2(player.input.moveTo) - vec2(player.body->GetWorldPos());
+	return glm::length(moving) > MOVEMENT_YAW_MIN_DIST ? atan2f(moving.y, moving.x) : fallback;
+}
 
 void World::UpdateUltimateGauges(f32 delta)
 {
 	foreach(it, players) {
-		if(it->clientHd == ClientHandle::INVALID) continue;
+		if(it->clientHd == ClientHandle::INVALID && (Config().DevShowcase || Config().DevMirror)) continue;
 		const ClassType cls = it->Main().classType;
 		const ClassType benchCls = it->Sub().classType;
 
@@ -184,7 +191,7 @@ bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 	const f32 resCost[3] = { PlayerSkillConsume(player, skillID, 0), PlayerSkillConsume(player, skillID, 1), PlayerSkillConsume(player, skillID, 2) };
 	const f32 hpCost = PlayerSkillConsume(player, skillID, 3);
 	if(mp <= 0 && ug <= 0 && st <= 0 && resCost[0] <= 0 && resCost[1] <= 0 && resCost[2] <= 0 && hpCost <= 0) return true;
-	if(player.clientHd == ClientHandle::INVALID) return true;
+	if(player.clientHd == ClientHandle::INVALID && (Config().DevShowcase || Config().DevMirror)) return true;
 
 	bool ok = (mp <= 0 || player.mana < 0 || player.mana >= mp) &&
 		(ug <= 0 || player.ultGauge < 0 || player.ultGauge >= ug) &&
@@ -323,15 +330,6 @@ void World::UpdateToggles()
 	}
 }
 
-void World::ComboBaseCooldown(Player& player)
-{
-	const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput((i32)player.comboBase);
-	if(!in || in->coolTimeID == 0 || in->coolTime <= 0) return;
-	const i32 id = in->coolTimeID;
-	const u32 ms = (u32)(in->coolTime * 1000.0f);
-	replication->SendCooltimeReset(player.clientHd, player.Main().UID, Slice<const i32>(&id, 1), ms, ms);
-}
-
 void World::ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID)
 {
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
@@ -446,8 +444,7 @@ void World::UpdateCasts()
 {
 	foreach(it, players) {
 		if(it->comboPending != SkillID::INVALID && it->comboSlot >= 0 && localTime >= it->comboSendAt) {
-			replication->SendChangeSkillSlot(it->clientHd, it->Main().UID, it->comboSlot, it->comboPending, it->comboResetCooltime);
-			if(it->comboResetCooltime != 0) replication->SendCooltimeReset(it->clientHd, it->Main().UID, Slice<const i32>(&it->comboResetCooltime, 1));
+			replication->SendChangeSkillSlot(it->clientHd, it->Main().UID, it->comboSlot, it->comboPending, 0);
 			it->comboPending = SkillID::INVALID;
 		}
 		if(it->comboAutoAt != Time::ZERO && localTime >= it->comboAutoAt) {
@@ -462,7 +459,6 @@ void World::UpdateCasts()
 		}
 		if(it->comboSlot >= 0 && localTime >= it->comboUntil) {
 			replication->SendChangeSkillSlot(it->clientHd, it->Main().UID, it->comboSlot, it->comboBase, 0);
-			ComboBaseCooldown(*it);
 			LOG("Combo :: %ls slot %d window ended", it->name.data(), it->comboSlot);
 			it->comboSlot = -1;
 		}
@@ -588,7 +584,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.castID = castID;
 			pr.damage = castCostLevel ? (i32)(damage * castCostLevel->damageRatio) : damage;
 			pr.castPos = castPos;
-			pr.angle = angle;
+			pr.angle = cmd->lowerDummyDir ? MovementYaw(player, angle) : angle;
 			pr.target = cmd->remote.targetPreset == ActionCommand::TargetPreset::MEMORIZED_TFT ? player.memorizedTarget : currentTarget;
 			pr.atTarget = cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET;
 			pr.stopAtTarget = cmd->remote.stopAtTarget;

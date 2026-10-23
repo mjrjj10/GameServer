@@ -125,6 +125,7 @@ struct SummonInfo
 	eastl::fixed_string<char,48,false> className;
 	eastl::fixed_vector<StatValue,24,false> baseStats;
 	f32 colliderRadius = 0;
+	i32 clearComboOnDeath = 0;
 	eastl::fixed_vector<SummonCommand,12,false> onSpawn;
 	eastl::fixed_vector<SummonCommand,12,false> onDie;
 	f32 lifeTime = 0;
@@ -157,6 +158,13 @@ struct StatusMod
 
 enum class Element: u8 { NONE, RED, GREEN, BLUE };
 
+inline u32 StatusTypeKey(const char* name)
+{
+	u32 h = 2166136261u;
+	for(const char* c = name; c && *c; c++) h = (h ^ (u8)*c) * 16777619u;
+	return h;
+}
+
 enum class StatusType: u8
 {
 	OTHER,
@@ -164,6 +172,7 @@ enum class StatusType: u8
 	ACTIVATE_UNDEAD,
 	AIRBORNE,
 	ARTILLERY,
+	BURROW,
 	DANCE,
 	DEFEAT_CASTER_AURA,
 	DEFENDER,
@@ -174,6 +183,7 @@ enum class StatusType: u8
 	ELECTRO,
 	EVADE,
 	FEAR,
+	FIREDELAY,
 	FLY,
 	FORCEBACK,
 	FREEZE,
@@ -185,6 +195,7 @@ enum class StatusType: u8
 	HIT_RECOVER,
 	HIT_PLAGUE,
 	HPTRIGGER,
+	IMMUNESKILL,
 	KNOCKDOWN,
 	KROMEDE,
 	LINK,
@@ -194,6 +205,7 @@ enum class StatusType: u8
 	NOCOST,
 	PUSH,
 	ROOT,
+	SECOND_CHANCE,
 	SHIELD,
 	SHIELDBOMB,
 	SHOCKED,
@@ -270,6 +282,8 @@ struct StatusInfo
 	NextCondition nextCondition = NextCondition::NONE;
 	StatusType type = StatusType::OTHER;
 	eastl::fixed_string<char,40,false> typeName;
+	u32 typeKey = 0;
+	i32 shieldCount = 0;
 
 	bool permanent = false;
 	i32 customInit = 0;
@@ -401,9 +415,20 @@ struct Remote
 	f32 attackMultiplier = 0;
 	f32 offsetY = 0;
 	bool forceTargetDir = false;
+	f32 forceFixedAngle = 0;
 	f32 offsetZ = 0;
 	f32 groundMoveOffsetZ = -1;
 	f32 damageDistStart = 0;
+	f32 statusTypeMultiplier = 1;
+	f32 hitDamageMultiplier = 0;
+	bool targetOnly = false;
+	bool vsRemote = false;
+	bool canReflect = false;
+	bool reflectUse = false;
+	bool reflectBack = false;
+	f32 reflectDamage = 1;
+	f32 maxHitDamageMultiplier = 0;
+	u32 statusTypeMultiplyKey = 0;
 	f32 damageOnBound = 100;
 	f32 distPenaltyRate = 0;
 	f32 penaltyApplyDistance = 0;
@@ -605,6 +630,7 @@ struct GameXmlContent
 			u16 nodeName = 0;
 			u8 byDummyDir = 0;
 			u8 rootDummyDir = 0;
+			u8 lowerDummyDir = 0;
 
 			union {
 				struct {

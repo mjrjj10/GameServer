@@ -33,6 +33,16 @@ static inline const ResourceGainRule* FindResourceGainRule(ClassType master, Res
 	return nullptr;
 }
 
+static const RemoteIdx MEASURED_REFLECTORS[] = {
+	RemoteIdx(1440050050),
+};
+
+static inline bool IsMeasuredReflector(RemoteIdx remote)
+{
+	for(RemoteIdx r : MEASURED_REFLECTORS) if(r == remote) return true;
+	return false;
+}
+
 struct FireNodeRule
 {
 	RemoteIdx remote;

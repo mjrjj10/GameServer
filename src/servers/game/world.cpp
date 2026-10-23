@@ -224,8 +224,8 @@ void World::Update(Time localTime_)
 	if(Config().DevShowcase) { if(!frozen) UpdateShowcase(); }
 	else {
 		if(!frozen) UpdateBotMovement();
-		if(!frozen) UpdateBotCombat();
-		if(!frozen) UpdateBotSkills();
+		if(!frozen && !combatLocked) UpdateBotCombat();
+		if(!frozen && !combatLocked) UpdateBotSkills();
 	}
 
 	// execute skill programs
@@ -569,8 +569,8 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 {
 	const SkillID skillID = ResolveComboRecast(player, skillIn, forcedAction);
 	const vec3 castPos = ResolveCastPos(player, skillID, castPosIn, forcedAction);
+	if(frozen || combatLocked) return;
 	MarkInBattle(player);
-	if(frozen) return;
 	if(!SkillTargetsAllowed(player, skillID, targets)) return;
 	eastl::fixed_vector<ActorUID,10,false> allEnemyTargets;
 	if(const GameXmlContent::SkillInput* selIn = GetGameXmlContent().FindSkillInput((i32)skillID)) {
@@ -907,7 +907,6 @@ void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType
 	const auto& content = GetGameXmlContent();
 	if(player.comboSlot >= 0 && skillType == SkillType::COMBO) {
 		replication->SendChangeSkillSlot(player.clientHd, player.Main().UID, player.comboSlot, player.comboBase, 0);
-		ComboBaseCooldown(player);
 		LOG("Combo :: %ls slot %d back to %d", player.name.data(), player.comboSlot, (i32)player.comboBase);
 		player.comboSlot = -1;
 	}
@@ -919,11 +918,9 @@ void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType
 		if((player.skills[base] == skillID || player.skills[base + 1] == skillID) && order >= 1 && order <= 4) slot = SKILL_SLOT_ENUM_FIRST + order - 1;
 		else if(order == 5 && (i32)skillID % 10 == 0) slot = SKILL_SLOT_ENUM_UG;
 		if(slot >= 0) {
-			const GameXmlContent::SkillInput* baseIn = content.FindSkillInput((i32)skillID);
 			player.comboPending = SkillID(combo);
 			player.comboSkill = SkillID(combo);
 			player.comboSendAt = TimeAdd(localTime, TimeMsToTime(50.0));
-			player.comboResetCooltime = baseIn ? baseIn->coolTimeID : 0;
 			player.comboSlot = slot;
 			player.comboBase = skillID;
 			player.comboCastPos = castPos;
