@@ -351,6 +351,8 @@ struct WeaponFiring
 	bool spawnAtAim = false;
 	i32 radiateNum = 1;
 	f32 radiateAngle = 0;
+	eastl::fixed_vector<RemoteIdx,4,false> extraRemotes;
+	i32 CreatedRemotes() const { return MAX(radiateNum, 1) + (i32)extraRemotes.size(); }
 };
 
 struct Remote

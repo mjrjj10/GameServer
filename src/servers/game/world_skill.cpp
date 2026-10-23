@@ -1092,7 +1092,7 @@ i32 World::ComboSkillFor(const Player& player, i32 skillID) const
 	return GetGameXmlContent().GetFirstComboSkill(skillID);
 }
 
-f32 World::PlayerSkillDamage(Player& player, SkillID skillID)
+f32 World::PlayerSkillDamage(const Player& player, SkillID skillID) const
 {
 	const f32 statusPower = StatusModSum(player, StatusMod::SKILLPOWER);
 	if(const GameXmlContent::SkillUpgrade* up = LatestUpgrade(player, (i32)skillID, GameXmlContent::SkillUpgrade::Type::DAMAGE)) {

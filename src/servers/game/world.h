@@ -853,7 +853,7 @@ public:
 	void RecoverWeaponHeat(Player& player, f32 amount);
 	void DropPendingActions(Player& player);
 	const GameXmlContent::SkillUpgrade* LatestUpgradeWith(const Player& player, i32 skillID, bool (*has)(const GameXmlContent::SkillUpgrade&)) const;
-	f32 PlayerSkillDamage(Player& player, SkillID skillID);
+	f32 PlayerSkillDamage(const Player& player, SkillID skillID) const;
 	f32 PlayerSkillConsumeMP(const Player& player, i32 skillID) const;
 	f32 PlayerSkillConsume(const Player& player, i32 skillID, i32 index) const;
 	const GameXmlContent::CostLevel* UpgradeCastMods(Player& player, SkillID skillID, const GameXmlContent::CostLevel* costLevel);

@@ -178,7 +178,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	}
 	else if(player.clientHd == ClientHandle::INVALID && remote) {
 		const u32 seed = nextRemoteSeed;
-		nextRemoteSeed += 1 + MAX(wf.radiateNum, 1);
+		nextRemoteSeed += 1 + wf.CreatedRemotes();
 		proj.remoteID = seed + 1;
 		const vec3 firePos = proj.pos + vec3(0, 0, FIRE_NODE_HEIGHT);
 		const vec3 target = firePos + vec3(proj.dir * proj.range, 0);
@@ -201,6 +201,21 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		proj.zoneDamage = (i32)WeaponHitDamage(player, nullptr);
 	}
 	LOG("Shot :: %ls class=%d remote=%d graph=%d reliable=%d dist=%.0f range=%.0f speed=%.0f width=%.0f hits=%d aoe=%.0f", player.name.data(), (i32)classType, remote ? (i32)remote->ID : -1, graph, reliable, distance, proj.range, proj.speed, proj.halfWidth, proj.hitsLeft, proj.aoeRadius);
+	if(!wf.extraRemotes.empty()) {
+		const u32 firstID = proj.remoteID;
+		projectileList.push_back(proj);
+		for(i32 k = 0; k < (i32)wf.extraRemotes.size() && !projectileList.full(); k++) {
+			const Remote* extra = content.FindRemote(wf.extraRemotes[k]);
+			if(!extra) continue;
+			Projectile p = proj;
+			p.remoteDoc = extra->ID;
+			p.damage = (i32)WeaponHitDamage(player, extra);
+			p.halfWidth = extra->boundSize[0] * 0.5f;
+			if(firstID != 0) p.remoteID = firstID + (u32)k + 1;
+			projectileList.push_back(p);
+		}
+		return;
+	}
 	if(wf.radiateNum <= 1) {
 		projectileList.push_back(proj);
 		return;
@@ -620,6 +635,7 @@ f32 World::WeaponHitDamage(const Player& player, const Remote* remote) const
 	const f32 attack = GetGameXmlContent().GetWeaponAttack((i32)weapon);
 	ASSERT(attack > 0);
 	const f32 mult = remote && remote->attackMultiplier > 0 ? remote->attackMultiplier : 1.0f;
+	if(remote && remote->skillIndex != 0 && remote->attackMultiplier > 0) return PlayerSkillDamage(player, SkillID(remote->skillIndex)) * mult;
 	return attack * mult * MAX(1.0f + StatusModMulSum(player, StatusMod::ATTACK) / 100.0f, 0.0f);
 }
 

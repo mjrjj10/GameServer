@@ -2580,13 +2580,21 @@ bool GameXmlContent::LoadSkillTooltips()
 			if(!pBase) continue;
 			i32 skillID = 0;
 			pSkill->QueryAttribute("DATAKEY", &skillID);
+			f32 remoteDelegateMul = 1.0f;
+			for(XMLElement* pAttr = pBase->FirstChildElement("attrMap"); pAttr; pAttr = pAttr->NextSiblingElement("attrMap")) {
+				const char* key = pAttr->Attribute("DATAKEY");
+				if(!key || EA::StdC::Strcmp(key, "TTATTR_REMOTE_DELIGATE") != 0) continue;
+				const Remote* delegate = FindRemote(RemoteIdx(pAttr->IntAttribute("DATA")));
+				if(delegate && delegate->attackMultiplier > 0) remoteDelegateMul = delegate->attackMultiplier;
+				break;
+			}
 			for(XMLElement* pT = pBase->FirstChildElement("tableDatas"); pT; pT = pT->NextSiblingElement("tableDatas")) {
 				const char* attrType = nullptr;
 				pT->QueryStringAttribute("attrType", &attrType);
 				if(!attrType || EA::StdC::Strcmp(attrType, "TTATTR_REMOTE_DAMAGE") != 0) continue;
 				f32 dmg = 0;
 				pT->QueryFloatAttribute("value_1", &dmg);
-				if(dmg > 0 && skillBaseDamage.find(skillID) == skillBaseDamage.end()) skillBaseDamage[skillID] = dmg;
+				if(dmg > 0 && skillBaseDamage.find(skillID) == skillBaseDamage.end()) skillBaseDamage[skillID] = dmg / remoteDelegateMul;
 			}
 			eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,40,false>, i32>,16,false> keyStatus;
 			i32 delegateID = 0;
@@ -3191,6 +3199,9 @@ bool GameXmlContent::LoadWeaponFiring()
 			XMLElement* pCreate = pFactory ? pFactory->FirstChildElement("_Create") : nullptr;
 			XMLElement* pDef = pCreate ? pCreate->FirstChildElement("_Default") : nullptr;
 			XMLElement* pRem = pDef ? pDef->FirstChildElement("_Remote") : nullptr;
+			for(XMLElement* pNext = pDef ? pDef->NextSiblingElement("_Default") : nullptr; pNext && !wf.extraRemotes.full(); pNext = pNext->NextSiblingElement("_Default")) {
+				if(XMLElement* pExtra = pNext->FirstChildElement("_Remote")) wf.extraRemotes.push_back((RemoteIdx)pExtra->IntAttribute("_RemoteIndex"));
+			}
 			if(pRem) {
 				i32 v = 0;
 				pRem->QueryAttribute("_RemoteIndex", &v);
