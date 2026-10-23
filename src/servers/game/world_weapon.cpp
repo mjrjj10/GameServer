@@ -142,6 +142,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	else if(remote && remote->lifeTime > 0) remoteRange = remote->lifeTime * proj.speed;
 
 	proj.range = graph ? (reliable ? MIN(distance, aimMax) : MIN(classRange, aimMax)) : remoteRange;
+	if(remote && remote->useOwnerRemoteSpeedRatio) proj.speed *= OwnerRemoteSpeedRatio(player);
 	proj.graph = graph;
 	proj.ignoreWalls = !remote || remote->ignoreGround;
 	proj.wallZ = player.body->GetWorldPos().z + BodyMidHeight(player);
@@ -727,4 +728,9 @@ u16 World::DefaultWeaponCreator(const Player& player, const WeaponFiring& wf) co
 	const WeaponFiring* def = content.FindWeaponFiring((i32)master.defaultWeaponIDs[0], player.Main().stance);
 	if(!def || def->firingMethod != wf.firingMethod) return 0;
 	return MeasuredDefaultWeaponCreator(player.Main().classType);
+}
+
+f32 World::OwnerRemoteSpeedRatio(const Player& player) const
+{
+	return MAX(1.0f + StatusModSum(player, StatusMod::REMOTESPEED) / 100.0f, 0.1f);
 }

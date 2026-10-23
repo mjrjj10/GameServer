@@ -597,7 +597,13 @@ void World::UpdateSummons()
 				pr.ownerIndex = pc->ownerIndex;
 				pr.skillID = pc->skill != 0 ? SkillID(pc->skill) : SkillID::INVALID;
 				pr.castID = nextCastID++;
-				pr.damage = pc->skill != 0 ? (i32)SkillDamage(SkillID(pc->skill)) : 0;
+				const ActorNpc* sourceNpc = pc->source != ActorUID::INVALID ? FindNpcActor(pc->source) : nullptr;
+				const SummonInfo* sourceInfo = sourceNpc ? GetGameXmlContent().FindSummon((i32)sourceNpc->docID) : nullptr;
+				f32 sourceAttack = 0;
+				if(sourceInfo) foreach_const(st, sourceInfo->baseStats) if(st->type == STAT_ATTACK) sourceAttack = st->value;
+				if(summonRemote && summonRemote->skillIndex != 0) pr.damage = (i32)PlayerSkillDamage(owner, SkillID(summonRemote->skillIndex));
+				else if(summonRemote && sourceAttack > 0) pr.damage = (i32)sourceAttack;
+				else pr.damage = pc->skill != 0 ? (i32)PlayerSkillDamage(owner, SkillID(pc->skill)) : 0;
 				pr.castPos = aimedGraph ? pc->aim : pc->pos;
 				pr.angle = aimedGraph ? atan2f(pc->aim.y - pc->pos.y, pc->aim.x - pc->pos.x) : pc->yaw;
 				if(aimedGraph) pr.preset = (i32)ActionCommand::TargetPreset::SELF_FFF;

@@ -893,11 +893,13 @@ void World::StartCasting(Player& player, SkillID skillID, const GameXmlContent::
 	const bool bot = player.clientHd == ClientHandle::INVALID;
 	f32 wait = cast.time;
 	if(bot && cast.type != GameXmlContent::SkillCast::DELAY) wait = MIN(wait, action.seqLength);
+	if(bot && cast.type == GameXmlContent::SkillCast::CHARGING && cast.maxChargingTime > 0) wait = cast.maxChargingTime;
 	player.casting.skillID = skillID;
 	player.casting.castPos = castPos;
 	player.casting.target = targets.size() > 0 ? targets[0] : ActorUID::INVALID;
 	player.casting.startPos = vec2(player.body->GetWorldPos());
 	player.casting.executeAt = TimeAdd(localTime, TimeMsToTime(wait * 1000.0));
+	player.casting.startedAt = localTime;
 	player.casting.type = (u8)cast.type;
 	player.casting.interruptByMove = cast.interruptByMove;
 	LOG("Cast :: %ls skill=%d start action=%d type=%d wait=%.2f", player.name.data(), (i32)skillID, (i32)cast.action, (i32)cast.type, wait);

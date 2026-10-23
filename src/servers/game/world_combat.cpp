@@ -29,7 +29,6 @@ static const f64 MULTI_KILL_WINDOW_MS = 15000.0;
 static const f64 DEAD_DAMAGE_WINDOW_MS = 15000.0;
 static const f32 PENETRATION_CAP = 50.0f;
 static const f32 SKILLDAMAGE_REDUCE_CAP = 80.0f;
-static const f32 TOOLTIP_SNIPER_CRIT_PER_MARK = 33.0f;
 static const i32 STATUS_ELECTRO_PASSIVE_BUFF_MPREGEN = 1230040011;
 static const f64 RESPAWN_BASE_UNTIL_SEC[] = { 50.0, 170.0 };
 static const i32 RESPAWN_BASE_MS[] = { 3000, 4000, 5000 };
@@ -169,7 +168,6 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		foreach_const(st, activeStatuses) {
 			if(st->targetIndex != target.index || !st->info || localTime >= st->until) continue;
 			if(st->info->type == StatusType::WEAK_ON_CRITICAL && attacker.team != target.team) bonus = 100.0f;
-			if(proj && st->info->type == StatusType::STACKBOMB && st->casterIndex == attacker.index && FindPassiveOfType(attacker, StatusType::SNIPER)) bonus += TOOLTIP_SNIPER_CRIT_PER_MARK * st->overlap;
 		}
 		if(rate + bonus > 0 && (RandUint() % 10000) < (u32)((rate + bonus) * 100.0f)) {
 			const f32 critDamage = MasterStat(ac, proj ? STAT_CRITICALDAMAGE : STAT_SKILL_CRITICALDAMAGE);
@@ -237,14 +235,19 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		if(target.recentDamage.full()) target.recentDamage.erase(target.recentDamage.begin());
 		target.recentDamage.push_back({ attacker.index, attacker.userID, damageAttackerOverride != ActorUID::INVALID ? damageAttackerOverride : attacker.Main().UID, proj ? SkillID::INVALID : skillID, damageStatusID, damage, (u8)(damageType == PACKET_DAMAGE_TYPE_CRITICAL ? 1 : 0), localTime });
 	}
+	f32 carryLift = 0;
+	foreach_const(st, activeStatuses) {
+		if(st->targetIndex != target.index || localTime >= st->until) continue;
+		for(const CarryLiftRule& rule : MEASURED_CARRY_LIFTS) if(rule.status == st->statusID) carryLift = rule.lift;
+	}
 	if(proj && proj->remoteID != 0) {
 		Replication::RemoteDamage hit;
 		hit.remoteID = proj->remoteID;
 		hit.remoteDoc = proj->remoteDoc;
 		hit.attackerUID = attacker.Main().UID;
 		hit.targetUID = chara.UID;
-		hit.remotePos = vec3(vec2(proj->pos), target.body->GetWorldPos().z);
-		hit.targetPos = target.body->GetWorldPos();
+		hit.remotePos = vec3(vec2(proj->pos), target.body->GetWorldPos().z + carryLift);
+		hit.targetPos = target.body->GetWorldPos() + vec3(0, 0, carryLift);
 		hit.dir = proj->dir;
 		hit.damageType = damageType;
 		hit.elementRelation = ElementRelation(elementMul);
@@ -260,8 +263,8 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		hit.remoteDoc = remoteDoc;
 		hit.attackerUID = damageAttackerOverride != ActorUID::INVALID ? damageAttackerOverride : attacker.Main().UID;
 		hit.targetUID = chara.UID;
-		hit.remotePos = statusForceCenterSet ? statusForceCenter : target.body->GetWorldPos();
-		hit.targetPos = target.body->GetWorldPos();
+		hit.remotePos = statusForceCenterSet ? statusForceCenter : target.body->GetWorldPos() + vec3(0, 0, carryLift);
+		hit.targetPos = target.body->GetWorldPos() + vec3(0, 0, carryLift);
 		hit.dir = remoteDir;
 		hit.damageType = damageType;
 		hit.elementRelation = ElementRelation(elementMul);

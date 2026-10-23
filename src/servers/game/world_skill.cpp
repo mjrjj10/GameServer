@@ -397,7 +397,14 @@ void World::ReleaseCast(Player& player)
 	LOG("Cast :: %ls skill=%d release", player.name.data(), (i32)c.skillID);
 	GroupTeleport(player, c.skillID, c.castPos);
 	if(f->second.action == ActionStateID::INVALID) return;
+	const GameXmlContent::SkillCast* sc = GetGameXmlContent().FindSkillCast((i32)c.skillID);
+	if(sc && sc->type == GameXmlContent::SkillCast::CHARGING && sc->maxChargingTime > 0 && sc->maxChargeRatio != sc->minChargeRatio) {
+		const f32 held = MIN((f32)TimeDiffSec(TimeDiff(c.startedAt, localTime)) / sc->maxChargingTime, 1.0f);
+		player.castChargeRatio = sc->minChargeRatio + (sc->maxChargeRatio - sc->minChargeRatio) * held;
+		LOG("Cast :: %ls skill=%d charge ratio %.2f", player.name.data(), (i32)c.skillID, player.castChargeRatio);
+	}
 	PlayerCastSkill(player, c.skillID, c.castPos, Slice<const ActorUID>(&c.target, c.target != ActorUID::INVALID ? 1 : 0), 0, f->second.action);
+	player.castChargeRatio = 1.0f;
 }
 
 void World::DropPendingActions(Player& player)
@@ -516,7 +523,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	}
 
 	const u32 castID = nextCastID++;
-	const i32 damage = (i32)PlayerSkillDamage(player, skillID);
+	const i32 damage = (i32)(PlayerSkillDamage(player, skillID) * player.castChargeRatio);
 	const ActorUID currentTarget = targets.size() > 0 ? targets[0] : ActorUID::INVALID;
 	const i32 upgradeSummon = UpgradeSummon(player, (i32)skillID);
 

@@ -926,6 +926,9 @@ f32 World::StatusModSum(const Player& p, i32 stat) const
 		foreach_const(m, it->info->mods) {
 			if((i32)m->stat == stat && !m->regen && !m->mul) sum += m->value * it->overlap;
 		}
+		for(const MeasuredStatusStat& ms : MEASURED_STATUS_STATS) {
+			if(ms.status == it->statusID && (i32)ms.stat == stat) sum += ms.value * it->overlap;
+		}
 	}
 	return sum;
 }

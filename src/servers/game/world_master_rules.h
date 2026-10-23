@@ -33,6 +33,51 @@ static inline const ResourceGainRule* FindResourceGainRule(ClassType master, Res
 	return nullptr;
 }
 
+struct MeasuredStatusStat
+{
+	i32 status;
+	StatusMod::Stat stat;
+	f32 value;
+};
+
+static const MeasuredStatusStat MEASURED_STATUS_STATS[] = {
+	{ 1230110012, StatusMod::REMOTESPEED, 100.0f },
+};
+
+struct CarryLiftRule
+{
+	i32 status;
+	f32 lift;
+};
+
+static const CarryLiftRule MEASURED_CARRY_LIFTS[] = {
+	{ 1230400053, 450.0f },
+};
+
+struct RepeatHitDecayRule
+{
+	RemoteIdx remote;
+	f32 stepPerHit;
+	f32 floor;
+};
+
+static const RepeatHitDecayRule MEASURED_REPEAT_HIT_DECAY[] = {
+	{ RemoteIdx(1440010042), 0.1f, 0.2f },
+	{ RemoteIdx(1440010037), 0.1f, 0.2f },
+	{ RemoteIdx(1440010047), 0.1f, 0.2f },
+	{ RemoteIdx(1440110052), 0.1f, 0.2f },
+	{ RemoteIdx(1440110053), 0.1f, 0.2f },
+	{ RemoteIdx(1440110054), 0.1f, 0.2f },
+	{ RemoteIdx(1440430051), 0.1f, 0.2f },
+	{ RemoteIdx(1440430052), 0.1f, 0.2f },
+};
+
+static inline const RepeatHitDecayRule* FindRepeatHitDecay(RemoteIdx remote)
+{
+	for(const RepeatHitDecayRule& r : MEASURED_REPEAT_HIT_DECAY) if(r.remote == remote) return &r;
+	return nullptr;
+}
+
 static const RemoteIdx MEASURED_REFLECTORS[] = {
 	RemoteIdx(1440050050),
 };

@@ -419,6 +419,11 @@ void GameXmlContent::LoadAllSkills()
 			else if(castType && EA::StdC::Strcmp(castType, "SKILL_CAST_TIME_CHARGING") == 0) sc.type = SkillCast::CHARGING;
 			pCast->QueryFloatAttribute("_CastTime", &sc.time);
 			pCast->QueryBoolAttribute("_InterruptByMove", &sc.interruptByMove);
+			if(XMLElement* pCharge = pCast->FirstChildElement("_Charge")) {
+				pCharge->QueryFloatAttribute("_MaxChargingTime", &sc.maxChargingTime);
+				pCharge->QueryFloatAttribute("_MinSkillChargeRatio", &sc.minChargeRatio);
+				pCharge->QueryFloatAttribute("_MaxSkillChargeRatio", &sc.maxChargeRatio);
+			}
 			sc.action = castAction ? ActionStateFromString(castAction) : ActionStateID::INVALID;
 			if(castType && sc.time > 0 && (sc.action != ActionStateID::INVALID || sc.type == SkillCast::LIMIT)) skillCast[skillID] = sc;
 			if(type == SkillType::TOGGLE && skill.action == ActionStateID::INVALID) skill.action = sc.action;
@@ -1828,6 +1833,7 @@ bool GameXmlContent::LoadRemoteData()
 				pComp->QueryAttribute("_PenetrationCount", &remote.penetrationCount);
 				remote.lifeTime = _LifeTime;
 				pComp->QueryFloatAttribute("_AttackMultiplier", &remote.attackMultiplier);
+				remote.useOwnerRemoteSpeedRatio = XmlAttrTrue(pComp, "_UseOwnerRemoteSpeedRatio");
 				pComp->QueryFloatAttribute("_OffsetY", &remote.offsetY);
 				if(XMLElement* pFd = pComp->FirstChildElement("_ForceDir")) {
 					const char* fdType = nullptr;
@@ -1870,6 +1876,7 @@ bool GameXmlContent::LoadRemoteData()
 				pComp->QueryFloatAttribute("_Sight", &remote.sight);
 				remote.targetOnly = XmlAttrTrue(pComp, "_TargetOnly");
 				if(XMLElement* pHoming = pComp->FirstChildElement("_Homing")) ParseHoming(pHoming, remote);
+				if(XMLElement* pOrbit = pComp->FirstChildElement("_Orbit")) pOrbit->QueryFloatAttribute("_Radius", &remote.orbitRadius);
 			}
 			else if((EA::StdC::Strcmp("_Homing", compName) == 0)) {
 				ParseHoming(pComp, remote);
@@ -2624,6 +2631,7 @@ bool GameXmlContent::LoadSkillTooltips()
 				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_MANAREGEN") == 0) mod.stat = StatusMod::MANAREGEN;
 				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_RAGEREGEN") == 0) mod.stat = StatusMod::RAGEREGEN;
 				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_STAMINA") == 0) mod.stat = StatusMod::STAMINA;
+				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_REMOTESPEED") == 0) mod.stat = StatusMod::REMOTESPEED;
 				if(mod.mul && mod.stat != StatusMod::OTHER && !skillMulStats.full()) skillMulStats.push_back({ skillID, statusID, (u8)mod.stat, mod.value });
 				if(!found->second.mods.full()) { found->second.mods.push_back(mod); modCount++; }
 				touched.insert(statusID);

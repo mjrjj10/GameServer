@@ -10,7 +10,6 @@ static const f32 WEAPON_NODE_MAX_FORWARD = 250.0f;
 static const i32 ULTIMATE_SKILL_SUFFIX = 50;
 static const f32 REPEAT_HIT_REDUCTION = 0.1f;
 static const f32 REPEAT_HIT_REDUCTION_CAP = 0.6f;
-static const f32 ORBIT_RADIUS = 150.0f;
 static const i32 BEZIER_ARC_SAMPLES = 24;
 static const f32 REMOTE_DESTROY_CHILD_DELAY = 0.05f;
 
@@ -129,6 +128,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	inst.range = remote->maxDistance;
 	if(remote->behaviorType == Remote::BehaviorType::GRAPH && remote->fixedGraphLength > 0) inst.range = remote->fixedGraphLength;
 	if(inst.range <= 0 && remote->lifeTime > 0 && inst.speed > 0) inst.range = remote->lifeTime * inst.speed;
+	if(remote->useOwnerRemoteSpeedRatio) inst.speed *= OwnerRemoteSpeedRatio(players[ownerIndex]);
 	if(remote->behaviorType == Remote::BehaviorType::GRAPH && remote->fixedGraphLength <= 0 && aimPos && glm::length(vec2(*aimPos)) > 1.0f) {
 		const f32 aimDist = glm::length(vec2(*aimPos) - vec2(pos));
 		inst.range = inst.range > 0 ? MIN(aimDist, inst.range) : aimDist;
@@ -367,14 +367,16 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 			if(stackBonus > 0) LOG("Passive :: %ls stack bonus +%d on %ls", owner.name.data(), stackBonus, target.name.data());
 		}
 		i32 dealt = amount + stackBonus;
-		if(enemy && GetGameXmlContent().IsRepeatHitReduced((i32)inst.skillID)) {
+		const RepeatHitDecayRule* decay = FindRepeatHitDecay(remote.ID);
+		if(enemy && (decay || GetGameXmlContent().IsRepeatHitReduced((i32)inst.skillID))) {
 			RepeatHit* rh = nullptr;
 			foreach(r, repeatHits) if(r->castID == inst.castID && r->targetIndex == target.index) rh = &*r;
 			if(!rh) {
 				repeatHits.push_back({ inst.castID, target.index, 0, localTime });
 				rh = &repeatHits.back();
 			}
-			dealt = (i32)(dealt * MAX(1.0f - REPEAT_HIT_REDUCTION * rh->count, 1.0f - REPEAT_HIT_REDUCTION_CAP));
+			if(decay) dealt = (i32)(dealt * MAX(1.0f - decay->stepPerHit * rh->count, decay->floor));
+			else dealt = (i32)(dealt * MAX(1.0f - REPEAT_HIT_REDUCTION * rh->count, 1.0f - REPEAT_HIT_REDUCTION_CAP));
 			rh->count++;
 			rh->at = localTime;
 		}
@@ -833,7 +835,7 @@ void World::ApplyAttachedRemote(RemoteInst& inst, Player& instOwner)
 {
 	const Remote& remote = *inst.remote;
 	if(remote.behaviorType == Remote::BehaviorType::ORBIT) {
-		const f32 radius = remote.boundSize[0] * 0.5f + ORBIT_RADIUS;
+		const f32 radius = remote.boundSize[0] * 0.5f + remote.orbitRadius;
 		foreach(it, players) {
 			if(!RemoteCanAffect(inst, *it, false)) continue;
 			if(glm::length(vec2(it->body->GetWorldPos()) - vec2(instOwner.body->GetWorldPos())) <= radius + HitRadius(*it)) RemoteHit(inst, *it);

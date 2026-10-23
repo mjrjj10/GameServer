@@ -152,7 +152,9 @@ struct World
 			Time executeAt = Time::ZERO;
 			u8 type = 0;
 			bool interruptByMove = false;
+			Time startedAt = Time::ZERO;
 		} casting;
+		f32 castChargeRatio = 1.0f;
 		SkillID toggleSkill = SkillID::INVALID;
 		u32 toggleCastID = 0;
 		Time toggleNext = Time::ZERO;
@@ -843,6 +845,7 @@ public:
 	f32 WeaponHeatScale(const Player& player) const;
 	f32 WeaponFireDelayScale(const Player& player) const;
 	f32 BotNextFireDelay(const Player& bot) const;
+	f32 OwnerRemoteSpeedRatio(const Player& player) const;
 	u16 DefaultWeaponCreator(const Player& player, const WeaponFiring& wf) const;
 	RemoteInst* FindProjectileReflector(const Projectile& proj, const vec2& from, const vec2& to, vec2* contact);
 	void ReflectProjectile(const Projectile& src, RemoteInst& reflector, const vec2& contact);

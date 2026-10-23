@@ -13,6 +13,7 @@ static const i32 STAT_STAMINA = 2;
 static const i32 STAT_MOVESPEED = 14;
 static const i32 STAT_MANA = 35;
 static const i32 STAT_SKILLPOWER = 8;
+static const i32 STAT_ATTACK = 6;
 struct ResourceDef { i32 maxStat; i32 regenStat; bool startFull; i32 tagRegenValueStat; i32 tagRegenRatioStat; };
 static const ResourceDef RESOURCES[3] = {
 	{ 17, 41, true, 46, 49 },

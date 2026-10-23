@@ -148,7 +148,7 @@ struct SummonInfo
 
 struct StatusMod
 {
-	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE, ATTACK, MOVESPEED, REFLECT_DAMAGE_RATIO, DEFENCE, MANAREGEN, RAGEREGEN, STAMINA };
+	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE, ATTACK, MOVESPEED, REFLECT_DAMAGE_RATIO, DEFENCE, MANAREGEN, RAGEREGEN, STAMINA, REMOTESPEED };
 	Stat stat = OTHER;
 	bool regen = false;
 	bool mul = false;
@@ -415,6 +415,8 @@ struct Remote
 	f32 maxSpeed = 0;
 	f32 maxDistance = 0;
 	i32 skillIndex = 0;
+	bool useOwnerRemoteSpeedRatio = false;
+	f32 orbitRadius = 0;
 	f32 lifeTime = 0;
 	i32 activateCount = 1;
 	i32 penetrationCount = 0;
@@ -802,7 +804,7 @@ struct GameXmlContent
 	eastl::hash_set<u64> skillActionGaps;
 	struct SkillInput { bool needsClick = false; bool directionOnly = false; bool friendlyOnly = false; bool positionDirection = false; bool selfPosition = false; bool teleportEntity = false; bool allEnemies = false; bool pickedEntity = false; bool lockOn = false; bool takesTarget = false; bool petCaster = false; i32 checkStatus = 0; u8 obstructMove = 0; bool obstructSight = false; i32 coolTimeID = 0; f32 coolTime = 0; f32 globalCoolTime = 0; f32 minDistance = 0; f32 maxDistance = 0; };
 	const SkillInput* FindSkillInput(i32 skillID) const { auto f = skillInput.find(skillID); return f == skillInput.end() ? nullptr : &f->second; }
-	struct SkillCast { enum Type: u8 { DELAY, LIMIT, CHARGING } type = DELAY; f32 time = 0; ActionStateID action = ActionStateID::INVALID; bool interruptByMove = false; };
+	struct SkillCast { enum Type: u8 { DELAY, LIMIT, CHARGING } type = DELAY; f32 time = 0; ActionStateID action = ActionStateID::INVALID; bool interruptByMove = false; f32 maxChargingTime = 0; f32 minChargeRatio = 1; f32 maxChargeRatio = 1; };
 	const SkillCast* FindSkillCast(i32 skillID) const { auto f = skillCast.find(skillID); return f == skillCast.end() ? nullptr : &f->second; }
 	bool IsCastAction(ActionStateID action) const { foreach_const(it, skillCast) if(it->second.action == action) return true; return false; }
 	struct SkillToggle { enum Consume: u8 { NONE, MANA, RAGE, STAMINA } consume = NONE; f32 interval = 0; f32 value = 0; eastl::fixed_vector<i32,4,false> remotes; eastl::fixed_vector<i32,6,false> statuses; };
