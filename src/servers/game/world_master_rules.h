@@ -330,7 +330,6 @@ static const PassiveStatusRule PASSIVE_STATUS_RULES[] = {
 
 enum class WeaponBonus: u8
 {
-	OWNER_BELOW_HP_TRIGGER,
 	TARGET_HAS_OWN_STATUS,
 	EVERY_NTH_HIT,
 	LAST_OF_CHAIN,
@@ -345,8 +344,17 @@ struct WeaponBonusRule
 	f32 mul;
 };
 
+struct LowHpFireRateRule
+{
+	ClassType master;
+	f32 fireDelayScale;
+};
+
+static const LowHpFireRateRule MEASURED_LOW_HP_FIRE_RATES[] = {
+	{ ClassType::ATTACKER, 0.843f },
+};
+
 static const WeaponBonusRule WEAPON_BONUS_RULES[] = {
-	{ ClassType::ATTACKER, WeaponBonus::OWNER_BELOW_HP_TRIGGER, 0, 0, 1.10f },
 	{ ClassType::BOXER, WeaponBonus::TARGET_HAS_OWN_STATUS, 0, 1230320002, 1.15f },
 	{ ClassType::SHUGOTRADER, WeaponBonus::EVERY_NTH_HIT, 6, 1230330000, 1.80f },
 	{ ClassType::RYTLOCK, WeaponBonus::LAST_OF_CHAIN, 3, 1230250002, 1.20f },

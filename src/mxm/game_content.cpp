@@ -406,6 +406,7 @@ void GameXmlContent::LoadAllSkills()
 			in.positionDirection = ux && EA::StdC::Strcmp(ux, "SKILL_CAST_TARGET_POSITION_DIRECTION") == 0;
 			pNodeCommonSkill->QueryIntAttribute("_CoolTimeID", &in.coolTimeID);
 			pNodeCommonSkill->QueryFloatAttribute("_CoolTime", &in.coolTime);
+			pNodeCommonSkill->QueryFloatAttribute("_GlobalCoolTime", &in.globalCoolTime);
 			skillInput[skillID] = in;
 		}
 		if(XMLElement* pCast = pNodeCommonSkill->FirstChildElement("_Cast")) {

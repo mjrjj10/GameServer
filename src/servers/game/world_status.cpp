@@ -557,10 +557,6 @@ f32 World::PassiveWeaponDamageMul(Player& attacker, Player& target)
 	for(const WeaponBonusRule& rule : WEAPON_BONUS_RULES) {
 		if(rule.master != attacker.Main().classType) continue;
 		switch(rule.condition) {
-			case WeaponBonus::OWNER_BELOW_HP_TRIGGER: {
-				const ActiveStatus* st = FindPassiveOfType(attacker, StatusType::HPTRIGGER);
-				if(st && attacker.Main().hp * 100 < attacker.Main().hpMax * st->info->Param("_CheckVal")) mul *= rule.mul;
-			} break;
 			case WeaponBonus::TARGET_HAS_OWN_STATUS: {
 				foreach_const(st, activeStatuses) {
 					if(st->statusID != rule.status || st->targetIndex != target.index || st->casterIndex != attacker.index || st->until <= localTime) continue;

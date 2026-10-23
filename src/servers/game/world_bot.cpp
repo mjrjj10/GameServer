@@ -42,7 +42,8 @@ void World::UpdateBotSkills()
 		const f32 botCd = slot == 4 ? content.BotUgSkillCoolTime() : content.BotNormalSkillCoolTime();
 		const f32 cd = MAX(content.GetSkillCoolTime(skill), botCd);
 		bot.botSkillReady[slot] = TimeAdd(localTime, TimeMsToTime(cd * 1000.0));
-		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(MAX(content.BotAfterSkillDelay(), 0.5f) * 1000.0));
+		const GameXmlContent::SkillInput* in = content.FindSkillInput(skill);
+		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(MAX(MAX(content.BotAfterSkillDelay(), 0.5f), in ? in->globalCoolTime : 0.0f) * 1000.0));
 
 		const vec3 tpos = target->body->GetWorldPos();
 		const f32 yaw = atan2f(tpos.y - pos.y, tpos.x - pos.x);
@@ -51,7 +52,6 @@ void World::UpdateBotSkills()
 		bot.weaponAimYaw = yaw;
 		const ActorUID targetUID = target->Main().UID;
 		LOG("BotSkill :: %ls casts %d at %ls (dist %.0f, cd %.0f)", bot.name.data(), skill, target->name.data(), best, cd);
-		const GameXmlContent::SkillInput* in = content.FindSkillInput(skill);
 		PlayerCastSkill(bot, SkillID(skill), tpos, Slice<const ActorUID>(&targetUID, in && in->takesTarget ? 1 : 0), 0);
 	}
 }

@@ -646,6 +646,11 @@ f32 World::WeaponFireDelayScale(const Player& player) const
 		if(it->targetIndex != player.index || !it->info || it->info->type != StatusType::FIREDELAY || it->until <= localTime) continue;
 		if(it->info->timeRatio > 0) scale *= it->info->timeRatio;
 	}
+	for(const LowHpFireRateRule& rule : MEASURED_LOW_HP_FIRE_RATES) {
+		if(rule.master != player.Main().classType) continue;
+		const ActiveStatus* st = FindPassiveOfType(player, StatusType::HPTRIGGER);
+		if(st && player.Main().hp * 100 < player.Main().hpMax * st->info->Param("_CheckVal")) scale *= rule.fireDelayScale;
+	}
 	return scale;
 }
 
