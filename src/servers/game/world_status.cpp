@@ -594,6 +594,15 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	DefeatGraphTimes(info, &duration, &graphDuration);
 	if(durationOverride > 0) duration = durationOverride;
 	if(caster.team != target.team) MarkInBattle(target);
+	if(info && info->targetsFriendlyPc && info->targetingRange > 0 && caster.index == target.index && !spreadingStatus) {
+		spreadingStatus = true;
+		foreach(it, players) {
+			if(it->index == caster.index || it->team != caster.team || it->dead) continue;
+			if(glm::length(vec2(it->body->GetWorldPos()) - vec2(caster.body->GetWorldPos())) > info->targetingRange) continue;
+			ApplyStatus(caster, *it, statusID, power, durationOverride);
+		}
+		spreadingStatus = false;
+	}
 	if(info && info->isDebuff && caster.team != target.team && HasStatusType(target, StatusType::GODMODE)) {
 		LOG("Status :: %ls resisted %d (godmode)", target.name.data(), statusID);
 		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);

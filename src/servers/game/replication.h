@@ -423,6 +423,7 @@ struct Replication
 		u8 comboCount = 0;
 	};
 	void SendRemoteCreate(const RemoteCreate& remote, ClientHandle exclude);
+	void SendWeaponCreatorShotToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, const wchar* fireObject, u16 creator, u8 chargingLevel, u8 comboCount, u16 firingCount);
 	void SendReflectedShotToAll(ActorUID shooterUID, ActorUID reflectorUID, u32 seed, const vec3& firePos, f32 worldYaw, const wchar* fireObject, u32 groupSeed, RemoteIdx doc);
 	void RelayRemoteSyncCreateFromRemoteDoc(ClientHandle senderHd, const u8* packetData, i32 packetSize);
 	void RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetData, i32 packetSize);

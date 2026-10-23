@@ -278,6 +278,7 @@ struct StatusInfo
 	i32 linkCasterStatus = 0;
 	i32 linkTargetStatus = 0;
 	f32 targetingRange = 0;
+	bool targetsFriendlyPc = false;
 	f32 explodeDamage = 0;
 	f32 additionalDamageByCaster = 0;
 	NextCondition nextCondition = NextCondition::NONE;
@@ -333,6 +334,8 @@ struct WeaponFiring
 	eastl::fixed_vector<f32,8,false> comboDelay;
 	f32 fireDelay = 0;
 	i32 firingMethod = 0;
+	f32 firingStatDuration = 0;
+	f32 firingMoveSpeedMul = 0;
 	eastl::fixed_vector<RemoteIdx,4,false> charge;
 	eastl::fixed_vector<f32,4,false> chargeTime;
 	eastl::fixed_string<char,32,false> chargeDummy;

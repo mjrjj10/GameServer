@@ -96,6 +96,10 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	const bool spawnAtAim = wf.spawnAtAim;
 	const RemoteIdx idx = SelectWeaponRemote(player, wf);
 	BotWeaponAnimation(player, replication);
+	if(wf.firingStatDuration > 0) {
+		player.firingStatUntil = TimeAdd(localTime, TimeMsToTime(wf.firingStatDuration * 1000.0));
+		player.firingMoveSpeedMul = wf.firingMoveSpeedMul;
+	}
 	if(player.clientHd == ClientHandle::INVALID) {
 		player.botAttackState = WeaponAttackState(player);
 		player.botAttackStateUntil = TimeAdd(localTime, TimeMsToTime(BOT_ATTACK_STATE_MS));
@@ -179,7 +183,9 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		const vec3 target = firePos + vec3(proj.dir * proj.range, 0);
 		eastl::fixed_string<wchar,32,false> fireObject;
 		for(char c : wf.fireDummy) fireObject.push_back((wchar)c);
-		replication->SendRemoteCreateToAll(player.Main().UID, seed, remote->ID, firePos, atan2f(proj.dir.y, proj.dir.x), target, ActorUID::INVALID, fireObject.empty() ? FIRE_OBJECT_SCENE_ROOT : fireObject.c_str());
+		const u16 creator = DefaultWeaponCreator(player, wf);
+		if(creator != 0 && !fireObject.empty()) replication->SendWeaponCreatorShotToAll(player.Main().UID, seed, remote->ID, firePos, atan2f(proj.dir.y, proj.dir.x), target, fireObject.c_str(), creator, player.chargeLevel, player.firingCombo, (u16)player.shotCount[player.mainCharaID & 1]);
+		else replication->SendRemoteCreateToAll(player.Main().UID, seed, remote->ID, firePos, atan2f(proj.dir.y, proj.dir.x), target, ActorUID::INVALID, fireObject.empty() ? FIRE_OBJECT_SCENE_ROOT : fireObject.c_str());
 	}
 	proj.damage = bomb && remote->attackMultiplier <= 0 ? 0 : (i32)WeaponHitDamage(player, remote);
 	proj.aoeDamage = (i32)WeaponHitDamage(player, bomb && bomb->attackMultiplier > 0 ? bomb : remote);
@@ -706,4 +712,14 @@ void World::ReflectProjectile(const Projectile& src, RemoteInst& reflector, cons
 	replication->SendReflectedShotToAll(players[src.ownerIndex].Main().UID, r.Main().UID, seed, p.pos + vec3(0, 0, FIRE_NODE_HEIGHT), yaw, GetGameXmlContent().GetNodeName(src.nodeName), reflector.reflectGroupSeed, src.remoteDoc);
 	LOG("Shot :: %ls reflects remote %d with %d", r.name.data(), (i32)src.remoteDoc, (i32)reflector.remote->ID);
 	projectileList.push_back(p);
+}
+
+u16 World::DefaultWeaponCreator(const Player& player, const WeaponFiring& wf) const
+{
+	const auto& content = GetGameXmlContent();
+	const auto& master = content.GetMaster(player.Main().classType);
+	if(master.defaultWeaponIDs.empty()) return 0;
+	const WeaponFiring* def = content.FindWeaponFiring((i32)master.defaultWeaponIDs[0], player.Main().stance);
+	if(!def || def->firingMethod != wf.firingMethod) return 0;
+	return MeasuredDefaultWeaponCreator(player.Main().classType);
 }

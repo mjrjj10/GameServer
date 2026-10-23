@@ -1470,6 +1470,24 @@ void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx d
 	remote.targetUID = targetUID;
 	SendRemoteCreate(remote, exclude);
 }
+void Replication::SendWeaponCreatorShotToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, const wchar* fireObject, u16 creator, u8 chargingLevel, u8 comboCount, u16 firingCount)
+{
+	RemoteCreate remote;
+	remote.parentUID = ownerUID;
+	remote.ownerUID = ownerUID;
+	remote.seed = seed;
+	remote.firePos = firePos;
+	remote.fireRotation[2] = (u16)WorldYawToCentiDegrees(worldYaw);
+	remote.targetPos = targetPos;
+	remote.fireObject = fireObject;
+	remote.fireObjectLen = (u16)EA::StdC::Strlen(fireObject);
+	remote.doc = doc;
+	remote.creator = creator;
+	remote.chargingLevel = chargingLevel;
+	remote.comboCount = comboCount;
+	remote.firingCount = firingCount;
+	SendRemoteCreate(remote, ClientHandle::INVALID);
+}
 void Replication::SendAiActionStateToAll(ActorUID actorUID, ActionStateID action, f32 worldYaw, const vec3& pos, bool keepSpeed)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {

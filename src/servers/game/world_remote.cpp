@@ -321,6 +321,8 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 		inst.actionChanged = true;
 		const ActorUID targetUID = target.Main().UID;
 		LOG("Remote :: %ls hit %ls -> caster action %d", owner.name.data(), target.name.data(), (i32)remote.changeCasterAction);
+		owner.dashDone = owner.dashDist;
+		owner.dashUntil = localTime;
 		hitActionOnly = true;
 		PlayerCastSkill(owner, inst.skillID, target.body->GetWorldPos(), Slice<const ActorUID>(&targetUID, 1), 0, remote.changeCasterAction);
 		hitActionOnly = false;

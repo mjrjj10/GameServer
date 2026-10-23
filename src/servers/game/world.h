@@ -247,6 +247,8 @@ struct World
 		i32 cleanseCharges = -1;
 		Time cleanseRefillAt = Time::ZERO;
 		Time defianceEndAt = Time::ZERO;
+		Time firingStatUntil = Time::ZERO;
+		f32 firingMoveSpeedMul = 0;
 		Time reviveReadyAt = Time::ZERO;
 		Time reviveAt = Time::ZERO;
 		f32 reviveRatio = 0;
@@ -628,6 +630,7 @@ struct World
 	};
 	eastl::fixed_vector<PendingStatus,256,false> pendingStatuses;
 	bool statusAniEnd = false;
+	bool spreadingStatus = false;
 	bool hitActionOnly = false;
 	f32 schedulePassOffset = 0;
 
@@ -840,6 +843,7 @@ public:
 	f32 WeaponHeatScale(const Player& player) const;
 	f32 WeaponFireDelayScale(const Player& player) const;
 	f32 BotNextFireDelay(const Player& bot) const;
+	u16 DefaultWeaponCreator(const Player& player, const WeaponFiring& wf) const;
 	RemoteInst* FindProjectileReflector(const Projectile& proj, const vec2& from, const vec2& to, vec2* contact);
 	void ReflectProjectile(const Projectile& src, RemoteInst& reflector, const vec2& contact);
 	void RecoverWeaponHeat(Player& player, f32 amount);

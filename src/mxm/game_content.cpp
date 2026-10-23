@@ -2400,6 +2400,7 @@ bool GameXmlContent::LoadStatusData()
 		pCommon->QueryAttribute("_MaxOverlapCount", &st.maxOverlap);
 		pCommon->QueryAttribute("_NextStatusIndex", &st.nextStatus);
 		pCommon->QueryFloatAttribute("_TargetingRange", &st.targetingRange);
+		if(const char* tt = pCommon->Attribute("_TargetingType")) st.targetsFriendlyPc = EA::StdC::Strcmp(tt, "FRIENDLY_PC") == 0;
 		if(XMLElement* pDef = pCommon->FirstChildElement("_DEFENDER")) pDef->QueryFloatAttribute("_ExplodeDmg", &st.explodeDamage);
 		pCommon->QueryFloatAttribute("_AdditionalDamageByCaster", &st.additionalDamageByCaster);
 		{
@@ -3158,6 +3159,13 @@ bool GameXmlContent::LoadWeaponFiring()
 			if(fireDummy) { wf.fireDummy = fireDummy; InternNodeName(fireDummy); }
 			wf.spawnAtAim = pData && XmlAttrTrue(pData, "_RemoteSpawnAimPosition");
 			wf.firingMethod = id;
+			if(XMLElement* pStat = pData ? pData->FirstChildElement("_FIRING_STAT") : nullptr) {
+				pStat->QueryFloatAttribute("_DurationTime", &wf.firingStatDuration);
+				for(XMLElement* pMul = pStat->FirstChildElement("_STAT_MUL"); pMul; pMul = pMul->NextSiblingElement("_STAT_MUL")) {
+					const char* key = pMul->Attribute("DATAKEY");
+					if(key && EA::StdC::Strcmp(key, "STAT_TYPE_MOVESPEED") == 0) wf.firingMoveSpeedMul += pMul->FloatAttribute("DATA");
+				}
+			}
 			if(pFire) pFire->QueryFloatAttribute("_FireDelayTime", &wf.fireDelay);
 			if(XMLElement* pCombo = pData ? pData->FirstChildElement("_COMBO") : nullptr) {
 				for(XMLElement* pLevel = pCombo->FirstChildElement("_LEVEL"); pLevel && !wf.comboValid.full(); pLevel = pLevel->NextSiblingElement("_LEVEL")) {

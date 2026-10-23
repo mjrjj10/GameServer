@@ -529,8 +529,10 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		bool regCombo = false;
 		bool acts[8] = {};
 		bool visuals[8] = {};
+		bool moves[8] = {};
 		foreach_const(cmd, action.commands) {
 			if(cmd->type == ActionCommand::Type::REGCOMBO) regCombo = true;
+			if((cmd->type == ActionCommand::Type::MOVE || cmd->type == ActionCommand::Type::GRAPH_MOVE_HORZ) && cmd->animIndex >= 0 && cmd->animIndex < 8) moves[cmd->animIndex] = true;
 			bool a = cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET ||
 				cmd->type == ActionCommand::Type::STATUS || cmd->type == ActionCommand::Type::STATUS_SKILL_TARGET || cmd->type == ActionCommand::Type::ENTITY;
 			if(cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) {
@@ -550,7 +552,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		if((!regCombo || !acts[0]) && (!hitEventCombo || !acts[0])) {
 			f32 start = 0;
 			for(i32 i = 0; i <= lastActing && (!regCombo || i <= 1); i++) {
-				if((acts[i] || visuals[i]) && !animPasses.full()) animPasses.push_back({ i, start });
+				if((acts[i] || visuals[i] || moves[i]) && !animPasses.full()) animPasses.push_back({ i, start });
 				i32 animId = 0, loop = 1;
 				foreach_const(st, action.anims) if(st->index == i) { animId = st->animationId; loop = MAX(st->loop, 1); }
 				start += content.GetAniSeqTime(className, animId) * (f32)loop;
@@ -646,7 +648,13 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 				preset == ActionCommand::TargetPreset::SELF_TFF || preset == ActionCommand::TargetPreset::SELF_TTF || preset == ActionCommand::TargetPreset::SELF_TTT;
 			const bool lastChild = preset == ActionCommand::TargetPreset::LAST_CHILD_FFF || preset == ActionCommand::TargetPreset::LAST_CHILD_TFF || preset == ActionCommand::TargetPreset::CHILD_INDEX_FFF;
 			ps.targetUID = lastChild ? ActorUID::INVALID : self ? player.Main().UID : currentTarget;
-			ps.duration = cmd->status.removeAtEnd ? MAX(action.seqLength - t, 0.3f) : replaceDuration;
+			ps.duration = replaceDuration;
+			if(cmd->status.removeAtEnd) {
+				i32 animId = 0, loop = 1;
+				foreach_const(st, action.anims) if(st->index == curAnim) { animId = st->animationId; loop = MAX(st->loop, 1); }
+				const f32 passLen = animId != 0 ? content.GetAniSeqTime(content.GetMaster(player.Main().classType).className.c_str(), animId) * (f32)loop : action.seqLength;
+				ps.duration = MAX(animPasses[pass].start + passLen - t, 0.3f);
+			}
 			ps.power = (f32)damage;
 			ps.remove = cmd->status.remove != 0;
 			ps.aniEnd = cmd->status.removeAtEnd != 0;
@@ -821,7 +829,9 @@ void World::MarkInBattle(Player& player)
 f32 World::PlayerMoveSpeed(const Player& p) const
 {
 	const f32 baseSpeed = const_cast<CharacterModel&>(GetGameXmlContent().GetMaster(p.Main().classType).character).getMoveSpeed();
-	return baseSpeed * (p.battleStage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (p.battleStage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f));
+	f32 mul = StatusModMulSum(p, StatusMod::MOVESPEED);
+	if(localTime < p.firingStatUntil) mul += p.firingMoveSpeedMul;
+	return baseSpeed * (p.battleStage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (p.battleStage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f)) * MAX(1.0f + mul / 100.0f, 0.0f);
 }
 
 void World::UpdateBattleStates()
