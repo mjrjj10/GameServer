@@ -2299,6 +2299,7 @@ StatusType StatusTypeFromString(const char* str)
 		"STATUS_TYPE_DANCE",
 		"STATUS_TYPE_DEFEAT_CASTER_AURA",
 		"STATUS_TYPE_DEFENDER",
+		"STATUS_TYPE_DEFIANCE",
 		"STATUS_TYPE_DISPEL",
 		"STATUS_TYPE_DOUBLEGUN",
 		"STATUS_TYPE_DRAGGED",
@@ -3156,8 +3157,13 @@ bool GameXmlContent::LoadWeaponFiring()
 			WeaponFiring wf;
 			if(fireDummy) { wf.fireDummy = fireDummy; InternNodeName(fireDummy); }
 			wf.spawnAtAim = pData && XmlAttrTrue(pData, "_RemoteSpawnAimPosition");
+			wf.firingMethod = id;
+			if(pFire) pFire->QueryFloatAttribute("_FireDelayTime", &wf.fireDelay);
 			if(XMLElement* pCombo = pData ? pData->FirstChildElement("_COMBO") : nullptr) {
-				for(XMLElement* pLevel = pCombo->FirstChildElement("_LEVEL"); pLevel && !wf.comboValid.full(); pLevel = pLevel->NextSiblingElement("_LEVEL")) wf.comboValid.push_back(pLevel->FloatAttribute("_ValidTime"));
+				for(XMLElement* pLevel = pCombo->FirstChildElement("_LEVEL"); pLevel && !wf.comboValid.full(); pLevel = pLevel->NextSiblingElement("_LEVEL")) {
+					wf.comboValid.push_back(pLevel->FloatAttribute("_ValidTime"));
+					wf.comboDelay.push_back(pLevel->FloatAttribute("_FireDelayTime"));
+				}
 			}
 			if(XMLElement* pCharge = pData ? pData->FirstChildElement("_CHARGE") : nullptr) {
 				for(XMLElement* pLevel = pCharge->FirstChildElement("_LEVEL"); pLevel && !wf.chargeTime.full(); pLevel = pLevel->NextSiblingElement("_LEVEL")) wf.chargeTime.push_back(pLevel->FloatAttribute("_ChargingTime"));

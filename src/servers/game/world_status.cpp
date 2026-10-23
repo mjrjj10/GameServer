@@ -199,12 +199,13 @@ void World::SendPassiveCounter(const ActiveStatus& st, i32 value)
 	replication->SendModifyStatusToAll(st.statusID, st.targetUID, st.casterUID, (u8)MAX(st.overlap, 1), (u8)MAX(value, 0));
 }
 
-bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* ccScale)
+bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32 ccDuration, f32* ccScale)
 {
 	if(info.kind != StatusInfo::Kind::HARD_CC && info.kind != StatusInfo::Kind::ROOT) return false;
 	if(ShowcaseIsDummy(target)) return false;
 	if(localTime < target.ccImmuneUntil) {
 		LOG("Passive :: %ls immune to status %d", target.name.data(), info.ID);
+		replication->SendResistStatusToAll(target.Main().UID, target.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
 		return true;
 	}
 	if(const ActiveStatus* st = FindPassiveOfType(target, StatusType::UNSHAKABLE)) {
@@ -214,10 +215,14 @@ bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* ccScale
 			if(target.cleanseRefillAt == Time::ZERO) target.cleanseRefillAt = TimeAdd(localTime, TimeMsToTime(st->info->Param("_RefillDuration")));
 			LOG("Passive :: %ls blocked status %d (charges left %d)", target.name.data(), info.ID, target.cleanseCharges);
 			SendPassiveCounter(*st, target.cleanseCharges);
+			const i32 defiance = (i32)st->info->ParamInt("_CustomAddStatusIndex");
+			if(defiance != 0) {
+				ApplyStatus(target, target, defiance, 1.0f, ccDuration);
+				target.defianceEndAt = TimeAdd(localTime, TimeMsToTime(ccDuration * 1000.0));
+			}
+			else replication->SendResistStatusToAll(target.Main().UID, target.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
 			return true;
 		}
-		target.cleanseCharges = MIN(target.cleanseCharges + 1, st->info->customMax);
-		SendPassiveCounter(*st, target.cleanseCharges);
 	}
 	const f32 toughness = MasterStat(target.Main().classType, STAT_TOUGHNESS);
 	if(toughness > 0 && ccScale) *ccScale = MAX(1.0f - toughness / 100.0f, 0.0f);
@@ -321,6 +326,16 @@ void World::UpdatePassives()
 				chara.hp = MAX(chara.hp, (i32)(chara.hpMax * it->reviveRatio));
 				replication->SendHpToAll(chara.UID, chara.hp, chara.hpMax);
 				LOG("Passive :: %ls revived at %d hp", it->name.data(), chara.hp);
+			}
+		}
+		if(it->defianceEndAt != Time::ZERO && localTime >= it->defianceEndAt) {
+			it->defianceEndAt = Time::ZERO;
+			if(!it->dead) replication->SendResistStatusToAll(it->Main().UID, it->Main().UID, STATUS_RESIST_EVENT_PASSIVE);
+		}
+		if(it->cleanseCharges < 0 && !it->dead) {
+			if(const ActiveStatus* st = FindPassiveOfType(*it, StatusType::UNSHAKABLE)) {
+				it->cleanseCharges = st->info->customInit;
+				if(it->cleanseCharges < st->info->customMax) it->cleanseRefillAt = TimeAdd(localTime, TimeMsToTime(st->info->Param("_RefillDuration")));
 			}
 		}
 		if(it->cleanseRefillAt != Time::ZERO && localTime >= it->cleanseRefillAt) {
@@ -594,10 +609,12 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		}
 	}
 	f32 ccScale = 1.0f;
-	if(info && caster.team != target.team && PassiveBlocksCC(target, *info, &ccScale)) {
-		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
+	if(info && caster.team != target.team && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT) && HasStatusType(target, StatusType::DEFIANCE)) {
+		LOG("Status :: %ls resisted %d (defiance)", target.name.data(), statusID);
+		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
 		return;
 	}
+	if(info && caster.team != target.team && PassiveBlocksCC(target, *info, duration, &ccScale)) return;
 	if(info && caster.team != target.team && target.defeatGuardSource == statusID && localTime < target.defeatGuardUntil) {
 		LOG("Status :: %ls resisted %d (defeat guard)", target.name.data(), statusID);
 		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);

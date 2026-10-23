@@ -426,9 +426,22 @@ struct Replication
 	void SendReflectedShotToAll(ActorUID shooterUID, ActorUID reflectorUID, u32 seed, const vec3& firePos, f32 worldYaw, const wchar* fireObject, u32 groupSeed, RemoteIdx doc);
 	void RelayRemoteSyncCreateFromRemoteDoc(ClientHandle senderHd, const u8* packetData, i32 packetSize);
 	void RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetData, i32 packetSize);
-	void RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, RemoteIdx remoteDoc);
+	u16 RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, RemoteIdx remoteDoc);
 	void RelayWeaponState(ClientHandle senderHd, ActorUID ownerUID, i32 weaponID, i32 state, u8 chargeLevel, u8 firingCombo);
-	void SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKills, UserID victimID, u8 victimTeam, i32 victimDeaths, i32 victimTeamDeaths);
+	void SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKills, UserID victimID, u8 victimTeam, i32 victimDeaths, i32 victimTeamKills);
+	void SendAssistScoreToAll(UserID userID, u8 team, i32 assists, i32 score, i32 teamScore);
+	struct DamageTaken
+	{
+		u32 attackerIndex;
+		UserID attackerUserID;
+		ActorUID objectUID;
+		SkillID skill;
+		i32 status;
+		i32 damage;
+		u8 damageType;
+		Time at;
+	};
+	void SendDeadDamageInfo(ClientHandle clientHd, u32 killerIndex, const DamageTaken* records, i32 count, i32 durationMs);
 	void SendDeathToAll(ActorUID killerUID, ActorUID targetUID, CreatureIndex killerDocID, u32 remoteID, RemoteIdx remoteDoc, UserID targetUserID, i32 respawnDelayMs);
 	void SendPvpAnnouncementToAll(u32 type, u32 data, ActorUID attackerUID, ActorUID victimUID);
 	void SendNpcDeadAckToAll(ActorUID npcUID, ActorUID killerUID, u32 killerDoc);

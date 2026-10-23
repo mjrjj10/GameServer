@@ -3,6 +3,7 @@
 #include <common/protocol.h>
 #include <EASTL/algorithm.h>
 #include <EASTL/fixed_hash_map.h>
+#include <EASTL/sort.h>
 #include <EAStdC/EAString.h>
 #include <mxm/game_content.h>
 #include "config.h"
@@ -1062,24 +1063,23 @@ void Replication::SendGaugeToAll(UserID userID, u8 updateType, bool overheated, 
 	}
 }
 
-void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKills, UserID victimID, u8 victimTeam, i32 victimDeaths, i32 victimTeamDeaths)
+void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKills, UserID victimID, u8 victimTeam, i32 victimDeaths, i32 victimTeamKills)
 {
-	enum : u32 { SCORE = 0, KILL_COUNT = 1, PLAYER_KILL_COUNT = 3, DEAD_COUNT = 14 };
+	enum : u32 { SCORE = 0, KILL_COUNT = 1, DEAD_COUNT = 14 };
+
+	PacketWriter<Sv::SN_ScoreUpdate> killerPacket;
+	killerPacket.Write<u32>((u32)killerID);
+	killerPacket.Write<TeamType>(TeamType::INVALID);
+	killerPacket.Write<u16>(2);
+	killerPacket.Write<u32>(KILL_COUNT); killerPacket.Write<u32>((u32)kills);
+	killerPacket.Write<u32>(SCORE);      killerPacket.Write<u32>((u32)kills);
 
 	PacketWriter<Sv::SN_ScoreUpdate> teamPacket;
 	teamPacket.Write<u32>(0);
 	teamPacket.Write<TeamType>(team == 0 ? TeamType::RED : TeamType::BLUE);
 	teamPacket.Write<u16>(2);
-	teamPacket.Write<u32>(SCORE);      teamPacket.Write<u32>((u32)teamKills);
 	teamPacket.Write<u32>(KILL_COUNT); teamPacket.Write<u32>((u32)teamKills);
-
-	PacketWriter<Sv::SN_ScoreUpdate> killerPacket;
-	killerPacket.Write<u32>((u32)killerID);
-	killerPacket.Write<TeamType>(TeamType::INVALID);
-	killerPacket.Write<u16>(3);
-	killerPacket.Write<u32>(SCORE);             killerPacket.Write<u32>((u32)kills);
-	killerPacket.Write<u32>(KILL_COUNT);        killerPacket.Write<u32>((u32)kills);
-	killerPacket.Write<u32>(PLAYER_KILL_COUNT); killerPacket.Write<u32>((u32)kills);
+	teamPacket.Write<u32>(SCORE);      teamPacket.Write<u32>((u32)teamKills);
 
 	PacketWriter<Sv::SN_ScoreUpdate> victimPacket;
 	victimPacket.Write<u32>((u32)victimID);
@@ -1091,15 +1091,102 @@ void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKi
 	victimTeamPacket.Write<u32>(0);
 	victimTeamPacket.Write<TeamType>(victimTeam == 0 ? TeamType::RED : TeamType::BLUE);
 	victimTeamPacket.Write<u16>(1);
-	victimTeamPacket.Write<u32>(DEAD_COUNT); victimTeamPacket.Write<u32>((u32)victimTeamDeaths);
+	victimTeamPacket.Write<u32>(DEAD_COUNT); victimTeamPacket.Write<u32>((u32)victimTeamKills);
 
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
-		SendPacket(clientHandle[clientID], teamPacket);
 		SendPacket(clientHandle[clientID], killerPacket);
+		SendPacket(clientHandle[clientID], teamPacket);
 		SendPacket(clientHandle[clientID], victimPacket);
 		SendPacket(clientHandle[clientID], victimTeamPacket);
 	}
+}
+
+void Replication::SendAssistScoreToAll(UserID userID, u8 team, i32 assists, i32 score, i32 teamScore)
+{
+	enum : u32 { SCORE = 0, ASSIST_COUNT = 2 };
+
+	PacketWriter<Sv::SN_ScoreUpdate> playerPacket;
+	playerPacket.Write<u32>((u32)userID);
+	playerPacket.Write<TeamType>(TeamType::INVALID);
+	playerPacket.Write<u16>(2);
+	playerPacket.Write<u32>(ASSIST_COUNT); playerPacket.Write<u32>((u32)assists);
+	playerPacket.Write<u32>(SCORE);        playerPacket.Write<u32>((u32)score);
+
+	PacketWriter<Sv::SN_ScoreUpdate> teamPacket;
+	teamPacket.Write<u32>(0);
+	teamPacket.Write<TeamType>(team == 0 ? TeamType::RED : TeamType::BLUE);
+	teamPacket.Write<u16>(1);
+	teamPacket.Write<u32>(SCORE); teamPacket.Write<u32>((u32)teamScore);
+
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		SendPacket(clientHandle[clientID], playerPacket);
+		SendPacket(clientHandle[clientID], teamPacket);
+	}
+}
+
+void Replication::SendDeadDamageInfo(ClientHandle clientHd, u32 killerIndex, const DamageTaken* records, i32 count, i32 durationMs)
+{
+	if(clientHd == ClientHandle::INVALID) return;
+	struct Entry { u32 attackerIndex; UserID userID; LocalActorID object; SkillID skill; i32 status; i32 damage; u8 damageType; };
+	eastl::fixed_vector<Entry,48,false> entries;
+	struct Group { u32 attackerIndex; UserID userID; i32 total; };
+	eastl::fixed_vector<Group,MAX_PLAYERS,false> groups;
+	for(i32 k = 0; k < count; k++) {
+		const DamageTaken& d = records[k];
+		const LocalActorID object = GetLocalActorID(clientHd, d.objectUID);
+		bool merged = false;
+		foreach(e, entries) {
+			if(e->attackerIndex == d.attackerIndex && e->object == object && e->skill == d.skill && e->status == d.status) {
+				e->damage += d.damage;
+				merged = true;
+				break;
+			}
+		}
+		if(!merged && !entries.full()) entries.push_back({ d.attackerIndex, d.attackerUserID, object, d.skill, d.status, d.damage, d.damageType });
+		bool grouped = false;
+		foreach(g, groups) {
+			if(g->attackerIndex == d.attackerIndex) {
+				g->total += d.damage;
+				grouped = true;
+				break;
+			}
+		}
+		if(!grouped && !groups.full()) groups.push_back({ d.attackerIndex, d.attackerUserID, d.damage });
+	}
+	eastl::sort(entries.begin(), entries.end(), [](const Entry& a, const Entry& b) { return a.damage > b.damage; });
+	eastl::sort(groups.begin(), groups.end(), [killerIndex](const Group& a, const Group& b) {
+		if((a.attackerIndex == killerIndex) != (b.attackerIndex == killerIndex)) return a.attackerIndex == killerIndex;
+		return a.total > b.total;
+	});
+
+	PacketWriter<Sv::SN_DeadDamageInfo> packet;
+	auto writeList = [&](const Group& g) {
+		u16 n = 0;
+		foreach_const(e, entries) if(e->attackerIndex == g.attackerIndex) n++;
+		packet.Write<u16>(n);
+		foreach_const(e, entries) {
+			if(e->attackerIndex != g.attackerIndex) continue;
+			packet.Write<u32>((u32)e->object);
+			packet.Write<u32>(e->skill != SkillID::INVALID ? (u32)e->skill : 0xFFFFFFFF);
+			packet.Write<u32>(e->status != 0 ? (u32)e->status : 0xFFFFFFFF);
+			packet.Write<u32>((u32)e->damage);
+			packet.Write<u8>(0);
+			packet.Write<u8>(e->damageType);
+		}
+		packet.Write<u32>((u32)g.userID);
+	};
+	const bool hasKiller = !groups.empty() && groups[0].attackerIndex == killerIndex;
+	if(hasKiller) writeList(groups[0]);
+	else {
+		packet.Write<u16>(0);
+		packet.Write<u32>(0);
+	}
+	packet.Write<u16>((u16)(groups.size() - (hasKiller ? 1 : 0)));
+	for(i32 g = hasKiller ? 1 : 0; g < (i32)groups.size(); g++) writeList(groups[g]);
+	packet.Write<u32>((u32)durationMs);
+	SendPacket(clientHd, packet);
 }
 
 static const f32 REMOTE_FIRE_HEIGHT = 158.0f;
@@ -1212,7 +1299,7 @@ void Replication::SendRemoteCreate(const RemoteCreate& remote, ClientHandle excl
 	}
 }
 
-void Replication::RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, RemoteIdx remoteDoc)
+u16 Replication::RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, RemoteIdx remoteDoc)
 {
 	ConstBuffer buff(packetData, packetSize);
 	RemoteCreate remote;
@@ -1222,11 +1309,11 @@ void Replication::RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i
 	const vec3 clientFirePos = f2v(buff.Read<float3>());
 	buff.ReadRaw(offsetof(Cl::CQ_GamePlayerSyncPhy, charNameLen) - offsetof(Cl::CQ_GamePlayerSyncPhy, unkShort1));
 	remote.fireObjectLen = buff.Read<u16>();
-	if(remote.fireObjectLen > MAX_FIRE_OBJECT_LEN) return;
-	if(packetSize < (i32)(sizeof(Sv::SN_RemoteSyncCreateFromCreatorId) - sizeof(wchar_t) + remote.fireObjectLen * sizeof(wchar_t))) return;
+	if(remote.fireObjectLen > MAX_FIRE_OBJECT_LEN) return 0;
+	if(packetSize < (i32)(sizeof(Sv::SN_RemoteSyncCreateFromCreatorId) - sizeof(wchar_t) + remote.fireObjectLen * sizeof(wchar_t))) return 0;
 	remote.fireObject = (const wchar*)buff.ReadRaw(remote.fireObjectLen * sizeof(wchar));
 	remote.scale = buff.Read<u16>();
-	if(remote.parentUID == ActorUID::INVALID || remote.ownerUID == ActorUID::INVALID) return;
+	if(remote.parentUID == ActorUID::INVALID || remote.ownerUID == ActorUID::INVALID) return 0;
 	if(buff.CanRead(sizeof(f32) + sizeof(u32) * 2 + sizeof(u16) * 4 + sizeof(u8) * 4)) {
 		remote.lifeTime = buff.Read<f32>();
 		buff.Read<u32>();
@@ -1247,6 +1334,7 @@ void Replication::RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i
 	remote.targetPos = vec3(target.x, target.y, remote.firePos.z);
 	remote.doc = remoteDoc;
 	SendRemoteCreate(remote, senderHd);
+	return remote.creator;
 }
 
 void Replication::RelayWeaponState(ClientHandle senderHd, ActorUID ownerUID, i32 weaponID, i32 state, u8 chargeLevel, u8 firingCombo)

@@ -120,6 +120,8 @@ struct World
 		ActionStateID botAttackState = ActionStateID::INVALID;
 		i32 killStreak = 0;
 		i32 multiKill = 0;
+		i32 assists = 0;
+		eastl::fixed_vector<Replication::DamageTaken,48,false> recentDamage;
 		Time lastKillAt = Time::ZERO;
 		Time botAttackStateUntil = Time::ZERO;
 		u8 chargeLevel = 0;
@@ -244,6 +246,7 @@ struct World
 		Time hitRecoverReadyAt = Time::ZERO;
 		i32 cleanseCharges = -1;
 		Time cleanseRefillAt = Time::ZERO;
+		Time defianceEndAt = Time::ZERO;
 		Time reviveReadyAt = Time::ZERO;
 		Time reviveAt = Time::ZERO;
 		f32 reviveRatio = 0;
@@ -836,6 +839,7 @@ public:
 	void RunWeaponActionStatuses(Player& player, i8 stance);
 	f32 WeaponHeatScale(const Player& player) const;
 	f32 WeaponFireDelayScale(const Player& player) const;
+	f32 BotNextFireDelay(const Player& bot) const;
 	RemoteInst* FindProjectileReflector(const Projectile& proj, const vec2& from, const vec2& to, vec2* contact);
 	void ReflectProjectile(const Projectile& src, RemoteInst& reflector, const vec2& contact);
 	void RecoverWeaponHeat(Player& player, f32 amount);
@@ -895,7 +899,7 @@ private:
 	void ApplyPassiveStatusRule(const PassiveStatusRule& rule, Player& owner, Player* hitTarget);
 	f32 PassiveWeaponDamageMul(Player& attacker, Player& target);
 	const ActiveStatus* FindPassiveOfType(const Player& p, StatusType type) const;
-	bool PassiveBlocksCC(Player& target, const StatusInfo& info, f32* ccScale);
+	bool PassiveBlocksCC(Player& target, const StatusInfo& info, f32 ccDuration, f32* ccScale);
 	void SendPassiveCounter(const ActiveStatus& st, i32 value);
 	void PassiveOnDamaged(Player& target);
 	bool PassiveOnLethal(Player& target);

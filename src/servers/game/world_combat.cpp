@@ -18,12 +18,15 @@ static const i32 STAT_DEFENCE_PENETRATION = 20;
 static const i32 STAT_SKILL_PENETRATION = 21;
 static const i32 STAT_SKILLDAMAGE_REDUCE_RATIO = 58;
 static const f32 DEFENCE_SCALE = 100.0f;
+static const u32 PVP_ANNOUNCE_PLAIN_KILL = 0;
 static const u32 PVP_ANNOUNCE_KILL = 1;
 static const u32 PVP_ANNOUNCE_FIRST_BLOOD = 2;
 static const u32 PVP_ANNOUNCE_MULTI_KILL = 3;
 static const u32 PVP_ANNOUNCE_KILL_STREAK = 4;
+static const u32 PVP_ANNOUNCE_TEAM_ALL_DEAD = 6;
 static const u32 PVP_ANNOUNCE_SHUTDOWN = 7;
 static const f64 MULTI_KILL_WINDOW_MS = 15000.0;
+static const f64 DEAD_DAMAGE_WINDOW_MS = 15000.0;
 static const f32 PENETRATION_CAP = 50.0f;
 static const f32 SKILLDAMAGE_REDUCE_CAP = 80.0f;
 static const f32 TOOLTIP_SNIPER_CRIT_PER_MARK = 33.0f;
@@ -226,6 +229,14 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 
 	LOG("Damage :: %ls -> %ls skill=%d damage=%d%s hp=%d/%d in=%d remote=%u element=%d", attacker.name.data(), target.name.data(), (i32)skillID, damage, damageType == PACKET_DAMAGE_TYPE_CRITICAL ? " CRIT" : "", chara.hp, chara.hpMax,
 		damageIn, (u32)(proj ? proj->remoteDoc : remoteDoc), (i32)(elementMul * 100.0f));
+	if(attacker.team != target.team) {
+		for(i32 k = 0; k < (i32)target.recentDamage.size(); ) {
+			if(localTime > TimeAdd(target.recentDamage[k].at, TimeMsToTime(DEAD_DAMAGE_WINDOW_MS))) target.recentDamage.erase(target.recentDamage.begin() + k);
+			else k++;
+		}
+		if(target.recentDamage.full()) target.recentDamage.erase(target.recentDamage.begin());
+		target.recentDamage.push_back({ attacker.index, attacker.userID, damageAttackerOverride != ActorUID::INVALID ? damageAttackerOverride : attacker.Main().UID, proj ? SkillID::INVALID : skillID, damageStatusID, damage, (u8)(damageType == PACKET_DAMAGE_TYPE_CRITICAL ? 1 : 0), localTime });
+	}
 	if(proj && proj->remoteID != 0) {
 		Replication::RemoteDamage hit;
 		hit.remoteID = proj->remoteID;
@@ -284,13 +295,11 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			ShowHiddenToEnemies(target, target.hiddenUID, ActorUID::INVALID);
 			target.hiddenUID = ActorUID::INVALID;
 		}
-		i32 victimTeamDeaths = 0;
-		foreach_const(it, players) if(it->team == target.team) victimTeamDeaths += it->deaths;
-		replication->SendScoreToAll(attacker.userID, attacker.team, attacker.kills, teamKills, target.userID, target.team, target.deaths, victimTeamDeaths);
-		replication->SendDeathToAll(attacker.Main().UID, chara.UID, CreatureIndex(100000000 + (i32)attacker.Main().classType), proj ? proj->remoteID : remoteID, proj ? proj->remoteDoc : remoteDoc, target.userID, respawnMs);
+		bool specialAnnounced = false;
 		if(attacker.team != target.team) {
 			if(!firstBloodDone) {
 				firstBloodDone = true;
+				specialAnnounced = true;
 				replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_FIRST_BLOOD, 0, attacker.Main().UID, chara.UID);
 			}
 			const bool chained = attacker.lastKillAt != Time::ZERO && localTime < TimeAdd(attacker.lastKillAt, TimeMsToTime(MULTI_KILL_WINDOW_MS));
@@ -300,9 +309,38 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			if(attacker.multiKill >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_MULTI_KILL, (u32)attacker.multiKill, attacker.Main().UID, chara.UID);
 			if(attacker.killStreak >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_KILL_STREAK, (u32)attacker.killStreak, attacker.Main().UID, chara.UID);
 			if(target.killStreak >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_SHUTDOWN, 0, attacker.Main().UID, chara.UID);
+			specialAnnounced = specialAnnounced || attacker.multiKill >= 2 || attacker.killStreak >= 2 || target.killStreak >= 2;
 		}
+		if(!specialAnnounced) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_PLAIN_KILL, 0, attacker.Main().UID, chara.UID);
 		target.killStreak = 0;
 		replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_KILL, 0, attacker.Main().UID, chara.UID);
+		if(attacker.team != target.team) {
+			bool allDead = true;
+			foreach_const(it, players) if(it->team == target.team && !it->dead) allDead = false;
+			if(allDead) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_TEAM_ALL_DEAD, (u32)(target.team == 0 ? TeamType::RED : TeamType::BLUE), attacker.Main().UID, chara.UID);
+		}
+		replication->SendScoreToAll(attacker.userID, attacker.team, attacker.kills, teamKills, target.userID, target.team, target.deaths, victimTeamKills);
+		for(i32 k = 0; k < (i32)target.recentDamage.size(); ) {
+			if(localTime > TimeAdd(target.recentDamage[k].at, TimeMsToTime(DEAD_DAMAGE_WINDOW_MS))) target.recentDamage.erase(target.recentDamage.begin() + k);
+			else k++;
+		}
+		Time firstDamageAt = localTime;
+		foreach_const(d, target.recentDamage) if(d->at < firstDamageAt) firstDamageAt = d->at;
+		foreach(it, players) {
+			if(it->index == attacker.index || it->team == target.team) continue;
+			bool assisted = false;
+			foreach_const(d, target.recentDamage) {
+				if(d->attackerIndex == it->index && d->damage > 0) assisted = true;
+			}
+			if(!assisted) continue;
+			it->assists++;
+			i32 teamScore = 0;
+			foreach_const(p, players) if(p->team == it->team) teamScore += p->kills;
+			replication->SendAssistScoreToAll(it->userID, it->team, it->assists, it->kills, teamScore);
+		}
+		replication->SendDeadDamageInfo(target.clientHd, attacker.index, target.recentDamage.data(), (i32)target.recentDamage.size(), (i32)TimeDiffMs(TimeDiff(firstDamageAt, localTime)));
+		target.recentDamage.clear();
+		replication->SendDeathToAll(attacker.Main().UID, chara.UID, CreatureIndex(100000000 + (i32)attacker.Main().classType), proj ? proj->remoteID : remoteID, proj ? proj->remoteDoc : remoteDoc, target.userID, respawnMs);
 	}
 }
 

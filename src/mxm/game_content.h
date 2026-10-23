@@ -176,6 +176,7 @@ enum class StatusType: u8
 	DANCE,
 	DEFEAT_CASTER_AURA,
 	DEFENDER,
+	DEFIANCE,
 	DISPEL,
 	DOUBLEGUN,
 	DRAGGED,
@@ -329,6 +330,9 @@ struct WeaponFiring
 	RemoteIdx base = RemoteIdx::INVALID;
 	eastl::fixed_vector<RemoteIdx,8,false> combo;
 	eastl::fixed_vector<f32,8,false> comboValid;
+	eastl::fixed_vector<f32,8,false> comboDelay;
+	f32 fireDelay = 0;
+	i32 firingMethod = 0;
 	eastl::fixed_vector<RemoteIdx,4,false> charge;
 	eastl::fixed_vector<f32,4,false> chargeTime;
 	eastl::fixed_string<char,32,false> chargeDummy;

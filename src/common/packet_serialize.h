@@ -3420,6 +3420,34 @@ inline const char* PacketSerialize<Sv::SN_DeadAck>(const void* packetData, const
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_DeadDamageInfo>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_DeadDamageInfo(%d, %d) :: {", Sv::SN_DeadDamageInfo::NET_ID, packetSize);
+	auto readList = [&](const char* label) {
+		const u16 count = buff.Read<u16>();
+		SER("	%s count=%u", label, count);
+		for(int i = 0; i < count; i++) {
+			const u32 objectID = buff.Read<u32>();
+			const u32 skill = buff.Read<u32>();
+			const u32 status = buff.Read<u32>();
+			const u32 damage = buff.Read<u32>();
+			const u8 monster = buff.Read<u8>();
+			const u8 type = buff.Read<u8>();
+			SER("		object=0x%08x skill=%u status=%u damage=%u monster=%u type=%u", objectID, skill, status, damage, monster, type);
+		}
+		SER("	%s attackerKey=%u", label, buff.Read<u32>());
+	};
+	readList("killer");
+	const u16 others = buff.Read<u16>();
+	for(int i = 0; i < others; i++) readList("other");
+	SER("	durationTime=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_RespawnDelaytime>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

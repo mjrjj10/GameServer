@@ -58,6 +58,7 @@ void World::UpdateBotSkills()
 
 static const f32 BOT_ENGAGE_RANGE = 2500.0f;
 static const f32 BOT_MELEE_RANGE = 150.0f;
+static const f32 BOT_MIN_FIRE_DELAY = 0.15f;
 static const f32 BOT_RANGE_FRACTION = 0.7f;
 static const f32 BOT_RANGED_MAX = 800.0f;
 static const f32 BOT_STRAFE_STEP = 0.6f;
@@ -131,18 +132,20 @@ void World::UpdateBotMovement()
 
 void World::UpdateBotCombat()
 {
-	const auto& content = GetGameXmlContent();
 	foreach(it, players) {
 		Player& bot = *it;
 		if(bot.clientHd != ClientHandle::INVALID || bot.dead) continue;
 		if(localTime < bot.tNextBotShot || localTime < bot.ccUntil) continue;
 		if(IsBlocked(bot, true, false, false)) continue;
-		const ClassType cls = bot.Main().classType;
 		if(WeaponIsMelee(bot) && Config().DevShowcase) continue;
 		if(WeaponIsMelee(bot)) {
 			foreach_const(e, players) {
 				if(e->dead || e->team == bot.team) continue;
-				if(glm::length(vec2(e->body->GetWorldPos()) - vec2(bot.body->GetWorldPos())) <= BOT_MELEE_RANGE + HitRadius(*e) + HitRadius(bot)) { bot.weaponFired = true; break; }
+				if(glm::length(vec2(e->body->GetWorldPos()) - vec2(bot.body->GetWorldPos())) <= BOT_MELEE_RANGE + HitRadius(*e) + HitRadius(bot)) {
+					bot.weaponFired = true;
+					bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot) * 1000.0));
+					break;
+				}
 			}
 			continue;
 		}
@@ -157,11 +160,7 @@ void World::UpdateBotCombat()
 			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(pos));
 			if(d < best) { best = d; target = &*e; }
 		}
-		const u32 m = bot.mainCharaID & 1;
-		const WeaponIndex weapon = m == 0 ? bot.mainWeapon : bot.subWeapon;
-		const f32 stanceDelay = content.GetWeaponStanceFireDelay((i32)weapon, bot.Main().stance);
-		const f32 delay = MAX(stanceDelay > 0 ? stanceDelay : content.GetWeaponFireDelay((i32)weapon), 0.15f) * WeaponFireDelayScale(bot);
-		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(delay * 1000.0));
+		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot) * 1000.0));
 		vec3 aim = target ? target->body->GetWorldPos() : vec3(0);
 		if(!target && !Config().DevShowcase) {
 			f32 bestNpc = range;
@@ -179,5 +178,14 @@ void World::UpdateBotCombat()
 		const vec2 dir = glm::length(rel) > 1.0f ? glm::normalize(rel) : vec2(1, 0);
 		bot.weaponAimYaw = atan2f(dir.y, dir.x);
 		PlayerWeaponShot(bot, pos, dir, best);
+		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot) * 1000.0));
 	}
+}
+
+f32 World::BotNextFireDelay(const Player& bot) const
+{
+	const WeaponFiring& wf = ActiveWeaponFiring(bot, bot.Main().stance);
+	f32 delay = wf.fireDelay;
+	if(bot.firingCombo < wf.comboDelay.size() && wf.comboDelay[bot.firingCombo] > 0 && wf.comboDelay[bot.firingCombo] <= wf.comboValid[bot.firingCombo]) delay = wf.comboDelay[bot.firingCombo];
+	return MAX(delay, BOT_MIN_FIRE_DELAY) * WeaponFireDelayScale(bot);
 }
