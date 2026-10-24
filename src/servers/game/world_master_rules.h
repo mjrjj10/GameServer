@@ -299,6 +299,25 @@ static inline const HitRecoverRule* FindHitRecoverRule(i32 status)
 	return nullptr;
 }
 
+struct ChargeHoldRule
+{
+	SkillID skill;
+	f32 holdSec;
+};
+
+static const ChargeHoldRule MEASURED_CHARGE_HOLDS[] = {
+	{ SkillID(180140030), 0.67f },
+	{ SkillID(180320050), 0.15f },
+};
+
+static inline const ChargeHoldRule* FindChargeHoldRule(SkillID skill)
+{
+	for(const ChargeHoldRule& rule : MEASURED_CHARGE_HOLDS) {
+		if(rule.skill == skill) return &rule;
+	}
+	return nullptr;
+}
+
 struct StatusDrainRule
 {
 	i32 status;

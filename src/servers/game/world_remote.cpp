@@ -354,6 +354,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	statusForceCenterSet = true;
 	statusPushDir = inst.dir;
 	statusPushDirSet = glm::length(inst.dir) > 0.5f;
+	const f32 falloff = RemoteDistanceFalloff(remote, glm::length(vec2(target.body->GetWorldPos()) - vec2(inst.pos)));
 
 	if(amount > 0) {
 		if(enemy && inst.skillID != SkillID::INVALID) PassiveOnSkillHit(owner, target);
@@ -381,7 +382,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 			rh->count++;
 			rh->at = localTime;
 		}
-		if(enemy) dealt = (i32)(dealt * RemoteDistanceFalloff(remote, glm::length(vec2(target.body->GetWorldPos()) - vec2(inst.pos))));
+		if(enemy) dealt = (i32)(dealt * falloff);
 		if(enemy && remote.hitDamageMultiplier != 0) {
 			dealt = (i32)(dealt * MAX(1.0f + remote.hitDamageMultiplier * inst.enemiesHit, 1.0f + remote.maxHitDamageMultiplier));
 			if(inst.enemiesHit < 255) inst.enemiesHit++;
@@ -420,7 +421,9 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) {
 					statusCasterOverride = inst.sourceUID;
 					statusDistanceRatioOverride = distanceOverride;
+					statusDurationScale = enemy ? falloff : 1.0f;
 					ApplyStatus(owner, target, statusID, (f32)inst.damage, durationOverride);
+					statusDurationScale = 1.0f;
 					statusDistanceRatioOverride = 0;
 					statusCasterOverride = ActorUID::INVALID;
 				}

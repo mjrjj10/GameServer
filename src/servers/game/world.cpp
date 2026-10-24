@@ -893,7 +893,10 @@ void World::StartCasting(Player& player, SkillID skillID, const GameXmlContent::
 	const bool bot = player.clientHd == ClientHandle::INVALID;
 	f32 wait = cast.time;
 	if(bot && cast.type != GameXmlContent::SkillCast::DELAY) wait = MIN(wait, action.seqLength);
-	if(bot && cast.type == GameXmlContent::SkillCast::CHARGING && cast.maxChargingTime > 0) wait = cast.maxChargingTime;
+	if(bot && cast.type == GameXmlContent::SkillCast::CHARGING && cast.maxChargingTime > 0) {
+		const ChargeHoldRule* hold = FindChargeHoldRule(skillID);
+		wait = hold ? MIN(hold->holdSec, cast.maxChargingTime) : cast.maxChargingTime;
+	}
 	player.casting.skillID = skillID;
 	player.casting.castPos = castPos;
 	player.casting.target = targets.size() > 0 ? targets[0] : ActorUID::INVALID;

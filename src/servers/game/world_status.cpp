@@ -633,6 +633,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			ccScale *= MIN(MAX(-ratio + rc / STATUS_PUSH_BASE_DISTANCE, 1.0f), FLY_PULL_MAX_SCALE);
 		}
 	}
+	ccScale *= statusDurationScale;
 	duration *= ccScale;
 	graphDuration *= ccScale;
 	ShowcaseOnStatus(caster, target, statusID);

@@ -7,6 +7,7 @@
 #include "instance.h"
 #include "account.h"
 #include "matchmaker_connector.h"
+#include "bot_loadouts.h"
 
 bool HubInstance::Init(Server* server_)
 {
@@ -806,6 +807,28 @@ RoomInstance::User* RoomInstance::FindUser(ClientHandle clientHd)
 	return nullptr;
 }
 
+static void PickMeasuredLoadout(const GameXmlContent::Master& master, ClassType classType, eastl::array<SkillID,2>& skills)
+{
+	u32 total = 0;
+	for(const MeasuredSkillLoadout& l : MEASURED_SKILL_LOADOUTS) if(l.master == classType) total += l.count;
+	if(total == 0) return;
+	u32 roll = RandUint() % total;
+	for(const MeasuredSkillLoadout& l : MEASURED_SKILL_LOADOUTS) {
+		if(l.master != classType) continue;
+		if(roll >= l.count) { roll -= l.count; continue; }
+		SkillID first = SkillID::INVALID;
+		SkillID second = SkillID::INVALID;
+		foreach_const(sid, master.skillIDs) {
+			if((i32)*sid % 100 == l.first) first = *sid;
+			if((i32)*sid % 100 == l.second) second = *sid;
+		}
+		if(first == SkillID::INVALID || second == SkillID::INVALID) return;
+		skills[0] = first;
+		skills[1] = second;
+		return;
+	}
+}
+
 bool RoomInstance::TryPickMaster(User* user, ClassType classType)
 {
 	if(teamMasterPickCount[user->team][(i32)classType] < 2) {
@@ -816,6 +839,7 @@ bool RoomInstance::TryPickMaster(User* user, ClassType classType)
 			user->Main().classType = classType;
 			user->Main().skills[0] = master.skillIDs[0];
 			user->Main().skills[1] = master.skillIDs[1];
+			if(user->isBot && !Config().DevShowcase) PickMeasuredLoadout(master, classType, user->Main().skills);
 			if(!master.fairPvpWeaponIDs.empty()) user->Main().weapon = master.fairPvpWeaponIDs[0];
 			else if(!master.defaultWeaponIDs.empty()) user->Main().weapon = master.defaultWeaponIDs[0];
 			else {
@@ -830,6 +854,7 @@ bool RoomInstance::TryPickMaster(User* user, ClassType classType)
 			user->Sub().classType = classType;
 			user->Sub().skills[0] = master.skillIDs[0];
 			user->Sub().skills[1] = master.skillIDs[1];
+			if(user->isBot && !Config().DevShowcase) PickMeasuredLoadout(master, classType, user->Sub().skills);
 			if(!master.fairPvpWeaponIDs.empty()) user->Sub().weapon = master.fairPvpWeaponIDs[0];
 			else if(!master.defaultWeaponIDs.empty()) user->Sub().weapon = master.defaultWeaponIDs[0];
 			else {

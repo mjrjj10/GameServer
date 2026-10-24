@@ -27,10 +27,12 @@ void World::UpdateBotSkills()
 		}
 		if(!target) continue;
 
+		const i32 base = (i32)bot.mainCharaID * 2;
 		eastl::fixed_vector<i32,5,false> ready;
 		for(i32 i = 0; i < 5; i++) {
 			const i32 skill = (*skills)[i];
 			if(skill == 0 || localTime < bot.botSkillReady[i]) continue;
+			if(i != 4 && !Config().DevShowcase && (i32)bot.skills[base] != skill && (i32)bot.skills[base + 1] != skill) continue;
 			const f32 maxDist = content.GetBotSkillMaxDistance(skill);
 			if(maxDist <= 0 || best > maxDist) continue;
 			ready.push_back(i);

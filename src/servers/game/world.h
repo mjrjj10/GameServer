@@ -751,6 +751,7 @@ struct World
 	struct RemoteActivation { u32 remoteID; ClientHandle skipHd; ActorUID targetUID; u32 penetration; vec3 pos; };
 	RemoteActivation remoteActivation = { 0, ClientHandle::INVALID, ActorUID::INVALID, 0, vec3(0) };
 	f32 statusDistanceRatioOverride = 0;
+	f32 statusDurationScale = 1.0f;
 	bool statusFromBehind = false;
 	bool statusPushDirSet = false;
 	vec2 statusPushDir = vec2(0);
