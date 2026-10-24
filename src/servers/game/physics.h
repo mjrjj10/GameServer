@@ -101,11 +101,12 @@ struct PhysicsScene
 	void Step();
 	void Destroy();
 
-	void CreateStaticCollider(const char* meshName, const vec3& pos, const vec3& rot = vec3(0));
+	PxRigidStatic* CreateStaticCollider(const char* meshName, const vec3& pos, const vec3& rot = vec3(0));
+	void SetStaticEnabled(PxRigidStatic* actor, bool enabled);
 	PhysicsDynamicBody* CreateDynamicBody(f32 radius, f32 height, const vec3& pos);
 	vec3 Move(PhysicsDynamicBody* body, const vec3& disp, f32 time /* seconds */);
 	vec3 FindMovePos(PhysicsDynamicBody* body, const vec3& disp, f32 time);
-	bool RaycastStatic(const vec3& from, const vec3& to, f32* hitDist, i32 ignoreTeam = -1);
+	bool RaycastStatic(const vec3& from, const vec3& to, f32* hitDist, i32 ignoreTeam = -1, const PxRigidActor** hitActor = nullptr);
 	PxRigidStatic* CreateWall(const vec3& pos, f32 width, f32 depth, f32 height, f32 yaw, i32 team);
 	void RemoveWall(PxRigidStatic* wall);
 };

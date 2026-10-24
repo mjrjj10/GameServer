@@ -352,7 +352,15 @@ struct WeaponFiring
 	i32 radiateNum = 1;
 	f32 radiateAngle = 0;
 	eastl::fixed_vector<RemoteIdx,4,false> extraRemotes;
-	i32 CreatedRemotes() const { return MAX(radiateNum, 1) + (i32)extraRemotes.size(); }
+	eastl::fixed_vector<i32,4,false> chargeParallel;
+	f32 parallelOffset = 0;
+	i32 ChargeParallel(u8 chargeLevel) const { return chargeLevel > 0 && chargeLevel <= chargeParallel.size() ? MAX(chargeParallel[chargeLevel - 1], 1) : 1; }
+	i32 CreatedRemotes() const
+	{
+		i32 n = MAX(radiateNum, 1);
+		for(i32 p : chargeParallel) n = MAX(n, p);
+		return n + (i32)extraRemotes.size();
+	}
 };
 
 struct Remote
@@ -562,7 +570,7 @@ struct GameXmlContent
 
 	struct LevelEventNode
 	{
-		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM };
+		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM, BOUND_TRIGGER, STATUS_CHANGE, ACTIVATE_TRIGGER, ON_HIT_TRIGGER, ACTION_CHANGE, CLIENT_EVENT };
 		i32 id = 0;
 		Kind kind = OTHER;
 		i32 tagID = -1;
@@ -570,6 +578,15 @@ struct GameXmlContent
 		f32 variance = 0;
 		i32 dropIndex = 0;
 		i32 areaID = 0;
+		u32 nameKey = 0;
+		u32 targetKey = 0;
+		bool enter = false;
+		bool active = false;
+		f32 retrigger = 0;
+		i32 statusIndex = 0;
+		i32 localID = 0;
+		i32 hitCount = 0;
+		ActionStateID action = ActionStateID::INVALID;
 		eastl::fixed_vector<i32,8,false> outputs;
 	};
 
@@ -905,6 +922,7 @@ struct GameXmlContent
 	}
 	struct InteractionInfo { f32 activeDistance = 0; bool carry = false; CreatureIndex receiver = CreatureIndex::Invalid; };
 	eastl::hash_map<i32, InteractionInfo> interactions;
+	eastl::hash_map<i32, i32> dynamicDensity;
 	const InteractionInfo* FindInteraction(i32 id) const { auto f = interactions.find(id); return f == interactions.end() ? nullptr : &f->second; }
 	f32 GetAniSeqTime(const char* className, i32 seqID) const { auto f = aniSeqTime.find(AniKey(className, seqID)); return f == aniSeqTime.end() ? 0 : f->second; }
 	struct MoveCurve

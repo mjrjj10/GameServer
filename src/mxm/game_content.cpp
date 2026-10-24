@@ -2377,166 +2377,157 @@ bool GameXmlContent::LoadStatusData()
 		return false;
 	}
 
-	for(XMLElement* pInfo = xml.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
-		StatusInfo st;
-		pInfo->QueryAttribute("ID", &st.ID);
-		XMLElement* pCommon = pInfo->FirstChildElement("ST_COMMONSTATUS");
-		const char* statusKey = pInfo->Attribute("KEYNAME");
-		st.staminaBurn = statusKey && EA::StdC::Strstr(statusKey, "STAMINABURN") != nullptr;
-		const char* statusDesc = pCommon ? pCommon->Attribute("_Description") : nullptr;
-		const char* defenceDown = statusKey && statusDesc && EA::StdC::Strstr(statusKey, "DEFENCEDOWN") ? EA::StdC::Strstr(statusDesc, "-") : nullptr;
-		if(defenceDown && EA::StdC::Strchr(defenceDown, '%')) st.descDefenceDown = (f32)EA::StdC::AtoI32(defenceDown + 1);
-		if(!pCommon) continue;
+	XMLDocument xmlDynamic;
+	XMLDocument* docs[2] = { &xml, LoadXMLFile(L"/client/STATUS_DYNAMIC.xml", xmlDynamic, true) ? &xmlDynamic : nullptr };
+	for(XMLDocument* doc : docs) {
+		if(!doc) continue;
+		for(XMLElement* pInfo = doc->FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+			StatusInfo st;
+			pInfo->QueryAttribute("ID", &st.ID);
+			XMLElement* pCommon = pInfo->FirstChildElement("ST_COMMONSTATUS");
+			const char* statusKey = pInfo->Attribute("KEYNAME");
+			st.staminaBurn = statusKey && EA::StdC::Strstr(statusKey, "STAMINABURN") != nullptr;
+			const char* statusDesc = pCommon ? pCommon->Attribute("_Description") : nullptr;
+			const char* defenceDown = statusKey && statusDesc && EA::StdC::Strstr(statusKey, "DEFENCEDOWN") ? EA::StdC::Strstr(statusDesc, "-") : nullptr;
+			if(defenceDown && EA::StdC::Strchr(defenceDown, '%')) st.descDefenceDown = (f32)EA::StdC::AtoI32(defenceDown + 1);
+			if(!pCommon) continue;
 
-		f32 durationMs = 0;
-		pCommon->QueryFloatAttribute("_DurationTime", &durationMs);
-		st.durationSec = durationMs / 1000.0f;
-		pCommon->QueryFloatAttribute("_DistanceRatio", &st.distanceRatio);
-		pCommon->QueryFloatAttribute("_TimeRatio", &st.timeRatio);
-		pCommon->QueryFloatAttribute("_HeightRatio", &st.heightRatio);
-		pCommon->QueryFloatAttribute("_LyingTime", &st.lyingTime);
-		pCommon->QueryFloatAttribute("_DotBaseDamage", &st.dotDamage);
-		st.attachToCaster = pCommon->Attribute("_AttachNodeName") != nullptr;
-		pCommon->QueryFloatAttribute("_DotDrainMultiplier", &st.drainMultiplier);
-		pCommon->QueryIntAttribute("_SkillIndex", &st.skillIndex);
-		f32 intervalMs = 0;
-		pCommon->QueryFloatAttribute("_Interval", &intervalMs);
-		st.intervalSec = intervalMs / 1000.0f;
-		pCommon->QueryFloatAttribute("_Distance", &st.distance);
-		pCommon->QueryFloatAttribute("_ParamRatio", &st.paramRatio);
-		pCommon->QueryFloatAttribute("_OffsetDraggedDistanceFromTarget", &st.dragOffset);
-		pCommon->QueryFloatAttribute("_DraggedByForceMin", &st.dragForceMin);
-		pCommon->QueryFloatAttribute("_DraggedByForceMax", &st.dragForceMax);
-		pCommon->QueryAttribute("_MaxOverlapCount", &st.maxOverlap);
-		pCommon->QueryAttribute("_NextStatusIndex", &st.nextStatus);
-		pCommon->QueryFloatAttribute("_TargetingRange", &st.targetingRange);
-		if(const char* tt = pCommon->Attribute("_TargetingType")) st.targetsFriendlyPc = EA::StdC::Strcmp(tt, "FRIENDLY_PC") == 0;
-		if(XMLElement* pDef = pCommon->FirstChildElement("_DEFENDER")) pDef->QueryFloatAttribute("_ExplodeDmg", &st.explodeDamage);
-		pCommon->QueryFloatAttribute("_AdditionalDamageByCaster", &st.additionalDamageByCaster);
-		{
-			const char* eff = nullptr;
-			pCommon->QueryStringAttribute("_EffectType", &eff);
-			st.isDebuff = eff && EA::StdC::Strcmp(eff, "STATUS_EFFECT_DEBUFF") == 0;
-			const char* dis = nullptr;
-			pCommon->QueryStringAttribute("_CanDispel", &dis);
-			st.canDispel = dis && EA::StdC::Stricmp(dis, "true") == 0;
-			const char* dispelType = nullptr;
-			pCommon->QueryStringAttribute("_DispelEffectType", &dispelType);
-			if(dispelType) st.dispelEffect = EA::StdC::Strcmp(dispelType, "STATUS_EFFECT_DEBUFF") == 0 ? 1 : 0;
-			const char* dispelStatus = nullptr;
-			pCommon->QueryStringAttribute("_DispelStatusType", &dispelStatus);
-			if(dispelStatus) st.dispelStatusType = StatusTypeFromString(dispelStatus);
-			for(XMLElement* pDefense = pCommon->FirstChildElement("_ADD_DF_STATUS"); pDefense; pDefense = pDefense->NextSiblingElement("_ADD_DF_STATUS")) {
-				const char* defense = nullptr;
-				pDefense->QueryStringAttribute("DATAKEY", &defense);
-				if(defense && !st.defenseTypes.full()) st.defenseTypes.push_back(StatusTypeFromString(defense));
+			f32 durationMs = 0;
+			pCommon->QueryFloatAttribute("_DurationTime", &durationMs);
+			st.durationSec = durationMs / 1000.0f;
+			pCommon->QueryFloatAttribute("_DistanceRatio", &st.distanceRatio);
+			pCommon->QueryFloatAttribute("_TimeRatio", &st.timeRatio);
+			pCommon->QueryFloatAttribute("_HeightRatio", &st.heightRatio);
+			pCommon->QueryFloatAttribute("_LyingTime", &st.lyingTime);
+			pCommon->QueryFloatAttribute("_DotBaseDamage", &st.dotDamage);
+			st.attachToCaster = pCommon->Attribute("_AttachNodeName") != nullptr;
+			pCommon->QueryFloatAttribute("_DotDrainMultiplier", &st.drainMultiplier);
+			pCommon->QueryIntAttribute("_SkillIndex", &st.skillIndex);
+			f32 intervalMs = 0;
+			pCommon->QueryFloatAttribute("_Interval", &intervalMs);
+			st.intervalSec = intervalMs / 1000.0f;
+			pCommon->QueryFloatAttribute("_Distance", &st.distance);
+			pCommon->QueryFloatAttribute("_ParamRatio", &st.paramRatio);
+			pCommon->QueryFloatAttribute("_OffsetDraggedDistanceFromTarget", &st.dragOffset);
+			pCommon->QueryFloatAttribute("_DraggedByForceMin", &st.dragForceMin);
+			pCommon->QueryFloatAttribute("_DraggedByForceMax", &st.dragForceMax);
+			pCommon->QueryAttribute("_MaxOverlapCount", &st.maxOverlap);
+			pCommon->QueryAttribute("_NextStatusIndex", &st.nextStatus);
+			pCommon->QueryFloatAttribute("_TargetingRange", &st.targetingRange);
+			if(const char* tt = pCommon->Attribute("_TargetingType")) st.targetsFriendlyPc = EA::StdC::Strcmp(tt, "FRIENDLY_PC") == 0;
+			if(XMLElement* pDef = pCommon->FirstChildElement("_DEFENDER")) pDef->QueryFloatAttribute("_ExplodeDmg", &st.explodeDamage);
+			pCommon->QueryFloatAttribute("_AdditionalDamageByCaster", &st.additionalDamageByCaster);
+			{
+				const char* eff = nullptr;
+				pCommon->QueryStringAttribute("_EffectType", &eff);
+				st.isDebuff = eff && EA::StdC::Strcmp(eff, "STATUS_EFFECT_DEBUFF") == 0;
+				const char* dis = nullptr;
+				pCommon->QueryStringAttribute("_CanDispel", &dis);
+				st.canDispel = dis && EA::StdC::Stricmp(dis, "true") == 0;
+				const char* dispelType = nullptr;
+				pCommon->QueryStringAttribute("_DispelEffectType", &dispelType);
+				if(dispelType) st.dispelEffect = EA::StdC::Strcmp(dispelType, "STATUS_EFFECT_DEBUFF") == 0 ? 1 : 0;
+				const char* dispelStatus = nullptr;
+				pCommon->QueryStringAttribute("_DispelStatusType", &dispelStatus);
+				if(dispelStatus) st.dispelStatusType = StatusTypeFromString(dispelStatus);
+				for(XMLElement* pDefense = pCommon->FirstChildElement("_ADD_DF_STATUS"); pDefense; pDefense = pDefense->NextSiblingElement("_ADD_DF_STATUS")) {
+					const char* defense = nullptr;
+					pDefense->QueryStringAttribute("DATAKEY", &defense);
+					if(defense && !st.defenseTypes.full()) st.defenseTypes.push_back(StatusTypeFromString(defense));
+				}
+				XMLElement* pBlock = pCommon->FirstChildElement("_INPUT_STATE_BLOCK");
+				if(pBlock) {
+					i32 v = 0;
+					v = 0; pBlock->QueryAttribute("_Attack", &v); st.blockAttack = v != 0;
+					v = 0; pBlock->QueryAttribute("_Skill", &v); st.blockSkill = v != 0;
+					i32 m = 0, s2 = 0;
+					pBlock->QueryAttribute("_MovingShirk", &m);
+					pBlock->QueryAttribute("_StandingShirk", &s2);
+					st.blockShirk = m != 0 || s2 != 0;
+					v = 0; pBlock->QueryAttribute("_Move", &v); st.blockMove = v != 0;
+				}
+				for(XMLElement* pAura = pCommon->FirstChildElement("_AuraStatusIndex"); pAura; pAura = pAura->NextSiblingElement("_AuraStatusIndex")) {
+					i32 id = 0;
+					pAura->QueryAttribute("DATA", &id);
+					if(id == 0) continue;
+					if(st.auraStatus == 0) st.auraStatus = id;
+					if(!st.auraStatuses.full()) st.auraStatuses.push_back(id);
+				}
+				st.auraAll = eff && EA::StdC::Strcmp(eff, "STATUS_EFFECT_UNKNOWN") == 0;
+				XMLElement* pLink = pCommon->FirstChildElement("_LINK");
+				if(!pLink) pLink = pCommon->NextSiblingElement("_LINK");
+				if(pLink) {
+					pLink->QueryAttribute("_LINK_CASTER", &st.linkCasterStatus);
+					pLink->QueryAttribute("_LINK_TARGET", &st.linkTargetStatus);
+				}
 			}
-			XMLElement* pBlock = pCommon->FirstChildElement("_INPUT_STATE_BLOCK");
-			if(pBlock) {
-				i32 v = 0;
-				v = 0; pBlock->QueryAttribute("_Attack", &v); st.blockAttack = v != 0;
-				v = 0; pBlock->QueryAttribute("_Skill", &v); st.blockSkill = v != 0;
-				i32 m = 0, s2 = 0;
-				pBlock->QueryAttribute("_MovingShirk", &m);
-				pBlock->QueryAttribute("_StandingShirk", &s2);
-				st.blockShirk = m != 0 || s2 != 0;
-				v = 0; pBlock->QueryAttribute("_Move", &v); st.blockMove = v != 0;
+			{
+				const char* cond = nullptr;
+				pCommon->QueryStringAttribute("_NextStatusCondition", &cond);
+				if(st.nextStatus != 0) {
+					st.nextCondition = StatusInfo::NextCondition::ALL;
+					if(cond && EA::StdC::Strcmp(cond, "E_NEXT_STATUS_CONDITION_TIMEOVER") == 0) st.nextCondition = StatusInfo::NextCondition::TIMEOVER;
+					else if(cond && EA::StdC::Strcmp(cond, "E_NEXT_STATUS_CONDITION_REMOVE_ONHIT") == 0) st.nextCondition = StatusInfo::NextCondition::REMOVE_ONHIT;
+				}
 			}
-			for(XMLElement* pAura = pCommon->FirstChildElement("_AuraStatusIndex"); pAura; pAura = pAura->NextSiblingElement("_AuraStatusIndex")) {
-				i32 id = 0;
-				pAura->QueryAttribute("DATA", &id);
-				if(id == 0) continue;
-				if(st.auraStatus == 0) st.auraStatus = id;
-				if(!st.auraStatuses.full()) st.auraStatuses.push_back(id);
+			if(st.maxOverlap < 1) st.maxOverlap = 1;
+			const char* type = nullptr;
+			pCommon->QueryStringAttribute("_Type", &type);
+			if(type) {
+				st.typeName = type;
+				st.typeKey = StatusTypeKey(type);
+				st.type = StatusTypeFromString(type);
 			}
-			st.auraAll = eff && EA::StdC::Strcmp(eff, "STATUS_EFFECT_UNKNOWN") == 0;
-			XMLElement* pLink = pCommon->FirstChildElement("_LINK");
-			if(!pLink) pLink = pCommon->NextSiblingElement("_LINK");
-			if(pLink) {
-				pLink->QueryAttribute("_LINK_CASTER", &st.linkCasterStatus);
-				pLink->QueryAttribute("_LINK_TARGET", &st.linkTargetStatus);
-			}
-		}
-		{
-			const char* cond = nullptr;
-			pCommon->QueryStringAttribute("_NextStatusCondition", &cond);
-			if(st.nextStatus != 0) {
-				st.nextCondition = StatusInfo::NextCondition::ALL;
-				if(cond && EA::StdC::Strcmp(cond, "E_NEXT_STATUS_CONDITION_TIMEOVER") == 0) st.nextCondition = StatusInfo::NextCondition::TIMEOVER;
-				else if(cond && EA::StdC::Strcmp(cond, "E_NEXT_STATUS_CONDITION_REMOVE_ONHIT") == 0) st.nextCondition = StatusInfo::NextCondition::REMOVE_ONHIT;
-			}
-		}
-		if(st.maxOverlap < 1) st.maxOverlap = 1;
-		const char* type = nullptr;
-		pCommon->QueryStringAttribute("_Type", &type);
-		if(type) {
-			st.typeName = type;
-			st.typeKey = StatusTypeKey(type);
-			st.type = StatusTypeFromString(type);
-		}
 
-		{
-			const char* pas = nullptr;
-			pCommon->QueryStringAttribute("_Passive", &pas);
-			st.permanent = durationMs <= 0 && pas && EA::StdC::Stricmp(pas, "true") == 0;
-			pCommon->QueryAttribute("_InitCustomValue", &st.customInit);
-			pCommon->QueryAttribute("_MaxCustomValue", &st.customMax);
-			pCommon->QueryAttribute("_ShieldCount", &st.shieldCount);
-			pCommon->QueryAttribute("_CasterStatusIndex", &st.casterStatus);
-			if(XMLElement* pHit = pCommon->FirstChildElement("_HITEFFECT")) {
-				pHit->QueryAttribute("_StatusDocIndex", &st.hitEffectStatus);
-				pHit->QueryFloatAttribute("_AddValue", &st.hitEffectValue);
-			}
-			if(XMLElement* pStack = pCommon->FirstChildElement("_STACKATTACK")) {
-				pStack->QueryAttribute("_Index", &st.stackStatus);
-				pStack->QueryAttribute("_NextStatusIndex", &st.stackFullStatus);
-				for(XMLElement* pR = pStack->FirstChildElement("_RemoteIndexList"); pR && !st.stackRemotes.full(); pR = pR->NextSiblingElement("_RemoteIndexList")) st.stackRemotes.push_back(pR->IntAttribute("DATA"));
-				for(XMLElement* pS = pStack->FirstChildElement("_FullStackSkillIndexList"); pS && !st.fullStackSkills.full(); pS = pS->NextSiblingElement("_FullStackSkillIndexList")) st.fullStackSkills.push_back(pS->IntAttribute("DATA"));
-			}
-			if(XMLElement* pIce = pCommon->FirstChildElement("_ICEQUEEN")) {
-				pIce->QueryAttribute("_Index", &st.stackStatus);
-				pIce->QueryAttribute("_FreezeStatusIndex", &st.stackFullStatus);
-			}
-			if(st.type == StatusType::NOCOST || st.type == StatusType::DOUBLEGUN) {
-				if(XMLElement* pCost = pCommon->FirstChildElement("_DOUBLEGUN")) {
-					pCost->QueryFloatAttribute("_AddRatioCostMP", &st.costRatioMP);
-					st.stackDurationSec = pCost->FloatAttribute("_Duration") / 1000.0f;
-					pCost->QueryAttribute("_MaxOverlapCount", &st.stackMax);
-					for(XMLElement* pS = pCost->FirstChildElement("_SkillList"); pS; pS = pS->NextSiblingElement("_SkillList")) {
-						i32 v = 0;
-						pS->QueryAttribute("DATA", &v);
-						if(v && !st.costSkills.full()) st.costSkills.push_back(v);
+			{
+				const char* pas = nullptr;
+				pCommon->QueryStringAttribute("_Passive", &pas);
+				st.permanent = durationMs <= 0 && pas && EA::StdC::Stricmp(pas, "true") == 0;
+				pCommon->QueryAttribute("_InitCustomValue", &st.customInit);
+				pCommon->QueryAttribute("_MaxCustomValue", &st.customMax);
+				pCommon->QueryAttribute("_ShieldCount", &st.shieldCount);
+				pCommon->QueryAttribute("_CasterStatusIndex", &st.casterStatus);
+				if(XMLElement* pHit = pCommon->FirstChildElement("_HITEFFECT")) {
+					pHit->QueryAttribute("_StatusDocIndex", &st.hitEffectStatus);
+					pHit->QueryFloatAttribute("_AddValue", &st.hitEffectValue);
+				}
+				if(XMLElement* pStack = pCommon->FirstChildElement("_STACKATTACK")) {
+					pStack->QueryAttribute("_Index", &st.stackStatus);
+					pStack->QueryAttribute("_NextStatusIndex", &st.stackFullStatus);
+					for(XMLElement* pR = pStack->FirstChildElement("_RemoteIndexList"); pR && !st.stackRemotes.full(); pR = pR->NextSiblingElement("_RemoteIndexList")) st.stackRemotes.push_back(pR->IntAttribute("DATA"));
+					for(XMLElement* pS = pStack->FirstChildElement("_FullStackSkillIndexList"); pS && !st.fullStackSkills.full(); pS = pS->NextSiblingElement("_FullStackSkillIndexList")) st.fullStackSkills.push_back(pS->IntAttribute("DATA"));
+				}
+				if(XMLElement* pIce = pCommon->FirstChildElement("_ICEQUEEN")) {
+					pIce->QueryAttribute("_Index", &st.stackStatus);
+					pIce->QueryAttribute("_FreezeStatusIndex", &st.stackFullStatus);
+				}
+				if(st.type == StatusType::NOCOST || st.type == StatusType::DOUBLEGUN) {
+					if(XMLElement* pCost = pCommon->FirstChildElement("_DOUBLEGUN")) {
+						pCost->QueryFloatAttribute("_AddRatioCostMP", &st.costRatioMP);
+						st.stackDurationSec = pCost->FloatAttribute("_Duration") / 1000.0f;
+						pCost->QueryAttribute("_MaxOverlapCount", &st.stackMax);
+						for(XMLElement* pS = pCost->FirstChildElement("_SkillList"); pS; pS = pS->NextSiblingElement("_SkillList")) {
+							i32 v = 0;
+							pS->QueryAttribute("DATA", &v);
+							if(v && !st.costSkills.full()) st.costSkills.push_back(v);
+						}
 					}
 				}
 			}
-		}
 
-		switch(st.type) {
-			case StatusType::STUN: case StatusType::PUSH: case StatusType::KNOCKDOWN: case StatusType::AIRBORNE: case StatusType::FEAR:
-			case StatusType::FORCEBACK: case StatusType::DRAGGED: case StatusType::SHOCKED: case StatusType::ACTIONBLOCK: case StatusType::FLY:
-				st.kind = StatusInfo::Kind::HARD_CC;
-				break;
-			case StatusType::ROOT: st.kind = StatusInfo::Kind::ROOT; break;
-			case StatusType::SLOW: st.kind = StatusInfo::Kind::SLOW; break;
-			default: break;
-		}
-
-		for(XMLElement* pChild = pInfo->FirstChildElement(); pChild; pChild = pChild->NextSiblingElement()) {
-			for(XMLElement* pNode = pChild; pNode; pNode = pNode == pChild ? pChild->FirstChildElement() : pNode->NextSiblingElement()) {
-				for(const XMLAttribute* a = pNode->FirstAttribute(); a; a = a->Next()) {
-					f64 v = 0;
-					if(a->QueryDoubleValue(&v) != XML_SUCCESS || st.params.full() || EA::StdC::Strlen(a->Name()) >= 31) continue;
-					StatusInfo::NamedValue nv;
-					nv.name = a->Name();
-					nv.value = v;
-					st.params.push_back(nv);
-				}
+			switch(st.type) {
+				case StatusType::STUN: case StatusType::PUSH: case StatusType::KNOCKDOWN: case StatusType::AIRBORNE: case StatusType::FEAR:
+				case StatusType::FORCEBACK: case StatusType::DRAGGED: case StatusType::SHOCKED: case StatusType::ACTIONBLOCK: case StatusType::FLY:
+					st.kind = StatusInfo::Kind::HARD_CC;
+					break;
+				case StatusType::ROOT: st.kind = StatusInfo::Kind::ROOT; break;
+				case StatusType::SLOW: st.kind = StatusInfo::Kind::SLOW; break;
+				default: break;
 			}
-		}
-		for(XMLElement* pChild = pInfo->FirstChildElement(); pChild; pChild = pChild->NextSiblingElement()) {
-			for(XMLElement* pNode = pChild->FirstChildElement(); pNode; pNode = pNode->NextSiblingElement()) {
-				for(XMLElement* pLeaf = pNode->FirstChildElement(); pLeaf; pLeaf = pLeaf->NextSiblingElement()) {
-					for(const XMLAttribute* a = pLeaf->FirstAttribute(); a; a = a->Next()) {
+
+			for(XMLElement* pChild = pInfo->FirstChildElement(); pChild; pChild = pChild->NextSiblingElement()) {
+				for(XMLElement* pNode = pChild; pNode; pNode = pNode == pChild ? pChild->FirstChildElement() : pNode->NextSiblingElement()) {
+					for(const XMLAttribute* a = pNode->FirstAttribute(); a; a = a->Next()) {
 						f64 v = 0;
 						if(a->QueryDoubleValue(&v) != XML_SUCCESS || st.params.full() || EA::StdC::Strlen(a->Name()) >= 31) continue;
 						StatusInfo::NamedValue nv;
@@ -2546,13 +2537,27 @@ bool GameXmlContent::LoadStatusData()
 					}
 				}
 			}
-		}
+			for(XMLElement* pChild = pInfo->FirstChildElement(); pChild; pChild = pChild->NextSiblingElement()) {
+				for(XMLElement* pNode = pChild->FirstChildElement(); pNode; pNode = pNode->NextSiblingElement()) {
+					for(XMLElement* pLeaf = pNode->FirstChildElement(); pLeaf; pLeaf = pLeaf->NextSiblingElement()) {
+						for(const XMLAttribute* a = pLeaf->FirstAttribute(); a; a = a->Next()) {
+							f64 v = 0;
+							if(a->QueryDoubleValue(&v) != XML_SUCCESS || st.params.full() || EA::StdC::Strlen(a->Name()) >= 31) continue;
+							StatusInfo::NamedValue nv;
+							nv.name = a->Name();
+							nv.value = v;
+							st.params.push_back(nv);
+						}
+					}
+				}
+			}
 
-		st.groupTeleportSkill = (i32)st.ParamInt("_MassiveTeleportIndex");
-		st.groupTeleportRadius = (f32)st.Param("_MassiveTeleportRadius");
-		st.groupTeleportStatus = (i32)st.ParamInt("_MassiveTeleportStatus");
-		st.carrier = st.ParamInt("_ShuttleSelfStatusIndex") != 0;
-		statusMap[st.ID] = st;
+			st.groupTeleportSkill = (i32)st.ParamInt("_MassiveTeleportIndex");
+			st.groupTeleportRadius = (f32)st.Param("_MassiveTeleportRadius");
+			st.groupTeleportStatus = (i32)st.ParamInt("_MassiveTeleportStatus");
+			st.carrier = st.ParamInt("_ShuttleSelfStatusIndex") != 0;
+			statusMap[st.ID] = st;
+		}
 	}
 
 	LOG("Loaded %d statuses", (i32)statusMap.size());
@@ -3018,12 +3023,23 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 	for(XMLElement* pNode = list->FirstChildElement("_LevelEventData"); pNode; pNode = pNode->NextSiblingElement("_LevelEventData")) {
 		LevelEventNode node;
 		node.id = pNode->IntAttribute("_ConvertedEventDataID");
+		node.nameKey = StatusTypeKey(pNode->Attribute("_EventDataID"));
 		for(XMLElement* out = pNode->FirstChildElement("_OutputLink"); out && !node.outputs.full(); out = out->NextSiblingElement("_OutputLink")) node.outputs.push_back(out->IntAttribute("_ConvertedEventDataID"));
 		if(pNode->FirstChildElement("_LevelStartTriggerData")) node.kind = LevelEventNode::LEVEL_START;
 		else if(XMLElement* e = pNode->FirstChildElement("_TakeItemTriggerData")) { node.kind = LevelEventNode::TAKE_ITEM; node.tagID = e->IntAttribute("_TagID", -1); }
 		else if(XMLElement* e = pNode->FirstChildElement("_DelaySeqInfo")) { node.kind = LevelEventNode::DELAY; node.delay = e->FloatAttribute("_DelayTime"); node.variance = e->FloatAttribute("_RandomDelayTimeVariance"); }
 		else if(pNode->FirstChildElement("_CallSFXInfo")) node.kind = LevelEventNode::CALL_SFX;
+		else if(pNode->FirstChildElement("_InitCoolTime")) node.kind = LevelEventNode::CLIENT_EVENT;
 		else if(XMLElement* e = pNode->FirstChildElement("_CallItemInfo")) { node.kind = LevelEventNode::CALL_ITEM; node.dropIndex = e->IntAttribute("_Index"); node.areaID = e->IntAttribute("_SpawnAreaID"); node.tagID = e->IntAttribute("_TagID", -1); }
+		else if(XMLElement* e = pNode->FirstChildElement("_BoundTriggerData")) { node.kind = LevelEventNode::BOUND_TRIGGER; node.areaID = e->IntAttribute("_AreaID"); node.enter = e->IntAttribute("_IsEnter") == 1; node.active = e->IntAttribute("_Active") == 1; node.retrigger = e->FloatAttribute("_RetriggerDelay"); }
+		else if(XMLElement* e = pNode->FirstChildElement("_StatusChangeInfo")) {
+			node.kind = LevelEventNode::STATUS_CHANGE;
+			const char* applyType = e->Attribute("_ApplyType");
+			if(e->IntAttribute("_bApply") == 1 && applyType && EA::StdC::Strcmp(applyType, "APPLY_MY_CHAR") == 0) node.statusIndex = e->IntAttribute("_StatusIndex");
+		}
+		else if(XMLElement* e = pNode->FirstChildElement("_OnHitTriggerData")) { node.kind = LevelEventNode::ON_HIT_TRIGGER; node.localID = e->IntAttribute("_LocalID"); node.delay = e->FloatAttribute("_DelayTime"); node.hitCount = e->IntAttribute("_HitCount"); }
+		else if(XMLElement* e = pNode->FirstChildElement("_ActionChangeInfo")) { node.kind = LevelEventNode::ACTION_CHANGE; node.localID = e->IntAttribute("_ID"); if(const char* a = e->Attribute("_ActionIndex")) node.action = ActionStateFromString(a); }
+		else if(XMLElement* e = pNode->FirstChildElement("_ActiveEventTriggerInfo")) { node.kind = LevelEventNode::ACTIVATE_TRIGGER; node.targetKey = StatusTypeKey(e->Attribute("_TriggerID")); node.active = e->IntAttribute("_Active") == 1; }
 		map->levelEvents.push_back(node);
 	}
 	LOG("Loaded %d level event nodes", (i32)map->levelEvents.size());
@@ -3236,6 +3252,15 @@ bool GameXmlContent::LoadWeaponFiring()
 				pRad->QueryAttribute("_MaxNum", &wf.radiateNum);
 				pRad->QueryFloatAttribute("_MaxAngle", &wf.radiateAngle);
 			}
+			XMLElement* pFactoryCharge = pFactory && wf.charge.empty() ? pFactory->FirstChildElement("_CHARGE") : nullptr;
+			for(XMLElement* pLevel = pFactoryCharge ? pFactoryCharge->FirstChildElement("_Create") : nullptr; pLevel && !wf.charge.full(); pLevel = pLevel->NextSiblingElement("_Create")) {
+				XMLElement* pPar = pLevel->FirstChildElement("_Parallel");
+				XMLElement* pParRem = pPar ? pPar->FirstChildElement("_Remote") : nullptr;
+				if(!pParRem) continue;
+				wf.charge.push_back((RemoteIdx)pParRem->IntAttribute("_RemoteIndex"));
+				wf.chargeParallel.push_back(pPar->IntAttribute("_MaxNum", 1));
+				pPar->QueryFloatAttribute("_Offset", &wf.parallelOffset);
+			}
 			wf.maxDistance = fireMaxDistance;
 			wf.minDistance = fireMinDistance;
 			if(wf.base != RemoteIdx::INVALID) firingRemotes[id] = wf;
@@ -3356,6 +3381,8 @@ bool GameXmlContent::LoadInteractionReceivers()
 		XMLElement* pRecv = pInfo->FirstChildElement("InteractionRecvComData");
 		i32 id = 0;
 		i32 interaction = 0;
+		XMLElement* pEntity = pInfo->FirstChildElement("EntityComData");
+		if(pEntity && pInfo->QueryAttribute("ID", &id) == XML_SUCCESS) pEntity->QueryAttribute("_DensityCount", &dynamicDensity[id]);
 		if(!pRecv || pInfo->QueryAttribute("ID", &id) != XML_SUCCESS || pRecv->QueryAttribute("_Index", &interaction) != XML_SUCCESS) continue;
 		auto found = interactions.find(interaction);
 		if(found != interactions.end() && found->second.receiver == CreatureIndex::Invalid) found->second.receiver = CreatureIndex(id);

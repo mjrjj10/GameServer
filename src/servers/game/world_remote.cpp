@@ -925,10 +925,11 @@ bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
 	if(inst.speed > 0) {
 		f32 step = inst.range > 0 ? MIN(inst.speed * delta, inst.range - inst.travelled) : inst.speed * delta;
 		bool hitWall = false;
+		const PxRigidActor* wallActor = nullptr;
 		if(!remote.ignoreGround && !remote.attachFireObject && step > 0) {
 			f32 wallDist = 0;
 			const vec2 a = vec2(inst.pos);
-			if(physics.RaycastStatic(vec3(a, inst.wallZ), vec3(a + inst.dir * step, inst.wallZ), &wallDist, (i32)players[inst.ownerIndex].team)) {
+			if(physics.RaycastStatic(vec3(a, inst.wallZ), vec3(a + inst.dir * step, inst.wallZ), &wallDist, (i32)players[inst.ownerIndex].team, &wallActor)) {
 				step = wallDist;
 				hitWall = true;
 			}
@@ -962,7 +963,10 @@ bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
 			inst.pos += vec3(inst.dir * step, 0);
 			inst.travelled += step;
 			if(hitWall || (inst.range > 0 && inst.travelled >= inst.range - 0.01f)) destroyed = true;
-			if(hitWall) LOG("Remote :: %d stopped by a wall after %.0f", (i32)remote.ID, inst.travelled);
+			if(hitWall) {
+				LOG("Remote :: %d stopped by a wall after %.0f", (i32)remote.ID, inst.travelled);
+				OnDynamicHit(wallActor, inst.clientRemoteID, ClientHandle::INVALID, inst.casterLocal ? players[inst.ownerIndex].clientHd : ClientHandle::INVALID, inst.pos);
+			}
 		}
 	}
 	else if(!inst.areaDone) {

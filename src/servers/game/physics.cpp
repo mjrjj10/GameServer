@@ -255,7 +255,7 @@ void PhysicsScene::Destroy()
     }
 }
 
-void PhysicsScene::CreateStaticCollider(const char* meshName, const vec3& pos, const vec3& rot)
+PxRigidStatic* PhysicsScene::CreateStaticCollider(const char* meshName, const vec3& pos, const vec3& rot)
 {
 	auto& ctx = PhysContext();
 
@@ -270,6 +270,14 @@ void PhysicsScene::CreateStaticCollider(const char* meshName, const vec3& pos, c
 	glm::quat quat(vec3(rot.x, rot.y, -rot.z)); // quaternion from euler angles
 	ground->setGlobalPose(PxTransform(PxVec3(pos.x, pos.y, pos.z), PxQuat(quat.x, quat.y, quat.z, quat.w)));
 	scene->addActor(*ground);
+	return ground;
+}
+
+void PhysicsScene::SetStaticEnabled(PxRigidStatic* actor, bool enabled)
+{
+	if(!actor || (actor->getScene() != nullptr) == enabled) return;
+	if(enabled) scene->addActor(*actor);
+	else scene->removeActor(*actor);
 }
 
 PhysicsDynamicBody* PhysicsScene::CreateDynamicBody(f32 radius, f32 height, const vec3& pos)
@@ -329,7 +337,7 @@ struct IgnoreTeamWalls: PxQueryFilterCallback
 	PxQueryHitType::Enum postFilter(const PxFilterData&, const PxQueryHit&) override { return PxQueryHitType::eBLOCK; }
 };
 
-bool PhysicsScene::RaycastStatic(const vec3& from, const vec3& to, f32* hitDist, i32 ignoreTeam)
+bool PhysicsScene::RaycastStatic(const vec3& from, const vec3& to, f32* hitDist, i32 ignoreTeam, const PxRigidActor** hitActor)
 {
 	const vec3 d = to - from;
 	const f32 len = glm::length(d);
@@ -341,6 +349,7 @@ bool PhysicsScene::RaycastStatic(const vec3& from, const vec3& to, f32* hitDist,
 	if(!scene->raycast(PxVec3(from.x, from.y, from.z), PxVec3(d.x / len, d.y / len, d.z / len), len, hit, PxHitFlag::eDEFAULT, filter, &teamFilter)) return false;
 	if(!hit.hasBlock) return false;
 	if(hitDist) *hitDist = hit.block.distance;
+	if(hitActor) *hitActor = hit.block.actor;
 	return true;
 }
 

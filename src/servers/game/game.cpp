@@ -396,7 +396,7 @@ bool Game::LoadMap()
 			auto& actor = world.SpawnDynamic(CI_WALL, it->ID);
 			actor.pos = it->pos;
 			actor.rot = it->rot;
-			world.physics.CreateStaticCollider("PvP_Death_NM_Wall04_GuardrailMob", it->pos, it->rot);
+			actor.collider = world.physics.CreateStaticCollider("PvP_Death_NM_Wall04_GuardrailMob", it->pos, it->rot);
 		}
 	}
 	return true;

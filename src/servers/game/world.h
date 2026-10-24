@@ -418,6 +418,8 @@ struct World
 		Time tLastActionChange;
 		vec3 pos;
 		vec3 rot;
+		PxRigidStatic* collider = nullptr;
+		eastl::fixed_vector<Time,16,false> hits;
 
 		explicit ActorDynamic(ActorUID UID_): UID(UID_) {}
 	};
@@ -870,12 +872,18 @@ public:
 	void RemoteHitNpcs(RemoteInst& inst);
 	void StartLevelEvents();
 	void UpdateLevelEvents();
-	void FireLevelEvent(i32 nodeID);
+	void FireLevelEvent(i32 nodeID, i32 playerIndex = -1);
+	void UpdateBoundTriggers();
+	void OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos);
+	bool LevelTriggerActive(const GameXmlContent::LevelEventNode& node) const;
 	void SpawnGroundItems(i32 dropIndex, i32 areaID, i32 tagID);
 	bool TakeGroundItem(Player& player, u32 itemUID);
 	struct GroundItem { u32 uid; i32 itemIndex; vec3 pos; i32 tagID; Time expireAt; };
 	eastl::fixed_vector<GroundItem,64,false> groundItems;
-	struct LevelEventTimer { i32 node; Time at; };
+	struct LevelEventTimer { i32 node; Time at; i32 playerIndex; };
+	struct BoundTriggerState { i32 node; u32 playerIndex; bool inside; Time last; };
+	eastl::fixed_vector<BoundTriggerState,128,true> boundTriggerStates;
+	eastl::fixed_vector<eastl::pair<u32,bool>,16,true> levelTriggerOverrides;
 	eastl::fixed_vector<LevelEventTimer,128,false> levelEventTimers;
 	u32 nextGroundItemUID = 0xC0000400;
 	bool levelEventsStarted = false;

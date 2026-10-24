@@ -216,6 +216,19 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		}
 		return;
 	}
+	const i32 parallel = wf.ChargeParallel(player.chargeLevel);
+	if(parallel > 1) {
+		const vec2 side = vec2(-proj.dir.y, proj.dir.x);
+		const vec3 center = proj.pos;
+		const u32 firstID = proj.remoteID;
+		for(i32 k = 0; k < parallel && !projectileList.full(); k++) {
+			proj.pos = center + vec3(side * (((f32)k - (f32)(parallel - 1) * 0.5f) * wf.parallelOffset), 0);
+			proj.start = proj.pos;
+			if(firstID != 0) proj.remoteID = firstID + (u32)k;
+			projectileList.push_back(proj);
+		}
+		return;
+	}
 	if(wf.radiateNum <= 1) {
 		projectileList.push_back(proj);
 		return;
@@ -310,10 +323,11 @@ void World::UpdateProjectiles(f32 delta)
 		f32 step = MIN(proj->speed * delta + proj->pendingAdvance, proj->range - proj->travelled);
 		proj->pendingAdvance = 0;
 		bool hitWall = false;
+		const PxRigidActor* wallActor = nullptr;
 		if(!proj->graph && !proj->ignoreWalls && step > 0) {
 			f32 wallDist = 0;
 			const vec2 a = vec2(proj->pos);
-			if(physics.RaycastStatic(vec3(a, proj->wallZ), vec3(a + proj->dir * step, proj->wallZ), &wallDist, (i32)players[proj->ownerIndex].team)) {
+			if(physics.RaycastStatic(vec3(a, proj->wallZ), vec3(a + proj->dir * step, proj->wallZ), &wallDist, (i32)players[proj->ownerIndex].team, &wallActor)) {
 				step = wallDist;
 				hitWall = true;
 			}
@@ -396,6 +410,7 @@ void World::UpdateProjectiles(f32 delta)
 			destroyed = hitWall || proj->travelled >= proj->range - 0.01f;
 			if(hitWall) {
 				LOG("Shot :: projectile stopped by a wall after %.0f", proj->travelled);
+				OnDynamicHit(wallActor, proj->remoteID, proj->seedOwnerHd, ClientHandle::INVALID, proj->pos);
 				ActorNpc* wallNpc = nullptr;
 				f32 best = WALL_HIT_SEARCH_RADIUS;
 				foreach(npc, actorNpcList) {

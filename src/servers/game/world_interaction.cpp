@@ -184,7 +184,7 @@ void World::StartLevelEvents()
 	}
 }
 
-void World::FireLevelEvent(i32 nodeID)
+void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 {
 	const GameXmlContent::LevelEventNode* node = GetGameXmlContent().mapPvpDeathMatch.FindLevelEvent(nodeID);
 	if(!node) return;
@@ -193,15 +193,34 @@ void World::FireLevelEvent(i32 nodeID)
 			const f32 jitter = node->variance > 0 ? ((f32)(RandUint() % 2001) / 1000.0f - 1.0f) * node->variance : 0.0f;
 			const Time at = TimeAdd(localTime, TimeMsToTime(MAX(node->delay + jitter, 0.0f) * 1000.0));
 			foreach_const(o, node->outputs) {
-				if(!levelEventTimers.full()) levelEventTimers.push_back({ *o, at });
+				if(!levelEventTimers.full()) levelEventTimers.push_back({ *o, at, playerIndex });
 			}
 			return;
 		}
 		case GameXmlContent::LevelEventNode::CALL_SFX: replication->SendClientLevelEventToAll(node->id); break;
+		case GameXmlContent::LevelEventNode::CLIENT_EVENT: replication->SendClientLevelEventToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID); break;
 		case GameXmlContent::LevelEventNode::CALL_ITEM: SpawnGroundItems(node->dropIndex, node->areaID, node->tagID); break;
+		case GameXmlContent::LevelEventNode::STATUS_CHANGE: {
+			if(playerIndex >= 0 && node->statusIndex != 0 && !players[playerIndex].dead) ApplyStatus(players[playerIndex], players[playerIndex], node->statusIndex);
+		} break;
+		case GameXmlContent::LevelEventNode::ACTION_CHANGE: {
+			foreach(d, actorDynamicList) {
+				if(d->localID != node->localID || node->action == ActionStateID::INVALID) continue;
+				d->action = node->action;
+				d->tLastActionChange = localTime;
+				d->hits.clear();
+				physics.SetStaticEnabled(d->collider, node->action != ActionStateID::DYNAMIC_OPEN);
+				LOG("LevelEvent :: dynamic %d action %d", d->localID, (i32)node->action);
+			}
+		} break;
+		case GameXmlContent::LevelEventNode::ACTIVATE_TRIGGER: {
+			bool found = false;
+			foreach(t, levelTriggerOverrides) if(t->first == node->targetKey) { t->second = node->active; found = true; }
+			if(!found) levelTriggerOverrides.push_back(eastl::make_pair(node->targetKey, node->active));
+		} break;
 		default: return;
 	}
-	foreach_const(o, node->outputs) FireLevelEvent(*o);
+	foreach_const(o, node->outputs) FireLevelEvent(*o, playerIndex);
 }
 
 void World::SpawnGroundItems(i32 dropIndex, i32 areaID, i32 tagID)
@@ -290,14 +309,77 @@ bool World::TakeGroundItem(Player& player, u32 itemUID)
 	return true;
 }
 
+void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos)
+{
+	if(!actor) return;
+	ActorDynamic* hit = nullptr;
+	foreach(d, actorDynamicList) {
+		if(d->collider && (const void*)d->collider == (const void*)actor) { hit = &*d; break; }
+	}
+	if(!hit) return;
+	if(remoteID != 0) {
+		const auto& densities = GetGameXmlContent().dynamicDensity;
+		const auto density = densities.find((i32)hit->docID);
+		replication->SendRemoteActivatedToAll(remoteID, seedOwnerHd, skipHd, hit->UID, density != densities.end() ? (u32)density->second : 0, pos);
+	}
+	foreach_const(n, GetGameXmlContent().mapPvpDeathMatch.levelEvents) {
+		if(n->kind != GameXmlContent::LevelEventNode::ON_HIT_TRIGGER || n->localID != hit->localID || n->hitCount <= 0) continue;
+		while(!hit->hits.empty() && TimeDiffSec(TimeDiff(hit->hits.front(), localTime)) > n->delay) hit->hits.erase(hit->hits.begin());
+		if(hit->hits.full()) hit->hits.erase(hit->hits.begin());
+		hit->hits.push_back(localTime);
+		if((i32)hit->hits.size() < n->hitCount) return;
+		hit->hits.clear();
+		LOG("LevelEvent :: dynamic %d hit %d times in %.0f s", hit->localID, n->hitCount, n->delay);
+		foreach_const(o, n->outputs) FireLevelEvent(*o);
+		return;
+	}
+}
+
+bool World::LevelTriggerActive(const GameXmlContent::LevelEventNode& node) const
+{
+	foreach_const(t, levelTriggerOverrides) if(t->first == node.nameKey) return t->second;
+	return node.active;
+}
+
+void World::UpdateBoundTriggers()
+{
+	if(!levelEventsStarted || Config().DevShowcase) return;
+	const GameXmlContent::Map& map = GetGameXmlContent().mapPvpDeathMatch;
+	foreach_const(n, map.levelEvents) {
+		if(n->kind != GameXmlContent::LevelEventNode::BOUND_TRIGGER || !LevelTriggerActive(*n)) continue;
+		const GameXmlContent::Map::Area* area = map.FindArea(n->areaID);
+		if(!area) continue;
+		foreach(p, players) {
+			if(p->dead || !p->body) continue;
+			const vec3 pos = p->body->GetWorldPos();
+			const bool inside = fabsf(pos.x - area->pos.x) <= area->size.z && fabsf(pos.y - area->pos.y) <= area->size.y;
+			BoundTriggerState* state = nullptr;
+			foreach(s, boundTriggerStates) if(s->node == n->id && s->playerIndex == p->index) state = &*s;
+			if(!state) {
+				boundTriggerStates.push_back({ n->id, p->index, inside, Time::ZERO });
+				continue;
+			}
+			if(state->inside == inside) continue;
+			state->inside = inside;
+			if(inside != n->enter) continue;
+			if(state->last != Time::ZERO && TimeDiffSec(TimeDiff(state->last, localTime)) < n->retrigger) continue;
+			state->last = localTime;
+			LOG("LevelEvent :: %ls %s area %d (node %d)", p->name.data(), inside ? "enters" : "leaves", n->areaID, n->id);
+			foreach_const(o, n->outputs) FireLevelEvent(*o, (i32)p->index);
+		}
+	}
+}
+
 void World::UpdateLevelEvents()
 {
 	for(i32 i = 0; i < (i32)levelEventTimers.size(); ) {
 		if(localTime < levelEventTimers[i].at) { i++; continue; }
 		const i32 node = levelEventTimers[i].node;
+		const i32 playerIndex = levelEventTimers[i].playerIndex;
 		levelEventTimers.erase(levelEventTimers.begin() + i);
-		FireLevelEvent(node);
+		FireLevelEvent(node, playerIndex);
 	}
+	UpdateBoundTriggers();
 	for(i32 i = 0; i < (i32)groundItems.size(); ) {
 		if(groundItems[i].expireAt != Time::ZERO && localTime >= groundItems[i].expireAt) {
 			replication->SendDestroyGroundItemToAll(groundItems[i].uid);

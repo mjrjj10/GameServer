@@ -275,20 +275,21 @@ void Replication::SendChatMessageToClient(ClientHandle toClientHd, const wchar* 
 	SendPacket(toClientHd, packet);
 }
 
-void Replication::SendClientLevelEvent(ClientHandle clientHd, i32 eventID)
+void Replication::SendClientLevelEvent(ClientHandle clientHd, i32 eventID, ActorUID caller)
 {
 	Sv::SN_RunClientLevelEvent event;
 	event.eventID = eventID;
-	event.caller = 0;
+	const LocalActorID callerLocal = caller != ActorUID::INVALID ? GetLocalActorID(clientHd, caller) : LocalActorID::INVALID;
+	event.caller = callerLocal != LocalActorID::INVALID ? (u32)callerLocal : 0;
 	event.serverTime = (i64)TimeDiffMs(TimeRelNow());
 	SendPacket(clientHd, event);
 }
 
-void Replication::SendClientLevelEventToAll(i32 eventID)
+void Replication::SendClientLevelEventToAll(i32 eventID, ActorUID caller)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
-		SendClientLevelEvent(clientHandle[clientID], eventID);
+		SendClientLevelEvent(clientHandle[clientID], eventID, caller);
 	}
 }
 
