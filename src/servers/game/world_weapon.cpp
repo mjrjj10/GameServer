@@ -115,12 +115,18 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		const vec3 aimPos = vec3(vec2(origin) + dir * reach, player.body->GetWorldPos().z);
 		replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(dir.y, dir.x)), WeaponAttackState(player));
 		const bool bot = player.clientHd == ClientHandle::INVALID;
+		u32 clientSeed = 0;
 		if(!bot && player.pendingShotRawSize > 0) {
 			const u16 creator = replication->RelayWeaponShot(player.clientHd, player.pendingShotRaw.data(), player.pendingShotRawSize, aimPos, remote->ID);
 			LOG("WeaponShot :: %ls firing=%d creator=%u doc=%d", player.name.data(), wf.firingMethod, creator, (i32)remote->ID);
+			if(player.pendingShotRawSize >= (i32)offsetof(Cl::CQ_GamePlayerSyncPhy, FirePosition)) clientSeed = ((const Cl::CQ_GamePlayerSyncPhy*)player.pendingShotRaw.data())->RemoteSeedID;
 			player.pendingShotRawSize = 0;
 		}
-		SpawnRemote(player.index, remote->ID, aimPos, dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), bot);
+		RemoteInst* marker = SpawnRemote(player.index, remote->ID, aimPos, dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), bot);
+		if(marker && !bot && clientSeed != 0) {
+			marker->clientRemoteID = clientSeed + 1;
+			marker->seedOwnerHd = player.clientHd;
+		}
 		LOG("Shot :: %ls class=%d remote=%d at aimed point (%.0f, %.0f) reach=%.0f", player.name.data(), (i32)classType, (i32)remote->ID, aimPos.x, aimPos.y, reach);
 		return;
 	}

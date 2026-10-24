@@ -375,6 +375,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 				repeatHits.push_back({ inst.castID, target.index, 0, localTime });
 				rh = &repeatHits.back();
 			}
+			if(decay && decay->resetSec > 0 && TimeDiffSec(TimeDiff(rh->at, localTime)) > decay->resetSec) rh->count = 0;
 			if(decay) dealt = (i32)(dealt * MAX(1.0f - decay->stepPerHit * rh->count, decay->floor));
 			else dealt = (i32)(dealt * MAX(1.0f - REPEAT_HIT_REDUCTION * rh->count, 1.0f - REPEAT_HIT_REDUCTION_CAP));
 			rh->count++;

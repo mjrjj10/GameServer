@@ -618,6 +618,8 @@ struct World
 		bool removeOnHit = false;
 		i32 custom = 0;
 		i32 damageAtStart = 0;
+		Time ccStatusEnd = Time::ZERO;
+		Time ccEnd = Time::ZERO;
 	};
 	eastl::fixed_vector<ActiveStatus,512,false> activeStatuses;
 

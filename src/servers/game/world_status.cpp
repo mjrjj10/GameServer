@@ -284,7 +284,7 @@ void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& cente
 		foreach(p, players) {
 			const bool casterAlly = p->team == casterTeam;
 			bool inside = !p->dead;
-			if(child->isDebuff ? casterAlly : (!casterAlly && !aura.auraAll)) inside = false;
+			if((child->isDebuff || aura.auraEnemies) == casterAlly) inside = false;
 			if(child->isDebuff && (i32)p->index == skipDebuffIndex) inside = false;
 			if(inside && glm::length(vec2(p->body->GetWorldPos()) - center) > range + HitRadius(*p)) inside = false;
 			ActiveStatus* cur = FindActiveStatus(p->index, *id);
@@ -754,6 +754,12 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			const f32 recover = info->lyingTime + content.GetLieEndTime(content.GetMaster(target.Main().classType).className.c_str());
 			ccEnd = TimeAdd(ccEnd, TimeMsToTime(recover * 1000.0));
 		}
+		foreach(a, activeStatuses) {
+			if(a->statusID != statusID || a->targetIndex != target.index) continue;
+			a->ccStatusEnd = st.until;
+			a->ccEnd = ccEnd;
+			break;
+		}
 		if(ccEnd > target.ccUntil) target.ccUntil = ccEnd;
 	}
 
@@ -1048,6 +1054,16 @@ void World::UpdateStatuses()
 			}
 			const u32 casterIndex = it->casterIndex;
 			if(it->info && it->info->auraStatus != 0) EndAura(casterIndex, *it->info);
+			if(it->ccEnd != Time::ZERO && localTime < it->ccStatusEnd && target.ccUntil == it->ccEnd) {
+				Time cc = TimeAdd(localTime, TimeDiff(it->ccStatusEnd, it->ccEnd));
+				foreach_const(o, activeStatuses) {
+					if(o == it || o->targetIndex != it->targetIndex || o->ccEnd == Time::ZERO) continue;
+					const Time end = o->until < o->ccStatusEnd ? TimeAdd(o->until, TimeDiff(o->ccStatusEnd, o->ccEnd)) : o->ccEnd;
+					if(end > cc) cc = end;
+				}
+				target.ccUntil = cc;
+				LOG("Status :: %ls control %d ended early, control until +%.2f s", target.name.data(), it->statusID, TimeDiffSec(TimeDiff(localTime, cc)));
+			}
 			it = activeStatuses.erase_unsorted(it);
 			if(next != 0 && !pendingStatuses.full()) {
 				PendingStatus ps;

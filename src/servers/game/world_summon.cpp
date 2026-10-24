@@ -631,7 +631,7 @@ void World::UpdateSummons()
 				ga.nextPulse = localTime;
 				ga.sourceUID = pc->source;
 				groundAuras.push_back(ga);
-				LOG("Summon :: %ls aura %d (gives %d statuses within %.0f%s)", owner.name.data(), pc->index, (i32)st->auraStatuses.size(), st->targetingRange, st->auraAll ? ", everyone" : "");
+				LOG("Summon :: %ls aura %d (gives %d statuses within %.0f%s)", owner.name.data(), pc->index, (i32)st->auraStatuses.size(), st->targetingRange, st->auraEnemies ? ", enemies" : "");
 			}
 		}
 		pc = pendingSummonCommands.erase_unsorted(pc);

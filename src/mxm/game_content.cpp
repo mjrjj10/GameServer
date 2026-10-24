@@ -2453,7 +2453,7 @@ bool GameXmlContent::LoadStatusData()
 					if(st.auraStatus == 0) st.auraStatus = id;
 					if(!st.auraStatuses.full()) st.auraStatuses.push_back(id);
 				}
-				st.auraAll = eff && EA::StdC::Strcmp(eff, "STATUS_EFFECT_UNKNOWN") == 0;
+				st.auraEnemies = eff && EA::StdC::Strcmp(eff, "STATUS_EFFECT_UNKNOWN") == 0;
 				XMLElement* pLink = pCommon->FirstChildElement("_LINK");
 				if(!pLink) pLink = pCommon->NextSiblingElement("_LINK");
 				if(pLink) {

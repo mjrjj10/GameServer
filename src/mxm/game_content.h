@@ -276,7 +276,7 @@ struct StatusInfo
 	eastl::fixed_vector<StatusType,4,false> defenseTypes;
 	i32 auraStatus = 0;
 	eastl::fixed_vector<i32,8,false> auraStatuses;
-	bool auraAll = false;
+	bool auraEnemies = false;
 	i32 linkCasterStatus = 0;
 	i32 linkTargetStatus = 0;
 	f32 targetingRange = 0;
