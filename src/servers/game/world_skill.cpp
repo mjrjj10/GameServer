@@ -171,6 +171,20 @@ void World::UpdateUltimateGauges(f32 delta)
 	}
 }
 
+bool World::SkillCostAffordable(const Player& player, i32 skillID, f32 mp) const
+{
+	const f32 ug = PlayerSkillConsume(player, skillID, 4);
+	const f32 st = GetGameXmlContent().GetSkillConsumeStamina(skillID);
+	const f32 hpCost = PlayerSkillConsume(player, skillID, 3);
+	if((mp > 0 && player.mana >= 0 && player.mana < mp) || (ug > 0 && player.ultGauge >= 0 && player.ultGauge < ug)) return false;
+	if((st > 0 && player.stamina >= 0 && player.stamina < st) || (hpCost > 0 && player.Main().hp <= hpCost)) return false;
+	for(int r = 0; r < 3; r++) {
+		const f32 cost = PlayerSkillConsume(player, skillID, r);
+		if(cost > 0 && player.res[r] >= 0 && player.res[r] < cost) return false;
+	}
+	return true;
+}
+
 bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 {
 	const auto& content = GetGameXmlContent();
@@ -194,13 +208,7 @@ bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 	if(mp <= 0 && ug <= 0 && st <= 0 && resCost[0] <= 0 && resCost[1] <= 0 && resCost[2] <= 0 && hpCost <= 0) return true;
 	if(player.clientHd == ClientHandle::INVALID && (Config().DevShowcase || Config().DevMirror)) return true;
 
-	bool ok = (mp <= 0 || player.mana < 0 || player.mana >= mp) &&
-		(ug <= 0 || player.ultGauge < 0 || player.ultGauge >= ug) &&
-		(st <= 0 || player.stamina < 0 || player.stamina >= st) &&
-		(hpCost <= 0 || player.Main().hp > hpCost);
-	for(int r = 0; r < 3; r++) {
-		if(resCost[r] > 0 && player.res[r] >= 0 && player.res[r] < resCost[r]) ok = false;
-	}
+	const bool ok = SkillCostAffordable(player, skillID, mp);
 	if(resCost[0] > 0 || resCost[1] > 0 || resCost[2] > 0 || hpCost > 0) {
 		LOG("Cost :: %ls skill=%d energy=%.0f/%.0f rage=%.0f/%.0f charges=%.0f/%.1f hp=%.0f", player.name.data(), skillID,
 			resCost[0], player.res[0], resCost[1], player.res[1], resCost[2], player.res[2], hpCost);
@@ -395,6 +403,11 @@ void World::ReleaseCast(Player& player)
 	auto f = GetGameXmlContent().skillMap.find(c.skillID);
 	if(f == GetGameXmlContent().skillMap.end() || player.dead) return;
 	LOG("Cast :: %ls skill=%d release", player.name.data(), (i32)c.skillID);
+	foreach(it, activeStatuses) {
+		if(it->targetIndex != player.index || it->casterIndex != player.index || !it->aniEnd || it->appliedAt < c.startedAt || it->until <= localTime) continue;
+		it->until = localTime;
+		LOG("Status :: %ls status=%d removed at cast release", player.name.data(), it->statusID);
+	}
 	GroupTeleport(player, c.skillID, c.castPos);
 	if(f->second.action == ActionStateID::INVALID) return;
 	const GameXmlContent::SkillCast* sc = GetGameXmlContent().FindSkillCast((i32)c.skillID);
@@ -962,7 +975,8 @@ void World::UpdateSkillPoints()
 		}
 		if(!botUpgrades || it->clientHd != ClientHandle::INVALID || it->skillPoints <= 0 || it->dead) continue;
 		for(i32 tries = 0; tries < (i32)ARRAY_COUNT(BOT_UPGRADE_ORDER) && it->skillPoints > 0; tries++) {
-			const i32 slot = BOT_UPGRADE_ORDER[it->botUpgradeTurn++ % ARRAY_COUNT(BOT_UPGRADE_ORDER)];
+			const i32 turn = it->botUpgradeTurn++;
+			const i32 slot = turn < MEASURED_BOT_SKILL_FIRST_UPGRADES ? turn % 2 : BOT_UPGRADE_ORDER[(turn - MEASURED_BOT_SKILL_FIRST_UPGRADES) % ARRAY_COUNT(BOT_UPGRADE_ORDER)];
 			if(UpgradeSkillSlot(*it, slot)) break;
 		}
 	}

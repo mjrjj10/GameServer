@@ -620,6 +620,7 @@ struct World
 		i32 damageAtStart = 0;
 		Time ccStatusEnd = Time::ZERO;
 		Time ccEnd = Time::ZERO;
+		bool aniEnd = false;
 	};
 	eastl::fixed_vector<ActiveStatus,512,false> activeStatuses;
 
@@ -705,6 +706,7 @@ struct World
 	Player& GetPlayer(u32 playerIndex);
 	u32 PlayerCount() const { return (u32)players.size(); }
 	bool PlayerPaySkillCost(Player& player, i32 skillID);
+	bool SkillCostAffordable(const Player& player, i32 skillID, f32 mp) const;
 	void UpdateWeaponHeat(Player& player);
 	void UpdateSummons();
 	void UpdateBotCombat();

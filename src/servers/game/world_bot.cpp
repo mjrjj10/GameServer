@@ -35,6 +35,7 @@ void World::UpdateBotSkills()
 			if(i != 4 && !Config().DevShowcase && (i32)bot.skills[base] != skill && (i32)bot.skills[base + 1] != skill) continue;
 			const f32 maxDist = content.GetBotSkillMaxDistance(skill);
 			if(maxDist <= 0 || best > maxDist) continue;
+			if(!Config().DevShowcase && !Config().DevMirror && !SkillCostAffordable(bot, skill, PlayerSkillConsumeMP(bot, skill))) continue;
 			ready.push_back(i);
 		}
 		if(ready.empty()) continue;

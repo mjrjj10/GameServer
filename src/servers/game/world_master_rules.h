@@ -299,6 +299,8 @@ static inline const HitRecoverRule* FindHitRecoverRule(i32 status)
 	return nullptr;
 }
 
+static const i32 MEASURED_BOT_SKILL_FIRST_UPGRADES = 6;
+
 struct ChargeHoldRule
 {
 	SkillID skill;

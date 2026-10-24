@@ -727,7 +727,8 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	st.damageAtStart = target.damageTaken;
 	st.until = TimeAdd(localTime, TimeMsToTime(MAX(duration, 0.1f) * 1000.0));
 	st.appliedAt = localTime;
-	st.nextTick = TimeAdd(localTime, TimeMsToTime((info && info->intervalSec > 0 ? info->intervalSec : 1.0f) * 1000.0));
+	st.aniEnd = statusAniEnd;
+	st.nextTick =TimeAdd(localTime, TimeMsToTime((info && info->intervalSec > 0 ? info->intervalSec : 1.0f) * 1000.0));
 	st.overlap = 1;
 	st.nextHealTick = localTime;
 	st.healTicksDone = 0;
