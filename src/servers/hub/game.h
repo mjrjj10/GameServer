@@ -99,6 +99,10 @@ struct HubGame
 	void OnEnqueueGame(ClientHandle clientHd);
 	void OnSortieRoomFound(ClientHandle clientHd, SortieUID sortieID);
 	void OnSortieRoomConfirm(ClientHandle clientHd, bool confirm);
+	void OnMailShowList(ClientHandle clientHd, u8 mailbox);
+	void OnMailRead(ClientHandle clientHd, u64 mailID);
+	void OnMailWrite(ClientHandle clientHd, const wchar* to, const wchar* subject, i32 subjectLen, const wchar* content, i32 contentLen);
+	void OnMailMove(ClientHandle clientHd, u8 moveType, const u64* ids, i32 count);
 
 	void MmOnPartyCreated(PartyUID partyUID, AccountUID leader);
 	void MmOnPartyEnqueued(PartyUID partyUID);

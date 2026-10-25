@@ -230,6 +230,12 @@ struct HubReplication
 
 	void SendAccountDataLobby(ClientHandle clientHd, const Account& account);
 	void SendMissionList(ClientHandle clientHd, const Account& account);
+	void SendMailUnreadNotice(ClientHandle clientHd, const wchar* owner);
+	void SendMailList(ClientHandle clientHd, const wchar* owner, u8 mailbox);
+	void SendMailRead(ClientHandle clientHd, const struct MailMessage& mail);
+	void SendMailNewInbox(ClientHandle clientHd, const struct MailMessage& mail);
+	void SendMailWriteResult(ClientHandle clientHd, ErrorType result);
+	void SendMailMoveResult(ClientHandle clientHd, ErrorType result);
 
 	void SendGameReady(ClientHandle clientHd);
 

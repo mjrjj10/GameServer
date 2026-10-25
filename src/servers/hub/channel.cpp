@@ -65,6 +65,10 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CQ_EnqueueGame);
 		HANDLE_CASE(CA_SortieRoomFound);
 		HANDLE_CASE(CN_SortieRoomConfirm);
+		HANDLE_CASE(CQ_MailShowList);
+		HANDLE_CASE(CQ_MailRead);
+		HANDLE_CASE(CQ_MailWrite);
+		HANDLE_CASE(CQ_MailMove);
 
 		default: {
 			NT_LOG("[client%x] Client :: Unknown packet :: size=%d netID=%d", clientHd, header.size, header.netID);
@@ -600,4 +604,64 @@ void HubPacketHandler::HandlePacket_CN_SortieRoomConfirm(ClientHandle clientHd, 
 	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CN_SortieRoomConfirm>(packetData, packetSize));
 
 	game->OnSortieRoomConfirm(clientHd, packet.confirm);
+}
+
+void HubPacketHandler::HandlePacket_CQ_MailShowList(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_MailShowList>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_MailShowList (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const Cl::CQ_MailShowList& packet = SafeCast<Cl::CQ_MailShowList>(packetData, packetSize);
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_MailShowList>(packetData, packetSize));
+
+	game->OnMailShowList(clientHd, packet.mailboxType);
+}
+
+void HubPacketHandler::HandlePacket_CQ_MailRead(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_MailRead>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_MailRead (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const Cl::CQ_MailRead& packet = SafeCast<Cl::CQ_MailRead>(packetData, packetSize);
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_MailRead>(packetData, packetSize));
+
+	game->OnMailRead(clientHd, packet.target_user_id_u64);
+}
+
+void HubPacketHandler::HandlePacket_CQ_MailWrite(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_MailWrite>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_MailWrite (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_MailWrite>(packetData, packetSize));
+	ConstBuffer buff(packetData, packetSize);
+	const u16 toLen = buff.Read<u16>();
+	const wchar* to = (const wchar*)buff.ReadRaw(toLen * sizeof(wchar));
+	const u16 subjectLen = buff.Read<u16>();
+	const wchar* subject = (const wchar*)buff.ReadRaw(subjectLen * sizeof(wchar));
+	const u16 contentLen = buff.Read<u16>();
+	const wchar* content = (const wchar*)buff.ReadRaw(contentLen * sizeof(wchar));
+
+	WideString toNick;
+	toNick.assign(to, toLen);
+	game->OnMailWrite(clientHd, toNick.data(), subject, subjectLen, content, contentLen);
+}
+
+void HubPacketHandler::HandlePacket_CQ_MailMove(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_MailMove>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_MailMove (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_MailMove>(packetData, packetSize));
+	ConstBuffer buff(packetData, packetSize);
+	const u8 moveType = buff.Read<u8>();
+	const u16 count = buff.Read<u16>();
+	eastl::fixed_vector<u64,64,true> ids;
+	for(u16 i = 0; i < count; i++) ids.push_back(buff.Read<u64>());
+
+	game->OnMailMove(clientHd, moveType, ids.data(), (i32)ids.size());
 }

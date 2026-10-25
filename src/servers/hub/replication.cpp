@@ -12,6 +12,7 @@
 #include <EASTL/sort.h>
 #include <time.h>
 #include "mission_rules.h"
+#include "mailbox.h"
 
 
 void HubReplication::Frame::Clear()
@@ -738,20 +739,8 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 		SendPacket(clientHd, packet);
 	}
 
-	// SN_MailUnreadNotice
-	{
-		PacketWriter<Sv::SN_MailUnreadNotice> packet;
-
-		packet.Write<u16>(1); // unreadInboxMailCount
-		packet.Write<u16>(0); // unreadArchivedMailCount
-		packet.Write<u16>(4); // unreadShopMailCount
-		packet.Write<u16>(3); // inboxMailCount
-		packet.Write<u16>(3); // archivedMailCount
-		packet.Write<u16>(16); // shopMailCount
-		packet.Write<u16>(0); // newAttachmentsPending_count
-
-		SendPacket(clientHd, packet);
-	}
+	MailRegisterAccount(account.nickname.data());
+	SendMailUnreadNotice(clientHd, account.nickname.data());
 
 	// SN_WarehouseItems
 	{
@@ -998,6 +987,84 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 	}
 
 	SendMissionList(clientHd, account);
+}
+
+template<typename Writer>
+static void WriteMailEx(Writer& packet, const MailMessage& m)
+{
+	packet.Write<i64>((i64)m.ID);
+	packet.Write<i64>(m.sendFiletime);
+	packet.Write<i64>(m.expireFiletime);
+	packet.Write<u8>(m.read);
+	packet.Write<u8>(0);
+	packet.Write<u8>(0);
+	packet.WriteStringObj(m.from.data());
+	packet.WriteStringObj(m.subject.data());
+	packet.Write<u16>(0);
+}
+
+void HubReplication::SendMailUnreadNotice(ClientHandle clientHd, const wchar* owner)
+{
+	const MailCounts counts = MailGetCounts(owner);
+	PacketWriter<Sv::SN_MailUnreadNotice> packet;
+	for(i32 i = 0; i < 3; i++) packet.Write<u16>(counts.unread[i]);
+	for(i32 i = 0; i < 3; i++) packet.Write<u16>(counts.total[i]);
+	packet.Write<u16>(0);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendMailList(ClientHandle clientHd, const wchar* owner, u8 mailbox)
+{
+	eastl::vector<MailMessage> mails;
+	MailList(owner, mailbox, &mails);
+	PacketWriter<Sv::SN_MailList,32768> packet;
+	packet.Write<u8>(0xFF);
+	packet.Write<u8>(mailbox);
+	packet.Write<u16>((u16)mails.size());
+	foreach_const(m, mails) WriteMailEx(packet, *m);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendMailNewInbox(ClientHandle clientHd, const MailMessage& mail)
+{
+	PacketWriter<Sv::SN_MailListNewInbox,2048> packet;
+	packet.Write<u8>(mail.mailbox);
+	packet.Write<u16>(1);
+	WriteMailEx(packet, mail);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendMailRead(ClientHandle clientHd, const MailMessage& mail)
+{
+	PacketWriter<Sv::SN_MailRead,2048> packet;
+	packet.Write<i64>((i64)mail.ID);
+	packet.Write<u8>(mail.read);
+	packet.Write<u8>(0);
+	packet.WriteStringObj(mail.from.data());
+	packet.WriteStringObj(mail.subject.data());
+	packet.WriteStringObj(mail.content.data());
+	packet.Write<i64>(mail.sendFiletime);
+	packet.Write<i64>(mail.expireFiletime);
+	packet.Write<i64>(0);
+	packet.Write<i64>(0);
+	packet.Write<i64>(0);
+	packet.Write<u32>(0);
+	packet.Write<u16>(0);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendMailWriteResult(ClientHandle clientHd, ErrorType result)
+{
+	Sv::SN_MailWriteResult packet;
+	packet.nErrorType = (u32)result;
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendMailMoveResult(ClientHandle clientHd, ErrorType result)
+{
+	Sv::SN_MailMoveResult packet;
+	packet.nErrorType = (u32)result;
+	SendPacket(clientHd, packet);
 }
 
 void HubReplication::SendMissionList(ClientHandle clientHd, const Account& account)

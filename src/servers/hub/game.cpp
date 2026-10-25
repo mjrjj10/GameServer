@@ -3,6 +3,7 @@
 #include "instance.h"
 #include <mxm/game_content.h>
 #include "config.h"
+#include "mailbox.h"
 #include <EAStdC/EAString.h>
 #include <common/utils.h>
 
@@ -674,4 +675,66 @@ void HubGame::SpawnNPC(CreatureIndex docID, i32 localID, const vec3& pos, const 
 	WorldHub::ActorCore& actor = world.SpawnNpcActor(docID, localID);
 	actor.pos = pos;
 	actor.dir = dir;
+}
+
+static ErrorType MailErrorType(MailWriteResult r)
+{
+	switch(r) {
+		case MailWriteResult::SUCCESS: return ErrorType::SUCCESS;
+		case MailWriteResult::EMPTY_NICKNAME: return ErrorType::MAIL_EMPTY_NICKNAME;
+		case MailWriteResult::EMPTY_SUBJECT: return ErrorType::MAIL_EMPTY_SUBJECT;
+		case MailWriteResult::EMPTY_CONTENTS: return ErrorType::MAIL_EMPTY_CONTENTS;
+		case MailWriteResult::EXCESS_SUBJECT: return ErrorType::MAIL_EXCESS_SUBJECT;
+		case MailWriteResult::EXCESS_CONTENTS: return ErrorType::MAIL_EXCESS_CONTENTS;
+		case MailWriteResult::UNKNOWN_RECIPIENT: return ErrorType::MAIL_WRITE_INVAILID_NICKNAME;
+		case MailWriteResult::RECIPIENT_FULL: return ErrorType::MAIL_SEND_ARCHIVE_FAIL_ARCHIVE_FULL;
+	}
+	ASSERT(0);
+	return ErrorType::SUCCESS;
+}
+
+void HubGame::OnMailShowList(ClientHandle clientHd, u8 mailbox)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	replication.SendMailList(clientHd, playerAccountData[userID]->nickname.data(), mailbox);
+}
+
+void HubGame::OnMailRead(ClientHandle clientHd, u64 mailID)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	MailMessage mail;
+	if(!MailRead(playerAccountData[userID]->nickname.data(), mailID, &mail)) {
+		WARN("[client%x] HubGame :: mail %llu not found", clientHd, mailID);
+		return;
+	}
+	replication.SendMailRead(clientHd, mail);
+	replication.SendMailUnreadNotice(clientHd, playerAccountData[userID]->nickname.data());
+}
+
+void HubGame::OnMailWrite(ClientHandle clientHd, const wchar* to, const wchar* subject, i32 subjectLen, const wchar* content, i32 contentLen)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	MailMessage sent;
+	const MailWriteResult r = MailSend(playerAccountData[userID]->nickname.data(), to, subject, subjectLen, content, contentLen, &sent);
+	LOG("[client%x] HubGame :: mail from %ls to %ls result %d", clientHd, playerAccountData[userID]->nickname.data(), to, (i32)r);
+	replication.SendMailWriteResult(clientHd, MailErrorType(r));
+	if(r != MailWriteResult::SUCCESS) return;
+	for(i32 i = 0; i < (i32)playerAccountData.size(); i++) {
+		if(!playerAccountData[i] || playerAccountData[i]->nickname.compare(to) != 0) continue;
+		replication.SendMailNewInbox(playerMap[i]->clientHd, sent);
+		replication.SendMailUnreadNotice(playerMap[i]->clientHd, to);
+	}
+}
+
+void HubGame::OnMailMove(ClientHandle clientHd, u8 moveType, const u64* ids, i32 count)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	const i32 moved = MailMove(playerAccountData[userID]->nickname.data(), moveType, ids, count);
+	LOG("[client%x] HubGame :: mail move type %u: %d of %d", clientHd, moveType, moved, count);
+	replication.SendMailMoveResult(clientHd, ErrorType::SUCCESS);
+	replication.SendMailUnreadNotice(clientHd, playerAccountData[userID]->nickname.data());
 }

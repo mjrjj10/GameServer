@@ -1,0 +1,116 @@
+#include "mailbox.h"
+#include <mutex>
+#include <time.h>
+#include <EASTL/algorithm.h>
+#include <EASTL/sort.h>
+
+static std::mutex g_mailMutex;
+static eastl::vector<MailMessage> g_mails;
+static eastl::vector<WideString> g_mailAccounts;
+static u64 g_nextMailID = 1;
+
+static const i64 FILETIME_UNIX_EPOCH = 116444736000000000LL;
+static const i64 FILETIME_PER_SEC = 10000000LL;
+
+static i64 NowFiletime()
+{
+	return FILETIME_UNIX_EPOCH + (i64)time(nullptr) * FILETIME_PER_SEC;
+}
+
+static bool KnownAccount(const wchar* nickname)
+{
+	foreach_const(a, g_mailAccounts) if(a->compare(nickname) == 0) return true;
+	return false;
+}
+
+static void PurgeExpired(i64 now)
+{
+	g_mails.erase(eastl::remove_if(g_mails.begin(), g_mails.end(), [now](const MailMessage& m) { return m.expireFiletime <= now; }), g_mails.end());
+}
+
+void MailRegisterAccount(const wchar* nickname)
+{
+	std::lock_guard<std::mutex> lock(g_mailMutex);
+	if(!KnownAccount(nickname)) g_mailAccounts.push_back(WideString(nickname));
+}
+
+MailWriteResult MailSend(const wchar* from, const wchar* to, const wchar* subject, i32 subjectLen, const wchar* content, i32 contentLen, MailMessage* sent)
+{
+	if(!to || !to[0]) return MailWriteResult::EMPTY_NICKNAME;
+	if(subjectLen <= 0) return MailWriteResult::EMPTY_SUBJECT;
+	if(contentLen <= 0) return MailWriteResult::EMPTY_CONTENTS;
+	if(subjectLen >= 64) return MailWriteResult::EXCESS_SUBJECT;
+	if(contentLen >= 512) return MailWriteResult::EXCESS_CONTENTS;
+
+	std::lock_guard<std::mutex> lock(g_mailMutex);
+	if(!KnownAccount(to)) return MailWriteResult::UNKNOWN_RECIPIENT;
+	const i64 now = NowFiletime();
+	PurgeExpired(now);
+	i32 owned = 0;
+	foreach_const(m, g_mails) if(m->owner.compare(to) == 0 && m->mailbox == MAILBOX_INBOX) owned++;
+	if(owned >= MAILBOX_CAPACITY) return MailWriteResult::RECIPIENT_FULL;
+
+	MailMessage mail;
+	mail.ID = g_nextMailID++;
+	mail.owner = to;
+	mail.from = from;
+	mail.subject.assign(subject, subjectLen);
+	mail.content.assign(content, contentLen);
+	mail.sendFiletime = now;
+	mail.expireFiletime = now + MAIL_LIFETIME_DAYS * 86400 * FILETIME_PER_SEC;
+	mail.mailbox = MAILBOX_INBOX;
+	mail.read = false;
+	g_mails.push_back(mail);
+	*sent = mail;
+	return MailWriteResult::SUCCESS;
+}
+
+MailCounts MailGetCounts(const wchar* owner)
+{
+	std::lock_guard<std::mutex> lock(g_mailMutex);
+	PurgeExpired(NowFiletime());
+	MailCounts counts = {};
+	foreach_const(m, g_mails) {
+		if(m->owner.compare(owner) != 0 || m->mailbox > 2) continue;
+		counts.total[m->mailbox]++;
+		if(!m->read) counts.unread[m->mailbox]++;
+	}
+	return counts;
+}
+
+void MailList(const wchar* owner, u8 mailbox, eastl::vector<MailMessage>* out)
+{
+	std::lock_guard<std::mutex> lock(g_mailMutex);
+	PurgeExpired(NowFiletime());
+	foreach_const(m, g_mails) if(m->owner.compare(owner) == 0 && m->mailbox == mailbox) out->push_back(*m);
+	eastl::sort(out->begin(), out->end(), [](const MailMessage& a, const MailMessage& b) { return a.ID > b.ID; });
+}
+
+bool MailRead(const wchar* owner, u64 mailID, MailMessage* out)
+{
+	std::lock_guard<std::mutex> lock(g_mailMutex);
+	foreach(m, g_mails) {
+		if(m->ID != mailID || m->owner.compare(owner) != 0) continue;
+		m->read = true;
+		*out = *m;
+		return true;
+	}
+	return false;
+}
+
+i32 MailMove(const wchar* owner, u8 moveType, const u64* ids, i32 count)
+{
+	std::lock_guard<std::mutex> lock(g_mailMutex);
+	i32 moved = 0;
+	for(i32 i = 0; i < count; i++) {
+		for(auto m = g_mails.begin(); m != g_mails.end(); ++m) {
+			if(m->ID != ids[i] || m->owner.compare(owner) != 0) continue;
+			if(moveType == MAIL_MOVE_ARCHIVE) m->mailbox = MAILBOX_ARCHIVE;
+			else if(moveType == MAIL_MOVE_DELETE) g_mails.erase(m);
+			else return moved;
+			moved++;
+			break;
+		}
+	}
+	return moved;
+}

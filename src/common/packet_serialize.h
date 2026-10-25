@@ -803,6 +803,169 @@ inline const char* PacketSerialize<Sv::SN_GamePlayerStock>(const void* packetDat
 }
 
 template<>
+inline const char* PacketSerialize<Cl::CQ_MailShowList>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_MailShowList(%d, %d) :: {", Cl::CQ_MailShowList::NET_ID, packetSize);
+	SER("	mailboxType=%u", buff.Read<u8>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_MailRead>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_MailRead(%d, %d) :: {", Cl::CQ_MailRead::NET_ID, packetSize);
+	SER("	mailId=%llu", buff.Read<u64>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_MailWrite>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_MailWrite(%d, %d) :: {", Cl::CQ_MailWrite::NET_ID, packetSize);
+	SER("	to='%ls'", buff.ReadWideStringObj().data());
+	SER("	subject='%ls'", buff.ReadWideStringObj().data());
+	SER("	content='%ls'", buff.ReadWideStringObj().data());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_MailMove>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_MailMove(%d, %d) :: {", Cl::CQ_MailMove::NET_ID, packetSize);
+	SER("	moveType=%u", buff.Read<u8>());
+	const u16 count = buff.Read<u16>();
+	SER("	mailUIDs_count=%u", count);
+	for(u16 i = 0; i < count; i++) SER("	mailUIDs[%u]=%llu", i, buff.Read<u64>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_MailUnreadNotice>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_MailUnreadNotice(%d, %d) :: {", Sv::SN_MailUnreadNotice::NET_ID, packetSize);
+	SER("	unreadInboxMailCount=%u", buff.Read<u16>());
+	SER("	unreadArchivedMailCount=%u", buff.Read<u16>());
+	SER("	unreadShopMailCount=%u", buff.Read<u16>());
+	SER("	inboxMailCount=%u", buff.Read<u16>());
+	SER("	archivedMailCount=%u", buff.Read<u16>());
+	SER("	shopMailCount=%u", buff.Read<u16>());
+	SER("	newAttachmentsPending_count=%u", buff.Read<u16>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_MailList>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_MailList(%d, %d) :: {", Sv::SN_MailList::NET_ID, packetSize);
+	SER("	packetNum=%u", buff.Read<u8>());
+	SER("	mailboxType=%u", buff.Read<u8>());
+	const u16 count = buff.Read<u16>();
+	SER("	mailList_count=%u", count);
+	for(u16 i = 0; i < count; i++) {
+		const i64 id = buff.Read<i64>();
+		const i64 sent = buff.Read<i64>();
+		const i64 expire = buff.Read<i64>();
+		const u8 isRead = buff.Read<u8>();
+		const u8 isGM = buff.Read<u8>();
+		const u8 hasAttachment = buff.Read<u8>();
+		SER("	mailList[%u]=(mailId=%lld send=%lld expire=%lld isRead=%u isGMMail=%u hasAttachment=%u", i, id, sent, expire, isRead, isGM, hasAttachment);
+		SER("		from='%ls'", buff.ReadWideStringObj().data());
+		SER("		subject='%ls'", buff.ReadWideStringObj().data());
+		const u16 items = buff.Read<u16>();
+		for(u16 k = 0; k < items; k++) SER("		items[%u]=%u", k, buff.Read<u32>());
+	}
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_MailRead>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_MailRead(%d, %d) :: {", Sv::SN_MailRead::NET_ID, packetSize);
+	SER("	mailId=%lld", buff.Read<i64>());
+	SER("	isRead=%u", buff.Read<u8>());
+	SER("	isGMMail=%u", buff.Read<u8>());
+	SER("	fromNickname='%ls'", buff.ReadWideStringObj().data());
+	SER("	subject='%ls'", buff.ReadWideStringObj().data());
+	SER("	content='%ls'", buff.ReadWideStringObj().data());
+	SER("	sendUTCDate=%lld", buff.Read<i64>());
+	SER("	expireUTCDate=%lld", buff.Read<i64>());
+	SER("	money=%lld", buff.Read<i64>());
+	SER("	exp=%lld", buff.Read<i64>());
+	SER("	ccoin=%lld", buff.Read<i64>());
+	SER("	guildFund=%u", buff.Read<u32>());
+	SER("	itemList_count=%u", buff.Read<u16>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_MailListNewInbox>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_MailListNewInbox(%d, %d) :: {", Sv::SN_MailListNewInbox::NET_ID, packetSize);
+	SER("	mailboxType=%u", buff.Read<u8>());
+	const u16 count = buff.Read<u16>();
+	SER("	mailList_count=%u", count);
+	for(u16 i = 0; i < count; i++) {
+		SER("	mailList[%u].mailId=%lld", i, buff.Read<i64>());
+		buff.Read<i64>();
+		buff.Read<i64>();
+		buff.Read<u8>();
+		buff.Read<u8>();
+		buff.Read<u8>();
+		SER("		from='%ls'", buff.ReadWideStringObj().data());
+		SER("		subject='%ls'", buff.ReadWideStringObj().data());
+		const u16 items = buff.Read<u16>();
+		for(u16 k = 0; k < items; k++) buff.Read<u32>();
+	}
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_MailWriteResult>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_MailWriteResult(%d, %d) :: {", Sv::SN_MailWriteResult::NET_ID, packetSize);
+	SER("	nErrorType=0x%x", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_MailMoveResult>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_MailMoveResult(%d, %d) :: {", Sv::SN_MailMoveResult::NET_ID, packetSize);
+	SER("	nErrorType=0x%x", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_MissionList>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();
@@ -2771,7 +2934,6 @@ DEFAULT_SERIALIZE(Sv::SN_PveComradeInfo);
 DEFAULT_SERIALIZE(Sv::SN_AchieveUpdate);
 DEFAULT_SERIALIZE(Sv::SN_FriendRequestList);
 DEFAULT_SERIALIZE(Sv::SN_BlockList);
-DEFAULT_SERIALIZE(Sv::SN_MailUnreadNotice);
 DEFAULT_SERIALIZE(Sv::SN_WarehouseItems);
 DEFAULT_SERIALIZE(Sv::SN_MutualFriendList);
 DEFAULT_SERIALIZE(Sv::SN_GuildMemberStatus);
