@@ -973,6 +973,25 @@ struct GameXmlContent
 	};
 	IngameLevelInfo ingameLevel;
 	bool LoadIngameLevel();
+
+	struct MasterGrowthStat { u8 type = 0; f32 linear = 0; f32 quadratic = 0; };
+	eastl::hash_map<i32, eastl::fixed_vector<MasterGrowthStat,4,false>> masterGrowth;
+	bool LoadMasterGrowth();
+	f32 MasterLevelBonus(ClassType classType, u8 statType, i32 level) const
+	{
+		auto f = masterGrowth.find((i32)classType);
+		if(f == masterGrowth.end() || level <= 1) return 0;
+		for(const MasterGrowthStat& g : f->second) {
+			if(g.type != statType) continue;
+			f32 best = 0;
+			for(i32 l = 2; l <= level; l++) {
+				const f32 x = (f32)(l - 1);
+				best = MAX(best, g.linear * x + g.quadratic * x * x);
+			}
+			return best;
+		}
+		return 0;
+	}
 	const MonsterAi* FindMonsterAi(i32 creatureID) const { auto f = monsterAi.find(creatureID); return f == monsterAi.end() ? nullptr : &f->second; }
 	bool LoadMonsterAi();
 	const eastl::fixed_vector<StatValue,24,false>* FindMonsterStats(i32 creatureID) const { auto f = monsterStats.find(creatureID); return f == monsterStats.end() ? nullptr : &f->second; }

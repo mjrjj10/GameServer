@@ -1172,13 +1172,14 @@ f32 World::PlayerSkillDamage(const Player& player, SkillID skillID) const
 {
 	const f32 statusPower = StatusModSum(player, StatusMod::SKILLPOWER);
 	if(const GameXmlContent::SkillUpgrade* up = LatestUpgrade(player, (i32)skillID, GameXmlContent::SkillUpgrade::Type::DAMAGE)) {
-		if(up->baseDamage >= 0) return MAX(up->baseDamage + up->attackMultiplier * (MasterStat(player.Main().classType, STAT_SKILLPOWER) + statusPower), 0.0f);
+		if(up->baseDamage >= 0) return MAX(up->baseDamage + up->attackMultiplier * (MasterStat(player.Main().classType, STAT_SKILLPOWER) + LevelBonus(player, player.Main().classType, STAT_SKILLPOWER) + statusPower), 0.0f);
 	}
 	f32 damage = SkillDamage(skillID);
 	auto found = GetGameXmlContent().skillMap.find(skillID);
-	if(statusPower > 0 && found != GetGameXmlContent().skillMap.end()) {
+	const f32 extraPower = statusPower + LevelBonus(player, player.Main().classType, STAT_SKILLPOWER);
+	if(extraPower > 0 && found != GetGameXmlContent().skillMap.end()) {
 		SkillNormalModel& sm = const_cast<SkillNormalModel&>(found->second);
-		damage += statusPower * sm.getSkillNormalLevelByIndex(0)->getAttackMultiplier();
+		damage += extraPower * sm.getSkillNormalLevelByIndex(0)->getAttackMultiplier();
 	}
 	return damage;
 }
@@ -1238,7 +1239,7 @@ const GameXmlContent::CostLevel* World::UpgradeCastMods(Player& player, SkillID 
 	}
 	const GameXmlContent::SkillUpgrade* dmg = LatestUpgrade(player, (i32)skillID, GameXmlContent::SkillUpgrade::Type::DAMAGE);
 	if(dmg && costIndex >= 0 && costIndex < (i32)dmg->costLevelDamage.size() && dmg->baseDamage > 0 && dmg->costLevelDamage[costIndex].first >= 0) {
-		const f32 skillPower = MasterStat(player.Main().classType, STAT_SKILLPOWER) + StatusModSum(player, StatusMod::SKILLPOWER);
+		const f32 skillPower = MasterStat(player.Main().classType, STAT_SKILLPOWER) + LevelBonus(player, player.Main().classType, STAT_SKILLPOWER) + StatusModSum(player, StatusMod::SKILLPOWER);
 		const f32 normal = dmg->baseDamage + dmg->attackMultiplier * skillPower;
 		const f32 empowered = dmg->costLevelDamage[costIndex].first + dmg->costLevelDamage[costIndex].second * skillPower;
 		if(normal > 0) mods.damageRatio = empowered / normal;

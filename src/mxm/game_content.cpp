@@ -997,6 +997,24 @@ bool GameXmlContent::LoadPvpMaps()
 	return FindPvpMap(MapIndex::PVP_DEATHMATCH) != nullptr;
 }
 
+bool GameXmlContent::LoadMasterGrowth()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/MasterGrowth.xml", doc)) return false;
+	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+		auto& stats = masterGrowth[pInfo->IntAttribute("class")];
+		for(XMLElement* st = pInfo->FirstChildElement("STAT"); st && !stats.full(); st = st->NextSiblingElement("STAT")) {
+			MasterGrowthStat g;
+			g.type = (u8)st->IntAttribute("type");
+			g.linear = st->FloatAttribute("linear");
+			g.quadratic = st->FloatAttribute("quadratic");
+			stats.push_back(g);
+		}
+	}
+	LOG("Loaded in-game growth of %d masters", (i32)masterGrowth.size());
+	return true;
+}
+
 bool GameXmlContent::LoadIngameLevel()
 {
 	XMLDocument doc;
@@ -2333,6 +2351,9 @@ bool GameXmlContent::Load()
 	if (!r) return false;
 
 	r = LoadIngameLevel();
+	if (!r) return false;
+
+	r = LoadMasterGrowth();
 	if (!r) return false;
 
 	r = LoadJukeboxSongs();

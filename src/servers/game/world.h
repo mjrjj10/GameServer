@@ -933,6 +933,8 @@ public:
 	void GrantIngameExp(Player& player, i32 gain, ActorUID target);
 	void GrantMonsterKillExp(const ActorNpc& npc, ActorUID killerUID);
 	i32 IngameRespawnDelayMs(const Player& player) const;
+	f32 LevelBonus(const Player& player, ClassType classType, u8 statType) const;
+	void ApplyLevelStats(Player& player);
 	u32 KillPoints() const;
 	void AddPoints(Player& player, i32 points);
 	void GrantMonsterKillPoints(const ActorNpc& npc, ActorUID killerUID);

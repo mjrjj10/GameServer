@@ -4,6 +4,9 @@
 #include <mxm/game_content.h>
 
 static const u32 PVP_ANNOUNCE_MONSTER_KILL = 5;
+static const u8 LEVEL_STAT_HEALTH = 0;
+static const u8 LEVEL_STAT_ATTACK = 6;
+static const u8 LEVEL_STAT_SKILLPOWER = 8;
 
 static bool KillRewarded(const World::ActorNpc& npc, const World::Player& killer)
 {
@@ -40,6 +43,7 @@ void World::GrantIngameExp(Player& player, i32 gain, ActorUID target)
 	if(player.clientHd != ClientHandle::INVALID) replication->SendExpIngame(player.clientHd, player.userID, gain, player.ingameExp, target);
 	if(!levelUp) return;
 	replication->SendLevelIngameToAll(player.userID, info.ExpToLevelUp(player.ingameLevel), player.ingameLevel);
+	ApplyLevelStats(player);
 	if(player.clientHd != ClientHandle::INVALID && player.propertyPoints > 0) {
 		replication->SendCharacterPropertyPoint(player.clientHd, player.Main().UID, player.propertyPoints);
 		replication->SendCharacterPropertyPoint(player.clientHd, player.Sub().UID, player.propertyPoints);
@@ -81,6 +85,26 @@ i32 World::IngameRespawnDelayMs(const Player& player) const
 	const f64 elapsed = gameStartedAt != Time::ZERO ? TimeDiffSec(TimeDiff(gameStartedAt, localTime)) : 0.0;
 	const f64 ms = info.respawnBaseMs + info.respawnPerLevelMs * player.ingameLevel + info.respawnPerSecMs * elapsed;
 	return (i32)(floor(ms / 1000.0 + 0.5) * 1000.0);
+}
+
+f32 World::LevelBonus(const Player& player, ClassType classType, u8 statType) const
+{
+	if(!map || !map->ingameLevels) return 0;
+	return GetGameXmlContent().MasterLevelBonus(classType, statType, player.ingameLevel);
+}
+
+void World::ApplyLevelStats(Player& player)
+{
+	for(i32 i = 0; i < 2; i++) {
+		ActorMaster& chara = i == 0 ? player.Main() : player.Sub();
+		const i32 hpMax = (i32)(MasterStat(chara.classType, LEVEL_STAT_HEALTH) + LevelBonus(player, chara.classType, LEVEL_STAT_HEALTH));
+		if(chara.hp > 0) chara.hp = MIN(chara.hp + MAX(hpMax - chara.hpMax, 0), hpMax);
+		chara.hpMax = hpMax;
+		replication->SendStatToAll(chara.UID, LEVEL_STAT_HEALTH, (f32)chara.hp, (f32)chara.hpMax);
+		const WeaponIndex weapon = (chara.UID == player.Main().UID) == ((player.mainCharaID & 1) == 0) ? player.mainWeapon : player.subWeapon;
+		replication->SendStatToAll(chara.UID, LEVEL_STAT_ATTACK, 0, GetGameXmlContent().GetWeaponAttack((i32)weapon) + LevelBonus(player, chara.classType, LEVEL_STAT_ATTACK));
+		replication->SendStatToAll(chara.UID, LEVEL_STAT_SKILLPOWER, 0, MasterStat(chara.classType, LEVEL_STAT_SKILLPOWER) + LevelBonus(player, chara.classType, LEVEL_STAT_SKILLPOWER));
+	}
 }
 
 u32 World::KillPoints() const
