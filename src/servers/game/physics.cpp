@@ -104,9 +104,9 @@ bool PhysicsContext::Init()
 		return false;
 	}
 
-	if(!LoadCollisionMeshes(gc.filePvpDeathmatch01Collision)) return false;
-	if(!LoadCollisionMeshes(gc.filePvpDeathmatch01CollisionWalls)) return false;
-	if(!LoadCollisionMeshes(gc.filePvpDeathNmWall04)) return false;
+	foreach_const(file, gc.collisionFiles) {
+		if(!LoadCollisionMeshes(*file)) return false;
+	}
 
 	LOG("PhysicsContext initialised");
 	return true;
@@ -145,7 +145,7 @@ bool PhysicsContext::LoadCollisionMeshes(const FileBuffer& file)
 		const i32 nameLen = buff.Read<i32>();
 		const char* name = (char*)buff.ReadRaw(nameLen);
 
-		const u16 meshDataSize = buff.Read<u32>();
+		const u32 meshDataSize = buff.Read<u32>();
 		void* meshData = buff.ReadRaw(meshDataSize);
 
 		PhysxReadBuffer readBuff(meshData, meshDataSize);
@@ -255,11 +255,11 @@ void PhysicsScene::Destroy()
     }
 }
 
-PxRigidStatic* PhysicsScene::CreateStaticCollider(const char* meshName, const vec3& pos, const vec3& rot)
+PxRigidStatic* PhysicsScene::CreateStaticCollider(const char* meshName, const vec3& pos, const vec3& rot, f32 scale)
 {
 	auto& ctx = PhysContext();
 
-	PxTriangleMeshGeometry geometry = PxTriangleMeshGeometry(ctx.triangleMeshMap.at(eastl::hash<const char*>{}(meshName)));
+	PxTriangleMeshGeometry geometry = PxTriangleMeshGeometry(ctx.triangleMeshMap.at(eastl::hash<const char*>{}(meshName)), PxMeshScale(scale));
 
 	PxShape* shape = ctx.physics->createShape(geometry, *ctx.matMapSurface);
 	ASSERT(shape); // createShape failed

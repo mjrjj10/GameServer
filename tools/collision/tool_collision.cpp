@@ -138,7 +138,7 @@ struct CollisionNifReader
 	};
 
 	eastl::fixed_vector<StringSlice,1024,true> stringList;
-	eastl::fixed_vector<u16,1024,true> blockSizeList;
+	eastl::fixed_vector<u32,1024,true> blockSizeList;
 	eastl::fixed_map<i32,DataStream,16,true> dataStreamMap;
 
 	eastl::fixed_vector<Mesh,8,true> meshList;

@@ -7,6 +7,7 @@
 
 #include <EASTL/hash_set.h>
 #include <EASTL/fixed_list.h>
+#include <EASTL/list.h>
 #include <EASTL/fixed_hash_map.h>
 #include <EASTL/fixed_map.h>
 #include <EASTL/fixed_string.h>
@@ -638,6 +639,17 @@ struct GameXmlContent
 			vec3 rot;
 		};
 
+		struct Collider
+		{
+			eastl::fixed_string<char,64,false> mesh;
+			vec3 pos;
+			vec3 rot;
+			f32 scale = 1;
+		};
+
+		MapIndex index = MapIndex(0);
+		eastl::fixed_vector<Collider,16,false> colliders;
+
 		eastl::fixed_vector<Spawn,512> creatures;
 		eastl::fixed_vector<Spawn,512> dynamic;
 		eastl::fixed_vector<Area,512> areas;
@@ -753,7 +765,7 @@ struct GameXmlContent
 	eastl::fixed_hash_map<ClassType, Slice<Action>, 800> actionListMap;
 
 	Map mapLobby;
-	Map mapPvpDeathMatch;
+	eastl::list<Map> pvpMaps;
 
 	eastl::fixed_vector<Song,60,false> jukeboxSongs;
 
@@ -885,13 +897,12 @@ struct GameXmlContent
 	bool HasEntrySystem(i32 entryID) const;
 	CreatureIndex FindDeathMatchBotIndex(ClassType classType) const;
 
-	FileBuffer filePvpDeathmatch01Collision;
-	FileBuffer filePvpDeathmatch01CollisionWalls;
-	FileBuffer filePvpDeathNmWall04;
+	eastl::vector<FileBuffer> collisionFiles;
 	FileBuffer fileCylinderCollision;
 
 	bool Load();
 	const MapList* FindMapListByID(MapIndex index) const;
+	const Map* FindPvpMap(MapIndex index) const;
 	const Song* FindJukeboxSongByID(SongID songID) const;
 	bool LoadCharacterBaseStats();
 
@@ -1067,7 +1078,7 @@ private:
 	bool LoadMapList();
 	bool LoadMapByID(Map* map, MapIndex index);
 	bool LoadLobby(MapIndex index);
-	bool LoadPvpDeathmach();
+	bool LoadPvpMaps();
 	bool LoadJukeboxSongs();
 	bool LoadCollisionMeshes();
 	bool LoadAnimationData();

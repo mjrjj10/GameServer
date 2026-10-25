@@ -312,15 +312,18 @@ void Game::Update(Time localTime_)
 
 bool Game::LoadMap()
 {
-	// TODO: Should probably part of world?
-	auto& phys = PhysContext();
-	world.physics.CreateStaticCollider("PVP_DeathMatch01_Collision", vec3(0));
-	world.physics.CreateStaticCollider("PVP_Deathmatch01_GuardrailMob", vec3(0));
-	// --------------------------------
-
 	const GameXmlContent& content = GetGameXmlContent();
+	const GameXmlContent::Map* map = content.FindPvpMap(replication.mapIndex);
+	if(!map) {
+		WARN("LoadMap> map %d has no server data, falling back to deathmatch", (i32)replication.mapIndex);
+		map = content.FindPvpMap(MapIndex::PVP_DEATHMATCH);
+	}
+	world.map = map;
+	foreach_const(c, map->colliders) {
+		world.physics.CreateStaticCollider(c->mesh.data(), c->pos, c->rot, c->scale);
+	}
 
-	foreach(it, content.mapPvpDeathMatch.creatures) {
+	foreach(it, map->creatures) {
 		// don't spawn "spawn points"
 		if(it->IsSpawnPoint()) {
 			if(it->faction != Faction::INVALID) {
@@ -345,7 +348,7 @@ bool Game::LoadMap()
 
 	}
 
-	foreach(it, content.mapPvpDeathMatch.dynamic) {
+	foreach(it, map->dynamic) {
 		// spawn dynamic
 		auto& actor = world.SpawnDynamic(it->docID, it->localID);
 		actor.pos = it->pos;
@@ -361,6 +364,8 @@ bool Game::LoadMap()
 		actor.seed = (i32)RandUint();
 
 	}
+
+	if(map->index != MapIndex::PVP_DEATHMATCH) return true;
 
 	// spawn walls dynamically
 
@@ -393,7 +398,7 @@ bool Game::LoadMap()
 
 	LOG("LoadMap> chosen wall configuration = '%s'", wallConfName);
 
-	foreach(it, content.mapPvpDeathMatch.areas) {
+	foreach(it, map->areas) {
 		if(wallConf.find(it->ID) != wallConf.end()) {
 			auto& actor = world.SpawnDynamic(CI_WALL, it->ID);
 			actor.pos = it->pos;

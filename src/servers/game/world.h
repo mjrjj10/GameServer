@@ -454,6 +454,7 @@ struct World
 
 
 	Replication* replication;
+	const GameXmlContent::Map* map = nullptr;
 
 	eastl::fixed_vector<Player,10,false> players;
 	eastl::fixed_list<ActorMaster,512,true> actorMasterList;

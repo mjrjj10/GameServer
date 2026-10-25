@@ -178,7 +178,7 @@ void World::StartLevelEvents()
 {
 	if(levelEventsStarted) return;
 	levelEventsStarted = true;
-	foreach_const(n, GetGameXmlContent().mapPvpDeathMatch.levelEvents) {
+	foreach_const(n, map->levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::LEVEL_START) continue;
 		foreach_const(o, n->outputs) FireLevelEvent(*o);
 	}
@@ -186,7 +186,7 @@ void World::StartLevelEvents()
 
 void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 {
-	const GameXmlContent::LevelEventNode* node = GetGameXmlContent().mapPvpDeathMatch.FindLevelEvent(nodeID);
+	const GameXmlContent::LevelEventNode* node = map->FindLevelEvent(nodeID);
 	if(!node) return;
 	switch(node->kind) {
 		case GameXmlContent::LevelEventNode::DELAY: {
@@ -227,7 +227,7 @@ void World::SpawnGroundItems(i32 dropIndex, i32 areaID, i32 tagID)
 {
 	const auto& content = GetGameXmlContent();
 	const GameXmlContent::DropGroup* group = content.FindDropGroup(dropIndex);
-	const GameXmlContent::Map::Area* area = content.mapPvpDeathMatch.FindArea(areaID);
+	const GameXmlContent::Map::Area* area = map->FindArea(areaID);
 	if(!group || !area) {
 		LOG("GroundItem :: drop group %d or area %d not found", dropIndex, areaID);
 		return;
@@ -302,7 +302,7 @@ bool World::TakeGroundItem(Player& player, u32 itemUID)
 	if(player.clientHd != ClientHandle::INVALID) replication->SendGroundItemTaken(player.clientHd, player.Main().UID, itemUID);
 	replication->SendPublicGroundItemTaken(player.clientHd, player.Main().UID, itemUID);
 	LOG("GroundItem :: %ls takes item %d (tag %d)", player.name.data(), item.itemIndex, item.tagID);
-	foreach_const(n, GetGameXmlContent().mapPvpDeathMatch.levelEvents) {
+	foreach_const(n, map->levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::TAKE_ITEM || n->tagID != item.tagID || item.tagID < 0) continue;
 		foreach_const(o, n->outputs) FireLevelEvent(*o);
 	}
@@ -322,7 +322,7 @@ void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle s
 		const auto density = densities.find((i32)hit->docID);
 		replication->SendRemoteActivatedToAll(remoteID, seedOwnerHd, skipHd, hit->UID, density != densities.end() ? (u32)density->second : 0, pos);
 	}
-	foreach_const(n, GetGameXmlContent().mapPvpDeathMatch.levelEvents) {
+	foreach_const(n, map->levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::ON_HIT_TRIGGER || n->localID != hit->localID || n->hitCount <= 0) continue;
 		while(!hit->hits.empty() && TimeDiffSec(TimeDiff(hit->hits.front(), localTime)) > n->delay) hit->hits.erase(hit->hits.begin());
 		if(hit->hits.full()) hit->hits.erase(hit->hits.begin());
@@ -344,10 +344,10 @@ bool World::LevelTriggerActive(const GameXmlContent::LevelEventNode& node) const
 void World::UpdateBoundTriggers()
 {
 	if(!levelEventsStarted || Config().DevShowcase) return;
-	const GameXmlContent::Map& map = GetGameXmlContent().mapPvpDeathMatch;
-	foreach_const(n, map.levelEvents) {
+	const GameXmlContent::Map& levelMap = *map;
+	foreach_const(n, levelMap.levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::BOUND_TRIGGER || !LevelTriggerActive(*n)) continue;
-		const GameXmlContent::Map::Area* area = map.FindArea(n->areaID);
+		const GameXmlContent::Map::Area* area = levelMap.FindArea(n->areaID);
 		if(!area) continue;
 		foreach(p, players) {
 			if(p->dead || !p->body) continue;

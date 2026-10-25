@@ -927,15 +927,67 @@ bool GameXmlContent::LoadLobby(MapIndex index)
 	return LoadMapByID(&mapLobby, index);
 }
 
-bool GameXmlContent::LoadPvpDeathmach()
+static bool FileLoad(FileBuffer* out, const wchar* path)
 {
-	const MapList* map = FindMapListByID(MapIndex::PVP_DEATHMATCH);
-	if (!map) {
-		LOG("ERROR(LoadPvpDeathmach): Map not found %d", (i32)MapIndex::PVP_DEATHMATCH);
+	out->data = FileOpenAndReadAll(path, &out->size);
+	if(!out->data) {
+		LOG("ERROR(FileLoad): failed to open '%ls'", path);
 		return false;
-	};
+	}
 
-	return LoadMapByID(&mapPvpDeathMatch, MapIndex::PVP_DEATHMATCH);
+	return true;
+}
+
+bool GameXmlContent::LoadPvpMaps()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/MapCollision.xml", doc)) return false;
+	XMLElement* pRoot = doc.FirstChildElement();
+	if(!pRoot) return false;
+	for(XMLElement* pMap = pRoot->FirstChildElement("_Map"); pMap; pMap = pMap->NextSiblingElement("_Map")) {
+		const MapIndex index = (MapIndex)pMap->IntAttribute("_Index");
+		pvpMaps.emplace_back();
+		Map& map = pvpMaps.back();
+		map.index = index;
+		if(!LoadMapByID(&map, index)) {
+			LOG("ERROR(LoadPvpMaps): map %d failed to load", (i32)index);
+			return false;
+		}
+		for(XMLElement* pFile = pMap->FirstChildElement("_File"); pFile; pFile = pFile->NextSiblingElement("_File")) {
+			const char* file = pFile->Attribute("_Path");
+			if(!file) return false;
+			Path path = gameDataDir;
+			wchar_t fileWide[256] = {0};
+			wchar_t* fileWideOut = fileWide;
+			eastl::DecodePart(file, file + EA::StdC::Strlen(file), fileWideOut, fileWide + ARRAY_COUNT(fileWide) - 1);
+			PathAppend(path, L"/");
+			PathAppend(path, fileWide);
+			FileBuffer buffer;
+			if(!FileLoad(&buffer, path.data())) {
+				LOG("ERROR(LoadPvpMaps): collision file '%s' not found", file);
+				return false;
+			}
+			collisionFiles.push_back(buffer);
+		}
+		for(XMLElement* pCollider = pMap->FirstChildElement("_Collider"); pCollider; pCollider = pCollider->NextSiblingElement("_Collider")) {
+			Map::Collider collider;
+			const char* mesh = pCollider->Attribute("_Mesh");
+			if(!mesh) return false;
+			collider.mesh = mesh;
+			collider.pos = vec3(pCollider->FloatAttribute("x"), pCollider->FloatAttribute("y"), pCollider->FloatAttribute("z"));
+			collider.rot = vec3(pCollider->FloatAttribute("angx"), pCollider->FloatAttribute("angy"), pCollider->FloatAttribute("angz"));
+			collider.scale = pCollider->FloatAttribute("scale", 1.0f);
+			map.colliders.push_back(collider);
+		}
+		LOG("PvP map %d: %d creatures, %d dynamics, %d areas, %d level events, %d colliders", (i32)index, (i32)map.creatures.size(), (i32)map.dynamic.size(), (i32)map.areas.size(), (i32)map.levelEvents.size(), (i32)map.colliders.size());
+	}
+	return FindPvpMap(MapIndex::PVP_DEATHMATCH) != nullptr;
+}
+
+const GameXmlContent::Map* GameXmlContent::FindPvpMap(MapIndex index) const
+{
+	foreach_const(m, pvpMaps) if(m->index == index) return &*m;
+	return nullptr;
 }
 
 struct MissionSubTypeName
@@ -1436,37 +1488,11 @@ bool GameXmlContent::LoadJukeboxSongs()
 	return true;
 }
 
-static bool FileLoad(FileBuffer* out, const wchar* path)
-{
-	out->data = FileOpenAndReadAll(path, &out->size);
-	if(!out->data) {
-		LOG("ERROR(FileLoad): failed to open '%ls'", path);
-		return false;
-	}
-
-	return true;
-}
-
 bool GameXmlContent::LoadCollisionMeshes()
 {
 	Path path = gameDataDir;
-	PathAppend(path, L"/PVP_DeathMatch01_Collision.physx_static");
-	bool r = FileLoad(&filePvpDeathmatch01Collision, path.data());
-	if(!r) return false;
-
-	path = gameDataDir;
-	PathAppend(path, L"/PVP_DeathMatch01_Env.physx_static");
-	r = FileLoad(&filePvpDeathmatch01CollisionWalls, path.data());
-	if(!r) return false;
-
-	path = gameDataDir;
-	PathAppend(path, L"/PvP_Death_NM_Wall04.physx_static");
-	r = FileLoad(&filePvpDeathNmWall04, path.data());
-	if(!r) return false;
-
-	path = gameDataDir;
 	PathAppend(path, L"/cylinder.physx_dynamic");
-	r = FileLoad(&fileCylinderCollision, path.data());
+	bool r = FileLoad(&fileCylinderCollision, path.data());
 	if(!r) return false;
 
 	return true;
@@ -2167,7 +2193,7 @@ bool GameXmlContent::Load()
 	r = LoadLobby(MapIndex::LOBBY_NORMAL);
 	if (!r) return false;
 
-	r = LoadPvpDeathmach();
+	r = LoadPvpMaps();
 	if (!r) return false;
 
 	r = LoadJukeboxSongs();

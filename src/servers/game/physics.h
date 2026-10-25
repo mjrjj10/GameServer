@@ -101,7 +101,7 @@ struct PhysicsScene
 	void Step();
 	void Destroy();
 
-	PxRigidStatic* CreateStaticCollider(const char* meshName, const vec3& pos, const vec3& rot = vec3(0));
+	PxRigidStatic* CreateStaticCollider(const char* meshName, const vec3& pos, const vec3& rot = vec3(0), f32 scale = 1.0f);
 	void SetStaticEnabled(PxRigidStatic* actor, bool enabled);
 	PhysicsDynamicBody* CreateDynamicBody(f32 radius, f32 height, const vec3& pos);
 	vec3 Move(PhysicsDynamicBody* body, const vec3& disp, f32 time /* seconds */);
