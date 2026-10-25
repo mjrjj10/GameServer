@@ -599,6 +599,10 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		}
 		spreadingStatus = false;
 	}
+	if(caster.team != target.team && HasStatusType(target, StatusType::BURROW)) {
+		LOG("Status :: %ls ignored %d (burrow)", target.name.data(), statusID);
+		return;
+	}
 	if(info && info->isDebuff && caster.team != target.team && HasStatusType(target, StatusType::GODMODE)) {
 		LOG("Status :: %ls resisted %d (godmode)", target.name.data(), statusID);
 		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);

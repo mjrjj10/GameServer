@@ -107,6 +107,17 @@ enum class TargetPreset: i8
 TargetPreset TargetPresetFromString(const char* str);
 const char* TargetPresetToString(TargetPreset p);
 
+enum class StatusCondition: u8
+{
+	NONE = 0,
+	FRIENDLY_HPBIGGER,
+	FRIENDLY_HPLESS,
+	UNFRIENDLY_HPBIGGER,
+	UNFRIENDLY_HPLESS,
+};
+
+StatusCondition StatusConditionFromString(const char* str);
+
 }
 
 struct SummonCommand
@@ -693,6 +704,7 @@ struct GameXmlContent
 					ActionCommand::TargetPreset targetPreset;
 					u8 removeAtEnd;
 					u8 remove;
+					ActionCommand::StatusCondition condition;
 				} status;
 
 				struct {
@@ -817,6 +829,7 @@ struct GameXmlContent
 
 	const Master& GetMaster(ClassType classType) const;
 	i32 GetFirstComboSkill(i32 baseSkill) const { auto f = firstComboSkill.find(baseSkill); return f == firstComboSkill.end() ? 0 : f->second; }
+	i32 GetNextComboSkill(i32 skillID) const { auto f = nextComboSkill.find(skillID); return f == nextComboSkill.end() ? 0 : f->second; }
 	typedef eastl::fixed_vector<ActionStateID,4,false> RandomActionList;
 	const RandomActionList* FindSkillRandomActions(i32 skillID) const { auto f = skillRandomActions.find(skillID); return f == skillRandomActions.end() ? nullptr : &f->second; }
 	i32 WeaponTypeOf(ClassType classType, WeaponIndex weaponIndex) const;
@@ -827,7 +840,7 @@ struct GameXmlContent
 	eastl::hash_set<u64> skillActionGaps;
 	struct SkillInput { bool needsClick = false; bool directionOnly = false; bool friendlyOnly = false; bool positionDirection = false; bool selfPosition = false; bool teleportEntity = false; bool allEnemies = false; bool pickedEntity = false; bool lockOn = false; bool takesTarget = false; bool petCaster = false; i32 checkStatus = 0; u8 obstructMove = 0; bool obstructSight = false; i32 coolTimeID = 0; f32 coolTime = 0; f32 globalCoolTime = 0; f32 minDistance = 0; f32 maxDistance = 0; };
 	const SkillInput* FindSkillInput(i32 skillID) const { auto f = skillInput.find(skillID); return f == skillInput.end() ? nullptr : &f->second; }
-	struct SkillCast { enum Type: u8 { DELAY, LIMIT, CHARGING } type = DELAY; f32 time = 0; ActionStateID action = ActionStateID::INVALID; bool interruptByMove = false; f32 maxChargingTime = 0; f32 minChargeRatio = 1; f32 maxChargeRatio = 1; };
+	struct SkillCast { enum Type: u8 { DELAY, LIMIT, CHARGING } type = DELAY; f32 time = 0; ActionStateID action = ActionStateID::INVALID; bool interruptByMove = false; bool interruptByLostTarget = false; f32 maxChargingTime = 0; f32 minChargeRatio = 1; f32 maxChargeRatio = 1; };
 	const SkillCast* FindSkillCast(i32 skillID) const { auto f = skillCast.find(skillID); return f == skillCast.end() ? nullptr : &f->second; }
 	bool IsCastAction(ActionStateID action) const { foreach_const(it, skillCast) if(it->second.action == action) return true; return false; }
 	struct SkillToggle { enum Consume: u8 { NONE, MANA, RAGE, STAMINA } consume = NONE; f32 interval = 0; f32 value = 0; eastl::fixed_vector<i32,4,false> remotes; eastl::fixed_vector<i32,6,false> statuses; };
@@ -908,6 +921,11 @@ struct GameXmlContent
 	i32 GetComboAutoCastMs(i32 skillID) const { auto f = comboAutoCastMs.find(skillID); return f == comboAutoCastMs.end() ? 0 : f->second; }
 	eastl::hash_map<i32, i32> comboDurationMs;
 	i32 GetComboDurationMs(i32 skillID) const { auto f = comboDurationMs.find(skillID); return f == comboDurationMs.end() ? 0 : f->second; }
+	eastl::hash_map<i32, i32> hitTargetComboMs;
+	i32 GetHitTargetComboMs(i32 skillID) const { auto f = hitTargetComboMs.find(skillID); return f == hitTargetComboMs.end() ? 0 : f->second; }
+	bool UsesHitEventTarget(i32 skillID) const { return hitTargetComboMs.find(skillID) != hitTargetComboMs.end(); }
+	eastl::hash_map<i32, eastl::fixed_vector<i32,2,false>> comboCleanupStatuses;
+	const eastl::fixed_vector<i32,2,false>* FindComboCleanupStatuses(i32 skillID) const { auto f = comboCleanupStatuses.find(skillID); return f == comboCleanupStatuses.end() ? nullptr : &f->second; }
 	eastl::hash_map<i32, i32> comboBaseSkill;
 	i32 GetComboBaseSkill(i32 skillID) const { auto f = comboBaseSkill.find(skillID); return f == comboBaseSkill.end() ? 0 : f->second; }
 	f32 GetSkillConsumeMP(i32 skillID) const { auto f = skillConsumeMP.find(skillID); return f == skillConsumeMP.end() ? 0 : f->second; }
@@ -1015,6 +1033,7 @@ private:
 	eastl::hash_map<i32, eastl::array<i32,5>> botSkills;
 	eastl::hash_map<i32, f32> skillCoolTime;
 	eastl::hash_map<i32, i32> firstComboSkill;
+	eastl::hash_map<i32, i32> nextComboSkill;
 	eastl::hash_map<i32, RandomActionList> skillRandomActions;
 	eastl::hash_map<i32, SkillStance> skillStance;
 	eastl::hash_map<i32, SkillCast> skillCast;

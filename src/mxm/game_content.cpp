@@ -372,6 +372,9 @@ void GameXmlContent::LoadAllSkills()
 			i32 baseCombo = 0;
 			pNodeCommonSkill->QueryIntAttribute("_BaseComboSkill", &baseCombo);
 			if(baseCombo != 0 && type == SkillType::COMBO && firstComboSkill.find(baseCombo) == firstComboSkill.end()) firstComboSkill[baseCombo] = skillID;
+			i32 nextCombo = 0;
+			pNodeCommonSkill->QueryIntAttribute("_NextComboSkill", &nextCombo);
+			if(nextCombo != 0) nextComboSkill[skillID] = nextCombo;
 		}
 		{
 			SkillInput in;
@@ -419,6 +422,7 @@ void GameXmlContent::LoadAllSkills()
 			else if(castType && EA::StdC::Strcmp(castType, "SKILL_CAST_TIME_CHARGING") == 0) sc.type = SkillCast::CHARGING;
 			pCast->QueryFloatAttribute("_CastTime", &sc.time);
 			pCast->QueryBoolAttribute("_InterruptByMove", &sc.interruptByMove);
+			pCast->QueryBoolAttribute("_InterruptByLostTarget", &sc.interruptByLostTarget);
 			if(XMLElement* pCharge = pCast->FirstChildElement("_Charge")) {
 				pCharge->QueryFloatAttribute("_MaxChargingTime", &sc.maxChargingTime);
 				pCharge->QueryFloatAttribute("_MinSkillChargeRatio", &sc.minChargeRatio);
@@ -1567,6 +1571,9 @@ bool GameXmlContent::LoadAnimationData()
 				pActionBase->QueryStringAttribute("Param2", &Param2);
 				cmd.status.removeAtEnd = Param2 && (EA::StdC::Strstr(Param2, "RemoveWhenAniEnd") || EA::StdC::Strstr(Param2, "RemoveWhenActionEnd") || EA::StdC::Strstr(Param2, "CleanUpWhenActionEnd")) ? 1 : 0;
 				cmd.status.remove = Param2 && EA::StdC::Strcmp(Param2, "Remove") == 0 ? 1 : 0;
+				const char* Param1 = nullptr;
+				pActionBase->QueryStringAttribute("Param1", &Param1);
+				cmd.status.condition = ActionCommand::StatusConditionFromString(Param1);
 			} break;
 
 			case ActionCommand::Type::ROTATESPEED: {
@@ -2735,6 +2742,13 @@ bool GameXmlContent::LoadSkillCosts()
 				const char* selectState = pComboTarget ? pComboTarget->Attribute("_SelectStateType") : nullptr;
 				const bool afterCast = selectState && EA::StdC::Strcmp(selectState, "SKILL_TARGET_SELECT_STATE_AFTERCAST") == 0;
 				if(afterCast && pCombo->BoolAttribute("_AutoCasting")) comboAutoCastMs[skillID] = MAX(pCombo->IntAttribute("_ExecuteTimeMS"), 1);
+				const char* selectType = pComboTarget ? pComboTarget->Attribute("_SelectType") : nullptr;
+				if(selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_USE_HIT_EVENT_TARGET") == 0) hitTargetComboMs[skillID] = pCombo->BoolAttribute("_AutoCasting") ? MAX(pCombo->IntAttribute("_ExecuteTimeMS"), 1) : 0;
+				for(XMLElement* pC = pCombo->FirstChildElement("_CleanupStatus"); pC; pC = pC->NextSiblingElement("_CleanupStatus")) {
+					auto& list = comboCleanupStatuses[skillID];
+					const i32 st = pC->IntAttribute("DATA");
+					if(st != 0 && !list.full()) list.push_back(st);
+				}
 				comboDurationMs[skillID] = pCombo->IntAttribute("_DurationTimeMS");
 			}
 			if(XMLElement* pCost = pCommon->FirstChildElement("_COST_PROPERTY")) {
@@ -3630,6 +3644,16 @@ TargetPreset TargetPresetFromString(const char* str)
 
 	auto it = targetPresetMap.find(str);
 	return (it != targetPresetMap.end()) ? it->second : TargetPreset::INVALID;
+}
+
+StatusCondition StatusConditionFromString(const char* str)
+{
+	if(!str) return StatusCondition::NONE;
+	if(EA::StdC::Strcmp(str, "FRIENDLY_HPBIGGER") == 0) return StatusCondition::FRIENDLY_HPBIGGER;
+	if(EA::StdC::Strcmp(str, "FRIENDLY_HPLESS") == 0) return StatusCondition::FRIENDLY_HPLESS;
+	if(EA::StdC::Strcmp(str, "UNFRIENDLY_HPBIGGER") == 0) return StatusCondition::UNFRIENDLY_HPBIGGER;
+	if(EA::StdC::Strcmp(str, "UNFRIENDLY_HPLESS") == 0) return StatusCondition::UNFRIENDLY_HPLESS;
+	return StatusCondition::NONE;
 }
 
 const char* TargetPresetToString(TargetPreset p)

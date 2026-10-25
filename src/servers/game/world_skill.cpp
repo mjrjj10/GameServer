@@ -408,6 +408,19 @@ void World::ReleaseCast(Player& player)
 		it->until = localTime;
 		LOG("Status :: %ls status=%d removed at cast release", player.name.data(), it->statusID);
 	}
+	if(const auto* cleanupList = GetGameXmlContent().FindComboCleanupStatuses((i32)c.skillID)) {
+		const auto& cleanup = *cleanupList;
+		foreach_const(cs, cleanup) {
+			const StatusInfo* info = GetGameXmlContent().FindStatus(*cs);
+			const i32 pair = info ? info->casterStatus : 0;
+			foreach(it, activeStatuses) {
+				if(it->statusID != *cs && (pair == 0 || it->statusID != pair)) continue;
+				if((it->targetIndex != player.index && it->casterIndex != player.index) || it->until <= localTime) continue;
+				it->until = localTime;
+				LOG("Status :: %ls status=%d cleaned up at combo end", player.name.data(), it->statusID);
+			}
+		}
+	}
 	GroupTeleport(player, c.skillID, c.castPos);
 	if(f->second.action == ActionStateID::INVALID) return;
 	const GameXmlContent::SkillCast* sc = GetGameXmlContent().FindSkillCast((i32)c.skillID);
@@ -483,9 +496,29 @@ void World::UpdateCasts()
 			LOG("Combo :: %ls slot %d window ended", it->name.data(), it->comboSlot);
 			it->comboSlot = -1;
 		}
+		if(it->hitCombo != SkillID::INVALID && localTime >= it->hitComboAt) {
+			const SkillID combo = it->hitCombo;
+			const ActorUID comboTarget = it->hitComboTarget;
+			it->hitCombo = SkillID::INVALID;
+			const ActorMaster* tm = FindMasterActor(comboTarget);
+			if(!it->dead && tm && !tm->parent->dead) {
+				LOG("Combo :: %ls hit auto-cast %d on %ls", it->name.data(), (i32)combo, tm->parent->name.data());
+				PlayerCastSkill(*it, combo, tm->parent->body->GetWorldPos(), Slice<const ActorUID>(&comboTarget, 1), 0);
+			}
+		}
 		if(it->casting.skillID == SkillID::INVALID || !it->body) continue;
 		if(it->dead) { CancelCast(*it, "dead"); continue; }
 		const bool bot = it->clientHd == ClientHandle::INVALID;
+		if(bot && (it->casting.lifted || it->casting.interruptByLostTarget)) {
+			const ActorMaster* tm = FindMasterActor(it->casting.target);
+			const bool lost = !tm || tm->parent->dead || tm->parent->untargetable;
+			if(lost && it->casting.interruptByLostTarget) {
+				LOG("Cast :: %ls skill=%d target lost", it->name.data(), (i32)it->casting.skillID);
+				ReleaseCast(*it);
+				continue;
+			}
+			if(!lost && it->casting.lifted) TeleportPlayer(*it, tm->parent->body->GetWorldPos(), it->input.rot.upperYaw);
+		}
 		if(localTime < it->casting.executeAt) continue;
 		if(!bot && it->casting.type == GameXmlContent::SkillCast::LIMIT) CancelCast(*it, "window ended");
 		else ReleaseCast(*it);
@@ -650,7 +683,8 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pendingSummons.push_back(ps);
 			scheduled = true;
 		}
-		if((cmd->type == ActionCommand::Type::STATUS || cmd->type == ActionCommand::Type::STATUS_SKILL_TARGET) && cmd->status.statusIndex != 0 && !pendingStatuses.full()) {
+		if((cmd->type == ActionCommand::Type::STATUS || cmd->type == ActionCommand::Type::STATUS_SKILL_TARGET) && cmd->status.statusIndex != 0 && !pendingStatuses.full() &&
+		   (cmd->status.condition == ActionCommand::StatusCondition::NONE || StatusConditionMet(player, currentTarget, cmd->status.condition))) {
 			PendingStatus ps;
 			ps.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
 			ps.statusID = cmd->status.statusIndex;
@@ -1092,6 +1126,22 @@ i32 World::UpgradeSummon(const Player& player, i32 skillID) const
 		if((*ups)[i].summon != 0) return (*ups)[i].summon;
 	}
 	return 0;
+}
+
+bool World::StatusConditionMet(const Player& caster, ActorUID targetUID, ActionCommand::StatusCondition condition) const
+{
+	const ActorMaster* tm = FindMasterActor(targetUID);
+	const ActorMaster& cm = caster.Main();
+	if(!tm || tm->hpMax <= 0 || cm.hpMax <= 0) return false;
+	const bool friendly = tm->parent->team == caster.team;
+	const bool bigger = (f32)tm->hp * (f32)cm.hpMax >= (f32)cm.hp * (f32)tm->hpMax;
+	switch(condition) {
+		case ActionCommand::StatusCondition::FRIENDLY_HPBIGGER: return friendly && bigger;
+		case ActionCommand::StatusCondition::FRIENDLY_HPLESS: return friendly && !bigger;
+		case ActionCommand::StatusCondition::UNFRIENDLY_HPBIGGER: return !friendly && bigger;
+		case ActionCommand::StatusCondition::UNFRIENDLY_HPLESS: return !friendly && !bigger;
+		default: return true;
+	}
 }
 
 i32 World::ComboSkillFor(const Player& player, i32 skillID) const

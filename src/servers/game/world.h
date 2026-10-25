@@ -152,8 +152,13 @@ struct World
 			Time executeAt = Time::ZERO;
 			u8 type = 0;
 			bool interruptByMove = false;
+			bool interruptByLostTarget = false;
+			bool lifted = false;
 			Time startedAt = Time::ZERO;
 		} casting;
+		SkillID hitCombo = SkillID::INVALID;
+		ActorUID hitComboTarget = ActorUID::INVALID;
+		Time hitComboAt = Time::ZERO;
 		f32 castChargeRatio = 1.0f;
 		SkillID toggleSkill = SkillID::INVALID;
 		u32 toggleCastID = 0;
@@ -818,7 +823,7 @@ private:
 	bool CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets);
 	void TargetPositionMove(const Player& player, SkillID skillID, const GameXmlContent::Action& action, const vec3& castPos, f32* distance, vec2* gotoDir) const;
 	void StartCasting(Player& player, SkillID skillID, const GameXmlContent::SkillCast& cast, const vec3& castPos, Slice<const ActorUID> targets, const GameXmlContent::Action& action);
-	void UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType, const vec3& castPos);
+	void UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType, const vec3& castPos, bool onHit = false);
 	void QueueChildSkill(Player& player, ActionStateID actionState, const vec3& castPos, Slice<const ActorUID> targets);
 	void ExecuteSkillProgram(SkillProgram& prog);
 	void RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 cmdIndex, const vec2& dir);
@@ -846,6 +851,7 @@ public:
 	const GameXmlContent::SkillUpgrade* LatestUpgrade(const Player& player, i32 skillID, GameXmlContent::SkillUpgrade::Type type) const;
 	ActionStateID UpgradeAction(const Player& player, i32 skillID) const;
 	i32 ComboSkillFor(const Player& player, i32 skillID) const;
+	bool StatusConditionMet(const Player& caster, ActorUID targetUID, ActionCommand::StatusCondition condition) const;
 	i32 UpgradeSummon(const Player& player, i32 skillID) const;
 	f32 ComboPassOffset(const Player& player, SkillID skillID) const;
 	void RunStanceOut(Player& player, i8 oldStance);
@@ -955,6 +961,7 @@ private:
 	f32 LagDistToPoint(const Player& p, const vec2& point) const;
 	vec2 LagClosestPos(const Player& p, const vec2& point) const;
 	bool RemoteHit(RemoteInst& inst, Player& target);
+	void TriggerSkillHitEvent(const RemoteInst& inst, Player& owner, Player& target);
 	i32 PenetrationCost(const Player& p) const;
 	void BeginRemoteActivation(const RemoteInst& inst);
 	void AddRemoteActivation(const Player& target, f32 z);

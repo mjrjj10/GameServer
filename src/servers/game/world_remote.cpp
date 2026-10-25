@@ -329,6 +329,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	}
 	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty()) {
 		AddRemoteActivation(target, inst.pos.z);
+		if(enemy) TriggerSkillHitEvent(inst, owner, target);
 		return true;
 	}
 
@@ -444,27 +445,43 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 		SpawnRemoteRules(*this, copy, remote.onHitCharacter, at, (i32)target.index, RemoteIdx::INVALID, true);
 	}
 
-	if(enemy) {
-		const i32 hitEventRemote = GetGameXmlContent().FindSkillHitEventRemote((i32)inst.skillID);
-		if(hitEventRemote != 0 && hitEventRemote == (i32)remote.ID && owner.Main().UID == inst.casterMasterUID &&
-		   eastl::find(comboTriggeredCasts.begin(), comboTriggeredCasts.end(), inst.castID) == comboTriggeredCasts.end()) {
-			if(comboTriggeredCasts.full()) comboTriggeredCasts.erase(comboTriggeredCasts.begin());
-			comboTriggeredCasts.push_back(inst.castID);
-			owner.memorizedTarget = target.Main().UID;
-			const ActorUID targetUID = target.Main().UID;
-			const vec2 rel = vec2(target.body->GetWorldPos() - owner.body->GetWorldPos());
-			LOG("ComboHit :: %ls skill=%d remote=%d -> next part", owner.name.data(), (i32)inst.skillID, (i32)remote.ID);
-			castCostLevel = inst.costLevel;
-			schedulePassOffset = ComboPassOffset(owner, inst.skillID);
-			ScheduleSkillRemotes(owner, inst.skillID, target.body->GetWorldPos(), Slice<const ActorUID>(&targetUID, 1), atan2f(rel.y, rel.x), 1);
-			schedulePassOffset = 0;
-			castCostLevel = nullptr;
-		}
-	}
+	if(enemy) TriggerSkillHitEvent(inst, owner, target);
 	statusFromBehind = false;
 	statusForceCenterSet = false;
 	statusPushDirSet = false;
 	return true;
+}
+
+void World::TriggerSkillHitEvent(const RemoteInst& inst, Player& owner, Player& target)
+{
+	const auto& content = GetGameXmlContent();
+	const i32 hitEventRemote = content.FindSkillHitEventRemote((i32)inst.skillID);
+	if(hitEventRemote == 0 || hitEventRemote != (i32)inst.remote->ID || owner.Main().UID != inst.casterMasterUID) return;
+	if(eastl::find(comboTriggeredCasts.begin(), comboTriggeredCasts.end(), inst.castID) != comboTriggeredCasts.end()) return;
+	if(comboTriggeredCasts.full()) comboTriggeredCasts.erase(comboTriggeredCasts.begin());
+	comboTriggeredCasts.push_back(inst.castID);
+	owner.memorizedTarget = target.Main().UID;
+	const ActorUID targetUID = target.Main().UID;
+	const vec2 rel = vec2(target.body->GetWorldPos() - owner.body->GetWorldPos());
+	LOG("ComboHit :: %ls skill=%d remote=%d -> next part", owner.name.data(), (i32)inst.skillID, (i32)inst.remote->ID);
+	castCostLevel = inst.costLevel;
+	schedulePassOffset = ComboPassOffset(owner, inst.skillID);
+	ScheduleSkillRemotes(owner, inst.skillID, target.body->GetWorldPos(), Slice<const ActorUID>(&targetUID, 1), atan2f(rel.y, rel.x), 1);
+	schedulePassOffset = 0;
+	castCostLevel = nullptr;
+	if(Config().DevShowcase) return;
+	if(owner.clientHd != ClientHandle::INVALID) {
+		auto sk = content.skillMap.find(inst.skillID);
+		if(sk != content.skillMap.end()) UpdateComboSlot(owner, inst.skillID, sk->second.type, target.body->GetWorldPos(), true);
+	}
+	i32 combo = ComboSkillFor(owner, (i32)inst.skillID);
+	if(combo == 0) combo = content.GetNextComboSkill((i32)inst.skillID);
+	const i32 comboMs = combo != 0 ? content.GetHitTargetComboMs(combo) : 0;
+	if(comboMs > 0) {
+		owner.hitCombo = SkillID(combo);
+		owner.hitComboTarget = targetUID;
+		owner.hitComboAt = TimeAdd(localTime, TimeMsToTime((f64)comboMs));
+	}
 }
 
 void World::RemoteHitAlongPath(RemoteInst& inst)

@@ -120,6 +120,7 @@ void World::Update(Time localTime_)
 
 		// tag
 		if(p.input.tag && p.clientHd == ClientHandle::INVALID) {
+			if(p.casting.skillID != SkillID::INVALID) p.input.tag = 0;
 			foreach_const(pr, pendingRemotes) {
 				if(!pr->remove && pr->ownerIndex == p.index) { p.input.tag = 0; break; }
 			}
@@ -573,6 +574,8 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	if(frozen || combatLocked) return;
 	MarkInBattle(player);
 	if(!SkillTargetsAllowed(player, skillID, targets)) return;
+	const ActorUID hitEventTarget = player.memorizedTarget;
+	if(targets.size() == 0 && hitEventTarget != ActorUID::INVALID && GetGameXmlContent().UsesHitEventTarget((i32)skillID)) targets = Slice<const ActorUID>(&hitEventTarget, 1);
 	eastl::fixed_vector<ActorUID,10,false> allEnemyTargets;
 	if(const GameXmlContent::SkillInput* selIn = GetGameXmlContent().FindSkillInput((i32)skillID)) {
 		if(selIn->allEnemies) {
@@ -905,10 +908,13 @@ void World::StartCasting(Player& player, SkillID skillID, const GameXmlContent::
 	player.casting.startedAt = localTime;
 	player.casting.type = (u8)cast.type;
 	player.casting.interruptByMove = cast.interruptByMove;
+	player.casting.interruptByLostTarget = cast.interruptByLostTarget;
+	player.casting.lifted = false;
+	foreach_const(cmd, action.commands) if(cmd->type == ActionCommand::Type::MOVE && cmd->move.preset == ActionCommand::MovePreset::LIFTED) player.casting.lifted = true;
 	LOG("Cast :: %ls skill=%d start action=%d type=%d wait=%.2f", player.name.data(), (i32)skillID, (i32)cast.action, (i32)cast.type, wait);
 }
 
-void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType, const vec3& castPos)
+void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType, const vec3& castPos, bool onHit)
 {
 	const auto& content = GetGameXmlContent();
 	if(player.comboSlot >= 0 && skillType == SkillType::COMBO) {
@@ -916,7 +922,9 @@ void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType
 		LOG("Combo :: %ls slot %d back to %d", player.name.data(), player.comboSlot, (i32)player.comboBase);
 		player.comboSlot = -1;
 	}
-	const i32 combo = ComboSkillFor(player, (i32)skillID);
+	if(content.FindSkillHitEventRemote((i32)skillID) != 0 && !onHit) return;
+	i32 combo = ComboSkillFor(player, (i32)skillID);
+	if(combo == 0 && onHit) combo = content.GetNextComboSkill((i32)skillID);
 	if(combo != 0) {
 		const i32 base = (i32)player.mainCharaID * 2;
 		i32 slot = -1;
