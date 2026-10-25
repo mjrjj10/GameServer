@@ -664,6 +664,10 @@ void World::UpdateRemotes(f32 delta)
 		const f32 destroyDelay = inst.speed <= 0 && (remote.destroyCreateRemote != RemoteIdx::INVALID || !remote.onDestroy.empty()) ? REMOTE_DESTROY_CHILD_DELAY : 0.0f;
 		if(!destroyed && remote.lifeTime > 0 && elapsed >= remote.lifeTime + destroyDelay) destroyed = true;
 		if(!destroyed && remote.lifeTime <= 0 && inst.speed <= 0 && inst.areaDone && elapsed >= destroyDelay) destroyed = true;
+		if(destroyed && !inst.killNow && inst.speed > 0 && inst.timeEventActive && ((remote.lifeTime > 0 && elapsed + delta >= remote.lifeTime) || (inst.range > 0 && inst.travelled >= inst.range - 0.01f))) {
+			const f32 endSec = MIN(remote.lifeTime > 0 ? remote.lifeTime : FLT_MAX, inst.range > 0 ? inst.range / inst.speed : FLT_MAX);
+			if(TimeDiffSec(TimeDiff(inst.spawnTime, inst.nextTimeEvent)) <= endSec + 0.001f) RunRemoteTimeEvent(inst, elapsed);
+		}
 
 		FlushRemoteActivation();
 		if(destroyed && inst.speed > 0) ShowcaseOnRemoteEnd(inst);

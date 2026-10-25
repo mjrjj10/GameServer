@@ -585,7 +585,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	if(target.dead || target.untargetable) return;
 	if(caster.team != target.team) target.statusesTaken++;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
-	f32 duration = info && info->durationSec > 0 ? info->durationSec : 1.0f;
+	f32 duration = info && info->durationSec > 0 ? info->durationSec : (info && info->type == StatusType::MOTION ? 0.0f : 1.0f);
 	f32 graphDuration = duration * (info && info->timeRatio > 0 ? info->timeRatio : 1.0f);
 	DefeatGraphTimes(info, &duration, &graphDuration);
 	if(durationOverride > 0) duration = durationOverride;
