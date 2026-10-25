@@ -14,6 +14,22 @@
 #include "mission_rules.h"
 #include "town_rules.h"
 #include "character_base_data.h"
+#include <mxm/account_progress.h>
+
+template<typename Writer>
+static void WriteInventoryItem(Writer& packet, const AccountItem& item)
+{
+	packet.template Write<u32>(item.uid);
+	packet.template Write<u8>(item.invenType);
+	packet.template Write<i32>(item.slot);
+	packet.template Write<i32>(item.docIndex);
+	packet.template Write<i32>(item.count);
+	packet.template Write<i32>(-1);
+	packet.template Write<u8>(0);
+	packet.template Write<i64>(0);
+	packet.template Write<u16>(0);
+}
+
 #include "mission_progress.h"
 #include "mailbox.h"
 
@@ -305,6 +321,33 @@ void HubReplication::SendReturnToCity(ClientHandle clientHd)
 	SendJoinCity(clientHd);
 }
 
+void HubReplication::SendCCoin(ClientHandle clientHd, i64 amount, u32 reason)
+{
+	Sv::SN_CCoin packet;
+	packet.amount = amount;
+	packet.nReason = reason;
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendItemUpdate(ClientHandle clientHd, const AccountItem& item, u32 reason)
+{
+	PacketWriter<Sv::SN_ItemUpdate> packet;
+	packet.Write<u16>(1);
+	WriteInventoryItem(packet, item);
+	packet.Write<u32>(reason);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendItemAcquisition(ClientHandle clientHd, u32 reason, const AccountItem& item, i32 amount)
+{
+	PacketWriter<Sv::SN_ItemAcquisition> packet;
+	packet.Write<u32>(reason);
+	packet.Write<u32>(item.uid);
+	packet.Write<i32>(item.docIndex);
+	packet.Write<i32>(amount);
+	SendPacket(clientHd, packet);
+}
+
 void HubReplication::SendHonorResult(ClientHandle clientHd, u32 result)
 {
 	Sv::SA_Honor answer;
@@ -588,22 +631,11 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 
 	// SN_ProfileItems
 	{
-		PacketWriter<Sv::SN_ProfileItems> packet;
-
-		packet.Write<u8>(1); // packetNum
-		packet.Write<u16>(1); // items_count
-
-		// jukebox coins
-		packet.Write<i32>(1073741864); // itemID
-		packet.Write<u8>(0); // invenType
-		packet.Write<i32>(200); // slot
-		packet.Write<i32>(137120001); // itemIndex -> actual jukebox coin identifier
-		packet.Write<i32>(1337); // count
-		packet.Write<i32>(-1); // propertyGroupIndex
-		packet.Write<u8>(0); // isLifeTimeAbsolute
-		packet.Write<i64>(0); // lifeEndTimeUTC
-		packet.Write<u16>(0); // properties_count
-
+		const AccountInventory inventory = AccountInventoryLoad(account.nickname.data());
+		PacketWriter<Sv::SN_ProfileItems,8192> packet;
+		packet.Write<u8>(1);
+		packet.Write<u16>((u16)inventory.items.size());
+		foreach_const(it, inventory.items) WriteInventoryItem(packet, *it);
 		SendPacket(clientHd, packet);
 	}
 
@@ -804,6 +836,7 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 	money.nMoney = account.gold;
 	money.nReason = 1;
 	SendPacket(clientHd, money);
+	SendCCoin(clientHd, account.ccoin, MEASURED_CCOIN_REASON_LOGIN);
 
 }
 

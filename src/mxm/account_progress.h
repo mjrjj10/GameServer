@@ -13,7 +13,26 @@ struct AccountProgress
 	u32 draws = 0;
 	u32 losses = 0;
 	u32 honors = 0;
+	i64 ccoin = 0;
 };
+
+struct AccountItem
+{
+	u32 uid = 0;
+	u8 invenType = 0;
+	i32 slot = 0;
+	i32 docIndex = 0;
+	i32 count = 0;
+};
+
+struct AccountInventory
+{
+	u32 nextUid = 0x40000001;
+	eastl::fixed_vector<AccountItem,256,true> items;
+};
+
+AccountInventory AccountInventoryLoad(const wchar* nickname);
+void AccountInventorySave(const wchar* nickname, const AccountInventory& inventory);
 
 struct AccountGameRecord
 {

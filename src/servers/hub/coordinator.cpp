@@ -730,6 +730,7 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 	account.wins = progress.wins;
 	account.draws = progress.draws;
 	account.losses = progress.losses;
+	account.ccoin = progress.ccoin;
 
 	accChdMap.emplace(accountUID, clientHd);
 	clientAccountUID[clientID] = accountUID;

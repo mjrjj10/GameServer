@@ -15,6 +15,7 @@ struct Account
 	u32 wins = 0;
 	u32 draws = 0;
 	u32 losses = 0;
+	i64 ccoin = 0;
 
 	// TODO: add to this
 

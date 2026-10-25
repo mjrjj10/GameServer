@@ -101,6 +101,7 @@ struct HubGame
 	void BroadcastPlayerStateInTown(i32 userID, i8 state, const u8* modes, i32 modeCount);
 	void OnPraise(ClientHandle clientHd, const wchar* nickname, i32 nicknameLen);
 	void OnHonor(ClientHandle clientHd, const WideString& nickname);
+	bool GrantItem(i32 userID, i32 docIndex, i32 amount, u32 updateReason, u32 acquisitionReason);
 	void OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID characterID, SkinIndex skinIndex);
 	void OnPlayerSyncActionState(ClientHandle clientHd, ActorUID actorUID, ActionStateID state, i32 param1, i32 param2, f32 rotate, f32 upperRotate);
 	void OnPlayerJukeboxQueueSong(ClientHandle clientHd, SongID songID);

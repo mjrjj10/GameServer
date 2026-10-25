@@ -375,6 +375,45 @@ void HubGame::OnReturnToCity(ClientHandle clientHd)
 	replication.SendReturnToCity(clientHd);
 }
 
+bool HubGame::GrantItem(i32 userID, i32 docIndex, i32 amount, u32 updateReason, u32 acquisitionReason)
+{
+	ASSERT(playerAccountData[userID]);
+	const GameXmlContent::ItemInfo* info = GetGameXmlContent().FindItemInfo(docIndex);
+	if(!info || amount <= 0) return false;
+	const wchar* nickname = playerAccountData[userID]->nickname.data();
+	const ClientHandle clientHd = playerMap[userID]->clientHd;
+	AccountInventory inventory = AccountInventoryLoad(nickname);
+	i32 left = amount;
+	foreach(it, inventory.items) {
+		if(left <= 0) break;
+		if(it->docIndex != docIndex || it->count >= info->maxStack) continue;
+		const i32 add = MIN(left, info->maxStack - it->count);
+		it->count += add;
+		left -= add;
+		replication.SendItemUpdate(clientHd, *it, updateReason);
+		replication.SendItemAcquisition(clientHd, acquisitionReason, *it, add);
+	}
+	while(left > 0) {
+		if(inventory.items.full()) break;
+		AccountItem item;
+		item.uid = inventory.nextUid++;
+		item.slot = MEASURED_INVENTORY_FIRST_SLOT;
+		for(bool taken = true; taken; ) {
+			taken = false;
+			foreach_const(it, inventory.items) if(it->invenType == item.invenType && it->slot == item.slot) { taken = true; item.slot++; break; }
+		}
+		item.docIndex = docIndex;
+		item.count = MIN(left, info->maxStack);
+		left -= item.count;
+		inventory.items.push_back(item);
+		replication.SendItemUpdate(clientHd, item, updateReason);
+		replication.SendItemAcquisition(clientHd, acquisitionReason, item, item.count);
+	}
+	AccountInventorySave(nickname, inventory);
+	LOG("[client%x] HubGame :: %ls receives %d x item %d", clientHd, nickname, amount - left, docIndex);
+	return left == 0;
+}
+
 void HubGame::OnHonor(ClientHandle clientHd, const WideString& nickname)
 {
 	const i32 userID = plidMap->Get(clientHd);
@@ -1275,11 +1314,17 @@ void HubGame::OnMissionReward(ClientHandle clientHd, i32 missionID)
 	bool levelUp = false;
 	if(data.rewardType == GameXmlContent::Mission::RewardType::GOLD) progress.gold += data.rewardAmount;
 	else if(data.rewardType == GameXmlContent::Mission::RewardType::EXP) levelUp = ProgressGainExp(&progress, (u32)data.rewardAmount);
-	else WARN("[client%x] HubGame :: mission %d reward type %d not granted", clientHd, missionID, (i32)data.rewardType);
+	else if(data.rewardType == GameXmlContent::Mission::RewardType::CCOIN) progress.ccoin += data.rewardAmount;
+	else if(data.rewardType != GameXmlContent::Mission::RewardType::ITEM) WARN("[client%x] HubGame :: mission %d reward type %d not granted", clientHd, missionID, (i32)data.rewardType);
 	AccountProgressSave(account.nickname.data(), progress);
 	account.level = progress.level;
 	account.levelExp = progress.levelExp;
 	account.gold = progress.gold;
+	account.ccoin = progress.ccoin;
+	if(data.rewardType == GameXmlContent::Mission::RewardType::ITEM && !GrantItem(userID, data.rewardItem, (i32)data.rewardAmount, MEASURED_ITEM_UPDATE_REASON_MISSION, MEASURED_ITEM_ACQUISITION_REASON_MISSION)) {
+		WARN("[client%x] HubGame :: mission %d item %d could not be granted", clientHd, missionID, data.rewardItem);
+	}
+	if(data.rewardType == GameXmlContent::Mission::RewardType::CCOIN) replication.SendCCoin(clientHd, account.ccoin, MEASURED_MISSION_REWARD_MONEY_REASON);
 
 	mission->rewarded = true;
 	MissionStore(list, &saved);

@@ -981,6 +981,7 @@ bool GameXmlContent::LoadMissions()
 		eastl::fixed_string<char,32,false> key;
 		Mission::RewardType type;
 		i64 amount;
+		i32 item;
 	};
 	eastl::fixed_vector<RewardInfo,128,false> rewards;
 	XMLDocument docReward;
@@ -991,6 +992,7 @@ bool GameXmlContent::LoadMissions()
 	ASSERT(pMissionRewards);
 	for(XMLElement* pReward = pMissionRewards->FirstChildElement("_RewardInfo"); pReward; pReward = pReward->NextSiblingElement("_RewardInfo")) {
 		RewardInfo info;
+		info.item = pReward->IntAttribute("_ItemIndex", 0);
 		const char* key = pReward->Attribute("DATAKEY");
 		const char* type = pReward->Attribute("_Type");
 		if(!key || !type) continue;
@@ -1045,6 +1047,7 @@ bool GameXmlContent::LoadMissions()
 				if(reward && r->key.compare(reward) == 0) {
 					mission.rewardType = r->type;
 					mission.rewardAmount = r->amount;
+					mission.rewardItem = r->item;
 				}
 			}
 			for(XMLElement* pReq = pData->FirstChildElement("_RequiredList"); pReq; pReq = pReq->NextSiblingElement("_RequiredList")) {
@@ -1062,6 +1065,12 @@ bool GameXmlContent::LoadMissions()
 	}
 	LOG("Loaded %d missions", (i32)missions.size());
 	return true;
+}
+
+const GameXmlContent::ItemInfo* GameXmlContent::FindItemInfo(i32 ID) const
+{
+	auto found = itemInfoMap.find(ID);
+	return found == itemInfoMap.end() ? nullptr : &found->second;
 }
 
 const GameXmlContent::Mission* GameXmlContent::FindMission(i32 ID) const
@@ -3149,6 +3158,17 @@ bool GameXmlContent::LoadGroundItems()
 	XMLDocument items;
 	if(!LoadXMLFile(L"/client/ITEM_BASIC.xml", items)) return false;
 	for(XMLElement* pInfo = items.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+		if(XMLElement* common = pInfo->FirstChildElement("ItemComData")) {
+			ItemInfo item;
+			pInfo->QueryAttribute("ID", &item.ID);
+			item.maxStack = MAX(1, common->IntAttribute("_MaxStack", 1));
+			const char* buyType = common->Attribute("_BuyType");
+			if(buyType && EA::StdC::Strcmp(buyType, "BUY_TYPE_GOLD") == 0) item.buyType = 1;
+			else if(buyType && EA::StdC::Strcmp(buyType, "BUY_TYPE_CCOIN") == 0) item.buyType = 2;
+			item.buyValue = common->IntAttribute("_BuyValue", 0);
+			item.sellValue = common->IntAttribute("_SellValue", 0);
+			itemInfoMap[item.ID] = item;
+		}
 		XMLElement* etc = pInfo->FirstChildElement("EtcItemComData");
 		const char* etcType = etc ? etc->Attribute("_Type") : nullptr;
 		if(!etcType || EA::StdC::Strcmp(etcType, "ETC_TYPE_FOOD") != 0) continue;

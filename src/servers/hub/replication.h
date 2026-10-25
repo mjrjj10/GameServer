@@ -232,6 +232,9 @@ struct HubReplication
 	void SendReturnToCity(ClientHandle clientHd);
 	void SendPraiseResult(ClientHandle clientHd, u32 errorType);
 	void SendHonorResult(ClientHandle clientHd, u32 result);
+	void SendCCoin(ClientHandle clientHd, i64 amount, u32 reason);
+	void SendItemUpdate(ClientHandle clientHd, const struct AccountItem& item, u32 reason);
+	void SendItemAcquisition(ClientHandle clientHd, u32 reason, const struct AccountItem& item, i32 amount);
 	void SendPraise(ClientHandle clientHd, const wchar* nickname, u32 count);
 	void SetPlayerAsInGame(ClientHandle clientHd);
 	void SendCharacterInfo(ClientHandle clientHd, ActorUID actorUID, CreatureIndex docID, ClassType classType, i32 health, i32 healthMax);

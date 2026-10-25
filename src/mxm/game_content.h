@@ -815,6 +815,7 @@ struct GameXmlContent
 		eastl::fixed_vector<ClassType,4,false> requiredClasses;
 		RewardType rewardType = RewardType::NONE;
 		i64 rewardAmount = 0;
+		i32 rewardItem = 0;
 	};
 
 	struct ExpLevel
@@ -822,6 +823,17 @@ struct GameXmlContent
 		u32 required = 0;
 		u32 gold = 0;
 	};
+
+	struct ItemInfo
+	{
+		i32 ID = 0;
+		i32 maxStack = 1;
+		u8 buyType = 0;
+		i32 buyValue = 0;
+		i32 sellValue = 0;
+	};
+	eastl::hash_map<i32,ItemInfo> itemInfoMap;
+	const ItemInfo* FindItemInfo(i32 ID) const;
 
 	eastl::fixed_vector<Mission,256,false> missions;
 	const Mission* FindMission(i32 ID) const;

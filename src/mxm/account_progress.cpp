@@ -33,6 +33,7 @@ AccountProgress AccountProgressLoad(const wchar* nickname)
 		else if(sscanf(line, "Draws=%u", &v32) == 1) progress.draws = v32;
 		else if(sscanf(line, "Losses=%u", &v32) == 1) progress.losses = v32;
 		else if(sscanf(line, "Honors=%u", &v32) == 1) progress.honors = v32;
+		else if(sscanf(line, "CCoin=%lld", &v64) == 1) progress.ccoin = (i64)v64;
 	}
 	fclose(f);
 	return progress;
@@ -48,7 +49,7 @@ void AccountProgressSave(const wchar* nickname, const AccountProgress& progress)
 	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
 	FILE* f = fopen(tmp, "wb");
 	ASSERT(f);
-	fprintf(f, "Level=%u\nExp=%u\nGold=%lld\nWins=%u\nDraws=%u\nLosses=%u\nHonors=%u\n", (u32)progress.level, progress.levelExp, (long long)progress.gold, progress.wins, progress.draws, progress.losses, progress.honors);
+	fprintf(f, "Level=%u\nExp=%u\nGold=%lld\nWins=%u\nDraws=%u\nLosses=%u\nHonors=%u\nCCoin=%lld\n", (u32)progress.level, progress.levelExp, (long long)progress.gold, progress.wins, progress.draws, progress.losses, progress.honors, (long long)progress.ccoin);
 	fclose(f);
 	remove(path);
 	rename(tmp, path);
@@ -235,6 +236,58 @@ void AccountFriendsSave(const wchar* nickname, const AccountFriends& friends)
 		WriteHexName(f, friends.statusMessage);
 		fputc('\n', f);
 	}
+	fclose(f);
+	remove(path);
+	rename(tmp, path);
+}
+
+AccountInventory AccountInventoryLoad(const wchar* nickname)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	AccountInventory inventory;
+	char path[512];
+	AccountPath(nickname, "items", path, sizeof(path));
+	FILE* f = fopen(path, "rb");
+	if(!f) {
+		AccountItem jukeboxCoins;
+		jukeboxCoins.uid = inventory.nextUid++;
+		jukeboxCoins.slot = 200;
+		jukeboxCoins.docIndex = 137120001;
+		jukeboxCoins.count = 99;
+		inventory.items.push_back(jukeboxCoins);
+		return inventory;
+	}
+	char line[256];
+	while(fgets(line, sizeof(line), f)) {
+		u32 uid = 0, inven = 0;
+		i32 slot = 0, doc = 0, count = 0;
+		if(sscanf(line, "N %u", &uid) == 1) inventory.nextUid = uid;
+		else if(sscanf(line, "I %u %u %d %d %d", &uid, &inven, &slot, &doc, &count) == 5 && !inventory.items.full()) {
+			AccountItem item;
+			item.uid = uid;
+			item.invenType = (u8)inven;
+			item.slot = slot;
+			item.docIndex = doc;
+			item.count = count;
+			inventory.items.push_back(item);
+		}
+	}
+	fclose(f);
+	return inventory;
+}
+
+void AccountInventorySave(const wchar* nickname, const AccountInventory& inventory)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	_mkdir(ACCOUNT_DIR);
+	char path[512];
+	char tmp[520];
+	AccountPath(nickname, "items", path, sizeof(path));
+	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+	FILE* f = fopen(tmp, "wb");
+	ASSERT(f);
+	fprintf(f, "N %u\n", inventory.nextUid);
+	foreach_const(it, inventory.items) fprintf(f, "I %u %u %d %d %d\n", it->uid, (u32)it->invenType, it->slot, it->docIndex, it->count);
 	fclose(f);
 	remove(path);
 	rename(tmp, path);
