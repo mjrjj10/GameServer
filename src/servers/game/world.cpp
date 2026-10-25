@@ -900,6 +900,9 @@ void World::StartCasting(Player& player, SkillID skillID, const GameXmlContent::
 		const ChargeHoldRule* hold = FindChargeHoldRule(skillID);
 		wait = hold ? MIN(hold->holdSec, cast.maxChargingTime) : cast.maxChargingTime;
 	}
+	if(bot && cast.type == GameXmlContent::SkillCast::LIMIT) {
+		if(const ChargeHoldRule* hold = FindChargeHoldRule(skillID)) wait = cast.time > 0 ? MIN(hold->holdSec, cast.time) : hold->holdSec;
+	}
 	player.casting.skillID = skillID;
 	player.casting.castPos = castPos;
 	player.casting.target = targets.size() > 0 ? targets[0] : ActorUID::INVALID;

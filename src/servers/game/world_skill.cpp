@@ -429,7 +429,19 @@ void World::ReleaseCast(Player& player)
 		player.castChargeRatio = sc->minChargeRatio + (sc->maxChargeRatio - sc->minChargeRatio) * held;
 		LOG("Cast :: %ls skill=%d charge ratio %.2f", player.name.data(), (i32)c.skillID, player.castChargeRatio);
 	}
-	PlayerCastSkill(player, c.skillID, c.castPos, Slice<const ActorUID>(&c.target, c.target != ActorUID::INVALID ? 1 : 0), 0, f->second.action);
+	vec3 releasePos = c.castPos;
+	if(player.clientHd == ClientHandle::INVALID && c.type != GameXmlContent::SkillCast::DELAY && !c.lifted && glm::length(vec2(c.castPos)) > 1.0f) {
+		const ActorUID aim = c.target != ActorUID::INVALID ? c.target : player.botAimTarget;
+		const ActorMaster* tm = aim != ActorUID::INVALID ? FindMasterActor(aim) : nullptr;
+		if(tm && !tm->parent->dead && !tm->parent->untargetable) {
+			releasePos = tm->parent->body->GetWorldPos();
+			const f32 yaw = atan2f(releasePos.y - player.body->GetWorldPos().y, releasePos.x - player.body->GetWorldPos().x);
+			player.input.rot.upperYaw = yaw;
+			player.input.rot.bodyYaw = yaw;
+			player.weaponAimYaw = yaw;
+		}
+	}
+	PlayerCastSkill(player, c.skillID, releasePos, Slice<const ActorUID>(&c.target, c.target != ActorUID::INVALID ? 1 : 0), 0, f->second.action);
 	player.castChargeRatio = 1.0f;
 }
 

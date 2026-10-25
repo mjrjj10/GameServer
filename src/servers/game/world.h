@@ -169,6 +169,7 @@ struct World
 		ActorUID pendingChildTarget = ActorUID::INVALID;
 		eastl::array<Time,5> botSkillReady = { Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO };
 		Time tNextBotSkill = Time::ZERO;
+		ActorUID botAimTarget = ActorUID::INVALID;
 		f32 ultGauge = -1.0f;
 		f32 stamina = -1.0f;
 		f32 benchStamina = -1.0f;

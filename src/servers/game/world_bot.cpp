@@ -54,6 +54,7 @@ void World::UpdateBotSkills()
 		bot.input.rot.bodyYaw = yaw;
 		bot.weaponAimYaw = yaw;
 		const ActorUID targetUID = target->Main().UID;
+		bot.botAimTarget = targetUID;
 		LOG("BotSkill :: %ls casts %d at %ls (dist %.0f, cd %.0f)", bot.name.data(), skill, target->name.data(), best, cd);
 		PlayerCastSkill(bot, SkillID(skill), tpos, Slice<const ActorUID>(&targetUID, in && in->takesTarget ? 1 : 0), 0);
 	}

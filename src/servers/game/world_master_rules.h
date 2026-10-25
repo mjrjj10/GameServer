@@ -310,6 +310,11 @@ struct ChargeHoldRule
 static const ChargeHoldRule MEASURED_CHARGE_HOLDS[] = {
 	{ SkillID(180140030), 0.67f },
 	{ SkillID(180320050), 0.15f },
+	{ SkillID(180060050), 1.44f },
+	{ SkillID(180070030), 0.16f },
+	{ SkillID(180150040), 1.75f },
+	{ SkillID(180280050), 0.16f },
+	{ SkillID(180370040), 0.71f },
 };
 
 static inline const ChargeHoldRule* FindChargeHoldRule(SkillID skill)
