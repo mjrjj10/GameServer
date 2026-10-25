@@ -10,12 +10,13 @@ static const f32 MONSTER_WAYPOINT_REACHED = 60.0f;
 static const u8 MONSTER_ATTACK_STAT = 6;
 static const u32 NPC_DEAD_NO_KILLER_DOC = 0;
 
-static f32 MonsterAttackPower(CreatureIndex docID)
+static f32 MonsterAttackPower(const World::ActorNpc& npc)
 {
-	const auto* stats = GetGameXmlContent().FindMonsterStats((i32)docID);
+	const GameXmlContent& content = GetGameXmlContent();
+	const auto* stats = content.FindMonsterStats((i32)npc.docID);
 	if(!stats) return 0;
 	const auto& list = *stats;
-	foreach_const(st, list) if(st->type == MONSTER_ATTACK_STAT) return st->value;
+	foreach_const(st, list) if(st->type == MONSTER_ATTACK_STAT) return st->value + content.MonsterGrowth((i32)npc.docID, MONSTER_ATTACK_STAT) * npc.growthLevel;
 	return 0;
 }
 
@@ -73,7 +74,7 @@ void World::MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const Gam
 	auto attackerIt = actorNpcMap.find(attackerUID);
 	if(attackerIt == actorNpcMap.end()) return;
 	ActorNpc& attacker = *attackerIt->second;
-	const i32 damage = (i32)(MonsterAttackPower(attacker.docID) * attack.multiplier + 0.5f);
+	const i32 damage = (i32)(MonsterAttackPower(attacker) * attack.multiplier + 0.5f);
 	if(damage <= 0) return;
 	auto targetIt = actorNpcMap.find(targetUID);
 	if(targetIt != actorNpcMap.end()) {

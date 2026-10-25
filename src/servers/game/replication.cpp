@@ -3009,7 +3009,7 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 			const auto& statList = *monsterStats;
 			foreach_const(st, statList) {
 				packet.Write<u8>(st->type);
-				packet.Write<f32>(st->value);
+				packet.Write<f32>(st->value + GetGameXmlContent().MonsterGrowth((i32)actor.docID, st->type) * actor.growthLevel);
 			}
 			packet.Write<u16>(1);
 			packet.Write<u8>((u8)StatType::STAT_TYPE_HEALTH);

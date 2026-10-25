@@ -411,6 +411,7 @@ void World::Replicate()
 		rfl.ownerUID = actor.ownerUID;
 		rfl.ownerSkillPower = actor.ownerClass >= 0 ? MasterStat((ClassType)actor.ownerClass, STAT_SKILLPOWER) : 0.0f;
 		rfl.hp = actor.hp;
+		rfl.growthLevel = actor.growthLevel;
 
 
 		replication->FramePushNpcActor(rfl);

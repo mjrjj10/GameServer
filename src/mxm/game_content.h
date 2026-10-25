@@ -977,6 +977,16 @@ struct GameXmlContent
 	bool LoadMonsterAi();
 	const eastl::fixed_vector<StatValue,24,false>* FindMonsterStats(i32 creatureID) const { auto f = monsterStats.find(creatureID); return f == monsterStats.end() ? nullptr : &f->second; }
 	eastl::hash_map<i32, eastl::fixed_vector<StatValue,24,false>> monsterStats;
+	eastl::hash_map<i32, eastl::fixed_vector<StatValue,4,false>> monsterGrowth;
+	f32 monsterGrowthPeriod = 0;
+	i32 monsterGrowthCap = 0;
+	f32 MonsterGrowth(i32 creatureID, u8 type) const
+	{
+		auto f = monsterGrowth.find(creatureID);
+		if(f == monsterGrowth.end()) return 0;
+		for(const StatValue& st : f->second) if(st.type == type) return st.value;
+		return 0;
+	}
 	const Song* FindJukeboxSongByID(SongID songID) const;
 	bool LoadCharacterBaseStats();
 

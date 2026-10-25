@@ -129,6 +129,7 @@ struct Replication
 		ActorUID ownerUID = ActorUID::INVALID;
 		f32 ownerSkillPower = 0;
 		i32 hp = 0;
+		i32 growthLevel = 0;
 
 
 		vec3 pos;

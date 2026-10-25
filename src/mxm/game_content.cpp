@@ -1079,10 +1079,15 @@ bool GameXmlContent::LoadMonsterStats()
 {
 	XMLDocument doc;
 	if(!LoadXMLFile(L"/MonsterStats.xml", doc)) return false;
+	monsterGrowthPeriod = doc.FirstChildElement()->FloatAttribute("growthPeriod");
+	monsterGrowthCap = doc.FirstChildElement()->IntAttribute("growthCap");
 	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
-		auto& stats = monsterStats[pInfo->IntAttribute("ID")];
+		const i32 id = pInfo->IntAttribute("ID");
+		auto& stats = monsterStats[id];
 		for(XMLElement* st = pInfo->FirstChildElement("STAT"); st && !stats.full(); st = st->NextSiblingElement("STAT")) {
 			stats.push_back({ (u8)st->IntAttribute("type"), st->FloatAttribute("value") });
+			const f32 growth = st->FloatAttribute("growth");
+			if(growth != 0 && !monsterGrowth[id].full()) monsterGrowth[id].push_back({ (u8)st->IntAttribute("type"), growth });
 		}
 	}
 	LOG("Loaded stats of %d monsters", (i32)monsterStats.size());

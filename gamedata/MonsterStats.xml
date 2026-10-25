@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<MONSTER_STATS>
+<MONSTER_STATS growthPeriod="120" growthCap="10">
   <INFO ID="105000130">
     <STAT type="0" value="399938" />
     <STAT type="6" value="96" />
@@ -239,7 +239,7 @@
   </INFO>
   <INFO ID="105001010">
     <STAT type="0" value="1300" />
-    <STAT type="6" value="96" />
+    <STAT type="6" value="96" growth="10" />
     <STAT type="7" value="113.333" />
     <STAT type="8" value="100" />
     <STAT type="10" value="150" />
@@ -251,7 +251,7 @@
   </INFO>
   <INFO ID="105001011">
     <STAT type="0" value="1000" />
-    <STAT type="6" value="96" />
+    <STAT type="6" value="96" growth="10" />
     <STAT type="7" value="113.333" />
     <STAT type="8" value="100" />
     <STAT type="10" value="150" />
@@ -263,7 +263,7 @@
   </INFO>
   <INFO ID="105001012">
     <STAT type="0" value="1600" />
-    <STAT type="6" value="96" />
+    <STAT type="6" value="96.1" growth="10" />
     <STAT type="7" value="113.333" />
     <STAT type="8" value="100" />
     <STAT type="10" value="150" />
@@ -274,8 +274,8 @@
     <STAT type="64" value="150" />
   </INFO>
   <INFO ID="105001040">
-    <STAT type="0" value="26500" />
-    <STAT type="6" value="612" />
+    <STAT type="0" value="22500" growth="2000" />
+    <STAT type="6" value="576" growth="18" />
     <STAT type="7" value="113.333" />
     <STAT type="8" value="100" />
     <STAT type="10" value="150" />
@@ -286,8 +286,8 @@
     <STAT type="64" value="150" />
   </INFO>
   <INFO ID="105001100">
-    <STAT type="0" value="39750" />
-    <STAT type="6" value="611" />
+    <STAT type="0" value="37000" growth="2750" />
+    <STAT type="6" value="576" growth="35" />
     <STAT type="7" value="113.333" />
     <STAT type="8" value="100" />
     <STAT type="10" value="150" />
@@ -299,8 +299,8 @@
     <STAT type="64" value="150" />
   </INFO>
   <INFO ID="105001101">
-    <STAT type="0" value="39750" />
-    <STAT type="6" value="611" />
+    <STAT type="0" value="37000" growth="2750" />
+    <STAT type="6" value="576" growth="35" />
     <STAT type="7" value="113.333" />
     <STAT type="8" value="100" />
     <STAT type="10" value="150" />
@@ -312,8 +312,8 @@
     <STAT type="64" value="150" />
   </INFO>
   <INFO ID="105001102">
-    <STAT type="0" value="39750" />
-    <STAT type="6" value="611" />
+    <STAT type="0" value="37000" growth="2750" />
+    <STAT type="6" value="576" growth="35" />
     <STAT type="7" value="113.333" />
     <STAT type="8" value="100" />
     <STAT type="10" value="150" />
@@ -373,8 +373,8 @@
     <STAT type="64" value="150" />
   </INFO>
   <INFO ID="105001200">
-    <STAT type="0" value="45000" />
-    <STAT type="6" value="672" />
+    <STAT type="0" value="45000" growth="3500" />
+    <STAT type="6" value="672" growth="20" />
     <STAT type="7" value="113.333" />
     <STAT type="8" value="100" />
     <STAT type="10" value="150" />
@@ -436,8 +436,8 @@
     <STAT type="64" value="150" />
   </INFO>
   <INFO ID="105001410">
-    <STAT type="0" value="19700" />
-    <STAT type="6" value="363.6" />
+    <STAT type="0" value="18500" growth="1200" />
+    <STAT type="6" value="345.6" growth="18" />
     <STAT type="7" value="113.333" />
     <STAT type="8" value="100" />
     <STAT type="10" value="150" />

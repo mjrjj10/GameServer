@@ -295,12 +295,17 @@ void World::InitMonsterStats(ActorNpc& npc)
 	npc.monsterAi = GetGameXmlContent().FindMonsterAi((i32)npc.docID);
 	auto path = map->paths.find(npc.localID);
 	npc.path = path != map->paths.end() && !path->second.empty() ? &path->second : nullptr;
-	const auto* stats = GetGameXmlContent().FindMonsterStats((i32)npc.docID);
+	const GameXmlContent& content = GetGameXmlContent();
+	const auto* stats = content.FindMonsterStats((i32)npc.docID);
 	if(!stats) return;
+	if(gameStartedAt != Time::ZERO && content.monsterGrowthPeriod > 0) {
+		npc.growthLevel = MIN((i32)(TimeDiffSec(TimeDiff(gameStartedAt, localTime)) / content.monsterGrowthPeriod), content.monsterGrowthCap);
+	}
 	const auto& statList = *stats;
 	foreach_const(st, statList) {
-		if(st->type == (u8)StatType::STAT_TYPE_HEALTH) npc.hp = npc.hpMax = (i32)st->value;
-		if(st->type == MONSTER_DEFENCE_STAT) npc.defence = st->value;
+		const f32 value = st->value + content.MonsterGrowth((i32)npc.docID, st->type) * npc.growthLevel;
+		if(st->type == (u8)StatType::STAT_TYPE_HEALTH) npc.hp = npc.hpMax = (i32)value;
+		if(st->type == MONSTER_DEFENCE_STAT) npc.defence = value;
 	}
 }
 
