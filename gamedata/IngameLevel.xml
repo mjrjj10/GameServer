@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<INGAME_LEVEL maxLevel="18" passiveExp="2" passivePeriod="5" shareRadius="1500" propertyPointsEvery="3" propertyPointsStep="3" respawnBaseMs="3880" respawnPerLevelMs="2192" respawnPerSecMs="12.77" killPoints="5">
+  <LEVEL level="1" exp="100" />
+  <LEVEL level="2" exp="120" />
+  <LEVEL level="3" exp="140" />
+  <LEVEL level="4" exp="160" />
+  <LEVEL level="5" exp="200" />
+  <LEVEL level="6" exp="220" />
+  <LEVEL level="7" exp="240" />
+  <LEVEL level="8" exp="260" />
+  <LEVEL level="9" exp="280" />
+  <LEVEL level="10" exp="300" />
+  <LEVEL level="11" exp="340" />
+  <LEVEL level="12" exp="360" />
+  <LEVEL level="13" exp="380" />
+  <LEVEL level="14" exp="400" />
+  <LEVEL level="15" exp="420" />
+  <LEVEL level="16" exp="460" />
+  <LEVEL level="17" exp="480" />
+  <MONSTER ID="105000306" exp="50" points="20" />
+  <MONSTER ID="105000307"  points="20" />
+  <MONSTER ID="105000308" exp="50" points="10" />
+  <MONSTER ID="105000311" exp="50" points="10" />
+  <MONSTER ID="105000312" exp="50" points="20" />
+  <MONSTER ID="105000430" exp="60" points="2" />
+  <MONSTER ID="105000431" exp="60" points="2" />
+  <MONSTER ID="105001010" exp="20" growth="1" growthPeriod="120" points="1" />
+  <MONSTER ID="105001011" exp="20" growth="1" growthPeriod="120" points="1" />
+  <MONSTER ID="105001012" exp="50" growth="3" growthPeriod="120" points="1" />
+  <MONSTER ID="105001040" exp="250" points="30" />
+  <MONSTER ID="105001200"  points="100" />
+  <MONSTER ID="105001400" exp="150" points="2" />
+  <MONSTER ID="105001401" exp="125" points="1" />
+  <MONSTER ID="105001402"  points="5" />
+  <MONSTER ID="105001403" exp="150" points="2" />
+  <MONSTER ID="105001410" exp="120" points="12" />
+  <SHARE helpers="0" killer="1" helper="0" />
+  <SHARE helpers="1" killer="0.7" helper="0.3" />
+  <SHARE helpers="2" killer="0.6" helper="0.2" />
+  <SHARE helpers="3" killer="0.55" helper="0.15" />
+  <SHARE helpers="4" killer="0.52" helper="0.12" />
+</INGAME_LEVEL>

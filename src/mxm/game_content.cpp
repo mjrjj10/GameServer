@@ -960,6 +960,8 @@ bool GameXmlContent::LoadPvpMaps()
 		pvpMaps.emplace_back();
 		Map& map = pvpMaps.back();
 		map.index = index;
+		map.ingameLevels = pMap->IntAttribute("_IngameLevel") == 1;
+		map.levelStartLead = pMap->FloatAttribute("_LevelStartLead", map.levelStartLead);
 		if(!LoadMapByID(&map, index)) {
 			LOG("ERROR(LoadPvpMaps): map %d failed to load", (i32)index);
 			return false;
@@ -993,6 +995,37 @@ bool GameXmlContent::LoadPvpMaps()
 		LOG("PvP map %d: %d creatures, %d dynamics, %d areas, %d level events, %d colliders", (i32)index, (i32)map.creatures.size(), (i32)map.dynamic.size(), (i32)map.areas.size(), (i32)map.levelEvents.size(), (i32)map.colliders.size());
 	}
 	return FindPvpMap(MapIndex::PVP_DEATHMATCH) != nullptr;
+}
+
+bool GameXmlContent::LoadIngameLevel()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/IngameLevel.xml", doc)) return false;
+	XMLElement* pRoot = doc.FirstChildElement();
+	if(!pRoot) return false;
+	IngameLevelInfo& info = ingameLevel;
+	info.maxLevel = pRoot->IntAttribute("maxLevel", 1);
+	info.passiveExp = pRoot->IntAttribute("passiveExp");
+	info.passivePeriod = pRoot->FloatAttribute("passivePeriod");
+	info.shareRadius = pRoot->FloatAttribute("shareRadius");
+	info.propertyPointsEvery = pRoot->IntAttribute("propertyPointsEvery");
+	info.propertyPointsStep = pRoot->IntAttribute("propertyPointsStep");
+	info.respawnBaseMs = pRoot->FloatAttribute("respawnBaseMs");
+	info.respawnPerLevelMs = pRoot->FloatAttribute("respawnPerLevelMs");
+	info.respawnPerSecMs = pRoot->FloatAttribute("respawnPerSecMs");
+	info.killPoints = pRoot->IntAttribute("killPoints", 1);
+	for(XMLElement* e = pRoot->FirstChildElement("LEVEL"); e && !info.levelExp.full(); e = e->NextSiblingElement("LEVEL")) info.levelExp.push_back(e->IntAttribute("exp"));
+	for(XMLElement* e = pRoot->FirstChildElement("MONSTER"); e; e = e->NextSiblingElement("MONSTER")) {
+		IngameLevelInfo::MonsterExp m;
+		m.exp = e->IntAttribute("exp");
+		m.growth = e->IntAttribute("growth");
+		m.growthPeriod = e->FloatAttribute("growthPeriod");
+		m.points = e->IntAttribute("points");
+		info.monsters[e->IntAttribute("ID")] = m;
+	}
+	for(XMLElement* e = pRoot->FirstChildElement("SHARE"); e && !info.shares.full(); e = e->NextSiblingElement("SHARE")) info.shares.push_back(eastl::make_pair(e->FloatAttribute("killer"), e->FloatAttribute("helper")));
+	LOG("Loaded in-game levels (max %d, %d monsters)", info.maxLevel, (i32)info.monsters.size());
+	return true;
 }
 
 bool GameXmlContent::LoadMonsterAi()
@@ -2292,6 +2325,9 @@ bool GameXmlContent::Load()
 	if (!r) return false;
 
 	r = LoadMonsterAi();
+	if (!r) return false;
+
+	r = LoadIngameLevel();
 	if (!r) return false;
 
 	r = LoadJukeboxSongs();

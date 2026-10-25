@@ -400,6 +400,9 @@ struct Replication
 	void SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed);
 	void SendNpcTurnToAll(ActorUID actorUID, f32 worldYaw);
 	void SendMonsterStateToAll(ActorUID actorUID, ActionStateID action, const vec3& pos, f32 speed);
+	void SendLevelIngameToAll(UserID userID, i32 expToLevelUp, i32 level);
+	void SendExpIngame(ClientHandle clientHd, UserID userID, i32 gain, i32 current, ActorUID target);
+	void SendCharacterPropertyPoint(ClientHandle clientHd, ActorUID character, i32 points);
 	void SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed);
 	void SendNpcLegStartToAll(ActorUID actorUID, const vec3& pos, const vec3& goal);
 	void SendNpcLegStopToAll(ActorUID actorUID, const vec3& pos, f32 worldYaw);
@@ -450,7 +453,8 @@ struct Replication
 	};
 	void SendDeadDamageInfo(ClientHandle clientHd, u32 killerIndex, const DamageTaken* records, i32 count, i32 durationMs);
 	void SendDeathToAll(ActorUID killerUID, ActorUID targetUID, CreatureIndex killerDocID, u32 remoteID, RemoteIdx remoteDoc, UserID targetUserID, i32 respawnDelayMs);
-	void SendPvpAnnouncementToAll(u32 type, u32 data, ActorUID attackerUID, ActorUID victimUID);
+	void SendPvpAnnouncementToAll(u32 type, u32 data, ActorUID attackerUID, ActorUID victimUID, u32 score = 1);
+	void SendPointsToAll(UserID userID, u8 team, i32 points, i32 teamPoints);
 	void SendNpcDeadAckToAll(ActorUID npcUID, ActorUID killerUID, u32 killerDoc);
 	void SendReviveToAll(UserID userID, ActorUID activeUID, ActorUID inactiveUID, const vec3& pos);
 

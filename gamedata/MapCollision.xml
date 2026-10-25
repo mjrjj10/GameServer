@@ -7,7 +7,7 @@
     <_Collider _Mesh="PVP_DeathMatch01_Collision" x="0" y="0" z="0" angx="0" angy="0" angz="0" scale="1" />
     <_Collider _Mesh="PVP_Deathmatch01_GuardrailMob" x="0" y="0" z="0" angx="0" angy="0" angz="0" scale="1" />
   </_Map>
-  <_Map _Index="160000050">
+  <_Map _Index="160000050" _IngameLevel="1" _LevelStartLead="15">
     <_File _Path="PVP_Titan_Ruins_ENV_01.physx_static" />
     <_File _Path="PVP_Titan_Ruins_ENV_02.physx_static" />
     <_File _Path="PVP_GOT_ENV_Boss_01.physx_static" />

@@ -311,7 +311,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			if(it->team == attacker.team) teamKills += it->kills;
 			if(it->team == target.team) victimTeamKills += it->kills;
 		}
-		const i32 respawnMs = gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills);
+		const i32 respawnMs = map && map->ingameLevels ? IngameRespawnDelayMs(target) : gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills);
 		target.tRespawn = TimeAdd(localTime, TimeMsToTime(respawnMs));
 		LOG("Death :: %ls killed by %ls (respawn %d ms)", target.name.data(), attacker.name.data(), respawnMs);
 		if(target.hiddenUID != ActorUID::INVALID) {
@@ -324,27 +324,28 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 				firstBloodDone = true;
 				attacker.firstBlood = true;
 				specialAnnounced = true;
-				replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_FIRST_BLOOD, 0, attacker.Main().UID, chara.UID);
+				replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_FIRST_BLOOD, 0, attacker.Main().UID, chara.UID, KillPoints());
 			}
 			const bool chained = attacker.lastKillAt != Time::ZERO && localTime < TimeAdd(attacker.lastKillAt, TimeMsToTime(MULTI_KILL_WINDOW_MS));
 			attacker.multiKill = chained ? attacker.multiKill + 1 : 1;
 			attacker.lastKillAt = localTime;
 			attacker.killStreak++;
 			attacker.bestKillStreak = MAX(attacker.bestKillStreak, attacker.killStreak);
-			if(attacker.multiKill >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_MULTI_KILL, (u32)attacker.multiKill, attacker.Main().UID, chara.UID);
-			if(attacker.killStreak >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_KILL_STREAK, (u32)attacker.killStreak, attacker.Main().UID, chara.UID);
-			if(target.killStreak >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_SHUTDOWN, 0, attacker.Main().UID, chara.UID);
+			if(attacker.multiKill >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_MULTI_KILL, (u32)attacker.multiKill, attacker.Main().UID, chara.UID, KillPoints());
+			if(attacker.killStreak >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_KILL_STREAK, (u32)attacker.killStreak, attacker.Main().UID, chara.UID, KillPoints());
+			if(target.killStreak >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_SHUTDOWN, 0, attacker.Main().UID, chara.UID, KillPoints());
 			specialAnnounced = specialAnnounced || attacker.multiKill >= 2 || attacker.killStreak >= 2 || target.killStreak >= 2;
 		}
-		if(!specialAnnounced) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_PLAIN_KILL, 0, attacker.Main().UID, chara.UID);
+		if(!specialAnnounced) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_PLAIN_KILL, 0, attacker.Main().UID, chara.UID, KillPoints());
 		target.killStreak = 0;
-		replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_KILL, 0, attacker.Main().UID, chara.UID);
+		replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_KILL, 0, attacker.Main().UID, chara.UID, KillPoints());
 		if(attacker.team != target.team) {
 			bool allDead = true;
 			foreach_const(it, players) if(it->team == target.team && !it->dead) allDead = false;
-			if(allDead) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_TEAM_ALL_DEAD, (u32)(target.team == 0 ? TeamType::RED : TeamType::BLUE), attacker.Main().UID, chara.UID);
+			if(allDead) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_TEAM_ALL_DEAD, (u32)(target.team == 0 ? TeamType::RED : TeamType::BLUE), attacker.Main().UID, chara.UID, KillPoints());
 		}
 		replication->SendScoreToAll(attacker.userID, attacker.team, attacker.kills, teamKills, target.userID, target.team, target.deaths, victimTeamKills);
+		AddPoints(attacker, (i32)KillPoints());
 		for(i32 k = 0; k < (i32)target.recentDamage.size(); ) {
 			if(localTime > TimeAdd(target.recentDamage[k].at, TimeMsToTime(DEAD_DAMAGE_WINDOW_MS))) target.recentDamage.erase(target.recentDamage.begin() + k);
 			else k++;
@@ -456,7 +457,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 		if(it->team == target.team) victimTeamKills += it->kills;
 		else teamKills += it->kills;
 	}
-	const i32 respawnMs = gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills);
+	const i32 respawnMs = map && map->ingameLevels ? IngameRespawnDelayMs(target) : gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills);
 	target.tRespawn = TimeAdd(localTime, TimeMsToTime(respawnMs));
 	target.killStreak = 0;
 	target.recentDamage.clear();

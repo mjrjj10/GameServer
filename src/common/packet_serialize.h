@@ -3182,6 +3182,9 @@ DEFAULT_SERIALIZE(Sv::SN_GuildfundAdded);
 DEFAULT_SERIALIZE(Sv::SN_GuildmemberJoin);
 DEFAULT_SERIALIZE(Sv::SN_GuildmemberQuit);
 DEFAULT_SERIALIZE(Sv::SN_GuildpointandfundChange);
+DEFAULT_SERIALIZE(Sv::SN_LevelIngame);
+DEFAULT_SERIALIZE(Sv::SN_ExpIngame);
+DEFAULT_SERIALIZE(Sv::SN_CharacterPropertyPoint);
 #undef DEFAULT_SERIALIZE
 
 template<>

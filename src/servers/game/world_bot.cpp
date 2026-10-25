@@ -72,10 +72,28 @@ static const f32 BOT_ROAM_STEP = 800.0f;
 static const u32 BOT_DECISION_MIN_MS = 400;
 static const u32 BOT_DECISION_SPAN_MS = 500;
 static const u32 BOT_STUCK_CHECK_MS = 500;
+static const f32 BOT_TOWER_MARGIN = 200.0f;
 
 static vec2 RotateVec(const vec2& v, f32 a)
 {
 	return vec2(v.x * cosf(a) - v.y * sinf(a), v.x * sinf(a) + v.y * cosf(a));
+}
+
+bool World::BotDangerAt(const Player& bot, const vec2& at, vec2* towerPos, f32* towerRange) const
+{
+	foreach_const(npc, actorNpcList) {
+		if(!npc->monsterAi || npc->monsterAi->run > 0 || npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
+		if(npc->faction != Faction::RED && npc->faction != Faction::BLUE) continue;
+		if(npc->faction == (Faction)bot.team) continue;
+		const GameXmlContent::MonsterAttack* attack = npc->monsterAi->byTarget[GameXmlContent::MonsterAttack::MASTER];
+		if(!attack) continue;
+		const f32 range = attack->range + BOT_TOWER_MARGIN;
+		if(glm::length(at - vec2(npc->pos)) >= range) continue;
+		if(towerPos) *towerPos = vec2(npc->pos);
+		if(towerRange) *towerRange = range;
+		return true;
+	}
+	return false;
 }
 
 void World::UpdateBotMovement()
@@ -102,6 +120,7 @@ void World::UpdateBotMovement()
 		f32 best = 1e9f;
 		foreach_const(e, players) {
 			if(e->dead || e->team == bot.team || e->untargetable || e->Main().classType == ClassType::NONE) continue;
+			if(BotDangerAt(bot, vec2(e->body->GetWorldPos()), nullptr, nullptr)) continue;
 			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - here);
 			if(d < best) { best = d; target = &*e; }
 		}
@@ -128,6 +147,13 @@ void World::UpdateBotMovement()
 			const vec2 d = goal - here;
 			const f32 len = glm::length(d);
 			goal = here + RotateVec(len > 1.0f ? d / len : vec2(1, 0), bot.botStrafe * PI * 0.6f) * BOT_ROAM_STEP;
+		}
+		vec2 tower;
+		f32 towerRange = 0;
+		if(BotDangerAt(bot, goal, &tower, &towerRange)) {
+			const vec2 away = here - tower;
+			const f32 len = glm::length(away);
+			goal = tower + (len > 1.0f ? away / len : vec2(1, 0)) * towerRange;
 		}
 		bot.input.moveTo = vec3(goal, pos.z);
 		bot.input.speed = PlayerMoveSpeed(bot);

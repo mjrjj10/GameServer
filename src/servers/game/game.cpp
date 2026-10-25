@@ -17,6 +17,7 @@ const CreatureIndex CI_DOOR = CreatureIndex(110040546);
 const CreatureIndex CI_WALL = CreatureIndex(110042602);
 
 static const f64 LEVEL_START_BEFORE_GAME_MS = 5000.0;
+static const f64 PRE_GAME_MIN_MS = 10000.0;
 
 void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl::array<ClientHandle, MAX_PLAYERS>& playerClientHdList)
 {
@@ -150,7 +151,7 @@ void Game::Update(Time localTime_)
 		case Phase::WaitingForReady: {
 			if(phaseTime < localTime) {
 				phase = Phase::PreGame;
-				phaseTime = TimeAdd(localTime, TimeMsToTime(10000));
+				phaseTime = TimeAdd(localTime, TimeMsToTime(MAX(PRE_GAME_MIN_MS, LevelStartLeadMs())));
 
 				foreach_const(p, playerList) {
 					replication.SendPreGameLevelEvents(p->clientHd);
@@ -159,7 +160,7 @@ void Game::Update(Time localTime_)
 		} break;
 
 		case Phase::PreGame: {
-			if(TimeAdd(localTime, TimeMsToTime(LEVEL_START_BEFORE_GAME_MS)) >= phaseTime) world.StartLevelEvents();
+			if(TimeAdd(localTime, TimeMsToTime(LevelStartLeadMs())) >= phaseTime) world.StartLevelEvents();
 			if(phaseTime < localTime) {
 				phase = Phase::Game;
 
@@ -186,6 +187,7 @@ void Game::Update(Time localTime_)
 				world.ApplyAllPassives();
 				world.StartSkillPoints();
 				world.StartTimeRecord();
+				world.StartIngameLevels();
 			}
 		} break;
 
@@ -645,6 +647,11 @@ void Game::OnPlayerTag(ClientHandle clientHd, ActorUID actorUID)
 	player.input.tag = 1;
 }
 
+f64 Game::LevelStartLeadMs() const
+{
+	return world.map ? (f64)world.map->levelStartLead * 1000.0 : LEVEL_START_BEFORE_GAME_MS;
+}
+
 void Game::EndGame()
 {
 	if(world.winnerTeam >= 0) world.FireGameEndTriggers(world.winnerTeam);
@@ -666,7 +673,8 @@ void Game::EndGame()
 		e.masters[0] = CreatureIndex(100000000 + (i32)p.mainClass);
 		e.masters[1] = CreatureIndex(100000000 + (i32)p.subClass);
 		list.push_back(e);
-		if(p.team == 0) red += p.kills; else blue += p.kills;
+		const i32 score = world.map && world.map->ingameLevels ? p.points : p.kills;
+		if(p.team == 0) red += score; else blue += score;
 	}
 	LOG("Game :: time over, red %d - blue %d", red, blue);
 	const f64 playSec = TimeDiffSec(TimeDiff(tGameStarted, localTime));

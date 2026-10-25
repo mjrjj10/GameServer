@@ -72,6 +72,7 @@ struct Game
 	Time tGameEnded = Time::ZERO;
 	bool sentBackToLobby = false;
 	void EndGame();
+	f64 LevelStartLeadMs() const;
 	Time localTime;
 
 	Time phaseTime = Time::ZERO;

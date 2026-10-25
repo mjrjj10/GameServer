@@ -134,6 +134,10 @@ struct World
 		eastl::fixed_map<i32,u8,12,false> skillLevels;
 		eastl::fixed_map<u32,GameXmlContent::CostLevel,12,false> castMods;
 		i32 skillPoints = 1;
+		i32 ingameLevel = 1;
+		i32 ingameExp = 0;
+		i32 propertyPoints = 0;
+		i32 points = 0;
 		Time nextSkillPointAt = Time::ZERO;
 		u8 botUpgradeTurn = 0;
 		u32 resourceGainCast = 0;
@@ -735,6 +739,7 @@ struct World
 	void UpdateBotSkills();
 	void UpdateSummonAi(f32 delta);
 	void UpdateMonsterAi(f32 delta);
+	bool BotDangerAt(const Player& bot, const vec2& at, vec2* towerPos, f32* towerRange) const;
 	f32 NpcHitRadius(const ActorNpc& npc) const;
 	void UpdateMonsterHits();
 	bool MonsterHostile(const ActorNpc& monster, const ActorNpc& other) const;
@@ -921,6 +926,15 @@ public:
 	void OnMonsterDeath(ActorNpc& npc, ActorUID killerUID);
 	void OnMonsterDamaged(ActorNpc& npc, i32 hpBefore);
 	void FireGameEndTriggers(i32 winnerTeam);
+	void StartIngameLevels();
+	void UpdateIngameLevels();
+	void GrantIngameExp(Player& player, i32 gain, ActorUID target);
+	void GrantMonsterKillExp(const ActorNpc& npc, ActorUID killerUID);
+	i32 IngameRespawnDelayMs(const Player& player) const;
+	u32 KillPoints() const;
+	void AddPoints(Player& player, i32 points);
+	void GrantMonsterKillPoints(const ActorNpc& npc, ActorUID killerUID);
+	Time nextPassiveExpAt = Time::ZERO;
 	eastl::hash_map<i32,i32> deadCounts;
 	eastl::fixed_vector<i32,32,true> hpTriggersFired;
 	i32 winnerTeam = -1;

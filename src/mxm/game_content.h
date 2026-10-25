@@ -662,6 +662,8 @@ struct GameXmlContent
 
 		MapIndex index = MapIndex(0);
 		eastl::fixed_vector<Collider,16,false> colliders;
+		bool ingameLevels = false;
+		f32 levelStartLead = 5.0f;
 
 		eastl::fixed_vector<Spawn,512> creatures;
 		eastl::fixed_vector<Spawn,512> dynamic;
@@ -950,6 +952,27 @@ struct GameXmlContent
 	};
 
 	eastl::hash_map<i32, MonsterAi> monsterAi;
+
+	struct IngameLevelInfo
+	{
+		struct MonsterExp { i32 exp = 0; i32 growth = 0; f32 growthPeriod = 0; i32 points = 0; };
+		i32 maxLevel = 1;
+		i32 passiveExp = 0;
+		f32 passivePeriod = 0;
+		f32 shareRadius = 0;
+		i32 propertyPointsEvery = 0;
+		i32 propertyPointsStep = 0;
+		f32 respawnBaseMs = 0;
+		f32 respawnPerLevelMs = 0;
+		f32 respawnPerSecMs = 0;
+		i32 killPoints = 1;
+		eastl::fixed_vector<i32,32,false> levelExp;
+		eastl::hash_map<i32, MonsterExp> monsters;
+		eastl::fixed_vector<eastl::pair<f32,f32>,8,false> shares;
+		i32 ExpToLevelUp(i32 level) const { return level >= 1 && level <= (i32)levelExp.size() ? levelExp[level - 1] : 0; }
+	};
+	IngameLevelInfo ingameLevel;
+	bool LoadIngameLevel();
 	const MonsterAi* FindMonsterAi(i32 creatureID) const { auto f = monsterAi.find(creatureID); return f == monsterAi.end() ? nullptr : &f->second; }
 	bool LoadMonsterAi();
 	const eastl::fixed_vector<StatValue,24,false>* FindMonsterStats(i32 creatureID) const { auto f = monsterStats.find(creatureID); return f == monsterStats.end() ? nullptr : &f->second; }

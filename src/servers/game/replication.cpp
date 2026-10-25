@@ -1584,6 +1584,39 @@ void Replication::SendMonsterStateToAll(ActorUID actorUID, ActionStateID action,
 	}
 }
 
+void Replication::SendLevelIngameToAll(UserID userID, i32 expToLevelUp, i32 level)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		Sv::SN_LevelIngame packet;
+		packet.usn = (u32)userID;
+		packet.expForLevelUp = (u16)expToLevelUp;
+		packet.currentLevel = (u8)level;
+		SendPacketData<Sv::SN_LevelIngame>(clientHandle[clientID], sizeof(packet), &packet);
+	}
+}
+
+void Replication::SendExpIngame(ClientHandle clientHd, UserID userID, i32 gain, i32 current, ActorUID target)
+{
+	Sv::SN_ExpIngame packet;
+	packet.usn = (u32)userID;
+	packet.acquisitionExp = (u16)gain;
+	packet.currentExp = (u16)current;
+	const LocalActorID local = target != ActorUID::INVALID ? GetLocalActorID(clientHd, target) : LocalActorID::INVALID;
+	packet.target = local != LocalActorID::INVALID ? (u32)local : 0;
+	SendPacketData<Sv::SN_ExpIngame>(clientHd, sizeof(packet), &packet);
+}
+
+void Replication::SendCharacterPropertyPoint(ClientHandle clientHd, ActorUID character, i32 points)
+{
+	const LocalActorID local = GetLocalActorID(clientHd, character);
+	if(local == LocalActorID::INVALID) return;
+	Sv::SN_CharacterPropertyPoint packet;
+	packet.characterId = (u32)local;
+	packet.propertyPoint = (u8)points;
+	SendPacketData<Sv::SN_CharacterPropertyPoint>(clientHd, sizeof(packet), &packet);
+}
+
 void Replication::SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed)
 {
 	const i16 yaw = WorldYawToMonsterDeciDegrees(worldYaw);
@@ -2220,7 +2253,27 @@ void Replication::SendNpcDeadAckToAll(ActorUID npcUID, ActorUID killerUID, u32 k
 	}
 }
 
-void Replication::SendPvpAnnouncementToAll(u32 type, u32 data, ActorUID attackerUID, ActorUID victimUID)
+void Replication::SendPointsToAll(UserID userID, u8 team, i32 points, i32 teamPoints)
+{
+	enum : u32 { SCORE = 0 };
+	PacketWriter<Sv::SN_ScoreUpdate> playerPacket;
+	playerPacket.Write<u32>((u32)userID);
+	playerPacket.Write<TeamType>(TeamType::INVALID);
+	playerPacket.Write<u16>(1);
+	playerPacket.Write<u32>(SCORE); playerPacket.Write<u32>((u32)points);
+	PacketWriter<Sv::SN_ScoreUpdate> teamPacket;
+	teamPacket.Write<u32>(0);
+	teamPacket.Write<TeamType>(team == 0 ? TeamType::RED : TeamType::BLUE);
+	teamPacket.Write<u16>(1);
+	teamPacket.Write<u32>(SCORE); teamPacket.Write<u32>((u32)teamPoints);
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		SendPacket(clientHandle[clientID], playerPacket);
+		SendPacket(clientHandle[clientID], teamPacket);
+	}
+}
+
+void Replication::SendPvpAnnouncementToAll(u32 type, u32 data, ActorUID attackerUID, ActorUID victimUID, u32 score)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
@@ -2228,7 +2281,7 @@ void Replication::SendPvpAnnouncementToAll(u32 type, u32 data, ActorUID attacker
 		Sv::SN_PvpEventAnnouncement packet;
 		packet.stAnnounceMent.announcementType = type;
 		packet.stAnnounceMent.announcementData = data;
-		packet.stAnnounceMent.score = 1;
+		packet.stAnnounceMent.score = score;
 		packet.stAnnounceMent.attackerID = (u32)GetLocalActorID(clientHd, attackerUID);
 		packet.stAnnounceMent.attackeeID = (u32)GetLocalActorID(clientHd, victimUID);
 		packet.stAnnounceMent.isAllDead = 0;
