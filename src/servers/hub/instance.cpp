@@ -70,22 +70,36 @@ const i32 PICKING_TIME = 60;
 const i32 MATCH_WAIT_TIME = 10;
 
 static std::mutex g_sentToGameMutex;
-static eastl::fixed_vector<WideString,64,true> g_sentToGame;
+struct SentToGame
+{
+	WideString nickname;
+	SortieUID sortieUID;
+};
+static eastl::fixed_vector<SentToGame,64,true> g_sentToGame;
 
-void MarkAccountSentToGame(const WideString& nickname)
+void MarkAccountSentToGame(const WideString& nickname, SortieUID sortieUID)
 {
 	std::lock_guard<std::mutex> lock(g_sentToGameMutex);
-	if(eastl::find(g_sentToGame.begin(), g_sentToGame.end(), nickname) == g_sentToGame.end()) g_sentToGame.push_back(nickname);
+	foreach(it, g_sentToGame) {
+		if(it->nickname != nickname) continue;
+		it->sortieUID = sortieUID;
+		LOG("[Room] %ls sent to a game server", nickname.data());
+		return;
+	}
+	g_sentToGame.push_back({ nickname, sortieUID });
 	LOG("[Room] %ls sent to a game server", nickname.data());
 }
 
-bool TakeAccountReturningFromGame(const WideString& nickname)
+bool TakeAccountReturningFromGame(const WideString& nickname, SortieUID* sortieUID)
 {
 	std::lock_guard<std::mutex> lock(g_sentToGameMutex);
-	auto it = eastl::find(g_sentToGame.begin(), g_sentToGame.end(), nickname);
-	if(it == g_sentToGame.end()) return false;
-	g_sentToGame.erase(it);
-	return true;
+	foreach(it, g_sentToGame) {
+		if(it->nickname != nickname) continue;
+		*sortieUID = it->sortieUID;
+		g_sentToGame.erase(it);
+		return true;
+	}
+	return false;
 }
 
 void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 userCount)
@@ -546,7 +560,7 @@ void RoomInstance::Update(Time localTime_)
 				packet.WriteStringObj(user.name.data(), user.name.size());
 				packet.Write<u32>(In::ProduceInstantKey(user.accountUID, sortieUID));
 				SendPacket(user.clientHd, packet);
-				MarkAccountSentToGame(user.name);
+				MarkAccountSentToGame(user.name, sortieUID);
 			}
 		}
 

@@ -30,8 +30,8 @@ struct HubInstance
 	void OnMatchmakerPacket(const NetHeader& header, const u8* packetData);
 };
 
-void MarkAccountSentToGame(const WideString& nickname);
-bool TakeAccountReturningFromGame(const WideString& nickname);
+void MarkAccountSentToGame(const WideString& nickname, SortieUID sortieUID);
+bool TakeAccountReturningFromGame(const WideString& nickname, SortieUID* sortieUID);
 
 struct RoomInstance
 {

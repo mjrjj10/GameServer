@@ -26,6 +26,7 @@ struct HubGame
 		const ClientHandle clientHd;
 		PartyUID partyUID = PartyUID::INVALID;
 		SortieUID sortieUID = SortieUID::INVALID;
+		SortieUID resultSortieUID = SortieUID::INVALID;
 
 		Player(): clientHd(ClientHandle::INVALID) {}
 
@@ -72,6 +73,8 @@ struct HubGame
 	hash_map<PartyUID, decltype(partyList)::iterator, MAX_PLAYERS> partyMap;
 	eastl::array<EntrySystemID,MAX_PLAYERS> pendingPartyEntry;
 	eastl::array<StageType,MAX_PLAYERS> pendingPartyStage;
+	struct PraiseCount { SortieUID sortieUID; WideString nickname; u32 count; };
+	eastl::fixed_vector<PraiseCount,64,true> praiseCounts;
 	eastl::array<GameType,MAX_PLAYERS> pendingPartyGameType;
 
 	eastl::fixed_vector<SpawnPoint,128> mapSpawnPoints;
@@ -93,6 +96,8 @@ struct HubGame
 	void OnPlayerChatMessage(ClientHandle clientHd, i32 chatType, const wchar* msg, i32 msglen);
 	void OnPlayerChatWhisper(ClientHandle clientHd, const wchar* destNick, const wchar* msg);
 	void OnPlayerEnterCity(ClientHandle clientHd);
+	void OnReturnToCity(ClientHandle clientHd);
+	void OnPraise(ClientHandle clientHd, const wchar* nickname, i32 nicknameLen);
 	void OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID characterID, SkinIndex skinIndex);
 	void OnPlayerSyncActionState(ClientHandle clientHd, ActorUID actorUID, ActionStateID state, i32 param1, i32 param2, f32 rotate, f32 upperRotate);
 	void OnPlayerJukeboxQueueSong(ClientHandle clientHd, SongID songID);

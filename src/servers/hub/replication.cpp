@@ -12,6 +12,7 @@
 #include <EASTL/sort.h>
 #include <time.h>
 #include "mission_rules.h"
+#include "town_rules.h"
 #include "mission_progress.h"
 #include "mailbox.h"
 
@@ -145,7 +146,7 @@ void HubReplication::OnPlayerConnect(ClientHandle clientHd)
 	playerLocalInfo[clientID].Reset();
 }
 
-void HubReplication::SendLoadLobby(ClientHandle clientHd, MapIndex stageIndex)
+void HubReplication::SendLoadLobby(ClientHandle clientHd, MapIndex stageIndex, bool joinCity)
 {
 	// SN_LoadCharacterStart
 	SendPacketData<Sv::SN_LoadCharacterStart>(clientHd, 0, nullptr);
@@ -236,13 +237,7 @@ void HubReplication::SendLoadLobby(ClientHandle clientHd, MapIndex stageIndex)
 		SendPacket(clientHd, packet);
 	}
 
-	// SN_CityMapInfo
-	Sv::SN_CityMapInfo cityMapInfo;
-	cityMapInfo.CityMapID = (MapIndex)Config().LobbyMap;
-	SendPacket(clientHd, cityMapInfo);
-
-	// SQ_CityLobbyJoinCity
-	SendPacketData<Sv::SQ_CityLobbyJoinCity>(clientHd, 0, nullptr);
+	if(joinCity) SendJoinCity(clientHd);
 
 	// SN_SetGameGvt
 	{
@@ -251,6 +246,62 @@ void HubReplication::SendLoadLobby(ClientHandle clientHd, MapIndex stageIndex)
 		gameGvt.virtualTime = 0;
 		SendPacket(clientHd, gameGvt);
 	}
+}
+
+void HubReplication::SendJoinCity(ClientHandle clientHd)
+{
+	Sv::SN_CityMapInfo cityMapInfo;
+	cityMapInfo.CityMapID = (MapIndex)Config().LobbyMap;
+	SendPacket(clientHd, cityMapInfo);
+
+	SendPacketData<Sv::SQ_CityLobbyJoinCity>(clientHd, 0, nullptr);
+}
+
+void HubReplication::SendResultScreenStart(ClientHandle clientHd)
+{
+	Sv::SN_EnterChannel channel;
+	channel.chID = MEASURED_RESULT_CHANNEL_ID;
+	channel.channelType = MEASURED_RESULT_CHANNEL_TYPE;
+	SendPacket(clientHd, channel);
+
+	Sv::SN_PvpAvailableReportCount report;
+	report.isTroll = 0;
+	report.remainingCount = MEASURED_PVP_REPORT_COUNT;
+	SendPacket(clientHd, report);
+
+	Sv::SN_PraiseStart praise;
+	praise.remainDurationMs = MEASURED_PRAISE_DURATION_MS;
+	SendPacket(clientHd, praise);
+}
+
+void HubReplication::SendUserReturnToCity(ClientHandle clientHd, const wchar* nickname)
+{
+	PacketWriter<Sv::SN_UserReturnToCity> packet;
+	packet.WriteStringObj(nickname);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendReturnToCity(ClientHandle clientHd)
+{
+	Sv::SA_ReturnToCity answer;
+	answer.errcode = 0;
+	SendPacket(clientHd, answer);
+	SendJoinCity(clientHd);
+}
+
+void HubReplication::SendPraiseResult(ClientHandle clientHd, u32 errorType)
+{
+	Sv::SA_Praise answer;
+	answer.errorType = errorType;
+	SendPacket(clientHd, answer);
+}
+
+void HubReplication::SendPraise(ClientHandle clientHd, const wchar* nickname, u32 count)
+{
+	PacketWriter<Sv::SN_Praise> packet;
+	packet.WriteStringObj(nickname);
+	packet.Write<u32>(count);
+	SendPacket(clientHd, packet);
 }
 
 void HubReplication::SetPlayerAsInGame(ClientHandle clientHd)

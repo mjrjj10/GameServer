@@ -147,9 +147,18 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 	replication.OnPlayerConnect(clientHd);
 
 	LOG("[client%x] HubGame :: account %llu connected (%ls)", clientHd, (u64)accountData->UID, accountData->nickname.data());
-	if(TakeAccountReturningFromGame(accountData->nickname)) {
-		LOG("[client%x] HubGame :: back from a game, loading the lobby", clientHd);
-		replication.SendLoadLobby(clientHd, MapIndex::LOBBY_NORMAL);
+	SortieUID resultSortieUID = SortieUID::INVALID;
+	if(TakeAccountReturningFromGame(accountData->nickname, &resultSortieUID)) {
+		if(Config().DevShowcase || Config().DevAutoQueue) {
+			LOG("[client%x] HubGame :: back from a game, loading the lobby", clientHd);
+			replication.SendLoadLobby(clientHd, MapIndex::LOBBY_NORMAL, true);
+		}
+		else {
+			LOG("[client%x] HubGame :: back from game %llu, result screen", clientHd, (u64)resultSortieUID);
+			playerMap[userID]->resultSortieUID = resultSortieUID;
+			replication.SendLoadLobby(clientHd, MapIndex::LOBBY_NORMAL, false);
+			replication.SendResultScreenStart(clientHd);
+		}
 	}
 }
 
@@ -339,7 +348,49 @@ void HubGame::OnPlayerJukeboxQueueSong(ClientHandle clientHd, SongID songID)
 
 void HubGame::OnPlayerReadyToLoad(ClientHandle clientHd)
 {
-	replication.SendLoadLobby(clientHd, MapIndex::LOBBY_NORMAL);
+	replication.SendLoadLobby(clientHd, MapIndex::LOBBY_NORMAL, true);
+}
+
+void HubGame::OnReturnToCity(ClientHandle clientHd)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	const WideString& nickname = playerAccountData[userID]->nickname;
+	const SortieUID resultSortieUID = playerMap[userID]->resultSortieUID;
+	playerMap[userID]->resultSortieUID = SortieUID::INVALID;
+	replication.SendUserReturnToCity(clientHd, nickname.data());
+	if(resultSortieUID != SortieUID::INVALID) {
+		foreach_const(p, playerList) {
+			if(p->clientHd == clientHd || p->resultSortieUID != resultSortieUID) continue;
+			replication.SendUserReturnToCity(p->clientHd, nickname.data());
+		}
+	}
+	replication.SendReturnToCity(clientHd);
+}
+
+void HubGame::OnPraise(ClientHandle clientHd, const wchar* nickname, i32 nicknameLen)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	const SortieUID resultSortieUID = playerMap[userID]->resultSortieUID;
+	if(resultSortieUID == SortieUID::INVALID || nicknameLen <= 0) {
+		WARN("[client%x] HubGame :: praise outside of a result screen", clientHd);
+		return;
+	}
+	WideString target;
+	target.assign(nickname, nicknameLen);
+	PraiseCount* entry = nullptr;
+	foreach(c, praiseCounts) if(c->sortieUID == resultSortieUID && c->nickname == target) entry = &*c;
+	if(!entry) {
+		if(praiseCounts.full()) praiseCounts.erase(praiseCounts.begin());
+		praiseCounts.push_back({ resultSortieUID, target, 0 });
+		entry = &praiseCounts.back();
+	}
+	entry->count++;
+	replication.SendPraiseResult(clientHd, 0);
+	foreach_const(p, playerList) {
+		if(p->resultSortieUID != resultSortieUID) continue;
+		replication.SendPraise(p->clientHd, target.data(), entry->count);
+	}
 }
 
 void HubGame::OnCreateParty(ClientHandle clientHd, EntrySystemID entry, StageType stageType)

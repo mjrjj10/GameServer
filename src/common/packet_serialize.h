@@ -3100,6 +3100,86 @@ inline const char* PacketSerialize<Sv::SN_SkillSelect>(const void* packetData, c
 }
 
 template<>
+inline const char* PacketSerialize<Cl::CQ_Praise>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_Praise(%d, %d) :: {", Cl::CQ_Praise::NET_ID, packetSize);
+	SER("	nickname='%ls'", buff.ReadWideStringObj().data());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_EnterChannel>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_EnterChannel(%d, %d) :: {", Sv::SN_EnterChannel::NET_ID, packetSize);
+	SER("	chID=%u", buff.Read<u32>());
+	SER("	channelType=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_PvpAvailableReportCount>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_PvpAvailableReportCount(%d, %d) :: {", Sv::SN_PvpAvailableReportCount::NET_ID, packetSize);
+	SER("	isTroll=%u", buff.Read<u8>());
+	SER("	remainingCount=%u", buff.Read<u8>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_PraiseStart>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_PraiseStart(%d, %d) :: {", Sv::SN_PraiseStart::NET_ID, packetSize);
+	SER("	remainDurationMs=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SA_Praise>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SA_Praise(%d, %d) :: {", Sv::SA_Praise::NET_ID, packetSize);
+	SER("	errorType=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_Praise>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_Praise(%d, %d) :: {", Sv::SN_Praise::NET_ID, packetSize);
+	SER("	nickName='%ls'", buff.ReadWideStringObj().data());
+	SER("	praiseCount=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_UserReturnToCity>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_UserReturnToCity(%d, %d) :: {", Sv::SN_UserReturnToCity::NET_ID, packetSize);
+	SER("	nickname='%ls'", buff.ReadWideStringObj().data());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SA_ReturnToCity>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

@@ -3694,11 +3694,11 @@ struct CQ_UNKNOWN_60307
 POP_PACKED
 
 PUSH_PACKED
-struct CQ_UNKNOWN_60308
+struct CQ_Praise
 {
 	enum { NET_ID = 60308 };
-	u16 text_wstring_len;
-	wchar text_wstring[1];
+	u16 nickname_len;
+	wchar nickname[1];
 };
 POP_PACKED
 

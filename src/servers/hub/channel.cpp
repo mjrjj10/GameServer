@@ -46,6 +46,8 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CN_ReadyToLoadCharacter);
 		HANDLE_CASE(CN_ReadyToLoadGameMap);
 		HANDLE_CASE(CN_EnterCityScene);
+		HANDLE_CASE(CQ_ReturnToCity);
+		HANDLE_CASE(CQ_Praise);
 		HANDLE_CASE(CA_SetGameGvt);
 		HANDLE_CASE(CA_CityLobbyJoinCity);
 		HANDLE_CASE(CQ_GetCharacterInfo);
@@ -323,6 +325,28 @@ void HubPacketHandler::HandlePacket_CN_EnterCityScene(ClientHandle clientHd, con
 	}
 	NT_LOG("[client%x] Client :: CN_EnterCityScene ::", clientHd);
 	game->OnPlayerEnterCity(clientHd);
+}
+
+void HubPacketHandler::HandlePacket_CQ_ReturnToCity(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	NT_LOG("[client%x] Client :: CQ_ReturnToCity ::", clientHd);
+	game->OnReturnToCity(clientHd);
+}
+
+void HubPacketHandler::HandlePacket_CQ_Praise(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	ConstBuffer buff(packetData, packetSize);
+	if(!buff.CanRead(2)) {
+		WARN("[client%x] WARNING: invalid CQ_Praise (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const u16 len = buff.Read<u16>();
+	if(len == 0 || len > 32 || !buff.CanRead(len * 2) || packetSize != 2 + len * 2) {
+		WARN("[client%x] WARNING: invalid CQ_Praise (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_Praise>(packetData, packetSize));
+	game->OnPraise(clientHd, (const wchar*)buff.ReadRaw(len * 2), len);
 }
 
 void HubPacketHandler::HandlePacket_CN_ReadyToLoadGameMap(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

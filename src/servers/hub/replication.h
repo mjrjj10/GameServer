@@ -218,7 +218,13 @@ struct HubReplication
 	void FramePushJukebox(const ActorJukebox& actor);
 
 	void OnPlayerConnect(ClientHandle clientHd);
-	void SendLoadLobby(ClientHandle clientHd, MapIndex stageIndex);
+	void SendLoadLobby(ClientHandle clientHd, MapIndex stageIndex, bool joinCity);
+	void SendJoinCity(ClientHandle clientHd);
+	void SendResultScreenStart(ClientHandle clientHd);
+	void SendUserReturnToCity(ClientHandle clientHd, const wchar* nickname);
+	void SendReturnToCity(ClientHandle clientHd);
+	void SendPraiseResult(ClientHandle clientHd, u32 errorType);
+	void SendPraise(ClientHandle clientHd, const wchar* nickname, u32 count);
 	void SetPlayerAsInGame(ClientHandle clientHd);
 	void SendCharacterInfo(ClientHandle clientHd, ActorUID actorUID, CreatureIndex docID, ClassType classType, i32 health, i32 healthMax);
 	void SendPlayerSetLeaderMaster(ClientHandle clientHd, ActorUID masterActorUID, ClassType classType, SkinIndex skinIndex);
