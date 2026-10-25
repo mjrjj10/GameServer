@@ -347,6 +347,7 @@ void HubGame::OnCreateParty(ClientHandle clientHd, EntrySystemID entry, StageTyp
 	}
 	pendingPartyEntry[userID] = entry;
 	pendingPartyStage[userID] = stageType;
+	pendingPartyGameType[userID] = GameType::PVP_NORMAL;
 
 	// TODO: validate args
 	const Account& acc = *playerAccountData[userID];
@@ -368,6 +369,21 @@ void HubGame::OnCreateParty(ClientHandle clientHd, EntrySystemID entry, StageTyp
 	}
 }
 
+void HubGame::OnPartyModify(ClientHandle clientHd, GameType gameType)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	if(gameType <= GameType::INVALID || gameType >= GameType::MAX) {
+		WARN("[client%x] WARNING: invalid party gameType (%d)", clientHd, (i32)gameType);
+		return;
+	}
+	pendingPartyGameType[userID] = gameType;
+	const PartyUID partyUID = playerMap[userID]->partyUID;
+	if(partyUID == PartyUID::INVALID) return;
+	auto f = partyMap.find(partyUID);
+	if(f == partyMap.end()) return;
+	f->second->gameType = gameType;
+}
+
 void HubGame::OnEnqueueGame(ClientHandle clientHd)
 {
 	const i32 userID = plidMap->Get(clientHd);
@@ -380,7 +396,7 @@ void HubGame::OnEnqueueGame(ClientHandle clientHd)
 	ASSERT(party.areaIndex != AreaIndex(0));
 	ASSERT(party.stageIndex != StageIndex(0));
 	ASSERT(party.mapIndex != MapIndex(0));
-	matchmaker->QueryPartyEnqueue(partyUID, party.areaIndex, party.stageIndex, party.mapIndex);
+	matchmaker->QueryPartyEnqueue(partyUID, party.areaIndex, party.stageIndex, party.mapIndex, party.gameType);
 }
 
 void HubGame::OnSortieRoomFound(ClientHandle clientHd, SortieUID sortieID)
@@ -420,6 +436,7 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 	partyMap.emplace(partyUID, --partyList.end());
 	party.entry = pendingPartyEntry[userID];
 	party.stageType = pendingPartyStage[userID];
+	party.gameType = pendingPartyGameType[userID];
 	AreaIndex areaID = AreaIndex(0);
 	StageIndex stageID = StageIndex(0);
 	MapIndex mapID = MapIndex(0);

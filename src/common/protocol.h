@@ -445,15 +445,22 @@ enum class GuildRankType : u8
 enum class GameType: i32
 {
 	INVALID = 0,
-	PvP_Normal = 1, // not PvP?
-	PvP_NormalFFA = 2,
-	PVP_AI = 3,
-	PVP_Rank = 4,
-	PVP_Custom = 5,
-	PVP_Tutorial = 6,
-	PVP_GuildPvp = 7,
-	PVP_FakeAi = 8,
+	PVE_NORMAL = 1,
+	PVE_RANDOM = 2,
+	PVE_TICKET = 3,
+	PVP_NORMAL = 4,
+	PVP_RANK = 5,
+	PVP_AI = 6,
+	PVP_NORMAL_FFA = 7,
+	PVP_GUILD = 8,
+	PVP_FAKE_AI = 9,
+	MAX = 10
 };
+
+inline bool GameTypeCanEscape(GameType type)
+{
+	return type == GameType::PVE_NORMAL || type == GameType::PVE_RANDOM || type == GameType::PVE_TICKET || type == GameType::PVP_AI;
+}
 
 enum class GameDefinition: i32
 {
@@ -784,7 +791,7 @@ struct CQ_PartyModify
 
 	u16 stageCount;
 	i32 stages[1];
-	i32 gametype;
+	GameType gametype;
 	i32 unk1;
 	u8 unk2;
 };

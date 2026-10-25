@@ -63,6 +63,7 @@ void MatchmakerConnector::Update()
 					packet.areaIndex = q->PartyEnqueue.areaIndex;
 					packet.stageIndex = q->PartyEnqueue.stageIndex;
 					packet.mapIndex = q->PartyEnqueue.mapIndex;
+					packet.gameType = q->PartyEnqueue.gameType;
 					conn.SendPacket(packet);
 				} break;
 
@@ -136,7 +137,7 @@ void MatchmakerConnector::QueryPartyCreate(const WideString& name, AccountUID le
 	queries.push_back(query);
 }
 
-void MatchmakerConnector::QueryPartyEnqueue(PartyUID partyUID, AreaIndex areaIndex, StageIndex stageIndex, MapIndex mapIndex)
+void MatchmakerConnector::QueryPartyEnqueue(PartyUID partyUID, AreaIndex areaIndex, StageIndex stageIndex, MapIndex mapIndex, GameType gameType)
 {
 	DBG_ASSERT(partyUID != PartyUID::INVALID);
 
@@ -148,6 +149,7 @@ void MatchmakerConnector::QueryPartyEnqueue(PartyUID partyUID, AreaIndex areaInd
 	query.PartyEnqueue.areaIndex = areaIndex;
 	query.PartyEnqueue.stageIndex = stageIndex;
 	query.PartyEnqueue.mapIndex = mapIndex;
+	query.PartyEnqueue.gameType = gameType;
 
 	LOCK_MUTEX(mutexQueries);
 	queries.push_back(query);

@@ -45,6 +45,7 @@ struct HubGame
 		AreaIndex areaIndex = AreaIndex(0);
 		StageIndex stageIndex = StageIndex(0);
 		MapIndex mapIndex = MapIndex(0);
+		GameType gameType = GameType::PVP_NORMAL;
 
 		eastl::fixed_vector<Member,5> memberList; // NOTE: first is leader
 		// TODO: do fancy party stuff later on
@@ -71,6 +72,7 @@ struct HubGame
 	hash_map<PartyUID, decltype(partyList)::iterator, MAX_PLAYERS> partyMap;
 	eastl::array<EntrySystemID,MAX_PLAYERS> pendingPartyEntry;
 	eastl::array<StageType,MAX_PLAYERS> pendingPartyStage;
+	eastl::array<GameType,MAX_PLAYERS> pendingPartyGameType;
 
 	eastl::fixed_vector<SpawnPoint,128> mapSpawnPoints;
 
@@ -96,6 +98,7 @@ struct HubGame
 	void OnPlayerJukeboxQueueSong(ClientHandle clientHd, SongID songID);
 	void OnPlayerReadyToLoad(ClientHandle clientHd);
 	void OnCreateParty(ClientHandle clientHd, EntrySystemID entry, StageType stageType);
+	void OnPartyModify(ClientHandle clientHd, GameType gameType);
 	void OnEnqueueGame(ClientHandle clientHd);
 	void OnSortieRoomFound(ClientHandle clientHd, SortieUID sortieID);
 	void OnSortieRoomConfirm(ClientHandle clientHd, bool confirm);

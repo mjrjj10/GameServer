@@ -86,6 +86,7 @@ struct HQ_PartyEnqueue
 	AreaIndex areaIndex;
 	StageIndex stageIndex;
 	MapIndex mapIndex;
+	GameType gameType;
 };
 
 PUSH_PACKED

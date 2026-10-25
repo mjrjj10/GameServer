@@ -550,6 +550,13 @@ void HubPacketHandler::HandlePacket_CQ_PartyModify(ClientHandle clientHd, const 
 	}
 	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_PartyModify>(packetData, packetSize));
 
+	ConstBuffer buff(packetData, packetSize);
+	const u16 stageCount = buff.Read<u16>();
+	if(buff.CanRead((i32)stageCount * 4 + 4)) {
+		buff.ReadRaw((i32)stageCount * 4);
+		game->OnPartyModify(clientHd, (GameType)buff.Read<i32>());
+	}
+
 	Sv::SA_PartyModify packet;
 	packet.retval = 0;
 	SendPacket(clientHd, packet);

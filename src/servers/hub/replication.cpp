@@ -1786,8 +1786,8 @@ void HubReplication::SendMatchingPartyFound(ClientHandle clientHd, const In::MN_
 	packet.Write<u16>(0);
 
 	// NOTE: if timeToWaitInSec is 0 there is no popup to accept
-	packet.Write<i32>(30); // timeToWaitInSec
-	packet.Write<u8>(1); // elementMain
+	packet.Write<i32>(15); // timeToWaitInSec
+	packet.Write<u8>(0); // elementMain
 	packet.Write<u8>(0); // elementSub
 
 	SendPacket(clientHd, packet);

@@ -65,6 +65,7 @@ struct Matchmaker
 		AreaIndex areaIndex = AreaIndex(0);
 		StageIndex stageIndex = StageIndex(0);
 		MapIndex mapIndex = MapIndex(0);
+		GameType gameType = GameType::PVP_NORMAL;
 
 		Party(PartyUID UID_): UID(UID_) {}
 	};
@@ -115,6 +116,7 @@ struct Matchmaker
 		AreaIndex areaIndex = AreaIndex(0);
 		StageIndex stageIndex = StageIndex(0);
 		MapIndex mapIndex = MapIndex(0);
+		GameType gameType = GameType::PVP_NORMAL;
 		eastl::fixed_vector<Player,16,false> playerList;
 		eastl::fixed_vector<decltype(playerList)::iterator,5> teamRed;
 		eastl::fixed_vector<decltype(playerList)::iterator,5> teamBlue;
@@ -320,6 +322,7 @@ struct Matchmaker
 				party.areaIndex = packet.areaIndex;
 				party.stageIndex = packet.stageIndex;
 				party.mapIndex = packet.mapIndex;
+				party.gameType = packet.gameType;
 				matchingPartyList.push_back(packet.partyUID);
 
 				eastl::fixed_set<ClientHandle,5,false> setInstance;
@@ -507,6 +510,7 @@ struct Matchmaker
 		room.areaIndex = firstParty.areaIndex;
 		room.stageIndex = firstParty.stageIndex;
 		room.mapIndex = firstParty.mapIndex;
+		room.gameType = firstParty.gameType;
 
 		LOG("MatchParties :: creating room %llu with %d player(s) from %d party(ies)", (u64)room.UID, humanCount, (i32)matchingPartyList.size());
 
@@ -555,13 +559,7 @@ struct Matchmaker
 				In::MN_MatchingPartyFound resp;
 				resp.partyUID = *puid;
 				resp.sortieUID = room.UID;
-				resp.gameType = GameType::PvP_Normal;
-				foreach_const(bpl, room.playerList) {
-					if(bpl->isBot) {
-						resp.gameType = GameType::PVP_Tutorial;
-						break;
-					}
-				}
+				resp.gameType = room.gameType;
 
 				resp.playerCount = 0;
 				foreach(pl, room.playerList) {
@@ -635,17 +633,11 @@ struct Matchmaker
 		packet.sortieUID = room.UID;
 		packet.playerCount = 0;
 		packet.spectatorCount = 0;
-		packet.gameType = GameType::PvP_Normal;
-		foreach_const(bp, room.playerList) {
-			if(bp->isBot) {
-				packet.gameType = GameType::PVP_Tutorial;
-				break;
-			}
-		}
+		packet.gameType = room.gameType;
 		packet.areaIndex = room.areaIndex;
 		packet.stageIndex = room.stageIndex;
 		packet.mapIndex = room.mapIndex;
-		packet.canEscape = packet.gameType != GameType::PVP_Rank;
+		packet.canEscape = GameTypeCanEscape(packet.gameType);
 		packet.surrenderAbleTime = 180000;
 
 		foreach_const(p, room.playerList) {

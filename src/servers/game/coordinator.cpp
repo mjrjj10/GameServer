@@ -664,8 +664,8 @@ void Coordinator::CreateDevGame()
 	game.areaIndex = areaID;
 	game.stageIndex = stageID;
 	game.mapIndex = mapID;
-	game.gameType = GameType::PVP_Tutorial;
-	game.canEscape = game.gameType != GameType::PVP_Rank;
+	game.gameType = GameType::PVP_AI;
+	game.canEscape = GameTypeCanEscape(game.gameType);
 	game.surrenderAbleTime = 180000;
 
 	auto& p = game.players[0];
