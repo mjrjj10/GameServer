@@ -144,7 +144,6 @@ void MatchmakerConnector::Update()
 	}
 }
 
-// Thread: Any Lane
 void MatchmakerConnector::QueryPartyAddMember(PartyUID partyUID, const WideString& name, AccountUID accountUID)
 {
 	MMQueryUID queryUID = nextQueryUID;
