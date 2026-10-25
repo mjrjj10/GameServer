@@ -37,6 +37,7 @@ struct FixedWideString
 };
 
 typedef FixedWideString<32> StrName;
+typedef FixedWideString<8> StrGuildTag;
 
 inline u32 ProduceInstantKey(AccountUID accountUID, SortieUID sortieUID)
 {
@@ -155,6 +156,7 @@ struct HQ_RoomCreateGame
 		eastl::array<i32,2> weaponGrades;
 		eastl::array<u8,2> masterGearNo;
 		eastl::array<i32,2> characterType;
+		StrGuildTag guildTag;
 	};
 
 	SortieUID sortieUID;
@@ -244,6 +246,7 @@ struct MQ_CreateGame
 		eastl::array<i32,2> weaponGrades;
 		eastl::array<u8,2> masterGearNo;
 		eastl::array<i32,2> characterType;
+		StrGuildTag guildTag;
 	};
 
 	SortieUID sortieUID;

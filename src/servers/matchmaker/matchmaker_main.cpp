@@ -105,6 +105,7 @@ struct Matchmaker
 			PlayerStatus status = PlayerStatus::Unknown;
 			Team team;
 			u8 isBot = false;
+			In::StrGuildTag guildTag = {};
 
 			eastl::array<Master,2> masters;
 
@@ -450,6 +451,7 @@ struct Matchmaker
 					p.masters[1].masterGearNo = pp.masterGearNo[1];
 					p.masters[0].characterType = pp.characterType[0];
 					p.masters[1].characterType = pp.characterType[1];
+					p.guildTag = pp.guildTag;
 				}
 
 				RoomCreateGame(room);
@@ -717,6 +719,7 @@ struct Matchmaker
 				player.masterGearNo[1] = p->masters[1].masterGearNo;
 				player.characterType[0] = p->masters[0].characterType;
 				player.characterType[1] = p->masters[1].characterType;
+				player.guildTag = p->guildTag;
 				packet.players[packet.playerCount++] = player;
 			}
 		}

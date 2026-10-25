@@ -30,6 +30,7 @@ struct MatchmakerConnector
 		eastl::array<i32,2> weaponGrades;
 		eastl::array<u8,2> masterGearNo;
 		eastl::array<i32,2> characterType;
+		In::StrGuildTag guildTag;
 	};
 
 	struct Query

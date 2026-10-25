@@ -55,7 +55,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 		desc.userID = UserID(pi+1);
 		desc.clientHd = playerClientHdList[pi];
 		desc.name.assign(p.name.data, p.name.len);
-		desc.guildTag = L"Alpha";
+		desc.guildTag.assign(p.guildTag.data, p.guildTag.len);
 		desc.team = p.team;
 		desc.masters = p.masters;
 		desc.skins = p.skins;

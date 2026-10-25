@@ -497,6 +497,9 @@ void RoomInstance::Update(Time localTime_)
 				rp.masterGearNo[1] = u->masters[1].masterGearNo;
 				rp.characterType[0] = u->masters[0].characterType;
 				rp.characterType[1] = u->masters[1].characterType;
+				rp.guildTag.len = 0;
+				auto account = GetAccountManager().accountMap.find(u->accountUID);
+				if(!u->isBot && account != GetAccountManager().accountMap.end() && account->second->guildTag.size() <= ARRAY_COUNT(rp.guildTag.data)) rp.guildTag.Copy(account->second->guildTag);
 				rpList.push_back(rp);
 			}
 

@@ -131,6 +131,7 @@ void MatchmakerConnector::Update()
 							player.weaponGrades = rp.weaponGrades;
 							player.masterGearNo = rp.masterGearNo;
 							player.characterType = rp.characterType;
+							player.guildTag = rp.guildTag;
 							packet.players[packet.playerCount++] = player;
 						}
 					}
