@@ -14,6 +14,7 @@ struct AccountProgress
 	u32 losses = 0;
 	u32 honors = 0;
 	i64 ccoin = 0;
+	eastl::array<i32,3> inventoryLines = { 4, 4, 4 };
 };
 
 struct AccountItem

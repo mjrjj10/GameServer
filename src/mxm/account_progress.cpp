@@ -34,6 +34,7 @@ AccountProgress AccountProgressLoad(const wchar* nickname)
 		else if(sscanf(line, "Losses=%u", &v32) == 1) progress.losses = v32;
 		else if(sscanf(line, "Honors=%u", &v32) == 1) progress.honors = v32;
 		else if(sscanf(line, "CCoin=%lld", &v64) == 1) progress.ccoin = (i64)v64;
+		else if(sscanf(line, "InventoryLines=%d %d %d", &progress.inventoryLines[0], &progress.inventoryLines[1], &progress.inventoryLines[2]) == 3) {}
 	}
 	fclose(f);
 	return progress;
@@ -49,7 +50,8 @@ void AccountProgressSave(const wchar* nickname, const AccountProgress& progress)
 	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
 	FILE* f = fopen(tmp, "wb");
 	ASSERT(f);
-	fprintf(f, "Level=%u\nExp=%u\nGold=%lld\nWins=%u\nDraws=%u\nLosses=%u\nHonors=%u\nCCoin=%lld\n", (u32)progress.level, progress.levelExp, (long long)progress.gold, progress.wins, progress.draws, progress.losses, progress.honors, (long long)progress.ccoin);
+	fprintf(f, "Level=%u\nExp=%u\nGold=%lld\nWins=%u\nDraws=%u\nLosses=%u\nHonors=%u\nCCoin=%lld\nInventoryLines=%d %d %d\n", (u32)progress.level, progress.levelExp, (long long)progress.gold, progress.wins, progress.draws, progress.losses, progress.honors, (long long)progress.ccoin,
+		progress.inventoryLines[0], progress.inventoryLines[1], progress.inventoryLines[2]);
 	fclose(f);
 	remove(path);
 	rename(tmp, path);

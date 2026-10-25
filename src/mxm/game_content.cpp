@@ -1008,6 +1008,20 @@ bool GameXmlContent::LoadMissions()
 		rewards.push_back(info);
 	}
 
+	XMLDocument docPrice;
+	if(!LoadXMLFile(L"/Design/GAMEINFO/ServicePrice.xml", docPrice)) return false;
+	XMLElement* pPrice = docPrice.FirstChildElement()->FirstChildElement("ST_SERVICEPRICE");
+	ASSERT(pPrice);
+	for(XMLElement* pCost = pPrice->FirstChildElement("_InvenUnlockCost"); pCost; pCost = pCost->NextSiblingElement("_InvenUnlockCost")) {
+		const i32 step = pCost->IntAttribute("DATAKEY", 0);
+		if(step <= 0 || step > (i32)inventoryExpandCosts.capacity()) continue;
+		if((i32)inventoryExpandCosts.size() < step) inventoryExpandCosts.resize(step);
+		ServiceCost& cost = inventoryExpandCosts[step - 1];
+		const char* type = pCost->Attribute("_Type");
+		cost.buyType = type && EA::StdC::Strcmp(type, "BUY_TYPE_CCOIN") == 0 ? 2 : 1;
+		cost.amount = pCost->IntAttribute("_Amount", 0);
+	}
+
 	XMLDocument doc;
 	if(!LoadXMLFile(L"/Design/DOCUMENT/MISSION.xml", doc)) return false;
 	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {

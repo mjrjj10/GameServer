@@ -233,6 +233,7 @@ struct HubReplication
 	void SendPraiseResult(ClientHandle clientHd, u32 errorType);
 	void SendHonorResult(ClientHandle clientHd, u32 result);
 	void SendCCoin(ClientHandle clientHd, i64 amount, u32 reason);
+	void SendInventoryExpand(ClientHandle clientHd, u32 result, i32 tab, i32 lineCount);
 	void SendShopBuyResult(ClientHandle clientHd, bool npShop, u32 result, u32 goodsID, u32 quantity, i32 itemIndex);
 	void SendItemUpdate(ClientHandle clientHd, const struct AccountItem& item, u32 reason);
 	void SendItemAcquisition(ClientHandle clientHd, u32 reason, const struct AccountItem& item, i32 amount);

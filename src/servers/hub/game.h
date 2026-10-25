@@ -102,6 +102,7 @@ struct HubGame
 	void OnPraise(ClientHandle clientHd, const wchar* nickname, i32 nicknameLen);
 	void OnHonor(ClientHandle clientHd, const WideString& nickname);
 	bool GrantItem(i32 userID, i32 docIndex, i32 amount, u32 updateReason, u32 acquisitionReason);
+	void OnInventoryExpand(ClientHandle clientHd, i32 tab);
 	void OnShopBuyItem(ClientHandle clientHd, u32 goodsID, i32 quantity, i32 itemIndex, i32 itemCount, bool npShop);
 	void OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID characterID, SkinIndex skinIndex);
 	void OnPlayerSyncActionState(ClientHandle clientHd, ActorUID actorUID, ActionStateID state, i32 param1, i32 param2, f32 rotate, f32 upperRotate);

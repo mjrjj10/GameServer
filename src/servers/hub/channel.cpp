@@ -64,6 +64,7 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CQ_Honor);
 		HANDLE_CASE(CQ_NpBuyCshopItem);
 		HANDLE_CASE(CQ_BuyCShopItem);
+		HANDLE_CASE(CQ_InventoryExpand);
 		HANDLE_CASE(CA_SetGameGvt);
 		HANDLE_CASE(CA_CityLobbyJoinCity);
 		HANDLE_CASE(CQ_GetCharacterInfo);
@@ -504,6 +505,17 @@ void HubPacketHandler::HandlePacket_CQ_CommunityStatusMessage(ClientHandle clien
 	message.assign((const wchar*)buff.ReadRaw(len * 2), len);
 	NT_LOG("[client%x] Client :: CQ_CommunityStatusMessage :: message='%ls'", clientHd, message.data());
 	game->OnStatusMessage(clientHd, message);
+}
+
+void HubPacketHandler::HandlePacket_CQ_InventoryExpand(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_InventoryExpand>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_InventoryExpand (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const Cl::CQ_InventoryExpand& packet = SafeCast<Cl::CQ_InventoryExpand>(packetData, packetSize);
+	NT_LOG("[client%x] Client :: CQ_InventoryExpand :: tab=%u", clientHd, packet.field1_id_id);
+	game->OnInventoryExpand(clientHd, (i32)packet.field1_id_id);
 }
 
 void HubPacketHandler::HandlePacket_CQ_BuyCShopItem(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

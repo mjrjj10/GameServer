@@ -337,6 +337,15 @@ void HubReplication::SendShopBuyResult(ClientHandle clientHd, bool npShop, u32 r
 	SendPacket(clientHd, packet);
 }
 
+void HubReplication::SendInventoryExpand(ClientHandle clientHd, u32 result, i32 tab, i32 lineCount)
+{
+	Sv::SA_InventoryExpand packet;
+	packet.result = result;
+	packet.invenTab = (u32)tab;
+	packet.lineCount = (u32)lineCount;
+	SendPacket(clientHd, packet);
+}
+
 void HubReplication::SendCCoin(ClientHandle clientHd, i64 amount, u32 reason)
 {
 	Sv::SN_CCoin packet;
@@ -724,9 +733,10 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 		PacketWriter<Sv::SN_AccountInfo> packet;
 
 		packet.WriteStringObj(account.nickname.data()); // nick
-		packet.Write<i32>(4); // inventoryLineCountTab0
-		packet.Write<i32>(4); // inventoryLineCountTab1
-		packet.Write<i32>(4); // inventoryLineCountTab2
+		const AccountProgress progress = AccountProgressLoad(account.nickname.data());
+		packet.Write<i32>(progress.inventoryLines[0]);
+		packet.Write<i32>(progress.inventoryLines[1]);
+		packet.Write<i32>(progress.inventoryLines[2]);
 #if 0
 		packet.Write<i32>(320080005);
 		packet.Write<i32>(320080005);

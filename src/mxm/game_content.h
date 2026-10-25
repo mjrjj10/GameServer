@@ -833,6 +833,8 @@ struct GameXmlContent
 		i32 sellValue = 0;
 	};
 	eastl::hash_map<i32,ItemInfo> itemInfoMap;
+	struct ServiceCost { u8 buyType = 0; i32 amount = 0; };
+	eastl::fixed_vector<ServiceCost,32,false> inventoryExpandCosts;
 	const ItemInfo* FindItemInfo(i32 ID) const;
 	void LoadItemInfos(tinyxml2::XMLDocument& doc);
 
