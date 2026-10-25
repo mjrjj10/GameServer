@@ -185,6 +185,7 @@ void Game::Update(Time localTime_)
 				if(!Config().DevShowcase) world.gameStartedAt = localTime;
 				world.ApplyAllPassives();
 				world.StartSkillPoints();
+				world.StartTimeRecord();
 			}
 		} break;
 
@@ -345,7 +346,7 @@ bool Game::LoadMap()
 		actor.actionState = it->actionState;
 		actor.entityType = it->entityType;
 		actor.seed = (i32)RandUint();
-
+		world.InitMonsterStats(actor);
 	}
 
 	foreach(it, map->dynamic) {

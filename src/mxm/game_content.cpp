@@ -984,6 +984,20 @@ bool GameXmlContent::LoadPvpMaps()
 	return FindPvpMap(MapIndex::PVP_DEATHMATCH) != nullptr;
 }
 
+bool GameXmlContent::LoadMonsterStats()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/MonsterStats.xml", doc)) return false;
+	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+		auto& stats = monsterStats[pInfo->IntAttribute("ID")];
+		for(XMLElement* st = pInfo->FirstChildElement("STAT"); st && !stats.full(); st = st->NextSiblingElement("STAT")) {
+			stats.push_back({ (u8)st->IntAttribute("type"), st->FloatAttribute("value") });
+		}
+	}
+	LOG("Loaded stats of %d monsters", (i32)monsterStats.size());
+	return true;
+}
+
 const GameXmlContent::Map* GameXmlContent::FindPvpMap(MapIndex index) const
 {
 	foreach_const(m, pvpMaps) if(m->index == index) return &*m;
@@ -2214,6 +2228,9 @@ bool GameXmlContent::Load()
 	if (!r) return false;
 
 	r = LoadPvpMaps();
+	if(!r) return false;
+
+	r = LoadMonsterStats();
 	if (!r) return false;
 
 	r = LoadJukeboxSongs();
@@ -2349,7 +2366,9 @@ Faction GameXmlContent::StringToFaction(const char* s)
 	static const eastl::hash_map<eastl::string, Faction> factionMap = {
 		{"TEAM_RED", Faction::RED},
 		{"TEAM_BLUE", Faction::BLUE},
-		{"TEAM_DYNAMIC", Faction::DYNAMIC}
+		{"TEAM_DYNAMIC", Faction::DYNAMIC},
+		{"TEAM_ORANGE", Faction::ORANGE},
+		{"TEAM_TYPE_INVALID", Faction::MONSTER}
 	};
 
 	auto it = factionMap.find(s);
@@ -3323,6 +3342,24 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(XMLElement* e = pNode->FirstChildElement("_OnHitTriggerData")) { node.kind = LevelEventNode::ON_HIT_TRIGGER; node.localID = e->IntAttribute("_LocalID"); node.delay = e->FloatAttribute("_DelayTime"); node.hitCount = e->IntAttribute("_HitCount"); }
 		else if(XMLElement* e = pNode->FirstChildElement("_ActionChangeInfo")) { node.kind = LevelEventNode::ACTION_CHANGE; node.localID = e->IntAttribute("_ID"); if(const char* a = e->Attribute("_ActionIndex")) node.action = ActionStateFromString(a); }
 		else if(XMLElement* e = pNode->FirstChildElement("_ActiveEventTriggerInfo")) { node.kind = LevelEventNode::ACTIVATE_TRIGGER; node.targetKey = StatusTypeKey(e->Attribute("_TriggerID")); node.active = e->IntAttribute("_Active") == 1; }
+		else if(XMLElement* e = pNode->FirstChildElement("_CallMonsterInfo")) {
+			node.kind = LevelEventNode::CALL_MONSTER;
+			node.monster = e->IntAttribute("_Index");
+			node.count = MAX(e->IntAttribute("_Count", 1), 1);
+			node.callCount = MAX(e->IntAttribute("_CallCount", 1), 1);
+			node.callDelay = e->FloatAttribute("_CallDelayTime");
+			node.callInterval = e->FloatAttribute("_CallIntervalTime");
+			node.variance = e->FloatAttribute("_RandomDelayTimeVariance");
+			node.areaID = e->IntAttribute("_SpawnAreaID");
+			node.tagID = e->IntAttribute("_TagID", -1);
+			node.spawnAnim = e->IntAttribute("_SpawnAnim");
+			node.wander = e->IntAttribute("_AIWanderDistOverride", -1);
+			if(const char* team = e->Attribute("_Team")) node.team = StringToFaction(team);
+		}
+		else if(XMLElement* e = pNode->FirstChildElement("_DespawnEntityInfo")) { node.kind = LevelEventNode::DESPAWN_ENTITY; node.localID = e->IntAttribute("_LocalID"); node.tagID = e->IntAttribute("_TagID", -1); }
+		else if(pNode->FirstChildElement("_RepeatInfo")) node.kind = LevelEventNode::PASS_THROUGH;
+		else if(pNode->FirstChildElement("_TimeRecordStartTriggerData")) node.kind = LevelEventNode::TIME_RECORD_START;
+		else if(pNode->FirstChildElement("_PrintMessageInfo") || pNode->FirstChildElement("_BGMEventInfo") || pNode->FirstChildElement("_ChangeCameraInfo") || pNode->FirstChildElement("_SetNameTagVisibillityInfo") || pNode->FirstChildElement("_InputLockInfo") || pNode->FirstChildElement("_ActiveInteractionInfo") || pNode->FirstChildElement("_ClientDrivenActionChangeInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
 		map->levelEvents.push_back(node);
 	}
 	LOG("Loaded %d level event nodes", (i32)map->levelEvents.size());

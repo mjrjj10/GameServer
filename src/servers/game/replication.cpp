@@ -2881,13 +2881,25 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 		packet.Write<u8>(actor.dirToNearPC);
 		packet.Write<i32>(actor.wanderDist);
 		packet.Write<i32>(actor.tagID);
-		packet.Write<Faction>(actor.ownerUID != ActorUID::INVALID && actor.faction != Faction::DYNAMIC ? (Faction)(3 + (actor.faction == Faction::BLUE ? 1 : 0)) : actor.faction);
+		packet.Write<TeamType>(FactionTeamType(actor.faction));
 		packet.Write<ClassType>(ClassType::NONE);
 		packet.Write<SkinIndex>(SkinIndex::DEFAULT);
 		packet.Write<i32>(actor.seed);
 
 		const SummonInfo* summon = actor.ownerUID != ActorUID::INVALID ? GetGameXmlContent().FindSummon((i32)actor.docID) : nullptr;
-		if(summon && !summon->baseStats.empty()) {
+		const auto* monsterStats = summon ? nullptr : GetGameXmlContent().FindMonsterStats((i32)actor.docID);
+		if(monsterStats && !monsterStats->empty()) {
+			packet.Write<u16>((u16)monsterStats->size());
+			const auto& statList = *monsterStats;
+			foreach_const(st, statList) {
+				packet.Write<u8>(st->type);
+				packet.Write<f32>(st->value);
+			}
+			packet.Write<u16>(1);
+			packet.Write<u8>((u8)StatType::STAT_TYPE_HEALTH);
+			packet.Write<f32>((f32)actor.hp);
+		}
+		else if(summon && !summon->baseStats.empty()) {
 			f32 hp = 1.0f;
 			packet.Write<u16>((u16)summon->baseStats.size());
 			foreach_const(st, summon->baseStats) {
@@ -2984,7 +2996,7 @@ void Replication::SendActorDynamicSpawn(ClientHandle clientHd, const ActorDynami
 		packet.Write<u8>(actor.dirToNearPC);
 		packet.Write<i32>(actor.wanderDist);
 		packet.Write<i32>(actor.tagID);
-		packet.Write<Faction>(actor.faction);
+		packet.Write<TeamType>(FactionTeamType(actor.faction));
 		packet.Write<ClassType>(ClassType::NONE);
 		packet.Write<SkinIndex>(SkinIndex::DEFAULT);
 		packet.Write<i32>(actor.seed);

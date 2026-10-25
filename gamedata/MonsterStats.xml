@@ -1,0 +1,450 @@
+<?xml version="1.0"?>
+<MONSTER_STATS>
+  <INFO ID="105000130">
+    <STAT type="0" value="399938" />
+    <STAT type="6" value="96" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="9" value="5" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000304">
+    <STAT type="0" value="20400" />
+    <STAT type="6" value="422.4" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="80" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="58" value="50" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000305">
+    <STAT type="0" value="20400" />
+    <STAT type="6" value="422.4" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="80" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="58" value="50" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000306">
+    <STAT type="0" value="17000" />
+    <STAT type="6" value="460.8" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="80" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="58" value="50" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000307">
+    <STAT type="0" value="14500" />
+    <STAT type="6" value="460.8" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="80" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="58" value="50" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000308">
+    <STAT type="0" value="14500" />
+    <STAT type="6" value="460.8" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="80" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="58" value="50" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000309">
+    <STAT type="0" value="11000" />
+    <STAT type="6" value="672" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="80" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="58" value="50" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000311">
+    <STAT type="0" value="11000" />
+    <STAT type="6" value="441.6" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="80" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="58" value="50" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000312">
+    <STAT type="0" value="17000" />
+    <STAT type="6" value="460.8" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="80" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="58" value="50" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000391">
+    <STAT type="0" value="499922" />
+    <STAT type="6" value="96" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000392">
+    <STAT type="0" value="499922" />
+    <STAT type="6" value="96" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000395">
+    <STAT type="0" value="499922" />
+    <STAT type="6" value="96" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000396">
+    <STAT type="0" value="499922" />
+    <STAT type="6" value="96" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000397">
+    <STAT type="0" value="499922" />
+    <STAT type="6" value="96" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000398">
+    <STAT type="0" value="499922" />
+    <STAT type="6" value="96" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000430">
+    <STAT type="0" value="4900" />
+    <STAT type="6" value="316.8" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000431">
+    <STAT type="0" value="4900" />
+    <STAT type="6" value="316.8" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000453">
+    <STAT type="0" value="309" />
+    <STAT type="6" value="96" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105000800">
+    <STAT type="0" value="1200" />
+    <STAT type="6" value="230.4" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001010">
+    <STAT type="0" value="1300" />
+    <STAT type="6" value="96" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="110" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001011">
+    <STAT type="0" value="1000" />
+    <STAT type="6" value="96" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="110" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001012">
+    <STAT type="0" value="1600" />
+    <STAT type="6" value="96" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="111" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001040">
+    <STAT type="0" value="26500" />
+    <STAT type="6" value="612" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001100">
+    <STAT type="0" value="39750" />
+    <STAT type="6" value="611" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="132" />
+    <STAT type="15" value="100" />
+    <STAT type="38" value="375" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001101">
+    <STAT type="0" value="39750" />
+    <STAT type="6" value="611" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="125" />
+    <STAT type="15" value="100" />
+    <STAT type="38" value="375" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001102">
+    <STAT type="0" value="39750" />
+    <STAT type="6" value="611" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="125" />
+    <STAT type="15" value="100" />
+    <STAT type="38" value="375" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001105">
+    <STAT type="0" value="30900" />
+    <STAT type="6" value="576" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="120" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001106">
+    <STAT type="0" value="30900" />
+    <STAT type="6" value="576" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="120" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001107">
+    <STAT type="0" value="30900" />
+    <STAT type="6" value="576" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="120" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001108">
+    <STAT type="0" value="30900" />
+    <STAT type="6" value="576" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="120" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001200">
+    <STAT type="0" value="45000" />
+    <STAT type="6" value="672" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="38" value="350" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001400">
+    <STAT type="0" value="7100" />
+    <STAT type="6" value="480" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="9" value="10" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001401">
+    <STAT type="0" value="4000" />
+    <STAT type="6" value="307.2" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001402">
+    <STAT type="0" value="8300" />
+    <STAT type="6" value="537.6" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="9" value="10" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001403">
+    <STAT type="0" value="6400" />
+    <STAT type="6" value="480" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+  <INFO ID="105001410">
+    <STAT type="0" value="19700" />
+    <STAT type="6" value="363.6" />
+    <STAT type="7" value="113.333" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="135" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
+</MONSTER_STATS>

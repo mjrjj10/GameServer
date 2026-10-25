@@ -582,7 +582,7 @@ struct GameXmlContent
 
 	struct LevelEventNode
 	{
-		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM, BOUND_TRIGGER, STATUS_CHANGE, ACTIVATE_TRIGGER, ON_HIT_TRIGGER, ACTION_CHANGE, CLIENT_EVENT };
+		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM, BOUND_TRIGGER, STATUS_CHANGE, ACTIVATE_TRIGGER, ON_HIT_TRIGGER, ACTION_CHANGE, CLIENT_EVENT, CALL_MONSTER, DESPAWN_ENTITY, PASS_THROUGH, TIME_RECORD_START };
 		i32 id = 0;
 		Kind kind = OTHER;
 		i32 tagID = -1;
@@ -599,6 +599,14 @@ struct GameXmlContent
 		i32 localID = 0;
 		i32 hitCount = 0;
 		ActionStateID action = ActionStateID::INVALID;
+		i32 monster = 0;
+		i32 count = 1;
+		i32 callCount = 1;
+		f32 callDelay = 0;
+		f32 callInterval = 0;
+		i32 spawnAnim = 0;
+		i32 wander = -1;
+		Faction team = Faction::INVALID;
 		eastl::fixed_vector<i32,8,false> outputs;
 	};
 
@@ -904,6 +912,8 @@ struct GameXmlContent
 	bool Load();
 	const MapList* FindMapListByID(MapIndex index) const;
 	const Map* FindPvpMap(MapIndex index) const;
+	const eastl::fixed_vector<StatValue,24,false>* FindMonsterStats(i32 creatureID) const { auto f = monsterStats.find(creatureID); return f == monsterStats.end() ? nullptr : &f->second; }
+	eastl::hash_map<i32, eastl::fixed_vector<StatValue,24,false>> monsterStats;
 	const Song* FindJukeboxSongByID(SongID songID) const;
 	bool LoadCharacterBaseStats();
 
@@ -1080,6 +1090,7 @@ private:
 	bool LoadMapByID(Map* map, MapIndex index);
 	bool LoadLobby(MapIndex index);
 	bool LoadPvpMaps();
+	bool LoadMonsterStats();
 	bool LoadJukeboxSongs();
 	bool LoadCollisionMeshes();
 	bool LoadAnimationData();

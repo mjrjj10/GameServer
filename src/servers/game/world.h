@@ -887,8 +887,13 @@ public:
 	void DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage);
 	void RemoteHitNpcs(RemoteInst& inst);
 	void StartLevelEvents();
+	void StartTimeRecord();
 	void UpdateLevelEvents();
 	void FireLevelEvent(i32 nodeID, i32 playerIndex = -1);
+	void CallMonsters(const GameXmlContent::LevelEventNode& node);
+	ActorNpc& SpawnMonster(CreatureIndex docID, i32 localID, const vec3& pos, const vec3& rot, Faction faction, i32 tagID);
+	void InitMonsterStats(ActorNpc& npc);
+	void DespawnEntities(i32 localID, i32 tagID);
 	void UpdateBoundTriggers();
 	void OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos);
 	bool LevelTriggerActive(const GameXmlContent::LevelEventNode& node) const;
@@ -897,6 +902,8 @@ public:
 	struct GroundItem { u32 uid; i32 itemIndex; vec3 pos; i32 tagID; Time expireAt; };
 	eastl::fixed_vector<GroundItem,64,false> groundItems;
 	struct LevelEventTimer { i32 node; Time at; i32 playerIndex; };
+	struct MonsterCall { i32 node; Time at; i32 remaining; };
+	eastl::fixed_vector<MonsterCall,128,false> monsterCalls;
 	struct BoundTriggerState { i32 node; u32 playerIndex; bool inside; Time last; };
 	eastl::fixed_vector<BoundTriggerState,128,true> boundTriggerStates;
 	eastl::fixed_vector<eastl::pair<u32,bool>,16,true> levelTriggerOverrides;

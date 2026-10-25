@@ -172,6 +172,8 @@ void World::UpdateInteractions()
 }
 
 static const u32 STAT_REASON_ITEM = 3;
+static const u8 MONSTER_DEFENCE_STAT = 7;
+static const i32 DYNAMIC_INDEX_RANGE = 110;
 static const f32 BOT_ITEM_PICKUP_RADIUS = 100.0f;
 
 void World::StartLevelEvents()
@@ -182,6 +184,72 @@ void World::StartLevelEvents()
 		if(n->kind != GameXmlContent::LevelEventNode::LEVEL_START) continue;
 		foreach_const(o, n->outputs) FireLevelEvent(*o);
 	}
+}
+
+void World::StartTimeRecord()
+{
+	foreach_const(n, map->levelEvents) {
+		if(n->kind != GameXmlContent::LevelEventNode::TIME_RECORD_START) continue;
+		foreach_const(o, n->outputs) FireLevelEvent(*o);
+	}
+}
+
+void World::InitMonsterStats(ActorNpc& npc)
+{
+	const auto* stats = GetGameXmlContent().FindMonsterStats((i32)npc.docID);
+	if(!stats) return;
+	const auto& statList = *stats;
+	foreach_const(st, statList) {
+		if(st->type == (u8)StatType::STAT_TYPE_HEALTH) npc.hp = npc.hpMax = (i32)st->value;
+		if(st->type == MONSTER_DEFENCE_STAT) npc.defence = st->value;
+	}
+}
+
+World::ActorNpc& World::SpawnMonster(CreatureIndex docID, i32 localID, const vec3& pos, const vec3& rot, Faction faction, i32 tagID)
+{
+	ActorNpc& npc = SpawnNpcActor(docID, localID);
+	npc.pos = pos;
+	npc.home = pos;
+	npc.rot = rot;
+	npc.faction = faction;
+	npc.tagID = tagID;
+	npc.actionState = ActionStateID::SPAWN_BEHAVIORSTATE;
+	npc.seed = (i32)RandUint();
+	InitMonsterStats(npc);
+	return npc;
+}
+
+void World::CallMonsters(const GameXmlContent::LevelEventNode& node)
+{
+	const GameXmlContent::Map::Area* area = map->FindArea(node.areaID);
+	if(!area) {
+		WARN("LevelEvent :: node %d calls monster %d in unknown area %d", node.id, node.monster, node.areaID);
+		return;
+	}
+	for(i32 i = 0; i < node.count; i++) {
+		if(node.monster / 1000000 == DYNAMIC_INDEX_RANGE) {
+			ActorDynamic& dyn = SpawnDynamic((CreatureIndex)node.monster, node.areaID);
+			dyn.pos = area->pos;
+			dyn.rot = area->rot;
+			dyn.tagID = node.tagID;
+			if(node.team != Faction::INVALID && node.team != Faction::MONSTER) dyn.faction = node.team;
+			continue;
+		}
+		ActorNpc& npc = SpawnMonster((CreatureIndex)node.monster, node.areaID, area->pos, area->rot, node.team, node.tagID);
+		npc.spawnAnim = node.spawnAnim;
+		npc.wanderDist = node.wander;
+	}
+	LOG("LevelEvent :: node %d calls %d x monster %d (tag %d) in area %d", node.id, node.count, node.monster, node.tagID, node.areaID);
+}
+
+void World::DespawnEntities(i32 localID, i32 tagID)
+{
+	foreach(npc, actorNpcList) {
+		if(npc->ownerUID != ActorUID::INVALID || npc->removeAt != Time::ZERO) continue;
+		if(tagID >= 0 ? npc->tagID != tagID : npc->localID != localID) continue;
+		if(npc->despawnAt == Time::ZERO || npc->despawnAt > localTime) npc->despawnAt = localTime;
+	}
+	LOG("LevelEvent :: despawn local %d tag %d", localID, tagID);
 }
 
 void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
@@ -213,6 +281,12 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 				LOG("LevelEvent :: dynamic %d action %d", d->localID, (i32)node->action);
 			}
 		} break;
+		case GameXmlContent::LevelEventNode::CALL_MONSTER: {
+			const f32 jitter = node->variance > 0 ? ((f32)(RandUint() % 2001) / 1000.0f - 1.0f) * node->variance : 0.0f;
+			if(!monsterCalls.full()) monsterCalls.push_back({ node->id, TimeAdd(localTime, TimeMsToTime(MAX(node->callDelay + jitter, 0.0f) * 1000.0)), node->callCount });
+		} break;
+		case GameXmlContent::LevelEventNode::DESPAWN_ENTITY: DespawnEntities(node->localID, node->tagID); break;
+		case GameXmlContent::LevelEventNode::PASS_THROUGH: break;
 		case GameXmlContent::LevelEventNode::ACTIVATE_TRIGGER: {
 			bool found = false;
 			foreach(t, levelTriggerOverrides) if(t->first == node->targetKey) { t->second = node->active; found = true; }
@@ -378,6 +452,18 @@ void World::UpdateLevelEvents()
 		const i32 playerIndex = levelEventTimers[i].playerIndex;
 		levelEventTimers.erase(levelEventTimers.begin() + i);
 		FireLevelEvent(node, playerIndex);
+	}
+	for(i32 i = 0; i < (i32)monsterCalls.size(); ) {
+		MonsterCall& call = monsterCalls[i];
+		if(localTime < call.at) { i++; continue; }
+		const GameXmlContent::LevelEventNode* node = map->FindLevelEvent(call.node);
+		if(node) CallMonsters(*node);
+		if(!node || --call.remaining <= 0) {
+			monsterCalls.erase(monsterCalls.begin() + i);
+			continue;
+		}
+		call.at = TimeAdd(call.at, TimeMsToTime(MAX(node->callInterval, 0.0f) * 1000.0));
+		i++;
 	}
 	UpdateBoundTriggers();
 	for(i32 i = 0; i < (i32)groundItems.size(); ) {

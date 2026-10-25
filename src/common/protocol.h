@@ -499,8 +499,21 @@ enum class Faction: i32
 	RED = 0,
 	BLUE = 1,
 	DYNAMIC = 2,
+	MONSTER = 3,
+	ORANGE = 4,
 	_COUNT = 2
 };
+
+inline TeamType FactionTeamType(Faction faction)
+{
+	switch(faction) {
+		case Faction::RED: return TeamType::RED;
+		case Faction::BLUE: return TeamType::BLUE;
+		case Faction::DYNAMIC: return TeamType::DYNAMIC;
+		case Faction::ORANGE: return TeamType::ORANGE;
+		default: return TeamType::MONSTER;
+	}
+}
 
 enum class RemoteIdx: i32
 {
