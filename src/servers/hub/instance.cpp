@@ -744,6 +744,37 @@ void RoomInstance::OnClientPacket(ClientHandle clientHd, const NetHeader& header
 			SendPacket(clientHd, notify);
 		} break;
 
+		case Cl::CQ_SelectSkin::NET_ID: {
+			if(!ValidatePacket<Cl::CQ_SelectSkin>(packetData, packetSize)) {
+				WARN("[client%x] WARNING: invalid CQ_SelectSkin (size=%d)", clientHd, packetSize);
+				break;
+			}
+			const Cl::CQ_SelectSkin& packet = SafeCast<Cl::CQ_SelectSkin>(packetData, packetSize);
+			NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_SelectSkin>(packetData, packetSize));
+			User* user = FindUser(clientHd);
+			if(!user) break;
+			const ClassType cls = (ClassType)packet.classType;
+			const SkinIndex skin = (SkinIndex)packet.skinIndex;
+			bool known = false;
+			foreach_const(m, GetGameXmlContent().masters) {
+				if(m->classType != cls) continue;
+				foreach_const(s, m->skinIDs) if(*s == skin) known = true;
+			}
+			bool applied = false;
+			for(int mi = 0; mi < 2 && known; mi++) {
+				if(user->masters[mi].classType != cls) continue;
+				user->masters[mi].skin = skin;
+				user->replicate.masterPick = true;
+				applied = true;
+			}
+			LOG("[Room] %ls skin %d for class %d: %s", user->name.data(), (i32)skin, (i32)cls, applied ? "applied" : (known ? "master not picked" : "unknown skin"));
+			Sv::SA_CharacterSkinSelect ack;
+			ack.result = (u32)(known ? ErrorType::SUCCESS : ErrorType::CHARACTER_SKIN_SELECT_INVALID_DATA);
+			ack.classType = packet.classType;
+			ack.skinIndex = packet.skinIndex;
+			SendPacket(clientHd, ack);
+		} break;
+
 		case Cl::CQ_RoomSwapSkill::NET_ID: {
 			User* user = FindUser(clientHd);
 			if(!user) break;

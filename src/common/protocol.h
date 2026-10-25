@@ -184,6 +184,7 @@ enum class ErrorType: u32
 	MAIL_EXCESS_CONTENTS = 0x157,
 	MAIL_WRITE_INVAILID_NICKNAME = 0x158,
 	MAIL_SEND_ARCHIVE_FAIL_ARCHIVE_FULL = 0x159,
+	CHARACTER_SKIN_SELECT_INVALID_DATA = 0x100,
 };
 
 // values from decompile
@@ -1695,11 +1696,11 @@ PUSH_PACKED
 struct CQ_SelectSkin
 {
 	enum { NET_ID = 60115 };
-	u32 roomIdOrInviterId; // 4 bytes
-	u8 constZero; // 1 bytes (bool)
-	u32 rejectMessage; // 4 bytes (unclassified writer wstring)
+	u32 classType;
+	u32 skinIndex;
 };
 POP_PACKED
+ASSERT_SIZE(CQ_SelectSkin, 8);
 
 PUSH_PACKED
 struct CQ_UNKNOWN_60116

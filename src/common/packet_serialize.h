@@ -803,6 +803,31 @@ inline const char* PacketSerialize<Sv::SN_GamePlayerStock>(const void* packetDat
 }
 
 template<>
+inline const char* PacketSerialize<Cl::CQ_SelectSkin>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_SelectSkin(%d, %d) :: {", Cl::CQ_SelectSkin::NET_ID, packetSize);
+	SER("	classType=%u", buff.Read<u32>());
+	SER("	skinIndex=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SA_CharacterSkinSelect>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SA_CharacterSkinSelect(%d, %d) :: {", Sv::SA_CharacterSkinSelect::NET_ID, packetSize);
+	SER("	result=0x%x", buff.Read<u32>());
+	SER("	classType=%u", buff.Read<u32>());
+	SER("	skinIndex=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Cl::CQ_MailShowList>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();
