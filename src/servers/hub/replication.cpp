@@ -12,6 +12,7 @@
 #include <EASTL/sort.h>
 #include <time.h>
 #include "mission_rules.h"
+#include "mission_progress.h"
 #include "mailbox.h"
 
 
@@ -1067,46 +1068,69 @@ void HubReplication::SendMailMoveResult(ClientHandle clientHd, ErrorType result)
 	SendPacket(clientHd, packet);
 }
 
+template<typename Writer>
+static void WriteMissionInfo(Writer& packet, const ActiveMission& m)
+{
+	packet.template Write<u32>((u32)m.mission->ID);
+	packet.template Write<i64>(m.progress);
+	packet.template Write<u16>(m.changedCount);
+	packet.template Write<u8>(m.cleared ? 1 : 0);
+	packet.template Write<u8>(m.rewarded ? 1 : 0);
+}
+
 void HubReplication::SendMissionList(ClientHandle clientHd, const Account& account)
 {
 	const i64 now = (i64)time(nullptr);
-	const MissionCalendar cal = ComputeMissionCalendar(now);
-	const auto& missions = GetGameXmlContent().missions;
-
-	eastl::fixed_vector<i32,64,false> list;
-	u32 seed = 2166136261u;
-	foreach_const(c, account.nickname) seed = (seed ^ (u32)*c) * 16777619u;
-	seed = (seed ^ (u32)cal.periodDay) * 16777619u;
-	const i32 grade = DailyMissionGrade(account.level);
-	for(i32 step = 0; step <= MISSION_DAILY_STEPS; step++) {
-		eastl::fixed_vector<i32,64,false> pool;
-		foreach_const(m, missions) {
-			if(m->category != GameXmlContent::Mission::Category::DAILY || m->step != step || m->dayRestricted) continue;
-			if(step > 0 && step <= MEASURED_DAILY_GRADED_STEP_MAX && m->grade != grade) continue;
-			if(!pool.full()) pool.push_back(m->ID);
-		}
-		if(pool.empty()) continue;
-		const u32 pick = (seed ^ (u32)step * 2654435761u) % (u32)pool.size();
-		list.push_back(pool[pick]);
-	}
-	for(i32 id : MEASURED_WEEKLY_MISSIONS_COMMON) list.push_back(id);
-	for(i32 id : MEASURED_WEEKLY_MISSIONS[cal.weeklySet]) list.push_back(id);
-	for(i32 id : MEASURED_MONTHLY_MISSIONS) list.push_back(id);
-	for(i32 id : MEASURED_GUILD_MISSIONS[cal.weeklySet]) list.push_back(id);
-	eastl::sort(list.begin(), list.end());
+	const AccountMissions saved = AccountMissionsLoad(account.nickname.data());
+	ActiveMissionList list;
+	const MissionTimers timers = MissionBuildActive(account.nickname.data(), account.level, now, saved, &list);
 
 	PacketWriter<Sv::SN_MissionList,2048> packet;
 	packet.Write<u16>((u16)list.size());
-	foreach_const(id, list) {
-		packet.Write<u32>((u32)*id);
-		packet.Write<i64>(0);
-		packet.Write<u16>(0);
-		packet.Write<u8>(0);
-		packet.Write<u8>(0);
-	}
-	packet.Write<u32>((u32)((cal.dailyResetUtc - now) * 1000));
-	packet.Write<u32>((u32)((cal.weeklyResetUtc - now) * 1000));
-	packet.Write<u32>((u32)((cal.monthlyResetUtc - now) * 1000));
+	foreach_const(m, list) WriteMissionInfo(packet, *m);
+	packet.Write<u32>((u32)(timers.dailyRemainSec * 1000));
+	packet.Write<u32>((u32)(timers.weeklyRemainSec * 1000));
+	packet.Write<u32>((u32)(timers.monthlyRemainSec * 1000));
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendMissionReward(ClientHandle clientHd, u32 result, const ActiveMission& mission)
+{
+	PacketWriter<Sv::SA_RequestMissionReward> packet;
+	packet.Write<u32>(result);
+	WriteMissionInfo(packet, mission);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendDailyMissionChange(ClientHandle clientHd, u32 result, i32 step, const ActiveMission& mission)
+{
+	PacketWriter<Sv::SA_DailyMissionChange> packet;
+	packet.Write<u32>(result);
+	packet.Write<u32>((u32)step);
+	WriteMissionInfo(packet, mission);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendMoney(ClientHandle clientHd, i64 gold, i32 reason)
+{
+	Sv::SN_Money money;
+	money.nMoney = gold;
+	money.nReason = reason;
+	SendPacket(clientHd, money);
+}
+
+void HubReplication::SendExpGain(ClientHandle clientHd, ActorUID actorUID, const wchar* name, bool levelUp, u16 level, u32 levelExp, u32 gained)
+{
+	Sv::SN_ExpGain gain;
+	gain.amount = gained;
+	SendPacket(clientHd, gain);
+
+	PacketWriter<Sv::SN_Exp> packet;
+	packet.Write<LocalActorID>(GetLocalActorID(clientHd, actorUID));
+	packet.WriteStringObj(name);
+	packet.Write<u8>(levelUp ? 1 : 0);
+	packet.Write<u16>(level);
+	packet.Write<u32>(levelExp);
 	SendPacket(clientHd, packet);
 }
 

@@ -106,6 +106,8 @@ struct HubGame
 	void OnMailRead(ClientHandle clientHd, u64 mailID);
 	void OnMailWrite(ClientHandle clientHd, const wchar* to, const wchar* subject, i32 subjectLen, const wchar* content, i32 contentLen);
 	void OnMailMove(ClientHandle clientHd, u8 moveType, const u64* ids, i32 count);
+	void OnMissionReward(ClientHandle clientHd, i32 missionID);
+	void OnDailyMissionChange(ClientHandle clientHd, i32 step);
 
 	void MmOnPartyCreated(PartyUID partyUID, AccountUID leader);
 	void MmOnPartyEnqueued(PartyUID partyUID);

@@ -185,6 +185,7 @@ enum class ErrorType: u32
 	MAIL_WRITE_INVAILID_NICKNAME = 0x158,
 	MAIL_SEND_ARCHIVE_FAIL_ARCHIVE_FULL = 0x159,
 	CHARACTER_SKIN_SELECT_INVALID_DATA = 0x100,
+	RANDOM_MISSION_ALREADY_COMPLETED = 0x1ad,
 };
 
 // values from decompile
@@ -2767,22 +2768,22 @@ struct CQ_RequestMissionList
 POP_PACKED
 
 PUSH_PACKED
-struct CQ_WarehouseItemDelete
+struct CQ_RequestMissionReward
 {
 	enum { NET_ID = 60226 };
-	u32 amount_u32; // 4 bytes
+	u32 missionIndex;
 };
 POP_PACKED
-ASSERT_SIZE(CQ_WarehouseItemDelete, 4);
+ASSERT_SIZE(CQ_RequestMissionReward, 4);
 
 PUSH_PACKED
-struct CQ_UNKNOWN_60227
+struct CQ_DailyMissionChange
 {
 	enum { NET_ID = 60227 };
-	u32 value_u32; // 4 bytes
+	u32 step;
 };
 POP_PACKED
-ASSERT_SIZE(CQ_UNKNOWN_60227, 4);
+ASSERT_SIZE(CQ_DailyMissionChange, 4);
 
 PUSH_PACKED
 struct CQ_PvpRecord

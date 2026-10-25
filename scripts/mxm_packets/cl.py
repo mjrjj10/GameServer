@@ -1102,12 +1102,12 @@ class ClientSerializer:
         print('}')
     
     def serialize_60226(netid, p: common.PacketReader):
-        print('CQ_WarehouseItemDelete {')
-        print('    field1=%d' % p.read_u32())
+        print('CQ_RequestMissionReward {')
+        print('    missionIndex=%d' % p.read_u32())
         print('}')
     def serialize_60227(netid, p: common.PacketReader):
-        print('Cl_60227 {')
-        print('    field1=%d' % p.read_u32())
+        print('CQ_DailyMissionChange {')
+        print('    step=%d' % p.read_u32())
         print('}')
     def serialize_60229(netid, p: common.PacketReader):
         print('CQ_PvpDetailRecord {')

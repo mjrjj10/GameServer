@@ -119,8 +119,11 @@ struct World
 		Time botComboShotAt = Time::ZERO;
 		ActionStateID botAttackState = ActionStateID::INVALID;
 		i32 killStreak = 0;
+		i32 bestKillStreak = 0;
 		i32 multiKill = 0;
 		i32 assists = 0;
+		bool firstBlood = false;
+		i64 damageDealt = 0;
 		eastl::fixed_vector<Replication::DamageTaken,48,false> recentDamage;
 		Time lastKillAt = Time::ZERO;
 		Time botAttackStateUntil = Time::ZERO;

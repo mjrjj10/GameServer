@@ -775,17 +775,45 @@ struct GameXmlContent
 	{
 		StageIndex ID;
 		i32 joinMemberMax = 0;
+		bool titan = false;
 		eastl::fixed_vector<MapIndex,8,false> maps;
 	};
 
 	struct Mission
 	{
 		enum class Category: u8 { DAILY, WEEKLY, MONTHLY, GUILD, OTHER };
+		enum class SubType: u8 {
+			OTHER,
+			ACHIEVE_MISSION,
+			GET_GOLD,
+			GET_EXP,
+			MASTER_SORTIE,
+			PVP_PLAY,
+			PVP_WIN,
+			PVP_KILL,
+			PVP_ASSIST,
+			PVP_KILL_STREAK,
+			PVP_FIRST_BLOOD,
+			PVP_DAMAGE,
+			PVP_TITAN_SCORE,
+			PVP_TITAN_SCORE_TOTAL,
+		};
+		enum class Section: u8 { OTHER, ALL, PVP_ALL, PVP_TITAN };
+		enum class RewardType: u8 { NONE, GOLD, EXP, CCOIN, ITEM, GUILDFUND };
 		i32 ID;
 		Category category;
 		i32 step;
 		i32 grade;
 		bool dayRestricted;
+		SubType subType = SubType::OTHER;
+		Section section = Section::OTHER;
+		i64 count = 0;
+		i64 value = 0;
+		GameType gameType = GameType::INVALID;
+		Category requiredCategory = Category::OTHER;
+		eastl::fixed_vector<ClassType,4,false> requiredClasses;
+		RewardType rewardType = RewardType::NONE;
+		i64 rewardAmount = 0;
 	};
 
 	struct ExpLevel
@@ -795,6 +823,7 @@ struct GameXmlContent
 	};
 
 	eastl::fixed_vector<Mission,256,false> missions;
+	const Mission* FindMission(i32 ID) const;
 	eastl::fixed_vector<ExpLevel,1024,false> expLevels;
 	eastl::fixed_vector<EntrySystem,32,false> entrySystems;
 	eastl::fixed_vector<AreaStages,64,false> areaStages;

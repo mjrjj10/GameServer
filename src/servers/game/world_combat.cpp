@@ -247,6 +247,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	LOG("Damage :: %ls -> %ls skill=%d damage=%d%s hp=%d/%d in=%d remote=%u element=%d", attacker.name.data(), target.name.data(), (i32)skillID, damage, damageType == PACKET_DAMAGE_TYPE_CRITICAL ? " CRIT" : "", chara.hp, chara.hpMax,
 		damageIn, (u32)(proj ? proj->remoteDoc : remoteDoc), (i32)(elementMul * 100.0f));
 	if(attacker.team != target.team) {
+		attacker.damageDealt += damage;
 		for(i32 k = 0; k < (i32)target.recentDamage.size(); ) {
 			if(localTime > TimeAdd(target.recentDamage[k].at, TimeMsToTime(DEAD_DAMAGE_WINDOW_MS))) target.recentDamage.erase(target.recentDamage.begin() + k);
 			else k++;
@@ -321,6 +322,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		if(attacker.team != target.team) {
 			if(!firstBloodDone) {
 				firstBloodDone = true;
+				attacker.firstBlood = true;
 				specialAnnounced = true;
 				replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_FIRST_BLOOD, 0, attacker.Main().UID, chara.UID);
 			}
@@ -328,6 +330,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			attacker.multiKill = chained ? attacker.multiKill + 1 : 1;
 			attacker.lastKillAt = localTime;
 			attacker.killStreak++;
+			attacker.bestKillStreak = MAX(attacker.bestKillStreak, attacker.killStreak);
 			if(attacker.multiKill >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_MULTI_KILL, (u32)attacker.multiKill, attacker.Main().UID, chara.UID);
 			if(attacker.killStreak >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_KILL_STREAK, (u32)attacker.killStreak, attacker.Main().UID, chara.UID);
 			if(target.killStreak >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_SHUTDOWN, 0, attacker.Main().UID, chara.UID);

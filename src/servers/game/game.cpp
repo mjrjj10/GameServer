@@ -648,6 +648,7 @@ void Game::EndGame()
 	for(u32 i = 0; i < world.PlayerCount(); i++) {
 		World::Player& p = world.GetPlayer(i);
 		Replication::EndPlayer e;
+		e.playerIndex = i;
 		e.userID = p.userID;
 		e.clientHd = p.clientHd;
 		e.name = p.name.data();
@@ -671,7 +672,20 @@ void Game::EndGame()
 		const bool won = own > other;
 		e->gold = minutes * (won ? rule.winGoldPerMin : rule.loseGoldPerMin);
 		e->exp = minutes * (won ? rule.winExpPerMin : rule.loseExpPerMin);
-		AccountRewardAppend(e->name, e->gold, e->exp);
+		const World::Player& p = world.GetPlayer(e->playerIndex);
+		AccountGameRecord record;
+		record.gold = e->gold;
+		record.exp = e->exp;
+		record.won = won;
+		record.kills = p.kills;
+		record.assists = p.assists;
+		record.bestKillStreak = p.bestKillStreak;
+		record.firstBlood = p.firstBlood;
+		record.damage = p.damageDealt;
+		record.stageIndex = (i32)replication.stageIndex;
+		record.gameType = (i32)replication.gameType;
+		record.classTypes = { (i32)p.mainClass, (i32)p.subClass };
+		AccountGameRecordAppend(e->name, record);
 		LOG("Game :: %ls reward %u gold %u exp (%u min, %s)", e->name, e->gold, e->exp, minutes, won ? "win" : (own == other ? "draw" : "loss"));
 	}
 	replication.SendGameEnd(list.data(), (i32)list.size(), red, blue, (u32)(TimeDiffSec(TimeDiff(tGameStarted, localTime)) * 1000.0));

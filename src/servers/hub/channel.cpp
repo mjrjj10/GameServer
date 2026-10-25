@@ -67,6 +67,8 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CN_SortieRoomConfirm);
 		HANDLE_CASE(CQ_MailShowList);
 		HANDLE_CASE(CQ_MailRead);
+		HANDLE_CASE(CQ_RequestMissionReward);
+		HANDLE_CASE(CQ_DailyMissionChange);
 		HANDLE_CASE(CQ_MailWrite);
 		HANDLE_CASE(CQ_MailMove);
 
@@ -635,6 +637,30 @@ void HubPacketHandler::HandlePacket_CQ_MailRead(ClientHandle clientHd, const Net
 	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_MailRead>(packetData, packetSize));
 
 	game->OnMailRead(clientHd, packet.target_user_id_u64);
+}
+
+void HubPacketHandler::HandlePacket_CQ_RequestMissionReward(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_RequestMissionReward>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_RequestMissionReward (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const Cl::CQ_RequestMissionReward& packet = SafeCast<Cl::CQ_RequestMissionReward>(packetData, packetSize);
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_RequestMissionReward>(packetData, packetSize));
+
+	game->OnMissionReward(clientHd, (i32)packet.missionIndex);
+}
+
+void HubPacketHandler::HandlePacket_CQ_DailyMissionChange(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_DailyMissionChange>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_DailyMissionChange (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const Cl::CQ_DailyMissionChange& packet = SafeCast<Cl::CQ_DailyMissionChange>(packetData, packetSize);
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_DailyMissionChange>(packetData, packetSize));
+
+	game->OnDailyMissionChange(clientHd, (i32)packet.step);
 }
 
 void HubPacketHandler::HandlePacket_CQ_MailWrite(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

@@ -938,8 +938,74 @@ bool GameXmlContent::LoadPvpDeathmach()
 	return LoadMapByID(&mapPvpDeathMatch, MapIndex::PVP_DEATHMATCH);
 }
 
+struct MissionSubTypeName
+{
+	const char* name;
+	GameXmlContent::Mission::SubType subType;
+};
+
+static const MissionSubTypeName MISSION_SUBTYPE_NAMES[] = {
+	{ "MISSION_SUBTYPE_MISSION_ACHIEVE_MISSION", GameXmlContent::Mission::SubType::ACHIEVE_MISSION },
+	{ "MISSION_SUBTYPE_ALL_GET_GOLD", GameXmlContent::Mission::SubType::GET_GOLD },
+	{ "MISSION_SUBTYPE_ALL_GET_EXP", GameXmlContent::Mission::SubType::GET_EXP },
+	{ "MISSION_SUBTYPE_ALL_MASTER_SORTIE", GameXmlContent::Mission::SubType::MASTER_SORTIE },
+	{ "MISSION_SUBTYPE_PVP_MISSION_PLAY", GameXmlContent::Mission::SubType::PVP_PLAY },
+	{ "MISSION_SUBTYPE_PVP_WIN_TOTAL", GameXmlContent::Mission::SubType::PVP_WIN },
+	{ "MISSION_SUBTYPE_PVP_KILL_TOTAL", GameXmlContent::Mission::SubType::PVP_KILL },
+	{ "MISSION_SUBTYPE_PVP_ASSIST_COUNT", GameXmlContent::Mission::SubType::PVP_ASSIST },
+	{ "MISSION_SUBTYPE_PVP_KILL_STREAK", GameXmlContent::Mission::SubType::PVP_KILL_STREAK },
+	{ "MISSION_SUBTYPE_PVP_FIRST_BLOOD", GameXmlContent::Mission::SubType::PVP_FIRST_BLOOD },
+	{ "MISSION_SUBTYPE_PVP_GIVE_DAMAGE_TOTAL", GameXmlContent::Mission::SubType::PVP_DAMAGE },
+	{ "MISSION_SUBTYPE_PVP_TITAN_SCORE", GameXmlContent::Mission::SubType::PVP_TITAN_SCORE },
+	{ "MISSION_SUBTYPE_PVP_TITAN_SCORE_TOTAL", GameXmlContent::Mission::SubType::PVP_TITAN_SCORE_TOTAL },
+};
+
+static const char* GAME_TYPE_NAMES[] = {
+	"GAME_TYPE_INVALID", "GAME_TYPE_PVE_NORMAL", "GAME_TYPE_PVE_RANDOM", "GAME_TYPE_PVE_TICKET", "GAME_TYPE_PVP_NORMAL",
+	"GAME_TYPE_PVP_RANK", "GAME_TYPE_PVP_AI", "GAME_TYPE_PVP_NORMAL_FFA", "GAME_TYPE_PVP_GUILD", "GAME_TYPE_PVP_FAKE_AI",
+};
+
+static GameXmlContent::Mission::Category MissionCategoryFromName(const char* cat)
+{
+	if(cat && EA::StdC::Strcmp(cat, "DAILY") == 0) return GameXmlContent::Mission::Category::DAILY;
+	if(cat && EA::StdC::Strcmp(cat, "WEEKLY") == 0) return GameXmlContent::Mission::Category::WEEKLY;
+	if(cat && EA::StdC::Strcmp(cat, "MONTHLY") == 0) return GameXmlContent::Mission::Category::MONTHLY;
+	if(cat && EA::StdC::Strcmp(cat, "GUILD") == 0) return GameXmlContent::Mission::Category::GUILD;
+	return GameXmlContent::Mission::Category::OTHER;
+}
+
 bool GameXmlContent::LoadMissions()
 {
+	struct RewardInfo
+	{
+		eastl::fixed_string<char,32,false> key;
+		Mission::RewardType type;
+		i64 amount;
+	};
+	eastl::fixed_vector<RewardInfo,128,false> rewards;
+	XMLDocument docReward;
+	if(!LoadXMLFile(L"/Design/GAMEINFO/ServiceReward.xml", docReward)) return false;
+	XMLElement* pRewardRoot = docReward.FirstChildElement()->FirstChildElement("ST_SERVICEREWARD");
+	ASSERT(pRewardRoot);
+	XMLElement* pMissionRewards = pRewardRoot->FirstChildElement("_MissionRewardInfo");
+	ASSERT(pMissionRewards);
+	for(XMLElement* pReward = pMissionRewards->FirstChildElement("_RewardInfo"); pReward; pReward = pReward->NextSiblingElement("_RewardInfo")) {
+		RewardInfo info;
+		const char* key = pReward->Attribute("DATAKEY");
+		const char* type = pReward->Attribute("_Type");
+		if(!key || !type) continue;
+		info.key = key;
+		info.type = Mission::RewardType::NONE;
+		if(EA::StdC::Strcmp(type, "REWARD_TYPE_GOLD") == 0) info.type = Mission::RewardType::GOLD;
+		else if(EA::StdC::Strcmp(type, "REWARD_TYPE_EXP") == 0) info.type = Mission::RewardType::EXP;
+		else if(EA::StdC::Strcmp(type, "REWARD_TYPE_CCOIN") == 0) info.type = Mission::RewardType::CCOIN;
+		else if(EA::StdC::Strcmp(type, "REWARD_TYPE_ITEM") == 0) info.type = Mission::RewardType::ITEM;
+		else if(EA::StdC::Strcmp(type, "REWARD_TYPE_GUILDFUND") == 0) info.type = Mission::RewardType::GUILDFUND;
+		info.amount = pReward->Int64Attribute("_Amount", 0);
+		ASSERT(!rewards.full());
+		rewards.push_back(info);
+	}
+
 	XMLDocument doc;
 	if(!LoadXMLFile(L"/Design/DOCUMENT/MISSION.xml", doc)) return false;
 	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
@@ -958,17 +1024,50 @@ bool GameXmlContent::LoadMissions()
 				if(value && EA::StdC::Stricmp(value, "FALSE") == 0) mission.dayRestricted = true;
 			}
 		}
-		const char* cat = pMission->Attribute("_Category");
-		mission.category = Mission::Category::OTHER;
-		if(cat && EA::StdC::Strcmp(cat, "DAILY") == 0) mission.category = Mission::Category::DAILY;
-		else if(cat && EA::StdC::Strcmp(cat, "WEEKLY") == 0) mission.category = Mission::Category::WEEKLY;
-		else if(cat && EA::StdC::Strcmp(cat, "MONTHLY") == 0) mission.category = Mission::Category::MONTHLY;
-		else if(cat && EA::StdC::Strcmp(cat, "GUILD") == 0) mission.category = Mission::Category::GUILD;
+		mission.category = MissionCategoryFromName(pMission->Attribute("_Category"));
+		const char* subType = pMission->Attribute("_SubType");
+		for(const MissionSubTypeName& name : MISSION_SUBTYPE_NAMES) {
+			if(subType && EA::StdC::Strcmp(subType, name.name) == 0) mission.subType = name.subType;
+		}
+		if(XMLElement* pData = pMission->FirstChildElement("_MISSION_DATA")) {
+			mission.count = pData->Int64Attribute("_count", 0);
+			mission.value = pData->Int64Attribute("_value", 0);
+			const char* section = pData->Attribute("_SectionKey");
+			if(section && EA::StdC::Strcmp(section, "AREA_ALL") == 0) mission.section = Mission::Section::ALL;
+			else if(section && EA::StdC::Strcmp(section, "AREA_PVP_ALL") == 0) mission.section = Mission::Section::PVP_ALL;
+			else if(section && EA::StdC::Strcmp(section, "AREA_PVP_TITAN") == 0) mission.section = Mission::Section::PVP_TITAN;
+			const char* gameType = pData->Attribute("_GameType");
+			for(i32 t = 0; t < (i32)ARRAY_COUNT(GAME_TYPE_NAMES); t++) {
+				if(gameType && EA::StdC::Strcmp(gameType, GAME_TYPE_NAMES[t]) == 0) mission.gameType = (GameType)t;
+			}
+			const char* reward = pData->Attribute("_Reward");
+			foreach_const(r, rewards) {
+				if(reward && r->key.compare(reward) == 0) {
+					mission.rewardType = r->type;
+					mission.rewardAmount = r->amount;
+				}
+			}
+			for(XMLElement* pReq = pData->FirstChildElement("_RequiredList"); pReq; pReq = pReq->NextSiblingElement("_RequiredList")) {
+				const char* req = pReq->Attribute("DATA");
+				if(!req) continue;
+				auto found = masterClassStringMap.find(strHash(req));
+				if(found != masterClassStringMap.end()) {
+					if(!mission.requiredClasses.full()) mission.requiredClasses.push_back(found->second->classType);
+				}
+				else mission.requiredCategory = MissionCategoryFromName(req);
+			}
+		}
 		ASSERT(!missions.full());
 		missions.push_back(mission);
 	}
 	LOG("Loaded %d missions", (i32)missions.size());
 	return true;
+}
+
+const GameXmlContent::Mission* GameXmlContent::FindMission(i32 ID) const
+{
+	foreach_const(m, missions) if(m->ID == ID) return &*m;
+	return nullptr;
 }
 
 bool GameXmlContent::LoadExpInfo()
@@ -1119,6 +1218,8 @@ bool GameXmlContent::LoadStageMaps()
 		XMLElement* pStage = pInfo->FirstChildElement();
 		if(!pStage) continue;
 		pStage->QueryIntAttribute("_JoinMemberMax", &stage.joinMemberMax);
+		const char* gameMode = pStage->Attribute("_GameModeType");
+		stage.titan = gameMode && EA::StdC::Strcmp(gameMode, "GAME_MODE_GOT") == 0;
 		XMLElement* pWorldMap = pStage->FirstChildElement("_WORLD_STAGE_MAP");
 		if(!pWorldMap) continue;
 		for(XMLElement* pGroup = pWorldMap->FirstChildElement("_WORLD_STAGE_MAP_GROUP");

@@ -17,6 +17,7 @@ static const i32 MEASURED_MONTHLY_MISSIONS[] = {
 };
 static const i32 MISSION_DAILY_STEPS = 4;
 static const i32 MEASURED_DAILY_GRADED_STEP_MAX = 2;
+static const i32 MEASURED_MISSION_REWARD_MONEY_REASON = 16;
 
 struct DailyMissionGradeRule
 {

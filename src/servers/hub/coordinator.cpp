@@ -3,6 +3,8 @@
 #include <common/inner_protocol.h>
 #include <mxm/game_content.h>
 #include <mxm/account_progress.h>
+#include "mission_progress.h"
+#include <time.h>
 #include <zlib.h>
 #include <EAStdC/EAString.h>
 #include <EAStdC/EASprintf.h>
@@ -704,15 +706,16 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 	AccountProgress progress = AccountProgressLoad(account.nickname.data());
 	const AccountReward reward = AccountRewardTake(account.nickname.data());
 	if(reward.games > 0) {
-		const auto& levels = GetGameXmlContent().expLevels;
-		progress.gold += reward.gold;
-		progress.levelExp += reward.exp;
-		while(progress.level + 1 < (i32)levels.size() && levels[progress.level].required > 0 && progress.levelExp >= levels[progress.level].required) {
-			progress.levelExp -= levels[progress.level].required;
-			progress.level++;
-			progress.gold += levels[progress.level].gold;
-			LOG("[client%x] Account :: %ls reaches level %u", clientHd, account.nickname.data(), (u32)progress.level);
+		if(!reward.records.empty()) {
+			AccountMissions saved = AccountMissionsLoad(account.nickname.data());
+			ActiveMissionList list;
+			MissionBuildActive(account.nickname.data(), progress.level, (i64)time(nullptr), saved, &list);
+			foreach_const(r, reward.records) MissionApplyGame(*r, &list);
+			MissionStore(list, &saved);
+			AccountMissionsSave(account.nickname.data(), saved);
 		}
+		progress.gold += reward.gold;
+		if(ProgressGainExp(&progress, reward.exp)) LOG("[client%x] Account :: %ls reaches level %u", clientHd, account.nickname.data(), (u32)progress.level);
 		LOG("[client%x] Account :: %ls rewards of %d game(s): %lld gold, %u exp -> level %u (%u exp), %lld gold", clientHd, account.nickname.data(), reward.games, reward.gold, reward.exp, (u32)progress.level, progress.levelExp, progress.gold);
 	}
 	AccountProgressSave(account.nickname.data(), progress);

@@ -230,6 +230,10 @@ struct HubReplication
 
 	void SendAccountDataLobby(ClientHandle clientHd, const Account& account);
 	void SendMissionList(ClientHandle clientHd, const Account& account);
+	void SendMissionReward(ClientHandle clientHd, u32 result, const struct ActiveMission& mission);
+	void SendDailyMissionChange(ClientHandle clientHd, u32 result, i32 step, const struct ActiveMission& mission);
+	void SendMoney(ClientHandle clientHd, i64 gold, i32 reason);
+	void SendExpGain(ClientHandle clientHd, ActorUID actorUID, const wchar* name, bool levelUp, u16 level, u32 levelExp, u32 gained);
 	void SendMailUnreadNotice(ClientHandle clientHd, const wchar* owner);
 	void SendMailList(ClientHandle clientHd, const wchar* owner, u8 mailbox);
 	void SendMailRead(ClientHandle clientHd, const struct MailMessage& mail);

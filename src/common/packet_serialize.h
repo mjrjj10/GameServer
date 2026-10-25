@@ -839,6 +839,28 @@ inline const char* PacketSerialize<Cl::CQ_MailShowList>(const void* packetData, 
 }
 
 template<>
+inline const char* PacketSerialize<Cl::CQ_RequestMissionReward>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_RequestMissionReward(%d, %d) :: {", Cl::CQ_RequestMissionReward::NET_ID, packetSize);
+	SER("	missionIndex=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_DailyMissionChange>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_DailyMissionChange(%d, %d) :: {", Cl::CQ_DailyMissionChange::NET_ID, packetSize);
+	SER("	step=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Cl::CQ_MailRead>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();
@@ -986,6 +1008,52 @@ inline const char* PacketSerialize<Sv::SN_MailMoveResult>(const void* packetData
 	ConstBuffer buff(packetData, packetSize);
 	SER("SN_MailMoveResult(%d, %d) :: {", Sv::SN_MailMoveResult::NET_ID, packetSize);
 	SER("	nErrorType=0x%x", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SA_RequestMissionReward>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SA_RequestMissionReward(%d, %d) :: {", Sv::SA_RequestMissionReward::NET_ID, packetSize);
+	SER("	result=%u", buff.Read<u32>());
+	const u32 index = buff.Read<u32>();
+	const i64 progress = buff.Read<i64>();
+	const u16 changed = buff.Read<u16>();
+	const u8 cleared = buff.Read<u8>();
+	const u8 rewarded = buff.Read<u8>();
+	SER("	mission=(index=%u progressCount=%lld changedCount=%u isCleared=%u isRewarded=%u)", index, progress, changed, cleared, rewarded);
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SA_DailyMissionChange>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SA_DailyMissionChange(%d, %d) :: {", Sv::SA_DailyMissionChange::NET_ID, packetSize);
+	SER("	result=%u", buff.Read<u32>());
+	SER("	step=%u", buff.Read<u32>());
+	const u32 index = buff.Read<u32>();
+	const i64 progress = buff.Read<i64>();
+	const u16 changed = buff.Read<u16>();
+	const u8 cleared = buff.Read<u8>();
+	const u8 rewarded = buff.Read<u8>();
+	SER("	mission=(index=%u progressCount=%lld changedCount=%u isCleared=%u isRewarded=%u)", index, progress, changed, cleared, rewarded);
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_ExpGain>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_ExpGain(%d, %d) :: {", Sv::SN_ExpGain::NET_ID, packetSize);
+	SER("	amount=%u", buff.Read<u32>());
 	SER("}");
 	return str.data();
 }

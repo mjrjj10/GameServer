@@ -50,7 +50,7 @@ void AccountProgressSave(const wchar* nickname, const AccountProgress& progress)
 	rename(tmp, path);
 }
 
-void AccountRewardAppend(const wchar* nickname, i64 gold, u32 exp)
+void AccountGameRecordAppend(const wchar* nickname, const AccountGameRecord& record)
 {
 	std::lock_guard<std::mutex> lock(g_accountFileMutex);
 	_mkdir(ACCOUNT_DIR);
@@ -58,7 +58,8 @@ void AccountRewardAppend(const wchar* nickname, i64 gold, u32 exp)
 	AccountPath(nickname, "reward", path, sizeof(path));
 	FILE* f = fopen(path, "ab");
 	ASSERT(f);
-	fprintf(f, "%lld %u\n", (long long)gold, exp);
+	fprintf(f, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d\n", (long long)record.gold, record.exp, (u32)record.won, record.kills, record.assists, record.bestKillStreak,
+		(u32)record.firstBlood, (long long)record.damage, record.titanScore, record.stageIndex, record.gameType, record.classTypes[0], record.classTypes[1]);
 	fclose(f);
 }
 
@@ -70,14 +71,77 @@ AccountReward AccountRewardTake(const wchar* nickname)
 	AccountPath(nickname, "reward", path, sizeof(path));
 	FILE* f = fopen(path, "rb");
 	if(!f) return reward;
-	long long gold = 0;
-	u32 exp = 0;
-	while(fscanf(f, "%lld %u", &gold, &exp) == 2) {
-		reward.gold += (i64)gold;
-		reward.exp += exp;
+	char line[512];
+	while(fgets(line, sizeof(line), f)) {
+		AccountGameRecord record;
+		long long gold = 0, damage = 0;
+		u32 won = 0, firstBlood = 0;
+		const i32 n = sscanf(line, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d", &gold, &record.exp, &won, &record.kills, &record.assists, &record.bestKillStreak,
+			&firstBlood, &damage, &record.titanScore, &record.stageIndex, &record.gameType, &record.classTypes[0], &record.classTypes[1]);
+		if(n < 2) continue;
+		record.gold = (i64)gold;
+		record.won = (u8)won;
+		record.firstBlood = (u8)firstBlood;
+		record.damage = (i64)damage;
+		reward.gold += record.gold;
+		reward.exp += record.exp;
 		reward.games++;
+		if(n == 13 && !reward.records.full()) reward.records.push_back(record);
 	}
 	fclose(f);
 	remove(path);
 	return reward;
+}
+
+AccountMissions AccountMissionsLoad(const wchar* nickname)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	AccountMissions missions;
+	char path[512];
+	AccountPath(nickname, "missions", path, sizeof(path));
+	FILE* f = fopen(path, "rb");
+	if(!f) return missions;
+	char line[256];
+	while(fgets(line, sizeof(line), f)) {
+		long long period = 0, progress = 0;
+		i32 id = 0, step = 0;
+		u32 rewarded = 0, changed = 0;
+		if(sscanf(line, "M %d %lld %lld %u", &id, &period, &progress, &rewarded) == 4) {
+			if(missions.states.full()) continue;
+			AccountMissionState state;
+			state.ID = id;
+			state.period = (i64)period;
+			state.progress = (i64)progress;
+			state.rewarded = (u8)rewarded;
+			missions.states.push_back(state);
+		}
+		else if(sscanf(line, "C %d %lld %d %u", &step, &period, &id, &changed) == 4) {
+			if(missions.dailyChanges.full()) continue;
+			AccountDailyChange change;
+			change.step = step;
+			change.period = (i64)period;
+			change.missionID = id;
+			change.changedCount = (u16)changed;
+			missions.dailyChanges.push_back(change);
+		}
+	}
+	fclose(f);
+	return missions;
+}
+
+void AccountMissionsSave(const wchar* nickname, const AccountMissions& missions)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	_mkdir(ACCOUNT_DIR);
+	char path[512];
+	char tmp[520];
+	AccountPath(nickname, "missions", path, sizeof(path));
+	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+	FILE* f = fopen(tmp, "wb");
+	ASSERT(f);
+	foreach_const(s, missions.states) fprintf(f, "M %d %lld %lld %u\n", s->ID, (long long)s->period, (long long)s->progress, (u32)s->rewarded);
+	foreach_const(c, missions.dailyChanges) fprintf(f, "C %d %lld %d %u\n", c->step, (long long)c->period, c->missionID, (u32)c->changedCount);
+	fclose(f);
+	remove(path);
+	rename(tmp, path);
 }

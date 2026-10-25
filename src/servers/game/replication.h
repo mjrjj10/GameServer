@@ -336,6 +336,7 @@ struct Replication
 	void SendDoConnectChannel(ClientHandle clientHd, const wchar* nickname, const i32 hubIP[4], u16 hubPort);
 	struct EndPlayer
 	{
+		u32 playerIndex = 0;
 		UserID userID;
 		ClientHandle clientHd;
 		const wchar* name;

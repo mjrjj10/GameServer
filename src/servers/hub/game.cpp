@@ -4,6 +4,10 @@
 #include <mxm/game_content.h>
 #include "config.h"
 #include "mailbox.h"
+#include "mission_progress.h"
+#include "mission_rules.h"
+#include <mxm/account_progress.h>
+#include <time.h>
 #include <EAStdC/EAString.h>
 #include <common/utils.h>
 
@@ -715,6 +719,63 @@ void HubGame::OnMailShowList(ClientHandle clientHd, u8 mailbox)
 	const i32 userID = plidMap->Get(clientHd);
 	ASSERT(playerAccountData[userID]);
 	replication.SendMailList(clientHd, playerAccountData[userID]->nickname.data(), mailbox);
+}
+
+void HubGame::OnMissionReward(ClientHandle clientHd, i32 missionID)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	auto found = GetAccountManager().accountMap.find(playerAccountData[userID]->UID);
+	ASSERT(found != GetAccountManager().accountMap.end());
+	Account& account = *found->second;
+	AccountMissions saved = AccountMissionsLoad(account.nickname.data());
+	ActiveMissionList list;
+	MissionBuildActive(account.nickname.data(), account.level, (i64)time(nullptr), saved, &list);
+	ActiveMission* mission = MissionFind(&list, missionID);
+	if(!mission || !mission->cleared || mission->rewarded) {
+		WARN("[client%x] HubGame :: mission %d reward refused", clientHd, missionID);
+		if(mission) replication.SendMissionReward(clientHd, (u32)ErrorType::RANDOM_MISSION_ALREADY_COMPLETED, *mission);
+		return;
+	}
+
+	AccountProgress progress = AccountProgressLoad(account.nickname.data());
+	const GameXmlContent::Mission& data = *mission->mission;
+	bool levelUp = false;
+	if(data.rewardType == GameXmlContent::Mission::RewardType::GOLD) progress.gold += data.rewardAmount;
+	else if(data.rewardType == GameXmlContent::Mission::RewardType::EXP) levelUp = ProgressGainExp(&progress, (u32)data.rewardAmount);
+	else WARN("[client%x] HubGame :: mission %d reward type %d not granted", clientHd, missionID, (i32)data.rewardType);
+	AccountProgressSave(account.nickname.data(), progress);
+	account.level = progress.level;
+	account.levelExp = progress.levelExp;
+	account.gold = progress.gold;
+
+	mission->rewarded = true;
+	MissionStore(list, &saved);
+	AccountMissionsSave(account.nickname.data(), saved);
+	LOG("[client%x] HubGame :: %ls mission %d reward %lld (type %d)", clientHd, account.nickname.data(), missionID, data.rewardAmount, (i32)data.rewardType);
+
+	if(data.rewardType == GameXmlContent::Mission::RewardType::GOLD) replication.SendMoney(clientHd, account.gold, MEASURED_MISSION_REWARD_MONEY_REASON);
+	if(data.rewardType == GameXmlContent::Mission::RewardType::EXP) {
+		replication.SendExpGain(clientHd, playerActorUID[userID], account.nickname.data(), levelUp, account.level, account.levelExp, (u32)data.rewardAmount);
+		if(levelUp) replication.SendMoney(clientHd, account.gold, MEASURED_MISSION_REWARD_MONEY_REASON);
+	}
+	replication.SendMissionReward(clientHd, 0, *mission);
+}
+
+void HubGame::OnDailyMissionChange(ClientHandle clientHd, i32 step)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	const Account& account = *playerAccountData[userID];
+	AccountMissions saved = AccountMissionsLoad(account.nickname.data());
+	ActiveMission changed;
+	if(!MissionChangeDaily(account.nickname.data(), account.level, (i64)time(nullptr), step, &saved, &changed)) {
+		WARN("[client%x] HubGame :: daily mission change refused (step %d)", clientHd, step);
+		return;
+	}
+	AccountMissionsSave(account.nickname.data(), saved);
+	LOG("[client%x] HubGame :: %ls daily step %d -> mission %d (change %u)", clientHd, account.nickname.data(), step, changed.mission->ID, (u32)changed.changedCount);
+	replication.SendDailyMissionChange(clientHd, 0, step, changed);
 }
 
 void HubGame::OnMailRead(ClientHandle clientHd, u64 mailID)
