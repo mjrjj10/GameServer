@@ -16,6 +16,27 @@ static const i32 MEASURED_MONTHLY_MISSIONS[] = {
 	303000201, 303000203, 303000204, 303000205, 303000208, 303000218, 303000219,
 };
 static const i32 MISSION_DAILY_STEPS = 4;
+static const i32 MEASURED_DAILY_GRADED_STEP_MAX = 2;
+
+struct DailyMissionGradeRule
+{
+	u16 maxLevel;
+	i32 grade;
+};
+
+static const DailyMissionGradeRule MEASURED_DAILY_MISSION_GRADES[] = {
+	{ 28, 1 },
+	{ 98, 2 },
+	{ 0xFFFF, 3 },
+};
+
+static inline i32 DailyMissionGrade(u16 level)
+{
+	for(const DailyMissionGradeRule& rule : MEASURED_DAILY_MISSION_GRADES) {
+		if(level <= rule.maxLevel) return rule.grade;
+	}
+	return MEASURED_DAILY_MISSION_GRADES[ARRAY_COUNT(MEASURED_DAILY_MISSION_GRADES) - 1].grade;
+}
 static const i64 MISSION_RESET_HOUR_PACIFIC = 3;
 static const i32 MISSION_WEEKLY_RESET_WEEKDAY = 3;
 

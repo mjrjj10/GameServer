@@ -784,6 +784,8 @@ struct GameXmlContent
 		i32 ID;
 		Category category;
 		i32 step;
+		i32 grade;
+		bool dayRestricted;
 	};
 
 	struct ExpLevel

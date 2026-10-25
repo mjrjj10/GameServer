@@ -1077,10 +1077,13 @@ void HubReplication::SendMissionList(ClientHandle clientHd, const Account& accou
 	u32 seed = 2166136261u;
 	foreach_const(c, account.nickname) seed = (seed ^ (u32)*c) * 16777619u;
 	seed = (seed ^ (u32)cal.periodDay) * 16777619u;
+	const i32 grade = DailyMissionGrade(account.level);
 	for(i32 step = 0; step <= MISSION_DAILY_STEPS; step++) {
 		eastl::fixed_vector<i32,64,false> pool;
 		foreach_const(m, missions) {
-			if(m->category == GameXmlContent::Mission::Category::DAILY && m->step == step && !pool.full()) pool.push_back(m->ID);
+			if(m->category != GameXmlContent::Mission::Category::DAILY || m->step != step || m->dayRestricted) continue;
+			if(step > 0 && step <= MEASURED_DAILY_GRADED_STEP_MAX && m->grade != grade) continue;
+			if(!pool.full()) pool.push_back(m->ID);
 		}
 		if(pool.empty()) continue;
 		const u32 pick = (seed ^ (u32)step * 2654435761u) % (u32)pool.size();

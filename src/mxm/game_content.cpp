@@ -948,6 +948,16 @@ bool GameXmlContent::LoadMissions()
 		Mission mission;
 		if(pInfo->QueryIntAttribute("ID", &mission.ID) != XML_SUCCESS) continue;
 		mission.step = pMission->IntAttribute("_Step", 0);
+		mission.grade = (mission.ID / 10000) % 10;
+		mission.dayRestricted = false;
+		if(XMLElement* pData = pMission->FirstChildElement("_MISSION_DATA")) {
+			for(i32 day = 1; day <= 7; day++) {
+				char attr[8];
+				EA::StdC::Snprintf(attr, sizeof(attr), "_Day%d", day);
+				const char* value = pData->Attribute(attr);
+				if(value && EA::StdC::Stricmp(value, "FALSE") == 0) mission.dayRestricted = true;
+			}
+		}
 		const char* cat = pMission->Attribute("_Category");
 		mission.category = Mission::Category::OTHER;
 		if(cat && EA::StdC::Strcmp(cat, "DAILY") == 0) mission.category = Mission::Category::DAILY;
