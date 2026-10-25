@@ -776,6 +776,7 @@ struct GameXmlContent
 		StageIndex ID;
 		i32 joinMemberMax = 0;
 		bool titan = false;
+		GameModeType gameMode = GameModeType::GAME_MODE_INVALID;
 		eastl::fixed_vector<MapIndex,8,false> maps;
 	};
 

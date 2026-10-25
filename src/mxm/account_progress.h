@@ -8,6 +8,9 @@ struct AccountProgress
 	u16 level = 1;
 	u32 levelExp = 0;
 	i64 gold = 116472;
+	u32 wins = 0;
+	u32 draws = 0;
+	u32 losses = 0;
 };
 
 struct AccountGameRecord
@@ -15,6 +18,7 @@ struct AccountGameRecord
 	i64 gold = 0;
 	u32 exp = 0;
 	u8 won = 0;
+	u8 draw = 0;
 	i32 kills = 0;
 	i32 assists = 0;
 	i32 bestKillStreak = 0;

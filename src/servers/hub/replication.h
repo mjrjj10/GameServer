@@ -207,6 +207,7 @@ struct HubReplication
 	const ClientLocalMapping* plidMap;
 
 	eastl::array<ClientHandle,MAX_CLIENTS> playerClientHd;
+	eastl::array<const Account*,MAX_CLIENTS> playerAccount;
 	eastl::array<PlayerState,MAX_CLIENTS> playerState;
 	eastl::array<PlayerLocalInfo,MAX_CLIENTS> playerLocalInfo;
 
@@ -218,6 +219,12 @@ struct HubReplication
 	void FramePushJukebox(const ActorJukebox& actor);
 
 	void OnPlayerConnect(ClientHandle clientHd);
+	void SetPlayerAccount(ClientHandle clientHd, const Account* account);
+	void SendUpdateEntrySystem(ClientHandle clientHd);
+	void SendTownBurst(ClientHandle clientHd);
+	void SendMasterRotation(ClientHandle clientHd);
+	void SendPlayerStateInTown(ClientHandle clientHd, ActorUID actorUID, i8 state, const u8* modes, i32 modeCount);
+	void SendSelfExp(ClientHandle clientHd);
 	void SendLoadLobby(ClientHandle clientHd, MapIndex stageIndex, bool joinCity);
 	void SendJoinCity(ClientHandle clientHd);
 	void SendResultScreenStart(ClientHandle clientHd);

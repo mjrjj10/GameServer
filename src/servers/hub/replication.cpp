@@ -142,8 +142,14 @@ void HubReplication::OnPlayerConnect(ClientHandle clientHd)
 	const i32 clientID = plidMap->Get(clientHd);
 
 	playerClientHd[clientID] = clientHd;
+	playerAccount[clientID] = nullptr;
 	playerState[clientID] = PlayerState::CONNECTED;
 	playerLocalInfo[clientID].Reset();
+}
+
+void HubReplication::SetPlayerAccount(ClientHandle clientHd, const Account* account)
+{
+	playerAccount[plidMap->Get(clientHd)] = account;
 }
 
 void HubReplication::SendLoadLobby(ClientHandle clientHd, MapIndex stageIndex, bool joinCity)
@@ -827,6 +833,10 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 	money.nReason = 1;
 	SendPacket(clientHd, money);
 
+}
+
+void HubReplication::SendUpdateEntrySystem(ClientHandle clientHd)
+{
 	// SN_UpdateEntrySystem
 	{
 		PacketWriter<Sv::SN_UpdateEntrySystem,2048> packet;
@@ -1037,8 +1047,6 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 
 		SendPacket(clientHd, packet);
 	}
-
-	SendMissionList(clientHd, account);
 }
 
 template<typename Writer>
@@ -2251,16 +2259,6 @@ void HubReplication::SendActorPlayerSpawn(ClientHandle clientHd, const ActorPlay
 		}
 	}
 
-	// SN_SpawnPosForMinimap
-	{
-		PacketWriter<Sv::SN_SpawnPosForMinimap> packet;
-
-		packet.Write<LocalActorID>(localActorID); // objectID
-		packet.Write(actor.pos); // p3nPos
-
-		SendPacket(clientHd, packet);
-	}
-
 	// SN_GamePlayerStock
 	{
 		PacketWriter<Sv::SN_GamePlayerStock> packet;
@@ -2285,7 +2283,8 @@ void HubReplication::SendActorPlayerSpawn(ClientHandle clientHd, const ActorPlay
 		SendPacket(clientHd, packet);
 	}
 
-	if(actor.parentActorUID == ActorUID::INVALID) {
+	const bool self = (u32)localActorID < (u32)LocalActorID::FIRST_OTHER_PLAYER;
+	if(actor.parentActorUID == ActorUID::INVALID && !self) {
 		PacketWriter<Sv::SN_Exp> packet;
 		packet.Write<LocalActorID>(localActorID);
 		packet.WriteStringObj(actor.name.data());
@@ -2294,6 +2293,7 @@ void HubReplication::SendActorPlayerSpawn(ClientHandle clientHd, const ActorPlay
 		packet.Write<u32>(actor.levelExp);
 		SendPacket(clientHd, packet);
 	}
+	if(actor.parentActorUID == ActorUID::INVALID) SendPlayerStateInTown(clientHd, actor.actorUID, self ? -1 : 0, nullptr, 0);
 
 	// SN_GamePlayerEquipWeapon
 	{
@@ -2307,21 +2307,7 @@ void HubReplication::SendActorPlayerSpawn(ClientHandle clientHd, const ActorPlay
 		SendPacket(clientHd, packet);
 	}
 
-	/*
-	if(stageType == StageType::CITY) {
-		// SN_PlayerStateInTown
-		{
-			PacketWriter<> packet;
-
-			packet.Write<LocalActorID>(localActorID); // playerID
-			packet.Write<u8>(0); // playerStateInTown
-			packet.Write<u16>(0); // matchingGameModes_count
-
-			LOG("[client%03d] Server :: SN_PlayerStateInTown :: state=%d", clientID, -1);
-			SendPacket<>(clientID, Sv::SN_PlayerStateInTownpacket);
-		}
-	}
-	*/
+	if(actor.parentActorUID == ActorUID::INVALID) SendMasterSkillSlots(clientHd, actor);
 
 	/*
 	// SN_StatusSnapshot
@@ -2548,23 +2534,169 @@ void HubReplication::SendMasterSkillSlots(ClientHandle clientHd, const HubReplic
 
 void HubReplication::SendInitialFrame(ClientHandle clientHd)
 {
-	// SN_ScanEnd
 	SendPacketData<Sv::SN_ScanEnd>(clientHd, 0, nullptr);
+	SendTownBurst(clientHd);
+}
 
-	// SN_TownHudStatistics
+void HubReplication::SendSelfExp(ClientHandle clientHd)
+{
+	const Account* account = playerAccount[plidMap->Get(clientHd)];
+	if(!account) return;
+	foreach_const(p, frameCur->playerList) {
+		if(p->parentActorUID != ActorUID::INVALID) continue;
+		const LocalActorID localActorID = GetLocalActorID(clientHd, p->actorUID);
+		if(localActorID == LocalActorID::INVALID || (u32)localActorID >= (u32)LocalActorID::FIRST_OTHER_PLAYER) continue;
+		PacketWriter<Sv::SN_Exp> packet;
+		packet.Write<LocalActorID>(localActorID);
+		packet.WriteStringObj(account->nickname.data());
+		packet.Write<u8>(0);
+		packet.Write<u16>(account->level);
+		packet.Write<u32>(account->levelExp);
+		SendPacket(clientHd, packet);
+		return;
+	}
+}
+
+void HubReplication::SendMasterRotation(ClientHandle clientHd)
+{
+	PacketWriter<Sv::SN_MasterRotationInfo> packet;
+	packet.Write<i32>(0);
+	eastl::fixed_vector<CreatureIndex,100,false> freeList;
+	foreach_const(m, GetGameXmlContent().masters) {
+		if(m->skillIDs.empty() || m->skinIDs.empty() || m->defaultWeaponIDs.empty() || freeList.full()) continue;
+		freeList.push_back(CreatureIndex(100000000 + (i32)m->classType));
+	}
+	packet.WriteVec(freeList.data(), freeList.size());
+	packet.WriteVec((CreatureIndex*)nullptr, 0);
+	packet.WriteVec((CreatureIndex*)nullptr, 0);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendPlayerStateInTown(ClientHandle clientHd, ActorUID actorUID, i8 state, const u8* modes, i32 modeCount)
+{
+	const LocalActorID localActorID = GetLocalActorID(clientHd, actorUID);
+	if(localActorID == LocalActorID::INVALID) return;
+	PacketWriter<Sv::SN_PlayerStateInTown> packet;
+	packet.Write<LocalActorID>(localActorID);
+	packet.Write<i8>(state);
+	packet.Write<u16>((u16)modeCount);
+	for(i32 i = 0; i < modeCount; i++) packet.Write<u8>(modes[i]);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendTownBurst(ClientHandle clientHd)
+{
+	const Account* account = playerAccount[plidMap->Get(clientHd)];
+
+	{
+		PacketWriter<Sv::SN_PveTodayStageInfo> packet;
+		packet.Write<u16>(0);
+		packet.Write<u16>(0);
+		SendPacket(clientHd, packet);
+	}
+	{
+		PacketWriter<Sv::SN_FatiguePointInfo> packet;
+		packet.Write<u16>(0);
+		packet.Write<u16>(MEASURED_MAX_FATIGUE_POINT);
+		SendPacket(clientHd, packet);
+	}
+	SendSelfExp(clientHd);
+	SendUpdateEntrySystem(clientHd);
+	{
+		PacketWriter<Sv::SN_GameEventActivated> packet;
+		packet.Write<u16>(0);
+		SendPacket(clientHd, packet);
+	}
+	{
+		PacketWriter<Sv::SN_GameEventPending> packet;
+		packet.Write<u16>(0);
+		SendPacket(clientHd, packet);
+	}
+	if(account) SendMissionList(clientHd, *account);
+	SendMasterRotation(clientHd);
+	{
+		PacketWriter<Sv::SN_AddictionWarning> packet;
+		packet.Write<u8>(0);
+		SendPacket(clientHd, packet);
+	}
+	{
+		PacketWriter<Sv::SN_NotifyAasRestricted> packet;
+		packet.Write<u8>(0);
+		SendPacket(clientHd, packet);
+	}
+	{
+		PacketWriter<Sv::SN_ItemLifetimeExpired> packet;
+		packet.Write<u16>(0);
+		SendPacket(clientHd, packet);
+	}
+	{
+		PacketWriter<Sv::SN_EffectLifetimeExpired> packet;
+		packet.Write<u16>(0);
+		SendPacket(clientHd, packet);
+	}
+	{
+		PacketWriter<Sv::SN_EffectLifetimeList> packet;
+		packet.Write<u16>(0);
+		SendPacket(clientHd, packet);
+	}
+	{
+		PacketWriter<Sv::SN_CurrentGuideMission> packet;
+		packet.Write<u8>(0xff);
+		packet.Write<u8>(0);
+		packet.Write<u8>(0);
+		SendPacket(clientHd, packet);
+	}
 	{
 		PacketWriter<Sv::SN_TownHudStatistics> packet;
-
-		packet.Write<u8>(0); // gameModeType
-		packet.Write<u8>(0); // gameType
-		packet.Write<u16>(3); // argList_count
-
-		// arglist
-		packet.Write<i32>(479);
-		packet.Write<i32>(0);
-		packet.Write<i32>(16);
-
+		const u32 wins = account ? account->wins : 0;
+		const u32 draws = account ? account->draws : 0;
+		const u32 losses = account ? account->losses : 0;
+		packet.Write<u8>((u8)GameModeType::GAME_MODE_DEATH_MATCH);
+		packet.Write<u8>((u8)GameType::PVP_NORMAL);
+		packet.Write<u16>(4);
+		packet.Write<i32>(wins + losses > 0 ? (i32)((u64)wins * 10000 / (wins + losses)) : 0);
+		packet.Write<i32>((i32)wins);
+		packet.Write<i32>((i32)draws);
+		packet.Write<i32>((i32)losses);
 		SendPacket(clientHd, packet);
+	}
+	{
+		PacketWriter<Sv::SN_ServerUtcTime> packet;
+		packet.Write<i64>(FILETIME_UNIX_EPOCH_100NS + (i64)time(nullptr) * 10000000LL);
+		SendPacket(clientHd, packet);
+	}
+	{
+		PacketWriter<Sv::SN_GmDisabledMasters> packet;
+		packet.Write<u16>(0);
+		SendPacket(clientHd, packet);
+	}
+	{
+		PacketWriter<Sv::SN_GmDisabledSkins> packet;
+		packet.Write<u16>(0);
+		SendPacket(clientHd, packet);
+	}
+	{
+		PacketWriter<Sv::SN_GmDisabledStages> packet;
+		packet.Write<u16>(0);
+		SendPacket(clientHd, packet);
+	}
+	SendSelfExp(clientHd);
+	{
+		PacketWriter<Sv::SN_HudEventList> packet;
+		packet.Write<u16>(0);
+		SendPacket(clientHd, packet);
+	}
+	{
+		PacketWriter<Sv::SN_CshopEventList> packet;
+		packet.Write<u16>(0);
+		SendPacket(clientHd, packet);
+	}
+	foreach_const(p, frameCur->playerList) {
+		if(p->parentActorUID != ActorUID::INVALID) continue;
+		const LocalActorID localActorID = GetLocalActorID(clientHd, p->actorUID);
+		if(localActorID == LocalActorID::INVALID || (u32)localActorID >= (u32)LocalActorID::FIRST_OTHER_PLAYER) continue;
+		SendPlayerStateInTown(clientHd, p->actorUID, 0, nullptr, 0);
+		break;
 	}
 }
 

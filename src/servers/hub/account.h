@@ -12,6 +12,9 @@ struct Account
 	u16 level = 1;
 	u32 levelExp = 0;
 	i64 gold = 0;
+	u32 wins = 0;
+	u32 draws = 0;
+	u32 losses = 0;
 
 	// TODO: add to this
 

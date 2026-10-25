@@ -29,6 +29,9 @@ AccountProgress AccountProgressLoad(const wchar* nickname)
 		if(sscanf(line, "Level=%u", &v32) == 1) progress.level = (u16)v32;
 		else if(sscanf(line, "Exp=%u", &v32) == 1) progress.levelExp = v32;
 		else if(sscanf(line, "Gold=%lld", &v64) == 1) progress.gold = (i64)v64;
+		else if(sscanf(line, "Wins=%u", &v32) == 1) progress.wins = v32;
+		else if(sscanf(line, "Draws=%u", &v32) == 1) progress.draws = v32;
+		else if(sscanf(line, "Losses=%u", &v32) == 1) progress.losses = v32;
 	}
 	fclose(f);
 	return progress;
@@ -44,7 +47,7 @@ void AccountProgressSave(const wchar* nickname, const AccountProgress& progress)
 	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
 	FILE* f = fopen(tmp, "wb");
 	ASSERT(f);
-	fprintf(f, "Level=%u\nExp=%u\nGold=%lld\n", (u32)progress.level, progress.levelExp, (long long)progress.gold);
+	fprintf(f, "Level=%u\nExp=%u\nGold=%lld\nWins=%u\nDraws=%u\nLosses=%u\n", (u32)progress.level, progress.levelExp, (long long)progress.gold, progress.wins, progress.draws, progress.losses);
 	fclose(f);
 	remove(path);
 	rename(tmp, path);
@@ -58,8 +61,8 @@ void AccountGameRecordAppend(const wchar* nickname, const AccountGameRecord& rec
 	AccountPath(nickname, "reward", path, sizeof(path));
 	FILE* f = fopen(path, "ab");
 	ASSERT(f);
-	fprintf(f, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d\n", (long long)record.gold, record.exp, (u32)record.won, record.kills, record.assists, record.bestKillStreak,
-		(u32)record.firstBlood, (long long)record.damage, record.titanScore, record.stageIndex, record.gameType, record.classTypes[0], record.classTypes[1]);
+	fprintf(f, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d %u\n", (long long)record.gold, record.exp, (u32)record.won, record.kills, record.assists, record.bestKillStreak,
+		(u32)record.firstBlood, (long long)record.damage, record.titanScore, record.stageIndex, record.gameType, record.classTypes[0], record.classTypes[1], (u32)record.draw);
 	fclose(f);
 }
 
@@ -75,18 +78,19 @@ AccountReward AccountRewardTake(const wchar* nickname)
 	while(fgets(line, sizeof(line), f)) {
 		AccountGameRecord record;
 		long long gold = 0, damage = 0;
-		u32 won = 0, firstBlood = 0;
-		const i32 n = sscanf(line, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d", &gold, &record.exp, &won, &record.kills, &record.assists, &record.bestKillStreak,
-			&firstBlood, &damage, &record.titanScore, &record.stageIndex, &record.gameType, &record.classTypes[0], &record.classTypes[1]);
+		u32 won = 0, firstBlood = 0, draw = 0;
+		const i32 n = sscanf(line, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d %u", &gold, &record.exp, &won, &record.kills, &record.assists, &record.bestKillStreak,
+			&firstBlood, &damage, &record.titanScore, &record.stageIndex, &record.gameType, &record.classTypes[0], &record.classTypes[1], &draw);
 		if(n < 2) continue;
 		record.gold = (i64)gold;
 		record.won = (u8)won;
+		record.draw = (u8)draw;
 		record.firstBlood = (u8)firstBlood;
 		record.damage = (i64)damage;
 		reward.gold += record.gold;
 		reward.exp += record.exp;
 		reward.games++;
-		if(n == 13 && !reward.records.full()) reward.records.push_back(record);
+		if(n >= 13 && !reward.records.full()) reward.records.push_back(record);
 	}
 	fclose(f);
 	remove(path);

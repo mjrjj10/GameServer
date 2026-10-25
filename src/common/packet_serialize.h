@@ -3051,6 +3051,22 @@ DEFAULT_SERIALIZE(Cl::CQ_LoadingComplete);
 DEFAULT_SERIALIZE(Cl::CQ_GameIsReady);
 DEFAULT_SERIALIZE(Sv::SN_Unknown_62472);
 DEFAULT_SERIALIZE(Sv::SN_UpdateEntrySystem);
+DEFAULT_SERIALIZE(Sv::SN_PveTodayStageInfo);
+DEFAULT_SERIALIZE(Sv::SN_FatiguePointInfo);
+DEFAULT_SERIALIZE(Sv::SN_GameEventActivated);
+DEFAULT_SERIALIZE(Sv::SN_GameEventPending);
+DEFAULT_SERIALIZE(Sv::SN_AddictionWarning);
+DEFAULT_SERIALIZE(Sv::SN_ItemLifetimeExpired);
+DEFAULT_SERIALIZE(Sv::SN_EffectLifetimeExpired);
+DEFAULT_SERIALIZE(Sv::SN_EffectLifetimeList);
+DEFAULT_SERIALIZE(Sv::SN_CurrentGuideMission);
+DEFAULT_SERIALIZE(Sv::SN_ServerUtcTime);
+DEFAULT_SERIALIZE(Sv::SN_GmDisabledMasters);
+DEFAULT_SERIALIZE(Sv::SN_GmDisabledSkins);
+DEFAULT_SERIALIZE(Sv::SN_GmDisabledStages);
+DEFAULT_SERIALIZE(Sv::SN_HudEventList);
+DEFAULT_SERIALIZE(Sv::SN_CshopEventList);
+DEFAULT_SERIALIZE(Sv::SN_PlayerStateInTown);
 
 #undef DEFAULT_SERIALIZE
 

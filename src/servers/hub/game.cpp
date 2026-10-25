@@ -145,6 +145,7 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 	replication.SendAccountDataLobby(clientHd, *accountData);
 
 	replication.OnPlayerConnect(clientHd);
+	replication.SetPlayerAccount(clientHd, accountData);
 
 	LOG("[client%x] HubGame :: account %llu connected (%ls)", clientHd, (u64)accountData->UID, accountData->nickname.data());
 	SortieUID resultSortieUID = SortieUID::INVALID;
@@ -514,6 +515,9 @@ void HubGame::MmOnPartyEnqueued(PartyUID partyUID)
 		// TODO: check if on this hub
 		const ClientHandle clientHd = accountClientHandleMap.at(m->accountUID);
 		replication.SendPartyEnqueue(clientHd, party.stageIndex);
+		const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(party.stageIndex);
+		const u8 mode = stage && stage->gameMode != GameModeType::GAME_MODE_INVALID ? (u8)stage->gameMode : 0;
+		BroadcastPlayerStateInTown(plidMap->Get(clientHd), 1, &mode, stage ? 1 : 0);
 	}
 }
 
@@ -539,6 +543,17 @@ void HubGame::MmOnMatchFound(const In::MN_MatchingPartyFound& matchingParty)
 			if(matchingParty.playerList[i].accountUID == m->accountUID) myTeam = matchingParty.playerList[i].team;
 		}
 		replication.SendMatchingPartyFound(clientHd, matchingParty, party.stageIndex, rowIDs, myTeam);
+		BroadcastPlayerStateInTown(userID, 0, nullptr, 0);
+	}
+}
+
+void HubGame::BroadcastPlayerStateInTown(i32 userID, i8 state, const u8* modes, i32 modeCount)
+{
+	const ActorUID actorUID = playerActorUID[userID];
+	if(actorUID == ActorUID::INVALID) return;
+	foreach_const(p, playerList) {
+		if(p->clientHd == ClientHandle::INVALID) continue;
+		replication.SendPlayerStateInTown(p->clientHd, actorUID, state, modes, modeCount);
 	}
 }
 

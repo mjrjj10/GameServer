@@ -710,7 +710,12 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 			AccountMissions saved = AccountMissionsLoad(account.nickname.data());
 			ActiveMissionList list;
 			MissionBuildActive(account.nickname.data(), progress.level, (i64)time(nullptr), saved, &list);
-			foreach_const(r, reward.records) MissionApplyGame(*r, &list);
+			foreach_const(r, reward.records) {
+				MissionApplyGame(*r, &list);
+				if(r->won) progress.wins++;
+				else if(r->draw) progress.draws++;
+				else progress.losses++;
+			}
 			MissionStore(list, &saved);
 			AccountMissionsSave(account.nickname.data(), saved);
 		}
@@ -722,6 +727,9 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 	account.level = progress.level;
 	account.levelExp = progress.levelExp;
 	account.gold = progress.gold;
+	account.wins = progress.wins;
+	account.draws = progress.draws;
+	account.losses = progress.losses;
 
 	accChdMap.emplace(accountUID, clientHd);
 	clientAccountUID[clientID] = accountUID;

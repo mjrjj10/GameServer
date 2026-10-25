@@ -677,6 +677,7 @@ void Game::EndGame()
 		record.gold = e->gold;
 		record.exp = e->exp;
 		record.won = won;
+		record.draw = own == other;
 		record.kills = p.kills;
 		record.assists = p.assists;
 		record.bestKillStreak = p.bestKillStreak;

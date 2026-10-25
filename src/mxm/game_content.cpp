@@ -1220,6 +1220,13 @@ bool GameXmlContent::LoadStageMaps()
 		pStage->QueryIntAttribute("_JoinMemberMax", &stage.joinMemberMax);
 		const char* gameMode = pStage->Attribute("_GameModeType");
 		stage.titan = gameMode && EA::StdC::Strcmp(gameMode, "GAME_MODE_GOT") == 0;
+		static const char* GAME_MODE_NAMES[] = {
+			"GAME_MODE_STAGE", "GAME_MODE_DEFENCE", "GAME_MODE_DEATH_MATCH", "GAME_MODE_GOT", "GAME_MODE_OCCUPY",
+			"GAME_MODE_SPORTS", "GAME_MODE_TEST", "GAME_MODE_MASTER_TRAINING", "GAME_MODE_RANDOM_ARENA",
+		};
+		for(i32 m = 0; m < (i32)ARRAY_COUNT(GAME_MODE_NAMES); m++) {
+			if(gameMode && EA::StdC::Strcmp(gameMode, GAME_MODE_NAMES[m]) == 0) stage.gameMode = (GameModeType)m;
+		}
 		XMLElement* pWorldMap = pStage->FirstChildElement("_WORLD_STAGE_MAP");
 		if(!pWorldMap) continue;
 		for(XMLElement* pGroup = pWorldMap->FirstChildElement("_WORLD_STAGE_MAP_GROUP");
