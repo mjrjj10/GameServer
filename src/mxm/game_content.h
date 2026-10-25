@@ -834,6 +834,7 @@ struct GameXmlContent
 	};
 	eastl::hash_map<i32,ItemInfo> itemInfoMap;
 	const ItemInfo* FindItemInfo(i32 ID) const;
+	void LoadItemInfos(tinyxml2::XMLDocument& doc);
 
 	eastl::fixed_vector<Mission,256,false> missions;
 	const Mission* FindMission(i32 ID) const;

@@ -62,6 +62,8 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CQ_CommunityStatusMessage);
 		HANDLE_CASE(CQ_Praise);
 		HANDLE_CASE(CQ_Honor);
+		HANDLE_CASE(CQ_NpBuyCshopItem);
+		HANDLE_CASE(CQ_BuyCShopItem);
 		HANDLE_CASE(CA_SetGameGvt);
 		HANDLE_CASE(CA_CityLobbyJoinCity);
 		HANDLE_CASE(CQ_GetCharacterInfo);
@@ -502,6 +504,46 @@ void HubPacketHandler::HandlePacket_CQ_CommunityStatusMessage(ClientHandle clien
 	message.assign((const wchar*)buff.ReadRaw(len * 2), len);
 	NT_LOG("[client%x] Client :: CQ_CommunityStatusMessage :: message='%ls'", clientHd, message.data());
 	game->OnStatusMessage(clientHd, message);
+}
+
+void HubPacketHandler::HandlePacket_CQ_BuyCShopItem(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(packetSize != 8) {
+		WARN("[client%x] WARNING: invalid CQ_BuyCShopItem (size=%d)", clientHd, packetSize);
+		return;
+	}
+	ConstBuffer buff(packetData, packetSize);
+	const i32 itemIndex = buff.Read<i32>();
+	const i32 count = buff.Read<i32>();
+	NT_LOG("[client%x] Client :: CQ_BuyCShopItem :: item=%d count=%d", clientHd, itemIndex, count);
+	game->OnShopBuyItem(clientHd, (u32)itemIndex, count, itemIndex, 1, false);
+}
+
+void HubPacketHandler::HandlePacket_CQ_NpBuyCshopItem(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	ConstBuffer buff(packetData, packetSize);
+	if(!buff.CanRead(44)) {
+		WARN("[client%x] WARNING: invalid CQ_NpBuyCshopItem (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const u32 goodsID = buff.Read<u32>();
+	const i32 quantity = buff.Read<i32>();
+	buff.ReadRaw(34);
+	const u16 textLen = buff.Read<u16>();
+	if(textLen > 64 || !buff.CanRead(textLen * 2 + 2)) {
+		WARN("[client%x] WARNING: invalid CQ_NpBuyCshopItem (size=%d)", clientHd, packetSize);
+		return;
+	}
+	buff.ReadRaw(textLen * 2);
+	const u16 entries = buff.Read<u16>();
+	if(entries != 1 || !buff.CanRead(14)) {
+		WARN("[client%x] WARNING: unsupported CQ_NpBuyCshopItem (size=%d entries=%u)", clientHd, packetSize, (u32)entries);
+		return;
+	}
+	const i32 itemIndex = buff.Read<i32>();
+	const i32 itemCount = buff.Read<i32>();
+	NT_LOG("[client%x] Client :: CQ_NpBuyCshopItem :: goods=%u quantity=%d item=%d count=%d", clientHd, goodsID, quantity, itemIndex, itemCount);
+	game->OnShopBuyItem(clientHd, goodsID, quantity, itemIndex, itemCount, true);
 }
 
 void HubPacketHandler::HandlePacket_CQ_Honor(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

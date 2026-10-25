@@ -414,6 +414,39 @@ bool HubGame::GrantItem(i32 userID, i32 docIndex, i32 amount, u32 updateReason, 
 	return left == 0;
 }
 
+void HubGame::OnShopBuyItem(ClientHandle clientHd, u32 goodsID, i32 quantity, i32 itemIndex, i32 itemCount, bool npShop)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	auto found = GetAccountManager().accountMap.find(playerAccountData[userID]->UID);
+	ASSERT(found != GetAccountManager().accountMap.end());
+	Account& account = *found->second;
+	const GameXmlContent::ItemInfo* info = GetGameXmlContent().FindItemInfo(itemIndex);
+	const i32 units = quantity * itemCount;
+	if(!info || info->buyType == 0 || info->buyValue <= 0 || quantity <= 0 || itemCount <= 0 || units > 999) {
+		WARN("[client%x] HubGame :: invalid shop purchase goods=%u item=%d x%d", clientHd, goodsID, itemIndex, units);
+		replication.SendShopBuyResult(clientHd, npShop, MEASURED_SHOP_INVALID_DATA, goodsID, (u32)quantity, itemIndex);
+		return;
+	}
+	const i64 cost = (i64)info->buyValue * quantity;
+	AccountProgress progress = AccountProgressLoad(account.nickname.data());
+	const bool ccoin = info->buyType == 2;
+	if((ccoin ? progress.ccoin : progress.gold) < cost) {
+		replication.SendShopBuyResult(clientHd, npShop, ccoin ? MEASURED_SHOP_NOT_ENOUGH_CCOIN : MEASURED_SHOP_NOT_ENOUGH_GOLD, goodsID, (u32)quantity, itemIndex);
+		return;
+	}
+	if(ccoin) progress.ccoin -= cost;
+	else progress.gold -= cost;
+	AccountProgressSave(account.nickname.data(), progress);
+	account.gold = progress.gold;
+	account.ccoin = progress.ccoin;
+	LOG("[client%x] HubGame :: %ls buys %d x item %d for %lld %s", clientHd, account.nickname.data(), units, itemIndex, cost, ccoin ? "ccoin" : "gold");
+	if(ccoin) replication.SendCCoin(clientHd, account.ccoin, MEASURED_CCOIN_REASON_SHOP);
+	else replication.SendMoney(clientHd, account.gold, MEASURED_MISSION_REWARD_MONEY_REASON);
+	GrantItem(userID, itemIndex, units, MEASURED_ITEM_UPDATE_REASON_SHOP, MEASURED_ITEM_ACQUISITION_REASON_SHOP);
+	replication.SendShopBuyResult(clientHd, npShop, 0, goodsID, (u32)quantity, itemIndex);
+}
+
 void HubGame::OnHonor(ClientHandle clientHd, const WideString& nickname)
 {
 	const i32 userID = plidMap->Get(clientHd);

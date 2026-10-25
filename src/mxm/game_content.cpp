@@ -3153,22 +3153,35 @@ static u8 ConsumableStatType(const char* name)
 	return 0xff;
 }
 
+void GameXmlContent::LoadItemInfos(XMLDocument& doc)
+{
+	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+		XMLElement* common = pInfo->FirstChildElement("ItemComData");
+		if(!common) continue;
+		ItemInfo item;
+		pInfo->QueryAttribute("ID", &item.ID);
+		item.maxStack = MAX(1, common->IntAttribute("_MaxStack", 1));
+		const char* buyType = common->Attribute("_BuyType");
+		if(buyType && EA::StdC::Strcmp(buyType, "BUY_TYPE_GOLD") == 0) item.buyType = 1;
+		else if(buyType && EA::StdC::Strcmp(buyType, "BUY_TYPE_CCOIN") == 0) item.buyType = 2;
+		item.buyValue = common->IntAttribute("_BuyValue", 0);
+		item.sellValue = common->IntAttribute("_SellValue", 0);
+		itemInfoMap[item.ID] = item;
+	}
+}
+
 bool GameXmlContent::LoadGroundItems()
 {
 	XMLDocument items;
 	if(!LoadXMLFile(L"/client/ITEM_BASIC.xml", items)) return false;
+	LoadItemInfos(items);
+	const wchar* extraItemFiles[] = { L"/client/ITEM_SUPPORT.xml", L"/client/ITEM_RON.xml" };
+	for(const wchar* file : extraItemFiles) {
+		XMLDocument extra;
+		if(!LoadXMLFile(file, extra)) return false;
+		LoadItemInfos(extra);
+	}
 	for(XMLElement* pInfo = items.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
-		if(XMLElement* common = pInfo->FirstChildElement("ItemComData")) {
-			ItemInfo item;
-			pInfo->QueryAttribute("ID", &item.ID);
-			item.maxStack = MAX(1, common->IntAttribute("_MaxStack", 1));
-			const char* buyType = common->Attribute("_BuyType");
-			if(buyType && EA::StdC::Strcmp(buyType, "BUY_TYPE_GOLD") == 0) item.buyType = 1;
-			else if(buyType && EA::StdC::Strcmp(buyType, "BUY_TYPE_CCOIN") == 0) item.buyType = 2;
-			item.buyValue = common->IntAttribute("_BuyValue", 0);
-			item.sellValue = common->IntAttribute("_SellValue", 0);
-			itemInfoMap[item.ID] = item;
-		}
 		XMLElement* etc = pInfo->FirstChildElement("EtcItemComData");
 		const char* etcType = etc ? etc->Attribute("_Type") : nullptr;
 		if(!etcType || EA::StdC::Strcmp(etcType, "ETC_TYPE_FOOD") != 0) continue;

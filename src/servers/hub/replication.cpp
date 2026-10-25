@@ -321,6 +321,22 @@ void HubReplication::SendReturnToCity(ClientHandle clientHd)
 	SendJoinCity(clientHd);
 }
 
+void HubReplication::SendShopBuyResult(ClientHandle clientHd, bool npShop, u32 result, u32 goodsID, u32 quantity, i32 itemIndex)
+{
+	if(!npShop) {
+		Sv::SA_BuyCshopItem answer;
+		answer.result = result;
+		answer.itemIndex = (u32)itemIndex;
+		SendPacket(clientHd, answer);
+		return;
+	}
+	Sv::SA_NpBuyCshopItem packet;
+	packet.result = result;
+	packet.goodsId = goodsID;
+	packet.quantity = quantity;
+	SendPacket(clientHd, packet);
+}
+
 void HubReplication::SendCCoin(ClientHandle clientHd, i64 amount, u32 reason)
 {
 	Sv::SN_CCoin packet;
