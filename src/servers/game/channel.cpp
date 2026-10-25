@@ -43,6 +43,8 @@ void GamePacketHandler::OnClientsDisconnected(const ClientHandle* clientList, co
 	}
 }
 
+static const u16 TRAIT_RESET_NET_ID = 60299;
+
 void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& header, const u8* packetData)
 {
 	const i32 packetSize = header.size - sizeof(NetHeader);
@@ -67,6 +69,23 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 		CASE(CQ_GamePlayerTag);
 		CASE(CQ_PlayerJump);
 		CASE(CQ_PlayerSyncTeleport);
+		case Cl::CQ_MasterSupplyRequest::NET_ID: {
+			NT_LOG("[client%x] Client :: trait upgrade size=%d", clientHd, packetSize);
+			ConstBuffer buff(packetData, packetSize);
+			if(!buff.CanRead(6)) break;
+			const LocalActorID local = buff.Read<LocalActorID>();
+			const u16 count = buff.Read<u16>();
+			if(count > 32 || !buff.CanRead(count)) break;
+			const u8* indices = (const u8*)buff.ReadRaw(count);
+			game->OnTraitUpgrade(clientHd, replication->GetWorldActorUID(clientHd, local), indices, count);
+		} break;
+		case TRAIT_RESET_NET_ID: {
+			NT_LOG("[client%x] Client :: trait reset size=%d", clientHd, packetSize);
+			ConstBuffer buff(packetData, packetSize);
+			if(!buff.CanRead(4)) break;
+			const LocalActorID local = buff.Read<LocalActorID>();
+			game->OnTraitReset(clientHd, replication->GetWorldActorUID(clientHd, local));
+		} break;
 		CASE(CQ_SkillUpgradeIngame);
 		CASE(CQ_GetGroundItem);
 		CASE(CQ_PlayerCastSkill);

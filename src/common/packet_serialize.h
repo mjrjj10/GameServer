@@ -3188,6 +3188,11 @@ DEFAULT_SERIALIZE(Sv::SN_CharacterPropertyPoint);
 DEFAULT_SERIALIZE(Sv::SQ_TeleportObject);
 DEFAULT_SERIALIZE(Sv::SN_PlayerSyncTeleport);
 DEFAULT_SERIALIZE(Cl::CQ_PlayerSyncTeleport);
+DEFAULT_SERIALIZE(Sv::SN_CharacterPropertyInfo);
+DEFAULT_SERIALIZE(Sv::SN_CharacterPropertyReset);
+DEFAULT_SERIALIZE(Sv::SA_CharacterPropertyUpgrade);
+DEFAULT_SERIALIZE(Sv::SA_CharacterPropertyReset);
+DEFAULT_SERIALIZE(Sv::SN_NotifyIsInSafeZone);
 #undef DEFAULT_SERIALIZE
 
 template<>

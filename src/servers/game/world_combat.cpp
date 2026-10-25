@@ -164,10 +164,11 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 
 	if(attacker.index != target.index) {
 		const bool skillHit = !proj && skillID != SkillID::INVALID;
-		const f32 def = MasterStat(target.Main().classType, STAT_DEFENCE) * MAX(1.0f + StatusModMulSum(target, StatusMod::DEFENCE) / 100.0f, 0.0f);
-		const f32 pen = MIN(MAX(MasterStat(attacker.Main().classType, skillHit ? STAT_SKILL_PENETRATION : STAT_DEFENCE_PENETRATION), 0.0f), PENETRATION_CAP) / 100.0f;
+		const f32 def = (MasterStat(target.Main().classType, STAT_DEFENCE) + StatBonus(target, STAT_DEFENCE)) * MAX(1.0f + StatusModMulSum(target, StatusMod::DEFENCE) / 100.0f, 0.0f);
+		const i32 penStat = skillHit ? STAT_SKILL_PENETRATION : STAT_DEFENCE_PENETRATION;
+		const f32 pen = MIN(MAX(MasterStat(attacker.Main().classType, penStat) + StatBonus(attacker, (u8)penStat), 0.0f), PENETRATION_CAP) / 100.0f;
 		f32 mul = DEFENCE_SCALE / (DEFENCE_SCALE + MAX(def * (1.0f - pen), 0.0f));
-		if(skillHit) mul *= 1.0f - MIN(MAX(MasterStat(target.Main().classType, STAT_SKILLDAMAGE_REDUCE_RATIO), 0.0f), SKILLDAMAGE_REDUCE_CAP) / 100.0f;
+		if(skillHit) mul *= 1.0f - MIN(MAX(MasterStat(target.Main().classType, STAT_SKILLDAMAGE_REDUCE_RATIO) + StatBonus(target, STAT_SKILLDAMAGE_REDUCE_RATIO), 0.0f), SKILLDAMAGE_REDUCE_CAP) / 100.0f;
 		damage = MAX((i32)(damage * mul + 0.5f), damage > 0 ? 1 : 0);
 	}
 
@@ -180,7 +181,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		const ClassType ac = attacker.Main().classType;
 		const RemoteIdx doc = proj ? proj->remoteDoc : remoteDoc;
 		const Remote* critRemote = doc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(doc) : nullptr;
-		const f32 rate = MasterStat(ac, proj ? STAT_CRITICALRATE : STAT_SKILL_CRITICALRATE) + (critRemote ? critRemote->criticalRate : 0) +
+		const f32 rate = MasterStat(ac, proj ? STAT_CRITICALRATE : STAT_SKILL_CRITICALRATE) + (proj ? StatBonus(attacker, STAT_CRITICALRATE) : 0.0f) + (critRemote ? critRemote->criticalRate : 0) +
 			StatusModSum(attacker, proj ? StatusMod::CRITICALRATE : StatusMod::SKILL_CRITICALRATE);
 		f32 bonus = 0;
 		foreach_const(st, activeStatuses) {
@@ -432,7 +433,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	if(frozen || target.dead || target.untargetable || damage <= 0) return;
 	if(HasStatusType(target, StatusType::GODMODE) || HasStatusType(target, StatusType::BURROW)) return;
 	MarkInBattle(target);
-	const f32 def = MasterStat(target.Main().classType, STAT_DEFENCE) * MAX(1.0f + StatusModMulSum(target, StatusMod::DEFENCE) / 100.0f, 0.0f);
+	const f32 def = (MasterStat(target.Main().classType, STAT_DEFENCE) + StatBonus(target, STAT_DEFENCE)) * MAX(1.0f + StatusModMulSum(target, StatusMod::DEFENCE) / 100.0f, 0.0f);
 	damage = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(def, 0.0f)) + 0.5f), 1);
 	foreach(it, activeStatuses) {
 		if(damage <= 0) break;

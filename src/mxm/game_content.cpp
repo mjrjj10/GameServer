@@ -997,6 +997,25 @@ bool GameXmlContent::LoadPvpMaps()
 	return FindPvpMap(MapIndex::PVP_DEATHMATCH) != nullptr;
 }
 
+bool GameXmlContent::LoadMasterTraits()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/MasterTraits.xml", doc)) return false;
+	traitMaxPoints = doc.FirstChildElement()->IntAttribute("maxPointsPerTrait", traitMaxPoints);
+	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+		auto& traits = masterTraits[pInfo->IntAttribute("class")];
+		for(XMLElement* pTrait = pInfo->FirstChildElement("TRAIT"); pTrait; pTrait = pTrait->NextSiblingElement("TRAIT")) {
+			const i32 index = pTrait->IntAttribute("index");
+			if(index < 0 || index >= 4) continue;
+			for(XMLElement* st = pTrait->FirstChildElement("STAT"); st && !traits[index].full(); st = st->NextSiblingElement("STAT")) {
+				traits[index].push_back({ (u8)st->IntAttribute("type"), st->FloatAttribute("perPoint") });
+			}
+		}
+	}
+	LOG("Loaded traits of %d masters", (i32)masterTraits.size());
+	return true;
+}
+
 bool GameXmlContent::LoadMasterGrowth()
 {
 	XMLDocument doc;
@@ -2356,6 +2375,9 @@ bool GameXmlContent::Load()
 	r = LoadMasterGrowth();
 	if (!r) return false;
 
+	r = LoadMasterTraits();
+	if (!r) return false;
+
 	r = LoadJukeboxSongs();
 	if(!r) return false;
 
@@ -3457,7 +3479,7 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(pNode->FirstChildElement("_CallSFXInfo")) node.kind = LevelEventNode::CALL_SFX;
 		else if(pNode->FirstChildElement("_InitCoolTime")) node.kind = LevelEventNode::CLIENT_EVENT;
 		else if(XMLElement* e = pNode->FirstChildElement("_CallItemInfo")) { node.kind = LevelEventNode::CALL_ITEM; node.dropIndex = e->IntAttribute("_Index"); node.areaID = e->IntAttribute("_SpawnAreaID"); node.tagID = e->IntAttribute("_TagID", -1); }
-		else if(XMLElement* e = pNode->FirstChildElement("_BoundTriggerData")) { node.kind = LevelEventNode::BOUND_TRIGGER; node.areaID = e->IntAttribute("_AreaID"); node.enter = e->IntAttribute("_IsEnter") == 1; node.active = e->IntAttribute("_Active") == 1; node.retrigger = e->FloatAttribute("_RetriggerDelay"); }
+		else if(XMLElement* e = pNode->FirstChildElement("_BoundTriggerData")) { node.kind = LevelEventNode::BOUND_TRIGGER; node.areaID = e->IntAttribute("_AreaID"); node.enter = e->IntAttribute("_IsEnter") == 1; node.active = e->IntAttribute("_Active") == 1; node.retrigger = e->FloatAttribute("_RetriggerDelay"); const char* trigger = e->Attribute("_TrigerType"); node.ownTeamOnly = trigger && EA::StdC::Strcmp(trigger, "TRIGER_MEMBERSHIP_OWN") == 0; }
 		else if(XMLElement* e = pNode->FirstChildElement("_StatusChangeInfo")) {
 			node.kind = LevelEventNode::STATUS_CHANGE;
 			const char* applyType = e->Attribute("_ApplyType");
@@ -3486,6 +3508,7 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		}
 		else if(XMLElement* e = pNode->FirstChildElement("_DespawnEntityInfo")) { node.kind = LevelEventNode::DESPAWN_ENTITY; node.localID = e->IntAttribute("_LocalID"); node.tagID = e->IntAttribute("_TagID", -1); }
 		else if(pNode->FirstChildElement("_RepeatInfo")) node.kind = LevelEventNode::PASS_THROUGH;
+		else if(XMLElement* e = pNode->FirstChildElement("_SafeZoneInfo")) { node.kind = LevelEventNode::SAFE_ZONE; node.active = e->IntAttribute("_Enable") == 1; }
 		else if(XMLElement* e = pNode->FirstChildElement("_DeadCountTriggerData")) {
 			node.kind = LevelEventNode::DEAD_COUNT;
 			node.tagID = e->IntAttribute("_TagID", -1);

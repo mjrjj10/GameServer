@@ -406,6 +406,10 @@ struct Replication
 	void SendLevelIngameToAll(UserID userID, i32 expToLevelUp, i32 level);
 	void SendExpIngame(ClientHandle clientHd, UserID userID, i32 gain, i32 current, ActorUID target);
 	void SendCharacterPropertyPoint(ClientHandle clientHd, ActorUID character, i32 points);
+	void SendCharacterPropertyInfoToAll(ActorUID character, const eastl::array<u8,4>& levels);
+	void SendCharacterPropertyResetToAll(ActorUID character);
+	void SendTraitAnswer(ClientHandle clientHd, bool reset, u32 error);
+	void SendSafeZone(ClientHandle clientHd, UserID userID, bool inside);
 	void SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed);
 	void SendNpcLegStartToAll(ActorUID actorUID, const vec3& pos, const vec3& goal);
 	void SendNpcLegStopToAll(ActorUID actorUID, const vec3& pos, f32 worldYaw);

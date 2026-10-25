@@ -1,0 +1,410 @@
+<?xml version="1.0"?>
+<MASTER_TRAITS maxPointsPerTrait="12">
+  <INFO class="1">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="3.19" samples="10" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="9" perPoint="3.86" samples="8" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="0" perPoint="55" samples="2" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="5" perPoint="0.4" samples="4" />
+      <STAT type="14" perPoint="1.4" samples="4" />
+    </TRAIT>
+  </INFO>
+  <INFO class="2">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="31.76" samples="2" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="8" perPoint="31.9" samples="12" />
+    </TRAIT>
+  </INFO>
+  <INFO class="3">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="6.01" samples="17" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="20" perPoint="2.04" samples="3" />
+      <STAT type="21" perPoint="2.04" samples="3" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="9" perPoint="3.72" samples="2" />
+    </TRAIT>
+  </INFO>
+  <INFO class="4">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="1.9372" samples="7" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="8" perPoint="37" samples="12" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="5" perPoint="0.4" samples="4" />
+      <STAT type="14" perPoint="1.4" samples="3" />
+    </TRAIT>
+  </INFO>
+  <INFO class="5">
+    <TRAIT index="0">
+      <STAT type="0" perPoint="58" samples="10" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="7" perPoint="2.694" samples="2" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="58" perPoint="2.87" samples="3" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="51" perPoint="0.12" samples="6" />
+      <STAT type="53" perPoint="2.22" samples="6" />
+    </TRAIT>
+  </INFO>
+  <INFO class="6">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="19.4852" samples="6" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="20" perPoint="2.04" samples="2" />
+      <STAT type="21" perPoint="2.04" samples="2" />
+    </TRAIT>
+  </INFO>
+  <INFO class="7">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="3.6855" samples="11" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="0" perPoint="57" samples="3" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="7" perPoint="3.2378" samples="3" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="58" perPoint="3.56" samples="1" />
+    </TRAIT>
+  </INFO>
+  <INFO class="8">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="9.592" samples="2" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="7" perPoint="2.5568" samples="6" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="53" perPoint="2.22" samples="1" />
+    </TRAIT>
+  </INFO>
+  <INFO class="9">
+    <TRAIT index="0">
+      <STAT type="8" perPoint="24.2" samples="6" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="39" perPoint="0.28" samples="1" />
+      <STAT type="53" perPoint="2.22" samples="1" />
+    </TRAIT>
+  </INFO>
+  <INFO class="10">
+    <TRAIT index="0">
+      <STAT type="8" perPoint="41.7" samples="35" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="0" perPoint="54" samples="6" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="39" perPoint="0.28" samples="21" />
+      <STAT type="53" perPoint="2.22" samples="17" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="5" perPoint="0.4" samples="7" />
+      <STAT type="14" perPoint="1.4" samples="8" />
+    </TRAIT>
+  </INFO>
+  <INFO class="11">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="3.95" samples="7" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="8" perPoint="45.5" samples="2" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="39" perPoint="0.28" samples="3" />
+      <STAT type="53" perPoint="2.22" samples="3" />
+    </TRAIT>
+  </INFO>
+  <INFO class="12">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="6.7422" samples="11" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="20" perPoint="2.04" samples="3" />
+      <STAT type="21" perPoint="2.04" samples="3" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="0" perPoint="53" samples="9" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="5" perPoint="0.4" samples="9" />
+      <STAT type="14" perPoint="1.4" samples="10" />
+    </TRAIT>
+  </INFO>
+  <INFO class="13">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="9.408" samples="6" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="8" perPoint="41.7" samples="2" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="7" perPoint="3.6322" samples="3" />
+    </TRAIT>
+  </INFO>
+  <INFO class="14">
+    <TRAIT index="0">
+      <STAT type="20" perPoint="2.04" samples="3" />
+      <STAT type="21" perPoint="2.04" samples="3" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="7" perPoint="3.2809" samples="7" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="58" perPoint="3.45" samples="8" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="5" perPoint="0.25" samples="25" />
+      <STAT type="14" perPoint="1.4" samples="27" />
+    </TRAIT>
+  </INFO>
+  <INFO class="15">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="3.79" samples="15" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="20" perPoint="2.04" samples="5" />
+      <STAT type="21" perPoint="2.04" samples="5" />
+    </TRAIT>
+  </INFO>
+  <INFO class="16">
+    <TRAIT index="1">
+      <STAT type="8" perPoint="29.2" samples="8" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="20" perPoint="2.04" samples="4" />
+      <STAT type="21" perPoint="2.04" samples="4" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="0" perPoint="53" samples="2" />
+    </TRAIT>
+  </INFO>
+  <INFO class="17">
+    <TRAIT index="2">
+      <STAT type="39" perPoint="0.28" samples="14" />
+      <STAT type="53" perPoint="2.22" samples="11" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="5" perPoint="0.4" samples="3" />
+      <STAT type="14" perPoint="1.4" samples="3" />
+    </TRAIT>
+  </INFO>
+  <INFO class="18">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="6.67" samples="16" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="20" perPoint="2.04" samples="2" />
+      <STAT type="21" perPoint="2.04" samples="2" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="39" perPoint="0.28" samples="2" />
+      <STAT type="53" perPoint="2.22" samples="2" />
+    </TRAIT>
+  </INFO>
+  <INFO class="19">
+    <TRAIT index="1">
+      <STAT type="8" perPoint="28.8" samples="1" />
+    </TRAIT>
+  </INFO>
+  <INFO class="20">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="8.4767" samples="4" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="7" perPoint="2.5963" samples="1" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="5" perPoint="0.25" samples="13" />
+      <STAT type="14" perPoint="1.4" samples="13" />
+    </TRAIT>
+  </INFO>
+  <INFO class="21">
+    <TRAIT index="0">
+      <STAT type="8" perPoint="37" samples="6" />
+    </TRAIT>
+  </INFO>
+  <INFO class="22">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="10.05" samples="13" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="0" perPoint="55" samples="1" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="39" perPoint="0.28" samples="14" />
+      <STAT type="53" perPoint="2.22" samples="13" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="14" perPoint="1.4" samples="1" />
+    </TRAIT>
+  </INFO>
+  <INFO class="24">
+    <TRAIT index="0">
+      <STAT type="8" perPoint="30.8" samples="2" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="9" perPoint="4.89" samples="2" />
+    </TRAIT>
+  </INFO>
+  <INFO class="25">
+    <TRAIT index="0">
+      <STAT type="8" perPoint="28.4" samples="8" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="0" perPoint="58" samples="5" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="7" perPoint="2.422" samples="8" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="53" perPoint="2.22" samples="5" />
+    </TRAIT>
+  </INFO>
+  <INFO class="26">
+    <TRAIT index="1">
+      <STAT type="0" perPoint="55" samples="12" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="7" perPoint="3.6647" samples="6" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="5" perPoint="0.25" samples="3" />
+      <STAT type="14" perPoint="1.4" samples="4" />
+    </TRAIT>
+  </INFO>
+  <INFO class="27">
+    <TRAIT index="2">
+      <STAT type="39" perPoint="0.28" samples="2" />
+      <STAT type="53" perPoint="2.22" samples="2" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="5" perPoint="0.4" samples="3" />
+      <STAT type="14" perPoint="1.4" samples="3" />
+    </TRAIT>
+  </INFO>
+  <INFO class="29">
+    <TRAIT index="0">
+      <STAT type="8" perPoint="33.7" samples="6" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="20" perPoint="2.04" samples="1" />
+      <STAT type="21" perPoint="2.04" samples="1" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="5" perPoint="0.4" samples="2" />
+      <STAT type="14" perPoint="1.4" samples="3" />
+    </TRAIT>
+  </INFO>
+  <INFO class="30">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="2.14" samples="7" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="39" perPoint="0.28" samples="1" />
+    </TRAIT>
+  </INFO>
+  <INFO class="31">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="8.294" samples="3" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="20" perPoint="2.04" samples="1" />
+      <STAT type="21" perPoint="2.04" samples="1" />
+    </TRAIT>
+  </INFO>
+  <INFO class="32">
+    <TRAIT index="1">
+      <STAT type="8" perPoint="37" samples="3" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="5" perPoint="0.25" samples="14" />
+      <STAT type="14" perPoint="1.4" samples="15" />
+    </TRAIT>
+  </INFO>
+  <INFO class="33">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="5.8" samples="3" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="51" perPoint="0.39" samples="1" />
+      <STAT type="53" perPoint="2.22" samples="2" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="5" perPoint="0.4" samples="1" />
+      <STAT type="14" perPoint="4.6667" samples="1" />
+    </TRAIT>
+  </INFO>
+  <INFO class="34">
+    <TRAIT index="0">
+      <STAT type="8" perPoint="41.7" samples="1" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="0" perPoint="57.6667" samples="2" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="7" perPoint="2.7546" samples="2" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="5" perPoint="0.4" samples="2" />
+      <STAT type="14" perPoint="1.4" samples="2" />
+    </TRAIT>
+  </INFO>
+  <INFO class="35">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="4.29" samples="13" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="20" perPoint="2.04" samples="18" />
+      <STAT type="21" perPoint="2.04" samples="18" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="0" perPoint="55" samples="2" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="39" perPoint="0.28" samples="16" />
+      <STAT type="53" perPoint="2.22" samples="15" />
+    </TRAIT>
+  </INFO>
+  <INFO class="36">
+    <TRAIT index="1">
+      <STAT type="0" perPoint="57" samples="5" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="7" perPoint="2.3405" samples="6" />
+    </TRAIT>
+  </INFO>
+  <INFO class="40">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="15.46" samples="5" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="8" perPoint="30.2" samples="37" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="0" perPoint="53" samples="7" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="5" perPoint="0.4" samples="5" />
+      <STAT type="14" perPoint="1.4" samples="6" />
+    </TRAIT>
+  </INFO>
+</MASTER_TRAITS>

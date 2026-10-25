@@ -175,6 +175,7 @@ static const u32 STAT_REASON_ITEM = 3;
 static const u8 MONSTER_DEFENCE_STAT = 7;
 static const i32 DYNAMIC_INDEX_RANGE = 110;
 static const f32 MONSTER_STATUS_FOREVER_SEC = 1000000.0f;
+static const i32 AREA_TYPE_CIRCLE = 1;
 static const f32 BOT_ITEM_PICKUP_RADIUS = 100.0f;
 
 void World::StartLevelEvents()
@@ -185,6 +186,18 @@ void World::StartLevelEvents()
 		if(n->kind != GameXmlContent::LevelEventNode::LEVEL_START) continue;
 		foreach_const(o, n->outputs) FireLevelEvent(*o);
 	}
+}
+
+i32 World::AreaOwnerTeam(const GameXmlContent::Map::Area& area) const
+{
+	f32 best = FLT_MAX;
+	i32 team = -1;
+	foreach_const(s, map->creatures) {
+		if(!s->IsSpawnPoint() || (s->faction != Faction::RED && s->faction != Faction::BLUE)) continue;
+		const f32 d = glm::length(vec2(s->pos) - vec2(area.pos));
+		if(d < best) { best = d; team = (i32)s->faction; }
+	}
+	return team;
 }
 
 void World::SetLevelTriggerActive(u32 nameKey, bool active)
@@ -384,6 +397,12 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 				}
 			}
 		} break;
+		case GameXmlContent::LevelEventNode::SAFE_ZONE: {
+			if(playerIndex < 0) break;
+			Player& p = players[playerIndex];
+			p.inSafeZone = node->active;
+			if(p.clientHd != ClientHandle::INVALID) replication->SendSafeZone(p.clientHd, p.userID, node->active);
+		} break;
 		case GameXmlContent::LevelEventNode::OR_CONDITION: {
 			if(!LevelTriggerActive(*node)) return;
 			if(node->resetAfter) SetLevelTriggerActive(node->nameKey, false);
@@ -539,15 +558,18 @@ void World::UpdateBoundTriggers()
 		if(n->kind != GameXmlContent::LevelEventNode::BOUND_TRIGGER || !LevelTriggerActive(*n)) continue;
 		const GameXmlContent::Map::Area* area = levelMap.FindArea(n->areaID);
 		if(!area) continue;
+		const i32 ownerTeam = n->ownTeamOnly ? AreaOwnerTeam(*area) : -1;
 		foreach(p, players) {
 			if(p->dead || !p->body) continue;
+			if(ownerTeam >= 0 && (i32)p->team != ownerTeam) continue;
 			const vec3 pos = p->body->GetWorldPos();
-			const bool inside = fabsf(pos.x - area->pos.x) <= area->size.z && fabsf(pos.y - area->pos.y) <= area->size.y;
+			const bool inside = area->type == AREA_TYPE_CIRCLE ? glm::length(vec2(pos) - vec2(area->pos)) <= area->size.z : fabsf(pos.x - area->pos.x) <= area->size.z && fabsf(pos.y - area->pos.y) <= area->size.y;
 			BoundTriggerState* state = nullptr;
 			foreach(s, boundTriggerStates) if(s->node == n->id && s->playerIndex == p->index) state = &*s;
 			if(!state) {
-				boundTriggerStates.push_back({ n->id, p->index, inside, Time::ZERO });
-				continue;
+				boundTriggerStates.push_back({ n->id, p->index, n->ownTeamOnly ? !inside : inside, Time::ZERO });
+				if(!n->ownTeamOnly) continue;
+				state = &boundTriggerStates.back();
 			}
 			if(state->inside == inside) continue;
 			state->inside = inside;

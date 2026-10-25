@@ -651,7 +651,7 @@ f32 World::WeaponHitDamage(const Player& player, const Remote* remote) const
 {
 	const u32 m = player.mainCharaID & 1;
 	const WeaponIndex weapon = m == 0 ? player.mainWeapon : player.subWeapon;
-	const f32 attack = GetGameXmlContent().GetWeaponAttack((i32)weapon) + LevelBonus(player, player.Main().classType, STAT_ATTACK);
+	const f32 attack = GetGameXmlContent().GetWeaponAttack((i32)weapon) + StatBonus(player, STAT_ATTACK);
 	ASSERT(attack > 0);
 	const f32 mult = remote && remote->attackMultiplier > 0 ? remote->attackMultiplier : 1.0f;
 	if(remote && remote->skillIndex != 0 && remote->attackMultiplier > 0) return PlayerSkillDamage(player, SkillID(remote->skillIndex)) * mult;

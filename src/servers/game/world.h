@@ -136,8 +136,8 @@ struct World
 		i32 skillPoints = 1;
 		i32 ingameLevel = 1;
 		i32 ingameExp = 0;
-		i32 propertyPoints = 0;
 		i32 points = 0;
+		bool inSafeZone = false;
 		Time nextSkillPointAt = Time::ZERO;
 		u8 botUpgradeTurn = 0;
 		u32 resourceGainCast = 0;
@@ -333,6 +333,9 @@ struct World
 		SkinIndex skinIndex;
 		i32 hp;
 		i32 hpMax;
+		eastl::array<u8,4> traits = {};
+		i32 traitPoints = 0;
+		Time traitResetAt = Time::ZERO;
 		i32 seed;
 		i32 spawnAnim = -1;
 		i32 ownerID = 0;
@@ -923,6 +926,7 @@ public:
 	void InitMonsterStats(ActorNpc& npc);
 	void DespawnEntities(i32 localID, i32 tagID);
 	void SetLevelTriggerActive(u32 nameKey, bool active);
+	i32 AreaOwnerTeam(const GameXmlContent::Map::Area& area) const;
 	void ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply);
 	bool NpcHasStatusType(const ActorNpc& npc, StatusType type) const;
 	void OnMonsterDeath(ActorNpc& npc, ActorUID killerUID);
@@ -934,6 +938,11 @@ public:
 	void GrantMonsterKillExp(const ActorNpc& npc, ActorUID killerUID);
 	i32 IngameRespawnDelayMs(const Player& player) const;
 	f32 LevelBonus(const Player& player, ClassType classType, u8 statType) const;
+	f32 StatBonus(const Player& player, u8 statType) const;
+	void SendTraitStats(Player& player, ActorMaster& chara);
+	void RefreshMasterHealth(Player& player, ActorMaster& chara);
+	u32 UpgradeTraits(Player& player, ActorUID characterUID, const u8* indices, i32 count);
+	u32 ResetTraits(Player& player, ActorUID characterUID);
 	void ApplyLevelStats(Player& player);
 	u32 KillPoints() const;
 	void AddPoints(Player& player, i32 points);

@@ -1607,6 +1607,59 @@ void Replication::SendExpIngame(ClientHandle clientHd, UserID userID, i32 gain, 
 	SendPacketData<Sv::SN_ExpIngame>(clientHd, sizeof(packet), &packet);
 }
 
+void Replication::SendCharacterPropertyInfoToAll(ActorUID character, const eastl::array<u8,4>& levels)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const LocalActorID local = GetLocalActorID(clientHandle[clientID], character);
+		if(local == LocalActorID::INVALID) continue;
+		PacketWriter<Sv::SN_CharacterPropertyInfo,32> packet;
+		packet.Write<u32>((u32)local);
+		u16 count = 0;
+		for(u8 v : levels) if(v) count++;
+		packet.Write<u16>(count);
+		for(u8 i = 0; i < 4; i++) {
+			if(!levels[i]) continue;
+			packet.Write<u8>(i);
+			packet.Write<u8>(levels[i]);
+		}
+		SendPacket(clientHandle[clientID], packet);
+	}
+}
+
+void Replication::SendSafeZone(ClientHandle clientHd, UserID userID, bool inside)
+{
+	Sv::SN_NotifyIsInSafeZone packet;
+	packet.userID = (i32)userID;
+	packet.inSafeZone = inside ? 1 : 0;
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendTraitAnswer(ClientHandle clientHd, bool reset, u32 error)
+{
+	if(reset) {
+		Sv::SA_CharacterPropertyReset packet;
+		packet.errorType = error;
+		SendPacket(clientHd, packet);
+		return;
+	}
+	Sv::SA_CharacterPropertyUpgrade packet;
+	packet.errorType = error;
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendCharacterPropertyResetToAll(ActorUID character)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const LocalActorID local = GetLocalActorID(clientHandle[clientID], character);
+		if(local == LocalActorID::INVALID) continue;
+		Sv::SN_CharacterPropertyReset packet;
+		packet.characterId = (u32)local;
+		SendPacketData<Sv::SN_CharacterPropertyReset>(clientHandle[clientID], sizeof(packet), &packet);
+	}
+}
+
 void Replication::SendCharacterPropertyPoint(ClientHandle clientHd, ActorUID character, i32 points)
 {
 	const LocalActorID local = GetLocalActorID(clientHd, character);

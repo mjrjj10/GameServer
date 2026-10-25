@@ -5,6 +5,7 @@
 
 static const u32 PVP_ANNOUNCE_MONSTER_KILL = 5;
 static const u8 LEVEL_STAT_HEALTH = 0;
+static const f64 TRAIT_RESET_COOLDOWN_MS = 20000.0;
 static const u8 LEVEL_STAT_ATTACK = 6;
 static const u8 LEVEL_STAT_SKILLPOWER = 8;
 
@@ -20,7 +21,10 @@ void World::StartIngameLevels()
 	foreach(p, players) {
 		p->ingameLevel = 1;
 		p->ingameExp = 0;
-		p->propertyPoints = 0;
+		p->Main().traits = {};
+		p->Main().traitPoints = 0;
+		p->Sub().traits = {};
+		p->Sub().traitPoints = 0;
 		replication->SendLevelIngameToAll(p->userID, info.ExpToLevelUp(1), 1);
 	}
 	nextPassiveExpAt = info.passivePeriod > 0 ? TimeAdd(localTime, TimeMsToTime(info.passivePeriod * 1000.0)) : Time::ZERO;
@@ -37,16 +41,19 @@ void World::GrantIngameExp(Player& player, i32 gain, ActorUID target)
 		player.ingameExp -= info.ExpToLevelUp(player.ingameLevel);
 		player.ingameLevel++;
 		levelUp = true;
-		if(info.propertyPointsEvery > 0 && player.ingameLevel % info.propertyPointsEvery == 0) player.propertyPoints += info.propertyPointsStep;
+		if(info.propertyPointsEvery > 0 && player.ingameLevel % info.propertyPointsEvery == 0) {
+			player.Main().traitPoints += info.propertyPointsStep;
+			player.Sub().traitPoints += info.propertyPointsStep;
+		}
 	}
 	if(player.ingameLevel >= info.maxLevel) player.ingameExp = 0;
 	if(player.clientHd != ClientHandle::INVALID) replication->SendExpIngame(player.clientHd, player.userID, gain, player.ingameExp, target);
 	if(!levelUp) return;
 	replication->SendLevelIngameToAll(player.userID, info.ExpToLevelUp(player.ingameLevel), player.ingameLevel);
 	ApplyLevelStats(player);
-	if(player.clientHd != ClientHandle::INVALID && player.propertyPoints > 0) {
-		replication->SendCharacterPropertyPoint(player.clientHd, player.Main().UID, player.propertyPoints);
-		replication->SendCharacterPropertyPoint(player.clientHd, player.Sub().UID, player.propertyPoints);
+	if(player.clientHd != ClientHandle::INVALID) {
+		if(player.Main().traitPoints > 0) replication->SendCharacterPropertyPoint(player.clientHd, player.Main().UID, player.Main().traitPoints);
+		if(player.Sub().traitPoints > 0) replication->SendCharacterPropertyPoint(player.clientHd, player.Sub().UID, player.Sub().traitPoints);
 	}
 	LOG("Level :: %ls reaches level %d", player.name.data(), player.ingameLevel);
 }
@@ -97,14 +104,90 @@ void World::ApplyLevelStats(Player& player)
 {
 	for(i32 i = 0; i < 2; i++) {
 		ActorMaster& chara = i == 0 ? player.Main() : player.Sub();
-		const i32 hpMax = (i32)(MasterStat(chara.classType, LEVEL_STAT_HEALTH) + LevelBonus(player, chara.classType, LEVEL_STAT_HEALTH));
-		if(chara.hp > 0) chara.hp = MIN(chara.hp + MAX(hpMax - chara.hpMax, 0), hpMax);
-		chara.hpMax = hpMax;
-		replication->SendStatToAll(chara.UID, LEVEL_STAT_HEALTH, (f32)chara.hp, (f32)chara.hpMax);
+		RefreshMasterHealth(player, chara);
 		const WeaponIndex weapon = (chara.UID == player.Main().UID) == ((player.mainCharaID & 1) == 0) ? player.mainWeapon : player.subWeapon;
 		replication->SendStatToAll(chara.UID, LEVEL_STAT_ATTACK, 0, GetGameXmlContent().GetWeaponAttack((i32)weapon) + LevelBonus(player, chara.classType, LEVEL_STAT_ATTACK));
 		replication->SendStatToAll(chara.UID, LEVEL_STAT_SKILLPOWER, 0, MasterStat(chara.classType, LEVEL_STAT_SKILLPOWER) + LevelBonus(player, chara.classType, LEVEL_STAT_SKILLPOWER));
 	}
+}
+
+void World::RefreshMasterHealth(Player& player, ActorMaster& chara)
+{
+	const i32 hpMax = (i32)(MasterStat(chara.classType, LEVEL_STAT_HEALTH) + LevelBonus(player, chara.classType, LEVEL_STAT_HEALTH) + GetGameXmlContent().MasterTraitBonus(chara.classType, chara.traits, LEVEL_STAT_HEALTH));
+	if(chara.hp > 0) chara.hp = MIN(chara.hp + MAX(hpMax - chara.hpMax, 0), hpMax);
+	chara.hpMax = hpMax;
+	replication->SendStatToAll(chara.UID, LEVEL_STAT_HEALTH, (f32)chara.hp, (f32)chara.hpMax);
+}
+
+f32 World::StatBonus(const Player& player, u8 statType) const
+{
+	const ActorMaster& chara = player.Main();
+	return LevelBonus(player, chara.classType, statType) + GetGameXmlContent().MasterTraitBonus(chara.classType, chara.traits, statType);
+}
+
+void World::SendTraitStats(Player& player, ActorMaster& chara)
+{
+	const GameXmlContent& content = GetGameXmlContent();
+	auto f = content.masterTraits.find((i32)chara.classType);
+	if(f == content.masterTraits.end()) return;
+	for(i32 i = 0; i < 4; i++) {
+		for(const StatValue& st : f->second[i]) {
+			if(st.type == LEVEL_STAT_HEALTH) {
+				RefreshMasterHealth(player, chara);
+				continue;
+			}
+			const f32 value = MasterStat(chara.classType, st.type) + LevelBonus(player, chara.classType, st.type) + content.MasterTraitBonus(chara.classType, chara.traits, st.type);
+			replication->SendStatToAll(chara.UID, st.type, 0, value);
+		}
+	}
+}
+
+u32 World::UpgradeTraits(Player& player, ActorUID characterUID, const u8* indices, i32 count)
+{
+	static const u32 ERR_NOT_USING_MODE = 600;
+	static const u32 ERR_NOT_EXIST_CHARACTER = 603;
+	static const u32 ERR_NOT_ENOUGH_POINT = 604;
+	static const u32 ERR_NOT_EXIST_DATA = 605;
+	static const u32 ERR_COUNT_LIMIT = 606;
+	const GameXmlContent& content = GetGameXmlContent();
+	if(!map || !map->ingameLevels) return ERR_NOT_USING_MODE;
+	static const u32 ERR_NOT_IN_SAFE_ZONE = 601;
+	ActorMaster* chara = player.Main().UID == characterUID ? &player.Main() : player.Sub().UID == characterUID ? &player.Sub() : nullptr;
+	if(!chara) return ERR_NOT_EXIST_CHARACTER;
+	if(!player.inSafeZone) return ERR_NOT_IN_SAFE_ZONE;
+	if(count <= 0 || count > chara->traitPoints) return ERR_NOT_ENOUGH_POINT;
+	eastl::array<u8,4> levels = chara->traits;
+	for(i32 i = 0; i < count; i++) {
+		if(indices[i] >= 4) return ERR_NOT_EXIST_DATA;
+		if(levels[indices[i]] >= content.traitMaxPoints) return ERR_COUNT_LIMIT;
+		levels[indices[i]]++;
+	}
+	chara->traits = levels;
+	chara->traitPoints -= count;
+	SendTraitStats(player, *chara);
+	if(player.clientHd != ClientHandle::INVALID) replication->SendCharacterPropertyPoint(player.clientHd, chara->UID, chara->traitPoints);
+	replication->SendCharacterPropertyInfoToAll(chara->UID, chara->traits);
+	LOG("Traits :: %ls master %d traits %d/%d/%d/%d (%d points left)", player.name.data(), (i32)chara->classType, chara->traits[0], chara->traits[1], chara->traits[2], chara->traits[3], chara->traitPoints);
+	return 0;
+}
+
+u32 World::ResetTraits(Player& player, ActorUID characterUID)
+{
+	static const u32 ERR_NOT_USING_MODE = 600;
+	static const u32 ERR_NOT_EXIST_CHARACTER = 603;
+	if(!map || !map->ingameLevels) return ERR_NOT_USING_MODE;
+	ActorMaster* chara = player.Main().UID == characterUID ? &player.Main() : player.Sub().UID == characterUID ? &player.Sub() : nullptr;
+	static const u32 ERR_RESET_COOLTIME = 602;
+	if(!chara) return ERR_NOT_EXIST_CHARACTER;
+	if(chara->traitResetAt != Time::ZERO && localTime < TimeAdd(chara->traitResetAt, TimeMsToTime(TRAIT_RESET_COOLDOWN_MS))) return ERR_RESET_COOLTIME;
+	chara->traitResetAt = localTime;
+	for(u8 v : chara->traits) chara->traitPoints += v;
+	chara->traits = {};
+	SendTraitStats(player, *chara);
+	replication->SendCharacterPropertyResetToAll(chara->UID);
+	if(player.clientHd != ClientHandle::INVALID) replication->SendCharacterPropertyPoint(player.clientHd, chara->UID, chara->traitPoints);
+	LOG("Traits :: %ls master %d reset (%d points)", player.name.data(), (i32)chara->classType, chara->traitPoints);
+	return 0;
 }
 
 u32 World::KillPoints() const

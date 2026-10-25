@@ -46,7 +46,7 @@ void World::UpdateUltimateGauges(f32 delta)
 			it->moveSpeedSent = -1.0f;
 		}
 		{
-			const f32 base = MasterStat(cls, STAT_MOVESPEED);
+			const f32 base = MasterStat(cls, STAT_MOVESPEED) + StatBonus(*it, STAT_MOVESPEED);
 			const f32 speed = MAX(base * (1.0f + StatusModMulSum(*it, StatusMod::MOVESPEED) / 100.0f), 0.0f);
 			if(base > 0 && fabsf(speed - it->moveSpeedSent) > 0.01f) {
 				it->moveSpeedSent = speed;
@@ -96,8 +96,8 @@ void World::UpdateUltimateGauges(f32 delta)
 			}
 		}
 
-		const f32 staminaRegen = MasterStat(cls, STAT_STAMINAREGEN) * MAX(1.0f + StatusRegenBonus(*it, StatusMod::STAMINA, true) / 100.0f, 0.0f);
-		const f32 manaRegen = MasterStat(cls, STAT_MANAREGEN) + StatusRegenBonus(*it, StatusMod::MANAREGEN, false);
+		const f32 staminaRegen = (MasterStat(cls, STAT_STAMINAREGEN) + StatBonus(*it, STAT_STAMINAREGEN)) * MAX(1.0f + StatusRegenBonus(*it, StatusMod::STAMINA, true) / 100.0f, 0.0f);
+		const f32 manaRegen = MasterStat(cls, STAT_MANAREGEN) + StatBonus(*it, STAT_MANAREGEN) + StatusRegenBonus(*it, StatusMod::MANAREGEN, false);
 		const f32 rageRegen = MasterStat(cls, RESOURCES[1].regenStat) + StatusRegenBonus(*it, StatusMod::RAGEREGEN, false);
 		{
 			const f32 rates[3] = { staminaRegen, manaRegen, rageRegen };
@@ -1172,11 +1172,11 @@ f32 World::PlayerSkillDamage(const Player& player, SkillID skillID) const
 {
 	const f32 statusPower = StatusModSum(player, StatusMod::SKILLPOWER);
 	if(const GameXmlContent::SkillUpgrade* up = LatestUpgrade(player, (i32)skillID, GameXmlContent::SkillUpgrade::Type::DAMAGE)) {
-		if(up->baseDamage >= 0) return MAX(up->baseDamage + up->attackMultiplier * (MasterStat(player.Main().classType, STAT_SKILLPOWER) + LevelBonus(player, player.Main().classType, STAT_SKILLPOWER) + statusPower), 0.0f);
+		if(up->baseDamage >= 0) return MAX(up->baseDamage + up->attackMultiplier * (MasterStat(player.Main().classType, STAT_SKILLPOWER) + StatBonus(player, STAT_SKILLPOWER) + statusPower), 0.0f);
 	}
 	f32 damage = SkillDamage(skillID);
 	auto found = GetGameXmlContent().skillMap.find(skillID);
-	const f32 extraPower = statusPower + LevelBonus(player, player.Main().classType, STAT_SKILLPOWER);
+	const f32 extraPower = statusPower + StatBonus(player, STAT_SKILLPOWER);
 	if(extraPower > 0 && found != GetGameXmlContent().skillMap.end()) {
 		SkillNormalModel& sm = const_cast<SkillNormalModel&>(found->second);
 		damage += extraPower * sm.getSkillNormalLevelByIndex(0)->getAttackMultiplier();
@@ -1239,7 +1239,7 @@ const GameXmlContent::CostLevel* World::UpgradeCastMods(Player& player, SkillID 
 	}
 	const GameXmlContent::SkillUpgrade* dmg = LatestUpgrade(player, (i32)skillID, GameXmlContent::SkillUpgrade::Type::DAMAGE);
 	if(dmg && costIndex >= 0 && costIndex < (i32)dmg->costLevelDamage.size() && dmg->baseDamage > 0 && dmg->costLevelDamage[costIndex].first >= 0) {
-		const f32 skillPower = MasterStat(player.Main().classType, STAT_SKILLPOWER) + LevelBonus(player, player.Main().classType, STAT_SKILLPOWER) + StatusModSum(player, StatusMod::SKILLPOWER);
+		const f32 skillPower = MasterStat(player.Main().classType, STAT_SKILLPOWER) + StatBonus(player, STAT_SKILLPOWER) + StatusModSum(player, StatusMod::SKILLPOWER);
 		const f32 normal = dmg->baseDamage + dmg->attackMultiplier * skillPower;
 		const f32 empowered = dmg->costLevelDamage[costIndex].first + dmg->costLevelDamage[costIndex].second * skillPower;
 		if(normal > 0) mods.damageRatio = empowered / normal;

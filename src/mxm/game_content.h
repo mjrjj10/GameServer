@@ -582,7 +582,7 @@ struct GameXmlContent
 
 	struct LevelEventNode
 	{
-		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM, BOUND_TRIGGER, STATUS_CHANGE, ACTIVATE_TRIGGER, ON_HIT_TRIGGER, ACTION_CHANGE, CLIENT_EVENT, CALL_MONSTER, DESPAWN_ENTITY, PASS_THROUGH, TIME_RECORD_START, DEAD_COUNT, HP_TRIGGER, OR_CONDITION, GAME_END_TRIGGER };
+		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM, BOUND_TRIGGER, STATUS_CHANGE, ACTIVATE_TRIGGER, ON_HIT_TRIGGER, ACTION_CHANGE, CLIENT_EVENT, CALL_MONSTER, DESPAWN_ENTITY, PASS_THROUGH, TIME_RECORD_START, DEAD_COUNT, HP_TRIGGER, OR_CONDITION, GAME_END_TRIGGER, SAFE_ZONE };
 		enum ApplyType: u8 { APPLY_MY_CHAR = 0, APPLY_LOCAL_ID, APPLY_OTHER };
 		i32 id = 0;
 		Kind kind = OTHER;
@@ -611,6 +611,7 @@ struct GameXmlContent
 		ApplyType applyType = APPLY_OTHER;
 		bool apply = true;
 		bool resetAfter = false;
+		bool ownTeamOnly = false;
 		f32 hpPercent = 0;
 		eastl::fixed_vector<i32,8,false> outputs;
 	};
@@ -977,6 +978,26 @@ struct GameXmlContent
 	struct MasterGrowthStat { u8 type = 0; f32 linear = 0; f32 quadratic = 0; };
 	eastl::hash_map<i32, eastl::fixed_vector<MasterGrowthStat,4,false>> masterGrowth;
 	bool LoadMasterGrowth();
+
+	eastl::hash_map<i32, eastl::array<eastl::fixed_vector<StatValue,4,false>,4>> masterTraits;
+	i32 traitMaxPoints = 12;
+	bool LoadMasterTraits();
+	f32 MasterTraitBonus(ClassType classType, const eastl::array<u8,4>& levels, u8 statType) const
+	{
+		auto f = masterTraits.find((i32)classType);
+		if(f == masterTraits.end()) return 0;
+		f32 sum = 0;
+		for(i32 i = 0; i < 4; i++) {
+			if(levels[i] == 0) continue;
+			for(const StatValue& st : f->second[i]) if(st.type == statType) sum += st.value * levels[i];
+		}
+		return sum;
+	}
+	bool MasterHasTrait(ClassType classType, i32 index) const
+	{
+		auto f = masterTraits.find((i32)classType);
+		return f != masterTraits.end() && index >= 0 && index < 4 && !f->second[index].empty();
+	}
 	f32 MasterLevelBonus(ClassType classType, u8 statType, i32 level) const
 	{
 		auto f = masterGrowth.find((i32)classType);

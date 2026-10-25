@@ -741,6 +741,24 @@ void Game::OnPlayerSkillUpgrade(ClientHandle clientHd, i32 slot)
 	if(!world.UpgradeSkillSlot(player, slot)) LOG("Upgrade :: %ls slot %d refused (points %d)", player.name.data(), slot, player.skillPoints);
 }
 
+void Game::OnTraitUpgrade(ClientHandle clientHd, ActorUID characterUID, const u8* indices, i32 count)
+{
+	auto found = playerMap.find(clientHd);
+	if(found == playerMap.end()) return;
+	World::Player& player = world.GetPlayer(found->second->playerIndex);
+	const u32 error = world.UpgradeTraits(player, characterUID, indices, count);
+	if(error != 0) LOG("Traits :: %ls upgrade refused (error %u)", player.name.data(), error);
+	replication.SendTraitAnswer(clientHd, false, error);
+}
+
+void Game::OnTraitReset(ClientHandle clientHd, ActorUID characterUID)
+{
+	auto found = playerMap.find(clientHd);
+	if(found == playerMap.end()) return;
+	World::Player& player = world.GetPlayer(found->second->playerIndex);
+	replication.SendTraitAnswer(clientHd, true, world.ResetTraits(player, characterUID));
+}
+
 void Game::OnPlayerSyncTeleport(ClientHandle clientHd, ActorUID actorUID, const vec3& pos)
 {
 	auto found = playerMap.find(clientHd);
