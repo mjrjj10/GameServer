@@ -49,6 +49,8 @@ struct WorldHub
 		ClientHandle clientHd;
 		WideString name;
 		WideString guildTag;
+		u16 level = 1;
+		u32 levelExp = 0;
 
 		explicit ActorPlayer(ActorUID UID_, ActorUID parentActorUID_):
 			ActorCore(UID_),

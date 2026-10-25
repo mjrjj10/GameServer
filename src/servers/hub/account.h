@@ -9,6 +9,8 @@ struct Account
 	WideString nickname;
 	WideString guildTag;
 	i32 leaderMasterID;
+	u16 level = 1;
+	u32 levelExp = 0;
 
 	// TODO: add to this
 

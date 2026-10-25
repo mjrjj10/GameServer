@@ -938,6 +938,29 @@ bool GameXmlContent::LoadPvpDeathmach()
 	return LoadMapByID(&mapPvpDeathMatch, MapIndex::PVP_DEATHMATCH);
 }
 
+bool GameXmlContent::LoadMissions()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/Design/DOCUMENT/MISSION.xml", doc)) return false;
+	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+		XMLElement* pMission = pInfo->FirstChildElement("ST_MISSION");
+		if(!pMission) continue;
+		Mission mission;
+		if(pInfo->QueryIntAttribute("ID", &mission.ID) != XML_SUCCESS) continue;
+		mission.step = pMission->IntAttribute("_Step", 0);
+		const char* cat = pMission->Attribute("_Category");
+		mission.category = Mission::Category::OTHER;
+		if(cat && EA::StdC::Strcmp(cat, "DAILY") == 0) mission.category = Mission::Category::DAILY;
+		else if(cat && EA::StdC::Strcmp(cat, "WEEKLY") == 0) mission.category = Mission::Category::WEEKLY;
+		else if(cat && EA::StdC::Strcmp(cat, "MONTHLY") == 0) mission.category = Mission::Category::MONTHLY;
+		else if(cat && EA::StdC::Strcmp(cat, "GUILD") == 0) mission.category = Mission::Category::GUILD;
+		ASSERT(!missions.full());
+		missions.push_back(mission);
+	}
+	LOG("Loaded %d missions", (i32)missions.size());
+	return true;
+}
+
 bool GameXmlContent::LoadEntrySystems()
 {
 	XMLDocument docEntry;
@@ -1981,6 +2004,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadEntrySystems();
+	if(!r) return false;
+
+	r = LoadMissions();
 	if(!r) return false;
 
 	r = LoadStageMaps();

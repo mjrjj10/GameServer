@@ -9,6 +9,9 @@
 #include "config.h"
 #include "coordinator.h" // AccountData
 #include <mxm/game_content.h>
+#include <EASTL/sort.h>
+#include <time.h>
+#include "mission_rules.h"
 
 
 void HubReplication::Frame::Clear()
@@ -993,6 +996,48 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 
 		SendPacket(clientHd, packet);
 	}
+
+	SendMissionList(clientHd, account);
+}
+
+void HubReplication::SendMissionList(ClientHandle clientHd, const Account& account)
+{
+	const i64 now = (i64)time(nullptr);
+	const MissionCalendar cal = ComputeMissionCalendar(now);
+	const auto& missions = GetGameXmlContent().missions;
+
+	eastl::fixed_vector<i32,64,false> list;
+	u32 seed = 2166136261u;
+	foreach_const(c, account.nickname) seed = (seed ^ (u32)*c) * 16777619u;
+	seed = (seed ^ (u32)cal.periodDay) * 16777619u;
+	for(i32 step = 0; step <= MISSION_DAILY_STEPS; step++) {
+		eastl::fixed_vector<i32,64,false> pool;
+		foreach_const(m, missions) {
+			if(m->category == GameXmlContent::Mission::Category::DAILY && m->step == step && !pool.full()) pool.push_back(m->ID);
+		}
+		if(pool.empty()) continue;
+		const u32 pick = (seed ^ (u32)step * 2654435761u) % (u32)pool.size();
+		list.push_back(pool[pick]);
+	}
+	for(i32 id : MEASURED_WEEKLY_MISSIONS_COMMON) list.push_back(id);
+	for(i32 id : MEASURED_WEEKLY_MISSIONS[cal.weeklySet]) list.push_back(id);
+	for(i32 id : MEASURED_MONTHLY_MISSIONS) list.push_back(id);
+	for(i32 id : MEASURED_GUILD_MISSIONS[cal.weeklySet]) list.push_back(id);
+	eastl::sort(list.begin(), list.end());
+
+	PacketWriter<Sv::SN_MissionList,2048> packet;
+	packet.Write<u16>((u16)list.size());
+	foreach_const(id, list) {
+		packet.Write<u32>((u32)*id);
+		packet.Write<i64>(0);
+		packet.Write<u16>(0);
+		packet.Write<u8>(0);
+		packet.Write<u8>(0);
+	}
+	packet.Write<u32>((u32)((cal.dailyResetUtc - now) * 1000));
+	packet.Write<u32>((u32)((cal.weeklyResetUtc - now) * 1000));
+	packet.Write<u32>((u32)((cal.monthlyResetUtc - now) * 1000));
+	SendPacket(clientHd, packet);
 }
 
 void HubReplication::SendGameReady(ClientHandle clientHd)
@@ -2092,6 +2137,16 @@ void HubReplication::SendActorPlayerSpawn(ClientHandle clientHd, const ActorPlay
 		packet.Write<u8>(0); // staffType
 		packet.Write<u8>(0); // isSubstituted
 
+		SendPacket(clientHd, packet);
+	}
+
+	if(actor.parentActorUID == ActorUID::INVALID) {
+		PacketWriter<Sv::SN_Exp> packet;
+		packet.Write<LocalActorID>(localActorID);
+		packet.WriteStringObj(actor.name.data());
+		packet.Write<u8>(0);
+		packet.Write<u16>(actor.level);
+		packet.Write<u32>(actor.levelExp);
 		SendPacket(clientHd, packet);
 	}
 

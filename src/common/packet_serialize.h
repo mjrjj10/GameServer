@@ -803,6 +803,48 @@ inline const char* PacketSerialize<Sv::SN_GamePlayerStock>(const void* packetDat
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_MissionList>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+
+	SER("SN_MissionList(%d, %d) :: {", Sv::SN_MissionList::NET_ID, packetSize);
+	const u16 count = buff.Read<u16>();
+	SER("	missions_count=%u", count);
+	for(u16 i = 0; i < count; i++) {
+		const u32 index = buff.Read<u32>();
+		const i64 progress = buff.Read<i64>();
+		const u16 changed = buff.Read<u16>();
+		const u8 cleared = buff.Read<u8>();
+		const u8 rewarded = buff.Read<u8>();
+		SER("	missions[%u]=(index=%u progressCount=%lld changedCount=%u isCleared=%u isRewarded=%u)", i, index, progress, changed, cleared, rewarded);
+	}
+	SER("	dailyMissionRemainTimeMS=%u", buff.Read<u32>());
+	SER("	weeklyMissionRemainTimeMS=%u", buff.Read<u32>());
+	SER("	monthlyMissionRemainTimeMS=%u", buff.Read<u32>());
+	SER("}");
+
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Sv::SN_Exp>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+
+	SER("SN_Exp(%d, %d) :: {", Sv::SN_Exp::NET_ID, packetSize);
+	SER("	leaderCSN=0x%08x", buff.Read<u32>());
+	SER("	nickname='%ls'", buff.ReadWideStringObj().data());
+	SER("	isLevelUp=%u", buff.Read<u8>());
+	SER("	level=%u", buff.Read<u16>());
+	SER("	currentLevelExp=%u", buff.Read<u32>());
+	SER("}");
+
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_GamePlayerTag>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

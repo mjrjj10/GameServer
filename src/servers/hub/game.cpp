@@ -303,6 +303,8 @@ void HubGame::OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID cha
 	actor.dir = dir;
 	actor.eye = eye;
 	actor.clientHd = clientHd; // TODO: this is not useful right now
+	actor.level = account->level;
+	actor.levelExp = account->levelExp;
 	playerActorUID[userID] = actor.UID;
 
 	replication.SendPlayerSetLeaderMaster(clientHd, playerActorUID[userID], classType, skinIndex);

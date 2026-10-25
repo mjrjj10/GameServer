@@ -778,6 +778,15 @@ struct GameXmlContent
 		eastl::fixed_vector<MapIndex,8,false> maps;
 	};
 
+	struct Mission
+	{
+		enum class Category: u8 { DAILY, WEEKLY, MONTHLY, GUILD, OTHER };
+		i32 ID;
+		Category category;
+		i32 step;
+	};
+
+	eastl::fixed_vector<Mission,256,false> missions;
 	eastl::fixed_vector<EntrySystem,32,false> entrySystems;
 	eastl::fixed_vector<AreaStages,64,false> areaStages;
 	eastl::fixed_vector<StageMaps,512,false> stageMaps;
@@ -981,6 +990,7 @@ private:
 
 	bool LoadMasterDefinitions();
 	bool LoadEntrySystems();
+	bool LoadMissions();
 	bool LoadStageMaps();
 	bool LoadBotCreatures();
 

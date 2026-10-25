@@ -65,6 +65,8 @@ struct HubReplication
 		i32 additionnalOverHeatGauge;
 		i32 additionnalOverHeatGaugeRatio;
 		u8 playerStateInTown;
+		u16 level = 1;
+		u32 levelExp = 0;
 		eastl::fixed_vector<u8,16> matchingGameModes;
 
 		ActionStateID actionState;
@@ -227,6 +229,7 @@ struct HubReplication
 	void SendChatWhisperToClient(ClientHandle destClientHd, const wchar* destNick, const wchar* msg);
 
 	void SendAccountDataLobby(ClientHandle clientHd, const Account& account);
+	void SendMissionList(ClientHandle clientHd, const Account& account);
 
 	void SendGameReady(ClientHandle clientHd);
 
