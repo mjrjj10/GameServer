@@ -1,10 +1,10 @@
 #include "channel.h"
-#include "guild.h"
 
 #include "coordinator.h"
 #include <common/packet_validator.h>
 #include <mxm/game_content.h>
 #include "game.h"
+#include "town_rules.h"
 
 bool HubPacketHandler::Init(HubGame* game_)
 {
@@ -37,9 +37,6 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 #define HANDLE_CASE(PACKET) case Cl::PACKET::NET_ID: { HandlePacket_##PACKET(clientHd, header, packetData, packetSize); } break
 
 	switch(header.netID) {
-		HANDLE_CASE(CQ_GetGuildProfile);
-		HANDLE_CASE(CQ_GetGuildMemberList);
-		HANDLE_CASE(CQ_GetGuildHistoryList);
 		HANDLE_CASE(CQ_GetGuildRankingSeasonList);
 		HANDLE_CASE(CQ_TierRecord);
 
@@ -91,6 +88,32 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CQ_MailWrite);
 		HANDLE_CASE(CQ_MailMove);
 
+		case Cl::CQ_GetGuildProfile::NET_ID:
+		case Cl::CQ_GetGuildMemberList::NET_ID:
+		case Cl::CQ_GetGuildHistoryList::NET_ID:
+		case Cl::CQ_GetGuildMemberStatusList::NET_ID:
+		case Cl::CQ_CreateGuild::NET_ID:
+		case Cl::CQ_DissolveGuild::NET_ID:
+		case MEASURED_CQ_CANCEL_GUILD_DISSOLUTION:
+		case Cl::CQ_QuitGuild::NET_ID:
+		case Cl::CQ_KickGuildMember::NET_ID:
+		case MEASURED_CQ_JOIN_GUILD:
+		case Cl::CQ_GetGuildJoinRequestList::NET_ID:
+		case Cl::CQ_RespondGuildJoinRequest::NET_ID:
+		case Cl::CQ_InviteGuildMember::NET_ID:
+		case Cl::CQ_GetGuildInvitationList::NET_ID:
+		case Cl::CQ_RespondGuildInvitation::NET_ID:
+		case Cl::CQ_GetGuildPublicProfile::NET_ID:
+		case MEASURED_CQ_GET_GUILD_PUBLIC_PROFILE_FROM_USER:
+		case Cl::CQ_EditGuildNotice::NET_ID:
+		case Cl::CQ_EditGuildIntro::NET_ID:
+		case Cl::CQ_SetGuildInterest::NET_ID:
+		case Cl::CQ_SetGuildJoinType::NET_ID:
+		case MEASURED_CQ_DONATE_TO_GUILD:
+		case Cl::CQ_GetRecommendedGuildList::NET_ID:
+			game->OnGuildPacket(clientHd, header.netID, packetData, packetSize);
+			break;
+
 		default: {
 			NT_LOG("[client%x] Client :: Unknown packet :: size=%d netID=%d", clientHd, header.size, header.netID);
 		} break;
@@ -130,152 +153,6 @@ void HubPacketHandler::OnMatchmakerPacket(const NetHeader& header, const u8* pac
 			const In::MN_MatchingPartyFound resp = SafeCast<In::MN_MatchingPartyFound>(packetData, packetSize);
 			game->MmOnMatchFound(resp);
 		} break;
-	}
-}
-
-void HubPacketHandler::HandlePacket_CQ_GetGuildProfile(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
-{
-	if(!ValidatePacket<Cl::CQ_GetGuildProfile>(packetData, packetSize)) {
-		WARN("[client%x] WARNING: invalid CQ_GetGuildProfile (size=%d)", clientHd, packetSize);
-		return;
-	}
-	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_GetGuildProfile>(packetData, packetSize));
-
-	// SA_GetGuildProfile
-	{
-		PacketWriter<Sv::SA_GetGuildProfile,512> packet;
-
-		const Guild& guild = GetAlphaGuild();
-		packet.Write<i32>(0); // result;
-		packet.WriteStringObj(guild.name);
-		packet.WriteStringObj(guild.tag);
-		packet.Write<i32>(guild.emblemIndex);
-		packet.Write<u8>(guild.lvl);
-		packet.Write<u8>(guild.memberMax);
-		packet.WriteStringObj(guild.ownerNickname);
-		packet.Write<i64>(guild.createdDate);
-		packet.Write<i64>(guild.dissolutionDate);
-		packet.Write<u8>(guild.joinType);
-
-		Sv::SA_GetGuildProfile::ST_GuildInterest guildInterest;
-		guildInterest.likePveStage = 1;
-		guildInterest.likeDefence = 1;
-		guildInterest.likePvpNormal = 1;
-		guildInterest.likePvpOccupy = 1;
-		guildInterest.likePvpGot = 1;
-		guildInterest.likePvpRank = 1;
-		guildInterest.likeOlympic = 1;
-		packet.Write(guildInterest);
-
-		packet.WriteStringObj(guild.intro);
-		packet.WriteStringObj(guild.notice);
-		packet.Write<i32>(guild.point);
-		packet.Write<i32>(guild.fund);
-
-		Sv::SA_GetGuildProfile::ST_GuildPvpRecord guildPvpRecord;
-		guildPvpRecord.rp = 0;
-		guildPvpRecord.win = 0;
-		guildPvpRecord.draw = 0;
-		guildPvpRecord.lose = 0;
-		packet.Write(guildPvpRecord);
-
-		packet.Write<i32>(guild.rankNo);
-
-		packet.Write<u16>((u16)GetAlphaGuildRanks().size());
-		for(auto& rank : GetAlphaGuildRanks()) {
-			packet.Write<i32>(rank.id);
-			packet.Write<GuildRankType>(rank.type);
-			packet.Write<u8>(rank.iconIndex);
-			packet.WriteStringObj(rank.name);
-			packet.Write(rank.rights);
-		}
-
-		packet.Write<u16>((u16)guild.skills.size());
-		for(auto& skill : guild.skills) {
-			packet.Write<u8>((u8)skill.type);
-			packet.Write<u8>(skill.level);
-			packet.Write<i64>(0); // expiryDate
-			packet.Write<u16>(0); // extensionCount
-		}
-
-		packet.Write<i32>(0); // curDailyStageGuildPoint
-		packet.Write<i32>(guild.maxDailyStage);
-		packet.Write<i32>(0); // curDailyArenaGuildPoint
-		packet.Write<i32>(guild.maxDailyArena);
-		packet.Write<u8>(0); // todayRollCallCount
-
-		SendPacket(clientHd, packet);
-	}
-}
-
-void HubPacketHandler::HandlePacket_CQ_GetGuildMemberList(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
-{
-	if(!ValidatePacket<Cl::CQ_GetGuildMemberList>(packetData, packetSize)) {
-		WARN("[client%x] WARNING: invalid CQ_GetGuildMemberList (size=%d)", clientHd, packetSize);
-		return;
-	}
-	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_GetGuildMemberList>(packetData, packetSize));
-
-	// SA_GetGuildMemberList
-	{
-		PacketWriter<Sv::SA_GetGuildMemberList,512> packet;
-
-		packet.Write<i32>(0); // result
-
-		const Guild& guild = GetAlphaGuild();
-		const i32 userID = game->plidMap->Get(clientHd);
-		const WideString& nick = game->playerAccountData[userID]->nickname;
-		packet.Write<u16>(2); // guildMemberProfileList_count
-
-		packet.WriteStringObj(guild.owner.nick);
-		packet.Write<i32>(guild.owner.membershipID);
-		packet.Write<u16>(guild.owner.lvl);
-		packet.Write<u16>(guild.owner.leaderClassType);
-		packet.Write<u16>(guild.owner.masterCount);
-		packet.Write<i32>(guild.owner.achievementScore);
-		packet.Write<u8>(0); // topPvpTierGrade
-		packet.Write<u16>(0); // topPvpTierPoint
-		packet.Write<i32>(0); // contributedGuildPoint
-		packet.Write<i32>(0); // contributedGuildFund
-		packet.Write<u16>(0); // guildPvpWin
-		packet.Write<u16>(0); // guildPvpPlay
-		packet.Write<i64>(0); // lastLogoutDate
-
-		packet.WriteStringObj(nick.data(), nick.size());
-		packet.Write<i32>(guild.newMemberRankID); // membershipID
-		packet.Write<u16>(1); // lvl
-		packet.Write<u16>(0); // leaderClassType
-		packet.Write<u16>(0); // masterCount
-		packet.Write<i32>(0); // achievementScore
-		packet.Write<u8>(0); // topPvpTierGrade
-		packet.Write<u16>(0); // topPvpTierPoint
-		packet.Write<i32>(0); // contributedGuildPoint
-		packet.Write<i32>(0); // contributedGuildFund
-		packet.Write<u16>(0); // guildPvpWin
-		packet.Write<u16>(0); // guildPvpPlay
-		packet.Write<i64>(0); // lastLogoutDate
-
-		SendPacket(clientHd, packet);
-	}
-}
-
-void HubPacketHandler::HandlePacket_CQ_GetGuildHistoryList(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
-{
-	if(!ValidatePacket<Cl::CQ_GetGuildHistoryList>(packetData, packetSize)) {
-		WARN("[client%x] WARNING: invalid CQ_GetGuildHistoryList (size=%d)", clientHd, packetSize);
-		return;
-	}
-	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_GetGuildHistoryList>(packetData, packetSize));
-
-	// SA_GetGuildMemberList
-	{
-		PacketWriter<Sv::SA_GetGuildHistoryList> packet;
-
-		packet.Write<i32>(0); // result
-
-		packet.Write<u16>(0); // guildHistories_count
-
-		SendPacket(clientHd, packet);
 	}
 }
 

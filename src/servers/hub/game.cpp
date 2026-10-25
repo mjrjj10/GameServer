@@ -149,6 +149,7 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 	replication.OnPlayerConnect(clientHd);
 	replication.SetPlayerAccount(clientHd, accountData);
 	SendFriendsOnConnect(userID);
+	GuildOnConnect(userID);
 
 	LOG("[client%x] HubGame :: account %llu connected (%ls)", clientHd, (u64)accountData->UID, accountData->nickname.data());
 	SortieUID resultSortieUID = SortieUID::INVALID;
@@ -173,6 +174,7 @@ void HubGame::OnPlayerDisconnect(ClientHandle clientHd)
 
 	if(playerAccountData[userID] && playerMap[userID] != playerList.end()) LeaveParty(userID, playerMap[userID]->sortieUID == SortieUID::INVALID);
 	if(playerAccountData[userID]) BroadcastFriendState(userID, playerMap[userID] != playerList.end() && playerMap[userID]->sortieUID != SortieUID::INVALID ? MEASURED_FRIEND_STATE_IN_GAME : MEASURED_FRIEND_STATE_OFFLINE);
+	if(playerAccountData[userID] && playerMap[userID] != playerList.end()) GuildOnDisconnect(userID);
 
 	// we can disconnect before spawning, so test if we have an actor associated
 	if(playerActorUID[userID] != ActorUID::INVALID) {
@@ -236,6 +238,7 @@ void HubGame::OnPlayerChatMessage(ClientHandle clientHd, i32 chatType, const wch
 
 	const i32 userID = plidMap->Get(clientHd);
 	ASSERT(playerAccountData[userID]);
+	if(chatType == MEASURED_CHAT_TYPE_GUILD && GuildChat(userID, msg, msgLen)) return;
 	replication.SendChatMessageToAll(playerAccountData[userID]->nickname.data(), chatType, msg, msgLen);
 }
 
@@ -826,6 +829,7 @@ void HubGame::BroadcastFriendState(i32 userID, u8 state)
 {
 	const Account& account = *playerAccountData[userID];
 	if(state != MEASURED_FRIEND_STATE_OFFLINE && playerMap[userID] != playerList.end()) replication.SendFriendStateChanged(playerMap[userID]->clientHd, account.nickname.data(), state);
+	if(playerMap[userID] != playerList.end()) GuildBroadcastState(userID, state);
 	const AccountFriends friends = AccountFriendsLoad(account.nickname.data());
 	foreach_const(f, friends.friends) {
 		const i32 friendID = FindUserByNickname(*f);

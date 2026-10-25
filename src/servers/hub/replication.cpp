@@ -32,6 +32,7 @@ static void WriteInventoryItem(Writer& packet, const AccountItem& item)
 
 #include "mission_progress.h"
 #include "mailbox.h"
+#include "guild_store.h"
 
 
 void HubReplication::Frame::Clear()
@@ -634,14 +635,14 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 		SendPacket(clientHd, packet);
 	}
 
-	// SN_MyGuild
-	{
+	GuildStore& guildStore = GetGuildStore();
+	std::lock_guard<std::recursive_mutex> guildLock(guildStore.mutex);
+	const GuildRecord* guild = guildStore.FindByMember(account.nickname);
+	if(guild) {
 		PacketWriter<Sv::SN_MyGuild> packet;
-
-		packet.WriteStringObj(L"Alpha");
-		packet.Write<i64>(0);
+		packet.WriteStringObj(guild->tag.data());
+		packet.Write<i64>(guild->dissolution);
 		packet.Write<u8>(0);
-
 		SendPacket(clientHd, packet);
 	}
 
@@ -791,14 +792,11 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 		SendPacket(clientHd, packet);
 	}
 
-	// SN_GuildChannelEnter
-	{
+	if(guild) {
 		PacketWriter<Sv::SN_GuildChannelEnter> packet;
-
-		packet.WriteStringObj(L"Alpha"); // guildName
-		packet.WriteStringObj(account.nickname.data()); // nick
-		packet.Write<u8>(0); // onlineStatus
-
+		packet.WriteStringObj(guild->name.data());
+		packet.WriteStringObj(account.nickname.data());
+		packet.Write<u8>(0);
 		SendPacket(clientHd, packet);
 	}
 
@@ -848,14 +846,6 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 		SendPacket(clientHd, packet);
 	}
 
-	// SN_GuildMemberStatus
-	{
-		PacketWriter<Sv::SN_GuildMemberStatus> packet;
-
-		packet.Write<u16>(0); // guildMemberStatusList_count
-
-		SendPacket(clientHd, packet);
-	}
 
 	// SN_Money
 	Sv::SN_Money money;

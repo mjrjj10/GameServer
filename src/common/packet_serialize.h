@@ -3159,6 +3159,28 @@ DEFAULT_SERIALIZE(Sv::SN_CCoin);
 DEFAULT_SERIALIZE(Sv::SA_NpBuyCshopItem);
 DEFAULT_SERIALIZE(Sv::SA_BuyCshopItem);
 DEFAULT_SERIALIZE(Sv::SA_InventoryExpand);
+DEFAULT_SERIALIZE(Sv::SA_CreateGuild);
+DEFAULT_SERIALIZE(Sv::SA_DissolveGuild);
+DEFAULT_SERIALIZE(Sv::SA_DonateToGuild);
+DEFAULT_SERIALIZE(Sv::SA_EditGuildnotice);
+DEFAULT_SERIALIZE(Sv::SA_GetGuildinvitationlist);
+DEFAULT_SERIALIZE(Sv::SA_GetGuildjoinrequestlist);
+DEFAULT_SERIALIZE(Sv::SA_GetGuildpublicprofile);
+DEFAULT_SERIALIZE(Sv::SA_GetRecommendedguildlist);
+DEFAULT_SERIALIZE(Sv::SA_JoinGuild);
+DEFAULT_SERIALIZE(Sv::SA_QuitGuild);
+DEFAULT_SERIALIZE(Sv::SA_RespondGuildinvitation);
+DEFAULT_SERIALIZE(Sv::SA_RespondGuildjoinrequest);
+DEFAULT_SERIALIZE(Sv::SA_SetGuildjointype);
+DEFAULT_SERIALIZE(Sv::SN_GuildInvitation);
+DEFAULT_SERIALIZE(Sv::SN_GuildJoinapproval);
+DEFAULT_SERIALIZE(Sv::SN_GuildLevelup);
+DEFAULT_SERIALIZE(Sv::SN_GuildNotice);
+DEFAULT_SERIALIZE(Sv::SN_GuildchannelLeave);
+DEFAULT_SERIALIZE(Sv::SN_GuildfundAdded);
+DEFAULT_SERIALIZE(Sv::SN_GuildmemberJoin);
+DEFAULT_SERIALIZE(Sv::SN_GuildmemberQuit);
+DEFAULT_SERIALIZE(Sv::SN_GuildpointandfundChange);
 #undef DEFAULT_SERIALIZE
 
 template<>

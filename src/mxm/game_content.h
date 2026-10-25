@@ -870,6 +870,11 @@ struct GameXmlContent
 	eastl::fixed_vector<GuildSkillInfo,16,false> guildSkills;
 	eastl::fixed_vector<i32,64,false> validGuildEmblems;
 	i32 guildActivityCapWeekday = 100;
+	i32 guildFoundationLevel = 10;
+	i32 guildFoundationGold = 18000;
+	i32 guildDonationUnit = 100;
+	i32 guildFundExchangeRate = 100;
+	i32 guildRollcallPoint = 50;
 
 	i32 GuildLevelForPoints(i32 points) const;
 	i32 GuildSkillValue(const char* key, i32 level) const;

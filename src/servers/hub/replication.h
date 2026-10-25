@@ -302,6 +302,9 @@ struct HubReplication
 	LocalActorID GetLocalActorID(ClientHandle clientHd, ActorUID actorUID); // Can return INVALID
 	ActorUID GetWorldActorUID(ClientHandle clientHd, LocalActorID localActorID); // Can return INVALID
 
+	template<typename Packet, u32 CAPACITY>
+	inline void SendWriter(ClientHandle clientHd, const PacketWriter<Packet,CAPACITY>& writer) { SendPacket(clientHd, writer); }
+
 private:
 	void PlayerForceLocalActorID(ClientHandle clientHd, ActorUID actorUID, LocalActorID localActorID);
 

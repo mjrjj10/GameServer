@@ -1335,6 +1335,13 @@ bool GameXmlContent::LoadGuildData()
 
 	XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("ST_GUILDINFO");
 	if(!pInfo) return false;
+	guildFoundationLevel = pInfo->IntAttribute("_RequiredLevelForGuildFoundation", guildFoundationLevel);
+	guildFoundationGold = pInfo->IntAttribute("_GuildFoundationGold", guildFoundationGold);
+	if(XMLElement* pDonation = pInfo->FirstChildElement("_GuildDonation")) {
+		guildDonationUnit = MAX(1, pDonation->IntAttribute("_Unit", guildDonationUnit));
+		guildFundExchangeRate = MAX(1, pDonation->IntAttribute("_ExchangeRateForOneFund", guildFundExchangeRate));
+	}
+	if(XMLElement* pReward = pInfo->FirstChildElement("_GuildPointReward")) guildRollcallPoint = pReward->IntAttribute("_RollcallPoint", guildRollcallPoint);
 
 	for(XMLElement* pLvl = pInfo->FirstChildElement("_GuildLevel");
 		pLvl;

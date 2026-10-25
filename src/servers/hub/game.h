@@ -9,6 +9,7 @@
 
 #include "world.h"
 #include "matchmaker_connector.h"
+#include "guild_store.h"
 
 struct HubGame
 {
@@ -115,6 +116,34 @@ struct HubGame
 	void OnPartyBreakUp(ClientHandle clientHd);
 	void OnPartyLeave(ClientHandle clientHd);
 	void OnCancelMatching(ClientHandle clientHd);
+	void OnGuildPacket(ClientHandle clientHd, u16 netID, const u8* data, i32 size);
+	void GuildOnConnect(i32 userID);
+	void GuildOnDisconnect(i32 userID);
+	void GuildBroadcastState(i32 userID, u8 state);
+	bool GuildChat(i32 userID, const wchar* msg, i32 msgLen);
+	void GuildLevelCheck(GuildRecord& guild, i32 levelBefore);
+	void GuildAddMember(GuildRecord& guild, const WideString& nick);
+	void GuildRemoveMember(GuildRecord& guild, const WideString& nick, bool kicked);
+	u16 GuildLeaderClass(const WideString& nickname);
+	void SendGuildResult(ClientHandle clientHd, u16 netID, u32 result);
+	void SendGuildNickResult(ClientHandle clientHd, u16 netID, u32 result, const WideString& text);
+	void SendMyGuild(ClientHandle clientHd, const GuildRecord* guild, u8 rollcall);
+	void SendGuildChannelEnter(ClientHandle clientHd, const GuildRecord& guild, const WideString& nickname, u8 status);
+	void SendGuildStatus(ClientHandle clientHd, const WideString* nicks, const u8* states, i32 count);
+	void SendGuildPointAndFund(const GuildRecord& guild);
+	void SendGuildProfile(ClientHandle clientHd, const GuildRecord* guild);
+	void SendGuildMemberList(ClientHandle clientHd, const GuildRecord* guild);
+	void SendGuildHistory(ClientHandle clientHd, const GuildRecord* guild);
+	void SendGuildPublicProfile(ClientHandle clientHd, const GuildRecord* guild, u16 netID, const WideString* memberNick);
+	template<typename Fn>
+	void ForEachOnlineGuildMember(const GuildRecord& guild, Fn fn)
+	{
+		foreach_const(m, guild.members) {
+			const i32 memberID = FindUserByNickname(m->nickname);
+			if(memberID < 0 || playerMap[memberID] == playerList.end()) continue;
+			fn(memberID, playerMap[memberID]->clientHd);
+		}
+	}
 	void OnFriendRequest(ClientHandle clientHd, const WideString& nickname);
 	void OnFriendRespond(ClientHandle clientHd, const WideString& nickname, bool accept);
 	void OnFriendRemove(ClientHandle clientHd, const WideString& nickname);

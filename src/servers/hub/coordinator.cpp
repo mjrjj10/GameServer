@@ -4,6 +4,7 @@
 #include <mxm/game_content.h>
 #include <mxm/account_progress.h>
 #include "mission_progress.h"
+#include "guild_store.h"
 #include <time.h>
 #include <zlib.h>
 #include <EAStdC/EAString.h>
@@ -694,7 +695,7 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 
 	Account& account = *(--am.accountList.end());
 	account.nickname.assign(nick, nickLen);
-	account.guildTag = L"Alpha";
+	account.guildTag.clear();
 	account.leaderMasterID = 0; // Lua
 
 	// remove the @plaync... part
@@ -731,6 +732,11 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 	account.draws = progress.draws;
 	account.losses = progress.losses;
 	account.ccoin = progress.ccoin;
+	{
+		GuildStore& guilds = GetGuildStore();
+		std::lock_guard<std::recursive_mutex> lock(guilds.mutex);
+		if(const GuildRecord* guild = guilds.FindByMember(account.nickname)) account.guildTag = guild->tag;
+	}
 
 	accChdMap.emplace(accountUID, clientHd);
 	clientAccountUID[clientID] = accountUID;
