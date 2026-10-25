@@ -50,11 +50,18 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CQ_PartyInvite);
 		HANDLE_CASE(CQ_PartyInviteAccept);
 		HANDLE_CASE(CQ_BreakUpPartyRoom);
+		HANDLE_CASE(CQ_LeavePartyRoom);
 		HANDLE_CASE(CQ_CancelMatching);
 		HANDLE_CASE(CQ_FriendRequest);
 		HANDLE_CASE(CQ_FriendRequestRespond);
 		HANDLE_CASE(CQ_FriendRemove);
+		HANDLE_CASE(CQ_FriendSetFavorite);
+		HANDLE_CASE(CQ_FriendUnsetFavorite);
+		HANDLE_CASE(CQ_CommunityBlockAdd);
+		HANDLE_CASE(CQ_CommunityBlockRemove);
+		HANDLE_CASE(CQ_CommunityStatusMessage);
 		HANDLE_CASE(CQ_Praise);
+		HANDLE_CASE(CQ_Honor);
 		HANDLE_CASE(CA_SetGameGvt);
 		HANDLE_CASE(CA_CityLobbyJoinCity);
 		HANDLE_CASE(CQ_GetCharacterInfo);
@@ -380,6 +387,12 @@ void HubPacketHandler::HandlePacket_CQ_BreakUpPartyRoom(ClientHandle clientHd, c
 	game->OnPartyBreakUp(clientHd);
 }
 
+void HubPacketHandler::HandlePacket_CQ_LeavePartyRoom(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	NT_LOG("[client%x] Client :: CQ_LeavePartyRoom :: size=%d", clientHd, packetSize);
+	game->OnPartyLeave(clientHd);
+}
+
 void HubPacketHandler::HandlePacket_CQ_CancelMatching(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
 {
 	NT_LOG("[client%x] Client :: CQ_CancelMatching :: size=%d", clientHd, packetSize);
@@ -427,6 +440,79 @@ void HubPacketHandler::HandlePacket_CQ_FriendRemove(ClientHandle clientHd, const
 	}
 	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_FriendRemove>(packetData, packetSize));
 	game->OnFriendRemove(clientHd, nickname);
+}
+
+void HubPacketHandler::HandlePacket_CQ_FriendSetFavorite(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	WideString nickname;
+	if(!ReadNickname(packetData, packetSize, 0, &nickname)) {
+		WARN("[client%x] WARNING: invalid CQ_FriendSetFavorite (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: CQ_FriendSetFavorite :: nickname='%ls'", clientHd, nickname.data());
+	game->OnFriendFavorite(clientHd, nickname, true);
+}
+
+void HubPacketHandler::HandlePacket_CQ_FriendUnsetFavorite(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	WideString nickname;
+	if(!ReadNickname(packetData, packetSize, 0, &nickname)) {
+		WARN("[client%x] WARNING: invalid CQ_FriendUnsetFavorite (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: CQ_FriendUnsetFavorite :: nickname='%ls'", clientHd, nickname.data());
+	game->OnFriendFavorite(clientHd, nickname, false);
+}
+
+void HubPacketHandler::HandlePacket_CQ_CommunityBlockAdd(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	WideString nickname;
+	if(!ReadNickname(packetData, packetSize, 0, &nickname)) {
+		WARN("[client%x] WARNING: invalid CQ_CommunityBlockAdd (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: CQ_CommunityBlockAdd :: nickname='%ls'", clientHd, nickname.data());
+	game->OnBlock(clientHd, nickname, true);
+}
+
+void HubPacketHandler::HandlePacket_CQ_CommunityBlockRemove(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	WideString nickname;
+	if(!ReadNickname(packetData, packetSize, 0, &nickname)) {
+		WARN("[client%x] WARNING: invalid CQ_CommunityBlockRemove (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: CQ_CommunityBlockRemove :: nickname='%ls'", clientHd, nickname.data());
+	game->OnBlock(clientHd, nickname, false);
+}
+
+void HubPacketHandler::HandlePacket_CQ_CommunityStatusMessage(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	ConstBuffer buff(packetData, packetSize);
+	if(!buff.CanRead(2)) {
+		WARN("[client%x] WARNING: invalid CQ_CommunityStatusMessage (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const u16 len = buff.Read<u16>();
+	if(len > 60 || packetSize != 2 + len * 2) {
+		WARN("[client%x] WARNING: invalid CQ_CommunityStatusMessage (size=%d)", clientHd, packetSize);
+		return;
+	}
+	WideString message;
+	message.assign((const wchar*)buff.ReadRaw(len * 2), len);
+	NT_LOG("[client%x] Client :: CQ_CommunityStatusMessage :: message='%ls'", clientHd, message.data());
+	game->OnStatusMessage(clientHd, message);
+}
+
+void HubPacketHandler::HandlePacket_CQ_Honor(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	WideString nickname;
+	if(!ReadNickname(packetData, packetSize, 0, &nickname)) {
+		WARN("[client%x] WARNING: invalid CQ_Honor (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: CQ_Honor :: nickname='%ls'", clientHd, nickname.data());
+	game->OnHonor(clientHd, nickname);
 }
 
 void HubPacketHandler::HandlePacket_CQ_Praise(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

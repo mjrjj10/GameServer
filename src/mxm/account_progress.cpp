@@ -32,6 +32,7 @@ AccountProgress AccountProgressLoad(const wchar* nickname)
 		else if(sscanf(line, "Wins=%u", &v32) == 1) progress.wins = v32;
 		else if(sscanf(line, "Draws=%u", &v32) == 1) progress.draws = v32;
 		else if(sscanf(line, "Losses=%u", &v32) == 1) progress.losses = v32;
+		else if(sscanf(line, "Honors=%u", &v32) == 1) progress.honors = v32;
 	}
 	fclose(f);
 	return progress;
@@ -47,7 +48,7 @@ void AccountProgressSave(const wchar* nickname, const AccountProgress& progress)
 	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
 	FILE* f = fopen(tmp, "wb");
 	ASSERT(f);
-	fprintf(f, "Level=%u\nExp=%u\nGold=%lld\nWins=%u\nDraws=%u\nLosses=%u\n", (u32)progress.level, progress.levelExp, (long long)progress.gold, progress.wins, progress.draws, progress.losses);
+	fprintf(f, "Level=%u\nExp=%u\nGold=%lld\nWins=%u\nDraws=%u\nLosses=%u\nHonors=%u\n", (u32)progress.level, progress.levelExp, (long long)progress.gold, progress.wins, progress.draws, progress.losses, progress.honors);
 	fclose(f);
 	remove(path);
 	rename(tmp, path);
@@ -191,6 +192,9 @@ AccountFriends AccountFriendsLoad(const wchar* nickname)
 		if(line[0] == 0 || line[1] != ' ' || !ParseHexName(line + 2, &name)) continue;
 		if(line[0] == 'F' && !friends.friends.full()) friends.friends.push_back(name);
 		else if(line[0] == 'R' && !friends.requests.full()) friends.requests.push_back(name);
+		else if(line[0] == 'V' && !friends.favorites.full()) friends.favorites.push_back(name);
+		else if(line[0] == 'B' && !friends.blocked.full()) friends.blocked.push_back(name);
+		else if(line[0] == 'S') friends.statusMessage = name;
 	}
 	fclose(f);
 	return friends;
@@ -214,6 +218,21 @@ void AccountFriendsSave(const wchar* nickname, const AccountFriends& friends)
 	foreach_const(n, friends.requests) {
 		fputs("R ", f);
 		WriteHexName(f, *n);
+		fputc('\n', f);
+	}
+	foreach_const(n, friends.favorites) {
+		fputs("V ", f);
+		WriteHexName(f, *n);
+		fputc('\n', f);
+	}
+	foreach_const(n, friends.blocked) {
+		fputs("B ", f);
+		WriteHexName(f, *n);
+		fputc('\n', f);
+	}
+	if(!friends.statusMessage.empty()) {
+		fputs("S ", f);
+		WriteHexName(f, friends.statusMessage);
 		fputc('\n', f);
 	}
 	fclose(f);

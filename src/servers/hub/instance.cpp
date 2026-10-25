@@ -450,8 +450,22 @@ void RoomInstance::Update(Time localTime_)
 			}
 		}
 
+		bool randomPick = false;
 		if(TimeDurationSec(startTime, localTime) > PICKING_TIME) {
 			allReady = true;
+			eastl::fixed_vector<ClassType,100,false> pool;
+			foreach_const(m, allowedMastersSet) pool.push_back(*m);
+			u32 pickSeed = (u32)(u64)sortieUID * 2654435761u;
+			foreach(u, userList) {
+				for(u32 tries = 0; tries < pool.size() * 2 && (u->Main().classType == ClassType::NONE || u->Sub().classType == ClassType::NONE) && !pool.empty(); tries++) {
+					pickSeed = pickSeed * 1664525u + 1013904223u;
+					if(TryPickMaster(u, pool[(pickSeed >> 8) % pool.size()])) {
+						randomPick = true;
+						LOG("[Room] %ls ran out of time, random master %d", u->name.data(), (i32)(u->Sub().classType != ClassType::NONE ? u->Sub().classType : u->Main().classType));
+					}
+				}
+			}
+			if(randomPick) Replicate();
 		}
 
 		// when every player is ready, create a game
@@ -490,7 +504,7 @@ void RoomInstance::Update(Time localTime_)
 
 			// update clients
 			Sv::SN_SortieMasterPickPhaseStep packetStep;
-			packetStep.isRandomPick = 0;
+			packetStep.isRandomPick = randomPick ? 1 : 0;
 
 			Sv::SN_StartCountdownSortieRoom packetCountdown;
 			packetCountdown.stageType = StageType::PVP_GAME;

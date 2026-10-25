@@ -3146,6 +3146,13 @@ inline const char* PacketSerialize<Cl::CQ_FriendRemove>(const void* packetData, 
 	SER("}");
 	return str.data();
 }
+DEFAULT_SERIALIZE(Sv::SN_CommunityStatusMessage);
+DEFAULT_SERIALIZE(Sv::SA_CommunityStatusMessage);
+DEFAULT_SERIALIZE(Sv::SN_FriendPartycreation);
+DEFAULT_SERIALIZE(Sv::SA_PartyLeave);
+DEFAULT_SERIALIZE(Sv::SN_RestartPvpEntryStart);
+DEFAULT_SERIALIZE(Sv::SN_RestartPvpEntryUpdate);
+DEFAULT_SERIALIZE(Sv::SA_Honor);
 #undef DEFAULT_SERIALIZE
 
 template<>

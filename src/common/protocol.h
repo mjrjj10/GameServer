@@ -1474,10 +1474,8 @@ PUSH_PACKED
 struct CQ_LeavePartyRoom
 {
 	enum { NET_ID = 60085 };
-	u32 field1_id_id; // 4 bytes
 };
 POP_PACKED
-ASSERT_SIZE(CQ_LeavePartyRoom, 4);
 
 PUSH_PACKED
 struct CQ_BreakUpPartyRoom
@@ -1817,7 +1815,7 @@ struct CQ_CommunityBlockAdd
 POP_PACKED
 
 PUSH_PACKED
-struct CN_UNKNOWN_60128
+struct CQ_CommunityBlockRemove
 {
 	enum { NET_ID = 60128 };
 	u16 textField_len; // 2 bytes

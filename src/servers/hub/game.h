@@ -100,6 +100,7 @@ struct HubGame
 	void OnReturnToCity(ClientHandle clientHd);
 	void BroadcastPlayerStateInTown(i32 userID, i8 state, const u8* modes, i32 modeCount);
 	void OnPraise(ClientHandle clientHd, const wchar* nickname, i32 nicknameLen);
+	void OnHonor(ClientHandle clientHd, const WideString& nickname);
 	void OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID characterID, SkinIndex skinIndex);
 	void OnPlayerSyncActionState(ClientHandle clientHd, ActorUID actorUID, ActionStateID state, i32 param1, i32 param2, f32 rotate, f32 upperRotate);
 	void OnPlayerJukeboxQueueSong(ClientHandle clientHd, SongID songID);
@@ -109,10 +110,14 @@ struct HubGame
 	void OnPartyInvite(ClientHandle clientHd, const wchar* nickname, i32 nicknameLen);
 	void OnPartyInviteAccept(ClientHandle clientHd, i32 partyID);
 	void OnPartyBreakUp(ClientHandle clientHd);
+	void OnPartyLeave(ClientHandle clientHd);
 	void OnCancelMatching(ClientHandle clientHd);
 	void OnFriendRequest(ClientHandle clientHd, const WideString& nickname);
 	void OnFriendRespond(ClientHandle clientHd, const WideString& nickname, bool accept);
 	void OnFriendRemove(ClientHandle clientHd, const WideString& nickname);
+	void OnFriendFavorite(ClientHandle clientHd, const WideString& nickname, bool favorite);
+	void OnBlock(ClientHandle clientHd, const WideString& nickname, bool block);
+	void OnStatusMessage(ClientHandle clientHd, const WideString& message);
 	HubReplication::FriendEntry MakeFriendEntry(const WideString& nickname, u16* levelStorage);
 	void SendFriendsOnConnect(i32 userID);
 	void BroadcastFriendState(i32 userID, u8 state);

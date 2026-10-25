@@ -172,7 +172,7 @@ void HubGame::OnPlayerDisconnect(ClientHandle clientHd)
 	LOG("[client%x] GameHub :: OnClientDisconnect :: actorUID=%u", clientHd, (u32)playerActorUID[userID]);
 
 	if(playerAccountData[userID] && playerMap[userID] != playerList.end()) LeaveParty(userID, playerMap[userID]->sortieUID == SortieUID::INVALID);
-	if(playerAccountData[userID]) BroadcastFriendState(userID, MEASURED_FRIEND_STATE_OFFLINE);
+	if(playerAccountData[userID]) BroadcastFriendState(userID, playerMap[userID] != playerList.end() && playerMap[userID]->sortieUID != SortieUID::INVALID ? MEASURED_FRIEND_STATE_IN_GAME : MEASURED_FRIEND_STATE_OFFLINE);
 
 	// we can disconnect before spawning, so test if we have an actor associated
 	if(playerActorUID[userID] != ActorUID::INVALID) {
@@ -375,6 +375,21 @@ void HubGame::OnReturnToCity(ClientHandle clientHd)
 	replication.SendReturnToCity(clientHd);
 }
 
+void HubGame::OnHonor(ClientHandle clientHd, const WideString& nickname)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	if(nickname == playerAccountData[userID]->nickname || !AccountExists(nickname.data())) {
+		replication.SendHonorResult(clientHd, MEASURED_FRIEND_REQUEST_NOT_FOUND);
+		return;
+	}
+	AccountProgress progress = AccountProgressLoad(nickname.data());
+	progress.honors++;
+	AccountProgressSave(nickname.data(), progress);
+	LOG("[client%x] HubGame :: %ls honors %ls (%u)", clientHd, playerAccountData[userID]->nickname.data(), nickname.data(), progress.honors);
+	replication.SendHonorResult(clientHd, 0);
+}
+
 void HubGame::OnPraise(ClientHandle clientHd, const wchar* nickname, i32 nicknameLen)
 {
 	const i32 userID = plidMap->Get(clientHd);
@@ -444,6 +459,13 @@ void HubGame::OnPartyModify(ClientHandle clientHd, GameType gameType)
 	auto f = partyMap.find(partyUID);
 	if(f == partyMap.end()) return;
 	f->second->gameType = gameType;
+	if(f->second->memberList.front().accountUID != playerAccountData[userID]->UID) return;
+	const AccountFriends friends = AccountFriendsLoad(playerAccountData[userID]->nickname.data());
+	foreach_const(n, friends.friends) {
+		const i32 friendID = FindUserByNickname(*n);
+		if(friendID < 0 || playerMap[friendID] == playerList.end()) continue;
+		replication.SendFriendPartyCreation(playerMap[friendID]->clientHd, playerAccountData[userID]->nickname.data(), f->second->stageIndex, gameType);
+	}
 }
 
 HubGame::Party* HubGame::FindPlayerParty(i32 userID)
@@ -535,6 +557,7 @@ void HubGame::OnPartyInviteAccept(ClientHandle clientHd, i32 partyID)
 	party.memberList.push_back(member);
 	playerMap[userID]->partyUID = party.UID;
 	matchmaker->QueryPartyAddMember(party.UID, playerAccountData[userID]->nickname, accountUID);
+	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_IN_PARTY);
 	LOG("[client%x] HubGame :: %ls joins party %u as %u", clientHd, playerAccountData[userID]->nickname.data(), (u32)party.UID, member.userId);
 
 	eastl::fixed_vector<HubReplication::PartyUser,5,false> users;
@@ -575,7 +598,10 @@ void HubGame::LeaveParty(i32 userID, bool notify)
 			auto h = accountClientHandleMap.find(m->accountUID);
 			if(h == accountClientHandleMap.end()) continue;
 			playerMap[plidMap->Get(h->second)]->partyUID = PartyUID::INVALID;
-			if(notify) replication.SendPartyBreakup(h->second);
+			if(notify) {
+				replication.SendPartyBreakup(h->second);
+				BroadcastFriendState(plidMap->Get(h->second), MEASURED_FRIEND_STATE_ONLINE);
+			}
 		}
 		foreach_const(inv, party->invites) {
 			auto h = accountClientHandleMap.find(*inv);
@@ -612,6 +638,15 @@ void HubGame::OnPartyBreakUp(ClientHandle clientHd)
 	const bool leader = party && party->memberList.front().accountUID == playerAccountData[userID]->UID;
 	LeaveParty(userID, true);
 	replication.SendPartyBreakupAnswer(clientHd, leader ? remain : remain - 1);
+	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_ONLINE);
+}
+
+void HubGame::OnPartyLeave(ClientHandle clientHd)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	LeaveParty(userID, true);
+	replication.SendPartyLeaveAnswer(clientHd);
+	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_ONLINE);
 }
 
 void HubGame::OnCancelMatching(ClientHandle clientHd)
@@ -626,6 +661,7 @@ void HubGame::OnCancelMatching(ClientHandle clientHd)
 		if(h == accountClientHandleMap.end()) continue;
 		replication.SendCancelMatchingQueue(h->second);
 		BroadcastPlayerStateInTown(plidMap->Get(h->second), 0, nullptr, 0);
+		BroadcastFriendState(plidMap->Get(h->second), MEASURED_FRIEND_STATE_ONLINE);
 	}
 	if(solo) {
 		LeaveParty(userID, false);
@@ -639,6 +675,7 @@ HubReplication::FriendEntry HubGame::MakeFriendEntry(const WideString& nickname,
 	entry.nickname = nickname.data();
 	entry.leaderCreature = 100000000 + (i32)DEFAULT_LEADER_CLASS;
 	entry.state = MEASURED_FRIEND_STATE_OFFLINE;
+	entry.favorite = 0;
 	const i32 friendID = FindUserByNickname(nickname);
 	if(friendID >= 0) {
 		*levelStorage = playerAccountData[friendID]->level;
@@ -657,16 +694,23 @@ void HubGame::SendFriendsOnConnect(i32 userID)
 	eastl::fixed_vector<HubReplication::FriendEntry,64,false> list;
 	eastl::fixed_vector<u16,64,false> levels;
 	levels.resize(friends.friends.size());
-	for(i32 i = 0; i < (i32)friends.friends.size(); i++) list.push_back(MakeFriendEntry(friends.friends[i], &levels[i]));
+	for(i32 i = 0; i < (i32)friends.friends.size(); i++) {
+		list.push_back(MakeFriendEntry(friends.friends[i], &levels[i]));
+		list.back().favorite = eastl::find(friends.favorites.begin(), friends.favorites.end(), friends.friends[i]) != friends.favorites.end() ? 1 : 0;
+	}
 	replication.SendFriendList(clientHd, list.data(), (i32)list.size());
+	replication.SendCommunityStatusMessage(clientHd, account.nickname.data(), friends.statusMessage.data());
 	list.clear();
 	eastl::fixed_vector<u16,32,false> requestLevels;
 	requestLevels.resize(friends.requests.size());
 	for(i32 i = 0; i < (i32)friends.requests.size(); i++) list.push_back(MakeFriendEntry(friends.requests[i], &requestLevels[i]));
 	replication.SendFriendRequestList(clientHd, list.data(), (i32)list.size());
 	foreach_const(f, friends.friends) {
-		if(FindUserByNickname(*f) >= 0) replication.SendFriendStateChanged(clientHd, f->data(), MEASURED_FRIEND_STATE_ONLINE);
+		if(FindUserByNickname(*f) < 0) continue;
+		replication.SendFriendStateChanged(clientHd, f->data(), MEASURED_FRIEND_STATE_ONLINE);
+		replication.SendCommunityStatusMessage(clientHd, f->data(), AccountFriendsLoad(f->data()).statusMessage.data());
 	}
+	replication.SendBlockList(clientHd, friends.blocked.data(), (i32)friends.blocked.size());
 	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_ONLINE);
 }
 
@@ -711,6 +755,10 @@ void HubGame::OnFriendRequest(ClientHandle clientHd, const WideString& nickname)
 		return;
 	}
 	AccountFriends theirs = AccountFriendsLoad(nickname.data());
+	if(ContainsName(theirs.blocked, self) || ContainsName(mine.blocked, nickname)) {
+		replication.SendFriendRequestResult(clientHd, MEASURED_FRIEND_REQUEST_ALREADY_BLOCKED, nickname.data());
+		return;
+	}
 	if(ContainsName(theirs.requests, self)) {
 		replication.SendFriendRequestResult(clientHd, MEASURED_FRIEND_REQUEST_ALREADY_SENT, nickname.data());
 		return;
@@ -797,6 +845,58 @@ void HubGame::OnFriendRemove(ClientHandle clientHd, const WideString& nickname)
 	if(otherID >= 0 && playerMap[otherID] != playerList.end()) replication.SendFriendRemoved(playerMap[otherID]->clientHd, self.data());
 }
 
+void HubGame::OnFriendFavorite(ClientHandle clientHd, const WideString& nickname, bool favorite)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	const WideString& self = playerAccountData[userID]->nickname;
+	const u16 netID = favorite ? Sv::SA_FriendSetFavorite::NET_ID : Sv::SA_FriendUnsetFavorite::NET_ID;
+	AccountFriends mine = AccountFriendsLoad(self.data());
+	if(!ContainsName(mine.friends, nickname)) {
+		replication.SendNicknameResult(clientHd, netID, MEASURED_FRIEND_FAVORITE_NOT_FOUND, nickname.data());
+		return;
+	}
+	mine.favorites.erase(eastl::remove(mine.favorites.begin(), mine.favorites.end(), nickname), mine.favorites.end());
+	if(favorite && !mine.favorites.full()) mine.favorites.push_back(nickname);
+	AccountFriendsSave(self.data(), mine);
+	replication.SendNicknameResult(clientHd, netID, 0, nickname.data());
+}
+
+void HubGame::OnBlock(ClientHandle clientHd, const WideString& nickname, bool block)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	const WideString& self = playerAccountData[userID]->nickname;
+	const u16 netID = block ? Sv::SA_CommunityBlockAdd::NET_ID : Sv::SA_CommunityBlockRemove::NET_ID;
+	AccountFriends mine = AccountFriendsLoad(self.data());
+	if(block && (nickname == self || !AccountExists(nickname.data()))) {
+		replication.SendNicknameResult(clientHd, netID, MEASURED_FRIEND_REQUEST_NOT_FOUND, nickname.data());
+		return;
+	}
+	mine.blocked.erase(eastl::remove(mine.blocked.begin(), mine.blocked.end(), nickname), mine.blocked.end());
+	if(block && !mine.blocked.full()) mine.blocked.push_back(nickname);
+	AccountFriendsSave(self.data(), mine);
+	LOG("[client%x] HubGame :: %ls %s %ls", clientHd, self.data(), block ? "blocks" : "unblocks", nickname.data());
+	replication.SendNicknameResult(clientHd, netID, 0, nickname.data());
+}
+
+void HubGame::OnStatusMessage(ClientHandle clientHd, const WideString& message)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	const WideString& self = playerAccountData[userID]->nickname;
+	AccountFriends mine = AccountFriendsLoad(self.data());
+	mine.statusMessage = message;
+	AccountFriendsSave(self.data(), mine);
+	replication.SendCommunityStatusMessageResult(clientHd, 0);
+	replication.SendCommunityStatusMessage(clientHd, self.data(), message.data());
+	foreach_const(f, mine.friends) {
+		const i32 friendID = FindUserByNickname(*f);
+		if(friendID < 0 || playerMap[friendID] == playerList.end()) continue;
+		replication.SendCommunityStatusMessage(playerMap[friendID]->clientHd, self.data(), message.data());
+	}
+}
+
 void HubGame::OnEnqueueGame(ClientHandle clientHd)
 {
 	const i32 userID = plidMap->Get(clientHd);
@@ -864,6 +964,7 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 	party.mapIndex = mapID;
 
 	replication.SendPartyCreateSucess(clientHd, UserID(1), StageType::PVP_GAME);
+	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_IN_CREATION);
 	if(Config().DevShowcase || Config().DevAutoQueue) OnEnqueueGame(clientHd);
 }
 
@@ -881,6 +982,7 @@ void HubGame::MmOnPartyEnqueued(PartyUID partyUID)
 		const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(party.stageIndex);
 		const u8 mode = stage && stage->gameMode != GameModeType::GAME_MODE_INVALID ? (u8)stage->gameMode : 0;
 		BroadcastPlayerStateInTown(plidMap->Get(clientHd), 1, &mode, stage ? 1 : 0);
+		BroadcastFriendState(plidMap->Get(clientHd), MEASURED_FRIEND_STATE_IN_MATCHING);
 	}
 }
 
@@ -907,6 +1009,7 @@ void HubGame::MmOnMatchFound(const In::MN_MatchingPartyFound& matchingParty)
 		}
 		replication.SendMatchingPartyFound(clientHd, matchingParty, party.stageIndex, rowIDs, myTeam);
 		BroadcastPlayerStateInTown(userID, 0, nullptr, 0);
+		BroadcastFriendState(userID, MEASURED_FRIEND_STATE_IN_SORTIE);
 	}
 }
 

@@ -12,6 +12,7 @@ struct AccountProgress
 	u32 wins = 0;
 	u32 draws = 0;
 	u32 losses = 0;
+	u32 honors = 0;
 };
 
 struct AccountGameRecord
@@ -65,6 +66,9 @@ struct AccountFriends
 {
 	eastl::fixed_vector<WideString,64,true> friends;
 	eastl::fixed_vector<WideString,32,true> requests;
+	eastl::fixed_vector<WideString,64,true> favorites;
+	eastl::fixed_vector<WideString,64,true> blocked;
+	WideString statusMessage;
 };
 
 bool AccountExists(const wchar* nickname);

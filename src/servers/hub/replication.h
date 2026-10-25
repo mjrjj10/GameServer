@@ -231,6 +231,7 @@ struct HubReplication
 	void SendUserReturnToCity(ClientHandle clientHd, const wchar* nickname);
 	void SendReturnToCity(ClientHandle clientHd);
 	void SendPraiseResult(ClientHandle clientHd, u32 errorType);
+	void SendHonorResult(ClientHandle clientHd, u32 result);
 	void SendPraise(ClientHandle clientHd, const wchar* nickname, u32 count);
 	void SetPlayerAsInGame(ClientHandle clientHd);
 	void SendCharacterInfo(ClientHandle clientHd, ActorUID actorUID, CreatureIndex docID, ClassType classType, i32 health, i32 healthMax);
@@ -269,9 +270,15 @@ struct HubReplication
 	void SendPartyLeave(ClientHandle clientHd, u32 userId, const wchar* nickname, bool receiverIsOwner);
 	void SendPartyBreakupAnswer(ClientHandle clientHd, i32 remainMemberCount);
 	void SendPartyBreakup(ClientHandle clientHd);
+	void SendPartyLeaveAnswer(ClientHandle clientHd);
 	void SendPartyCancelInvite(ClientHandle clientHd, i32 partyID);
 	void SendCancelMatchingQueue(ClientHandle clientHd);
-	struct FriendEntry { const wchar* nickname; i32 leaderCreature; u8 state; u16 level; };
+	struct FriendEntry { const wchar* nickname; i32 leaderCreature; u8 state; u16 level; u8 favorite; };
+	void SendNicknameResult(ClientHandle clientHd, u16 netID, u32 result, const wchar* nickname);
+	void SendBlockList(ClientHandle clientHd, const WideString* names, i32 count);
+	void SendCommunityStatusMessage(ClientHandle clientHd, const wchar* nickname, const wchar* message);
+	void SendCommunityStatusMessageResult(ClientHandle clientHd, u32 result);
+	void SendFriendPartyCreation(ClientHandle clientHd, const wchar* nickname, StageIndex stageIndex, GameType gameType);
 	void SendFriendList(ClientHandle clientHd, const FriendEntry* friends, i32 count);
 	void SendFriendRequestList(ClientHandle clientHd, const FriendEntry* requests, i32 count);
 	void SendFriendStateChanged(ClientHandle clientHd, const wchar* nickname, u8 state);
