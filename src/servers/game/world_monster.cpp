@@ -57,6 +57,7 @@ void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDo
 	const f32 destroy = npc.monsterAi ? npc.monsterAi->destroy : 0.0f;
 	npc.removeAt = TimeAdd(localTime, TimeMsToTime(MAX(destroy, 1.0f) * 1000.0));
 	LOG("Monster :: creature=%d (local %d) dies at (%.0f, %.0f)", (i32)npc.docID, npc.localID, npc.pos.x, npc.pos.y);
+	OnMonsterDeath(npc, killerUID);
 }
 
 void World::MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const GameXmlContent::MonsterAttack& attack)

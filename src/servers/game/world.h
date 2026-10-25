@@ -915,6 +915,15 @@ public:
 	ActorNpc& SpawnMonster(CreatureIndex docID, i32 localID, const vec3& pos, const vec3& rot, Faction faction, i32 tagID);
 	void InitMonsterStats(ActorNpc& npc);
 	void DespawnEntities(i32 localID, i32 tagID);
+	void SetLevelTriggerActive(u32 nameKey, bool active);
+	void ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply);
+	bool NpcHasStatusType(const ActorNpc& npc, StatusType type) const;
+	void OnMonsterDeath(ActorNpc& npc, ActorUID killerUID);
+	void OnMonsterDamaged(ActorNpc& npc, i32 hpBefore);
+	void FireGameEndTriggers(i32 winnerTeam);
+	eastl::hash_map<i32,i32> deadCounts;
+	eastl::fixed_vector<i32,32,true> hpTriggersFired;
+	i32 winnerTeam = -1;
 	void UpdateBoundTriggers();
 	void OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos);
 	bool LevelTriggerActive(const GameXmlContent::LevelEventNode& node) const;

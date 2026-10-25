@@ -174,6 +174,7 @@ void World::UpdateInteractions()
 static const u32 STAT_REASON_ITEM = 3;
 static const u8 MONSTER_DEFENCE_STAT = 7;
 static const i32 DYNAMIC_INDEX_RANGE = 110;
+static const f32 MONSTER_STATUS_FOREVER_SEC = 1000000.0f;
 static const f32 BOT_ITEM_PICKUP_RADIUS = 100.0f;
 
 void World::StartLevelEvents()
@@ -182,6 +183,101 @@ void World::StartLevelEvents()
 	levelEventsStarted = true;
 	foreach_const(n, map->levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::LEVEL_START) continue;
+		foreach_const(o, n->outputs) FireLevelEvent(*o);
+	}
+}
+
+void World::SetLevelTriggerActive(u32 nameKey, bool active)
+{
+	foreach(t, levelTriggerOverrides) {
+		if(t->first != nameKey) continue;
+		t->second = active;
+		return;
+	}
+	levelTriggerOverrides.push_back(eastl::make_pair(nameKey, active));
+}
+
+void World::ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply)
+{
+	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
+		if(npcStatuses[i].npcUID == npc.UID && npcStatuses[i].statusID == statusID) npcStatuses.erase(npcStatuses.begin() + i);
+		else i++;
+	}
+	if(!apply) {
+		replication->SendRemoveStatusToAll(statusID, npc.UID, npc.UID);
+		LOG("Status :: creature=%d (local %d) loses status %d", (i32)npc.docID, npc.localID, statusID);
+		return;
+	}
+	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
+	const f32 duration = info && info->durationSec > 0 ? info->durationSec : MONSTER_STATUS_FOREVER_SEC;
+	replication->SendAddStatusToAll(statusID, npc.UID, npc.UID, duration, npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false, false);
+	if(!npcStatuses.full()) {
+		NpcStatus ns;
+		ns.npcUID = npc.UID;
+		ns.statusID = statusID;
+		ns.casterUID = npc.UID;
+		ns.until = TimeAdd(localTime, TimeMsToTime((f64)duration * 1000.0));
+		ns.linked = false;
+		npcStatuses.push_back(ns);
+	}
+	LOG("Status :: creature=%d (local %d) gets status %d", (i32)npc.docID, npc.localID, statusID);
+}
+
+bool World::NpcHasStatusType(const ActorNpc& npc, StatusType type) const
+{
+	foreach_const(ns, npcStatuses) {
+		if(ns->npcUID != npc.UID || localTime >= ns->until) continue;
+		const StatusInfo* info = GetGameXmlContent().FindStatus(ns->statusID);
+		if(info && info->type == type) return true;
+	}
+	return false;
+}
+
+void World::OnMonsterDeath(ActorNpc& npc, ActorUID killerUID)
+{
+	Faction killerTeam = Faction::INVALID;
+	if(ActorMaster* m = FindMasterActor(killerUID)) killerTeam = m->parent ? (Faction)m->parent->team : Faction::INVALID;
+	else {
+		auto killer = actorNpcMap.find(killerUID);
+		if(killer != actorNpcMap.end()) killerTeam = killer->second->faction;
+	}
+	if(npc.tagID >= 0) {
+		foreach_const(n, map->levelEvents) {
+			if(n->kind != GameXmlContent::LevelEventNode::DEAD_COUNT || n->tagID != npc.tagID || !LevelTriggerActive(*n)) continue;
+			if(n->team != Faction::INVALID && n->team != Faction::MONSTER && n->team != killerTeam) continue;
+			i32& count = deadCounts[n->id];
+			if(++count < n->count) continue;
+			count = 0;
+			LOG("LevelEvent :: dead count of tag %d reached (node %d)", npc.tagID, n->id);
+			foreach_const(o, n->outputs) FireLevelEvent(*o);
+		}
+	}
+	static const u32 coreTag = StatusTypeKey("Core");
+	if(npc.monsterAi && npc.monsterAi->tagKey == coreTag && winnerTeam < 0 && (npc.faction == Faction::RED || npc.faction == Faction::BLUE)) {
+		winnerTeam = npc.faction == Faction::RED ? 1 : 0;
+		LOG("Game :: core of team %d destroyed, team %d wins", (i32)npc.faction, winnerTeam);
+	}
+}
+
+void World::OnMonsterDamaged(ActorNpc& npc, i32 hpBefore)
+{
+	if(npc.tagID < 0 || npc.hpMax <= 0) return;
+	foreach_const(n, map->levelEvents) {
+		if(n->kind != GameXmlContent::LevelEventNode::HP_TRIGGER || n->tagID != npc.tagID) continue;
+		const f32 threshold = npc.hpMax * n->hpPercent / 100.0f;
+		if((f32)hpBefore <= threshold || (f32)npc.hp > threshold) continue;
+		if(eastl::find(hpTriggersFired.begin(), hpTriggersFired.end(), n->id) != hpTriggersFired.end()) continue;
+		hpTriggersFired.push_back(n->id);
+		LOG("LevelEvent :: tag %d below %.0f%% hp (node %d)", npc.tagID, n->hpPercent, n->id);
+		foreach_const(o, n->outputs) FireLevelEvent(*o);
+	}
+}
+
+void World::FireGameEndTriggers(i32 team)
+{
+	const Faction winner = team == 0 ? Faction::RED : Faction::BLUE;
+	foreach_const(n, map->levelEvents) {
+		if(n->kind != GameXmlContent::LevelEventNode::GAME_END_TRIGGER || n->team != winner) continue;
 		foreach_const(o, n->outputs) FireLevelEvent(*o);
 	}
 }
@@ -272,8 +368,24 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 		case GameXmlContent::LevelEventNode::CLIENT_EVENT: replication->SendClientLevelEventToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID); break;
 		case GameXmlContent::LevelEventNode::CALL_ITEM: SpawnGroundItems(node->dropIndex, node->areaID, node->tagID); break;
 		case GameXmlContent::LevelEventNode::STATUS_CHANGE: {
-			if(playerIndex >= 0 && node->statusIndex != 0 && !players[playerIndex].dead) ApplyStatus(players[playerIndex], players[playerIndex], node->statusIndex);
+			if(node->applyType == GameXmlContent::LevelEventNode::APPLY_MY_CHAR) {
+				if(node->apply && playerIndex >= 0 && node->statusIndex != 0 && !players[playerIndex].dead) ApplyStatus(players[playerIndex], players[playerIndex], node->statusIndex);
+			}
+			else if(node->applyType == GameXmlContent::LevelEventNode::APPLY_LOCAL_ID && node->statusIndex != 0) {
+				foreach(npc, actorNpcList) {
+					if(npc->ownerUID != ActorUID::INVALID || npc->removeAt != Time::ZERO) continue;
+					if(node->tagID >= 0 ? npc->tagID != node->tagID : npc->localID != node->localID) continue;
+					ApplyMonsterStatus(*npc, node->statusIndex, node->apply);
+				}
+			}
 		} break;
+		case GameXmlContent::LevelEventNode::OR_CONDITION: {
+			if(!LevelTriggerActive(*node)) return;
+			if(node->resetAfter) SetLevelTriggerActive(node->nameKey, false);
+		} break;
+		case GameXmlContent::LevelEventNode::DEAD_COUNT:
+		case GameXmlContent::LevelEventNode::HP_TRIGGER:
+		case GameXmlContent::LevelEventNode::GAME_END_TRIGGER: return;
 		case GameXmlContent::LevelEventNode::ACTION_CHANGE: {
 			foreach(d, actorDynamicList) {
 				if(d->localID != node->localID || node->action == ActionStateID::INVALID) continue;
@@ -290,11 +402,7 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 		} break;
 		case GameXmlContent::LevelEventNode::DESPAWN_ENTITY: DespawnEntities(node->localID, node->tagID); break;
 		case GameXmlContent::LevelEventNode::PASS_THROUGH: break;
-		case GameXmlContent::LevelEventNode::ACTIVATE_TRIGGER: {
-			bool found = false;
-			foreach(t, levelTriggerOverrides) if(t->first == node->targetKey) { t->second = node->active; found = true; }
-			if(!found) levelTriggerOverrides.push_back(eastl::make_pair(node->targetKey, node->active));
-		} break;
+		case GameXmlContent::LevelEventNode::ACTIVATE_TRIGGER: SetLevelTriggerActive(node->targetKey, node->active); break;
 		default: return;
 	}
 	foreach_const(o, node->outputs) FireLevelEvent(*o, playerIndex);

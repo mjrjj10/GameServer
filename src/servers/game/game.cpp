@@ -190,6 +190,7 @@ void Game::Update(Time localTime_)
 		} break;
 
 		case Phase::Game: {
+			if(!gameEnded && tGameStarted != Time::ZERO && world.winnerTeam >= 0) EndGame();
 			if(!gameEnded && tGameStarted != Time::ZERO) {
 				f32 limit = GetGameXmlContent().GetStageTimeLimit((i32)replication.stageIndex);
 				if(limit <= 0) limit = STAGE_TIME_LIMIT_FALLBACK_SEC;
@@ -646,6 +647,7 @@ void Game::OnPlayerTag(ClientHandle clientHd, ActorUID actorUID)
 
 void Game::EndGame()
 {
+	if(world.winnerTeam >= 0) world.FireGameEndTriggers(world.winnerTeam);
 	gameEnded = true;
 	tGameEnded = localTime;
 	world.frozen = true;
@@ -675,7 +677,7 @@ void Game::EndGame()
 		if(e->clientHd == ClientHandle::INVALID) continue;
 		const i32 own = e->team == 0 ? red : blue;
 		const i32 other = e->team == 0 ? blue : red;
-		const bool won = own > other;
+		const bool won = world.winnerTeam >= 0 ? e->team == world.winnerTeam : own > other;
 		e->gold = minutes * (won ? rule.winGoldPerMin : rule.loseGoldPerMin);
 		e->exp = minutes * (won ? rule.winExpPerMin : rule.loseExpPerMin);
 		const World::Player& p = world.GetPlayer(e->playerIndex);
@@ -683,7 +685,7 @@ void Game::EndGame()
 		record.gold = e->gold;
 		record.exp = e->exp;
 		record.won = won;
-		record.draw = own == other;
+		record.draw = world.winnerTeam < 0 && own == other;
 		record.kills = p.kills;
 		record.assists = p.assists;
 		record.bestKillStreak = p.bestKillStreak;
@@ -930,6 +932,19 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			const vec3 to(tpX, tpY, tpArgs >= 3 ? tpZ : playerActor.body->GetWorldPos().z);
 			world.MovePlayer(playerActor, to, playerActor.input.rot.bodyYaw, false);
 			SendDbgMsg(clientHd, LFMT(L"Teleported to (%g, %g, %g)", to.x, to.y, to.z));
+			return true;
+		}
+
+		i32 killTag = 0;
+		if(EA::StdC::Sscanf(msg, L"killtag %d", &killTag) == 1) {
+			World::Player& playerActor = world.GetPlayer(p.playerIndex);
+			i32 killed = 0;
+			foreach(npc, world.actorNpcList) {
+				if(npc->tagID != killTag || npc->hp <= 0 || npc->removeAt != Time::ZERO || npc->ownerUID != ActorUID::INVALID) continue;
+				world.MonsterDie(*npc, playerActor.Main().UID, CreatureIndex(100000000 + (i32)playerActor.Main().classType));
+				killed++;
+			}
+			SendDbgMsg(clientHd, LFMT(L"Killed %d monster(s) with tag %d", killed, killTag));
 			return true;
 		}
 

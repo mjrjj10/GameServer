@@ -391,8 +391,11 @@ f32 World::NpcHitRadius(const ActorNpc& npc) const
 void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage)
 {
 	if(damage <= 0 || !NpcHittableBy(npc, attacker)) return;
+	if(npc.ownerUID == ActorUID::INVALID && NpcHasStatusType(npc, StatusType::GODMODE)) return;
 	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence, 0.0f)) + 0.5f), 1);
+	const i32 hpBefore = npc.hp;
 	npc.hp = MAX(npc.hp - dealt, 0);
+	if(npc.ownerUID == ActorUID::INVALID) OnMonsterDamaged(npc, hpBefore);
 	replication->SendDamageToAll(attacker.Main().UID, npc.UID, skillID, dealt, npc.hp, npc.hpMax);
 	LOG("Summon :: creature=%d takes %d from %ls hp=%d/%d", (i32)npc.docID, dealt, attacker.name.data(), npc.hp, npc.hpMax);
 	if(npc.hp <= 0) {
@@ -408,8 +411,11 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 void World::DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i32 remote)
 {
 	if(damage <= 0 || target.hp <= 0 || target.removeAt != Time::ZERO) return;
+	if(NpcHasStatusType(target, StatusType::GODMODE)) return;
 	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(target.defence, 0.0f)) + 0.5f), 1);
+	const i32 hpBefore = target.hp;
 	target.hp = MAX(target.hp - dealt, 0);
+	OnMonsterDamaged(target, hpBefore);
 	replication->SendDamageToAll(attacker.UID, target.UID, SkillID::INVALID, dealt, target.hp, target.hpMax);
 	if(target.hp <= 0) MonsterDie(target, attacker.UID, attacker.docID);
 }

@@ -2710,7 +2710,8 @@ bool GameXmlContent::LoadStatusData()
 	}
 
 	XMLDocument xmlDynamic;
-	XMLDocument* docs[2] = { &xml, LoadXMLFile(L"/client/STATUS_DYNAMIC.xml", xmlDynamic, true) ? &xmlDynamic : nullptr };
+	XMLDocument xmlMob;
+	XMLDocument* docs[3] = { &xml, LoadXMLFile(L"/client/STATUS_DYNAMIC.xml", xmlDynamic, true) ? &xmlDynamic : nullptr, LoadXMLFile(L"/client/STATUS_MOB.xml", xmlMob, true) ? &xmlMob : nullptr };
 	for(XMLDocument* doc : docs) {
 		if(!doc) continue;
 		for(XMLElement* pInfo = doc->FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
@@ -3398,7 +3399,11 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(XMLElement* e = pNode->FirstChildElement("_StatusChangeInfo")) {
 			node.kind = LevelEventNode::STATUS_CHANGE;
 			const char* applyType = e->Attribute("_ApplyType");
-			if(e->IntAttribute("_bApply") == 1 && applyType && EA::StdC::Strcmp(applyType, "APPLY_MY_CHAR") == 0) node.statusIndex = e->IntAttribute("_StatusIndex");
+			node.applyType = !applyType ? LevelEventNode::APPLY_OTHER : EA::StdC::Strcmp(applyType, "APPLY_MY_CHAR") == 0 ? LevelEventNode::APPLY_MY_CHAR : EA::StdC::Strcmp(applyType, "APPLY_LOCAL_ID") == 0 ? LevelEventNode::APPLY_LOCAL_ID : LevelEventNode::APPLY_OTHER;
+			node.apply = e->IntAttribute("_bApply") == 1;
+			node.localID = e->IntAttribute("_LocalID");
+			node.tagID = e->IntAttribute("_TagID", -1);
+			if(node.apply || node.applyType == LevelEventNode::APPLY_LOCAL_ID) node.statusIndex = e->IntAttribute("_StatusIndex");
 		}
 		else if(XMLElement* e = pNode->FirstChildElement("_OnHitTriggerData")) { node.kind = LevelEventNode::ON_HIT_TRIGGER; node.localID = e->IntAttribute("_LocalID"); node.delay = e->FloatAttribute("_DelayTime"); node.hitCount = e->IntAttribute("_HitCount"); }
 		else if(XMLElement* e = pNode->FirstChildElement("_ActionChangeInfo")) { node.kind = LevelEventNode::ACTION_CHANGE; node.localID = e->IntAttribute("_ID"); if(const char* a = e->Attribute("_ActionIndex")) node.action = ActionStateFromString(a); }
@@ -3419,6 +3424,16 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		}
 		else if(XMLElement* e = pNode->FirstChildElement("_DespawnEntityInfo")) { node.kind = LevelEventNode::DESPAWN_ENTITY; node.localID = e->IntAttribute("_LocalID"); node.tagID = e->IntAttribute("_TagID", -1); }
 		else if(pNode->FirstChildElement("_RepeatInfo")) node.kind = LevelEventNode::PASS_THROUGH;
+		else if(XMLElement* e = pNode->FirstChildElement("_DeadCountTriggerData")) {
+			node.kind = LevelEventNode::DEAD_COUNT;
+			node.tagID = e->IntAttribute("_TagID", -1);
+			node.count = MAX(e->IntAttribute("_Count", 1), 1);
+			node.active = e->IntAttribute("_Active", 1) == 1;
+			if(const char* team = e->Attribute("_Team")) node.team = StringToFaction(team);
+		}
+		else if(XMLElement* e = pNode->FirstChildElement("_HPTriggerData")) { node.kind = LevelEventNode::HP_TRIGGER; node.tagID = e->IntAttribute("_TagID", -1); node.hpPercent = e->FloatAttribute("_HP"); node.active = true; }
+		else if(XMLElement* e = pNode->FirstChildElement("_EventOrConditionInfo")) { node.kind = LevelEventNode::OR_CONDITION; node.resetAfter = e->IntAttribute("_ResetAfterEvent") == 1; node.active = true; }
+		else if(XMLElement* e = pNode->FirstChildElement("_GameEndTriggerData")) { node.kind = LevelEventNode::GAME_END_TRIGGER; if(const char* team = e->Attribute("_Team")) node.team = StringToFaction(team); }
 		else if(pNode->FirstChildElement("_TimeRecordStartTriggerData")) node.kind = LevelEventNode::TIME_RECORD_START;
 		else if(pNode->FirstChildElement("_PrintMessageInfo") || pNode->FirstChildElement("_BGMEventInfo") || pNode->FirstChildElement("_ChangeCameraInfo") || pNode->FirstChildElement("_SetNameTagVisibillityInfo") || pNode->FirstChildElement("_InputLockInfo") || pNode->FirstChildElement("_ActiveInteractionInfo") || pNode->FirstChildElement("_ClientDrivenActionChangeInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
 		map->levelEvents.push_back(node);
