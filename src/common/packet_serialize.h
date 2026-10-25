@@ -3185,6 +3185,9 @@ DEFAULT_SERIALIZE(Sv::SN_GuildpointandfundChange);
 DEFAULT_SERIALIZE(Sv::SN_LevelIngame);
 DEFAULT_SERIALIZE(Sv::SN_ExpIngame);
 DEFAULT_SERIALIZE(Sv::SN_CharacterPropertyPoint);
+DEFAULT_SERIALIZE(Sv::SQ_TeleportObject);
+DEFAULT_SERIALIZE(Sv::SN_PlayerSyncTeleport);
+DEFAULT_SERIALIZE(Cl::CQ_PlayerSyncTeleport);
 #undef DEFAULT_SERIALIZE
 
 template<>

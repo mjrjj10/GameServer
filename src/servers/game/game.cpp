@@ -741,6 +741,17 @@ void Game::OnPlayerSkillUpgrade(ClientHandle clientHd, i32 slot)
 	if(!world.UpgradeSkillSlot(player, slot)) LOG("Upgrade :: %ls slot %d refused (points %d)", player.name.data(), slot, player.skillPoints);
 }
 
+void Game::OnPlayerSyncTeleport(ClientHandle clientHd, ActorUID actorUID, const vec3& pos)
+{
+	auto found = playerMap.find(clientHd);
+	if(found == playerMap.end()) return;
+	World::Player& player = world.GetPlayer(found->second->playerIndex);
+	if(player.Main().UID != actorUID) return;
+	world.TeleportPlayer(player, pos, player.input.rot.bodyYaw);
+	replication.SendPlayerSyncTeleportToOthers(clientHd, actorUID, pos);
+	LOG("Teleport :: %ls confirmed at (%.0f, %.0f, %.0f)", player.name.data(), pos.x, pos.y, pos.z);
+}
+
 void Game::OnPlayerJump(ClientHandle clientHd, ActorUID actorUID, f32 rotate, f32 moveDirX, f32 moveDirY)
 {
 	Player& p = *playerMap.at(clientHd);
@@ -938,7 +949,8 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 		if(tpArgs >= 2) {
 			World::Player& playerActor = world.GetPlayer(p.playerIndex);
 			const vec3 to(tpX, tpY, tpArgs >= 3 ? tpZ : playerActor.body->GetWorldPos().z);
-			world.MovePlayer(playerActor, to, playerActor.input.rot.bodyYaw, false);
+			world.TeleportPlayer(playerActor, to, playerActor.input.rot.bodyYaw);
+			replication.SendTeleportRequest(clientHd, playerActor.Main().UID, to);
 			SendDbgMsg(clientHd, LFMT(L"Teleported to (%g, %g, %g)", to.x, to.y, to.z));
 			return true;
 		}

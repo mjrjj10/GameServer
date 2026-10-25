@@ -2016,6 +2016,27 @@ static const i32 SYNC_STOP_STILL_FRAMES = 4;
 static const f32 SYNC_TURN_COS = 0.985f;
 static const f32 SYNC_HEARTBEAT_SEC = 0.67f;
 
+void Replication::SendTeleportRequest(ClientHandle clientHd, ActorUID actorUID, const vec3& pos)
+{
+	Sv::SQ_TeleportObject packet;
+	packet.objectID = (u32)GetLocalActorID(clientHd, actorUID);
+	packet.pos = v2f(pos);
+	SendPacketData<Sv::SQ_TeleportObject>(clientHd, sizeof(packet), &packet);
+}
+
+void Replication::SendPlayerSyncTeleportToOthers(ClientHandle except, ActorUID actorUID, const vec3& pos)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME || clientHandle[clientID] == except) continue;
+		const LocalActorID local = GetLocalActorID(clientHandle[clientID], actorUID);
+		if(local == LocalActorID::INVALID) continue;
+		Sv::SN_PlayerSyncTeleport packet;
+		packet.objectID = (u32)local;
+		packet.pos = v2f(pos);
+		SendPacketData<Sv::SN_PlayerSyncTeleport>(clientHandle[clientID], sizeof(packet), &packet);
+	}
+}
+
 void Replication::SendSelfTeleport(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, f32 worldYaw, const vec3* clientPos)
 {
 	if(clientPos && glm::length(vec2(*clientPos) - vec2(pos)) <= CLIENT_SELF_SNAP_DIST + 40.0f) {

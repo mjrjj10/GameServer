@@ -66,6 +66,7 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 		CASE(CQ_GameIsReady);
 		CASE(CQ_GamePlayerTag);
 		CASE(CQ_PlayerJump);
+		CASE(CQ_PlayerSyncTeleport);
 		CASE(CQ_SkillUpgradeIngame);
 		CASE(CQ_GetGroundItem);
 		CASE(CQ_PlayerCastSkill);
@@ -353,6 +354,17 @@ void GamePacketHandler::HandlePacket_CQ_PlayerJump(ClientHandle clientHd, const 
 	const f32 moveDirY = buff.Read<f32>();
 
 	game->OnPlayerJump(clientHd, replication->GetWorldActorUID(clientHd, actorID), rotate, moveDirX, moveDirY);
+}
+
+void GamePacketHandler::HandlePacket_CQ_PlayerSyncTeleport(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_PlayerSyncTeleport>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_PlayerSyncTeleport (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_PlayerSyncTeleport>(packetData, packetSize));
+	const Cl::CQ_PlayerSyncTeleport& packet = SafeCast<Cl::CQ_PlayerSyncTeleport>(packetData, packetSize);
+	game->OnPlayerSyncTeleport(clientHd, replication->GetWorldActorUID(clientHd, (LocalActorID)packet.objectID), vec3(packet.pos.x, packet.pos.y, packet.pos.z));
 }
 
 void GamePacketHandler::HandlePacket_CQ_WeaponState(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

@@ -397,6 +397,12 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	const i32 hpBefore = npc.hp;
 	npc.hp = MAX(npc.hp - dealt, 0);
 	if(npc.ownerUID == ActorUID::INVALID) OnMonsterDamaged(npc, hpBefore);
+	if(npc.ownerUID == ActorUID::INVALID && npc.monsterAi && (npc.faction == Faction::ORANGE || npc.faction == Faction::MONSTER) && npc.monsterTarget == ActorUID::INVALID && npc.hp > 0) {
+		npc.monsterTarget = attacker.Main().UID;
+		npc.monsterReturning = false;
+		LOG("Monster :: neutral creature=%d (local %d) attacked by %ls", (i32)npc.docID, npc.localID, attacker.name.data());
+		replication->SendAiSetTargetToAll(npc.UID, npc.monsterTarget);
+	}
 	replication->SendDamageToAll(attacker.Main().UID, npc.UID, skillID, dealt, npc.hp, npc.hpMax);
 	LOG("Summon :: creature=%d takes %d from %ls hp=%d/%d", (i32)npc.docID, dealt, attacker.name.data(), npc.hp, npc.hpMax);
 	if(npc.hp <= 0) {
@@ -445,6 +451,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	if(chara.hp == 0) PassiveOnLethal(target);
 	replication->SendDamageToAll(attacker.UID, chara.UID, SkillID::INVALID, damage, chara.hp, chara.hpMax);
 	if(chara.hp > 0) {
+		LOG("Damage :: creature %d -> %ls damage=%d hp=%d/%d", (i32)attacker.docID, target.name.data(), damage, chara.hp, chara.hpMax);
 		PassiveOnDamaged(target);
 		return;
 	}

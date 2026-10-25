@@ -416,6 +416,7 @@ struct World
 		Time monsterNextAttack = Time::ZERO;
 		Time monsterNextSearch = Time::ZERO;
 		Time monsterNextSync = Time::ZERO;
+		bool monsterReturning = false;
 
 		vec3 pos;
 		vec3 rot;

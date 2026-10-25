@@ -111,6 +111,7 @@ struct Game
 	void OnPlayerTag(ClientHandle clientHd, ActorUID actorUID);
 	void OnPlayerReturnToChannel(ClientHandle clientHd);
 	void OnPlayerJump(ClientHandle clientHd, ActorUID actorUID, f32 rotate, f32 moveDirX, f32 moveDirY);
+	void OnPlayerSyncTeleport(ClientHandle clientHd, ActorUID actorUID, const vec3& pos);
 	void OnPlayerSkillUpgrade(ClientHandle clientHd, i32 slot);
 	void OnPlayerTakeGroundItem(ClientHandle clientHd, u32 itemUID);
 	void OnClientRemoteCreated(ClientHandle clientHd, u32 seed, RemoteIdx doc);

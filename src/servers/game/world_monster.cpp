@@ -24,6 +24,11 @@ static bool FactionsOppose(Faction a, Faction b)
 	return (a == Faction::RED && b == Faction::BLUE) || (a == Faction::BLUE && b == Faction::RED);
 }
 
+static bool MonsterNeutral(const World::ActorNpc& npc)
+{
+	return npc.faction == Faction::ORANGE || npc.faction == Faction::MONSTER;
+}
+
 static GameXmlContent::MonsterAttack::Target MonsterTargetKind(const GameXmlContent::MonsterAi& ai)
 {
 	static const u32 minionTag = StatusTypeKey("Minion");
@@ -41,6 +46,7 @@ bool World::MonsterHostile(const ActorNpc& monster, const Player& player) const
 {
 	static const u32 playerTag = StatusTypeKey("Player");
 	if(player.dead || player.untargetable || !player.body) return false;
+	if(MonsterNeutral(monster)) return monster.monsterTarget == player.Main().UID;
 	return FactionsOppose(monster.faction, (Faction)player.team) && monster.monsterAi->Hates(playerTag);
 }
 
@@ -130,6 +136,36 @@ void World::UpdateMonsterAi(f32 delta)
 				npc.monsterTarget = ActorUID::INVALID;
 				replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
 			}
+		}
+		const bool neutral = MonsterNeutral(npc);
+		if(neutral && targetPos && glm::length(vec2(npc.pos) - vec2(npc.home)) > MAX(ai.lost, ai.perception)) {
+			targetPos = nullptr;
+			npc.monsterTarget = ActorUID::INVALID;
+			npc.monsterReturning = true;
+			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
+		}
+		if(neutral && !targetPos) {
+			const vec2 rel = vec2(npc.home) - vec2(npc.pos);
+			const f32 dist = glm::length(rel);
+			if(dist > MONSTER_WAYPOINT_REACHED && ai.run > 0) {
+				const f32 yaw = atan2f(rel.y, rel.x);
+				npc.pos = vec3(vec2(npc.pos) + rel / dist * MIN(ai.run * delta, dist), npc.pos.z);
+				npc.rot.z = yaw;
+				if(!npc.monsterReturning || localTime >= npc.monsterNextSync) {
+					npc.monsterReturning = true;
+					npc.monsterNextSync = TimeAdd(localTime, TimeMsToTime(MONSTER_SYNC_MS));
+					replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.home, yaw, ai.run);
+				}
+			}
+			else if(npc.monsterReturning) {
+				npc.monsterReturning = false;
+				npc.monsterChasing = false;
+				npc.hp = npc.hpMax;
+				replication->SendHpToAll(npc.UID, npc.hp, npc.hpMax);
+				LOG("Monster :: neutral creature=%d (local %d) back home, healed", (i32)npc.docID, npc.localID);
+				replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, npc.rot.z, 0.0f);
+			}
+			continue;
 		}
 		if(!targetPos && ai.perception > 0 && localTime >= npc.monsterNextSearch) {
 			npc.monsterNextSearch = TimeAdd(localTime, TimeMsToTime(MONSTER_SEARCH_MS));

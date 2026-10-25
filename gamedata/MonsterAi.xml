@@ -35,7 +35,7 @@
     <ATTACK target="structure" state="SKILL_2_BEHAVIORSTATE" range="956" cooldown="1.08" remote="1480010004" delay="0.1" multiplier="2.5" speed="1500" status="0" samples="114" />
   </INFO>
   <INFO ID="105000309" class="PvP_GoT_Turret_Sub_Cannon" walk="0" run="0" perception="4200" lost="4200" tag="Tower_Side" enemies="Titan" destroy="1" radius="1">
-    <ATTACK target="structure" state="SKILL_1_BEHAVIORSTATE" range="4019" cooldown="2.00" remote="1460000119" delay="0" multiplier="0" speed="0" status="0" samples="416" />
+    <ATTACK target="structure" state="SKILL_1_BEHAVIORSTATE" range="4019" cooldown="2.00" remote="1460000119" delay="0" multiplier="1" speed="0" status="0" samples="416" />
   </INFO>
   <INFO ID="105000311" class="PvP_Titan_Tower_Side" walk="0" run="0" perception="1500" lost="1500" tag="Tower_Side" enemies="Chief|Minion|Player|Player_Summonee" destroy="6" radius="140">
     <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" range="1364" cooldown="1.02" remote="1480010002" delay="0.1" multiplier="2.2" speed="1500" status="1264070004" samples="130" />
@@ -46,5 +46,36 @@
     <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" range="1428" cooldown="1.50" remote="1480010002" delay="0.1" multiplier="2.2" speed="1500" status="1264070004" samples="21" />
     <ATTACK target="minion" state="SKILL_3_BEHAVIORSTATE" range="1146" cooldown="1.50" remote="1480010005" delay="0.1" multiplier="2.2" speed="1500" status="0" samples="118" />
     <ATTACK target="structure" state="SKILL_2_BEHAVIORSTATE" range="796" cooldown="1.20" remote="1480010004" delay="0.1" multiplier="2.5" speed="1500" status="0" samples="315" />
+  </INFO>
+  <INFO ID="105001400" class="PVP_TITAN_ROBOT_MELEE" walk="500" run="500" perception="1750" lost="1800" tag="" enemies="Player|Player_Summonee" destroy="6" radius="90">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" range="410" cooldown="4.76" remote="1480012201" delay="1" multiplier="1" speed="0" status="1200070011" samples="59" />
+  </INFO>
+  <INFO ID="105001401" class="PVP_TITAN_ROBOT_EXP" walk="450" run="450" perception="1750" lost="1800" tag="" enemies="Player|Player_Summonee" destroy="6" radius="90">
+    <ATTACK target="master" state="SKILL_3_BEHAVIORSTATE" range="778" cooldown="3.87" remote="1480012320" delay="0" multiplier="1" speed="0" status="0" samples="35" />
+  </INFO>
+  <INFO ID="105001402" class="PVP_TITAN_ROBOT_COMPONENT" walk="0" run="0" perception="650" lost="650" tag="" enemies="Player|Player_Summonee" destroy="6" radius="75">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" range="489" cooldown="2.24" remote="1480012600" delay="1" multiplier="1" speed="1700" status="0" samples="23" />
+  </INFO>
+  <INFO ID="105001403" class="PVP_TITAN_ROBOT_RANGE" walk="450" run="450" perception="1750" lost="1800" tag="" enemies="Player|Player_Summonee" destroy="6" radius="90">
+    <ATTACK target="master" state="SKILL_3_BEHAVIORSTATE" range="373" cooldown="3.25" remote="1480012720" delay="1" multiplier="1" speed="0" status="1200082420" samples="59" />
+  </INFO>
+  <INFO ID="105000430" class="PVP_TITAN_ROBOT_GUARD" walk="320" run="500" perception="1750" lost="1800" tag="" enemies="Player|Player_Summonee" destroy="6" radius="90">
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" range="694" cooldown="2.34" remote="1480012810" delay="1" multiplier="1" speed="1500" status="0" samples="55" />
+  </INFO>
+  <INFO ID="105000431" class="PVP_TITAN_ROBOT_GUARD" walk="320" run="500" perception="1750" lost="1800" tag="" enemies="Player|Player_Summonee" destroy="6" radius="90">
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" range="668" cooldown="2.42" remote="1480012810" delay="1" multiplier="1" speed="1500" status="0" samples="65" />
+  </INFO>
+  <INFO ID="105001040" class="PVP_TITAN_TANIAN_KING" walk="250" run="450" perception="1250" lost="1250" tag="" enemies="Player|Player_Summonee" destroy="6" radius="120">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" range="666" cooldown="2.77" remote="1480000510" delay="0.5" multiplier="3" speed="2000" status="1200070013" samples="61" />
+  </INFO>
+  <INFO ID="105001200" class="PvP_Titan_Boss" walk="450" run="450" perception="3000" lost="3000" tag="" enemies="Player|Player_Summonee" destroy="6" radius="130">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" range="1261" cooldown="2.39" remote="1480011000" delay="1.2" multiplier="1" speed="0" status="0" samples="34" />
+  </INFO>
+  <INFO ID="105001410" class="PVP_TITAN_AKMAN" walk="500" run="500" perception="1500" lost="1800" tag="Chief" enemies="Titan|Tower_Side|Tower_Center|Core|Minion|Player|Player_Summonee" destroy="6" radius="120">
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" range="1500" cooldown="2.00" remote="1480012011" delay="1" multiplier="2" speed="0" status="1262010200" samples="37" />
+    <ATTACK target="minion" state="SKILL_5_BEHAVIORSTATE" range="471" cooldown="2.62" remote="1480012042" delay="1.5" multiplier="6" speed="0" status="1200070011" samples="87" />
+  </INFO>
+  <INFO ID="105000800" class="PvP_GoT_Fish" walk="400" run="400" perception="300" lost="1000" tag="" enemies="Player" destroy="1" radius="50">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" range="300" cooldown="3.43" remote="1480000420" delay="0" multiplier="2" speed="0" status="1200070904" samples="28" />
   </INFO>
 </MONSTER_AI>
