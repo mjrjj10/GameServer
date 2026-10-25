@@ -57,6 +57,27 @@ void MatchmakerConnector::Update()
 					conn.SendPacket(packet);
 				} break;
 
+				case Query::Type::PartyAddMember: {
+					In::HQ_PartyAddMember packet;
+					packet.partyUID = q->PartyAddMember.partyUID;
+					packet.name = q->PartyAddMember.name;
+					packet.accountUID = q->PartyAddMember.accountUID;
+					conn.SendPacket(packet);
+				} break;
+
+				case Query::Type::PartyRemoveMember: {
+					In::HQ_PartyRemoveMember packet;
+					packet.partyUID = q->PartyRemoveMember.partyUID;
+					packet.accountUID = q->PartyRemoveMember.accountUID;
+					conn.SendPacket(packet);
+				} break;
+
+				case Query::Type::PartyCancelMatching: {
+					In::HQ_PartyCancelMatching packet;
+					packet.partyUID = q->PartyCancelMatching.partyUID;
+					conn.SendPacket(packet);
+				} break;
+
 				case Query::Type::PartyEnqueue: {
 					In::HQ_PartyEnqueue packet;
 					packet.partyUID = q->PartyEnqueue.partyUID;
@@ -121,6 +142,46 @@ void MatchmakerConnector::Update()
 
 		queries.clear();
 	}
+}
+
+// Thread: Any Lane
+void MatchmakerConnector::QueryPartyAddMember(PartyUID partyUID, const WideString& name, AccountUID accountUID)
+{
+	MMQueryUID queryUID = nextQueryUID;
+	nextQueryUID = MMQueryUID((u32)nextQueryUID + 1);
+
+	Query query(queryUID, Query::Type::PartyAddMember);
+	query.PartyAddMember.partyUID = partyUID;
+	query.PartyAddMember.name.Copy(name);
+	query.PartyAddMember.accountUID = accountUID;
+
+	LOCK_MUTEX(mutexQueries);
+	queries.push_back(query);
+}
+
+void MatchmakerConnector::QueryPartyRemoveMember(PartyUID partyUID, AccountUID accountUID)
+{
+	MMQueryUID queryUID = nextQueryUID;
+	nextQueryUID = MMQueryUID((u32)nextQueryUID + 1);
+
+	Query query(queryUID, Query::Type::PartyRemoveMember);
+	query.PartyRemoveMember.partyUID = partyUID;
+	query.PartyRemoveMember.accountUID = accountUID;
+
+	LOCK_MUTEX(mutexQueries);
+	queries.push_back(query);
+}
+
+void MatchmakerConnector::QueryPartyCancelMatching(PartyUID partyUID)
+{
+	MMQueryUID queryUID = nextQueryUID;
+	nextQueryUID = MMQueryUID((u32)nextQueryUID + 1);
+
+	Query query(queryUID, Query::Type::PartyCancelMatching);
+	query.PartyCancelMatching.partyUID = partyUID;
+
+	LOCK_MUTEX(mutexQueries);
+	queries.push_back(query);
 }
 
 // Thread: Any Lane

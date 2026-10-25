@@ -38,6 +38,7 @@ struct HubGame
 	{
 		struct Member {
 			AccountUID accountUID;
+			u32 userId = 1;
 		};
 
 		const PartyUID UID;
@@ -49,7 +50,7 @@ struct HubGame
 		GameType gameType = GameType::PVP_NORMAL;
 
 		eastl::fixed_vector<Member,5> memberList; // NOTE: first is leader
-		// TODO: do fancy party stuff later on
+		eastl::fixed_vector<AccountUID,8> invites;
 
 		Party(PartyUID UID_): UID(UID_) {}
 	};
@@ -105,6 +106,19 @@ struct HubGame
 	void OnPlayerReadyToLoad(ClientHandle clientHd);
 	void OnCreateParty(ClientHandle clientHd, EntrySystemID entry, StageType stageType);
 	void OnPartyModify(ClientHandle clientHd, GameType gameType);
+	void OnPartyInvite(ClientHandle clientHd, const wchar* nickname, i32 nicknameLen);
+	void OnPartyInviteAccept(ClientHandle clientHd, i32 partyID);
+	void OnPartyBreakUp(ClientHandle clientHd);
+	void OnCancelMatching(ClientHandle clientHd);
+	void OnFriendRequest(ClientHandle clientHd, const WideString& nickname);
+	void OnFriendRespond(ClientHandle clientHd, const WideString& nickname, bool accept);
+	void OnFriendRemove(ClientHandle clientHd, const WideString& nickname);
+	HubReplication::FriendEntry MakeFriendEntry(const WideString& nickname, u16* levelStorage);
+	void SendFriendsOnConnect(i32 userID);
+	void BroadcastFriendState(i32 userID, u8 state);
+	Party* FindPlayerParty(i32 userID);
+	i32 FindUserByNickname(const WideString& nickname);
+	void LeaveParty(i32 userID, bool notify);
 	void OnEnqueueGame(ClientHandle clientHd);
 	void OnSortieRoomFound(ClientHandle clientHd, SortieUID sortieID);
 	void OnSortieRoomConfirm(ClientHandle clientHd, bool confirm);

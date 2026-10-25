@@ -260,7 +260,27 @@ struct HubReplication
 	void SendAreaPopularity(ClientHandle clientHd, AreaIndex areaID);
 	void SendPartyCreateSucess(ClientHandle clientHd, UserID ownerUserID, StageType stageType);
 
-	void SendPartyEnqueue(ClientHandle clientHd, StageIndex stageIndex);
+	void SendPartyEnqueue(ClientHandle clientHd, StageIndex stageIndex, bool leader);
+	void SendPartyInvite(ClientHandle clientHd, const wchar* inviterNick, StageIndex stageIndex, GameType gameType, i32 partyID);
+	void SendPartyInviteResult(ClientHandle clientHd, u32 result, const wchar* nickname);
+	struct PartyUser { u32 userId; const wchar* nickname; };
+	void SendPartyJoinAnswer(ClientHandle clientHd, i32 partyID, StageType stageType, GameType gameType, const PartyUser* members, i32 count);
+	void SendPartyJoin(ClientHandle clientHd, u32 userId, const wchar* nickname, CreatureIndex leaderCreature, bool receiverIsOwner, GameType gameType, u8 slot);
+	void SendPartyLeave(ClientHandle clientHd, u32 userId, const wchar* nickname, bool receiverIsOwner);
+	void SendPartyBreakupAnswer(ClientHandle clientHd, i32 remainMemberCount);
+	void SendPartyBreakup(ClientHandle clientHd);
+	void SendPartyCancelInvite(ClientHandle clientHd, i32 partyID);
+	void SendCancelMatchingQueue(ClientHandle clientHd);
+	struct FriendEntry { const wchar* nickname; i32 leaderCreature; u8 state; u16 level; };
+	void SendFriendList(ClientHandle clientHd, const FriendEntry* friends, i32 count);
+	void SendFriendRequestList(ClientHandle clientHd, const FriendEntry* requests, i32 count);
+	void SendFriendStateChanged(ClientHandle clientHd, const wchar* nickname, u8 state);
+	void SendFriendRequestResult(ClientHandle clientHd, u32 result, const wchar* nickname);
+	void SendFriendRequested(ClientHandle clientHd, const wchar* nickname, i32 leaderCreature);
+	void SendFriendRespondResult(ClientHandle clientHd, u32 result, const wchar* nickname, u8 accept);
+	void SendFriendAdded(ClientHandle clientHd, const FriendEntry& entry);
+	void SendFriendRemoveResult(ClientHandle clientHd, u32 result, const wchar* nickname);
+	void SendFriendRemoved(ClientHandle clientHd, const wchar* nickname);
 	void SendMatchingPartyFound(ClientHandle clientHd, const In::MN_MatchingPartyFound& matchingParty, StageIndex stageIndex, const eastl::fixed_vector<UserID,16>& rowIDs, u8 myTeam);
 
 	void OnClientDisconnect(ClientHandle clientHd);

@@ -6,6 +6,8 @@
 #include "mailbox.h"
 #include "mission_progress.h"
 #include "mission_rules.h"
+#include "town_rules.h"
+#include <EASTL/algorithm.h>
 #include <mxm/account_progress.h>
 #include <time.h>
 #include <EAStdC/EAString.h>
@@ -146,6 +148,7 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 
 	replication.OnPlayerConnect(clientHd);
 	replication.SetPlayerAccount(clientHd, accountData);
+	SendFriendsOnConnect(userID);
 
 	LOG("[client%x] HubGame :: account %llu connected (%ls)", clientHd, (u64)accountData->UID, accountData->nickname.data());
 	SortieUID resultSortieUID = SortieUID::INVALID;
@@ -167,6 +170,9 @@ void HubGame::OnPlayerDisconnect(ClientHandle clientHd)
 {
 	const i32 userID = plidMap->Get(clientHd);
 	LOG("[client%x] GameHub :: OnClientDisconnect :: actorUID=%u", clientHd, (u32)playerActorUID[userID]);
+
+	if(playerAccountData[userID] && playerMap[userID] != playerList.end()) LeaveParty(userID, playerMap[userID]->sortieUID == SortieUID::INVALID);
+	if(playerAccountData[userID]) BroadcastFriendState(userID, MEASURED_FRIEND_STATE_OFFLINE);
 
 	// we can disconnect before spawning, so test if we have an actor associated
 	if(playerActorUID[userID] != ActorUID::INVALID) {
@@ -440,6 +446,357 @@ void HubGame::OnPartyModify(ClientHandle clientHd, GameType gameType)
 	f->second->gameType = gameType;
 }
 
+HubGame::Party* HubGame::FindPlayerParty(i32 userID)
+{
+	if(playerMap[userID] == playerList.end()) return nullptr;
+	const PartyUID partyUID = playerMap[userID]->partyUID;
+	if(partyUID == PartyUID::INVALID) return nullptr;
+	auto f = partyMap.find(partyUID);
+	if(f == partyMap.end()) return nullptr;
+	return &*f->second;
+}
+
+i32 HubGame::FindUserByNickname(const WideString& nickname)
+{
+	for(i32 i = 0; i < MAX_PLAYERS; i++) {
+		if(playerAccountData[i] && playerAccountData[i]->nickname == nickname) return i;
+	}
+	return -1;
+}
+
+void HubGame::OnPartyInvite(ClientHandle clientHd, const wchar* nickname, i32 nicknameLen)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	WideString target;
+	target.assign(nickname, nicknameLen);
+	Party* party = FindPlayerParty(userID);
+	if(!party || party->memberList.front().accountUID != playerAccountData[userID]->UID) {
+		replication.SendPartyInviteResult(clientHd, MEASURED_PARTY_INVITE_NOT_OWNER, target.data());
+		return;
+	}
+	const i32 targetID = FindUserByNickname(target);
+	if(targetID < 0 || targetID == userID) {
+		replication.SendPartyInviteResult(clientHd, MEASURED_PARTY_INVITE_NOT_FOUND_USER, target.data());
+		return;
+	}
+	const AccountUID targetUID = playerAccountData[targetID]->UID;
+	foreach_const(m, party->memberList) {
+		if(m->accountUID == targetUID) {
+			replication.SendPartyInviteResult(clientHd, MEASURED_PARTY_INVITE_ALREADY_JOINED, target.data());
+			return;
+		}
+	}
+	const Party* targetParty = FindPlayerParty(targetID);
+	if(playerMap[targetID]->sortieUID != SortieUID::INVALID || (targetParty && targetParty->memberList.size() > 1)) {
+		replication.SendPartyInviteResult(clientHd, MEASURED_PARTY_INVITE_INVALID_USER_STATE, target.data());
+		return;
+	}
+	if(eastl::find(party->invites.begin(), party->invites.end(), targetUID) == party->invites.end()) {
+		if(party->invites.full()) party->invites.erase(party->invites.begin());
+		party->invites.push_back(targetUID);
+	}
+	LOG("[client%x] HubGame :: %ls invites %ls to party %u", clientHd, playerAccountData[userID]->nickname.data(), target.data(), (u32)party->UID);
+	replication.SendPartyInvite(playerMap[targetID]->clientHd, playerAccountData[userID]->nickname.data(), party->stageIndex, party->gameType, (i32)party->UID);
+}
+
+void HubGame::OnPartyInviteAccept(ClientHandle clientHd, i32 partyID)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	const AccountUID accountUID = playerAccountData[userID]->UID;
+	auto f = partyMap.find(PartyUID((u32)partyID));
+	if(f == partyMap.end()) {
+		WARN("[client%x] HubGame :: party %d not found", clientHd, partyID);
+		return;
+	}
+	Party& party = *f->second;
+	auto invite = eastl::find(party.invites.begin(), party.invites.end(), accountUID);
+	if(invite == party.invites.end()) {
+		WARN("[client%x] HubGame :: no invitation to party %d", clientHd, partyID);
+		return;
+	}
+	party.invites.erase(invite);
+	const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(party.stageIndex);
+	const i32 capacity = stage && stage->joinMemberMax > 0 ? stage->joinMemberMax : (i32)party.memberList.capacity();
+	if((i32)party.memberList.size() >= capacity || party.memberList.full()) {
+		WARN("[client%x] HubGame :: party %d is full", clientHd, partyID);
+		return;
+	}
+	if(FindPlayerParty(userID)) LeaveParty(userID, true);
+
+	Party::Member member;
+	member.accountUID = accountUID;
+	member.userId = 2;
+	for(bool taken = true; taken; ) {
+		taken = false;
+		foreach_const(m, party.memberList) if(m->userId == member.userId) { taken = true; member.userId++; break; }
+	}
+	party.memberList.push_back(member);
+	playerMap[userID]->partyUID = party.UID;
+	matchmaker->QueryPartyAddMember(party.UID, playerAccountData[userID]->nickname, accountUID);
+	LOG("[client%x] HubGame :: %ls joins party %u as %u", clientHd, playerAccountData[userID]->nickname.data(), (u32)party.UID, member.userId);
+
+	eastl::fixed_vector<HubReplication::PartyUser,5,false> users;
+	foreach_const(m, party.memberList) {
+		auto h = accountClientHandleMap.find(m->accountUID);
+		if(h == accountClientHandleMap.end()) continue;
+		const i32 memberID = plidMap->Get(h->second);
+		users.push_back({ m->userId, playerAccountData[memberID]->nickname.data() });
+	}
+	replication.SendPartyJoinAnswer(clientHd, partyID, party.stageType, party.gameType, users.data(), (i32)users.size());
+
+	CreatureIndex leaderCreature = CreatureIndex::Invalid;
+	if(WorldHub::ActorPlayer* actor = world.FindPlayerActor(playerActorUID[userID])) leaderCreature = CreatureIndex(100000000 + (i32)actor->classType);
+	u8 slot = 0;
+	foreach_const(m, party.memberList) {
+		if(m->accountUID == accountUID) break;
+		slot++;
+	}
+	foreach_const(m, party.memberList) {
+		if(m->accountUID == accountUID) continue;
+		auto h = accountClientHandleMap.find(m->accountUID);
+		if(h == accountClientHandleMap.end()) continue;
+		replication.SendPartyJoin(h->second, member.userId, playerAccountData[userID]->nickname.data(), leaderCreature, m == party.memberList.begin(), party.gameType, slot);
+	}
+}
+
+void HubGame::LeaveParty(i32 userID, bool notify)
+{
+	Party* party = FindPlayerParty(userID);
+	playerMap[userID]->partyUID = PartyUID::INVALID;
+	if(!party) return;
+	const AccountUID accountUID = playerAccountData[userID]->UID;
+	const bool leader = party->memberList.front().accountUID == accountUID;
+	if(leader) {
+		matchmaker->QueryPartyCancelMatching(party->UID);
+		foreach_const(m, party->memberList) {
+			if(m->accountUID == accountUID) continue;
+			auto h = accountClientHandleMap.find(m->accountUID);
+			if(h == accountClientHandleMap.end()) continue;
+			playerMap[plidMap->Get(h->second)]->partyUID = PartyUID::INVALID;
+			if(notify) replication.SendPartyBreakup(h->second);
+		}
+		foreach_const(inv, party->invites) {
+			auto h = accountClientHandleMap.find(*inv);
+			if(h != accountClientHandleMap.end() && notify) replication.SendPartyCancelInvite(h->second, (i32)party->UID);
+		}
+		const PartyUID partyUID = party->UID;
+		auto f = partyMap.find(partyUID);
+		partyList.erase(f->second);
+		partyMap.erase(f);
+		LOG("HubGame :: party %u broken up", (u32)partyUID);
+		return;
+	}
+	u32 leftUserId = 0;
+	for(auto m = party->memberList.begin(); m != party->memberList.end(); ++m) {
+		if(m->accountUID != accountUID) continue;
+		leftUserId = m->userId;
+		party->memberList.erase(m);
+		break;
+	}
+	matchmaker->QueryPartyRemoveMember(party->UID, accountUID);
+	if(!notify) return;
+	foreach_const(m, party->memberList) {
+		auto h = accountClientHandleMap.find(m->accountUID);
+		if(h == accountClientHandleMap.end()) continue;
+		replication.SendPartyLeave(h->second, leftUserId, playerAccountData[userID]->nickname.data(), m == party->memberList.begin());
+	}
+}
+
+void HubGame::OnPartyBreakUp(ClientHandle clientHd)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	Party* party = FindPlayerParty(userID);
+	const i32 remain = party ? (i32)party->memberList.size() : 1;
+	const bool leader = party && party->memberList.front().accountUID == playerAccountData[userID]->UID;
+	LeaveParty(userID, true);
+	replication.SendPartyBreakupAnswer(clientHd, leader ? remain : remain - 1);
+}
+
+void HubGame::OnCancelMatching(ClientHandle clientHd)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	Party* party = FindPlayerParty(userID);
+	if(!party) return;
+	matchmaker->QueryPartyCancelMatching(party->UID);
+	const bool solo = party->memberList.size() == 1;
+	foreach_const(m, party->memberList) {
+		auto h = accountClientHandleMap.find(m->accountUID);
+		if(h == accountClientHandleMap.end()) continue;
+		replication.SendCancelMatchingQueue(h->second);
+		BroadcastPlayerStateInTown(plidMap->Get(h->second), 0, nullptr, 0);
+	}
+	if(solo) {
+		LeaveParty(userID, false);
+		replication.SendPartyBreakup(clientHd);
+	}
+}
+
+HubReplication::FriendEntry HubGame::MakeFriendEntry(const WideString& nickname, u16* levelStorage)
+{
+	HubReplication::FriendEntry entry;
+	entry.nickname = nickname.data();
+	entry.leaderCreature = 100000000 + (i32)DEFAULT_LEADER_CLASS;
+	entry.state = MEASURED_FRIEND_STATE_OFFLINE;
+	const i32 friendID = FindUserByNickname(nickname);
+	if(friendID >= 0) {
+		*levelStorage = playerAccountData[friendID]->level;
+		if(WorldHub::ActorPlayer* actor = world.FindPlayerActor(playerActorUID[friendID])) entry.leaderCreature = 100000000 + (i32)actor->classType;
+	}
+	else *levelStorage = AccountProgressLoad(nickname.data()).level;
+	entry.level = *levelStorage;
+	return entry;
+}
+
+void HubGame::SendFriendsOnConnect(i32 userID)
+{
+	const Account& account = *playerAccountData[userID];
+	const ClientHandle clientHd = playerMap[userID]->clientHd;
+	const AccountFriends friends = AccountFriendsLoad(account.nickname.data());
+	eastl::fixed_vector<HubReplication::FriendEntry,64,false> list;
+	eastl::fixed_vector<u16,64,false> levels;
+	levels.resize(friends.friends.size());
+	for(i32 i = 0; i < (i32)friends.friends.size(); i++) list.push_back(MakeFriendEntry(friends.friends[i], &levels[i]));
+	replication.SendFriendList(clientHd, list.data(), (i32)list.size());
+	list.clear();
+	eastl::fixed_vector<u16,32,false> requestLevels;
+	requestLevels.resize(friends.requests.size());
+	for(i32 i = 0; i < (i32)friends.requests.size(); i++) list.push_back(MakeFriendEntry(friends.requests[i], &requestLevels[i]));
+	replication.SendFriendRequestList(clientHd, list.data(), (i32)list.size());
+	foreach_const(f, friends.friends) {
+		if(FindUserByNickname(*f) >= 0) replication.SendFriendStateChanged(clientHd, f->data(), MEASURED_FRIEND_STATE_ONLINE);
+	}
+	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_ONLINE);
+}
+
+void HubGame::BroadcastFriendState(i32 userID, u8 state)
+{
+	const Account& account = *playerAccountData[userID];
+	if(state != MEASURED_FRIEND_STATE_OFFLINE && playerMap[userID] != playerList.end()) replication.SendFriendStateChanged(playerMap[userID]->clientHd, account.nickname.data(), state);
+	const AccountFriends friends = AccountFriendsLoad(account.nickname.data());
+	foreach_const(f, friends.friends) {
+		const i32 friendID = FindUserByNickname(*f);
+		if(friendID < 0 || friendID == userID || playerMap[friendID] == playerList.end()) continue;
+		replication.SendFriendStateChanged(playerMap[friendID]->clientHd, account.nickname.data(), state);
+	}
+}
+
+static bool ContainsName(const eastl::fixed_vector<WideString,64,true>& list, const WideString& name)
+{
+	return eastl::find(list.begin(), list.end(), name) != list.end();
+}
+
+static bool ContainsName(const eastl::fixed_vector<WideString,32,true>& list, const WideString& name)
+{
+	return eastl::find(list.begin(), list.end(), name) != list.end();
+}
+
+void HubGame::OnFriendRequest(ClientHandle clientHd, const WideString& nickname)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	const WideString& self = playerAccountData[userID]->nickname;
+	if(nickname == self) {
+		replication.SendFriendRequestResult(clientHd, MEASURED_FRIEND_REQUEST_YOURSELF, nickname.data());
+		return;
+	}
+	if(!AccountExists(nickname.data())) {
+		replication.SendFriendRequestResult(clientHd, MEASURED_FRIEND_REQUEST_NOT_FOUND, nickname.data());
+		return;
+	}
+	AccountFriends mine = AccountFriendsLoad(self.data());
+	if(ContainsName(mine.friends, nickname)) {
+		replication.SendFriendRequestResult(clientHd, MEASURED_FRIEND_REQUEST_ALREADY_FRIEND, nickname.data());
+		return;
+	}
+	AccountFriends theirs = AccountFriendsLoad(nickname.data());
+	if(ContainsName(theirs.requests, self)) {
+		replication.SendFriendRequestResult(clientHd, MEASURED_FRIEND_REQUEST_ALREADY_SENT, nickname.data());
+		return;
+	}
+	if(theirs.requests.full()) {
+		replication.SendFriendRequestResult(clientHd, MEASURED_FRIEND_REQUEST_OVERFLOW, nickname.data());
+		return;
+	}
+	theirs.requests.push_back(self);
+	AccountFriendsSave(nickname.data(), theirs);
+	LOG("[client%x] HubGame :: %ls sends a friend request to %ls", clientHd, self.data(), nickname.data());
+	replication.SendFriendRequestResult(clientHd, 0, nickname.data());
+	const i32 targetID = FindUserByNickname(nickname);
+	if(targetID >= 0 && playerMap[targetID] != playerList.end()) {
+		u16 level = 0;
+		const HubReplication::FriendEntry entry = MakeFriendEntry(self, &level);
+		replication.SendFriendRequested(playerMap[targetID]->clientHd, self.data(), entry.leaderCreature);
+	}
+}
+
+void HubGame::OnFriendRespond(ClientHandle clientHd, const WideString& nickname, bool accept)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	const WideString& self = playerAccountData[userID]->nickname;
+	AccountFriends mine = AccountFriendsLoad(self.data());
+	auto request = eastl::find(mine.requests.begin(), mine.requests.end(), nickname);
+	if(request == mine.requests.end()) {
+		replication.SendFriendRespondResult(clientHd, MEASURED_FRIEND_RESPONSE_NOT_FOUND, nickname.data(), accept ? 1 : 0);
+		return;
+	}
+	mine.requests.erase(request);
+	AccountFriends theirs = AccountFriendsLoad(nickname.data());
+	if(accept) {
+		if(mine.friends.full()) {
+			AccountFriendsSave(self.data(), mine);
+			replication.SendFriendRespondResult(clientHd, MEASURED_FRIEND_RESPONSE_MY_LIST_IS_FULL, nickname.data(), 1);
+			return;
+		}
+		if(theirs.friends.full()) {
+			AccountFriendsSave(self.data(), mine);
+			replication.SendFriendRespondResult(clientHd, MEASURED_FRIEND_RESPONSE_TARGET_LIST_IS_FULL, nickname.data(), 1);
+			return;
+		}
+		if(!ContainsName(mine.friends, nickname)) mine.friends.push_back(nickname);
+		if(!ContainsName(theirs.friends, self)) theirs.friends.push_back(self);
+		theirs.requests.erase(eastl::remove(theirs.requests.begin(), theirs.requests.end(), self), theirs.requests.end());
+		AccountFriendsSave(nickname.data(), theirs);
+	}
+	AccountFriendsSave(self.data(), mine);
+	LOG("[client%x] HubGame :: %ls %s the friend request of %ls", clientHd, self.data(), accept ? "accepts" : "declines", nickname.data());
+	replication.SendFriendRespondResult(clientHd, 0, nickname.data(), accept ? 1 : 0);
+	if(!accept) return;
+	u16 level = 0;
+	HubReplication::FriendEntry other = MakeFriendEntry(nickname, &level);
+	const i32 otherID = FindUserByNickname(nickname);
+	if(otherID >= 0) other.state = MEASURED_FRIEND_STATE_ONLINE;
+	replication.SendFriendAdded(clientHd, other);
+	if(otherID >= 0 && playerMap[otherID] != playerList.end()) {
+		u16 selfLevel = 0;
+		HubReplication::FriendEntry me = MakeFriendEntry(self, &selfLevel);
+		me.state = MEASURED_FRIEND_STATE_ONLINE;
+		replication.SendFriendAdded(playerMap[otherID]->clientHd, me);
+	}
+}
+
+void HubGame::OnFriendRemove(ClientHandle clientHd, const WideString& nickname)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	const WideString& self = playerAccountData[userID]->nickname;
+	AccountFriends mine = AccountFriendsLoad(self.data());
+	if(!ContainsName(mine.friends, nickname)) {
+		replication.SendFriendRemoveResult(clientHd, MEASURED_FRIEND_REMOVE_NOT_FOUND, nickname.data());
+		return;
+	}
+	mine.friends.erase(eastl::remove(mine.friends.begin(), mine.friends.end(), nickname), mine.friends.end());
+	AccountFriendsSave(self.data(), mine);
+	AccountFriends theirs = AccountFriendsLoad(nickname.data());
+	theirs.friends.erase(eastl::remove(theirs.friends.begin(), theirs.friends.end(), self), theirs.friends.end());
+	AccountFriendsSave(nickname.data(), theirs);
+	replication.SendFriendRemoveResult(clientHd, 0, nickname.data());
+	const i32 otherID = FindUserByNickname(nickname);
+	if(otherID >= 0 && playerMap[otherID] != playerList.end()) replication.SendFriendRemoved(playerMap[otherID]->clientHd, self.data());
+}
+
 void HubGame::OnEnqueueGame(ClientHandle clientHd)
 {
 	const i32 userID = plidMap->Get(clientHd);
@@ -449,6 +806,10 @@ void HubGame::OnEnqueueGame(ClientHandle clientHd)
 	auto f = partyMap.find(partyUID);
 	if(f == partyMap.end()) return;
 	const Party& party = *f->second;
+	if(party.memberList.front().accountUID != playerAccountData[userID]->UID) {
+		WARN("[client%x] HubGame :: enqueue refused, not the party leader", clientHd);
+		return;
+	}
 	ASSERT(party.areaIndex != AreaIndex(0));
 	ASSERT(party.stageIndex != StageIndex(0));
 	ASSERT(party.mapIndex != MapIndex(0));
@@ -502,7 +863,7 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 	party.stageIndex = stageID;
 	party.mapIndex = mapID;
 
-	replication.SendPartyCreateSucess(clientHd, UserID(userID + 1), StageType::PVP_GAME);
+	replication.SendPartyCreateSucess(clientHd, UserID(1), StageType::PVP_GAME);
 	if(Config().DevShowcase || Config().DevAutoQueue) OnEnqueueGame(clientHd);
 }
 
@@ -513,8 +874,10 @@ void HubGame::MmOnPartyEnqueued(PartyUID partyUID)
 	Party& party = *f->second;
 	foreach_const(m, party.memberList) {
 		// TODO: check if on this hub
-		const ClientHandle clientHd = accountClientHandleMap.at(m->accountUID);
-		replication.SendPartyEnqueue(clientHd, party.stageIndex);
+		auto h = accountClientHandleMap.find(m->accountUID);
+		if(h == accountClientHandleMap.end()) continue;
+		const ClientHandle clientHd = h->second;
+		replication.SendPartyEnqueue(clientHd, party.stageIndex, m == party.memberList.begin());
 		const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(party.stageIndex);
 		const u8 mode = stage && stage->gameMode != GameModeType::GAME_MODE_INVALID ? (u8)stage->gameMode : 0;
 		BroadcastPlayerStateInTown(plidMap->Get(clientHd), 1, &mode, stage ? 1 : 0);

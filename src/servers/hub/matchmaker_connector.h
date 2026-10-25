@@ -37,6 +37,9 @@ struct MatchmakerConnector
 		enum class Type: u8 {
 			Invalid = 0,
 			PartyCreate,
+			PartyAddMember,
+			PartyRemoveMember,
+			PartyCancelMatching,
 			PartyEnqueue,
 			PlayerNotifyRoomFound,
 			PlayerRoomConfirm,
@@ -51,6 +54,21 @@ struct MatchmakerConnector
 				In::StrName name;
 				AccountUID leader;
 			} PartyCreate;
+
+			struct {
+				PartyUID partyUID;
+				In::StrName name;
+				AccountUID accountUID;
+			} PartyAddMember;
+
+			struct {
+				PartyUID partyUID;
+				AccountUID accountUID;
+			} PartyRemoveMember;
+
+			struct {
+				PartyUID partyUID;
+			} PartyCancelMatching;
 
 			struct {
 				PartyUID partyUID;
@@ -97,6 +115,9 @@ struct MatchmakerConnector
 	void Update();
 
 	void QueryPartyCreate(const WideString& name, AccountUID leader);
+	void QueryPartyAddMember(PartyUID partyUID, const WideString& name, AccountUID accountUID);
+	void QueryPartyRemoveMember(PartyUID partyUID, AccountUID accountUID);
+	void QueryPartyCancelMatching(PartyUID partyUID);
 	void QueryPartyEnqueue(PartyUID partyUID, AreaIndex areaIndex, StageIndex stageIndex, MapIndex mapIndex, GameType gameType);
 	void QueryPlayerNotifyRoomFound(AccountUID playerAccountUID, SortieUID sortieUID);
 	void QueryPlayerRoomConfirm(AccountUID playerAccountUID, SortieUID sortieUID, u8 confirm);

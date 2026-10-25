@@ -7,6 +7,7 @@
 #include <common/packet_serialize.h>
 #include <EAStdC/EAScanf.h>
 #include <EASTL/hash_map.h>
+#include <EASTL/algorithm.h>
 #include "config.h"
 
 static const f64 MATCHING_WAIT_SEC = 10.0;
@@ -311,6 +312,39 @@ struct Matchmaker
 				SendPacket(conn.clientHd, resp);
 			} break;
 
+			case In::HQ_PartyAddMember::NET_ID: {
+				NT_LOG("[hub%x] %s", conn.clientHd, PacketSerialize<In::HQ_PartyAddMember>(packetData, packetSize));
+				const In::HQ_PartyAddMember& packet = SafeCast<In::HQ_PartyAddMember>(packetData, packetSize);
+				auto f = partyMap.find(packet.partyUID);
+				if(f == partyMap.end()) break;
+				Party& party = *f->second;
+				bool known = false;
+				foreach_const(m, party.memberList) known = known || m->accountUID == packet.accountUID;
+				if(known || party.memberList.full()) break;
+				Party::Member member;
+				member.name.assign(packet.name.data, packet.name.len);
+				member.accountUID = packet.accountUID;
+				member.instanceChd = conn.clientHd;
+				party.memberList.push_back(member);
+				LOG("Party %u :: %ls joined (%d member(s))", (u32)party.UID, member.name.data(), (i32)party.memberList.size());
+			} break;
+
+			case In::HQ_PartyRemoveMember::NET_ID: {
+				NT_LOG("[hub%x] %s", conn.clientHd, PacketSerialize<In::HQ_PartyRemoveMember>(packetData, packetSize));
+				const In::HQ_PartyRemoveMember& packet = SafeCast<In::HQ_PartyRemoveMember>(packetData, packetSize);
+				auto f = partyMap.find(packet.partyUID);
+				if(f == partyMap.end()) break;
+				Party& party = *f->second;
+				party.memberList.erase(eastl::remove_if(party.memberList.begin(), party.memberList.end(), [&](const Party::Member& m) { return m.accountUID == packet.accountUID; }), party.memberList.end());
+				if(party.memberList.empty()) matchingPartyList.erase(eastl::remove(matchingPartyList.begin(), matchingPartyList.end(), packet.partyUID), matchingPartyList.end());
+			} break;
+
+			case In::HQ_PartyCancelMatching::NET_ID: {
+				NT_LOG("[hub%x] %s", conn.clientHd, PacketSerialize<In::HQ_PartyCancelMatching>(packetData, packetSize));
+				const In::HQ_PartyCancelMatching& packet = SafeCast<In::HQ_PartyCancelMatching>(packetData, packetSize);
+				matchingPartyList.erase(eastl::remove(matchingPartyList.begin(), matchingPartyList.end(), packet.partyUID), matchingPartyList.end());
+			} break;
+
 			case In::HQ_PartyEnqueue::NET_ID: {
 				NT_LOG("[hub%x] %s", conn.clientHd, PacketSerialize<In::HQ_PartyEnqueue>(packetData, packetSize));
 				const In::HQ_PartyEnqueue& packet = SafeCast<In::HQ_PartyEnqueue>(packetData, packetSize);
@@ -514,18 +548,20 @@ struct Matchmaker
 
 		LOG("MatchParties :: creating room %llu with %d player(s) from %d party(ies)", (u64)room.UID, humanCount, (i32)matchingPartyList.size());
 
-		i32 humanIndex = 0;
 		foreach_const(puid, matchingPartyList) {
 			const Party& party = *partyMap.at(*puid);
+			const i32 redFree = Config().TeamSize - (i32)room.teamRed.size();
+			const i32 blueFree = Config().TeamSize - (i32)room.teamBlue.size();
+			const i32 size = (i32)party.memberList.size();
+			const bool red = (redFree >= size && (blueFree < size || room.teamRed.size() <= room.teamBlue.size())) || (redFree < size && blueFree < size && redFree >= blueFree);
 			foreach_const(pl, party.memberList) {
 				if(room.teamRed.size() >= Config().TeamSize && room.teamBlue.size() >= Config().TeamSize) break;
+				const bool toRed = red ? room.teamRed.size() < Config().TeamSize : room.teamBlue.size() >= Config().TeamSize;
 				Room::Player player(pl->name, pl->accountUID, pl->instanceChd);
-				const bool red = (room.teamBlue.size() >= Config().TeamSize) || (room.teamRed.size() < Config().TeamSize && (humanIndex % 2) == 0);
-				player.team = red ? Team::RED : Team::BLUE;
+				player.team = toRed ? Team::RED : Team::BLUE;
 				room.playerList.push_back(player);
-				if(red) room.teamRed.push_back(&room.playerList.back());
+				if(toRed) room.teamRed.push_back(&room.playerList.back());
 				else room.teamBlue.push_back(&room.playerList.back());
-				humanIndex++;
 			}
 		}
 

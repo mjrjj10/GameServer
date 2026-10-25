@@ -3068,6 +3068,84 @@ DEFAULT_SERIALIZE(Sv::SN_HudEventList);
 DEFAULT_SERIALIZE(Sv::SN_CshopEventList);
 DEFAULT_SERIALIZE(Sv::SN_PlayerStateInTown);
 
+DEFAULT_SERIALIZE(In::HQ_PartyAddMember);
+DEFAULT_SERIALIZE(In::HQ_PartyRemoveMember);
+DEFAULT_SERIALIZE(In::HQ_PartyCancelMatching);
+DEFAULT_SERIALIZE(Cl::CQ_BreakUpPartyRoom);
+DEFAULT_SERIALIZE(Cl::CQ_CancelMatching);
+DEFAULT_SERIALIZE(Sv::SN_PartyInvite);
+DEFAULT_SERIALIZE(Sv::SA_PartyInvite);
+DEFAULT_SERIALIZE(Sv::SA_PartyJoin);
+DEFAULT_SERIALIZE(Sv::SN_PartyJoin);
+DEFAULT_SERIALIZE(Sv::SN_PartyLeave);
+DEFAULT_SERIALIZE(Sv::SA_PartyBreakup);
+DEFAULT_SERIALIZE(Sv::SN_PartyBreakup);
+DEFAULT_SERIALIZE(Sv::SN_PartyCancelInvite);
+DEFAULT_SERIALIZE(Sv::SN_CancelMatchingQueue);
+template<>
+inline const char* PacketSerialize<Cl::CQ_PartyInvite>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_PartyInvite(%d, %d) :: {", Cl::CQ_PartyInvite::NET_ID, packetSize);
+	SER("	nickname='%ls'", buff.ReadWideStringObj().data());
+	SER("	teamType=%u", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_PartyInviteAccept>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_PartyInviteAccept(%d, %d) :: {", Cl::CQ_PartyInviteAccept::NET_ID, packetSize);
+	SER("	partyID=%d", buff.Read<i32>());
+	SER("	zero=%u", buff.Read<u32>());
+	SER("	inviterNick='%ls'", buff.ReadWideStringObj().data());
+	SER("}");
+	return str.data();
+}
+DEFAULT_SERIALIZE(Sv::SN_FriendStateChanged);
+DEFAULT_SERIALIZE(Sv::SA_FriendRequest);
+DEFAULT_SERIALIZE(Sv::SN_FriendRequested);
+DEFAULT_SERIALIZE(Sv::SA_FriendRespond);
+DEFAULT_SERIALIZE(Sv::SN_FriendAdded);
+DEFAULT_SERIALIZE(Sv::SA_FriendRemove);
+DEFAULT_SERIALIZE(Sv::SN_FriendRemoved);
+template<>
+inline const char* PacketSerialize<Cl::CQ_FriendRequest>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_FriendRequest(%d, %d) :: {", Cl::CQ_FriendRequest::NET_ID, packetSize);
+	SER("	nickname='%ls'", buff.ReadWideStringObj().data());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_FriendRequestRespond>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_FriendRequestRespond(%d, %d) :: {", Cl::CQ_FriendRequestRespond::NET_ID, packetSize);
+	SER("	nickname='%ls'", buff.ReadWideStringObj().data());
+	SER("	accepted=%u", buff.Read<u8>());
+	SER("}");
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<Cl::CQ_FriendRemove>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("CQ_FriendRemove(%d, %d) :: {", Cl::CQ_FriendRemove::NET_ID, packetSize);
+	SER("	nickname='%ls'", buff.ReadWideStringObj().data());
+	SER("}");
+	return str.data();
+}
 #undef DEFAULT_SERIALIZE
 
 template<>

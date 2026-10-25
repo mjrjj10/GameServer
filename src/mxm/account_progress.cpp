@@ -149,3 +149,74 @@ void AccountMissionsSave(const wchar* nickname, const AccountMissions& missions)
 	remove(path);
 	rename(tmp, path);
 }
+
+bool AccountExists(const wchar* nickname)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	char path[512];
+	AccountPath(nickname, "txt", path, sizeof(path));
+	FILE* f = fopen(path, "rb");
+	if(!f) return false;
+	fclose(f);
+	return true;
+}
+
+static bool ParseHexName(const char* hex, WideString* out)
+{
+	out->clear();
+	for(const char* c = hex; *c && *c != '\n' && *c != '\r'; c += 4) {
+		u32 v = 0;
+		if(!c[1] || !c[2] || !c[3] || sscanf(c, "%4x", &v) != 1) return false;
+		out->push_back((wchar)v);
+	}
+	return !out->empty();
+}
+
+static void WriteHexName(FILE* f, const WideString& name)
+{
+	foreach_const(c, name) fprintf(f, "%04x", (u32)(u16)*c);
+}
+
+AccountFriends AccountFriendsLoad(const wchar* nickname)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	AccountFriends friends;
+	char path[512];
+	AccountPath(nickname, "friends", path, sizeof(path));
+	FILE* f = fopen(path, "rb");
+	if(!f) return friends;
+	char line[512];
+	while(fgets(line, sizeof(line), f)) {
+		WideString name;
+		if(line[0] == 0 || line[1] != ' ' || !ParseHexName(line + 2, &name)) continue;
+		if(line[0] == 'F' && !friends.friends.full()) friends.friends.push_back(name);
+		else if(line[0] == 'R' && !friends.requests.full()) friends.requests.push_back(name);
+	}
+	fclose(f);
+	return friends;
+}
+
+void AccountFriendsSave(const wchar* nickname, const AccountFriends& friends)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	_mkdir(ACCOUNT_DIR);
+	char path[512];
+	char tmp[520];
+	AccountPath(nickname, "friends", path, sizeof(path));
+	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+	FILE* f = fopen(tmp, "wb");
+	ASSERT(f);
+	foreach_const(n, friends.friends) {
+		fputs("F ", f);
+		WriteHexName(f, *n);
+		fputc('\n', f);
+	}
+	foreach_const(n, friends.requests) {
+		fputs("R ", f);
+		WriteHexName(f, *n);
+		fputc('\n', f);
+	}
+	fclose(f);
+	remove(path);
+	rename(tmp, path);
+}

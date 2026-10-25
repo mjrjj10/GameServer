@@ -13,6 +13,7 @@
 #include <time.h>
 #include "mission_rules.h"
 #include "town_rules.h"
+#include "character_base_data.h"
 #include "mission_progress.h"
 #include "mailbox.h"
 
@@ -458,56 +459,38 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 		SendPacket(clientHd, packet);
 	}
 
-	// SN_AllCharacterBaseData
 	{
-		PacketWriter<Sv::SN_AllCharacterBaseData,2048> packet;
-
-		packet.Write<u16>(1); // charaList_count
-
-		packet.Write<i32>(100000001); // charaList[0].masterID
-		packet.Write<u16>(22); // charaList[0].baseStats_count
-
-		// charaList[0].baseStats
-		typedef Sv::SN_AllCharacterBaseData::Character::Stat Stat;
-		packet.Write(Stat{ 0, 2400.f });
-		packet.Write(Stat{ 2, 200.f });
-		packet.Write(Stat{ 37, 120.f });
-		packet.Write(Stat{ 5, 5.f });
-		packet.Write(Stat{ 42, 0.6f });
-		packet.Write(Stat{ 7, 92.3077f });
-		packet.Write(Stat{ 9, 3.f });
-		packet.Write(Stat{ 10, 150.f });
-		packet.Write(Stat{ 18, 100.f });
-		packet.Write(Stat{ 13, 100.f });
-		packet.Write(Stat{ 14, 100.f });
-		packet.Write(Stat{ 15, 100.f });
-		packet.Write(Stat{ 52, 100.f });
-		packet.Write(Stat{ 16, 1.f });
-		packet.Write(Stat{ 29, 20.f });
-		packet.Write(Stat{ 23, 9.f });
-		packet.Write(Stat{ 31, 14.f });
-		packet.Write(Stat{ 22, 2.f });
-		packet.Write(Stat{ 54, 15.f });
-		packet.Write(Stat{ 63, 3.f });
-		packet.Write(Stat{ 64, 150.f });
-		packet.Write(Stat{ 55, 15.f });
-
-		packet.Write<u16>(7); // charaList[0].skillData_count
-
-		// charaList[0].skillData
-		typedef Sv::SN_AllCharacterBaseData::Character::SkillRatio SkillR;
-		packet.Write(SkillR{ 180010020, 355.f, 0.42f, 0.f, 0.f, 0.f });
-		packet.Write(SkillR{ 180010040, 995.f, 0.81f, 0.f, 0.f, 0.1f });
-		packet.Write(SkillR{ 180010010, 550.f, 0.56f, 0.f, 0.f, 0.f });
-		packet.Write(SkillR{ 180010030, 0.f, 0.f, 0.f, 0.f, 0.f });
-		packet.Write(SkillR{ 180010050, 680.f, 0.37f, 0.f, 0.f, 0.f });
-		packet.Write(SkillR{ 180010000, 0.f, 1.0f, 0.f, 0.f, 0.f });
-		packet.Write(SkillR{ 180010002, 0.f, 1.0f, 0.f, 0.f, 0.f });
-
-		packet.Write<i32>(1); // cur
-		packet.Write<i32>(1); // max
-
-		SendPacket(clientHd, packet);
+		const i32 total = (i32)ARRAY_COUNT(MEASURED_CHARACTER_BASES);
+		const i32 packets = (total + MEASURED_CHARACTER_BASE_PER_PACKET - 1) / MEASURED_CHARACTER_BASE_PER_PACKET;
+		for(i32 p = 0; p < packets; p++) {
+			PacketWriter<Sv::SN_AllCharacterBaseData,8192> packet;
+			const i32 first = p * MEASURED_CHARACTER_BASE_PER_PACKET;
+			const i32 count = MIN(MEASURED_CHARACTER_BASE_PER_PACKET, total - first);
+			packet.Write<u16>((u16)count);
+			for(i32 i = first; i < first + count; i++) {
+				const MeasuredCharacterBase& chara = MEASURED_CHARACTER_BASES[i];
+				packet.Write<i32>(chara.docIndex);
+				packet.Write<u16>(chara.statCount);
+				for(i32 k = 0; k < chara.statCount; k++) {
+					const MeasuredBaseStat& stat = MEASURED_CHARACTER_BASE_STATS[chara.statOffset + k];
+					packet.Write<u8>(stat.type);
+					packet.Write<f32>(stat.value);
+				}
+				packet.Write<u16>(chara.skillCount);
+				for(i32 k = 0; k < chara.skillCount; k++) {
+					const MeasuredSkillRatio& skill = MEASURED_CHARACTER_BASE_SKILLS[chara.skillOffset + k];
+					packet.Write<i32>(skill.skillID);
+					packet.Write<f32>(skill.baseDamage);
+					packet.Write<f32>(skill.attackMultiplier);
+					packet.Write<f32>(skill.healMultiplier);
+					packet.Write<f32>(skill.shieldMultiplier);
+					packet.Write<f32>(skill.dotMultiplier);
+				}
+			}
+			packet.Write<i32>(p + 1);
+			packet.Write<i32>(packets);
+			SendPacket(clientHd, packet);
+		}
 	}
 
 	const GameXmlContent& content = GetGameXmlContent();
@@ -745,15 +728,6 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 		SendPacket(clientHd, packet);
 	}
 
-	// SN_FriendList
-	{
-		PacketWriter<Sv::SN_FriendList> packet;
-
-		packet.Write<u16>(0); // friendList_count
-
-		SendPacket(clientHd, packet);
-	}
-
 	// SN_PveComradeInfo
 	{
 		PacketWriter<Sv::SN_PveComradeInfo> packet;
@@ -775,15 +749,6 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 		packet.Write<u16>(0); // achievedList_count
 		packet.Write<i64>(6); // progressInt64
 		packet.Write<i64>(6); // date
-
-		SendPacket(clientHd, packet);
-	}
-
-	// SN_FriendRequestList
-	{
-		PacketWriter<Sv::SN_FriendRequestList> packet;
-
-		packet.Write<u16>(0); // friendRequestList_count
 
 		SendPacket(clientHd, packet);
 	}
@@ -1803,11 +1768,202 @@ void HubReplication::SendPartyCreateSucess(ClientHandle clientHd, UserID ownerUs
 	SendPacket(clientHd, packet);
 }
 
-void HubReplication::SendPartyEnqueue(ClientHandle clientHd, StageIndex stageIndex)
+void HubReplication::SendPartyInvite(ClientHandle clientHd, const wchar* inviterNick, StageIndex stageIndex, GameType gameType, i32 partyID)
 {
-	Sv::SA_EnqueueGame packet;
-	packet.retval = 0;
+	PacketWriter<Sv::SN_PartyInvite> packet;
+	packet.Write<u32>(0);
+	packet.WriteStringObj(inviterNick);
+	packet.Write<u16>(1);
+	packet.Write(stageIndex);
+	packet.Write<u32>((u32)gameType);
+	packet.Write<u32>((u32)GameDefinition::System);
+	packet.Write<u32>((u32)StageRule::Unfair);
+	packet.Write<i32>(partyID);
+	packet.Write<u32>(0);
 	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendPartyInviteResult(ClientHandle clientHd, u32 result, const wchar* nickname)
+{
+	PacketWriter<Sv::SA_PartyInvite> packet;
+	packet.Write<u32>(result);
+	packet.WriteStringObj(nickname);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendPartyJoinAnswer(ClientHandle clientHd, i32 partyID, StageType stageType, GameType gameType, const PartyUser* members, i32 count)
+{
+	PacketWriter<Sv::SA_PartyJoin,1024> packet;
+	packet.Write<i32>(0);
+	packet.Write<i32>(partyID);
+	packet.Write<u32>((u32)stageType);
+	packet.Write<u32>((u32)gameType);
+	packet.Write<u32>((u32)GameDefinition::System);
+	packet.Write<u16>((u16)count);
+	for(i32 i = 0; i < count; i++) {
+		packet.Write<u32>(members[i].userId);
+		packet.WriteStringObj(members[i].nickname);
+		packet.Write<u8>(0);
+		packet.Write<i32>(0);
+		packet.Write<i32>(0);
+		packet.Write<i32>(0);
+		packet.Write<f32>(0.f);
+	}
+	packet.Write<u32>(0);
+	packet.Write<u16>(0);
+	packet.Write<u32>(0);
+	packet.Write<u16>(0);
+	packet.Write<u8>(0);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendPartyJoin(ClientHandle clientHd, u32 userId, const wchar* nickname, CreatureIndex leaderCreature, bool receiverIsOwner, GameType gameType, u8 slot)
+{
+	PacketWriter<Sv::SN_PartyJoin> packet;
+	packet.Write<u32>(userId);
+	packet.WriteStringObj(nickname);
+	packet.Write<u8>(0);
+	packet.Write(leaderCreature);
+	packet.Write<u8>(receiverIsOwner ? 1 : 0);
+	packet.Write<u32>((u32)gameType);
+	packet.Write<u32>((u32)GameDefinition::System);
+	packet.Write<u32>(0);
+	packet.Write<u8>(slot);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendPartyLeave(ClientHandle clientHd, u32 userId, const wchar* nickname, bool receiverIsOwner)
+{
+	PacketWriter<Sv::SN_PartyLeave> packet;
+	packet.Write<u32>(userId);
+	packet.WriteStringObj(nickname);
+	packet.Write<u8>(receiverIsOwner ? 1 : 0);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendPartyBreakupAnswer(ClientHandle clientHd, i32 remainMemberCount)
+{
+	PacketWriter<Sv::SA_PartyBreakup> packet;
+	packet.Write<i32>(0);
+	packet.Write<i32>(remainMemberCount);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendPartyBreakup(ClientHandle clientHd)
+{
+	SendPacketData<Sv::SN_PartyBreakup>(clientHd, 0, nullptr);
+}
+
+void HubReplication::SendPartyCancelInvite(ClientHandle clientHd, i32 partyID)
+{
+	PacketWriter<Sv::SN_PartyCancelInvite> packet;
+	packet.Write<i32>(partyID);
+	SendPacket(clientHd, packet);
+}
+
+template<typename Writer>
+static void WriteFriendEntry(Writer& packet, const HubReplication::FriendEntry& e)
+{
+	packet.WriteStringObj(e.nickname);
+	packet.template Write<i32>(e.leaderCreature);
+	packet.template Write<u8>(e.state);
+	packet.template Write<u16>(e.level);
+	packet.template Write<u8>(0);
+	packet.template Write<u8>(0);
+	packet.template Write<u8>(0);
+	packet.template Write<i64>(FILETIME_UNIX_EPOCH_100NS + (i64)time(nullptr) * 10000000LL);
+}
+
+void HubReplication::SendFriendList(ClientHandle clientHd, const FriendEntry* friends, i32 count)
+{
+	PacketWriter<Sv::SN_FriendList,4096> packet;
+	packet.Write<u16>((u16)count);
+	for(i32 i = 0; i < count; i++) WriteFriendEntry(packet, friends[i]);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendFriendRequestList(ClientHandle clientHd, const FriendEntry* requests, i32 count)
+{
+	PacketWriter<Sv::SN_FriendRequestList,2048> packet;
+	packet.Write<u16>((u16)count);
+	for(i32 i = 0; i < count; i++) {
+		packet.WriteStringObj(requests[i].nickname);
+		packet.Write<i32>(requests[i].leaderCreature);
+	}
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendFriendStateChanged(ClientHandle clientHd, const wchar* nickname, u8 state)
+{
+	PacketWriter<Sv::SN_FriendStateChanged> packet;
+	packet.WriteStringObj(nickname);
+	packet.Write<u8>(state);
+	packet.Write<u8>(0);
+	packet.Write<i64>(FILETIME_UNIX_EPOCH_100NS + (i64)time(nullptr) * 10000000LL);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendFriendRequestResult(ClientHandle clientHd, u32 result, const wchar* nickname)
+{
+	PacketWriter<Sv::SA_FriendRequest> packet;
+	packet.Write<u32>(result);
+	packet.WriteStringObj(nickname);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendFriendRequested(ClientHandle clientHd, const wchar* nickname, i32 leaderCreature)
+{
+	PacketWriter<Sv::SN_FriendRequested> packet;
+	packet.WriteStringObj(nickname);
+	packet.Write<i32>(leaderCreature);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendFriendRespondResult(ClientHandle clientHd, u32 result, const wchar* nickname, u8 accept)
+{
+	PacketWriter<Sv::SA_FriendRespond> packet;
+	packet.Write<u32>(result);
+	packet.WriteStringObj(nickname);
+	packet.Write<u8>(accept);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendFriendAdded(ClientHandle clientHd, const FriendEntry& entry)
+{
+	PacketWriter<Sv::SN_FriendAdded> packet;
+	WriteFriendEntry(packet, entry);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendFriendRemoveResult(ClientHandle clientHd, u32 result, const wchar* nickname)
+{
+	PacketWriter<Sv::SA_FriendRemove> packet;
+	packet.Write<u32>(result);
+	packet.WriteStringObj(nickname);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendFriendRemoved(ClientHandle clientHd, const wchar* nickname)
+{
+	PacketWriter<Sv::SN_FriendRemoved> packet;
+	packet.WriteStringObj(nickname);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendCancelMatchingQueue(ClientHandle clientHd)
+{
+	PacketWriter<Sv::SN_CancelMatchingQueue> packet;
+	packet.Write<u8>(0);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendPartyEnqueue(ClientHandle clientHd, StageIndex stageIndex, bool leader)
+{
+	if(leader) {
+		Sv::SA_EnqueueGame packet;
+		packet.retval = 0;
+		SendPacket(clientHd, packet);
+	}
 
 	Sv::SN_EnqueueMatchingQueue matching;
 	matching.stageIndex = stageIndex;

@@ -1406,9 +1406,9 @@ PUSH_PACKED
 struct CQ_PartyInvite
 {
 	enum { NET_ID = 60078 };
-	u16 field1_len;
-	wchar field1[1];
-	u32 field2;
+	u16 nickname_len;
+	wchar nickname[1];
+	u32 teamType;
 };
 POP_PACKED
 
@@ -1460,14 +1460,15 @@ POP_PACKED
 ASSERT_SIZE(CQ_RejectPartyRoom, 4);
 
 PUSH_PACKED
-struct CQ_JoinPartyAsSpectator
+struct CQ_PartyInviteAccept
 {
 	enum { NET_ID = 60084 };
-	u32 newLeaderProfileId; // 4 bytes
-	u32 secondId; // 4 bytes
+	i32 partyID;
+	u32 zero;
+	u16 inviterNick_len;
+	wchar inviterNick[1];
 };
 POP_PACKED
-ASSERT_SIZE(CQ_JoinPartyAsSpectator, 8);
 
 PUSH_PACKED
 struct CQ_LeavePartyRoom
@@ -1482,11 +1483,8 @@ PUSH_PACKED
 struct CQ_BreakUpPartyRoom
 {
 	enum { NET_ID = 60086 };
-	ItemUID itemInstanceUID; // 4 bytes: 0x40000000-tagged instance uid, same id space as SN_ItemUpdate.m_itemID; server zeroes/decrements it on use
-	u32 slotOrParam; // 4 bytes
 };
 POP_PACKED
-ASSERT_SIZE(CQ_BreakUpPartyRoom, 8);
 
 PUSH_PACKED
 struct CQ_PartyKickAll
@@ -1572,8 +1570,6 @@ PUSH_PACKED
 struct CQ_CancelMatching
 {
 	enum { NET_ID = 60098 };
-	u8 flagByte; // 1 bytes (bool)
-	u32 wideStringField; // 4 bytes (unclassified writer wstring)
 };
 POP_PACKED
 
@@ -1711,18 +1707,19 @@ POP_PACKED
 ASSERT_SIZE(CQ_SelectSkin, 8);
 
 PUSH_PACKED
-struct CQ_UNKNOWN_60116
+struct CQ_FriendRequest
 {
 	enum { NET_ID = 60116 };
-	u32 roomOrHostId; // 4 bytes
-	u32 joinRole; // 4 bytes
-	u32 password; // 4 bytes (unclassified writer wstring)
+	u16 nickname_len;
+	wchar nickname[1];
 };
 POP_PACKED
 
 PUSH_PACKED
 struct CQ_FriendRequestRespond
-{	u16 playerNameLen;
+{
+	enum { NET_ID = 60117 };
+	u16 playerNameLen;
 	wchar playerName[1]; // length is playerNameLen
 	u8 accepted;
 

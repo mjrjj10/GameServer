@@ -78,6 +78,30 @@ struct HQ_PartyCreate
 	AccountUID leader;
 };
 
+struct HQ_PartyAddMember
+{
+	enum { NET_ID = 1007 };
+
+	PartyUID partyUID;
+	StrName name;
+	AccountUID accountUID;
+};
+
+struct HQ_PartyRemoveMember
+{
+	enum { NET_ID = 1008 };
+
+	PartyUID partyUID;
+	AccountUID accountUID;
+};
+
+struct HQ_PartyCancelMatching
+{
+	enum { NET_ID = 1009 };
+
+	PartyUID partyUID;
+};
+
 struct HQ_PartyEnqueue
 {
 	enum { NET_ID = 1003 };

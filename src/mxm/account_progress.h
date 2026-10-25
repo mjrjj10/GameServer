@@ -2,6 +2,7 @@
 #include <common/base.h>
 #include <EASTL/array.h>
 #include <EASTL/fixed_vector.h>
+#include <common/utils.h>
 
 struct AccountProgress
 {
@@ -60,6 +61,15 @@ struct AccountMissions
 	eastl::fixed_vector<AccountDailyChange,8,true> dailyChanges;
 };
 
+struct AccountFriends
+{
+	eastl::fixed_vector<WideString,64,true> friends;
+	eastl::fixed_vector<WideString,32,true> requests;
+};
+
+bool AccountExists(const wchar* nickname);
+AccountFriends AccountFriendsLoad(const wchar* nickname);
+void AccountFriendsSave(const wchar* nickname, const AccountFriends& friends);
 AccountProgress AccountProgressLoad(const wchar* nickname);
 void AccountProgressSave(const wchar* nickname, const AccountProgress& progress);
 void AccountGameRecordAppend(const wchar* nickname, const AccountGameRecord& record);
