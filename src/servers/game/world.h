@@ -402,6 +402,16 @@ struct World
 		i32 ownerClass = -1;
 		Time nextPassive = Time::ZERO;
 		Time passiveBlockedUntil = Time::ZERO;
+		const GameXmlContent::MonsterAi* monsterAi = nullptr;
+		const eastl::fixed_vector<vec3,48,true>* path = nullptr;
+		i32 pathPoint = 0;
+		bool monsterStarted = false;
+		bool monsterWalking = false;
+		bool monsterChasing = false;
+		ActorUID monsterTarget = ActorUID::INVALID;
+		Time monsterNextAttack = Time::ZERO;
+		Time monsterNextSearch = Time::ZERO;
+		Time monsterNextSync = Time::ZERO;
 
 		vec3 pos;
 		vec3 rot;
@@ -724,6 +734,17 @@ struct World
 	f32 PlayerMoveSpeed(const Player& p) const;
 	void UpdateBotSkills();
 	void UpdateSummonAi(f32 delta);
+	void UpdateMonsterAi(f32 delta);
+	f32 NpcHitRadius(const ActorNpc& npc) const;
+	void UpdateMonsterHits();
+	bool MonsterHostile(const ActorNpc& monster, const ActorNpc& other) const;
+	bool MonsterHostile(const ActorNpc& monster, const Player& player) const;
+	void MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const GameXmlContent::MonsterAttack& attack);
+	void DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i32 remote);
+	void DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, i32 remote, i32 status);
+	void MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDoc);
+	struct MonsterHit { ActorUID attacker; ActorUID target; Time at; const GameXmlContent::MonsterAttack* attack; };
+	eastl::fixed_vector<MonsterHit,256,true> monsterHits;
 	void UpdateSummonAttack(ActorNpc& npc, f32 delta);
 	void UpdateShowcase();
 	void ShowcaseOnCast(const Player& player);

@@ -662,6 +662,7 @@ struct GameXmlContent
 		eastl::fixed_vector<Spawn,512> dynamic;
 		eastl::fixed_vector<Area,512> areas;
 		eastl::vector<LevelEventNode> levelEvents;
+		eastl::hash_map<i32, eastl::fixed_vector<vec3,48,true>> paths;
 
 		const Area* FindArea(i32 id) const { foreach_const(a, areas) if(a->ID == id) return &*a; return nullptr; }
 		const LevelEventNode* FindLevelEvent(i32 id) const { foreach_const(n, levelEvents) if(n->id == id) return &*n; return nullptr; }
@@ -912,6 +913,40 @@ struct GameXmlContent
 	bool Load();
 	const MapList* FindMapListByID(MapIndex index) const;
 	const Map* FindPvpMap(MapIndex index) const;
+
+	struct MonsterAttack
+	{
+		enum Target: u8 { MASTER = 0, MINION, STRUCTURE, _COUNT };
+		Target target = MASTER;
+		ActionStateID state = ActionStateID::INVALID;
+		f32 range = 0;
+		f32 cooldown = 0;
+		i32 remote = 0;
+		f32 delay = 0;
+		f32 multiplier = 0;
+		f32 speed = 0;
+		i32 status = 0;
+	};
+
+	struct MonsterAi
+	{
+		eastl::fixed_string<char,48,false> className;
+		f32 walk = 0;
+		f32 run = 0;
+		f32 perception = 0;
+		f32 lost = 0;
+		f32 destroy = 0;
+		f32 radius = 0;
+		u32 tagKey = 0;
+		eastl::fixed_vector<u32,10,false> enemyTags;
+		eastl::array<const MonsterAttack*,MonsterAttack::_COUNT> byTarget = {};
+		eastl::fixed_vector<MonsterAttack,MonsterAttack::_COUNT,false> attacks;
+		bool Hates(u32 tag) const { return eastl::find(enemyTags.begin(), enemyTags.end(), tag) != enemyTags.end(); }
+	};
+
+	eastl::hash_map<i32, MonsterAi> monsterAi;
+	const MonsterAi* FindMonsterAi(i32 creatureID) const { auto f = monsterAi.find(creatureID); return f == monsterAi.end() ? nullptr : &f->second; }
+	bool LoadMonsterAi();
 	const eastl::fixed_vector<StatValue,24,false>* FindMonsterStats(i32 creatureID) const { auto f = monsterStats.find(creatureID); return f == monsterStats.end() ? nullptr : &f->second; }
 	eastl::hash_map<i32, eastl::fixed_vector<StatValue,24,false>> monsterStats;
 	const Song* FindJukeboxSongByID(SongID songID) const;

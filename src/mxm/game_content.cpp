@@ -906,6 +906,17 @@ bool GameXmlContent::LoadMapByID(Map* map, MapIndex index)
 	}
 
 	if(!LoadLevelEvents(map, tempPathData)) return false;
+
+	XMLDocument pathDoc;
+	if(LoadXMLFile(LFMT(L"/%s/Path.xml", tempPathData), pathDoc, true) && pathDoc.FirstChildElement()) {
+		XMLElement* pList = pathDoc.FirstChildElement()->FirstChildElement("MAP_PATH_LIST");
+		for(XMLElement* pPath = pList ? pList->FirstChildElement("MAP_PATH_INFO") : nullptr; pPath; pPath = pPath->NextSiblingElement("MAP_PATH_INFO")) {
+			auto& points = map->paths[pPath->IntAttribute("DATAKEY")];
+			for(XMLElement* pPoint = pPath->FirstChildElement("_PathList"); pPoint; pPoint = pPoint->NextSiblingElement("_PathList")) {
+				points.push_back(vec3(pPoint->FloatAttribute("kTranslate_x"), pPoint->FloatAttribute("kTranslate_y"), pPoint->FloatAttribute("kTranslate_z")));
+			}
+		}
+	}
 	return true;
 }
 
@@ -982,6 +993,53 @@ bool GameXmlContent::LoadPvpMaps()
 		LOG("PvP map %d: %d creatures, %d dynamics, %d areas, %d level events, %d colliders", (i32)index, (i32)map.creatures.size(), (i32)map.dynamic.size(), (i32)map.areas.size(), (i32)map.levelEvents.size(), (i32)map.colliders.size());
 	}
 	return FindPvpMap(MapIndex::PVP_DEATHMATCH) != nullptr;
+}
+
+bool GameXmlContent::LoadMonsterAi()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/MonsterAi.xml", doc)) return false;
+	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+		MonsterAi& ai = monsterAi[pInfo->IntAttribute("ID")];
+		ai.className = pInfo->Attribute("class") ? pInfo->Attribute("class") : "";
+		ai.walk = pInfo->FloatAttribute("walk");
+		ai.run = pInfo->FloatAttribute("run");
+		ai.perception = pInfo->FloatAttribute("perception");
+		ai.lost = pInfo->FloatAttribute("lost");
+		ai.destroy = pInfo->FloatAttribute("destroy");
+		ai.radius = pInfo->FloatAttribute("radius");
+		ai.tagKey = StatusTypeKey(pInfo->Attribute("tag") ? pInfo->Attribute("tag") : "");
+		if(const char* enemies = pInfo->Attribute("enemies")) {
+			const char* at = enemies;
+			while(*at && !ai.enemyTags.full()) {
+				const char* end = at;
+				while(*end && *end != '|') end++;
+				eastl::fixed_string<char,32,false> tag(at, end);
+				ai.enemyTags.push_back(StatusTypeKey(tag.c_str()));
+				at = *end ? end + 1 : end;
+			}
+		}
+		for(XMLElement* pAttack = pInfo->FirstChildElement("ATTACK"); pAttack && !ai.attacks.full(); pAttack = pAttack->NextSiblingElement("ATTACK")) {
+			MonsterAttack attack;
+			const char* target = pAttack->Attribute("target");
+			if(!target) continue;
+			if(EA::StdC::Strcmp(target, "master") == 0) attack.target = MonsterAttack::MASTER;
+			else if(EA::StdC::Strcmp(target, "minion") == 0) attack.target = MonsterAttack::MINION;
+			else attack.target = MonsterAttack::STRUCTURE;
+			if(const char* state = pAttack->Attribute("state")) attack.state = ActionStateFromString(state);
+			attack.range = pAttack->FloatAttribute("range");
+			attack.cooldown = pAttack->FloatAttribute("cooldown");
+			attack.remote = pAttack->IntAttribute("remote");
+			attack.delay = pAttack->FloatAttribute("delay");
+			attack.multiplier = pAttack->FloatAttribute("multiplier");
+			attack.speed = pAttack->FloatAttribute("speed");
+			attack.status = pAttack->IntAttribute("status");
+			ai.attacks.push_back(attack);
+		}
+		foreach_const(a, ai.attacks) ai.byTarget[a->target] = &*a;
+	}
+	LOG("Loaded AI of %d monsters", (i32)monsterAi.size());
+	return true;
 }
 
 bool GameXmlContent::LoadMonsterStats()
@@ -2231,6 +2289,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadMonsterStats();
+	if (!r) return false;
+
+	r = LoadMonsterAi();
 	if (!r) return false;
 
 	r = LoadJukeboxSongs();

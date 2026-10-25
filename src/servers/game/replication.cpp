@@ -1201,6 +1201,8 @@ static const u8 NPC_MOVE_FLAG_MOVING = 32;
 static const f32 SUMMON_SPAWN_HEIGHT = 50.0f;
 static const f32 NPC_SPEED_SCALE = 5.0f;
 static const u8 NPC_STATE_KEEP_SPEED = 0x04;
+static const u8 MONSTER_STATE_NO_YAW = 0x04;
+static const f32 MONSTER_SPEED_SCALE = 5.5f;
 static const u8 SUMMON_OWNER_SKILLPOWER_STAT = 8;
 static const f32 REFLECT_TARGET_DISTANCE = 10000.0f;
 static const u8 REFLECT_CREATE_FLAGS = 2;
@@ -1558,6 +1560,46 @@ void Replication::SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec
 		packet.lowerBodyYaw = yaw;
 		packet.angularSpeed = 0;
 		packet.linearSpeed = (u16)MIN(speed * 5.0f, 65535.0f);
+		packet.currPos = v2f(pos);
+		packet.goalPos = v2f(goal);
+		packet.movingFlags = 0;
+		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendMonsterStateToAll(ActorUID actorUID, ActionStateID action, const vec3& pos, f32 speed)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+		PacketWriter<Sv::SN_AiSetActionState,32> packet;
+		packet.Write<u8>(MONSTER_STATE_NO_YAW);
+		packet.Write<LocalActorID>(localID);
+		packet.Write<i16>((i16)action);
+		packet.Write<u16>((u16)MIN(speed * MONSTER_SPEED_SCALE, 65535.0f));
+		packet.Write(pos);
+		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed)
+{
+	const i16 yaw = WorldYawToMonsterDeciDegrees(worldYaw);
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+		Sv::SN_AIMonsterSyncMove packet;
+		packet.excludedFieldBits = 0;
+		packet.monsterID = (u32)localID;
+		packet.upperBodyPitch = 0;
+		packet.upperBodyYaw = yaw;
+		packet.lowerBodyYaw = yaw;
+		packet.angularSpeed = 0;
+		packet.linearSpeed = (u16)MIN(speed * MONSTER_SPEED_SCALE, 65535.0f);
 		packet.currPos = v2f(pos);
 		packet.goalPos = v2f(goal);
 		packet.movingFlags = 0;

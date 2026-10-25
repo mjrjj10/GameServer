@@ -196,6 +196,9 @@ void World::StartTimeRecord()
 
 void World::InitMonsterStats(ActorNpc& npc)
 {
+	npc.monsterAi = GetGameXmlContent().FindMonsterAi((i32)npc.docID);
+	auto path = map->paths.find(npc.localID);
+	npc.path = path != map->paths.end() && !path->second.empty() ? &path->second : nullptr;
 	const auto* stats = GetGameXmlContent().FindMonsterStats((i32)npc.docID);
 	if(!stats) return;
 	const auto& statList = *stats;

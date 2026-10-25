@@ -371,9 +371,21 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 
 bool World::NpcHittableBy(const ActorNpc& npc, const Player& attacker) const
 {
-	if(npc.hp <= 0 || npc.ownerUID == ActorUID::INVALID || npc.removeAt != Time::ZERO) return false;
+	if(npc.hp <= 0 || npc.removeAt != Time::ZERO) return false;
 	if(npc.despawnAt != Time::ZERO && localTime >= npc.despawnAt) return false;
+	if(npc.ownerUID == ActorUID::INVALID) {
+		if(!npc.monsterAi) return false;
+		if(npc.faction == Faction::RED || npc.faction == Faction::BLUE) return npc.faction != (Faction)attacker.team;
+		return npc.faction == Faction::ORANGE || npc.faction == Faction::MONSTER;
+	}
 	return players[npc.ownerIndex].team != attacker.team;
+}
+
+f32 World::NpcHitRadius(const ActorNpc& npc) const
+{
+	const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc.docID);
+	if(info) return info->colliderRadius;
+	return npc.monsterAi ? npc.monsterAi->radius : 0.0f;
 }
 
 void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage)
@@ -384,7 +396,64 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	replication->SendDamageToAll(attacker.Main().UID, npc.UID, skillID, dealt, npc.hp, npc.hpMax);
 	LOG("Summon :: creature=%d takes %d from %ls hp=%d/%d", (i32)npc.docID, dealt, attacker.name.data(), npc.hp, npc.hpMax);
 	if(npc.hp <= 0) {
+		if(npc.ownerUID == ActorUID::INVALID) {
+			MonsterDie(npc, attacker.Main().UID, CreatureIndex(100000000 + (i32)attacker.Main().classType));
+			return;
+		}
 		npc.killerUID = attacker.Main().UID;
 		npc.despawnAt = localTime;
 	}
+}
+
+void World::DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i32 remote)
+{
+	if(damage <= 0 || target.hp <= 0 || target.removeAt != Time::ZERO) return;
+	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(target.defence, 0.0f)) + 0.5f), 1);
+	target.hp = MAX(target.hp - dealt, 0);
+	replication->SendDamageToAll(attacker.UID, target.UID, SkillID::INVALID, dealt, target.hp, target.hpMax);
+	if(target.hp <= 0) MonsterDie(target, attacker.UID, attacker.docID);
+}
+
+void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, i32 remote, i32 status)
+{
+	if(frozen || target.dead || target.untargetable || damage <= 0) return;
+	if(HasStatusType(target, StatusType::GODMODE) || HasStatusType(target, StatusType::BURROW)) return;
+	MarkInBattle(target);
+	const f32 def = MasterStat(target.Main().classType, STAT_DEFENCE) * MAX(1.0f + StatusModMulSum(target, StatusMod::DEFENCE) / 100.0f, 0.0f);
+	damage = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(def, 0.0f)) + 0.5f), 1);
+	foreach(it, activeStatuses) {
+		if(damage <= 0) break;
+		if(it->targetIndex != target.index || it->shieldHP <= 0) continue;
+		const f32 absorbed = MIN(it->shieldHP, (f32)damage);
+		it->shieldHP -= absorbed;
+		it->absorbed += absorbed;
+		damage -= (i32)absorbed;
+	}
+	if(damage <= 0) return;
+	ActorMaster& chara = target.Main();
+	target.damageTaken += damage;
+	target.hitsTaken++;
+	chara.hp = MAX(chara.hp - damage, (HasStatusType(target, StatusType::NEARLY_IMMORTAL) || HasStatusType(target, StatusType::UNDEAD)) ? 1 : 0);
+	if(ShowcaseKeepsAlive(target)) chara.hp = MAX(chara.hp, 1);
+	if(chara.hp == 0) PassiveOnLethal(target);
+	replication->SendDamageToAll(attacker.UID, chara.UID, SkillID::INVALID, damage, chara.hp, chara.hpMax);
+	if(chara.hp > 0) {
+		PassiveOnDamaged(target);
+		return;
+	}
+	target.dead = true;
+	target.deaths++;
+	GrantSkillPoint(target);
+	i32 teamKills = 0;
+	i32 victimTeamKills = 0;
+	foreach_const(it, players) {
+		if(it->team == target.team) victimTeamKills += it->kills;
+		else teamKills += it->kills;
+	}
+	const i32 respawnMs = gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills);
+	target.tRespawn = TimeAdd(localTime, TimeMsToTime(respawnMs));
+	target.killStreak = 0;
+	target.recentDamage.clear();
+	LOG("Death :: %ls killed by creature %d (respawn %d ms)", target.name.data(), (i32)attacker.docID, respawnMs);
+	replication->SendDeathToAll(attacker.UID, chara.UID, attacker.docID, 0, (RemoteIdx)remote, target.userID, respawnMs);
 }

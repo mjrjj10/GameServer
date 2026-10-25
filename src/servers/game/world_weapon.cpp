@@ -272,9 +272,8 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 	}
 	foreach(npc, actorNpcList) {
 		if(!NpcHittableBy(*npc, owner)) continue;
-		const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc->docID);
 		const f32 d = glm::length(vec2(npc->pos) - vec2(center));
-		if(d > radius + (info ? info->colliderRadius : 0.0f)) continue;
+		if(d > radius + NpcHitRadius(*npc)) continue;
 		DamageNpc(owner, *npc, SkillID::INVALID, (i32)(damage * (bombRemote ? RemoteDistanceFalloff(*bombRemote, d) : 1.0f)));
 	}
 	if(mastersHit >= 2 && owner.mana >= 0) {
@@ -398,8 +397,7 @@ void World::UpdateProjectiles(f32 delta)
 			foreach(npc, actorNpcList) {
 				if(destroyed || proj->npcHitList.full() || proj->damage <= 0 || !NpcHittableBy(*npc, owner)) continue;
 				if(eastl::find(proj->npcHitList.begin(), proj->npcHitList.end(), npc->UID) != proj->npcHitList.end()) continue;
-				const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc->docID);
-				if(SegmentPointDist2D(from, to, vec2(npc->pos)) > proj->halfWidth + (info ? info->colliderRadius : 0.0f)) continue;
+				if(SegmentPointDist2D(from, to, vec2(npc->pos)) > proj->halfWidth + NpcHitRadius(*npc)) continue;
 				proj->npcHitList.push_back(npc->UID);
 				DamageNpc(owner, *npc, SkillID::INVALID, proj->damage);
 				proj->hitsLeft--;

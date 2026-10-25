@@ -587,8 +587,7 @@ void World::RemoteHitNpcs(RemoteInst& inst)
 	foreach(npc, actorNpcList) {
 		if(inst.npcHits.full() || !NpcHittableBy(*npc, owner)) continue;
 		if(eastl::find(inst.npcHits.begin(), inst.npcHits.end(), npc->UID) != inst.npcHits.end()) continue;
-		const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc->docID);
-		const f32 r = info ? info->colliderRadius : 0.0f;
+		const f32 r = NpcHitRadius(*npc);
 		const vec2 rel = vec2(npc->pos) - vec2(inst.pos) - inst.dir * RemoteBoundOffset(remote);
 		const f32 dist = glm::length(rel);
 		if(sphere) {

@@ -218,6 +218,7 @@ void World::Update(Time localTime_)
 	UpdateSkillPoints();
 	UpdateSummons();
 	UpdateSummonAi((f32)tdelta);
+	UpdateMonsterAi((f32)tdelta);
 	if(!frozen) UpdatePassives();
 	if(!frozen) UpdateStances();
 	if(!frozen) UpdateCasts();

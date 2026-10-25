@@ -921,6 +921,18 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			return true;
 		}
 
+		f32 tpX = 0;
+		f32 tpY = 0;
+		f32 tpZ = 0;
+		const i32 tpArgs = EA::StdC::Sscanf(msg, L"tp %f %f %f", &tpX, &tpY, &tpZ);
+		if(tpArgs >= 2) {
+			World::Player& playerActor = world.GetPlayer(p.playerIndex);
+			const vec3 to(tpX, tpY, tpArgs >= 3 ? tpZ : playerActor.body->GetWorldPos().z);
+			world.MovePlayer(playerActor, to, playerActor.input.rot.bodyYaw, false);
+			SendDbgMsg(clientHd, LFMT(L"Teleported to (%g, %g, %g)", to.x, to.y, to.z));
+			return true;
+		}
+
 		i32 eventSeq = 0;
 		if(EA::StdC::Sscanf(msg, L"es %d", &eventSeq) == 1) {
 			replication.SendChatMessageToClient(clientHd, L"Dbg", EChatType::NOTICE_CHAT, LFMT(L"Event Sequence (%d)", eventSeq));
