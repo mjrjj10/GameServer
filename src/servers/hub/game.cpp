@@ -536,6 +536,7 @@ void HubGame::OnCreateParty(ClientHandle clientHd, EntrySystemID entry, StageTyp
 	pendingPartyEntry[userID] = entry;
 	pendingPartyStage[userID] = stageType;
 	pendingPartyGameType[userID] = GameType::PVP_NORMAL;
+	pendingPartyStageIndex[userID] = StageIndex(0);
 
 	// TODO: validate args
 	const Account& acc = *playerAccountData[userID];
@@ -557,7 +558,19 @@ void HubGame::OnCreateParty(ClientHandle clientHd, EntrySystemID entry, StageTyp
 	}
 }
 
-void HubGame::OnPartyModify(ClientHandle clientHd, GameType gameType)
+bool HubGame::SetPartyStage(Party& party, StageIndex stage)
+{
+	AreaIndex areaID = AreaIndex(0);
+	MapIndex mapID = MapIndex(0);
+	const GameXmlContent& content = GetGameXmlContent();
+	if(!content.FindEntryStageArea((i32)party.entry, stage, &areaID) || !content.FindStageMap(stage, &mapID)) return false;
+	party.areaIndex = areaID;
+	party.stageIndex = stage;
+	party.mapIndex = mapID;
+	return true;
+}
+
+void HubGame::OnPartyModify(ClientHandle clientHd, StageIndex stage, GameType gameType)
 {
 	const i32 userID = plidMap->Get(clientHd);
 	if(gameType <= GameType::INVALID || gameType >= GameType::MAX) {
@@ -565,12 +578,14 @@ void HubGame::OnPartyModify(ClientHandle clientHd, GameType gameType)
 		return;
 	}
 	pendingPartyGameType[userID] = gameType;
+	if(stage != StageIndex(0)) pendingPartyStageIndex[userID] = stage;
 	const PartyUID partyUID = playerMap[userID]->partyUID;
 	if(partyUID == PartyUID::INVALID) return;
 	auto f = partyMap.find(partyUID);
 	if(f == partyMap.end()) return;
-	f->second->gameType = gameType;
 	if(f->second->memberList.front().accountUID != playerAccountData[userID]->UID) return;
+	f->second->gameType = gameType;
+	if(stage != StageIndex(0) && !SetPartyStage(*f->second, stage)) WARN("[client%x] WARNING: stage %d not available for entry %d", clientHd, (i32)stage, (i32)f->second->entry);
 	const AccountFriends friends = AccountFriendsLoad(playerAccountData[userID]->nickname.data());
 	foreach_const(n, friends.friends) {
 		const i32 friendID = FindUserByNickname(*n);
@@ -1074,6 +1089,7 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 	party.areaIndex = areaID;
 	party.stageIndex = stageID;
 	party.mapIndex = mapID;
+	if(pendingPartyStageIndex[userID] != StageIndex(0)) SetPartyStage(party, pendingPartyStageIndex[userID]);
 
 	replication.SendPartyCreateSucess(clientHd, UserID(1), StageType::PVP_GAME);
 	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_IN_CREATION);

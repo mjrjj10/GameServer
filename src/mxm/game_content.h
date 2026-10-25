@@ -892,6 +892,7 @@ struct GameXmlContent
 	i32 GuildSkillValue(const char* key, i32 level) const;
 
 	bool FindQueueAreaStage(i32 entryID, AreaIndex* outAreaIndex, StageIndex* outStageIndex) const;
+	bool FindEntryStageArea(i32 entryID, StageIndex stage, AreaIndex* outAreaIndex) const;
 	bool FindStageMap(StageIndex stageID, MapIndex* outMapIndex) const;
 	const StageMaps* FindStageMaps(StageIndex stageID) const;
 	bool HasEntrySystem(i32 entryID) const;

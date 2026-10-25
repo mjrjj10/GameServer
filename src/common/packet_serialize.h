@@ -2442,6 +2442,7 @@ inline const char* PacketSerialize<In::HQ_PartyEnqueue>(const void* packetData, 
 	SER("	areaIndex=%d", (i32)packet.areaIndex);
 	SER("	stageIndex=%d", (i32)packet.stageIndex);
 	SER("	mapIndex=%d", (i32)packet.mapIndex);
+	SER("	teamSize=%d", (i32)packet.teamSize);
 	SER("}");
 
 	return str.data();

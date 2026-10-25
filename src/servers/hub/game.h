@@ -78,6 +78,7 @@ struct HubGame
 	struct PraiseCount { SortieUID sortieUID; WideString nickname; u32 count; };
 	eastl::fixed_vector<PraiseCount,64,true> praiseCounts;
 	eastl::array<GameType,MAX_PLAYERS> pendingPartyGameType;
+	eastl::array<StageIndex,MAX_PLAYERS> pendingPartyStageIndex;
 
 	eastl::fixed_vector<SpawnPoint,128> mapSpawnPoints;
 
@@ -110,7 +111,8 @@ struct HubGame
 	void OnPlayerJukeboxQueueSong(ClientHandle clientHd, SongID songID);
 	void OnPlayerReadyToLoad(ClientHandle clientHd);
 	void OnCreateParty(ClientHandle clientHd, EntrySystemID entry, StageType stageType);
-	void OnPartyModify(ClientHandle clientHd, GameType gameType);
+	void OnPartyModify(ClientHandle clientHd, StageIndex stage, GameType gameType);
+	bool SetPartyStage(Party& party, StageIndex stage);
 	void OnPartyInvite(ClientHandle clientHd, const wchar* nickname, i32 nicknameLen);
 	void OnPartyInviteAccept(ClientHandle clientHd, i32 partyID);
 	void OnPartyBreakUp(ClientHandle clientHd);

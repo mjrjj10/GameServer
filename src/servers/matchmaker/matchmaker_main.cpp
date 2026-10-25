@@ -11,6 +11,7 @@
 #include "config.h"
 
 static const f64 MATCHING_WAIT_SEC = 10.0;
+static const i32 MAX_TEAM_SIZE = 5;
 
 Server* g_Server = nullptr;
 Listener* g_Listener = nullptr;
@@ -67,6 +68,7 @@ struct Matchmaker
 		StageIndex stageIndex = StageIndex(0);
 		MapIndex mapIndex = MapIndex(0);
 		GameType gameType = GameType::PVP_NORMAL;
+		i32 teamSize = 0;
 
 		Party(PartyUID UID_): UID(UID_) {}
 	};
@@ -357,6 +359,7 @@ struct Matchmaker
 				party.stageIndex = packet.stageIndex;
 				party.mapIndex = packet.mapIndex;
 				party.gameType = packet.gameType;
+				party.teamSize = packet.teamSize;
 				matchingPartyList.push_back(packet.partyUID);
 
 				eastl::fixed_set<ClientHandle,5,false> setInstance;
@@ -517,11 +520,15 @@ struct Matchmaker
 		const Time now = TimeRelNow();
 		if(matchingStartTime == Time::ZERO) matchingStartTime = now;
 
+		const StageIndex roomStage = partyMap.at(matchingPartyList.front())->stageIndex;
+		const i32 frontTeamSize = partyMap.at(matchingPartyList.front())->teamSize;
+		const i32 teamSize = frontTeamSize > 0 ? MIN(frontTeamSize, MAX_TEAM_SIZE) : Config().TeamSize;
 		i32 humanCount = 0;
 		foreach_const(puid, matchingPartyList) {
-			humanCount += partyMap.at(*puid)->memberList.size();
+			const Party& party = *partyMap.at(*puid);
+			if(party.stageIndex == roomStage) humanCount += party.memberList.size();
 		}
-		if(!Config().SoloRooms && humanCount < Config().TeamSize * 2 && TimeDiffSec(TimeDiff(matchingStartTime, now)) < MATCHING_WAIT_SEC) return;
+		if(!Config().SoloRooms && humanCount < teamSize * 2 && TimeDiffSec(TimeDiff(matchingStartTime, now)) < MATCHING_WAIT_SEC) return;
 		matchingStartTime = Time::ZERO;
 		decltype(matchingPartyList) laterParties;
 		if(Config().SoloRooms) {
@@ -530,6 +537,14 @@ struct Matchmaker
 				matchingPartyList.pop_back();
 			}
 			humanCount = (i32)partyMap.at(matchingPartyList.front())->memberList.size();
+		}
+		else {
+			decltype(matchingPartyList) sameStage;
+			foreach_const(puid, matchingPartyList) {
+				if(partyMap.at(*puid)->stageIndex == roomStage) sameStage.push_back(*puid);
+				else laterParties.push_back(*puid);
+			}
+			matchingPartyList = sameStage;
 		}
 
 		const Party& firstParty = *partyMap.at(matchingPartyList.front());
@@ -550,13 +565,13 @@ struct Matchmaker
 
 		foreach_const(puid, matchingPartyList) {
 			const Party& party = *partyMap.at(*puid);
-			const i32 redFree = Config().TeamSize - (i32)room.teamRed.size();
-			const i32 blueFree = Config().TeamSize - (i32)room.teamBlue.size();
+			const i32 redFree = teamSize - (i32)room.teamRed.size();
+			const i32 blueFree = teamSize - (i32)room.teamBlue.size();
 			const i32 size = (i32)party.memberList.size();
 			const bool red = (redFree >= size && (blueFree < size || room.teamRed.size() <= room.teamBlue.size())) || (redFree < size && blueFree < size && redFree >= blueFree);
 			foreach_const(pl, party.memberList) {
-				if(room.teamRed.size() >= Config().TeamSize && room.teamBlue.size() >= Config().TeamSize) break;
-				const bool toRed = red ? room.teamRed.size() < Config().TeamSize : room.teamBlue.size() >= Config().TeamSize;
+				if(room.teamRed.size() >= teamSize && room.teamBlue.size() >= teamSize) break;
+				const bool toRed = red ? room.teamRed.size() < teamSize : room.teamBlue.size() >= teamSize;
 				Room::Player player(pl->name, pl->accountUID, pl->instanceChd);
 				player.team = toRed ? Team::RED : Team::BLUE;
 				room.playerList.push_back(player);
@@ -566,7 +581,7 @@ struct Matchmaker
 		}
 
 		i32 botID = 1;
-		while(room.teamRed.size() < Config().TeamSize) {
+		while(room.teamRed.size() < teamSize) {
 			Room::Player player(LFMT(L"Bot%d", botID++), AccountUID::INVALID, ClientHandle::INVALID);
 			player.team = Team::RED;
 			player.isBot = true;
@@ -574,7 +589,7 @@ struct Matchmaker
 			room.playerList.push_back(player);
 			room.teamRed.push_back(&room.playerList.back());
 		}
-		while(room.teamBlue.size() < Config().TeamSize) {
+		while(room.teamBlue.size() < teamSize) {
 			Room::Player player(LFMT(L"Bot%d", botID++), AccountUID::INVALID, ClientHandle::INVALID);
 			player.team = Team::BLUE;
 			player.isBot = true;

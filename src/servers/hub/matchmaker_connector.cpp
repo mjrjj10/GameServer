@@ -1,5 +1,6 @@
 #include "matchmaker_connector.h"
 #include <common/inner_protocol.h>
+#include <mxm/game_content.h>
 
 MatchmakerConnector* g_connector = nullptr;
 
@@ -85,6 +86,8 @@ void MatchmakerConnector::Update()
 					packet.stageIndex = q->PartyEnqueue.stageIndex;
 					packet.mapIndex = q->PartyEnqueue.mapIndex;
 					packet.gameType = q->PartyEnqueue.gameType;
+					const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(q->PartyEnqueue.stageIndex);
+					packet.teamSize = stage ? (u8)stage->joinMemberMax : 0;
 					conn.SendPacket(packet);
 				} break;
 

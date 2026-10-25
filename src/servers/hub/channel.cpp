@@ -692,8 +692,9 @@ void HubPacketHandler::HandlePacket_CQ_PartyModify(ClientHandle clientHd, const 
 	ConstBuffer buff(packetData, packetSize);
 	const u16 stageCount = buff.Read<u16>();
 	if(buff.CanRead((i32)stageCount * 4 + 4)) {
-		buff.ReadRaw((i32)stageCount * 4);
-		game->OnPartyModify(clientHd, (GameType)buff.Read<i32>());
+		const StageIndex stage = stageCount > 0 ? (StageIndex)buff.Read<i32>() : StageIndex(0);
+		if(stageCount > 1) buff.ReadRaw((i32)(stageCount - 1) * 4);
+		game->OnPartyModify(clientHd, stage, (GameType)buff.Read<i32>());
 	}
 
 	Sv::SA_PartyModify packet;

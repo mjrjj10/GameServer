@@ -1251,6 +1251,26 @@ bool GameXmlContent::HasEntrySystem(i32 entryID) const
 	return false;
 }
 
+bool GameXmlContent::FindEntryStageArea(i32 entryID, StageIndex stage, AreaIndex* outAreaIndex) const
+{
+	foreach_const(entry, entrySystems) {
+		if(entry->ID != entryID) continue;
+		for(int pass = 0; pass < 2; pass++) {
+			const auto& areas = pass == 0 ? entry->areas : entry->scheduleAreas;
+			foreach_const(areaID, areas) {
+				foreach_const(area, areaStages) {
+					if(area->ID != *areaID) continue;
+					if(eastl::find(area->stages.begin(), area->stages.end(), stage) == area->stages.end()) continue;
+					*outAreaIndex = area->ID;
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	return false;
+}
+
 bool GameXmlContent::FindQueueAreaStage(i32 entryID, AreaIndex* outAreaIndex, StageIndex* outStageIndex) const
 {
 	for(auto& entry : entrySystems) {

@@ -111,6 +111,7 @@ struct HQ_PartyEnqueue
 	StageIndex stageIndex;
 	MapIndex mapIndex;
 	GameType gameType;
+	u8 teamSize;
 };
 
 PUSH_PACKED
