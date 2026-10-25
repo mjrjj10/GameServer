@@ -124,7 +124,7 @@ void World::CounterAttack(Player& attacker, Player& target, bool weaponHit)
 
 void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 damage, const Projectile* proj, u32 remoteID, RemoteIdx remoteDoc, vec2 remoteDir)
 {
-	if(target.dead || target.untargetable) return;
+	if(frozen || target.dead || target.untargetable) return;
 	if(attacker.index != target.index) {
 		attacker.lastHitTargetIndex = (i32)target.index;
 		attacker.lastHitAt = localTime;
