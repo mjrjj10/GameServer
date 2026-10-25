@@ -6,6 +6,8 @@
 
 #include <mxm/game_content.h>
 #include "config.h"
+#include "world_master_rules.h"
+#include <mxm/account_progress.h>
 
 static const f32 STAGE_TIME_LIMIT_FALLBACK_SEC = 300.0f;
 static const f64 RETURN_TO_LOBBY_DELAY_SEC = 20.0;
@@ -658,6 +660,20 @@ void Game::EndGame()
 		if(p.team == 0) red += p.kills; else blue += p.kills;
 	}
 	LOG("Game :: time over, red %d - blue %d", red, blue);
+	const f64 playSec = TimeDiffSec(TimeDiff(tGameStarted, localTime));
+	const u32 minutes = (u32)(playSec / 60.0);
+	const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(replication.stageIndex);
+	const PvpRewardRule& rule = FindPvpRewardRule(stage ? stage->joinMemberMax : 0);
+	foreach(e, list) {
+		if(e->clientHd == ClientHandle::INVALID) continue;
+		const i32 own = e->team == 0 ? red : blue;
+		const i32 other = e->team == 0 ? blue : red;
+		const bool won = own > other;
+		e->gold = minutes * (won ? rule.winGoldPerMin : rule.loseGoldPerMin);
+		e->exp = minutes * (won ? rule.winExpPerMin : rule.loseExpPerMin);
+		AccountRewardAppend(e->name, e->gold, e->exp);
+		LOG("Game :: %ls reward %u gold %u exp (%u min, %s)", e->name, e->gold, e->exp, minutes, won ? "win" : (own == other ? "draw" : "loss"));
+	}
 	replication.SendGameEnd(list.data(), (i32)list.size(), red, blue, (u32)(TimeDiffSec(TimeDiff(tGameStarted, localTime)) * 1000.0));
 }
 

@@ -786,7 +786,14 @@ struct GameXmlContent
 		i32 step;
 	};
 
+	struct ExpLevel
+	{
+		u32 required = 0;
+		u32 gold = 0;
+	};
+
 	eastl::fixed_vector<Mission,256,false> missions;
+	eastl::fixed_vector<ExpLevel,1024,false> expLevels;
 	eastl::fixed_vector<EntrySystem,32,false> entrySystems;
 	eastl::fixed_vector<AreaStages,64,false> areaStages;
 	eastl::fixed_vector<StageMaps,512,false> stageMaps;
@@ -991,6 +998,7 @@ private:
 	bool LoadMasterDefinitions();
 	bool LoadEntrySystems();
 	bool LoadMissions();
+	bool LoadExpInfo();
 	bool LoadStageMaps();
 	bool LoadBotCreatures();
 

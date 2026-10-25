@@ -301,6 +301,29 @@ static inline const HitRecoverRule* FindHitRecoverRule(i32 status)
 
 static const i32 MEASURED_BOT_SKILL_FIRST_UPGRADES = 6;
 
+struct PvpRewardRule
+{
+	i32 minTeamSize;
+	u32 winGoldPerMin;
+	u32 winExpPerMin;
+	u32 loseGoldPerMin;
+	u32 loseExpPerMin;
+};
+
+static const PvpRewardRule MEASURED_PVP_REWARDS[] = {
+	{ 5, 15, 100, 10, 70 },
+	{ 0, 12, 80, 8, 56 },
+};
+
+static inline const PvpRewardRule& FindPvpRewardRule(i32 teamSize)
+{
+	for(const PvpRewardRule& rule : MEASURED_PVP_REWARDS) {
+		if(teamSize >= rule.minTeamSize) return rule;
+	}
+	ASSERT(0);
+	return MEASURED_PVP_REWARDS[0];
+}
+
 struct ChargeHoldRule
 {
 	SkillID skill;

@@ -11,6 +11,7 @@ struct Account
 	i32 leaderMasterID;
 	u16 level = 1;
 	u32 levelExp = 0;
+	i64 gold = 0;
 
 	// TODO: add to this
 

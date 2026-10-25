@@ -343,6 +343,8 @@ struct Replication
 		i32 kills;
 		i32 deaths;
 		CreatureIndex masters[2];
+		u32 gold = 0;
+		u32 exp = 0;
 	};
 	void SendGameEnd(const EndPlayer* players, i32 count, i32 redScore, i32 blueScore, u32 playTimeMs);
 	void SendGaugeToAll(UserID userID, u8 updateType, bool overheated, f32 overheatTime, u16 gauge, u16 maxGauge);

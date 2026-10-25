@@ -2,6 +2,7 @@
 #include <common/packet_validator.h>
 #include <common/inner_protocol.h>
 #include <mxm/game_content.h>
+#include <mxm/account_progress.h>
 #include <zlib.h>
 #include <EAStdC/EAString.h>
 #include <EAStdC/EASprintf.h>
@@ -699,6 +700,25 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 	if(f != -1) {
 		account.nickname = account.nickname.left(f);
 	}
+
+	AccountProgress progress = AccountProgressLoad(account.nickname.data());
+	const AccountReward reward = AccountRewardTake(account.nickname.data());
+	if(reward.games > 0) {
+		const auto& levels = GetGameXmlContent().expLevels;
+		progress.gold += reward.gold;
+		progress.levelExp += reward.exp;
+		while(progress.level + 1 < (i32)levels.size() && levels[progress.level].required > 0 && progress.levelExp >= levels[progress.level].required) {
+			progress.levelExp -= levels[progress.level].required;
+			progress.level++;
+			progress.gold += levels[progress.level].gold;
+			LOG("[client%x] Account :: %ls reaches level %u", clientHd, account.nickname.data(), (u32)progress.level);
+		}
+		LOG("[client%x] Account :: %ls rewards of %d game(s): %lld gold, %u exp -> level %u (%u exp), %lld gold", clientHd, account.nickname.data(), reward.games, reward.gold, reward.exp, (u32)progress.level, progress.levelExp, progress.gold);
+	}
+	AccountProgressSave(account.nickname.data(), progress);
+	account.level = progress.level;
+	account.levelExp = progress.levelExp;
+	account.gold = progress.gold;
 
 	accChdMap.emplace(accountUID, clientHd);
 	clientAccountUID[clientID] = accountUID;

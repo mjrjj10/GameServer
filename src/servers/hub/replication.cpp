@@ -771,7 +771,7 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 
 	// SN_Money
 	Sv::SN_Money money;
-	money.nMoney = 116472;
+	money.nMoney = account.gold;
 	money.nReason = 1;
 	SendPacket(clientHd, money);
 

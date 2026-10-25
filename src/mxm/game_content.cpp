@@ -961,6 +961,28 @@ bool GameXmlContent::LoadMissions()
 	return true;
 }
 
+bool GameXmlContent::LoadExpInfo()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/Design/GAMEINFO/ExpInfo.xml", doc)) return false;
+	XMLElement* pTable = doc.FirstChildElement()->FirstChildElement("ST_EXP_INFO");
+	ASSERT(pTable);
+	for(XMLElement* pLevel = pTable->FirstChildElement("EXP_INFO"); pLevel; pLevel = pLevel->NextSiblingElement("EXP_INFO")) {
+		i32 level = 0;
+		if(pLevel->QueryIntAttribute("DATAKEY", &level) != XML_SUCCESS || level <= 0) continue;
+		ASSERT(level < (i32)expLevels.capacity());
+		if((i32)expLevels.size() <= level) expLevels.resize(level + 1);
+		ExpLevel& info = expLevels[level];
+		pLevel->QueryUnsignedAttribute("_RequiredExp", &info.required);
+		for(XMLElement* pReward = pLevel->FirstChildElement("_Reward"); pReward; pReward = pReward->NextSiblingElement("_Reward")) {
+			const char* type = pReward->Attribute("_Type");
+			if(type && EA::StdC::Strcmp(type, "GOLD") == 0) info.gold += pReward->UnsignedAttribute("_Amount", 0);
+		}
+	}
+	LOG("Loaded %d account levels", (i32)expLevels.size() - 1);
+	return true;
+}
+
 bool GameXmlContent::LoadEntrySystems()
 {
 	XMLDocument docEntry;
@@ -2007,6 +2029,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadMissions();
+	if(!r) return false;
+
+	r = LoadExpInfo();
 	if(!r) return false;
 
 	r = LoadStageMaps();

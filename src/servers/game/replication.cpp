@@ -1009,9 +1009,9 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 		res.Write<TeamType>(TeamType::BLUE);
 		res.Write<u32>(blueResult);
 		res.Write<u32>((u32)players[i].userID);
-		res.Write<u32>(0);
+		res.Write<u32>(players[i].gold);
 		res.Write<u16>(0);
-		res.Write<u32>(0);
+		res.Write<u32>(players[i].exp);
 		res.Write<u16>(0);
 		res.Write<u16>(0);
 		for(int z = 0; z < 15; z++) res.Write<u8>(0);
