@@ -951,6 +951,12 @@ public:
 	eastl::hash_map<i32,i32> deadCounts;
 	eastl::fixed_vector<i32,32,true> hpTriggersFired;
 	i32 winnerTeam = -1;
+	struct TeamVote { bool active = false; u32 type = 0; i32 requestor = -1; Time endAt = Time::ZERO; Time cooldownUntil = Time::ZERO; eastl::array<i8,10> choices; };
+	eastl::array<TeamVote,2> teamVotes;
+	void RequestVote(Player& player, u32 type);
+	void CastVote(Player& player, u32 choice);
+	void UpdateVotes();
+	void FinishVote(i32 team, bool passed);
 	void UpdateBoundTriggers();
 	void OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos);
 	bool LevelTriggerActive(const GameXmlContent::LevelEventNode& node) const;

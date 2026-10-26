@@ -114,6 +114,8 @@ struct Game
 	void OnPlayerSyncTeleport(ClientHandle clientHd, ActorUID actorUID, const vec3& pos);
 	void OnTraitUpgrade(ClientHandle clientHd, ActorUID characterUID, const u8* indices, i32 count);
 	void OnTraitReset(ClientHandle clientHd, ActorUID characterUID);
+	void OnRequestVote(ClientHandle clientHd, u32 type);
+	void OnVote(ClientHandle clientHd, u32 choice);
 	void OnPlayerSkillUpgrade(ClientHandle clientHd, i32 slot);
 	void OnPlayerTakeGroundItem(ClientHandle clientHd, u32 itemUID);
 	void OnClientRemoteCreated(ClientHandle clientHd, u32 seed, RemoteIdx doc);

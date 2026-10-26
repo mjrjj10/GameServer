@@ -1627,6 +1627,37 @@ void Replication::SendCharacterPropertyInfoToAll(ActorUID character, const eastl
 	}
 }
 
+void Replication::SendRequestVoting(ClientHandle clientHd, UserID requestor, u32 type, u32 periodMs, i32 voters, bool modify)
+{
+	Sv::SN_RequestVoting packet;
+	packet.requestorUsn = (u32)requestor;
+	packet.votingType = type;
+	packet.period = periodMs;
+	packet.voterCount = (u32)voters;
+	packet.isModify = modify ? 1 : 0;
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendVote(ClientHandle clientHd, u32 type, u32 choice)
+{
+	Sv::SN_Vote packet;
+	packet.votingType = type;
+	packet.voteType = choice;
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendVotingResult(ClientHandle clientHd, UserID candidate, u32 type, u32 state, u32 reason, u32 playerCool, u32 teamCool)
+{
+	Sv::SN_VotingResult packet;
+	packet.candidateUsn = (u32)candidate;
+	packet.votingType = type;
+	packet.votingStateType = state;
+	packet.votingResultReasonType = reason;
+	packet.playerCoolTime = playerCool;
+	packet.teamCoolTime = teamCool;
+	SendPacket(clientHd, packet);
+}
+
 void Replication::SendSafeZone(ClientHandle clientHd, UserID userID, bool inside)
 {
 	Sv::SN_NotifyIsInSafeZone packet;

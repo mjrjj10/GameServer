@@ -79,6 +79,16 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 			const u8* indices = (const u8*)buff.ReadRaw(count);
 			game->OnTraitUpgrade(clientHd, replication->GetWorldActorUID(clientHd, local), indices, count);
 		} break;
+		case Cl::CQ_RequestVoting::NET_ID: {
+			NT_LOG("[client%x] Client :: request voting size=%d", clientHd, packetSize);
+			if(packetSize < 4) break;
+			game->OnRequestVote(clientHd, *(const u32*)packetData);
+		} break;
+		case Cl::CQ_Vote::NET_ID: {
+			NT_LOG("[client%x] Client :: vote size=%d", clientHd, packetSize);
+			if(packetSize < 8) break;
+			game->OnVote(clientHd, *(const u32*)(packetData + 4));
+		} break;
 		case TRAIT_RESET_NET_ID: {
 			NT_LOG("[client%x] Client :: trait reset size=%d", clientHd, packetSize);
 			ConstBuffer buff(packetData, packetSize);

@@ -410,6 +410,9 @@ struct Replication
 	void SendCharacterPropertyResetToAll(ActorUID character);
 	void SendTraitAnswer(ClientHandle clientHd, bool reset, u32 error);
 	void SendSafeZone(ClientHandle clientHd, UserID userID, bool inside);
+	void SendRequestVoting(ClientHandle clientHd, UserID requestor, u32 type, u32 periodMs, i32 voters, bool modify);
+	void SendVote(ClientHandle clientHd, u32 type, u32 choice);
+	void SendVotingResult(ClientHandle clientHd, UserID candidate, u32 type, u32 state, u32 reason, u32 playerCool, u32 teamCool);
 	void SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed);
 	void SendNpcLegStartToAll(ActorUID actorUID, const vec3& pos, const vec3& goal);
 	void SendNpcLegStopToAll(ActorUID actorUID, const vec3& pos, f32 worldYaw);

@@ -751,6 +751,20 @@ void Game::OnTraitUpgrade(ClientHandle clientHd, ActorUID characterUID, const u8
 	replication.SendTraitAnswer(clientHd, false, error);
 }
 
+void Game::OnRequestVote(ClientHandle clientHd, u32 type)
+{
+	auto found = playerMap.find(clientHd);
+	if(found == playerMap.end()) return;
+	world.RequestVote(world.GetPlayer(found->second->playerIndex), type);
+}
+
+void Game::OnVote(ClientHandle clientHd, u32 choice)
+{
+	auto found = playerMap.find(clientHd);
+	if(found == playerMap.end()) return;
+	world.CastVote(world.GetPlayer(found->second->playerIndex), choice);
+}
+
 void Game::OnTraitReset(ClientHandle clientHd, ActorUID characterUID)
 {
 	auto found = playerMap.find(clientHd);

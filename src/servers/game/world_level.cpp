@@ -190,6 +190,88 @@ u32 World::ResetTraits(Player& player, ActorUID characterUID)
 	return 0;
 }
 
+static const u32 VOTE_TYPE_SURRENDER = 0;
+static const f64 VOTE_SURRENDER_PERIOD_MS = 30000.0;
+static const f64 VOTE_SURRENDER_FAIL_COOLDOWN_MS = 90000.0;
+static const u32 VOTE_STATE_PASSED = 1;
+static const u32 VOTE_STATE_FAILED = 2;
+static const u32 VOTE_REASON_PASSED = 1;
+static const u32 VOTE_REASON_REJECTED = 2;
+static const i8 VOTE_YES = 0;
+static const i8 VOTE_NONE = -1;
+
+void World::RequestVote(Player& player, u32 type)
+{
+	if(type != VOTE_TYPE_SURRENDER || winnerTeam >= 0 || gameStartedAt == Time::ZERO) return;
+	if(TimeDiffMs(TimeDiff(gameStartedAt, localTime)) < (f64)replication->surrenderAbleTime) return;
+	TeamVote& vote = teamVotes[player.team];
+	if(vote.active || localTime < vote.cooldownUntil) return;
+	vote.active = true;
+	vote.type = type;
+	vote.requestor = (i32)player.index;
+	vote.endAt = TimeAdd(localTime, TimeMsToTime(VOTE_SURRENDER_PERIOD_MS));
+	vote.choices.fill(VOTE_NONE);
+	i32 voters = 0;
+	foreach(p, players) {
+		if(p->team != player.team) continue;
+		voters++;
+		if(p->index == player.index || p->clientHd == ClientHandle::INVALID) vote.choices[p->index] = VOTE_YES;
+	}
+	foreach(p, players) {
+		if(p->team == player.team && p->clientHd != ClientHandle::INVALID) replication->SendRequestVoting(p->clientHd, player.userID, type, (u32)VOTE_SURRENDER_PERIOD_MS, voters, false);
+	}
+	foreach(voter, players) {
+		if(voter->team != player.team || vote.choices[voter->index] != VOTE_YES) continue;
+		foreach(p, players) {
+			if(p->team == player.team && p->clientHd != ClientHandle::INVALID) replication->SendVote(p->clientHd, type, (u32)VOTE_YES);
+		}
+	}
+	LOG("Vote :: %ls asks team %d to surrender", player.name.data(), (i32)player.team);
+	UpdateVotes();
+}
+
+void World::CastVote(Player& player, u32 choice)
+{
+	TeamVote& vote = teamVotes[player.team];
+	if(!vote.active || vote.choices[player.index] != VOTE_NONE) return;
+	vote.choices[player.index] = (i8)choice;
+	foreach(p, players) {
+		if(p->team == player.team && p->clientHd != ClientHandle::INVALID) replication->SendVote(p->clientHd, vote.type, choice);
+	}
+	UpdateVotes();
+}
+
+void World::FinishVote(i32 team, bool passed)
+{
+	TeamVote& vote = teamVotes[team];
+	vote.active = false;
+	if(!passed) vote.cooldownUntil = TimeAdd(localTime, TimeMsToTime(VOTE_SURRENDER_FAIL_COOLDOWN_MS));
+	const UserID requestor = vote.requestor >= 0 ? players[vote.requestor].userID : UserID(0);
+	foreach(p, players) {
+		if(p->team == team && p->clientHd != ClientHandle::INVALID) replication->SendVotingResult(p->clientHd, requestor, vote.type, passed ? VOTE_STATE_PASSED : VOTE_STATE_FAILED, passed ? VOTE_REASON_PASSED : VOTE_REASON_REJECTED, 0, passed ? 0 : (u32)VOTE_SURRENDER_FAIL_COOLDOWN_MS);
+	}
+	LOG("Vote :: team %d surrender %s", team, passed ? "passed" : "rejected");
+	if(passed && winnerTeam < 0) winnerTeam = team == 0 ? 1 : 0;
+}
+
+void World::UpdateVotes()
+{
+	for(i32 team = 0; team < 2; team++) {
+		TeamVote& vote = teamVotes[team];
+		if(!vote.active) continue;
+		i32 voters = 0, yes = 0, no = 0;
+		foreach_const(p, players) {
+			if(p->team != team) continue;
+			voters++;
+			if(vote.choices[p->index] == VOTE_YES) yes++;
+			else if(vote.choices[p->index] != VOTE_NONE) no++;
+		}
+		const i32 needed = voters <= 3 ? voters : voters - 1;
+		if(yes >= needed) FinishVote(team, true);
+		else if(voters - no < needed || localTime >= vote.endAt) FinishVote(team, false);
+	}
+}
+
 u32 World::KillPoints() const
 {
 	return map && map->ingameLevels ? (u32)GetGameXmlContent().ingameLevel.killPoints : 1;
@@ -217,6 +299,7 @@ void World::GrantMonsterKillPoints(const ActorNpc& npc, ActorUID killerUID)
 
 void World::UpdateIngameLevels()
 {
+	UpdateVotes();
 	if(!map || !map->ingameLevels || frozen || nextPassiveExpAt == Time::ZERO || localTime < nextPassiveExpAt) return;
 	const GameXmlContent::IngameLevelInfo& info = GetGameXmlContent().ingameLevel;
 	nextPassiveExpAt = TimeAdd(nextPassiveExpAt, TimeMsToTime(info.passivePeriod * 1000.0));
