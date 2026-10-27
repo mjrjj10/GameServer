@@ -574,6 +574,9 @@ World::ActorMasterHandle World::MasterInvalidHandle()
 	return actorMasterList.end();
 }
 
+static const f64 CAST_LOCK_MS = 500.0;
+static const i32 ULTIMATE_SKILL_SUFFIX = 50;
+
 void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPosIn, Slice<const ActorUID> targets, f32 clientTime, ActionStateID forcedAction)
 {
 	const SkillID skillID = ResolveComboRecast(player, skillIn, forcedAction);
@@ -876,6 +879,8 @@ bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos
 		}
 	}
 	if(!PlayerPaySkillCost(player, (i32)skillID)) return false;
+	player.castLockUntil = TimeAdd(localTime, TimeMsToTime(CAST_LOCK_MS));
+	if((i32)skillID % 100 == ULTIMATE_SKILL_SUFFIX) player.ultCooldownUntil = TimeAdd(localTime, TimeMsToTime(GetGameXmlContent().GetSkillCoolTime((i32)skillID) * 1000.0));
 	if(castCostLevel) {
 		for(i32 r = 0; r < 3; r++) {
 			if(castCostLevel->consume[r] > 0 && player.res[r] >= 0) { player.res[r] -= castCostLevel->consume[r]; player.resDirty = true; }

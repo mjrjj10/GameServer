@@ -177,6 +177,18 @@ void World::UpdateUltimateGauges(f32 delta)
 
 		const ActorUID mainUID = it->Main().UID;
 		if(it->ultDirty) replication->SendStatToAll(mainUID, (i32)StatType::STAT_TYPE_ULTIMATE, it->ultGauge, ultMax);
+		if(replication->titanMode) {
+			SkillID ult = SkillID::INVALID;
+			foreach_const(sid, GetGameXmlContent().GetMaster(it->Main().classType).skillIDs) if((i32)*sid % 100 == ULTIMATE_SKILL_ID_SUFFIX) ult = *sid;
+			auto learned = it->skillLevels.find((i32)ult);
+			const i8 ready = (learned != it->skillLevels.end() && learned->second > 0 && localTime >= it->ultCooldownUntil && localTime >= it->castLockUntil) ? 1 : 0;
+			if(ready != it->ultReadySent) {
+				it->ultReadySent = ready;
+				foreach_const(mate, players) {
+					if(mate->clientHd != ClientHandle::INVALID && mate->team == it->team) replication->SendUltReady(mate->clientHd, mainUID, ready != 0);
+				}
+			}
+		}
 		if(it->staminaDirty && staminaMax > 0) replication->SendStatToAll(mainUID, STAT_STAMINA, it->stamina, staminaMax);
 		if(it->manaDirty && manaMax > 0) replication->SendStatToAll(mainUID, STAT_MANA, it->mana, manaMax);
 		if(it->resDirty) {

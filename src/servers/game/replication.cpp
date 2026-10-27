@@ -2158,6 +2158,14 @@ void Replication::SendHideDetect(ClientHandle clientHd, ActorUID detectorUID, Ac
 	SendPacket(clientHd, packet);
 }
 
+void Replication::SendUltReady(ClientHandle clientHd, ActorUID actorUID, bool ready)
+{
+	Sv::SN_UpdateCanCastSkillSlotUg packet;
+	packet.playerID = (u32)GetLocalActorID(clientHd, actorUID);
+	packet.canCastSkillSlotUG = ready ? 1 : 0;
+	SendPacket(clientHd, packet);
+}
+
 void Replication::SendTagCooltime(ClientHandle clientHd, ActorUID actorUID, u32 ms)
 {
 	Sv::SN_UpdateGamePlayerTagCooltime packet;

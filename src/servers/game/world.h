@@ -204,6 +204,9 @@ struct World
 		Time botStageSkillReady = Time::ZERO;
 		ActorUID botAimTarget = ActorUID::INVALID;
 		f32 ultGauge = -1.0f;
+		i8 ultReadySent = -1;
+		Time ultCooldownUntil = Time::ZERO;
+		Time castLockUntil = Time::ZERO;
 		f32 stamina = -1.0f;
 		f32 benchStamina = -1.0f;
 		f32 mana = -1.0f;
