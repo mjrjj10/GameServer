@@ -25,6 +25,8 @@ static const u32 PVP_ANNOUNCE_MULTI_KILL = 3;
 static const u32 PVP_ANNOUNCE_KILL_STREAK = 4;
 static const u32 PVP_ANNOUNCE_TEAM_ALL_DEAD = 6;
 static const u32 PVP_ANNOUNCE_SHUTDOWN = 7;
+static const u32 PVP_ANNOUNCE_KILLED_BY_MONSTER = 8;
+
 static const f64 MULTI_KILL_WINDOW_MS = 15000.0;
 static const f64 DEAD_DAMAGE_WINDOW_MS = 15000.0;
 static const f32 PENETRATION_CAP = 50.0f;
@@ -537,4 +539,5 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	target.recentDamage.clear();
 	LOG("Death :: %ls killed by creature %d (respawn %d ms)", target.name.data(), (i32)attacker.docID, respawnMs);
 	replication->SendDeathToAll(attacker.UID, chara.UID, attacker.docID, 0, (RemoteIdx)remote, target.userID, respawnMs);
+	if(replication->titanMode) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_KILLED_BY_MONSTER, 0, attacker.UID, chara.UID, KillPoints());
 }

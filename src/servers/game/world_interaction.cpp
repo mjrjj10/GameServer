@@ -352,8 +352,16 @@ void World::OnMonsterDeath(ActorNpc& npc, ActorUID killerUID)
 	}
 }
 
+static const u32 PVP_ANNOUNCE_CORE_ATTACKED = 15;
+static const f64 CORE_ANNOUNCE_INTERVAL_MS = 1000.0;
+
 void World::OnMonsterDamaged(ActorNpc& npc, i32 hpBefore)
 {
+	static const u32 coreTag = StatusTypeKey("Core");
+	if(npc.monsterAi && npc.monsterAi->tagKey == coreTag && npc.hp > 0 && npc.hp < hpBefore && localTime >= npc.coreAnnounceAt) {
+		npc.coreAnnounceAt = TimeAdd(localTime, TimeMsToTime(CORE_ANNOUNCE_INTERVAL_MS));
+		replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_CORE_ATTACKED, 0, npc.UID, ActorUID::INVALID, (u32)npc.hp);
+	}
 	if(npc.monsterAi && npc.hp > 0 && npc.hpMax > 0) {
 		const auto& buffs = npc.monsterAi->hpBuffs;
 		while(npc.hpBuffLevel < buffs.size() && (f32)npc.hp <= buffs[npc.hpBuffLevel].first * npc.hpMax) {
@@ -483,7 +491,10 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 			return;
 		}
 		case GameXmlContent::LevelEventNode::CALL_SFX: replication->SendClientLevelEventToAll(node->id); break;
-		case GameXmlContent::LevelEventNode::CLIENT_EVENT: replication->SendClientLevelEventToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID); break;
+		case GameXmlContent::LevelEventNode::CLIENT_EVENT:
+			replication->SendClientLevelEventToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID);
+			if(node->initTagCool && playerIndex >= 0) SendTagCooltimeToTeam(players[playerIndex], 0);
+			break;
 		case GameXmlContent::LevelEventNode::CALL_ITEM: SpawnGroundItems(node->dropIndex, node->areaID, node->tagID); break;
 		case GameXmlContent::LevelEventNode::STATUS_CHANGE: {
 			if(node->applyType == GameXmlContent::LevelEventNode::APPLY_MY_CHAR) {

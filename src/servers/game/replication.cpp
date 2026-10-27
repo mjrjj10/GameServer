@@ -2158,6 +2158,14 @@ void Replication::SendHideDetect(ClientHandle clientHd, ActorUID detectorUID, Ac
 	SendPacket(clientHd, packet);
 }
 
+void Replication::SendTagCooltime(ClientHandle clientHd, ActorUID actorUID, u32 ms)
+{
+	Sv::SN_UpdateGamePlayerTagCooltime packet;
+	packet.playerID = (u32)GetLocalActorID(clientHd, actorUID);
+	packet.tagCooltimeMS = ms;
+	SendPacket(clientHd, packet);
+}
+
 void Replication::SendLightArea(ClientHandle clientHd, bool on, u32 cell, u8 team, u8 radius)
 {
 	if(on) {

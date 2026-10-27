@@ -613,6 +613,7 @@ struct GameXmlContent
 		ApplyType applyType = APPLY_OTHER;
 		bool apply = true;
 		bool resetAfter = false;
+		bool initTagCool = false;
 		bool ownTeamOnly = false;
 		f32 hpPercent = 0;
 		i32 aiIndex = 0;

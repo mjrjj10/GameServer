@@ -1095,6 +1095,22 @@ static const u8 LIGHT_RADIUS_CELLS = 2;
 static const f64 LIGHT_DURATION_MS = 3000.0;
 static const u8 NETWORK_TEAM_BASE = 3;
 
+static const f32 TAG_COOLTIME_FLOOR_SEC = 5.0f;
+
+u32 World::TagCooltimeMs(const Player& owner) const
+{
+	const f32 mul = MAX(1.0f + StatusRegenBonus(owner, StatusMod::TAG_COOLTIME, true) / 100.0f, 0.0f);
+	return (u32)(MAX(MasterStat(owner.Sub().classType, STAT_TAG_COOLTIME) * mul, TAG_COOLTIME_FLOOR_SEC) * 1000.0f + 0.5f);
+}
+
+void World::SendTagCooltimeToTeam(const Player& owner, u32 ms)
+{
+	if(!replication->titanMode) return;
+	foreach_const(p, players) {
+		if(p->clientHd != ClientHandle::INVALID && p->team == owner.team) replication->SendTagCooltime(p->clientHd, owner.Sub().UID, ms);
+	}
+}
+
 void World::LightAttacker(const vec3& attackerPos, i32 victimTeam)
 {
 	if(!replication->titanMode || victimTeam < 0 || victimTeam > 1) return;

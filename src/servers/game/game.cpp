@@ -191,6 +191,7 @@ void Game::Update(Time localTime_)
 				if(!Config().DevShowcase) world.gameStartedAt = localTime;
 				world.ApplyAllPassives();
 				world.StartSkillPoints();
+				foreach_const(p, world.players) world.SendTagCooltimeToTeam(*p, 0);
 				world.StartTimeRecord();
 				world.StartIngameLevels();
 			}

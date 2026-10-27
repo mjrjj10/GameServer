@@ -462,6 +462,7 @@ struct World
 		Time monsterNextAttack = Time::ZERO;
 		eastl::array<Time,24> monsterSkillReady = {};
 		Time monsterNextSearch = Time::ZERO;
+		Time coreAnnounceAt = Time::ZERO;
 		Time monsterNextSync = Time::ZERO;
 		bool monsterReturning = false;
 
@@ -1094,6 +1095,8 @@ public:
 	void UpdateNpcFog();
 	void RevealToTeam(Player& player, i32 team);
 	void LightAttacker(const vec3& attackerPos, i32 victimTeam);
+	void SendTagCooltimeToTeam(const Player& owner, u32 ms);
+	u32 TagCooltimeMs(const Player& owner) const;
 	void UpdateLitCells();
 	struct LitCell { u32 cell; u8 team; Time until; };
 	eastl::fixed_vector<LitCell,512,true> litCells;

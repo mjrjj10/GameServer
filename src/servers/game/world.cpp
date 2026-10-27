@@ -138,6 +138,7 @@ void World::Update(Time localTime_)
 			p.ultDirty = true;
 			p.regenResend = true;
 			if(!p.dead) ApplyStatus(p, p, STATUS_PC_TAG_GODMODE);
+			SendTagCooltimeToTeam(p, TagCooltimeMs(p));
 		}
 
 		// cast skills

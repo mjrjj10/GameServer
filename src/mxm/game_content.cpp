@@ -3732,7 +3732,7 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(XMLElement* e = pNode->FirstChildElement("_TakeItemTriggerData")) { node.kind = LevelEventNode::TAKE_ITEM; node.tagID = e->IntAttribute("_TagID", -1); }
 		else if(XMLElement* e = pNode->FirstChildElement("_DelaySeqInfo")) { node.kind = LevelEventNode::DELAY; node.delay = e->FloatAttribute("_DelayTime"); node.variance = e->FloatAttribute("_RandomDelayTimeVariance"); }
 		else if(pNode->FirstChildElement("_CallSFXInfo")) node.kind = LevelEventNode::CALL_SFX;
-		else if(pNode->FirstChildElement("_InitCoolTime")) node.kind = LevelEventNode::CLIENT_EVENT;
+		else if(XMLElement* e = pNode->FirstChildElement("_InitCoolTime")) { node.kind = LevelEventNode::CLIENT_EVENT; node.initTagCool = e->IntAttribute("_CharacterTag") != 0; }
 		else if(XMLElement* e = pNode->FirstChildElement("_CallItemInfo")) { node.kind = LevelEventNode::CALL_ITEM; node.dropIndex = e->IntAttribute("_Index"); node.areaID = e->IntAttribute("_SpawnAreaID"); node.tagID = e->IntAttribute("_TagID", -1); }
 		else if(XMLElement* e = pNode->FirstChildElement("_BoundTriggerData")) { node.kind = LevelEventNode::BOUND_TRIGGER; node.areaID = e->IntAttribute("_AreaID"); node.enter = e->IntAttribute("_IsEnter") == 1; node.active = e->IntAttribute("_Active") == 1; node.retrigger = e->FloatAttribute("_RetriggerDelay"); const char* trigger = e->Attribute("_TrigerType"); node.ownTeamOnly = trigger && EA::StdC::Strcmp(trigger, "TRIGER_MEMBERSHIP_OWN") == 0; }
 		else if(XMLElement* e = pNode->FirstChildElement("_StatusChangeInfo")) {

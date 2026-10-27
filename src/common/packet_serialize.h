@@ -3208,6 +3208,7 @@ DEFAULT_SERIALIZE(Sv::SN_StageSkillSelect);
 DEFAULT_SERIALIZE(Sv::SN_BushObjectState);
 DEFAULT_SERIALIZE(Sv::SN_LightOnArea);
 DEFAULT_SERIALIZE(Sv::SN_LightOffArea);
+DEFAULT_SERIALIZE(Sv::SN_UpdateGamePlayerTagCooltime);
 #undef DEFAULT_SERIALIZE
 
 template<>
