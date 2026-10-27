@@ -236,7 +236,17 @@ void World::UpdateMonsterAi(f32 delta)
 			LOG("Monster :: creature=%d (local %d) wakes up", (i32)npc.docID, npc.localID);
 			continue;
 		}
-		if(targetPos && localTime < npc.monsterHoldUntil) continue;
+		if(npc.monsterWeakUntil != Time::ZERO && localTime >= npc.monsterWeakUntil) {
+			npc.monsterWeakUntil = Time::ZERO;
+			if(npc.monsterWeakHit && ai.groggyChance > 0 && (f32)(RandUint() % 10000) < ai.groggyChance * 10000.0f) {
+				LOG("Monster :: creature=%d (local %d) is groggy", (i32)npc.docID, npc.localID);
+				npc.actionState = ActionStateID::DEFEAT_GROGGY_BEHAVIORSTATE;
+				replication->SendMonsterStateToAll(npc.UID, ActionStateID::DEFEAT_GROGGY_BEHAVIORSTATE, npc.pos, 0.0f);
+				foreach_const(st, ai.groggyStatuses) ApplyMonsterStatus(npc, *st, true);
+				npc.monsterHoldUntil = TimeAdd(localTime, TimeMsToTime(ai.groggyTime * 1000.0));
+			}
+		}
+		if(localTime < npc.monsterHoldUntil) continue;
 		if(targetPos && attack) {
 			const vec2 rel = vec2(*targetPos) - vec2(npc.pos);
 			const f32 dist = glm::length(rel);
@@ -263,12 +273,24 @@ void World::UpdateMonsterAi(f32 delta)
 			npc.monsterWalking = false;
 			if(localTime < npc.monsterNextAttack) continue;
 			npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime(attack->cooldown * 1000.0));
+			eastl::fixed_vector<i32,16,false> ready;
+			f32 totalShare = attack->share;
+			const f32 hpRatio = npc.hpMax > 0 ? (f32)npc.hp / (f32)npc.hpMax : 1.0f;
 			for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)npc.monsterSkillReady.size(); s++) {
 				const GameXmlContent::MonsterAttack& special = ai.attacks[s];
 				if(!special.special || special.target != attack->target || localTime < npc.monsterSkillReady[s]) continue;
+				if(hpRatio < special.hpMin || hpRatio > special.hpMax) continue;
 				if(npc.monsterSkillReady[s] == Time::ZERO) { npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime(special.cooldown * 1000.0)); continue; }
 				if(dist > special.range + (reach - attack->range)) continue;
-				npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime(special.cooldown * 1000.0));
+				ready.push_back(s);
+				totalShare += special.share;
+			}
+			f32 roll = (f32)(RandUint() % 10000) / 10000.0f * totalShare - attack->share;
+			foreach_const(s, ready) {
+				const GameXmlContent::MonsterAttack& special = ai.attacks[*s];
+				if(roll >= special.share) { roll -= special.share; continue; }
+				if(roll < 0) break;
+				npc.monsterSkillReady[*s] = TimeAdd(localTime, TimeMsToTime(special.cooldown * 1000.0));
 				attack = &special;
 				LOG("Monster :: creature=%d (local %d) uses %s", (i32)npc.docID, npc.localID, ActionStateToString(special.state));
 				break;
@@ -277,6 +299,11 @@ void World::UpdateMonsterAi(f32 delta)
 			npc.actionState = attack->state;
 			replication->SendNpcTurnToAll(npc.UID, yaw);
 			replication->SendMonsterStateToAll(npc.UID, attack->state, npc.pos, ai.run);
+			foreach_const(st, attack->selfStatuses) ApplyMonsterStatus(npc, *st, true);
+			if(attack->weakTime > 0) {
+				npc.monsterWeakUntil = TimeAdd(localTime, TimeMsToTime(attack->weakTime * 1000.0));
+				npc.monsterWeakHit = false;
+			}
 			const f32 travel = attack->speed > 0 ? dist / attack->speed : 0.0f;
 			for(i32 h = 0; h < (i32)attack->hits && !monsterHits.full(); h++) {
 				monsterHits.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime((attack->delay + travel + h * attack->interval) * 1000.0)), attack });

@@ -1348,6 +1348,7 @@ void World::ShowcaseOnDamage(const Player& target, i32 damage)
 
 bool World::ShowcaseKeepsAlive(const Player& target) const
 {
+	if(target.devGod) return true;
 	return Config().DevShowcase && (target.clientHd == ClientHandle::INVALID || Config().DevMirror) && Config().DevGxTest != GX_DEATH_TEST_MODE;
 }
 

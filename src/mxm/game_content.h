@@ -945,6 +945,11 @@ struct GameXmlContent
 		f32 radius = 0;
 		u8 hits = 1;
 		f32 interval = 0;
+		f32 hpMin = 0;
+		f32 hpMax = 1;
+		f32 weakTime = 0;
+		f32 share = 1;
+		eastl::fixed_vector<i32,4,false> selfStatuses;
 	};
 
 	struct MonsterAi
@@ -960,6 +965,9 @@ struct GameXmlContent
 		ActionStateID idle = ActionStateID::INVALID;
 		ActionStateID awake = ActionStateID::INVALID;
 		f32 awakeTime = 0;
+		f32 groggyChance = 0;
+		f32 groggyTime = 0;
+		eastl::fixed_vector<i32,4,false> groggyStatuses;
 		eastl::fixed_vector<u32,10,false> enemyTags;
 		eastl::array<const MonsterAttack*,MonsterAttack::_COUNT> byTarget = {};
 		eastl::fixed_vector<MonsterAttack,16,false> attacks;

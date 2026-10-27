@@ -1042,6 +1042,13 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			return true;
 		}
 
+		if(EA::StdC::Strcmp(msg, L"god") == 0) {
+			World::Player& playerActor = world.GetPlayer(p.playerIndex);
+			playerActor.devGod = !playerActor.devGod;
+			SendDbgMsg(clientHd, playerActor.devGod ? L"God mode on" : L"God mode off");
+			return true;
+		}
+
 		if(EA::StdC::Strcmp(msg, L"titan") == 0) {
 			world.RequestVote(world.GetPlayer(p.playerIndex), 1);
 			SendDbgMsg(clientHd, L"Titan vote requested");
@@ -1053,6 +1060,19 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			World::Player& playerActor = world.GetPlayer(p.playerIndex);
 			world.SpawnGroundItemAt(itemIndex, playerActor.body->GetWorldPos(), -1);
 			SendDbgMsg(clientHd, LFMT(L"Item %d dropped", itemIndex));
+			return true;
+		}
+
+		i32 hpTag = 0, hpPercent = 0;
+		if(EA::StdC::Sscanf(msg, L"monhp %d %d", &hpTag, &hpPercent) == 2) {
+			i32 changed = 0;
+			foreach(npc, world.actorNpcList) {
+				if(npc->tagID != hpTag || npc->hp <= 0) continue;
+				npc->hp = MAX(npc->hpMax * hpPercent / 100, 1);
+				replication.SendHpToAll(npc->UID, npc->hp, npc->hpMax);
+				changed++;
+			}
+			SendDbgMsg(clientHd, LFMT(L"%d monster(s) with tag %d at %d%% hp", changed, hpTag, hpPercent));
 			return true;
 		}
 

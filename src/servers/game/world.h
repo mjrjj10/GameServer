@@ -126,6 +126,7 @@ struct World
 		i32 assists = 0;
 		bool firstBlood = false;
 		i64 damageDealt = 0;
+		bool devGod = false;
 		eastl::array<u32,9> damageStats = {};
 		u8 statueCaptures = 0;
 		u8 visionCaptures = 0;
@@ -438,6 +439,8 @@ struct World
 		bool monsterStarted = false;
 		bool monsterAwake = false;
 		Time monsterHoldUntil = Time::ZERO;
+		Time monsterWeakUntil = Time::ZERO;
+		bool monsterWeakHit = false;
 		bool monsterWalking = false;
 		bool monsterChasing = false;
 		ActorUID monsterTarget = ActorUID::INVALID;

@@ -408,6 +408,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence, 0.0f)) + 0.5f), 1);
 	const i32 hpBefore = npc.hp;
 	npc.hp = MAX(npc.hp - AbsorbNpcShield(npc, dealt), 0);
+	if(npc.monsterWeakUntil != Time::ZERO && localTime < npc.monsterWeakUntil) npc.monsterWeakHit = true;
 	if(IsStructure(npc)) attacker.damageStats[END_DMG_BUILDING_DEALT] += (u32)(hpBefore - npc.hp);
 	if(npc.ownerUID == ActorUID::INVALID) OnMonsterDamaged(npc, hpBefore);
 	if(npc.ownerUID == ActorUID::INVALID && npc.monsterAi && (npc.faction == Faction::ORANGE || npc.faction == Faction::MONSTER) && npc.monsterTarget == ActorUID::INVALID && npc.hp > 0) {

@@ -1068,6 +1068,19 @@ bool GameXmlContent::LoadIngameLevel()
 	return true;
 }
 
+template<typename List>
+static void ParseIdList(const char* text, List& out)
+{
+	if(!text) return;
+	const char* at = text;
+	while(*at && !out.full()) {
+		while(*at == ' ') at++;
+		if(!*at) break;
+		out.push_back(EA::StdC::AtoI32(at));
+		while(*at && *at != ' ') at++;
+	}
+}
+
 bool GameXmlContent::LoadMonsterAi()
 {
 	XMLDocument doc;
@@ -1085,6 +1098,9 @@ bool GameXmlContent::LoadMonsterAi()
 		if(const char* idle = pInfo->Attribute("idle")) ai.idle = ActionStateFromString(idle);
 		if(const char* awake = pInfo->Attribute("awake")) if(*awake) ai.awake = ActionStateFromString(awake);
 		ai.awakeTime = pInfo->FloatAttribute("awakeTime");
+		ai.groggyChance = pInfo->FloatAttribute("groggyChance");
+		ai.groggyTime = pInfo->FloatAttribute("groggyTime");
+		ParseIdList(pInfo->Attribute("groggyStatus"), ai.groggyStatuses);
 		if(const char* enemies = pInfo->Attribute("enemies")) {
 			const char* at = enemies;
 			while(*at && !ai.enemyTags.full()) {
@@ -1115,6 +1131,11 @@ bool GameXmlContent::LoadMonsterAi()
 			attack.radius = pAttack->FloatAttribute("radius");
 			attack.hits = (u8)MAX(pAttack->IntAttribute("hits", 1), 1);
 			attack.interval = pAttack->FloatAttribute("interval");
+			attack.hpMin = pAttack->FloatAttribute("hpMin", 0.0f);
+			attack.hpMax = pAttack->FloatAttribute("hpMax", 1.0f);
+			attack.weakTime = pAttack->FloatAttribute("weakTime");
+			attack.share = pAttack->FloatAttribute("share", 1.0f);
+			ParseIdList(pAttack->Attribute("selfStatus"), attack.selfStatuses);
 			ai.attacks.push_back(attack);
 		}
 		foreach_const(a, ai.attacks) if(!a->special && !ai.byTarget[a->target]) ai.byTarget[a->target] = &*a;
