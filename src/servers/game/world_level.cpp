@@ -452,6 +452,7 @@ void World::SummonGiant(i32 team)
 
 static const i32 TITAN_SPAWN_STATUS = 1239000040;
 static const i32 TITAN_SPAWN_SELF_STATUS = 1239000041;
+static const i32 TITAN_SPAWN_REVEAL_STATUS = 1239000004;
 static const i32 AI_TRIGGER_TRANSFORM_TITAN = 300;
 static const f64 TITAN_MODE_SWITCH_DELAY_MS = 620.0;
 
@@ -475,6 +476,16 @@ void World::TransformTitan(Player& player, i32 formIndex, bool initial)
 	if(!initial) return;
 	ApplyStatus(player, player, TITAN_SPAWN_STATUS);
 	ApplyStatus(player, player, TITAN_SPAWN_SELF_STATUS);
+	const StatusInfo* reveal = GetGameXmlContent().FindStatus(TITAN_SPAWN_REVEAL_STATUS);
+	const f64 revealMs = reveal && reveal->durationSec > 0 ? reveal->durationSec * 1000.0 : 0.0;
+	foreach(e, players) {
+		if(e->team == player.team || e->dead || e->Main().classType == ClassType::NONE) continue;
+		ApplyStatus(player, *e, TITAN_SPAWN_REVEAL_STATUS);
+		if(revealMs > 0 && player.team < 2) {
+			const Time until = TimeAdd(localTime, TimeMsToTime(revealMs));
+			if(e->fogRevealUntil[player.team] < until) e->fogRevealUntil[player.team] = until;
+		}
+	}
 	FireAITrigger(AI_TRIGGER_TRANSFORM_TITAN, (i32)player.index);
 }
 

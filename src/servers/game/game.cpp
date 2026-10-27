@@ -1050,6 +1050,13 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			return true;
 		}
 
+		i32 piecesTeam = 0, piecesAdd = 0;
+		if(EA::StdC::Sscanf(msg, L"pieces %d %d", &piecesTeam, &piecesAdd) == 2 && (piecesTeam == 0 || piecesTeam == 1)) {
+			world.AddTeamPieces(piecesTeam, piecesAdd);
+			SendDbgMsg(clientHd, LFMT(L"Team %d +%d titan pieces", piecesTeam, piecesAdd));
+			return true;
+		}
+
 		i32 pointsTeam = 0, pointsAdd = 0;
 		if(EA::StdC::Sscanf(msg, L"points %d %d", &pointsTeam, &pointsAdd) == 2 && (pointsTeam == 0 || pointsTeam == 1)) {
 			world.AddTeamPoints(pointsTeam, pointsAdd);
