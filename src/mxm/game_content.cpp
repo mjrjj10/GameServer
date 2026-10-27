@@ -1121,6 +1121,18 @@ bool GameXmlContent::LoadTitan()
 	titan.cost = root->IntAttribute("cost");
 	titan.votePeriod = root->FloatAttribute("votePeriod");
 	titan.teamCoolTime = root->FloatAttribute("teamCoolTime");
+	titan.failPlayerCool = root->IntAttribute("failPlayerCool");
+	titan.endTeamCool = root->IntAttribute("endTeamCool");
+	titan.endPlayerCool = root->IntAttribute("endPlayerCool");
+	if(const char* giants = root->Attribute("giants")) {
+		for(const char* c = giants; *c && !titan.giants.full(); ) {
+			char* end = nullptr;
+			const long v = strtol(c, &end, 10);
+			if(end == c) break;
+			titan.giants.push_back((i32)v);
+			c = end;
+		}
+	}
 	for(XMLElement* f = root->FirstChildElement("FORM"); f && !titan.forms.full(); f = f->NextSiblingElement("FORM")) {
 		TitanForm form;
 		form.doc = f->IntAttribute("doc");

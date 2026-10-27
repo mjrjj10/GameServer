@@ -288,6 +288,8 @@ struct Replication
 	u8 canEscape = 0;
 	u8 isTrespass = 0;
 	i32 surrenderAbleTime = 0;
+	bool titanMode = false;
+	i8 titanNextIndex = 0;
 	eastl::array<SkillID,2> stageSkills = { SkillID::INVALID, SkillID::INVALID };
 	i32 supportKitIndex = -1;
 

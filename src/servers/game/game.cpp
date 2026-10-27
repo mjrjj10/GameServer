@@ -323,6 +323,12 @@ bool Game::LoadMap()
 		map = content.FindPvpMap(MapIndex::PVP_DEATHMATCH);
 	}
 	world.map = map;
+	const GameXmlContent::TitanInfo& titan = content.titan;
+	if(map->ingameLevels && !titan.forms.empty() && !titan.giants.empty()) {
+		world.giantCycle = RandUint() % (u32)titan.giants.size();
+		replication.titanMode = true;
+		replication.titanNextIndex = (i8)world.giantCycle;
+	}
 	foreach_const(c, map->colliders) {
 		world.physics.CreateStaticCollider(c->mesh.data(), c->pos, c->rot, c->scale);
 	}

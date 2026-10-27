@@ -193,7 +193,6 @@ u32 World::ResetTraits(Player& player, ActorUID characterUID)
 
 static const u32 VOTE_TYPE_SURRENDER = 0;
 static const u32 VOTE_TYPE_TITAN = 1;
-static const f64 VOTE_TITAN_FAIL_PLAYER_COOLDOWN_MS = 60000.0;
 static const f64 VOTE_SURRENDER_PERIOD_MS = 30000.0;
 static const f64 VOTE_SURRENDER_FAIL_COOLDOWN_MS = 90000.0;
 static const u32 VOTE_STATE_PASSED = 1;
@@ -269,7 +268,7 @@ void World::FinishVote(i32 team, bool passed)
 	if(vote.type == VOTE_TYPE_TITAN) {
 		reason = VOTE_REASON_PASSED;
 		if(passed) teamCool = (u32)GetGameXmlContent().titan.teamCoolTime;
-		else playerCool = (u32)VOTE_TITAN_FAIL_PLAYER_COOLDOWN_MS;
+		else playerCool = (u32)GetGameXmlContent().titan.failPlayerCool;
 	}
 	else if(!passed) teamCool = (u32)VOTE_SURRENDER_FAIL_COOLDOWN_MS;
 	if(teamCool > 0) vote.cooldownUntil = TimeAdd(localTime, TimeMsToTime((f64)teamCool));
@@ -350,7 +349,6 @@ void World::BuildGiantTriggers()
 		}
 	}
 	eastl::sort(giantTriggers.begin(), giantTriggers.end(), [](const GiantTrigger& a, const GiantTrigger& b) { return a.monster < b.monster; });
-	giantCycle = RandUint();
 	LOG("Titan :: %d giant triggers", (i32)giantTriggers.size());
 }
 
@@ -369,14 +367,17 @@ void World::UpdateGiantWaves()
 	for(i32 team = 0; team < 2; team++) {
 		if(giantTeamAt[team] == Time::ZERO || localTime < giantTeamAt[team]) continue;
 		giantTeamAt[team] = Time::ZERO;
+		const auto& order = GetGameXmlContent().titan.giants;
 		i32 variants = 0;
 		foreach_const(t, giantTriggers) if(t->team == team) variants++;
 		if(variants == 0) continue;
-		const i32 pick = (i32)(giantCycle++ % (u32)variants);
+		const u32 pick = giantCycle++;
 		i32 rank = 0;
 		foreach_const(t, giantTriggers) {
 			if(t->team != team) continue;
-			if(rank++ != pick) continue;
+			const bool chosen = order.empty() ? rank == (i32)(pick % (u32)variants) : t->monster == order[pick % (u32)order.size()];
+			rank++;
+			if(!chosen) continue;
 			LOG("Titan :: giant %d for team %d", t->monster, team);
 			FireAITrigger(t->aiIndex, -1);
 			break;

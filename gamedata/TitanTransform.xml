@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<TITAN cost="5" votePeriod="5000" teamCoolTime="10000">
+<TITAN cost="5" votePeriod="5000" teamCoolTime="10000" failPlayerCool="60000" endTeamCool="10000" endPlayerCool="0" giants="105001102 105001100 105001101">
   <FORM doc="100000900" duration="25000" weapon="131190000" skill1="189000010" skill2="189000020" ug="189000050" moveSpeed="800">
     <STAT type="0" value="12000" />
     <STAT type="2" value="200" />

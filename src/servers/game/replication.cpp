@@ -3348,16 +3348,18 @@ void Replication::SendInitialFrame(ClientHandle clientHd)
 	{
 		PacketWriter<Sv::SN_InitIngameModeInfo> packet;
 
-		packet.Write<i32>(0); // transformationVotingPlayerCoolTimeByVotingFail
-		packet.Write<i32>(0); // transformationVotingTeamCoolTimeByTransformationEnd
-		packet.Write<i32>(0); // playerCoolTimeByTransformationEnd
+		const GameXmlContent::TitanInfo& titan = GetGameXmlContent().titan;
+		packet.Write<i32>(titanMode ? titan.failPlayerCool : 0);
+		packet.Write<i32>(titanMode ? titan.endTeamCool : 0);
+		packet.Write<i32>(titanMode ? titan.endPlayerCool : 0);
 		packet.Write<i32>(0); // currentTransformationVotingPlayerCoolTimeByVotingFail
 		packet.Write<i32>(0); // currentTransformationVotingTeamCoolTimeByTransformationEnd
 		packet.Write<i32>(0); // currentPlayerCoolTimeByTransformationEnd
 		packet.Write<i32>(20); // chPropertyResetCoolTime
-		packet.Write<u8>(0); // transformationPieceCount
-		packet.Write<u16>(0); // titanDocIndexs_count
-		packet.Write<i8>(0); // nextTitanIndex
+		packet.Write<u8>(titanMode ? (u8)titan.cost : 0);
+		packet.Write<u16>(titanMode ? (u16)titan.giants.size() : 0);
+		if(titanMode) foreach_const(g, titan.giants) packet.Write<i32>(*g);
+		packet.Write<i8>(titanMode ? titanNextIndex : 0);
 		packet.Write<u16>(0); // limitExceptionStat_count
 
 

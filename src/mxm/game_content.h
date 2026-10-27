@@ -1045,6 +1045,10 @@ struct GameXmlContent
 		i32 cost = 0;
 		f32 votePeriod = 0;
 		f32 teamCoolTime = 0;
+		i32 failPlayerCool = 0;
+		i32 endTeamCool = 0;
+		i32 endPlayerCool = 0;
+		eastl::fixed_vector<i32,4,false> giants;
 		eastl::fixed_vector<TitanForm,4,false> forms;
 	};
 	TitanInfo titan;
