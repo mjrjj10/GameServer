@@ -41,7 +41,7 @@ static ActionStateID WeaponAttackState(const World::Player& player)
 static void BotWeaponAnimation(const World::Player& player, Replication* replication)
 {
 	if(player.clientHd != ClientHandle::INVALID) return;
-	const WeaponIndex weapon = (player.mainCharaID & 1) == 0 ? player.mainWeapon : player.subWeapon;
+	const WeaponIndex weapon = player.titanForm >= 0 ? WeaponIndex(GetGameXmlContent().titan.forms[player.titanForm].weapon) : (player.mainCharaID & 1) == 0 ? player.mainWeapon : player.subWeapon;
 	replication->RelayWeaponState(ClientHandle::INVALID, player.Main().UID, (i32)weapon, 2, player.chargeLevel, player.firingCombo);
 }
 
@@ -568,9 +568,18 @@ void World::OnWeaponAimPacket(Player& player, f32 aimYaw)
 	player.pendingAimTime = localTime;
 }
 
+WeaponIndex World::ActiveWeapon(const Player& p) const
+{
+	if(p.titanForm >= 0) {
+		const WeaponIndex titanWeapon = WeaponIndex(GetGameXmlContent().titan.forms[p.titanForm].weapon);
+		if(GetGameXmlContent().FindWeaponFiring((i32)titanWeapon, 0) && GetGameXmlContent().GetWeaponAttack((i32)titanWeapon) > 0) return titanWeapon;
+	}
+	return (p.mainCharaID & 1) == 0 ? p.mainWeapon : p.subWeapon;
+}
+
 const WeaponFiring& World::ActiveWeaponFiring(const Player& p, i8 stance) const
 {
-	const WeaponIndex weapon = (p.mainCharaID & 1) == 0 ? p.mainWeapon : p.subWeapon;
+	const WeaponIndex weapon = ActiveWeapon(p);
 	const WeaponFiring* wf = GetGameXmlContent().FindWeaponFiring((i32)weapon, stance);
 	ASSERT(wf);
 	return *wf;
@@ -622,7 +631,7 @@ void World::UpdateWeaponCharges()
 		const f64 held = TimeDiffSec(TimeDiff(it->chargeStart, localTime));
 		while(it->chargeAnnounced < wf.chargeTime.size() && it->chargeAnnounced < wf.charge.size() && held >= wf.chargeTime[it->chargeAnnounced]) {
 			it->chargeAnnounced++;
-			const WeaponIndex weapon = (it->mainCharaID & 1) == 0 ? it->mainWeapon : it->subWeapon;
+			const WeaponIndex weapon = ActiveWeapon(*it);
 			replication->RelayWeaponState(ClientHandle::INVALID, it->Main().UID, (i32)weapon, WEAPON_STATE_CHARGE, it->chargeAnnounced, it->firingCombo);
 			LOG("Shot :: %ls charge level %d after %.2fs", it->name.data(), (i32)it->chargeAnnounced, held);
 		}
@@ -649,8 +658,7 @@ bool World::WeaponIsMelee(const Player& p) const
 
 f32 World::WeaponHitDamage(const Player& player, const Remote* remote) const
 {
-	const u32 m = player.mainCharaID & 1;
-	const WeaponIndex weapon = m == 0 ? player.mainWeapon : player.subWeapon;
+	const WeaponIndex weapon = ActiveWeapon(player);
 	const f32 attack = GetGameXmlContent().GetWeaponAttack((i32)weapon) + StatBonus(player, STAT_ATTACK);
 	ASSERT(attack > 0);
 	const f32 mult = remote && remote->attackMultiplier > 0 ? remote->attackMultiplier : 1.0f;

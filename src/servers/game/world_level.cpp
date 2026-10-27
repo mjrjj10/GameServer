@@ -193,6 +193,7 @@ u32 World::ResetTraits(Player& player, ActorUID characterUID)
 
 static const u32 VOTE_TYPE_SURRENDER = 0;
 static const u32 VOTE_TYPE_TITAN = 1;
+static const i32 TITAN_READY_STATUS = 1239000002;
 static const f64 VOTE_SURRENDER_PERIOD_MS = 30000.0;
 static const f64 VOTE_SURRENDER_FAIL_COOLDOWN_MS = 90000.0;
 static const u32 VOTE_STATE_PASSED = 1;
@@ -243,6 +244,7 @@ void World::RequestVote(Player& player, u32 type)
 		}
 	}
 	LOG("Vote :: %ls starts vote %d for team %d", player.name.data(), type, (i32)player.team);
+	if(type == VOTE_TYPE_TITAN) ApplyStatus(player, player, TITAN_READY_STATUS, 0, periodMs / 1000.0f);
 	UpdateVotes();
 }
 
@@ -277,6 +279,7 @@ void World::FinishVote(i32 team, bool passed)
 		if(p->team == team && p->clientHd != ClientHandle::INVALID) replication->SendVotingResult(p->clientHd, requestor, vote.type, passed ? VOTE_STATE_PASSED : VOTE_STATE_FAILED, reason, playerCool, teamCool);
 	}
 	LOG("Vote :: team %d vote %d %s", team, vote.type, passed ? "passed" : "rejected");
+	if(vote.type == VOTE_TYPE_TITAN && vote.requestor >= 0) ConsumeStatus((u32)vote.requestor, TITAN_READY_STATUS);
 	if(!passed) return;
 	if(vote.type == VOTE_TYPE_SURRENDER && winnerTeam < 0) winnerTeam = team == 0 ? 1 : 0;
 	if(vote.type == VOTE_TYPE_TITAN && vote.requestor >= 0) TransformTitan(players[vote.requestor], 0, true);

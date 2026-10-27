@@ -833,7 +833,7 @@ void Game::OnPlayerWeaponStateRelay(ClientHandle clientHd, ActorUID ownerUID, i3
 	if(ownerUID == ActorUID::INVALID) ownerUID = player.Main().UID;
 	world.OnWeaponState(player, state, chargeLevel, firingCombo);
 	if(state != WEAPON_STATE_CHARGE) return;
-	const WeaponIndex weapon = player.mainCharaID == 0 ? player.mainWeapon : player.subWeapon;
+	const WeaponIndex weapon = world.ActiveWeapon(player);
 	replication.RelayWeaponState(clientHd, ownerUID, (i32)weapon, state, player.chargeLevel, firingCombo);
 }
 
@@ -861,7 +861,7 @@ bool Game::IsWeaponFireObject(ClientHandle clientHd, const wchar* name, u16 len)
 	auto found = playerMap.find(clientHd);
 	if(found == playerMap.end()) return false;
 	const World::Player& player = world.GetPlayer(found->second->playerIndex);
-	const WeaponIndex weapon = (player.mainCharaID & 1) == 0 ? player.mainWeapon : player.subWeapon;
+	const WeaponIndex weapon = world.ActiveWeapon(player);
 	const WeaponFiring* wf = GetGameXmlContent().FindWeaponFiring((i32)weapon, player.Main().stance);
 	if(wf && wf->fireDummy.empty()) return FireObjectIs(name, len, FIRE_OBJECT_SCENE_ROOT);
 	if(!wf) return false;

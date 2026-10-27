@@ -967,6 +967,7 @@ public:
 	void UpdateVotes();
 	void FinishVote(i32 team, bool passed);
 	void TransformTitan(Player& player, i32 formIndex, bool initial);
+	WeaponIndex ActiveWeapon(const Player& p) const;
 	void RevertTitan(Player& player);
 	void UpdateTitans();
 	void TitanOnCast(Player& player, SkillID skill);
