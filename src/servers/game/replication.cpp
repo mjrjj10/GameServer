@@ -620,8 +620,8 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 			packet.Write<SkinIndex>(p.subSkin);
 			packet.Write<SkillID>(p.skills[2]);
 			packet.Write<SkillID>(p.skills[3]);
-			packet.Write<SkillID>(stageSkills[0]);
-			packet.Write<SkillID>(stageSkills[1]);
+			packet.Write<SkillID>(p.stageSkills[0]);
+			packet.Write<SkillID>(p.stageSkills[1]);
 			packet.Write<i32>(supportKitIndex);
 			packet.Write<u8>(p.clientHd == ClientHandle::INVALID);
 		}
@@ -3444,8 +3444,8 @@ void Replication::SendMasterSkillSlots(ClientHandle clientHd, const Replication:
 		}
 
 		const size_t skillOffset = actor.actorUID == player.masters[0] ? 0 : 2;
-		packet.Write<SkillID>(stageSkills[0]);
-		packet.Write<SkillID>(stageSkills[1]);
+		packet.Write<SkillID>(player.stageSkills[0]);
+		packet.Write<SkillID>(player.stageSkills[1]);
 		packet.Write<SkillID>(player.skills[skillOffset]);
 		packet.Write<SkillID>(player.skills[skillOffset + 1]);
 		SkillID shirk = master.skillIDs.back();

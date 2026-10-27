@@ -3202,6 +3202,9 @@ DEFAULT_SERIALIZE(Sv::SN_ChangeCharacterMode);
 DEFAULT_SERIALIZE(Sv::SN_PvpResultScoreGot);
 DEFAULT_SERIALIZE(Sv::SN_MonsterRespawnTime);
 DEFAULT_SERIALIZE(Sv::SN_InteractionCancel);
+DEFAULT_SERIALIZE(Sv::SN_StageSkillAvailable);
+DEFAULT_SERIALIZE(Sv::SA_StageSkillSelect);
+DEFAULT_SERIALIZE(Sv::SN_StageSkillSelect);
 #undef DEFAULT_SERIALIZE
 
 template<>

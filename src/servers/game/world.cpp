@@ -293,6 +293,7 @@ void World::Replicate()
 		rep.subClass = player.subClass;
 		rep.subSkin = player.subSkin;
 		rep.skills = player.skills;
+		rep.stageSkills = player.stageSkills;
 		rep.mainWeapon = player.mainWeapon;
 		rep.subWeapon = player.subWeapon;
 		rep.mainWeaponGrade = player.mainWeaponGrade;
@@ -608,10 +609,11 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		}
 		ToggleOn(player, skillID, castPos);
 	}
-	if(!followUp && player.casting.skillID == skillID) {
+	if(!followUp && player.casting.skillID == skillID && player.casting.type != GameXmlContent::SkillCast::DELAY) {
 		ReleaseCast(player);
 		return;
 	}
+	if(!followUp && player.casting.skillID != SkillID::INVALID && player.casting.skillID != skillID && player.casting.interruptByOtherSkill) CancelCast(player, "other skill");
 	const GameXmlContent::SkillCast* cast = followUp ? nullptr : content.FindSkillCast((i32)skillID);
 	castCostLevel = followUp ? nullptr : PickCostLevel(player, skillID);
 	const GameXmlContent::SkillUpgrade* actionUpgrade = followUp ? nullptr : LatestUpgradeWith(player, (i32)skillID, [](const GameXmlContent::SkillUpgrade& u) { return u.action != ActionStateID::INVALID; });
@@ -917,6 +919,8 @@ void World::StartCasting(Player& player, SkillID skillID, const GameXmlContent::
 	player.casting.type = (u8)cast.type;
 	player.casting.interruptByMove = cast.interruptByMove;
 	player.casting.interruptByLostTarget = cast.interruptByLostTarget;
+	player.casting.interruptByAttacked = cast.interruptByAttacked;
+	player.casting.interruptByOtherSkill = cast.interruptByOtherSkill;
 	player.casting.lifted = false;
 	foreach_const(cmd, action.commands) if(cmd->type == ActionCommand::Type::MOVE && cmd->move.preset == ActionCommand::MovePreset::LIFTED) player.casting.lifted = true;
 	LOG("Cast :: %ls skill=%d start action=%d type=%d wait=%.2f", player.name.data(), (i32)skillID, (i32)cast.action, (i32)cast.type, wait);
@@ -990,6 +994,12 @@ void World::MovePlayer(Player& p, const vec3& pos, f32 yaw, bool snap)
 	TeleportPlayer(p, pos, yaw);
 	if(p.clientHd == ClientHandle::INVALID) return;
 	replication->SendSelfTeleport(p.clientHd, p.Main().UID, pos, yaw, snap ? &p.lastClientPos : nullptr);
+}
+
+void World::WarpPlayer(Player& p, const vec3& pos, f32 yaw)
+{
+	TeleportPlayer(p, pos, yaw);
+	if(p.clientHd != ClientHandle::INVALID) replication->SendTeleportRequest(p.clientHd, p.Main().UID, pos);
 }
 
 void World::RespawnPlayer(Player& player)

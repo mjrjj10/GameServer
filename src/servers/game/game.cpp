@@ -37,7 +37,6 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 	replication.canEscape = gameInfo.canEscape;
 	replication.isTrespass = 0;
 	replication.surrenderAbleTime = gameInfo.surrenderAbleTime;
-	replication.stageSkills.fill(SkillID::INVALID);
 	replication.supportKitIndex = -1;
 	world.Init(&replication);
 
@@ -61,6 +60,12 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 		desc.masters = p.masters;
 		desc.skins = p.skins;
 		desc.skills = p.skills;
+		desc.stageSkills = { SkillID::INVALID, SkillID::INVALID };
+		if(const GameXmlContent::StageMaps* stage = xml.FindStageMaps(gameInfo.stageIndex)) {
+			desc.stageSkills[0] = stage->stageSkill;
+			if(!stage->stageSkillCandidates.empty()) desc.stageSkills[1] = stage->stageSkillCandidates[0];
+			foreach_const(c, stage->stageSkillCandidates) if(*c == p.stageSkill) desc.stageSkills[1] = p.stageSkill;
+		}
 		desc.weapons = p.weapons;
 		desc.weaponGrades = p.weaponGrades;
 		desc.masterGearNo = p.masterGearNo;
@@ -925,6 +930,13 @@ void Game::OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID, const ve
 	LOG("Cast :: %ls execute request skill=%d (casting %d) pos=(%.0f, %.0f) target=%d", player.name.data(), (i32)skillID, (i32)player.casting.skillID, targetPos.x, targetPos.y, (i32)player.casting.target);
 	replication.SendExecuteSkillAck(clientHd, player.Main().UID, skillID);
 	if(player.casting.skillID == skillID) world.ReleaseCast(player);
+}
+
+void Game::OnPlayerCancelCast(ClientHandle clientHd, SkillID skillID)
+{
+	Player& p = *playerMap.at(clientHd);
+	World::Player& player = world.GetPlayer(p.playerIndex);
+	if(player.casting.skillID == skillID && skillID != SkillID::INVALID) world.CancelCast(player, "client");
 }
 
 void Game::OnPlayerGameIsReady(ClientHandle clientHd)

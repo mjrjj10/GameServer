@@ -106,6 +106,7 @@ struct Matchmaker
 			Team team;
 			u8 isBot = false;
 			In::StrGuildTag guildTag = {};
+			SkillID stageSkill = SkillID::INVALID;
 
 			eastl::array<Master,2> masters;
 
@@ -452,6 +453,7 @@ struct Matchmaker
 					p.masters[0].characterType = pp.characterType[0];
 					p.masters[1].characterType = pp.characterType[1];
 					p.guildTag = pp.guildTag;
+					p.stageSkill = pp.stageSkill;
 				}
 
 				RoomCreateGame(room);
@@ -656,6 +658,7 @@ struct Matchmaker
 
 				In::MN_RoomCreated packet;
 				packet.sortieUID = r->UID;
+				packet.stageIndex = r->stageIndex;
 				packet.playerCount = 0;
 
 				foreach_const(pl, r->playerList) {
@@ -720,6 +723,7 @@ struct Matchmaker
 				player.characterType[0] = p->masters[0].characterType;
 				player.characterType[1] = p->masters[1].characterType;
 				player.guildTag = p->guildTag;
+				player.stageSkill = p->stageSkill;
 				packet.players[packet.playerCount++] = player;
 			}
 		}

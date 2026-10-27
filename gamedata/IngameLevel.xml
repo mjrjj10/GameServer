@@ -18,12 +18,13 @@
   <LEVEL level="16" exp="460" />
   <LEVEL level="17" exp="480" />
   <MONSTER ID="105000306" exp="50" points="20" />
-  <MONSTER ID="105000307"  points="20" />
+  <MONSTER ID="105000307" exp="50" points="20" />
   <MONSTER ID="105000308" exp="50" points="10" />
   <MONSTER ID="105000311" exp="50" points="10" />
   <MONSTER ID="105000312" exp="50" points="20" />
   <MONSTER ID="105000430" exp="60" points="2" />
   <MONSTER ID="105000431" exp="60" points="2" />
+  <MONSTER ID="105000453" exp="30" points="0" />
   <MONSTER ID="105001010" exp="20" growth="1" growthPeriod="120" points="1" />
   <MONSTER ID="105001011" exp="20" growth="1" growthPeriod="120" points="1" />
   <MONSTER ID="105001012" exp="50" growth="3" growthPeriod="120" points="1" />
@@ -31,7 +32,7 @@
   <MONSTER ID="105001200"  points="100" />
   <MONSTER ID="105001400" exp="150" points="2" />
   <MONSTER ID="105001401" exp="125" points="1" />
-  <MONSTER ID="105001402"  points="5" />
+  <MONSTER ID="105001402" exp="250" points="5" />
   <MONSTER ID="105001403" exp="150" points="2" />
   <MONSTER ID="105001410" exp="120" points="12" />
   <SHARE helpers="0" killer="1" helper="0" />

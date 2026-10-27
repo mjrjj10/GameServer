@@ -424,6 +424,8 @@ void GameXmlContent::LoadAllSkills()
 			pCast->QueryFloatAttribute("_CastTime", &sc.time);
 			pCast->QueryBoolAttribute("_InterruptByMove", &sc.interruptByMove);
 			pCast->QueryBoolAttribute("_InterruptByLostTarget", &sc.interruptByLostTarget);
+			pCast->QueryBoolAttribute("_InterruptByAttacked", &sc.interruptByAttacked);
+			pCast->QueryBoolAttribute("_InterruptByOtherSkill", &sc.interruptByOtherSkill);
 			if(XMLElement* pCharge = pCast->FirstChildElement("_Charge")) {
 				pCharge->QueryFloatAttribute("_MaxChargingTime", &sc.maxChargingTime);
 				pCharge->QueryFloatAttribute("_MinSkillChargeRatio", &sc.minChargeRatio);
@@ -1518,6 +1520,12 @@ bool GameXmlContent::LoadStageMaps()
 		for(i32 m = 0; m < (i32)ARRAY_COUNT(GAME_MODE_NAMES); m++) {
 			if(gameMode && EA::StdC::Strcmp(gameMode, GAME_MODE_NAMES[m]) == 0) stage.gameMode = (GameModeType)m;
 		}
+		i32 stageSkill = 0;
+		if(pStage->QueryIntAttribute("_StageSkillIndex", &stageSkill) == XML_SUCCESS && stageSkill != 0) stage.stageSkill = SkillID(stageSkill);
+		for(XMLElement* pC = pStage->FirstChildElement("_StageSkillCandidateList"); pC; pC = pC->NextSiblingElement("_StageSkillCandidateList")) {
+			const i32 candidate = pC->IntAttribute("DATA");
+			if(candidate != 0 && !stage.stageSkillCandidates.full()) stage.stageSkillCandidates.push_back(SkillID(candidate));
+		}
 		XMLElement* pWorldMap = pStage->FirstChildElement("_WORLD_STAGE_MAP");
 		if(!pWorldMap) continue;
 		for(XMLElement* pGroup = pWorldMap->FirstChildElement("_WORLD_STAGE_MAP_GROUP");
@@ -1788,6 +1796,14 @@ bool GameXmlContent::LoadAnimationData()
 
 	XMLDocument xmlActionBase;
 	if(!LoadXMLFile(L"/ActionBase.xml", xmlActionBase)) return false;
+	XMLDocument xmlClassActions;
+	if(LoadXMLFile(L"/client/ActionBase_Class.xml", xmlClassActions)) {
+		for(XMLElement* pShared = xmlClassActions.FirstChildElement()->FirstChildElement(); pShared; pShared = pShared->NextSiblingElement()) {
+			XMLElement* copy = pShared->DeepClone(&xmlActionBase)->ToElement();
+			copy->SetAttribute("Class", "COMMON");
+			xmlActionBase.FirstChildElement()->InsertEndChild(copy);
+		}
+	}
 
 	ClassType prevMasterClassType = ClassType::NONE;
 	ActionStateID prevActionID = ActionStateID::INVALID;
@@ -1976,6 +1992,7 @@ bool GameXmlContent::LoadAnimationData()
 				pActionBase->QueryStringAttribute("TargetPreset", &TargetPreset);
 				cmd.teleport.toLastChild = Param1 && TargetPreset && EA::StdC::Strcmp(Param1, "TELEPORT_TARGET_ENTITY") == 0 &&
 					ActionCommand::TargetPresetFromString(TargetPreset) == ActionCommand::TargetPreset::LAST_CHILD_FFF ? 1 : 0;
+				cmd.teleport.toSpawnPoint = Param1 && EA::StdC::Strcmp(Param1, "TELEPORT_TARGET_SPAWN_POINT") == 0 ? 1 : 0;
 			} break;
 
 			case ActionCommand::Type::INTERACTION: {
@@ -2721,6 +2738,7 @@ const GameXmlContent::Action* GameXmlContent::FindSkillAction(ClassType classTyp
 	foreach_const(it, found->second) {
 		if(it->ID == actionID && it->stance == 0) return &*it;
 	}
+	if(classType != ClassType::NONE) return FindSkillAction(ClassType::NONE, actionID, 0);
 	return nullptr;
 }
 
@@ -2757,6 +2775,22 @@ bool GameXmlContent::CheckSkillActions()
 				if(*a == ActionStateID::INVALID || FindSkillAction(m->classType, *a)) continue;
 				if(skillActionGaps.insert(SkillActionKey(m->classType, *a)).second) {
 					LOG("GameContent :: class %d skill %d action %d has no ActionBase entry (no server-side commands)", (i32)m->classType, (i32)*sid, (i32)*a);
+				}
+			}
+		}
+		foreach_const(st, stageMaps) {
+			eastl::fixed_vector<SkillID,10,false> stageSkills;
+			if(st->stageSkill != SkillID::INVALID) stageSkills.push_back(st->stageSkill);
+			foreach_const(c, st->stageSkillCandidates) if(!stageSkills.full()) stageSkills.push_back(*c);
+			foreach_const(sid, stageSkills) {
+				auto found = skillMap.find(*sid);
+				if(found == skillMap.end()) continue;
+				eastl::fixed_vector<ActionStateID,2,false> actions;
+				actions.push_back(found->second.action);
+				if(const SkillCast* cast = FindSkillCast((i32)*sid)) actions.push_back(cast->action);
+				foreach_const(a, actions) {
+					if(*a == ActionStateID::INVALID || FindSkillAction(m->classType, *a)) continue;
+					skillActionGaps.insert(SkillActionKey(m->classType, *a));
 				}
 			}
 		}
@@ -3579,6 +3613,12 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(XMLElement* e = pNode->FirstChildElement("_AITriggerData")) { node.kind = LevelEventNode::AI_TRIGGER; node.aiIndex = e->IntAttribute("_INDEX"); }
 		else if(XMLElement* e = pNode->FirstChildElement("_InvokeAITriggerInfo")) { node.kind = LevelEventNode::INVOKE_AI_TRIGGER; node.aiIndex = e->IntAttribute("_INDEX"); }
 		else if(XMLElement* e = pNode->FirstChildElement("_ActiveInteractionInfo")) { node.kind = LevelEventNode::ACTIVE_INTERACTION; node.localID = e->IntAttribute("_LocalID"); node.active = e->IntAttribute("_Active") == 1; }
+		else if(XMLElement* e = pNode->FirstChildElement("_TeleportToInfo")) {
+			node.kind = LevelEventNode::TELEPORT_TO;
+			node.areaID = e->IntAttribute("_AreaID");
+			node.apply = false;
+			if(XMLElement* t = e->FirstChildElement("_TargetEntityInfo")) node.apply = t->IntAttribute("_IsAllPlayer") == 1;
+		}
 		else if(XMLElement* e = pNode->FirstChildElement("_InteractionTriggerData")) { node.kind = LevelEventNode::INTERACTION_TRIGGER; node.localID = e->IntAttribute("_TargetID"); }
 		else if(XMLElement* e = pNode->FirstChildElement("_AddInteractionCastingTimeInfo")) { node.kind = LevelEventNode::ADD_CAST_TIME; node.localID = e->IntAttribute("_LocalID"); node.delay = e->FloatAttribute("_Time"); if(const char* team = e->Attribute("_TeamType")) node.team = EA::StdC::Strcmp(team, "TEAM_GREEN") == 0 ? Faction::MONSTER : StringToFaction(team); }
 		else if(XMLElement* e = pNode->FirstChildElement("_NotifyRespawnTime")) {
@@ -3638,6 +3678,11 @@ bool GameXmlContent::LoadSummonActions()
 		}
 		if(!spawn && !die && stateAnimId != 0) {
 			foreach(it, summonMap) if(it->second.className == cls && it->second.stateAnim[skillState] == 0) it->second.stateAnim[skillState] = stateAnimId;
+		}
+		if(spawn && EA::StdC::Strcmp(type, "INTERACTION") == 0) {
+			const i32 interaction = pA->IntAttribute("Param1");
+			foreach(it, summonMap) if(it->second.className == cls) it->second.spawnInteraction = interaction;
+			continue;
 		}
 		const char* p2 = nullptr;
 		pA->QueryStringAttribute("Param2", &p2);
@@ -3919,6 +3964,8 @@ bool GameXmlContent::LoadInteractions()
 		pData->QueryFloatAttribute("_ActiveDistance", &info.activeDistance);
 		const char* action = pData->Attribute("_Action");
 		info.carry = action && EA::StdC::Strcmp(action, "IT_ACTION_TELEPORT") == 0;
+		const char* kind = pData->Attribute("_Type");
+		info.individual = kind && EA::StdC::Strcmp(kind, "IT_TYPE_INDIVIDUAL") == 0;
 		const char* active = pData->Attribute("_Active");
 		info.active = !active || EA::StdC::Stricmp(active, "False") != 0;
 		const char* repeat = pData->Attribute("_Repeat");
@@ -3933,6 +3980,8 @@ bool GameXmlContent::LoadInteractions()
 			found->second.castMs = pC->IntAttribute("castMs");
 			found->second.announcement = pC->UnsignedAttribute("announcement");
 			found->second.points = pC->IntAttribute("points");
+			found->second.ownerMask[0] = pC->UnsignedAttribute("ownerMask3");
+			found->second.ownerMask[1] = pC->UnsignedAttribute("ownerMask4");
 		}
 	}
 	return true;

@@ -99,6 +99,7 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 		CASE(CQ_SkillUpgradeIngame);
 		CASE(CQ_GetGroundItem);
 		CASE(CQ_PlayerCastSkill);
+		CASE(CQ_CancelCastSkill);
 		CASE(CQ_WeaponState);
 		CASE(CQ_InteractionCasting);
 		CASE(CQ_InteractionCancel);
@@ -541,6 +542,16 @@ void GamePacketHandler::HandlePacket_CQ_RemoteSyncTarget(ClientHandle clientHd, 
 	}
 	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_RemoteSyncTarget>(packetData, packetSize));
 	replication->RelayRemoteSyncTarget(clientHd, packetData, packetSize);
+}
+
+void GamePacketHandler::HandlePacket_CQ_CancelCastSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_CancelCastSkill>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_CancelCastSkill (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const Cl::CQ_CancelCastSkill& packet = SafeCast<Cl::CQ_CancelCastSkill>(packetData, packetSize);
+	game->OnPlayerCancelCast(clientHd, packet.skillID);
 }
 
 void GamePacketHandler::HandlePacket_CQ_PlayerCastSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

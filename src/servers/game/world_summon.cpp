@@ -507,6 +507,7 @@ void World::UpdateSummons()
 				if(spawnSec < life) actor.standAt = TimeAdd(localTime, TimeMsToTime(MAX(spawnSec, 0.0f) * 1000.0));
 				actor.attackRule = info ? FindSummonAttackRule(info->className.c_str()) : nullptr;
 				if(actor.attackRule) actor.nextAttack = TimeAdd(localTime, TimeMsToTime(actor.attackRule->firstDelayMs));
+				if(info && info->spawnInteraction != 0) AddCreatureInteraction(actor, info->spawnInteraction, owner.team);
 			}
 			actor.skillTarget = ps->target;
 			owner.lastChildUID = actor.UID;

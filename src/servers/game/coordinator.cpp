@@ -647,7 +647,7 @@ void Coordinator::CreateDevGame()
 	};
 
 	In::MQ_CreateGame game;
-	foreach(pl, game.players) pl->guildTag.len = 0;
+	foreach(pl, game.players) { pl->guildTag.len = 0; pl->stageSkill = SkillID::INVALID; }
 	game.sortieUID = SortieUID(1);
 	game.spectatorCount = 0;
 

@@ -223,6 +223,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	chara.hp = MAX(chara.hp - damage, (HasStatusType(target, StatusType::NEARLY_IMMORTAL) || HasStatusType(target, StatusType::UNDEAD)) ? 1 : 0);
 	if(ShowcaseKeepsAlive(target)) chara.hp = MAX(chara.hp, 1);
 	if(chara.hp == 0) PassiveOnLethal(target);
+	if(damage > 0 && target.casting.skillID != SkillID::INVALID && target.casting.interruptByAttacked) CancelCast(target, "attacked");
 	if(!reflecting && attacker.team != target.team && attacker.index != target.index && (proj || skillID != SkillID::INVALID)) {
 		const f32 ratio = StatusModSum(target, StatusMod::REFLECT_DAMAGE_RATIO);
 		if(ratio > 0 && !attacker.dead) {
@@ -453,6 +454,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	chara.hp = MAX(chara.hp - damage, (HasStatusType(target, StatusType::NEARLY_IMMORTAL) || HasStatusType(target, StatusType::UNDEAD)) ? 1 : 0);
 	if(ShowcaseKeepsAlive(target)) chara.hp = MAX(chara.hp, 1);
 	if(chara.hp == 0) PassiveOnLethal(target);
+	if(target.casting.skillID != SkillID::INVALID && target.casting.interruptByAttacked) CancelCast(target, "attacked");
 	replication->SendDamageToAll(attacker.UID, chara.UID, SkillID::INVALID, damage, chara.hp, chara.hpMax);
 	if(chara.hp > 0) {
 		LOG("Damage :: creature %d -> %ls damage=%d hp=%d/%d", (i32)attacker.docID, target.name.data(), damage, chara.hp, chara.hpMax);

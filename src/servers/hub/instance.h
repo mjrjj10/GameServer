@@ -80,6 +80,7 @@ struct RoomInstance
 
 		// picking phase related stuff
 		eastl::array<Master,2> masters;
+		SkillID stageSkill = SkillID::INVALID;
 		bool isReady = false;
 
 		struct {
@@ -112,6 +113,7 @@ struct RoomInstance
 	Server* server;
 	const HubInstanceUID UID;
 	const SortieUID sortieUID;
+	StageIndex stageIndex = StageIndex(0);
 	ClientLocalMapping plidMap;
 
 	eastl::fixed_vector<User,16,false> userList;

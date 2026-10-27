@@ -587,6 +587,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 
 	bool scheduled = false;
 	bool teleportToChild = false;
+	bool teleportToSpawn = false;
 	eastl::fixed_vector<SkillAnimPass,8,false>& animPasses = lastAnimPasses;
 	animPasses.clear();
 	if(anim == 0 && forceAnim < 0) {
@@ -669,6 +670,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			scheduled = true;
 		}
 		if(cmd->type == ActionCommand::Type::TELEPORT && cmd->teleport.toLastChild && t <= 0.001f) teleportToChild = true;
+		if(cmd->type == ActionCommand::Type::TELEPORT && cmd->teleport.toSpawnPoint) teleportToSpawn = true;
 		if(cmd->type == ActionCommand::Type::INTERACTION && cmd->interaction.interactionID != 0 && !pendingInteractions.full()) {
 			PendingInteraction pi;
 			pi.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
@@ -736,6 +738,10 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	}
 	}
 
+	if(teleportToSpawn && !player.dead) {
+		LOG("Teleport :: %ls back to spawn (%.0f, %.0f)", player.name.data(), player.spawnPos.x, player.spawnPos.y);
+		WarpPlayer(player, player.spawnPos, player.input.rot.upperYaw);
+	}
 	if(teleportToChild) {
 		const ActorNpc* child = FindNpcActor(player.lastChildUID);
 		if(child && localTime < child->despawnAt) {

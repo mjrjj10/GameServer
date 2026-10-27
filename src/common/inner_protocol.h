@@ -157,6 +157,7 @@ struct HQ_RoomCreateGame
 		eastl::array<u8,2> masterGearNo;
 		eastl::array<i32,2> characterType;
 		StrGuildTag guildTag;
+		SkillID stageSkill;
 	};
 
 	SortieUID sortieUID;
@@ -227,6 +228,7 @@ struct MN_RoomCreated
 	SortieUID sortieUID;
 	u8 playerCount;
 	eastl::array<RoomUser,16> playerList;
+	StageIndex stageIndex;
 };
 
 struct MQ_CreateGame
@@ -247,6 +249,7 @@ struct MQ_CreateGame
 		eastl::array<u8,2> masterGearNo;
 		eastl::array<i32,2> characterType;
 		StrGuildTag guildTag;
+		SkillID stageSkill;
 	};
 
 	SortieUID sortieUID;

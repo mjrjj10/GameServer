@@ -689,14 +689,14 @@ struct CA_CityLobbyJoinCity
 	enum { NET_ID = 60034 };
 };
 
-struct CN_PlayerTagCompleted
+struct CQ_CancelCastSkill
 {
 	enum { NET_ID = 60038 };
 
 	LocalActorID actorID;
-	i32 unk;
+	SkillID skillID;
 };
-ASSERT_SIZE(CN_PlayerTagCompleted, 8);
+ASSERT_SIZE(CQ_CancelCastSkill, 8);
 
 struct CQ_PlayerCastSkill
 {
@@ -3185,7 +3185,7 @@ POP_PACKED
 PUSH_PACKED
 struct CQ_CalendarDetail
 {
-	enum { NET_ID = 60273 };
+	enum { NET_ID = 60274 };
 	u32 value_u32; // 4 bytes
 };
 POP_PACKED
@@ -3194,8 +3194,8 @@ ASSERT_SIZE(CQ_CalendarDetail, 4);
 PUSH_PACKED
 struct CQ_StageSkillSelect
 {
-	enum { NET_ID = 60274 };
-	u32 object_id_u32; // 4 bytes
+	enum { NET_ID = 60273 };
+	SkillID skillIndex;
 };
 POP_PACKED
 ASSERT_SIZE(CQ_StageSkillSelect, 4);

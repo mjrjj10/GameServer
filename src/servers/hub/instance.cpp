@@ -139,6 +139,11 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 		}
 	}
 
+	const GameXmlContent::StageMaps* stageInfo = GetGameXmlContent().FindStageMaps(stageIndex);
+	if(stageInfo && !stageInfo->stageSkillCandidates.empty()) {
+		foreach(u, userList) u->stageSkill = stageInfo->stageSkillCandidates[0];
+	}
+
 	foreach_const(u, connectedUsers) {
 		const User& user = **u;
 
@@ -279,6 +284,20 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 			packet.WriteVec((CreatureIndex*)nullptr, 0); // vipRotation
 
 			SendPacket(user.clientHd, packet);
+		}
+
+		if(stageInfo && !stageInfo->stageSkillCandidates.empty()) {
+			PacketWriter<Sv::SN_StageSkillAvailable,256> packet;
+			packet.WriteVec(stageInfo->stageSkillCandidates.data(), stageInfo->stageSkillCandidates.size());
+			packet.Write<SkillID>(user.stageSkill);
+			SendPacket(user.clientHd, packet);
+			foreach_const(m, userList) {
+				if(m->team != user.team) continue;
+				Sv::SN_StageSkillSelect select;
+				select.userId = (u32)m->userID;
+				select.skillIndex = (u32)m->stageSkill;
+				SendPacket(user.clientHd, select);
+			}
 		}
 
 		{
@@ -498,6 +517,7 @@ void RoomInstance::Update(Time localTime_)
 				rp.characterType[0] = u->masters[0].characterType;
 				rp.characterType[1] = u->masters[1].characterType;
 				rp.guildTag.len = 0;
+				rp.stageSkill = u->stageSkill;
 				auto account = GetAccountManager().accountMap.find(u->accountUID);
 				if(!u->isBot && account != GetAccountManager().accountMap.end() && account->second->guildTag.size() <= ARRAY_COUNT(rp.guildTag.data)) rp.guildTag.Copy(account->second->guildTag);
 				rpList.push_back(rp);
@@ -773,6 +793,33 @@ void RoomInstance::OnClientPacket(ClientHandle clientHd, const NetHeader& header
 			notify.dwSkillIndex = (u32)skill;
 			notify.dwSkillSlot = (u32)slot;
 			SendPacket(clientHd, notify);
+		} break;
+
+		case Cl::CQ_StageSkillSelect::NET_ID: {
+			if(!ValidatePacket<Cl::CQ_StageSkillSelect>(packetData, packetSize)) {
+				WARN("[client%x] WARNING: invalid CQ_StageSkillSelect (size=%d)", clientHd, packetSize);
+				break;
+			}
+			const Cl::CQ_StageSkillSelect& packet = SafeCast<Cl::CQ_StageSkillSelect>(packetData, packetSize);
+			User* user = FindUser(clientHd);
+			const GameXmlContent::StageMaps* stageInfo = GetGameXmlContent().FindStageMaps(stageIndex);
+			if(!user || !stageInfo) break;
+			bool allowed = false;
+			foreach_const(c, stageInfo->stageSkillCandidates) if(*c == packet.skillIndex) allowed = true;
+			if(allowed) user->stageSkill = packet.skillIndex;
+			LOG("[Room] %ls selects stage skill %d (%s)", user->name.data(), (i32)packet.skillIndex, allowed ? "ok" : "refused");
+			Sv::SA_StageSkillSelect ack;
+			ack.errcode = allowed ? 0 : 1;
+			ack.currentSkillIndex = (u32)user->stageSkill;
+			SendPacket(clientHd, ack);
+			if(!allowed) break;
+			foreach_const(m, connectedUsers) {
+				if((*m)->team != user->team) continue;
+				Sv::SN_StageSkillSelect select;
+				select.userId = (u32)user->userID;
+				select.skillIndex = (u32)user->stageSkill;
+				SendPacket((*m)->clientHd, select);
+			}
 		} break;
 
 		case Cl::CQ_SelectSkin::NET_ID: {

@@ -65,6 +65,7 @@ struct Replication
 		ClassType subClass;
 		SkinIndex subSkin;
 		eastl::array<SkillID,4> skills;
+		eastl::array<SkillID,2> stageSkills;
 		WeaponIndex mainWeapon;
 		WeaponIndex subWeapon;
 		i32 mainWeaponGrade;
@@ -290,7 +291,6 @@ struct Replication
 	i32 surrenderAbleTime = 0;
 	bool titanMode = false;
 	i8 titanNextIndex = 0;
-	eastl::array<SkillID,2> stageSkills = { SkillID::INVALID, SkillID::INVALID };
 	i32 supportKitIndex = -1;
 
 	void Init(Server* server_);

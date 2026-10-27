@@ -31,6 +31,7 @@ struct MatchmakerConnector
 		eastl::array<u8,2> masterGearNo;
 		eastl::array<i32,2> characterType;
 		In::StrGuildTag guildTag;
+		SkillID stageSkill;
 	};
 
 	struct Query

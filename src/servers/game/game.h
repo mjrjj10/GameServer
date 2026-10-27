@@ -128,6 +128,7 @@ struct Game
 	void OnPlayerInteractionCancel(ClientHandle clientHd);
 	bool IsWeaponFireObject(ClientHandle clientHd, const wchar* name, u16 len);
 	void OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID, const vec3& targetPos, LocalActorID target);
+	void OnPlayerCancelCast(ClientHandle clientHd, SkillID skillID);
 
 	bool ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 len);
 	void SendDbgMsg(ClientHandle clientHd, const wchar* msg);

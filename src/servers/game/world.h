@@ -56,6 +56,7 @@ struct World
 		eastl::array<SkinIndex,2> skins;
 		eastl::array<ColliderSize,2> colliderSize;
 		eastl::array<SkillID,4> skills;
+		eastl::array<SkillID,2> stageSkills;
 		eastl::array<WeaponIndex,2> weapons;
 		eastl::array<i32,2> weaponGrades;
 		eastl::array<u8,2> masterGearNo;
@@ -94,6 +95,7 @@ struct World
 
 		const eastl::array<ColliderSize,2> colliderSize;
 		const eastl::array<SkillID,4> skills;
+		const eastl::array<SkillID,2> stageSkills;
 		const WeaponIndex mainWeapon;
 		const WeaponIndex subWeapon;
 		const i32 mainWeaponGrade;
@@ -172,6 +174,8 @@ struct World
 			u8 type = 0;
 			bool interruptByMove = false;
 			bool interruptByLostTarget = false;
+			bool interruptByAttacked = false;
+			bool interruptByOtherSkill = false;
 			bool lifted = false;
 			Time startedAt = Time::ZERO;
 		} casting;
@@ -321,6 +325,7 @@ struct World
 			subSkin(desc.skins[1]),
 			colliderSize(desc.colliderSize),
 			skills(desc.skills),
+			stageSkills(desc.stageSkills),
 			mainWeapon(desc.weapons[0]),
 			subWeapon(desc.weapons[1]),
 			mainWeaponGrade(desc.weaponGrades[0]),
@@ -781,6 +786,7 @@ struct World
 	bool applyingCasterStatus = false;
 	void TeleportPlayer(Player& p, const vec3& pos, f32 yaw);
 	void MovePlayer(Player& p, const vec3& pos, f32 yaw, bool snap);
+	void WarpPlayer(Player& p, const vec3& pos, f32 yaw);
 	void GxTestDrive(Player& gx, const vec2& dir);
 	void GxPreviewPlace(Player& human, f32 enemyDist);
 	void GxPreviewPrompt(Player& human, const char* key, i32 click, i32 holdMs, i32 count, const vec3& target, i32 enemy = 0);
@@ -920,6 +926,7 @@ public:
 	f32 PlayerSkillConsume(const Player& player, i32 skillID, i32 index) const;
 	const GameXmlContent::CostLevel* UpgradeCastMods(Player& player, SkillID skillID, const GameXmlContent::CostLevel* costLevel);
 	void ReleaseCast(Player& player);
+	void CancelCast(Player& player, const char* reason);
 	void SyncNpcLeg(ActorNpc& npc, const vec3& goal);
 	void StopNpcLeg(ActorNpc& npc);
 	void WanderNpc(ActorNpc& npc, f32 moveSpeed, f32 delta);
@@ -994,8 +1001,10 @@ public:
 	u32 giantCycle = 0;
 	eastl::array<eastl::fixed_vector<i32,32,false>,2> giantSummons;
 	void BuildGiantTriggers();
-	struct MapInteraction { ActorUID object; i32 localID; i32 interactionID; bool active; i32 occupiedTeam; Time coolUntil; eastl::array<i32,2> extraCastMs; };
-	eastl::fixed_vector<MapInteraction,32,false> mapInteractions;
+	struct MapInteraction { ActorUID object; i32 localID; i32 interactionID; bool active; i32 occupiedTeam; Time coolUntil; eastl::array<i32,2> extraCastMs; u32 openMask; bool creature; bool statusPending; };
+	eastl::fixed_vector<MapInteraction,64,false> mapInteractions;
+	void AddCreatureInteraction(const ActorNpc& npc, i32 interactionID, u8 ownerTeam);
+	bool MapInteractionPos(const MapInteraction& m, vec3* pos) const;
 	bool mapInteractionsBuilt = false;
 	void BuildMapInteractions();
 	void SendMapInteractionStatus(const MapInteraction& m);
@@ -1058,7 +1067,6 @@ private:
 	void SetStance(ActorMaster& master, i8 stance, f32 duration, i32 weaponFireCount, bool cancelByDefeat);
 	void StanceWeaponUse(Player& player);
 	void UpdateStances();
-	void CancelCast(Player& player, const char* reason);
 	void InterruptSkills(Player& player);
 	void UpdateCasts();
 	bool HasStatusType(const Player& p, StatusType type) const;

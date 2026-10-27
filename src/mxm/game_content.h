@@ -148,6 +148,7 @@ struct SummonInfo
 	f32 hideDetectRadius = 0;
 	f32 destroyTime = 0;
 	i32 spawnAnim = 0;
+	i32 spawnInteraction = 0;
 	bool targetable = false;
 	eastl::fixed_vector<i32,4,false> skills;
 	enum Ai: u8 { AI_NONE = 0, AI_RELAY, AI_CHASE };
@@ -583,7 +584,7 @@ struct GameXmlContent
 
 	struct LevelEventNode
 	{
-		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM, BOUND_TRIGGER, STATUS_CHANGE, ACTIVATE_TRIGGER, ON_HIT_TRIGGER, ACTION_CHANGE, CLIENT_EVENT, CALL_MONSTER, DESPAWN_ENTITY, PASS_THROUGH, TIME_RECORD_START, DEAD_COUNT, HP_TRIGGER, OR_CONDITION, GAME_END_TRIGGER, SAFE_ZONE, TEAM_CONDITION, ADD_GOT_PIECE, SAVE_GOT_PIECE, AI_TRIGGER, INVOKE_AI_TRIGGER, NOTIFY_RESPAWN, ACTIVE_INTERACTION, INTERACTION_TRIGGER, ADD_CAST_TIME };
+		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM, BOUND_TRIGGER, STATUS_CHANGE, ACTIVATE_TRIGGER, ON_HIT_TRIGGER, ACTION_CHANGE, CLIENT_EVENT, CALL_MONSTER, DESPAWN_ENTITY, PASS_THROUGH, TIME_RECORD_START, DEAD_COUNT, HP_TRIGGER, OR_CONDITION, GAME_END_TRIGGER, SAFE_ZONE, TEAM_CONDITION, ADD_GOT_PIECE, SAVE_GOT_PIECE, AI_TRIGGER, INVOKE_AI_TRIGGER, NOTIFY_RESPAWN, ACTIVE_INTERACTION, INTERACTION_TRIGGER, ADD_CAST_TIME, TELEPORT_TO };
 		enum ApplyType: u8 { APPLY_MY_CHAR = 0, APPLY_LOCAL_ID, APPLY_OTHER };
 		i32 id = 0;
 		Kind kind = OTHER;
@@ -750,6 +751,7 @@ struct GameXmlContent
 
 				struct {
 					u8 toLastChild;
+					u8 toSpawnPoint;
 				} teleport;
 
 				struct {
@@ -809,6 +811,8 @@ struct GameXmlContent
 		bool titan = false;
 		GameModeType gameMode = GameModeType::GAME_MODE_INVALID;
 		eastl::fixed_vector<MapIndex,8,false> maps;
+		SkillID stageSkill = SkillID::INVALID;
+		eastl::fixed_vector<SkillID,8,false> stageSkillCandidates;
 	};
 
 	struct Mission
@@ -1076,7 +1080,7 @@ struct GameXmlContent
 	eastl::hash_set<u64> skillActionGaps;
 	struct SkillInput { bool needsClick = false; bool directionOnly = false; bool friendlyOnly = false; bool positionDirection = false; bool selfPosition = false; bool teleportEntity = false; bool allEnemies = false; bool pickedEntity = false; bool lockOn = false; bool takesTarget = false; bool petCaster = false; i32 checkStatus = 0; u8 obstructMove = 0; bool obstructSight = false; i32 coolTimeID = 0; f32 coolTime = 0; f32 globalCoolTime = 0; f32 minDistance = 0; f32 maxDistance = 0; };
 	const SkillInput* FindSkillInput(i32 skillID) const { auto f = skillInput.find(skillID); return f == skillInput.end() ? nullptr : &f->second; }
-	struct SkillCast { enum Type: u8 { DELAY, LIMIT, CHARGING } type = DELAY; f32 time = 0; ActionStateID action = ActionStateID::INVALID; bool interruptByMove = false; bool interruptByLostTarget = false; f32 maxChargingTime = 0; f32 minChargeRatio = 1; f32 maxChargeRatio = 1; };
+	struct SkillCast { enum Type: u8 { DELAY, LIMIT, CHARGING } type = DELAY; f32 time = 0; ActionStateID action = ActionStateID::INVALID; bool interruptByMove = false; bool interruptByLostTarget = false; bool interruptByAttacked = false; bool interruptByOtherSkill = false; f32 maxChargingTime = 0; f32 minChargeRatio = 1; f32 maxChargeRatio = 1; };
 	const SkillCast* FindSkillCast(i32 skillID) const { auto f = skillCast.find(skillID); return f == skillCast.end() ? nullptr : &f->second; }
 	bool IsCastAction(ActionStateID action) const { foreach_const(it, skillCast) if(it->second.action == action) return true; return false; }
 	struct SkillToggle { enum Consume: u8 { NONE, MANA, RAGE, STAMINA } consume = NONE; f32 interval = 0; f32 value = 0; eastl::fixed_vector<i32,4,false> remotes; eastl::fixed_vector<i32,6,false> statuses; };
@@ -1174,7 +1178,7 @@ struct GameXmlContent
 		for(const char* c = key; *c; c++) { h ^= (u8)(*c >= 'a' && *c <= 'z' ? *c - 32 : *c); h *= 16777619u; }
 		return ((u64)h << 32) | (u32)seqID;
 	}
-	struct InteractionInfo { f32 activeDistance = 0; bool carry = false; CreatureIndex receiver = CreatureIndex::Invalid; bool active = true; bool repeat = false; f32 repeatInterval = 0; i32 castMs = 0; u32 announcement = 0; i32 points = 0; };
+	struct InteractionInfo { f32 activeDistance = 0; bool carry = false; bool individual = false; CreatureIndex receiver = CreatureIndex::Invalid; bool active = true; bool repeat = false; f32 repeatInterval = 0; i32 castMs = 0; u32 announcement = 0; i32 points = 0; eastl::array<u32,2> ownerMask = {{ 0, 0 }}; };
 	eastl::hash_map<i32, i32> dynamicInteraction;
 	i32 FindDynamicInteraction(i32 doc) const { auto f = dynamicInteraction.find(doc); return f == dynamicInteraction.end() ? 0 : f->second; }
 	eastl::hash_map<i32, InteractionInfo> interactions;
