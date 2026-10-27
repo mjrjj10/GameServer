@@ -449,6 +449,7 @@ struct World
 		Time stateEndAt = Time::ZERO;
 		f32 speedMul = 1.0f;
 		u8 victoryStep = 0;
+		u8 hpBuffLevel = 0;
 		Time victoryPendingAt = Time::ZERO;
 		Time victoryNext = Time::ZERO;
 		Time victoryHealAt = Time::ZERO;

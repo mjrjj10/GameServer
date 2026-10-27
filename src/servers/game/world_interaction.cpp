@@ -354,6 +354,13 @@ void World::OnMonsterDeath(ActorNpc& npc, ActorUID killerUID)
 
 void World::OnMonsterDamaged(ActorNpc& npc, i32 hpBefore)
 {
+	if(npc.monsterAi && npc.hp > 0 && npc.hpMax > 0) {
+		const auto& buffs = npc.monsterAi->hpBuffs;
+		while(npc.hpBuffLevel < buffs.size() && (f32)npc.hp <= buffs[npc.hpBuffLevel].first * npc.hpMax) {
+			ApplyMonsterStatus(npc, buffs[npc.hpBuffLevel].second, true);
+			npc.hpBuffLevel++;
+		}
+	}
 	if(npc.tagID < 0 || npc.hpMax <= 0) return;
 	foreach_const(n, map->levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::HP_TRIGGER || n->tagID != npc.tagID) continue;

@@ -1101,6 +1101,17 @@ bool GameXmlContent::LoadMonsterAi()
 		ai.groggyChance = pInfo->FloatAttribute("groggyChance");
 		ai.groggyTime = pInfo->FloatAttribute("groggyTime");
 		ai.spawnTime = pInfo->FloatAttribute("spawnTime");
+		if(const char* hpBuffs = pInfo->Attribute("hpBuffs")) {
+			const char* at = hpBuffs;
+			while(*at && !ai.hpBuffs.full()) {
+				f32 ratio = 0;
+				i32 status = 0;
+				if(EA::StdC::Sscanf(at, "%f:%d", &ratio, &status) != 2) break;
+				ai.hpBuffs.push_back(eastl::make_pair(ratio, status));
+				while(*at && *at != ' ') at++;
+				while(*at == ' ') at++;
+			}
+		}
 		if(const char* victory = pInfo->Attribute("victory")) {
 			char first[64] = {}, second[64] = {};
 			if(EA::StdC::Sscanf(victory, "%63s %63s", first, second) == 2) {

@@ -977,6 +977,7 @@ struct GameXmlContent
 		eastl::fixed_vector<i32,4,false> victoryStatuses;
 		f32 victoryStatusDelay = 0;
 		f32 victoryHeal = 0;
+		eastl::fixed_vector<eastl::pair<f32,i32>,8,false> hpBuffs;
 		eastl::fixed_vector<i32,4,false> groggyStatuses;
 		eastl::fixed_vector<StatusType,8,false> ccTypes;
 		eastl::fixed_vector<u32,10,false> enemyTags;
