@@ -3196,6 +3196,9 @@ DEFAULT_SERIALIZE(Sv::SN_NotifyIsInSafeZone);
 DEFAULT_SERIALIZE(Sv::SN_RequestVoting);
 DEFAULT_SERIALIZE(Sv::SN_Vote);
 DEFAULT_SERIALIZE(Sv::SN_VotingResult);
+DEFAULT_SERIALIZE(Sv::SA_TransformCharacter);
+DEFAULT_SERIALIZE(Sv::SN_TransformCharacter);
+DEFAULT_SERIALIZE(Sv::SN_ChangeCharacterMode);
 #undef DEFAULT_SERIALIZE
 
 template<>

@@ -557,6 +557,7 @@ struct GameXmlContent
 		eastl::fixed_vector<WeaponIndex,3,false> fairPvpWeaponIDs;
 		eastl::fixed_vector<StatValue,32,false> baseStats;
 		i32 densityCount = 0;
+		f32 moveSpeed = 0;
 
 
 
@@ -1027,6 +1028,27 @@ struct GameXmlContent
 	f32 FindMonsterLifeTime(i32 creatureID) const { auto f = monsterLifeTime.find(creatureID); return f == monsterLifeTime.end() ? 0.0f : f->second; }
 	f32 monsterGrowthPeriod = 0;
 	i32 monsterGrowthCap = 0;
+	struct TitanForm
+	{
+		i32 doc = 0;
+		f32 duration = 0;
+		i32 weapon = 0;
+		i32 skill1 = 0;
+		i32 skill2 = 0;
+		i32 ug = 0;
+		f32 moveSpeed = 0;
+		eastl::fixed_vector<StatValue,32,false> stats;
+		f32 Stat(u8 type) const { for(const StatValue& st : stats) if(st.type == type) return st.value; return 0; }
+	};
+	struct TitanInfo
+	{
+		i32 cost = 0;
+		f32 votePeriod = 0;
+		f32 teamCoolTime = 0;
+		eastl::fixed_vector<TitanForm,4,false> forms;
+	};
+	TitanInfo titan;
+	bool LoadTitan();
 	f32 MonsterGrowth(i32 creatureID, u8 type) const
 	{
 		auto f = monsterGrowth.find(creatureID);

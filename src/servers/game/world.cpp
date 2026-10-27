@@ -576,6 +576,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	const SkillID skillID = ResolveComboRecast(player, skillIn, forcedAction);
 	const vec3 castPos = ResolveCastPos(player, skillID, castPosIn, forcedAction);
 	if(frozen || combatLocked) return;
+	if(forcedAction == ActionStateID::INVALID) TitanOnCast(player, skillIn);
 	MarkInBattle(player);
 	if(!SkillTargetsAllowed(player, skillID, targets)) return;
 	const ActorUID hitEventTarget = player.memorizedTarget;

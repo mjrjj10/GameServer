@@ -243,6 +243,7 @@ bool GameXmlContent::LoadMasterDefinitionsModel()
 		float scale;
 
 		pEntityComData->QueryFloatAttribute("_MoveSpeed", &moveSpeed);
+		master->moveSpeed = moveSpeed;
 		pEntityComData->QueryFloatAttribute("_RotateSpeed", &rotateSpeed);
 		pEntityComData->QueryFloatAttribute("_Scale", &scale);
 		pEntityComData->QueryIntAttribute("_DensityCount", &master->densityCount);
@@ -1109,6 +1110,30 @@ bool GameXmlContent::LoadMonsterAi()
 		foreach_const(a, ai.attacks) ai.byTarget[a->target] = &*a;
 	}
 	LOG("Loaded AI of %d monsters", (i32)monsterAi.size());
+	return true;
+}
+
+bool GameXmlContent::LoadTitan()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/TitanTransform.xml", doc, true)) return true;
+	XMLElement* root = doc.FirstChildElement();
+	titan.cost = root->IntAttribute("cost");
+	titan.votePeriod = root->FloatAttribute("votePeriod");
+	titan.teamCoolTime = root->FloatAttribute("teamCoolTime");
+	for(XMLElement* f = root->FirstChildElement("FORM"); f && !titan.forms.full(); f = f->NextSiblingElement("FORM")) {
+		TitanForm form;
+		form.doc = f->IntAttribute("doc");
+		form.duration = f->FloatAttribute("duration");
+		form.weapon = f->IntAttribute("weapon");
+		form.skill1 = (i32)f->UnsignedAttribute("skill1");
+		form.skill2 = (i32)f->UnsignedAttribute("skill2");
+		form.ug = (i32)f->UnsignedAttribute("ug");
+		form.moveSpeed = f->FloatAttribute("moveSpeed");
+		for(XMLElement* st = f->FirstChildElement("STAT"); st && !form.stats.full(); st = st->NextSiblingElement("STAT")) form.stats.push_back({ (u8)st->IntAttribute("type"), st->FloatAttribute("value") });
+		titan.forms.push_back(form);
+	}
+	LOG("Loaded %d titan forms (cost %d)", (i32)titan.forms.size(), titan.cost);
 	return true;
 }
 
@@ -2379,6 +2404,9 @@ bool GameXmlContent::Load()
 	if (!r) return false;
 
 	r = LoadMonsterAi();
+	if (!r) return false;
+
+	r = LoadTitan();
 	if (!r) return false;
 
 	r = LoadIngameLevel();

@@ -192,6 +192,8 @@ u32 World::ResetTraits(Player& player, ActorUID characterUID)
 }
 
 static const u32 VOTE_TYPE_SURRENDER = 0;
+static const u32 VOTE_TYPE_TITAN = 1;
+static const f64 VOTE_TITAN_FAIL_PLAYER_COOLDOWN_MS = 60000.0;
 static const f64 VOTE_SURRENDER_PERIOD_MS = 30000.0;
 static const f64 VOTE_SURRENDER_FAIL_COOLDOWN_MS = 90000.0;
 static const u32 VOTE_STATE_PASSED = 1;
@@ -203,31 +205,45 @@ static const i8 VOTE_NONE = -1;
 
 void World::RequestVote(Player& player, u32 type)
 {
-	if(type != VOTE_TYPE_SURRENDER || winnerTeam >= 0 || gameStartedAt == Time::ZERO) return;
-	if(TimeDiffMs(TimeDiff(gameStartedAt, localTime)) < (f64)replication->surrenderAbleTime) return;
+	if(winnerTeam >= 0 || gameStartedAt == Time::ZERO) return;
+	const GameXmlContent::TitanInfo& titan = GetGameXmlContent().titan;
+	f32 periodMs = 0;
+	if(type == VOTE_TYPE_SURRENDER) {
+		if(TimeDiffMs(TimeDiff(gameStartedAt, localTime)) < (f64)replication->surrenderAbleTime) return;
+		periodMs = (f32)VOTE_SURRENDER_PERIOD_MS;
+	}
+	else if(type == VOTE_TYPE_TITAN) {
+		if(titan.forms.empty() || player.dead || player.titanForm >= 0 || teamTitanPieces[player.team] < titan.cost || localTime < player.titanVoteBlockedUntil) return;
+		periodMs = titan.votePeriod;
+	}
+	else return;
 	TeamVote& vote = teamVotes[player.team];
 	if(vote.active || localTime < vote.cooldownUntil) return;
 	vote.active = true;
 	vote.type = type;
+	vote.periodMs = periodMs;
 	vote.requestor = (i32)player.index;
-	vote.endAt = TimeAdd(localTime, TimeMsToTime(VOTE_SURRENDER_PERIOD_MS));
+	vote.endAt = TimeAdd(localTime, TimeMsToTime(periodMs));
 	vote.choices.fill(VOTE_NONE);
 	i32 voters = 0;
 	foreach(p, players) {
-		if(p->team != player.team) continue;
+		if(p->team != player.team || (type == VOTE_TYPE_TITAN && p->index == player.index)) continue;
 		voters++;
-		if(p->index == player.index || p->clientHd == ClientHandle::INVALID) vote.choices[p->index] = VOTE_YES;
 	}
 	foreach(p, players) {
-		if(p->team == player.team && p->clientHd != ClientHandle::INVALID) replication->SendRequestVoting(p->clientHd, player.userID, type, (u32)VOTE_SURRENDER_PERIOD_MS, voters, false);
+		if(p->team == player.team && (p->index == player.index || p->clientHd == ClientHandle::INVALID)) vote.choices[p->index] = VOTE_YES;
+	}
+	foreach(p, players) {
+		if(p->team == player.team && p->clientHd != ClientHandle::INVALID) replication->SendRequestVoting(p->clientHd, player.userID, type, (u32)periodMs, voters, false);
 	}
 	foreach(voter, players) {
 		if(voter->team != player.team || vote.choices[voter->index] != VOTE_YES) continue;
+		if(type == VOTE_TYPE_TITAN && voter->index == player.index) continue;
 		foreach(p, players) {
 			if(p->team == player.team && p->clientHd != ClientHandle::INVALID) replication->SendVote(p->clientHd, type, (u32)VOTE_YES);
 		}
 	}
-	LOG("Vote :: %ls asks team %d to surrender", player.name.data(), (i32)player.team);
+	LOG("Vote :: %ls starts vote %d for team %d", player.name.data(), type, (i32)player.team);
 	UpdateVotes();
 }
 
@@ -246,13 +262,25 @@ void World::FinishVote(i32 team, bool passed)
 {
 	TeamVote& vote = teamVotes[team];
 	vote.active = false;
-	if(!passed) vote.cooldownUntil = TimeAdd(localTime, TimeMsToTime(VOTE_SURRENDER_FAIL_COOLDOWN_MS));
 	const UserID requestor = vote.requestor >= 0 ? players[vote.requestor].userID : UserID(0);
-	foreach(p, players) {
-		if(p->team == team && p->clientHd != ClientHandle::INVALID) replication->SendVotingResult(p->clientHd, requestor, vote.type, passed ? VOTE_STATE_PASSED : VOTE_STATE_FAILED, passed ? VOTE_REASON_PASSED : VOTE_REASON_REJECTED, 0, passed ? 0 : (u32)VOTE_SURRENDER_FAIL_COOLDOWN_MS);
+	u32 reason = passed ? VOTE_REASON_PASSED : VOTE_REASON_REJECTED;
+	u32 playerCool = 0;
+	u32 teamCool = 0;
+	if(vote.type == VOTE_TYPE_TITAN) {
+		reason = VOTE_REASON_PASSED;
+		if(passed) teamCool = (u32)GetGameXmlContent().titan.teamCoolTime;
+		else playerCool = (u32)VOTE_TITAN_FAIL_PLAYER_COOLDOWN_MS;
 	}
-	LOG("Vote :: team %d surrender %s", team, passed ? "passed" : "rejected");
-	if(passed && winnerTeam < 0) winnerTeam = team == 0 ? 1 : 0;
+	else if(!passed) teamCool = (u32)VOTE_SURRENDER_FAIL_COOLDOWN_MS;
+	if(teamCool > 0) vote.cooldownUntil = TimeAdd(localTime, TimeMsToTime((f64)teamCool));
+	if(playerCool > 0 && vote.requestor >= 0) players[vote.requestor].titanVoteBlockedUntil = TimeAdd(localTime, TimeMsToTime((f64)playerCool));
+	foreach(p, players) {
+		if(p->team == team && p->clientHd != ClientHandle::INVALID) replication->SendVotingResult(p->clientHd, requestor, vote.type, passed ? VOTE_STATE_PASSED : VOTE_STATE_FAILED, reason, playerCool, teamCool);
+	}
+	LOG("Vote :: team %d vote %d %s", team, vote.type, passed ? "passed" : "rejected");
+	if(!passed) return;
+	if(vote.type == VOTE_TYPE_SURRENDER && winnerTeam < 0) winnerTeam = team == 0 ? 1 : 0;
+	if(vote.type == VOTE_TYPE_TITAN && vote.requestor >= 0) TransformTitan(players[vote.requestor], 0, true);
 }
 
 void World::UpdateVotes()
@@ -267,7 +295,7 @@ void World::UpdateVotes()
 			if(vote.choices[p->index] == VOTE_YES) yes++;
 			else if(vote.choices[p->index] != VOTE_NONE) no++;
 		}
-		const i32 needed = voters <= 3 ? voters : voters - 1;
+		const i32 needed = vote.type == VOTE_TYPE_TITAN ? voters / 2 + 1 : voters <= 3 ? voters : voters - 1;
 		if(yes >= needed) FinishVote(team, true);
 		else if(voters - no < needed || localTime >= vote.endAt) FinishVote(team, false);
 	}
@@ -356,9 +384,83 @@ void World::UpdateGiantWaves()
 	}
 }
 
+static const i32 TITAN_SPAWN_STATUS = 1239000040;
+static const i32 TITAN_SPAWN_SELF_STATUS = 1239000041;
+static const i32 AI_TRIGGER_TRANSFORM_TITAN = 300;
+static const f64 TITAN_MODE_SWITCH_DELAY_MS = 620.0;
+
+void World::TransformTitan(Player& player, i32 formIndex, bool initial)
+{
+	const GameXmlContent::TitanInfo& titan = GetGameXmlContent().titan;
+	if(formIndex < 0 || formIndex >= (i32)titan.forms.size()) return;
+	const GameXmlContent::TitanForm& form = titan.forms[formIndex];
+	ActorMaster& chara = player.Main();
+	if(initial) {
+		AddTeamPieces((i32)player.team, -titan.cost);
+		player.titanSavedHp = chara.hp;
+		player.titanUntil = TimeAdd(localTime, TimeMsToTime((f64)form.duration));
+		chara.hpMax = (i32)form.Stat((u8)StatType::STAT_TYPE_HEALTH);
+		chara.hp = chara.hpMax;
+		if(player.clientHd != ClientHandle::INVALID) replication->SendTransformAnswer(player.clientHd, chara.UID, form.doc);
+	}
+	player.titanForm = formIndex;
+	replication->SendTitanFormToAll(!initial, chara.UID, form.doc, initial ? (u32)form.duration : 0, form.weapon, form.skill1, form.skill2, form.ug, form.stats.data(), (u16)form.stats.size(), (f32)chara.hp, form.Stat((u8)StatType::STAT_TYPE_STAMINA), 0.0f, form.moveSpeed);
+	LOG("Titan :: %ls becomes %d (%d hp)", player.name.data(), form.doc, chara.hp);
+	if(!initial) return;
+	ApplyStatus(player, player, TITAN_SPAWN_STATUS);
+	ApplyStatus(player, player, TITAN_SPAWN_SELF_STATUS);
+	FireAITrigger(AI_TRIGGER_TRANSFORM_TITAN, (i32)player.index);
+}
+
+void World::RevertTitan(Player& player)
+{
+	if(player.titanForm < 0) return;
+	ActorMaster& chara = player.Main();
+	player.titanForm = -1;
+	player.titanUntil = Time::ZERO;
+	player.titanModeAt = Time::ZERO;
+	RefreshMasterHealth(player, chara);
+	chara.hp = player.dead ? 0 : MIN(MAX(player.titanSavedHp, 1), chara.hpMax);
+	const auto& master = GetGameXmlContent().GetMaster(chara.classType);
+	eastl::fixed_vector<StatValue,32,false> stats;
+	foreach_const(st, master.baseStats) {
+		StatValue v = *st;
+		if(v.type == (u8)StatType::STAT_TYPE_HEALTH) v.value = (f32)chara.hpMax;
+		if(!stats.full()) stats.push_back(v);
+	}
+	replication->SendTitanFormToAll(false, chara.UID, 100000000 + (i32)chara.classType, 0, 0, -1, -1, -1, stats.data(), (u16)stats.size(), (f32)chara.hp, MasterStat(chara.classType, (u8)StatType::STAT_TYPE_STAMINA), MAX(player.ultGauge, 0.0f), master.moveSpeed);
+	replication->SendStatToAll(chara.UID, (u8)StatType::STAT_TYPE_HEALTH, (f32)chara.hp, (f32)chara.hpMax);
+	LOG("Titan :: %ls back to master (%d/%d hp)", player.name.data(), chara.hp, chara.hpMax);
+}
+
+void World::TitanOnCast(Player& player, SkillID skill)
+{
+	if(player.titanForm < 0) return;
+	const GameXmlContent::TitanInfo& titan = GetGameXmlContent().titan;
+	if((i32)skill != titan.forms[player.titanForm].ug || titan.forms.size() < 2) return;
+	player.titanModeAt = TimeAdd(localTime, TimeMsToTime(TITAN_MODE_SWITCH_DELAY_MS));
+}
+
+void World::UpdateTitans()
+{
+	foreach(p, players) {
+		if(p->titanForm < 0) continue;
+		if(p->titanUntil != Time::ZERO && localTime >= p->titanUntil) {
+			RevertTitan(*p);
+			continue;
+		}
+		if(p->titanModeAt != Time::ZERO && localTime >= p->titanModeAt) {
+			p->titanModeAt = Time::ZERO;
+			const i32 count = (i32)GetGameXmlContent().titan.forms.size();
+			TransformTitan(*p, (p->titanForm + 1) % count, false);
+		}
+	}
+}
+
 void World::UpdateIngameLevels()
 {
 	UpdateVotes();
+	UpdateTitans();
 	UpdateGiantWaves();
 	if(!map || !map->ingameLevels || frozen || nextPassiveExpAt == Time::ZERO || localTime < nextPassiveExpAt) return;
 	const GameXmlContent::IngameLevelInfo& info = GetGameXmlContent().ingameLevel;

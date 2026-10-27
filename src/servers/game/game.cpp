@@ -1000,6 +1000,12 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			return true;
 		}
 
+		if(EA::StdC::Strcmp(msg, L"titan") == 0) {
+			world.RequestVote(world.GetPlayer(p.playerIndex), 1);
+			SendDbgMsg(clientHd, L"Titan vote requested");
+			return true;
+		}
+
 		i32 itemIndex = 0;
 		if(EA::StdC::Sscanf(msg, L"item %d", &itemIndex) == 1) {
 			World::Player& playerActor = world.GetPlayer(p.playerIndex);

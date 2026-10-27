@@ -4,6 +4,7 @@
 #include <common/utils.h>
 #include <common/protocol.h>
 #include <common/packet_serialize.h>
+#include <common/stat.h>
 #include <EASTL/array.h>
 #include <EASTL/fixed_vector.h>
 #include <EASTL/fixed_set.h>
@@ -411,6 +412,8 @@ struct Replication
 	void SendTraitAnswer(ClientHandle clientHd, bool reset, u32 error);
 	void SendSafeZone(ClientHandle clientHd, UserID userID, bool inside);
 	void SendPvpAnnouncementRaw(ClientHandle clientHd, u32 type, u32 data, u32 score, u32 attacker);
+	void SendTransformAnswer(ClientHandle clientHd, ActorUID charUID, i32 doc);
+	void SendTitanFormToAll(bool modeChange, ActorUID charUID, i32 doc, u32 durationMs, i32 weapon, i32 skill1, i32 skill2, i32 ug, const StatValue* stats, u16 count, f32 curHp, f32 curStamina, f32 curUlt, f32 moveSpeed);
 	void SendRequestVoting(ClientHandle clientHd, UserID requestor, u32 type, u32 periodMs, i32 voters, bool modify);
 	void SendVote(ClientHandle clientHd, u32 type, u32 choice);
 	void SendVotingResult(ClientHandle clientHd, UserID candidate, u32 type, u32 state, u32 reason, u32 playerCool, u32 teamCool);

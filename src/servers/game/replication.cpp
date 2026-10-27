@@ -1658,6 +1658,50 @@ void Replication::SendVotingResult(ClientHandle clientHd, UserID candidate, u32 
 	SendPacket(clientHd, packet);
 }
 
+void Replication::SendTransformAnswer(ClientHandle clientHd, ActorUID charUID, i32 doc)
+{
+	Sv::SA_TransformCharacter packet;
+	packet.result = 0;
+	packet.characterID = (u32)GetLocalActorID(clientHd, charUID);
+	packet.docIndex = (u32)doc;
+	packet.coolTime = 0;
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendTitanFormToAll(bool modeChange, ActorUID charUID, i32 doc, u32 durationMs, i32 weapon, i32 skill1, i32 skill2, i32 ug, const StatValue* stats, u16 count, f32 curHp, f32 curStamina, f32 curUlt, f32 moveSpeed)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		auto write = [&](auto& packet) {
+			packet.Write<u32>((u32)GetLocalActorID(clientHd, charUID));
+			packet.Write<i32>(doc);
+			if(!modeChange) packet.Write<u32>(durationMs);
+			packet.Write<i32>(weapon);
+			packet.Write<i32>(skill1);
+			packet.Write<i32>(skill2);
+			packet.Write<i32>(ug);
+			packet.Write<u16>(count);
+			for(u16 i = 0; i < count; i++) {
+				packet.Write<u8>(stats[i].type);
+				packet.Write<f32>(stats[i].value);
+			}
+			packet.Write<u16>(3);
+			packet.Write<u8>((u8)StatType::STAT_TYPE_HEALTH);
+			packet.Write<f32>(curHp);
+			packet.Write<u8>((u8)StatType::STAT_TYPE_ULTIMATE);
+			packet.Write<f32>(curUlt);
+			packet.Write<u8>((u8)StatType::STAT_TYPE_STAMINA);
+			packet.Write<f32>(curStamina);
+			packet.Write<f32>(moveSpeed);
+			packet.Write<u8>(1);
+			SendPacket(clientHd, packet);
+		};
+		if(modeChange) { PacketWriter<Sv::SN_ChangeCharacterMode,512> packet; write(packet); }
+		else { PacketWriter<Sv::SN_TransformCharacter,512> packet; write(packet); }
+	}
+}
+
 void Replication::SendPvpAnnouncementRaw(ClientHandle clientHd, u32 type, u32 data, u32 score, u32 attacker)
 {
 	Sv::SN_PvpEventAnnouncement packet;
