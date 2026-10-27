@@ -684,6 +684,7 @@ void Game::EndGame()
 		e.ingameLevel = (u8)p.ingameLevel;
 		e.damageDealt = p.damageDealt;
 		e.savedPieces = p.savedPieces;
+		e.monsterKills = p.monsterKills;
 		e.traits[0] = p.Main().traits;
 		e.traits[1] = p.Sub().traits;
 		list.push_back(e);

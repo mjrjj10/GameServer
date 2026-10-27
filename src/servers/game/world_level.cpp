@@ -317,6 +317,21 @@ void World::AddPoints(Player& player, i32 points)
 void World::GrantMonsterKillPoints(const ActorNpc& npc, ActorUID killerUID)
 {
 	if(!map || !map->ingameLevels) return;
+	static const u32 minionTag = StatusTypeKey("Minion");
+	static const u32 towerCenterTag = StatusTypeKey("Tower_Center");
+	static const u32 towerSideTag = StatusTypeKey("Tower_Side");
+	static const u32 chiefTag = StatusTypeKey("Chief");
+	if(ActorMaster* master = FindMasterActor(killerUID)) {
+		if(master->parent && npc.monsterAi) {
+			const u32 tag = npc.monsterAi->tagKey;
+			i32 kind = -1;
+			if(tag == minionTag) kind = END_KILL_MINION;
+			else if(tag == towerCenterTag || tag == towerSideTag) kind = END_KILL_TOWER;
+			else if(tag == chiefTag || npc.faction == Faction::ORANGE) kind = END_KILL_BOSS;
+			else if(npc.faction == Faction::MONSTER) kind = END_KILL_NEUTRAL;
+			if(kind >= 0 && master->parent->monsterKills[kind] < 255) master->parent->monsterKills[kind]++;
+		}
+	}
 	const GameXmlContent::IngameLevelInfo& info = GetGameXmlContent().ingameLevel;
 	auto found = info.monsters.find((i32)npc.docID);
 	ActorMaster* killer = FindMasterActor(killerUID);

@@ -1014,13 +1014,13 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 				scoreGot.Write<u8>((u8)(main ? p.assists : 0));
 				scoreGot.Write<u32>((u32)(main ? p.damageDealt : 0));
 				for(int d = 0; d < 9; d++) scoreGot.Write<u32>(0);
-				scoreGot.Write<u8>(0);
-				scoreGot.Write<u8>(0);
+				scoreGot.Write<u8>(main ? p.monsterKills[0] : 0);
+				scoreGot.Write<u8>(main ? p.monsterKills[1] : 0);
 				scoreGot.Write<u8>(0);
 				scoreGot.Write<u8>((u8)(main ? p.savedPieces : 0));
 				scoreGot.Write<u8>(0);
-				scoreGot.Write<u8>(0);
-				scoreGot.Write<u8>(0);
+				scoreGot.Write<u8>(main ? p.monsterKills[2] : 0);
+				scoreGot.Write<u8>(main ? p.monsterKills[3] : 0);
 			}
 			scoreGot.Write<u16>(0);
 			scoreGot.Write<u16>(0);

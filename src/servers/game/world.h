@@ -140,6 +140,7 @@ struct World
 		bool inSafeZone = false;
 		i32 titanPieces = 0;
 		i32 savedPieces = 0;
+		eastl::array<u8,4> monsterKills = {};
 		i32 titanForm = -1;
 		Time titanUntil = Time::ZERO;
 		Time titanModeAt = Time::ZERO;
@@ -990,6 +991,7 @@ public:
 	void BuildGiantTriggers();
 	eastl::array<vec2,2> titanSaveAreas;
 	eastl::array<bool,2> titanSaveAreaKnown = {{ false, false }};
+	enum EndKill { END_KILL_TOWER = 0, END_KILL_BOSS, END_KILL_MINION, END_KILL_NEUTRAL };
 	bool titanSaveAreasBuilt = false;
 	bool BotObjective(const Player& bot, vec2* goal);
 	void UpdateGiantWaves();

@@ -357,6 +357,7 @@ struct Replication
 		u8 ingameLevel = 1;
 		i64 damageDealt = 0;
 		i32 savedPieces = 0;
+		eastl::array<u8,4> monsterKills = {};
 		eastl::array<u8,4> traits[2] = {};
 	};
 	struct EndGot
