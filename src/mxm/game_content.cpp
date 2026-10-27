@@ -2514,6 +2514,9 @@ bool GameXmlContent::Load()
 	r = LoadSkillTooltips();
 	if(!r) return false;
 
+	r = LoadStatusStatMods();
+	if(!r) return false;
+
 	r = LoadSkillCosts();
 	if(!r) return false;
 
@@ -3108,6 +3111,55 @@ bool GameXmlContent::LoadStatusData()
 	return true;
 }
 
+static StatusMod::Stat StatusModStatFromName(const char* stat)
+{
+	static const struct { const char* name; StatusMod::Stat stat; } NAMES[] = {
+		{ "STAT_TYPE_SHIELD_DEFENCE", StatusMod::SHIELD_DEFENCE },
+		{ "STAT_TYPE_HEALTH", StatusMod::HEALTH },
+		{ "STAT_TYPE_SKILLPOWER", StatusMod::SKILLPOWER },
+		{ "STAT_TYPE_CRITICALRATE", StatusMod::CRITICALRATE },
+		{ "STAT_TYPE_REFLECT_DAMAGE_RATIO", StatusMod::REFLECT_DAMAGE_RATIO },
+		{ "STAT_TYPE_SKILL_CRITICALRATE", StatusMod::SKILL_CRITICALRATE },
+		{ "STAT_TYPE_ATTACK", StatusMod::ATTACK },
+		{ "STAT_TYPE_MOVESPEED", StatusMod::MOVESPEED },
+		{ "STAT_TYPE_DEFENCE", StatusMod::DEFENCE },
+		{ "STAT_TYPE_MANAREGEN", StatusMod::MANAREGEN },
+		{ "STAT_TYPE_RAGEREGEN", StatusMod::RAGEREGEN },
+		{ "STAT_TYPE_STAMINA", StatusMod::STAMINA },
+		{ "STAT_TYPE_REMOTESPEED", StatusMod::REMOTESPEED },
+		{ "STAT_TYPE_STAMINAREGEN", StatusMod::STAMINAREGEN },
+		{ "STAT_TYPE_ENERGYREGEN", StatusMod::ENERGYREGEN },
+		{ "STAT_TYPE_TAG_HEALTHREGEN_VALUE", StatusMod::TAG_HEALTHREGEN },
+		{ "STAT_TYPE_TAG_COOLTIME", StatusMod::TAG_COOLTIME },
+	};
+	for(const auto& n : NAMES) {
+		if(EA::StdC::Strcmp(stat, n.name) == 0) return n.stat;
+	}
+	return StatusMod::OTHER;
+}
+
+bool GameXmlContent::LoadStatusStatMods()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/StatusStatMods.xml", doc)) return true;
+	i32 count = 0;
+	for(XMLElement* pMod = doc.FirstChildElement()->FirstChildElement("MOD"); pMod; pMod = pMod->NextSiblingElement("MOD")) {
+		auto found = statusMap.find(pMod->IntAttribute("status"));
+		const char* stat = pMod->Attribute("stat");
+		if(found == statusMap.end() || !stat || found->second.mods.full()) continue;
+		StatusMod mod;
+		mod.stat = StatusModStatFromName(stat);
+		mod.value = pMod->FloatAttribute("value");
+		mod.mul = pMod->BoolAttribute("mul");
+		mod.regen = true;
+		if(mod.stat == StatusMod::OTHER || mod.value == 0) continue;
+		found->second.mods.push_back(mod);
+		count++;
+	}
+	LOG("Loaded %d measured status stat mods", count);
+	return true;
+}
+
 bool GameXmlContent::LoadSkillTooltips()
 {
 	XMLDocument xmlTT;
@@ -3171,19 +3223,7 @@ bool GameXmlContent::LoadSkillTooltips()
 				if(mod.value == 0 || !stat) continue;
 				mod.regen = proc && EA::StdC::Strcmp(proc, "STATPROC_REGEN") == 0;
 				mod.mul = apply && EA::StdC::Strcmp(apply, "STATAPPLY_MUL") == 0;
-				if(EA::StdC::Strcmp(stat, "STAT_TYPE_SHIELD_DEFENCE") == 0) mod.stat = StatusMod::SHIELD_DEFENCE;
-				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_HEALTH") == 0) mod.stat = StatusMod::HEALTH;
-				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_SKILLPOWER") == 0) mod.stat = StatusMod::SKILLPOWER;
-				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_CRITICALRATE") == 0) mod.stat = StatusMod::CRITICALRATE;
-				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_REFLECT_DAMAGE_RATIO") == 0) mod.stat = StatusMod::REFLECT_DAMAGE_RATIO;
-				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_SKILL_CRITICALRATE") == 0) mod.stat = StatusMod::SKILL_CRITICALRATE;
-				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_ATTACK") == 0) mod.stat = StatusMod::ATTACK;
-				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_MOVESPEED") == 0) mod.stat = StatusMod::MOVESPEED;
-				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_DEFENCE") == 0) mod.stat = StatusMod::DEFENCE;
-				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_MANAREGEN") == 0) mod.stat = StatusMod::MANAREGEN;
-				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_RAGEREGEN") == 0) mod.stat = StatusMod::RAGEREGEN;
-				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_STAMINA") == 0) mod.stat = StatusMod::STAMINA;
-				else if(EA::StdC::Strcmp(stat, "STAT_TYPE_REMOTESPEED") == 0) mod.stat = StatusMod::REMOTESPEED;
+				mod.stat = StatusModStatFromName(stat);
 				if(mod.mul && mod.stat != StatusMod::OTHER && !skillMulStats.full()) skillMulStats.push_back({ skillID, statusID, (u8)mod.stat, mod.value });
 				if(!found->second.mods.full()) { found->second.mods.push_back(mod); modCount++; }
 				touched.insert(statusID);

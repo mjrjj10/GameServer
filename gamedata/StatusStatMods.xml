@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<STATUS_STAT_MODS>
+  <MOD status="1200100003" stat="STAT_TYPE_TAG_HEALTHREGEN_VALUE" value="40" samples="6" />
+  <MOD status="1200100006" stat="STAT_TYPE_STAMINAREGEN" value="3" samples="6" />
+  <MOD status="1200100006" stat="STAT_TYPE_MANAREGEN" value="12" samples="6" />
+  <MOD status="1200100006" stat="STAT_TYPE_ENERGYREGEN" value="3" samples="6" />
+  <MOD status="1200100003" stat="STAT_TYPE_TAG_COOLTIME" value="-25" mul="1" samples="8" />
+  <MOD status="1200100006" stat="STAT_TYPE_TAG_COOLTIME" value="-25" mul="1" samples="6" />
+</STATUS_STAT_MODS>

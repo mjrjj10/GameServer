@@ -161,7 +161,7 @@ struct SummonInfo
 
 struct StatusMod
 {
-	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE, ATTACK, MOVESPEED, REFLECT_DAMAGE_RATIO, DEFENCE, MANAREGEN, RAGEREGEN, STAMINA, REMOTESPEED };
+	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE, ATTACK, MOVESPEED, REFLECT_DAMAGE_RATIO, DEFENCE, MANAREGEN, RAGEREGEN, STAMINA, REMOTESPEED, STAMINAREGEN, ENERGYREGEN, TAG_HEALTHREGEN, TAG_COOLTIME };
 	Stat stat = OTHER;
 	bool regen = false;
 	bool mul = false;
@@ -1341,6 +1341,7 @@ private:
 	eastl::hash_map<i32, Element> creatureElement;
 	bool LoadStatusData();
 	bool LoadSkillTooltips();
+	bool LoadStatusStatMods();
 	bool LoadSkillCosts();
 	bool LoadSkillUpgrades();
 	bool LoadCharacterElements();

@@ -7,6 +7,9 @@ static const i32 STAT_STAMINAREGEN = 5;
 static const i32 STAT_MANAREGEN = 39;
 static const i32 STAT_ULTIMATEREGEN = 42;
 static const i32 STAT_TAG_HEALTHREGEN_VALUE = 23;
+static const i32 STAT_TAG_COOLTIME = 31;
+static const f32 TAG_COOLTIME_AUX = 3.75f;
+static const f32 TAG_COOLTIME_MIN = 5.0f;
 static const i32 STAT_TAG_STAMINAREGEN_VALUE = 25;
 static const i32 STAT_TAG_HEALTHREGEN_RATIO = 27;
 static const i32 STAT_TAG_STAMINAREGEN_RATIO = 29;
@@ -96,14 +99,15 @@ void World::UpdateUltimateGauges(f32 delta)
 			}
 		}
 
-		const f32 staminaRegen = (MasterStat(cls, STAT_STAMINAREGEN) + StatBonus(*it, STAT_STAMINAREGEN)) * MAX(1.0f + StatusRegenBonus(*it, StatusMod::STAMINA, true) / 100.0f, 0.0f);
+		const f32 staminaRegen = (MasterStat(cls, STAT_STAMINAREGEN) + StatBonus(*it, STAT_STAMINAREGEN) + StatusRegenBonus(*it, StatusMod::STAMINAREGEN, false)) * MAX(1.0f + StatusRegenBonus(*it, StatusMod::STAMINA, true) / 100.0f, 0.0f);
 		const f32 manaRegen = MasterStat(cls, STAT_MANAREGEN) + StatBonus(*it, STAT_MANAREGEN) + StatusRegenBonus(*it, StatusMod::MANAREGEN, false);
 		const f32 rageRegen = MasterStat(cls, RESOURCES[1].regenStat) + StatusRegenBonus(*it, StatusMod::RAGEREGEN, false);
+		const f32 energyRegen = MasterStat(cls, RESOURCES[0].regenStat) + StatusRegenBonus(*it, StatusMod::ENERGYREGEN, false);
 		{
-			const f32 rates[3] = { staminaRegen, manaRegen, rageRegen };
-			const i32 statIDs[3] = { STAT_STAMINAREGEN, STAT_MANAREGEN, RESOURCES[1].regenStat };
-			const bool used[3] = { staminaMax > 0, manaMax > 0, resMax[1] > 0 };
-			for(int k = 0; k < 3; k++) {
+			const f32 rates[4] = { staminaRegen, manaRegen, rageRegen, energyRegen };
+			const i32 statIDs[4] = { STAT_STAMINAREGEN, STAT_MANAREGEN, RESOURCES[1].regenStat, RESOURCES[0].regenStat };
+			const bool used[4] = { staminaMax > 0, manaMax > 0, resMax[1] > 0, resMax[0] > 0 };
+			for(int k = 0; k < 4; k++) {
 				if(!used[k]) continue;
 				if(it->regenSent[k] < 0 && !it->regenResend) it->regenSent[k] = rates[k];
 				if(!it->regenResend && fabsf(rates[k] - it->regenSent[k]) < 0.001f) continue;
@@ -111,6 +115,22 @@ void World::UpdateUltimateGauges(f32 delta)
 				replication->SendStatToAll(it->Main().UID, statIDs[k], 0.0f, rates[k]);
 			}
 			it->regenResend = false;
+		}
+		{
+			const f32 tagCoolMul = MAX(1.0f + StatusRegenBonus(*it, StatusMod::TAG_COOLTIME, true) / 100.0f, 0.0f);
+			const f32 tagHealthBonus = StatusRegenBonus(*it, StatusMod::TAG_HEALTHREGEN, false);
+			if(tagCoolMul != it->tagStatSent[0] || tagHealthBonus != it->tagStatSent[1]) {
+				const bool first = it->tagStatSent[0] < 0;
+				it->tagStatSent[0] = tagCoolMul;
+				it->tagStatSent[1] = tagHealthBonus;
+				if(!first) {
+					for(i32 c = 0; c < 2; c++) {
+						const ActorMaster& m = *it->characters[c];
+						replication->SendStatToAll(m.UID, STAT_TAG_HEALTHREGEN_VALUE, 0.0f, MasterStat(m.classType, STAT_TAG_HEALTHREGEN_VALUE) + tagHealthBonus);
+						replication->SendStatToAll(m.UID, STAT_TAG_COOLTIME, TAG_COOLTIME_AUX * tagCoolMul, MAX(MasterStat(m.classType, STAT_TAG_COOLTIME) * tagCoolMul, TAG_COOLTIME_MIN));
+					}
+				}
+			}
 		}
 
 		if(localTime >= it->tNextRegen) {
@@ -128,14 +148,14 @@ void World::UpdateUltimateGauges(f32 delta)
 				regen(mainUID, STAT_STAMINA, it->stamina, staminaMax, staminaRegen);
 				regen(mainUID, STAT_MANA, it->mana, manaMax, manaRegen);
 				for(int r = 0; r < 3; r++) {
-					f32 amount = r == 1 ? rageRegen : MasterStat(cls, RESOURCES[r].regenStat);
+					f32 amount = r == 1 ? rageRegen : r == 0 ? energyRegen : MasterStat(cls, RESOURCES[r].regenStat);
 					if(r == 1 && amount < 0 && localTime < TimeAdd(it->rageGainAt, TimeMsToTime(RAGE_DECAY_DELAY_MS))) amount = 0;
 					regen(mainUID, RESOURCES[r].maxStat, it->res[r], resMax[r], amount);
 				}
 
 				ActorMaster& bench = it->Sub();
 				if(bench.hp > 0 && bench.hp < bench.hpMax) {
-					const i32 hpGain = (i32)(MasterStat(benchCls, STAT_TAG_HEALTHREGEN_VALUE) + MasterStat(benchCls, STAT_TAG_HEALTHREGEN_RATIO) * bench.hpMax / 100.0f);
+					const i32 hpGain = (i32)(MasterStat(benchCls, STAT_TAG_HEALTHREGEN_VALUE) + StatusRegenBonus(*it, StatusMod::TAG_HEALTHREGEN, false) + MasterStat(benchCls, STAT_TAG_HEALTHREGEN_RATIO) * bench.hpMax / 100.0f);
 					if(hpGain > 0) {
 						bench.hp = MIN(bench.hp + hpGain, bench.hpMax);
 						replication->SendStatToAll(bench.UID, (i32)StatType::STAT_TYPE_HEALTH, (f32)bench.hp, (f32)bench.hpMax, STAT_REASON_REGEN);

@@ -226,7 +226,8 @@ struct World
 		eastl::array<Time,2> overheatUntil = { Time::ZERO, Time::ZERO };
 		bool staminaDirty = false;
 		bool ultDirty = false;
-		eastl::array<f32,3> regenSent = { -1, -1, -1 };
+		eastl::array<f32,4> regenSent = { -1, -1, -1, -1 };
+		eastl::array<f32,2> tagStatSent = { -1, -1 };
 		bool regenResend = false;
 		f32 shotLeadSec = 0;
 		f32 weaponAimYaw = 0;
