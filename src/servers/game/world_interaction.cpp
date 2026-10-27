@@ -399,6 +399,7 @@ void World::InitMonsterStats(ActorNpc& npc)
 		const f32 value = st->value + content.MonsterGrowth((i32)npc.docID, st->type) * npc.growthLevel;
 		if(st->type == (u8)StatType::STAT_TYPE_HEALTH) npc.hp = npc.hpMax = (i32)value;
 		if(st->type == MONSTER_DEFENCE_STAT) npc.defence = value;
+		if(st->type == (u8)StatType::STAT_TYPE_MOVESPEED && value > 0) npc.speedMul = value / 100.0f;
 	}
 }
 

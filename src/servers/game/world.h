@@ -447,6 +447,7 @@ struct World
 		Time monsterHoldUntil = Time::ZERO;
 		Time defeatLieAt = Time::ZERO;
 		Time stateEndAt = Time::ZERO;
+		f32 speedMul = 1.0f;
 		Time monsterWeakUntil = Time::ZERO;
 		u32 fogHiddenFrom = 0;
 		bool monsterWeakHit = false;

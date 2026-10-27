@@ -1190,7 +1190,7 @@ void World::UpdateNpcFog()
 				npc->fogHiddenFrom |= bit;
 			}
 			else if((sees[viewer->team] || viewer->devVision) && hidden) {
-				const f32 speed = npc->monsterAi ? (npc->monsterWalking ? npc->monsterAi->walk : npc->monsterAi->run) : 0.0f;
+				const f32 speed = npc->monsterAi ? (npc->monsterWalking ? npc->monsterAi->walk : npc->monsterAi->run) * npc->speedMul : 0.0f;
 				replication->SendEnterNpc(viewer->clientHd, npc->UID, npc->docID, npc->pos, npc->rot.z, speed, npc->actionState != ActionStateID::INVALID ? npc->actionState : ActionStateID::NONE_BEHAVIORSTATE, npc->hp, npc->hpMax, (f32)npc->growthLevel);
 				npc->fogHiddenFrom &= ~bit;
 			}

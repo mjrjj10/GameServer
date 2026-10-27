@@ -158,6 +158,8 @@ void World::UpdateMonsterAi(f32 delta)
 		if(!npc.monsterAi || npc.hp <= 0 || npc.removeAt != Time::ZERO) continue;
 		if(npc.despawnAt != Time::ZERO && localTime >= npc.despawnAt) continue;
 		const GameXmlContent::MonsterAi& ai = *npc.monsterAi;
+		const f32 walk = ai.walk * npc.speedMul;
+		const f32 run = ai.run * npc.speedMul;
 		UpdateNpcDefeat(npc);
 		if(!npc.monsterStarted) {
 			if(localTime < TimeAdd(npc.spawnedAt, TimeMsToTime(MAX(MONSTER_START_DELAY_MS, (f64)ai.spawnTime * 1000.0)))) continue;
@@ -167,9 +169,9 @@ void World::UpdateMonsterAi(f32 delta)
 				npc.actionState = ai.idle;
 				replication->SendMonsterStateToAll(npc.UID, ai.idle, npc.pos, 0.0f);
 			}
-			if(npc.path && ai.walk > 0) {
+			if(npc.path && walk > 0) {
 				npc.monsterWalking = true;
-				replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, ai.walk);
+				replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, walk);
 			}
 		}
 
@@ -213,14 +215,14 @@ void World::UpdateMonsterAi(f32 delta)
 		if(neutral && !targetPos) {
 			const vec2 rel = vec2(npc.home) - vec2(npc.pos);
 			const f32 dist = glm::length(rel);
-			if(dist > MONSTER_WAYPOINT_REACHED && ai.run > 0) {
+			if(dist > MONSTER_WAYPOINT_REACHED && run > 0) {
 				const f32 yaw = atan2f(rel.y, rel.x);
-				npc.pos = vec3(vec2(npc.pos) + rel / dist * MIN(ai.run * delta, dist), npc.pos.z);
+				npc.pos = vec3(vec2(npc.pos) + rel / dist * MIN(run * delta, dist), npc.pos.z);
 				npc.rot.z = yaw;
 				if(!npc.monsterReturning || localTime >= npc.monsterNextSync) {
 					npc.monsterReturning = true;
 					npc.monsterNextSync = TimeAdd(localTime, TimeMsToTime(MONSTER_SYNC_MS));
-					replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.home, yaw, ai.run);
+					replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.home, yaw, run);
 				}
 			}
 			else if(npc.monsterReturning) {
@@ -293,15 +295,15 @@ void World::UpdateMonsterAi(f32 delta)
 			const f32 yaw = dist > 1.0f ? atan2f(rel.y, rel.x) : npc.rot.z;
 			const f32 reach = attack->range;
 			if(dist > reach) {
-				if(ai.run <= 0) continue;
+				if(run <= 0) continue;
 				npc.monsterWalking = false;
-				const f32 step = MIN(ai.run * delta, dist - reach);
+				const f32 step = MIN(run * delta, dist - reach);
 				npc.pos = vec3(vec2(npc.pos) + rel / dist * step, npc.pos.z);
 				npc.rot.z = yaw;
 				if(!npc.monsterChasing || localTime >= npc.monsterNextSync) {
 					npc.monsterChasing = true;
 					npc.monsterNextSync = TimeAdd(localTime, TimeMsToTime(MONSTER_SYNC_MS));
-					replication->SendMonsterMoveToAll(npc.UID, npc.pos, vec3(vec2(*targetPos) - rel / dist * reach, npc.pos.z), yaw, ai.run);
+					replication->SendMonsterMoveToAll(npc.UID, npc.pos, vec3(vec2(*targetPos) - rel / dist * reach, npc.pos.z), yaw, run);
 				}
 				continue;
 			}
@@ -337,7 +339,7 @@ void World::UpdateMonsterAi(f32 delta)
 			npc.rot.z = yaw;
 			npc.actionState = attack->state;
 			replication->SendNpcTurnToAll(npc.UID, yaw);
-			replication->SendMonsterStateToAll(npc.UID, attack->state, npc.pos, ai.run);
+			replication->SendMonsterStateToAll(npc.UID, attack->state, npc.pos, run);
 			if(attack->anim > 0) {
 				npc.stateEndAt = TimeAdd(localTime, TimeMsToTime(attack->anim * 1000.0));
 				if(npc.monsterHoldUntil < npc.stateEndAt) npc.monsterHoldUntil = npc.stateEndAt;
@@ -355,7 +357,7 @@ void World::UpdateMonsterAi(f32 delta)
 			continue;
 		}
 
-		if(!npc.path || ai.walk <= 0 || npc.pathPoint >= (i32)npc.path->size()) continue;
+		if(!npc.path || walk <= 0 || npc.pathPoint >= (i32)npc.path->size()) continue;
 		if(!npc.monsterWalking) {
 			npc.monsterWalking = true;
 			npc.monsterChasing = false;
@@ -365,9 +367,10 @@ void World::UpdateMonsterAi(f32 delta)
 				if(d < best) { best = d; npc.pathPoint = i; }
 			}
 			npc.actionState = ActionStateID::NONE_BEHAVIORSTATE;
-			replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, ai.walk);
+			replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, walk);
 		}
-		f32 budget = ai.walk * delta;
+		const i32 pointBefore = npc.pathPoint;
+		f32 budget = walk * delta;
 		while(budget > 0 && npc.pathPoint < (i32)npc.path->size()) {
 			const vec3& goal = (*npc.path)[npc.pathPoint];
 			const vec2 rel = vec2(goal) - vec2(npc.pos);
@@ -377,6 +380,10 @@ void World::UpdateMonsterAi(f32 delta)
 			npc.pos = vec3(vec2(npc.pos) + rel / dist * step, goal.z);
 			npc.rot.z = atan2f(rel.y, rel.x);
 			budget -= step;
+		}
+		if(npc.pathPoint < (i32)npc.path->size() && (npc.pathPoint != pointBefore || localTime >= npc.monsterNextSync)) {
+			npc.monsterNextSync = TimeAdd(localTime, TimeMsToTime(MONSTER_SYNC_MS));
+			replication->SendMonsterMoveToAll(npc.UID, npc.pos, (*npc.path)[npc.pathPoint], npc.rot.z, walk);
 		}
 	}
 }
