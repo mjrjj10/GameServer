@@ -127,6 +127,10 @@ struct World
 		bool firstBlood = false;
 		i64 damageDealt = 0;
 		bool devGod = false;
+		ActorUID bushUID = ActorUID::INVALID;
+		ActorUID fogHiddenUID = ActorUID::INVALID;
+		u8 fogSeenBy = 3;
+		eastl::array<Time,2> fogRevealUntil = {{ Time::ZERO, Time::ZERO }};
 		eastl::array<u32,9> damageStats = {};
 		u8 statueCaptures = 0;
 		u8 visionCaptures = 0;
@@ -440,6 +444,7 @@ struct World
 		bool monsterAwake = false;
 		Time monsterHoldUntil = Time::ZERO;
 		Time monsterWeakUntil = Time::ZERO;
+		u32 fogHiddenFrom = 0;
 		bool monsterWeakHit = false;
 		bool monsterWalking = false;
 		bool monsterChasing = false;
@@ -1057,6 +1062,12 @@ public:
 	void UpdateBattleStates();
 	void BreakHide(Player& player);
 	void UpdateHideVisibility();
+	void UpdateFog();
+	bool TeamSees(i32 team, const Player& target);
+	bool TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID);
+	void UpdateNpcFog();
+	void RevealToTeam(Player& player, i32 team);
+	Time nextFogUpdate = Time::ZERO;
 	void ShowHiddenToEnemies(Player& player, ActorUID was, ActorUID hidden);
 	void SendHideDetectToAll(ActorUID detectorUID, ActorUID targetUID, u8 flag);
 	void UpdateWeaponCharges();

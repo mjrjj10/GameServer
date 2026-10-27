@@ -3205,6 +3205,7 @@ DEFAULT_SERIALIZE(Sv::SN_InteractionCancel);
 DEFAULT_SERIALIZE(Sv::SN_StageSkillAvailable);
 DEFAULT_SERIALIZE(Sv::SA_StageSkillSelect);
 DEFAULT_SERIALIZE(Sv::SN_StageSkillSelect);
+DEFAULT_SERIALIZE(Sv::SN_BushObjectState);
 #undef DEFAULT_SERIALIZE
 
 template<>

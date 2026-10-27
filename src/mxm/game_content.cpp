@@ -2526,6 +2526,9 @@ bool GameXmlContent::Load()
 	r = LoadSummons();
 	if(!r) return false;
 
+	r = LoadSightData();
+	if(!r) return false;
+
 	r = LoadStageTimeLimits();
 	if(!r) return false;
 
@@ -3419,6 +3422,38 @@ void GameXmlContent::LoadSummonInfo(XMLElement* pInfo)
 		}
 		summonMap[id] = si;
 	}
+}
+
+bool GameXmlContent::LoadSightData()
+{
+	static const wchar* CREATURE_FILES[] = { L"/client/CREATURE_CHARACTER.xml", L"/client/CREATURE_MONSTER_PvP.xml", L"/client/CREATURE_MONSTER_SUMMON.xml" };
+	for(const wchar* file : CREATURE_FILES) {
+		XMLDocument doc;
+		if(!LoadXMLFile(file, doc, true)) continue;
+		for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+			XMLElement* pEntity = pInfo->FirstChildElement("EntityComData");
+			const char* sight = pEntity ? pEntity->Attribute("_SightRadiusType") : nullptr;
+			if(!sight) continue;
+			i32 meters = 0;
+			EA::StdC::Sscanf(sight, "SIGHT_RADIUS_TYPE_%dM", &meters);
+			creatureSight[pInfo->IntAttribute("ID")] = (f32)meters * 100.0f;
+		}
+	}
+	XMLDocument xmlDynamic;
+	if(LoadXMLFile(L"/client/DYNAMIC.xml", xmlDynamic)) {
+		for(XMLElement* pInfo = xmlDynamic.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+			XMLElement* pDyn = pInfo->FirstChildElement("DynamicComData");
+			XMLElement* pEntity = pInfo->FirstChildElement("EntityComData");
+			const char* type = pDyn ? pDyn->Attribute("_Type") : nullptr;
+			const char* key = pEntity ? pEntity->Attribute("KEYNAME") : nullptr;
+			if(!type || !key || EA::StdC::Strcmp(type, "DYNAMIC_TYPE_BUSH") != 0) continue;
+			const char* size = EA::StdC::Strrchr(key, '_');
+			i32 w = 0, l = 0;
+			if(size && EA::StdC::Sscanf(size + 1, "%dx%d", &w, &l) == 2) bushSize[pInfo->IntAttribute("ID")] = vec2((f32)w * 100.0f, (f32)l * 100.0f);
+		}
+	}
+	LOG("Loaded sight radius of %d creatures, %d bush types", (i32)creatureSight.size(), (i32)bushSize.size());
+	return true;
 }
 
 bool GameXmlContent::LoadStageTimeLimits()

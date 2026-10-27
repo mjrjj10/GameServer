@@ -1057,6 +1057,126 @@ void World::ShowHiddenToEnemies(Player& player, ActorUID was, ActorUID hidden)
 	LOG("Hide :: %ls %s from enemies", player.name.data(), hidden != ActorUID::INVALID ? "hidden" : "visible");
 }
 
+static const f64 FOG_UPDATE_MS = 200.0;
+static const f64 FOG_REVEAL_MS = 3000.0;
+static const f32 FOG_EYE_HEIGHT = 150.0f;
+static const f32 FOG_DEFAULT_SIGHT = 1600.0f;
+
+void World::RevealToTeam(Player& player, i32 team)
+{
+	if(!replication->titanMode || team < 0 || team > 1 || team == (i32)player.team) return;
+	player.fogRevealUntil[team] = TimeAdd(localTime, TimeMsToTime(FOG_REVEAL_MS));
+}
+
+bool World::TeamSees(i32 team, const Player& target)
+{
+	if(target.fogRevealUntil[team] != Time::ZERO && localTime < target.fogRevealUntil[team]) return true;
+	return TeamSeesAt(team, target.body->GetWorldPos(), target.bushUID);
+}
+
+bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID)
+{
+	const auto& content = GetGameXmlContent();
+	const vec3 eye = at + vec3(0, 0, FOG_EYE_HEIGHT);
+	f32 hit = 0;
+	foreach_const(p, players) {
+		if(p->team != (u8)team || p->dead || !p->body) continue;
+		if(bushUID != ActorUID::INVALID && p->bushUID != bushUID) continue;
+		const vec3 from = p->body->GetWorldPos();
+		const f32 sight = content.CreatureSight(100000000 + (i32)p->Main().classType);
+		if(glm::length(vec2(from) - vec2(at)) > (sight > 0 ? sight : FOG_DEFAULT_SIGHT)) continue;
+		if(!physics.RaycastStatic(from + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit)) return true;
+	}
+	if(bushUID != ActorUID::INVALID) return false;
+	foreach_const(npc, actorNpcList) {
+		if(npc->hp <= 0 || npc->removeAt != Time::ZERO || (npc->despawnAt != Time::ZERO && localTime >= npc->despawnAt)) continue;
+		const i32 npcTeam = npc->ownerUID != ActorUID::INVALID ? (i32)players[npc->ownerIndex].team : (npc->faction == Faction::RED ? 0 : npc->faction == Faction::BLUE ? 1 : -1);
+		if(npcTeam != team) continue;
+		const f32 sight = content.CreatureSight((i32)npc->docID);
+		if(sight <= 0 || glm::length(vec2(npc->pos) - vec2(at)) > sight) continue;
+		if(!physics.RaycastStatic(npc->pos + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit)) return true;
+	}
+	return false;
+}
+
+void World::UpdateFog()
+{
+	if(!replication->titanMode || localTime < nextFogUpdate) return;
+	nextFogUpdate = TimeAdd(localTime, TimeMsToTime(FOG_UPDATE_MS));
+	const auto& content = GetGameXmlContent();
+	foreach(p, players) {
+		if(!p->body) continue;
+		const vec3 at = p->body->GetWorldPos();
+		ActorUID bush = ActorUID::INVALID;
+		foreach_const(d, actorDynamicList) {
+			const vec2* size = content.FindBushSize((i32)d->docID);
+			if(!size) continue;
+			const vec2 rel = vec2(at) - vec2(d->pos);
+			const f32 c = cosf(-d->rot.z), s = sinf(-d->rot.z);
+			const vec2 local = vec2(rel.x * c - rel.y * s, rel.x * s + rel.y * c);
+			if(fabsf(local.x) <= size->x * 0.5f && fabsf(local.y) <= size->y * 0.5f) { bush = d->UID; break; }
+		}
+		if(bush != p->bushUID) {
+			p->bushUID = bush;
+			replication->SendBushStateToAll(p->Main().UID, bush);
+		}
+	}
+	UpdateNpcFog();
+	foreach(p, players) {
+		if(!p->body || p->dead || p->hiddenUID != ActorUID::INVALID) continue;
+		const ActorUID main = p->Main().UID;
+		if(p->hiddenFrom != 0 && p->fogHiddenUID != ActorUID::INVALID && p->fogHiddenUID != main) {
+			foreach(viewer, players) if(viewer->clientHd != ClientHandle::INVALID && (p->hiddenFrom & (1u << viewer->index))) replication->SendLeaveActor(viewer->clientHd, main);
+			p->fogHiddenUID = main;
+		}
+		const bool sees[2] = { p->team == 0 || TeamSees(0, *p), p->team == 1 || TeamSees(1, *p) };
+		p->fogSeenBy = (u8)((sees[0] ? 1 : 0) | (sees[1] ? 2 : 0));
+		foreach(viewer, players) {
+			if(viewer->clientHd == ClientHandle::INVALID || viewer->team == p->team) continue;
+			const u32 bit = 1u << viewer->index;
+			const bool hidden = (p->hiddenFrom & bit) != 0;
+			if(!sees[viewer->team] && !hidden) {
+				replication->SendLeaveActor(viewer->clientHd, main);
+				p->hiddenFrom |= bit;
+				p->fogHiddenUID = main;
+			}
+			else if(sees[viewer->team] && hidden) {
+				const ActorMaster& chara = p->Main();
+				const f32 baseSpeed = const_cast<CharacterModel&>(content.GetMaster(chara.classType).character).getMoveSpeed();
+				const f32 speed = baseSpeed * (p->battleStage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (p->battleStage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f));
+				replication->SendEnterActor(viewer->clientHd, main, chara.classType, p->body->GetWorldPos(), p->input.rot.bodyYaw, p->input.rot.upperYaw, p->input.moveTo, p->battleStage > 0, speed, chara.actionState != ActionStateID::INVALID ? chara.actionState : ActionStateID::NONE_BEHAVIORSTATE, chara.hp, chara.hpMax);
+				p->hiddenFrom &= ~bit;
+			}
+		}
+	}
+}
+
+void World::UpdateNpcFog()
+{
+	foreach(npc, actorNpcList) {
+		if(npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
+		const bool summon = npc->ownerUID != ActorUID::INVALID;
+		if(!summon && (!npc->monsterAi || IsStructure(*npc))) continue;
+		const i32 npcTeam = summon ? (i32)players[npc->ownerIndex].team : (npc->faction == Faction::RED ? 0 : npc->faction == Faction::BLUE ? 1 : -1);
+		bool sees[2];
+		for(i32 team = 0; team < 2; team++) sees[team] = team == npcTeam || TeamSeesAt(team, npc->pos, ActorUID::INVALID);
+		foreach(viewer, players) {
+			if(viewer->clientHd == ClientHandle::INVALID) continue;
+			const u32 bit = 1u << viewer->index;
+			const bool hidden = (npc->fogHiddenFrom & bit) != 0;
+			if(!sees[viewer->team] && !hidden) {
+				replication->SendLeaveActor(viewer->clientHd, npc->UID);
+				npc->fogHiddenFrom |= bit;
+			}
+			else if(sees[viewer->team] && hidden) {
+				const f32 speed = npc->monsterAi ? (npc->monsterWalking ? npc->monsterAi->walk : npc->monsterAi->run) : 0.0f;
+				replication->SendEnterNpc(viewer->clientHd, npc->UID, npc->docID, npc->pos, npc->rot.z, speed, npc->actionState != ActionStateID::INVALID ? npc->actionState : ActionStateID::NONE_BEHAVIORSTATE, npc->hp, npc->hpMax, (f32)npc->growthLevel);
+				npc->fogHiddenFrom &= ~bit;
+			}
+		}
+	}
+}
+
 void World::StartSkillPoints()
 {
 	foreach(it, players) it->nextSkillPointAt = TimeAdd(localTime, TimeMsToTime(SKILL_POINT_INTERVAL_MS));

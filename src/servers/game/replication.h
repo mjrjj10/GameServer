@@ -247,7 +247,7 @@ struct Replication
 		LocalActorID nextPlayerLocalActorID;
 		LocalActorID nextNpcLocalActorID;
 		LocalActorID nextMonsterLocalActorID;
-		eastl::fixed_set<ActorUID,16> hiddenActors;
+		eastl::fixed_set<ActorUID,256> hiddenActors;
 
 		void Reset();
 	};
@@ -338,6 +338,8 @@ struct Replication
 	void SendPlayerJump(ClientHandle clientHd, ActorUID mainActorUID, f32 rotate, f32 moveDirX, f32 moveDirY);
 	void SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, SkillID skillID, i32 damage, i32 hp, i32 hpMax, u32 damageType = 0, i32 statusID = 0);
 	void SendHpToAll(ActorUID actorUID, i32 hp, i32 hpMax);
+	void SendBushStateToAll(ActorUID actorUID, ActorUID bushUID);
+	void SendEnterNpc(ClientHandle clientHd, ActorUID actorUID, CreatureIndex docID, const vec3& pos, f32 yaw, f32 speed, ActionStateID action, i32 hp, i32 hpMax, f32 growthLevel);
 	void SendDoConnectChannel(ClientHandle clientHd, const wchar* nickname, const i32 hubIP[4], u16 hubPort);
 	struct EndPlayer
 	{

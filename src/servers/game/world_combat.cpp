@@ -250,6 +250,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	LOG("Damage :: %ls -> %ls skill=%d damage=%d%s hp=%d/%d in=%d remote=%u element=%d", attacker.name.data(), target.name.data(), (i32)skillID, damage, damageType == PACKET_DAMAGE_TYPE_CRITICAL ? " CRIT" : "", chara.hp, chara.hpMax,
 		damageIn, (u32)(proj ? proj->remoteDoc : remoteDoc), (i32)(elementMul * 100.0f));
 	if(attacker.team != target.team) {
+		RevealToTeam(attacker, target.team);
 		attacker.damageDealt += damage;
 		const bool normalHit = proj && skillID == SkillID::INVALID && damageStatusID == 0;
 		attacker.damageStats[END_DMG_MAX_DEALT] = MAX(attacker.damageStats[END_DMG_MAX_DEALT], (u32)damage);
@@ -410,6 +411,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	npc.hp = MAX(npc.hp - AbsorbNpcShield(npc, dealt), 0);
 	if(npc.monsterWeakUntil != Time::ZERO && localTime < npc.monsterWeakUntil) npc.monsterWeakHit = true;
 	if(IsStructure(npc)) attacker.damageStats[END_DMG_BUILDING_DEALT] += (u32)(hpBefore - npc.hp);
+	if(npc.faction == Faction::RED || npc.faction == Faction::BLUE) RevealToTeam(attacker, (i32)npc.faction);
 	if(npc.ownerUID == ActorUID::INVALID) OnMonsterDamaged(npc, hpBefore);
 	if(npc.ownerUID == ActorUID::INVALID && npc.monsterAi && (npc.faction == Faction::ORANGE || npc.faction == Faction::MONSTER) && npc.monsterTarget == ActorUID::INVALID && npc.hp > 0) {
 		npc.monsterTarget = attacker.Main().UID;

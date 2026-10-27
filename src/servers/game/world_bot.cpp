@@ -81,7 +81,7 @@ void World::UpdateBotSkills()
 		Player* target = nullptr;
 		f32 best = 1e9f;
 		foreach(e, players) {
-			if(e->dead || e->team == bot.team) continue;
+			if(e->dead || e->team == bot.team || !(e->fogSeenBy & (1u << bot.team))) continue;
 			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(pos));
 			if(d < best) { best = d; target = &*e; }
 		}
@@ -218,7 +218,7 @@ void World::UpdateBotMovement()
 		const Player* target = nullptr;
 		f32 best = 1e9f;
 		foreach_const(e, players) {
-			if(e->dead || e->team == bot.team || e->untargetable || e->Main().classType == ClassType::NONE) continue;
+			if(e->dead || e->team == bot.team || e->untargetable || e->Main().classType == ClassType::NONE || !(e->fogSeenBy & (1u << bot.team))) continue;
 			if(BotDangerAt(bot, vec2(e->body->GetWorldPos()), nullptr, nullptr)) continue;
 			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - here);
 			if(d < best) { best = d; target = &*e; }
@@ -274,7 +274,7 @@ void World::UpdateBotCombat()
 		if(WeaponIsMelee(bot) && Config().DevShowcase) continue;
 		if(WeaponIsMelee(bot)) {
 			foreach_const(e, players) {
-				if(e->dead || e->team == bot.team) continue;
+				if(e->dead || e->team == bot.team || !(e->fogSeenBy & (1u << bot.team))) continue;
 				if(glm::length(vec2(e->body->GetWorldPos()) - vec2(bot.body->GetWorldPos())) <= BOT_MELEE_RANGE + HitRadius(*e) + HitRadius(bot)) {
 					bot.weaponFired = true;
 					bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot) * 1000.0));
@@ -290,7 +290,7 @@ void World::UpdateBotCombat()
 		Player* target = nullptr;
 		f32 best = range;
 		foreach(e, players) {
-			if(e->dead || e->team == bot.team) continue;
+			if(e->dead || e->team == bot.team || !(e->fogSeenBy & (1u << bot.team))) continue;
 			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(pos));
 			if(d < best) { best = d; target = &*e; }
 		}

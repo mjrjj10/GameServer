@@ -1552,7 +1552,7 @@ void Replication::SendWeaponCreatorShotToAll(ActorUID ownerUID, u32 seed, Remote
 void Replication::SendAiActionStateToAll(ActorUID actorUID, ActionStateID action, f32 worldYaw, const vec3& pos, bool keepSpeed)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
-		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
@@ -1570,7 +1570,7 @@ void Replication::SendAiActionStateToAll(ActorUID actorUID, ActionStateID action
 void Replication::SendAiSetTargetToAll(ActorUID actorUID, ActorUID targetUID)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
-		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
@@ -1606,7 +1606,7 @@ void Replication::SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec
 {
 	const i16 yaw = WorldYawToMonsterDeciDegrees(worldYaw);
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
-		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
@@ -1628,7 +1628,7 @@ void Replication::SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec
 void Replication::SendMonsterStateToAll(ActorUID actorUID, ActionStateID action, const vec3& pos, f32 speed)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
-		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
@@ -1831,7 +1831,7 @@ void Replication::SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const
 {
 	const i16 yaw = WorldYawToMonsterDeciDegrees(worldYaw);
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
-		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
@@ -1854,7 +1854,7 @@ void Replication::SendNpcTurnToAll(ActorUID actorUID, f32 worldYaw)
 {
 	const i16 yaw = WorldYawToMonsterDeciDegrees(worldYaw);
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
-		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
@@ -1870,7 +1870,7 @@ void Replication::SendNpcTurnToAll(ActorUID actorUID, f32 worldYaw)
 void Replication::SendNpcLegStartToAll(ActorUID actorUID, const vec3& pos, const vec3& goal)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
-		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
@@ -1888,7 +1888,7 @@ void Replication::SendNpcLegStopToAll(ActorUID actorUID, const vec3& pos, f32 wo
 {
 	const i16 yaw = WorldYawToMonsterDeciDegrees(worldYaw);
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
-		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
@@ -2156,6 +2156,59 @@ void Replication::SendHideDetect(ClientHandle clientHd, ActorUID detectorUID, Ac
 	packet.targetID = (u32)GetLocalActorID(clientHd, targetUID);
 	packet.flag = flag;
 	SendPacket(clientHd, packet);
+}
+
+void Replication::SendBushStateToAll(ActorUID actorUID, ActorUID bushUID)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
+		const LocalActorID local = GetLocalActorID(clientHandle[clientID], actorUID);
+		if(local == LocalActorID::INVALID) continue;
+		Sv::SN_BushObjectState packet;
+		packet.objectID = (u32)local;
+		packet.bushID = bushUID != ActorUID::INVALID ? (u32)GetLocalActorID(clientHandle[clientID], bushUID) : 0;
+		SendPacket(clientHandle[clientID], packet);
+	}
+}
+
+void Replication::SendEnterNpc(ClientHandle clientHd, ActorUID actorUID, CreatureIndex docID, const vec3& pos, f32 yaw, f32 speed, ActionStateID action, i32 hp, i32 hpMax, f32 growthLevel)
+{
+	const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+	if(localID == LocalActorID::INVALID) return;
+	auto found = playerMap.find(clientHd);
+	if(found != playerMap.end()) playerLocalInfo[found->second].hiddenActors.erase(actorUID);
+	PacketWriter<Sv::SN_GameEnterActor,512> packet;
+	packet.Write<u8>(1);
+	packet.Write<LocalActorID>(localID);
+	packet.Write<float3>(v2f(pos));
+	packet.Write<float3>(float3{ cosf(yaw), sinf(yaw), 0 });
+	packet.Write<float2>(float2{ 0, 0 });
+	packet.Write<float2>(float2{ cosf(yaw), sinf(yaw) });
+	packet.Write<float3>(v2f(pos));
+	packet.Write<u8>(0);
+	packet.Write<f32>(speed);
+	packet.Write<ActionStateID>(action);
+	packet.Write<i32>(0);
+	const auto* stats = GetGameXmlContent().FindMonsterStats((i32)docID);
+	for(int list = 0; list < 2; list++) {
+		packet.Write<u16>(stats ? (u16)stats->size() : 0);
+		if(!stats) continue;
+		for(const auto& st : *stats) {
+			packet.Write<u8>(st.type);
+			const f32 value = st.value + GetGameXmlContent().MonsterGrowth((i32)docID, st.type) * growthLevel;
+			packet.Write<f32>(list == 1 && st.type == (u8)StatType::STAT_TYPE_HEALTH ? (f32)hp : value);
+		}
+	}
+	packet.Write<u16>(0);
+	packet.Write<u16>(0);
+	SendPacket(clientHd, packet);
+	Sv::SN_UpdateStat stat;
+	stat.characterID = (u32)localID;
+	stat._STAT_TYPE = 0;
+	stat._CUR = (f32)hp;
+	stat._MAX = (f32)hpMax;
+	stat._ReasonCode = 0;
+	SendPacket(clientHd, stat);
 }
 
 void Replication::SendLeaveActor(ClientHandle clientHd, ActorUID actorUID)
@@ -2450,7 +2503,7 @@ void Replication::SendInteractionExecuteToAll(ActorUID objectUID, ActorUID targe
 void Replication::SendNpcBehaviorToAll(ActorUID actorUID, ActionStateID action, const vec3& pos, const vec3& targetPos, ActorUID targetUID, f32 moveSpeed)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
-		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
@@ -2498,7 +2551,7 @@ void Replication::SendStanceToAll(ActorUID actorUID, i32 stance, f32 durationSec
 void Replication::SendHpToAll(ActorUID actorUID, i32 hp, i32 hpMax)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
-		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);

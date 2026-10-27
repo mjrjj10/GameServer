@@ -1200,6 +1200,10 @@ struct GameXmlContent
 	eastl::hash_map<i32, i32> dynamicInteraction;
 	eastl::hash_map<i32, f32> stageTeleportDistance;
 	eastl::hash_map<i32, f32> statusShield;
+	eastl::hash_map<i32, f32> creatureSight;
+	eastl::hash_map<i32, vec2> bushSize;
+	f32 CreatureSight(i32 doc) const { auto f = creatureSight.find(doc); return f == creatureSight.end() ? 0.0f : f->second; }
+	const vec2* FindBushSize(i32 doc) const { auto f = bushSize.find(doc); return f == bushSize.end() ? nullptr : &f->second; }
 	f32 StatusShieldAmount(const StatusInfo& info) const
 	{
 		auto f = statusShield.find(info.ID);
@@ -1341,6 +1345,7 @@ private:
 	bool LoadSkillUpgrades();
 	bool LoadCharacterElements();
 	bool LoadSummons();
+	bool LoadSightData();
 	void LoadSummonInfo(tinyxml2::XMLElement* pInfo);
 	bool LoadStageTimeLimits();
 	bool LoadAnimationSequenceTimes();
