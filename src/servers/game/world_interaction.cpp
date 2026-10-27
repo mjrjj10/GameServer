@@ -79,6 +79,7 @@ void World::RemoveDynamic(ActorUID uid)
 void World::PlayerInteract(Player& player, ActorUID targetUID)
 {
 	if(player.dead || player.carriedBy >= 0 || targetUID == ActorUID::INVALID) return;
+	if(StartMapInteraction(player, targetUID)) return;
 	const OpenInteraction* open = nullptr;
 	foreach_const(it, openInteractions) {
 		if(it->objectUID == targetUID || players[it->ownerIndex].Main().UID == targetUID) open = &*it;
@@ -417,6 +418,26 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 			if(p.clientHd != ClientHandle::INVALID) replication->SendSafeZone(p.clientHd, p.userID, node->active);
 		} break;
 		case GameXmlContent::LevelEventNode::INVOKE_AI_TRIGGER: FireAITrigger(node->aiIndex, playerIndex); break;
+		case GameXmlContent::LevelEventNode::INTERACTION_TRIGGER: return;
+		case GameXmlContent::LevelEventNode::ACTIVE_INTERACTION: {
+			replication->SendClientLevelEventToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID);
+			BuildMapInteractions();
+			foreach(m, mapInteractions) {
+				if(m->localID != node->localID) continue;
+				m->active = node->active;
+				if(node->active) { m->occupiedTeam = INTERACTION_NOT_OCCUPIED; m->coolUntil = Time::ZERO; }
+				SendMapInteractionStatus(*m);
+			}
+		} break;
+		case GameXmlContent::LevelEventNode::ADD_CAST_TIME: {
+			BuildMapInteractions();
+			foreach(m, mapInteractions) {
+				if(m->localID != node->localID) continue;
+				for(i32 team = 0; team < 2; team++) {
+					if(node->team == Faction::MONSTER || (i32)node->team == team) m->extraCastMs[team] += (i32)(node->delay * 1000.0f);
+				}
+			}
+		} break;
 		case GameXmlContent::LevelEventNode::NOTIFY_RESPAWN: replication->SendMonsterRespawnTimeToAll((u32)node->count, (u32)node->localID, (u32)(node->delay * 1000.0f)); break;
 		case GameXmlContent::LevelEventNode::TEAM_CONDITION: {
 			if(playerIndex < 0 || node->team == Faction::INVALID || (Faction)players[playerIndex].team != node->team) return;
@@ -623,6 +644,106 @@ bool World::LevelTriggerActive(const GameXmlContent::LevelEventNode& node) const
 	return node.active;
 }
 
+static const u32 INTERACTION_ALL_TEAMS = 0xffffffff;
+
+void World::BuildMapInteractions()
+{
+	if(mapInteractionsBuilt || !map) return;
+	mapInteractionsBuilt = true;
+	const auto& content = GetGameXmlContent();
+	foreach_const(d, actorDynamicList) {
+		if(d->localID >= INTERACTION_OBJECT_LOCAL_BASE || mapInteractions.full()) continue;
+		const i32 interaction = content.FindDynamicInteraction((i32)d->docID);
+		const GameXmlContent::InteractionInfo* info = interaction ? content.FindInteraction(interaction) : nullptr;
+		if(!info || info->carry) continue;
+		mapInteractions.push_back({ d->UID, d->localID, interaction, info->active, INTERACTION_NOT_OCCUPIED, Time::ZERO, {{ 0, 0 }} });
+	}
+	foreach_const(m, mapInteractions) SendMapInteractionStatus(*m);
+	LOG("Interaction :: %d map objects", (i32)mapInteractions.size());
+}
+
+void World::SendMapInteractionStatus(const MapInteraction& m)
+{
+	const bool cooling = m.coolUntil != Time::ZERO && localTime < m.coolUntil;
+	const bool open = m.active && !cooling && m.occupiedTeam == INTERACTION_NOT_OCCUPIED;
+	const f32 cool = cooling ? (f32)TimeDiffSec(TimeDiff(localTime, m.coolUntil)) : 0.0f;
+	replication->SendInteractionStatusToAll(m.object, open ? INTERACTION_ALL_TEAMS : 0, m.interactionID, m.occupiedTeam, ClientHandle::INVALID, cool);
+}
+
+bool World::StartMapInteraction(Player& player, ActorUID target)
+{
+	BuildMapInteractions();
+	i32 slot = -1;
+	for(i32 i = 0; i < (i32)mapInteractions.size(); i++) if(mapInteractions[i].object == target) slot = i;
+	if(slot < 0) return false;
+	const MapInteraction& m = mapInteractions[slot];
+	const GameXmlContent::InteractionInfo* info = GetGameXmlContent().FindInteraction(m.interactionID);
+	auto obj = actorDynamicMap.find(m.object);
+	if(!info || obj == actorDynamicMap.end() || !m.active || m.occupiedTeam != INTERACTION_NOT_OCCUPIED || player.interactSlot >= 0) return true;
+	foreach_const(p, players) if(p->interactSlot == slot) return true;
+	const vec2 here = vec2(player.body->GetWorldPos());
+	if(info->activeDistance > 0 && glm::length(here - vec2(obj->second->pos)) > info->activeDistance + HitRadius(player)) {
+		LOG("Interaction :: %ls too far from object %d", player.name.data(), m.localID);
+		return true;
+	}
+	const i32 castMs = MAX(info->castMs + m.extraCastMs[player.team], 0);
+	player.interactSlot = slot;
+	player.interactFrom = here;
+	player.interactEndAt = TimeAdd(localTime, TimeMsToTime((f64)castMs));
+	replication->SendInteractionCastingToAll(player.Main().UID, m.object, (u32)ActionStateID::INTERACTION_CAST_BEHAVIORSTATE, (u32)castMs);
+	LOG("Interaction :: %ls casts object %d (%d ms)", player.name.data(), m.localID, castMs);
+	return true;
+}
+
+void World::CancelMapInteraction(Player& player)
+{
+	if(player.interactSlot < 0) return;
+	replication->SendInteractionCancelToAll(player.Main().UID, mapInteractions[player.interactSlot].object);
+	LOG("Interaction :: %ls cancels object %d", player.name.data(), mapInteractions[player.interactSlot].localID);
+	player.interactSlot = -1;
+}
+
+void World::CompleteMapInteraction(Player& player)
+{
+	MapInteraction& m = mapInteractions[player.interactSlot];
+	player.interactSlot = -1;
+	const GameXmlContent::InteractionInfo* info = GetGameXmlContent().FindInteraction(m.interactionID);
+	if(!info) return;
+	m.occupiedTeam = PLAYER_FACTION_BASE + (i32)player.team;
+	if(info->repeat && info->repeatInterval > 0) m.coolUntil = TimeAdd(localTime, TimeMsToTime(info->repeatInterval * 1000.0));
+	else m.active = false;
+	SendMapInteractionStatus(m);
+	replication->SendInteractionExecuteOnlyToAll(player.Main().UID, m.object, (u32)ActionStateID::INTERACTION_EXECUTE_BEHAVIORSTAT);
+	LOG("Interaction :: %ls takes object %d (team %d)", player.name.data(), m.localID, (i32)player.team);
+	if(info->announcement != 0) {
+		player.occupyStreak++;
+		replication->SendPvpAnnouncementToAll(info->announcement, player.occupyStreak, player.Main().UID, m.object, (u32)info->points);
+		if(info->points > 0) AddPoints(player, info->points);
+	}
+	foreach_const(n, map->levelEvents) {
+		if(n->kind != GameXmlContent::LevelEventNode::INTERACTION_TRIGGER || n->localID != m.localID) continue;
+		foreach_const(o, n->outputs) FireLevelEvent(*o, (i32)player.index);
+	}
+}
+
+void World::UpdateMapInteractions()
+{
+	if(!levelEventsStarted) return;
+	BuildMapInteractions();
+	static const f32 INTERACTION_MOVE_CANCEL_DIST = 60.0f;
+	foreach(p, players) {
+		if(p->interactSlot < 0) continue;
+		if(p->dead || glm::length(vec2(p->body->GetWorldPos()) - p->interactFrom) > INTERACTION_MOVE_CANCEL_DIST) CancelMapInteraction(*p);
+		else if(localTime >= p->interactEndAt) CompleteMapInteraction(*p);
+	}
+	foreach(m, mapInteractions) {
+		if(m->coolUntil == Time::ZERO || localTime < m->coolUntil) continue;
+		m->coolUntil = Time::ZERO;
+		m->occupiedTeam = INTERACTION_NOT_OCCUPIED;
+		SendMapInteractionStatus(*m);
+	}
+}
+
 void World::UpdateBoundTriggers()
 {
 	if(!levelEventsStarted || Config().DevShowcase) return;
@@ -678,6 +799,7 @@ void World::UpdateLevelEvents()
 		i++;
 	}
 	UpdateBoundTriggers();
+	UpdateMapInteractions();
 	for(i32 i = 0; i < (i32)groundItems.size(); ) {
 		if(groundItems[i].expireAt != Time::ZERO && localTime >= groundItems[i].expireAt) {
 			replication->SendDestroyGroundItemToAll(groundItems[i].uid);

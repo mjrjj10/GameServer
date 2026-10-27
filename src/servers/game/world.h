@@ -140,6 +140,10 @@ struct World
 		bool inSafeZone = false;
 		i32 titanPieces = 0;
 		i32 savedPieces = 0;
+		i32 interactSlot = -1;
+		Time interactEndAt = Time::ZERO;
+		vec2 interactFrom = vec2(0);
+		u32 occupyStreak = 0;
 		eastl::array<u8,4> monsterKills = {};
 		i32 titanForm = -1;
 		Time titanUntil = Time::ZERO;
@@ -990,6 +994,15 @@ public:
 	u32 giantCycle = 0;
 	eastl::array<eastl::fixed_vector<i32,32,false>,2> giantSummons;
 	void BuildGiantTriggers();
+	struct MapInteraction { ActorUID object; i32 localID; i32 interactionID; bool active; i32 occupiedTeam; Time coolUntil; eastl::array<i32,2> extraCastMs; };
+	eastl::fixed_vector<MapInteraction,32,false> mapInteractions;
+	bool mapInteractionsBuilt = false;
+	void BuildMapInteractions();
+	void SendMapInteractionStatus(const MapInteraction& m);
+	bool StartMapInteraction(Player& player, ActorUID target);
+	void CancelMapInteraction(Player& player);
+	void CompleteMapInteraction(Player& player);
+	void UpdateMapInteractions();
 	eastl::array<vec2,2> titanSaveAreas;
 	eastl::array<bool,2> titanSaveAreaKnown = {{ false, false }};
 	enum EndKill { END_KILL_TOWER = 0, END_KILL_BOSS, END_KILL_MINION, END_KILL_NEUTRAL };

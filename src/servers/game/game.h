@@ -125,6 +125,7 @@ struct Game
 	void OnPlayerCastSkill(ClientHandle clientHd, ActorUID actorUID, const PlayerInputCastSkill& cast, const Cl::CQ_PlayerCastSkill::PosStruct& posInfo);
 	void OnPlayerToggleSkill(ClientHandle clientHd, SkillID skillID, bool on);
 	void OnPlayerInteraction(ClientHandle clientHd, ActorUID targetUID, LocalActorID selfLocal);
+	void OnPlayerInteractionCancel(ClientHandle clientHd);
 	bool IsWeaponFireObject(ClientHandle clientHd, const wchar* name, u16 len);
 	void OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID, const vec3& targetPos, LocalActorID target);
 

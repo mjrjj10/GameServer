@@ -431,6 +431,7 @@ void GamePacketHandler::HandlePacket_CQ_InteractionCancel(ClientHandle clientHd,
 		return;
 	}
 	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_InteractionCancel>(packetData, packetSize));
+	game->OnPlayerInteractionCancel(clientHd);
 }
 
 void GamePacketHandler::HandlePacket_CQ_GamePlayerSyncPhy(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

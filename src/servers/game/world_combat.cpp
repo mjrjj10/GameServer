@@ -308,6 +308,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		GrantSkillPoint(target);
 		DropTitanPieces(target);
 		RevertTitan(target);
+		target.occupyStreak = 0;
 		i32 teamKills = 0;
 		i32 victimTeamKills = 0;
 		foreach_const(it, players) {
@@ -463,6 +464,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	GrantSkillPoint(target);
 	DropTitanPieces(target);
 	RevertTitan(target);
+	target.occupyStreak = 0;
 	i32 teamKills = 0;
 	i32 victimTeamKills = 0;
 	foreach_const(it, players) {

@@ -373,7 +373,10 @@ struct Replication
 	void SendAiSetTargetToAll(ActorUID actorUID, ActorUID targetUID);
 	void SendExecuteSkillAck(ClientHandle clientHd, ActorUID casterUID, SkillID skillID);
 	void SendCancelSkillToAll(ActorUID casterUID, SkillID skillID);
-	void SendInteractionStatusToAll(ActorUID objectUID, u32 allowedTeamMask, i32 interactionID, i32 occupiedTeam, ClientHandle exclude = ClientHandle::INVALID);
+	void SendInteractionStatusToAll(ActorUID objectUID, u32 allowedTeamMask, i32 interactionID, i32 occupiedTeam, ClientHandle exclude = ClientHandle::INVALID, f32 coolTime = 0);
+	void SendInteractionCastingToAll(ActorUID casterUID, ActorUID objectUID, u32 actionState, u32 castingTimeMS);
+	void SendInteractionExecuteOnlyToAll(ActorUID casterUID, ActorUID objectUID, u32 actionState);
+	void SendInteractionCancelToAll(ActorUID casterUID, ActorUID objectUID);
 	void SendInteractionExecuteToAll(ActorUID objectUID, ActorUID targetUID, u32 actionState, u32 castingTimeMS);
 	void SendToggleSkill(ActorUID casterUID, ClientHandle casterHd, SkillID skillID, bool on, ActionStateID action);
 	void SendHideDetect(ClientHandle clientHd, ActorUID detectorUID, ActorUID targetUID, u8 flag);

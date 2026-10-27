@@ -846,6 +846,13 @@ void Game::OnPlayerInteraction(ClientHandle clientHd, ActorUID targetUID, LocalA
 	if(targetUID != ActorUID::INVALID) world.PlayerInteract(player, targetUID);
 }
 
+void Game::OnPlayerInteractionCancel(ClientHandle clientHd)
+{
+	auto found = playerMap.find(clientHd);
+	if(found == playerMap.end()) return;
+	world.CancelMapInteraction(world.GetPlayer(found->second->playerIndex));
+}
+
 void Game::OnPlayerToggleSkill(ClientHandle clientHd, SkillID skillID, bool on)
 {
 	auto found = playerMap.find(clientHd);

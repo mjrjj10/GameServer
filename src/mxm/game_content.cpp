@@ -3578,6 +3578,9 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(pNode->FirstChildElement("_SaveGotPieceInfo")) node.kind = LevelEventNode::SAVE_GOT_PIECE;
 		else if(XMLElement* e = pNode->FirstChildElement("_AITriggerData")) { node.kind = LevelEventNode::AI_TRIGGER; node.aiIndex = e->IntAttribute("_INDEX"); }
 		else if(XMLElement* e = pNode->FirstChildElement("_InvokeAITriggerInfo")) { node.kind = LevelEventNode::INVOKE_AI_TRIGGER; node.aiIndex = e->IntAttribute("_INDEX"); }
+		else if(XMLElement* e = pNode->FirstChildElement("_ActiveInteractionInfo")) { node.kind = LevelEventNode::ACTIVE_INTERACTION; node.localID = e->IntAttribute("_LocalID"); node.active = e->IntAttribute("_Active") == 1; }
+		else if(XMLElement* e = pNode->FirstChildElement("_InteractionTriggerData")) { node.kind = LevelEventNode::INTERACTION_TRIGGER; node.localID = e->IntAttribute("_TargetID"); }
+		else if(XMLElement* e = pNode->FirstChildElement("_AddInteractionCastingTimeInfo")) { node.kind = LevelEventNode::ADD_CAST_TIME; node.localID = e->IntAttribute("_LocalID"); node.delay = e->FloatAttribute("_Time"); if(const char* team = e->Attribute("_TeamType")) node.team = EA::StdC::Strcmp(team, "TEAM_GREEN") == 0 ? Faction::MONSTER : StringToFaction(team); }
 		else if(XMLElement* e = pNode->FirstChildElement("_NotifyRespawnTime")) {
 			node.kind = LevelEventNode::NOTIFY_RESPAWN;
 			node.localID = e->IntAttribute("_LocalID");
@@ -3586,7 +3589,7 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 			if(const char* key = e->Attribute("_StringKey")) EA::StdC::Sscanf(key, "MONSTER_RESPAWN_MESSAGE_%d", &message);
 			node.count = MAX(message - 1, 0);
 		}
-		else if(pNode->FirstChildElement("_PrintMessageInfo") || pNode->FirstChildElement("_BGMEventInfo") || pNode->FirstChildElement("_ChangeCameraInfo") || pNode->FirstChildElement("_SetNameTagVisibillityInfo") || pNode->FirstChildElement("_InputLockInfo") || pNode->FirstChildElement("_ActiveInteractionInfo") || pNode->FirstChildElement("_ClientDrivenActionChangeInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
+		else if(pNode->FirstChildElement("_PrintMessageInfo") || pNode->FirstChildElement("_BGMEventInfo") || pNode->FirstChildElement("_ChangeCameraInfo") || pNode->FirstChildElement("_SetNameTagVisibillityInfo") || pNode->FirstChildElement("_InputLockInfo") || pNode->FirstChildElement("_ClientDrivenActionChangeInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
 		map->levelEvents.push_back(node);
 	}
 	LOG("Loaded %d level event nodes", (i32)map->levelEvents.size());
@@ -3916,6 +3919,21 @@ bool GameXmlContent::LoadInteractions()
 		pData->QueryFloatAttribute("_ActiveDistance", &info.activeDistance);
 		const char* action = pData->Attribute("_Action");
 		info.carry = action && EA::StdC::Strcmp(action, "IT_ACTION_TELEPORT") == 0;
+		const char* active = pData->Attribute("_Active");
+		info.active = !active || EA::StdC::Stricmp(active, "False") != 0;
+		const char* repeat = pData->Attribute("_Repeat");
+		info.repeat = repeat && EA::StdC::Stricmp(repeat, "True") == 0;
+		pData->QueryFloatAttribute("_RepeatInterval", &info.repeatInterval);
+	}
+	XMLDocument xmlCast;
+	if(LoadXMLFile(L"/InteractionCast.xml", xmlCast, true)) {
+		for(XMLElement* pC = xmlCast.FirstChildElement()->FirstChildElement("INFO"); pC; pC = pC->NextSiblingElement("INFO")) {
+			auto found = interactions.find(pC->IntAttribute("ID"));
+			if(found == interactions.end()) continue;
+			found->second.castMs = pC->IntAttribute("castMs");
+			found->second.announcement = pC->UnsignedAttribute("announcement");
+			found->second.points = pC->IntAttribute("points");
+		}
 	}
 	return true;
 }
@@ -3933,6 +3951,7 @@ bool GameXmlContent::LoadInteractionReceivers()
 		if(!pRecv || pInfo->QueryAttribute("ID", &id) != XML_SUCCESS || pRecv->QueryAttribute("_Index", &interaction) != XML_SUCCESS) continue;
 		auto found = interactions.find(interaction);
 		if(found != interactions.end() && found->second.receiver == CreatureIndex::Invalid) found->second.receiver = CreatureIndex(id);
+		if(found != interactions.end()) dynamicInteraction[id] = interaction;
 	}
 	return true;
 }

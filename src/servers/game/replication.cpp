@@ -2359,7 +2359,55 @@ void Replication::SendCancelSkillToAll(ActorUID casterUID, SkillID skillID)
 	}
 }
 
-void Replication::SendInteractionStatusToAll(ActorUID objectUID, u32 allowedTeamMask, i32 interactionID, i32 occupiedTeam, ClientHandle exclude)
+void Replication::SendInteractionCastingToAll(ActorUID casterUID, ActorUID objectUID, u32 actionState, u32 castingTimeMS)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID casterID = GetLocalActorID(clientHd, casterUID);
+		const LocalActorID objectID = GetLocalActorID(clientHd, objectUID);
+		if(casterID == LocalActorID::INVALID || objectID == LocalActorID::INVALID) continue;
+		Sv::SN_InteractionCasting packet;
+		packet.objectID = (u32)casterID;
+		packet.targetID = (u32)objectID;
+		packet.actionState = actionState;
+		packet.castingTimeMS = castingTimeMS;
+		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendInteractionExecuteOnlyToAll(ActorUID casterUID, ActorUID objectUID, u32 actionState)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID casterID = GetLocalActorID(clientHd, casterUID);
+		const LocalActorID objectID = GetLocalActorID(clientHd, objectUID);
+		if(casterID == LocalActorID::INVALID || objectID == LocalActorID::INVALID) continue;
+		Sv::SN_InteractionExecute packet;
+		packet.objectID = (u32)casterID;
+		packet.targetID = (u32)objectID;
+		packet.actionState = actionState;
+		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendInteractionCancelToAll(ActorUID casterUID, ActorUID objectUID)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID casterID = GetLocalActorID(clientHd, casterUID);
+		const LocalActorID objectID = GetLocalActorID(clientHd, objectUID);
+		if(casterID == LocalActorID::INVALID || objectID == LocalActorID::INVALID) continue;
+		Sv::SN_InteractionCancel packet;
+		packet.objectID = (u32)casterID;
+		packet.targetID = (u32)objectID;
+		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendInteractionStatusToAll(ActorUID objectUID, u32 allowedTeamMask, i32 interactionID, i32 occupiedTeam, ClientHandle exclude, f32 coolTime)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
@@ -2372,7 +2420,7 @@ void Replication::SendInteractionStatusToAll(ActorUID objectUID, u32 allowedTeam
 		packet.objectID = (u32)localID;
 		packet.interactionID = (u32)interactionID;
 		packet.occupiedTeam = occupiedTeam;
-		packet.coolTime = 0;
+		packet.coolTime = coolTime;
 		SendPacket(clientHd, packet);
 	}
 }

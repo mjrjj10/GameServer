@@ -583,7 +583,7 @@ struct GameXmlContent
 
 	struct LevelEventNode
 	{
-		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM, BOUND_TRIGGER, STATUS_CHANGE, ACTIVATE_TRIGGER, ON_HIT_TRIGGER, ACTION_CHANGE, CLIENT_EVENT, CALL_MONSTER, DESPAWN_ENTITY, PASS_THROUGH, TIME_RECORD_START, DEAD_COUNT, HP_TRIGGER, OR_CONDITION, GAME_END_TRIGGER, SAFE_ZONE, TEAM_CONDITION, ADD_GOT_PIECE, SAVE_GOT_PIECE, AI_TRIGGER, INVOKE_AI_TRIGGER, NOTIFY_RESPAWN };
+		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM, BOUND_TRIGGER, STATUS_CHANGE, ACTIVATE_TRIGGER, ON_HIT_TRIGGER, ACTION_CHANGE, CLIENT_EVENT, CALL_MONSTER, DESPAWN_ENTITY, PASS_THROUGH, TIME_RECORD_START, DEAD_COUNT, HP_TRIGGER, OR_CONDITION, GAME_END_TRIGGER, SAFE_ZONE, TEAM_CONDITION, ADD_GOT_PIECE, SAVE_GOT_PIECE, AI_TRIGGER, INVOKE_AI_TRIGGER, NOTIFY_RESPAWN, ACTIVE_INTERACTION, INTERACTION_TRIGGER, ADD_CAST_TIME };
 		enum ApplyType: u8 { APPLY_MY_CHAR = 0, APPLY_LOCAL_ID, APPLY_OTHER };
 		i32 id = 0;
 		Kind kind = OTHER;
@@ -1174,7 +1174,9 @@ struct GameXmlContent
 		for(const char* c = key; *c; c++) { h ^= (u8)(*c >= 'a' && *c <= 'z' ? *c - 32 : *c); h *= 16777619u; }
 		return ((u64)h << 32) | (u32)seqID;
 	}
-	struct InteractionInfo { f32 activeDistance = 0; bool carry = false; CreatureIndex receiver = CreatureIndex::Invalid; };
+	struct InteractionInfo { f32 activeDistance = 0; bool carry = false; CreatureIndex receiver = CreatureIndex::Invalid; bool active = true; bool repeat = false; f32 repeatInterval = 0; i32 castMs = 0; u32 announcement = 0; i32 points = 0; };
+	eastl::hash_map<i32, i32> dynamicInteraction;
+	i32 FindDynamicInteraction(i32 doc) const { auto f = dynamicInteraction.find(doc); return f == dynamicInteraction.end() ? 0 : f->second; }
 	eastl::hash_map<i32, InteractionInfo> interactions;
 	eastl::hash_map<i32, i32> dynamicDensity;
 	const InteractionInfo* FindInteraction(i32 id) const { auto f = interactions.find(id); return f == interactions.end() ? nullptr : &f->second; }

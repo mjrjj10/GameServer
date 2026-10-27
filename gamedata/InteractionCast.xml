@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<INTERACTION_CAST>
+  <INFO ID="900000029" castMs="8000" announcement="0" points="0" />
+  <INFO ID="900000032" castMs="4000" announcement="9" points="3" />
+  <INFO ID="900000033" castMs="1500" announcement="0" points="0" />
+  <INFO ID="900000068" castMs="3000" announcement="21" points="2" />
+</INTERACTION_CAST>
