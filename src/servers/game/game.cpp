@@ -689,6 +689,9 @@ void Game::EndGame()
 		e.ingameLevel = (u8)p.ingameLevel;
 		e.damageDealt = p.damageDealt;
 		e.savedPieces = p.savedPieces;
+		e.damageStats = p.damageStats;
+		e.statueCaptures = p.statueCaptures;
+		e.visionCaptures = p.visionCaptures;
 		e.monsterKills = p.monsterKills;
 		e.traits[0] = p.Main().traits;
 		e.traits[1] = p.Sub().traits;
@@ -1050,6 +1053,20 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			World::Player& playerActor = world.GetPlayer(p.playerIndex);
 			world.SpawnGroundItemAt(itemIndex, playerActor.body->GetWorldPos(), -1);
 			SendDbgMsg(clientHd, LFMT(L"Item %d dropped", itemIndex));
+			return true;
+		}
+
+		i32 provokeTag = 0;
+		if(EA::StdC::Sscanf(msg, L"provoke %d", &provokeTag) == 1) {
+			World::Player& playerActor = world.GetPlayer(p.playerIndex);
+			i32 provoked = 0;
+			foreach(npc, world.actorNpcList) {
+				if(npc->tagID != provokeTag || npc->hp <= 0 || npc->ownerUID != ActorUID::INVALID) continue;
+				npc->monsterTarget = playerActor.Main().UID;
+				npc->monsterReturning = false;
+				provoked++;
+			}
+			SendDbgMsg(clientHd, LFMT(L"Provoked %d monster(s) with tag %d", provoked, provokeTag));
 			return true;
 		}
 

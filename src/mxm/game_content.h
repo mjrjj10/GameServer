@@ -941,6 +941,10 @@ struct GameXmlContent
 		f32 multiplier = 0;
 		f32 speed = 0;
 		i32 status = 0;
+		bool special = false;
+		f32 radius = 0;
+		u8 hits = 1;
+		f32 interval = 0;
 	};
 
 	struct MonsterAi
@@ -953,9 +957,12 @@ struct GameXmlContent
 		f32 destroy = 0;
 		f32 radius = 0;
 		u32 tagKey = 0;
+		ActionStateID idle = ActionStateID::INVALID;
+		ActionStateID awake = ActionStateID::INVALID;
+		f32 awakeTime = 0;
 		eastl::fixed_vector<u32,10,false> enemyTags;
 		eastl::array<const MonsterAttack*,MonsterAttack::_COUNT> byTarget = {};
-		eastl::fixed_vector<MonsterAttack,MonsterAttack::_COUNT,false> attacks;
+		eastl::fixed_vector<MonsterAttack,16,false> attacks;
 		bool Hates(u32 tag) const { return eastl::find(enemyTags.begin(), enemyTags.end(), tag) != enemyTags.end(); }
 	};
 
@@ -1105,6 +1112,8 @@ struct GameXmlContent
 	f32 BotNormalSkillCoolTime() const { return botNormalSkillCoolTime; }
 	f32 BotUgSkillCoolTime() const { return botUgSkillCoolTime; }
 	f32 BotAfterSkillDelay() const { return botAfterSkillDelay; }
+	f32 BotConstant(const char* key) const { auto f = botConstants.find(StatusTypeKey(key)); return f == botConstants.end() ? 0 : f->second; }
+	i32 BotStageSkillKind(i32 skill) const { for(i32 i = 0; i < (i32)botStageSkills.size(); i++) if(botStageSkills[i] == skill) return i; return -1; }
 	const eastl::array<i32,5>* FindBotSkills(i32 creature) const { auto f = botSkills.find(creature); return f == botSkills.end() ? nullptr : &f->second; }
 	bool IsChildOnExisting(ClassType c, ActionStateID a) const { return childOnExisting.find(((u32)c << 16) | ((u32)a & 0xFFFF)) != childOnExisting.end(); }
 	i32 GetChildSkill(ClassType c, ActionStateID a) const { auto f = childSkill.find(((u32)c << 16) | ((u32)a & 0xFFFF)); return f == childSkill.end() ? 0 : f->second; }
@@ -1179,9 +1188,18 @@ struct GameXmlContent
 		for(const char* c = key; *c; c++) { h ^= (u8)(*c >= 'a' && *c <= 'z' ? *c - 32 : *c); h *= 16777619u; }
 		return ((u64)h << 32) | (u32)seqID;
 	}
-	struct InteractionInfo { f32 activeDistance = 0; bool carry = false; bool individual = false; CreatureIndex receiver = CreatureIndex::Invalid; bool active = true; bool repeat = false; f32 repeatInterval = 0; i32 castMs = 0; u32 announcement = 0; i32 points = 0; eastl::array<u32,2> ownerMask = {{ 0, 0 }}; };
+	struct InteractionInfo { enum Action: u8 { OTHER, TOTEM, OCCUPY }; Action action = OTHER; f32 activeDistance = 0; bool carry = false; bool individual = false; CreatureIndex receiver = CreatureIndex::Invalid; bool active = true; bool repeat = false; f32 repeatInterval = 0; i32 castMs = 0; u32 announcement = 0; i32 points = 0; eastl::array<u32,2> ownerMask = {{ 0, 0 }}; };
 	eastl::hash_map<i32, i32> dynamicInteraction;
 	eastl::hash_map<i32, f32> stageTeleportDistance;
+	eastl::hash_map<i32, f32> statusShield;
+	f32 StatusShieldAmount(const StatusInfo& info) const
+	{
+		auto f = statusShield.find(info.ID);
+		if(f != statusShield.end()) return f->second;
+		f32 sum = 0;
+		for(const StatusMod& m : info.mods) if(m.stat == StatusMod::SHIELD_DEFENCE && !m.mul) sum += m.value;
+		return sum;
+	}
 	f32 FindStageTeleportDistance(i32 doc) const { auto f = stageTeleportDistance.find(doc); return f == stageTeleportDistance.end() ? -1.0f : f->second; }
 	i32 FindDynamicInteraction(i32 doc) const { auto f = dynamicInteraction.find(doc); return f == dynamicInteraction.end() ? 0 : f->second; }
 	eastl::hash_map<i32, InteractionInfo> interactions;
@@ -1293,6 +1311,8 @@ private:
 	f32 botNormalSkillCoolTime = 0;
 	f32 botUgSkillCoolTime = 0;
 	f32 botAfterSkillDelay = 0;
+	eastl::hash_map<u32, f32> botConstants;
+	eastl::array<i32,5> botStageSkills = {{ 0, 0, 0, 0, 0 }};
 	eastl::hash_map<i32, eastl::fixed_vector<i32,4,false>> passiveStatuses;
 	eastl::hash_map<i32, f32> skillConsumeStamina;
 	eastl::hash_map<i32, f32> skillConsumeMP;

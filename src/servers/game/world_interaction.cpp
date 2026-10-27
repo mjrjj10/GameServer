@@ -233,6 +233,7 @@ void World::ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply)
 		ns.casterUID = npc.UID;
 		ns.until = TimeAdd(localTime, TimeMsToTime((f64)duration * 1000.0));
 		ns.linked = false;
+		if(info && info->type == StatusType::SHIELD) ns.shieldHP = GetGameXmlContent().StatusShieldAmount(*info);
 		npcStatuses.push_back(ns);
 	}
 	LOG("Status :: creature=%d (local %d) gets status %d", (i32)npc.docID, npc.localID, statusID);
@@ -758,6 +759,8 @@ void World::CompleteMapInteraction(Player& player)
 	}
 	replication->SendInteractionExecuteOnlyToAll(player.Main().UID, m.object, (u32)ActionStateID::INTERACTION_EXECUTE_BEHAVIORSTAT);
 	LOG("Interaction :: %ls takes object %d (team %d)", player.name.data(), m.localID, (i32)player.team);
+	if(info->action == GameXmlContent::InteractionInfo::TOTEM && player.statueCaptures < 255) player.statueCaptures++;
+	if(info->action == GameXmlContent::InteractionInfo::OCCUPY && player.visionCaptures < 255) player.visionCaptures++;
 	if(info->announcement != 0) {
 		if(!m.creature) player.occupyStreak++;
 		replication->SendPvpAnnouncementToAll(info->announcement, m.creature ? 0 : player.occupyStreak, player.Main().UID, m.object, (u32)info->points);

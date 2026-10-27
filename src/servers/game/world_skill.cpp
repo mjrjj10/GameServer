@@ -391,9 +391,7 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	ns.casterUID = caster.Main().UID;
 	ns.until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
 	ns.linked = false;
-	if(info && info->type == StatusType::SHIELD) {
-		foreach_const(m, info->mods) if(m->stat == StatusMod::SHIELD_DEFENCE && !m->mul) ns.shieldHP += m->value;
-	}
+	if(info && info->type == StatusType::SHIELD) ns.shieldHP = GetGameXmlContent().StatusShieldAmount(*info);
 	npcStatuses.push_back(ns);
 	LOG("Status :: %ls gives creature=%d status=%d for %.1fs shield=%.0f", caster.name.data(), (i32)npc.docID, statusID, duration, ns.shieldHP);
 }

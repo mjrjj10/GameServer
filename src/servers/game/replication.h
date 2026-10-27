@@ -359,6 +359,9 @@ struct Replication
 		i32 savedPieces = 0;
 		eastl::array<u8,4> monsterKills = {};
 		eastl::array<u8,4> traits[2] = {};
+		eastl::array<u32,9> damageStats = {};
+		u8 statueCaptures = 0;
+		u8 visionCaptures = 0;
 	};
 	struct EndGot
 	{

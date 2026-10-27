@@ -86,6 +86,7 @@ void World::HealPlayer(Player& healer, Player& target, i32 amount)
 {
 	if(target.dead || amount <= 0) return;
 	ActorMaster& chara = target.Main();
+	healer.damageStats[END_DMG_HEAL] += (u32)MIN(amount, chara.hpMax - chara.hp);
 	chara.hp = MIN(chara.hp + amount, chara.hpMax);
 	LOG("Heal :: %ls -> %ls amount=%d hp=%d/%d", healer.name.data(), target.name.data(), amount, chara.hp, chara.hpMax);
 	if(healer.index != target.index && healer.Main().classType == ClassType::ELECTRO && FindPassiveOfType(healer, StatusType::ELECTRO)) ApplyStatus(healer, healer, STATUS_ELECTRO_PASSIVE_BUFF_MPREGEN);
@@ -250,6 +251,12 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		damageIn, (u32)(proj ? proj->remoteDoc : remoteDoc), (i32)(elementMul * 100.0f));
 	if(attacker.team != target.team) {
 		attacker.damageDealt += damage;
+		const bool normalHit = proj && skillID == SkillID::INVALID && damageStatusID == 0;
+		attacker.damageStats[END_DMG_MAX_DEALT] = MAX(attacker.damageStats[END_DMG_MAX_DEALT], (u32)damage);
+		attacker.damageStats[normalHit ? END_DMG_NORMAL_DEALT : END_DMG_SKILL_DEALT] += (u32)damage;
+		target.damageStats[END_DMG_TAKEN] += (u32)damage;
+		target.damageStats[END_DMG_MAX_TAKEN] = MAX(target.damageStats[END_DMG_MAX_TAKEN], (u32)damage);
+		target.damageStats[normalHit ? END_DMG_NORMAL_TAKEN : END_DMG_SKILL_TAKEN] += (u32)damage;
 		for(i32 k = 0; k < (i32)target.recentDamage.size(); ) {
 			if(localTime > TimeAdd(target.recentDamage[k].at, TimeMsToTime(DEAD_DAMAGE_WINDOW_MS))) target.recentDamage.erase(target.recentDamage.begin() + k);
 			else k++;
@@ -400,17 +407,8 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	if(npc.ownerUID == ActorUID::INVALID && NpcHasStatusType(npc, StatusType::GODMODE)) return;
 	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence, 0.0f)) + 0.5f), 1);
 	const i32 hpBefore = npc.hp;
-	i32 left = dealt;
-	foreach(ns, npcStatuses) {
-		if(left <= 0) break;
-		if(ns->npcUID != npc.UID || ns->shieldHP <= 0 || localTime >= ns->until) continue;
-		const f32 absorbed = MIN(ns->shieldHP, (f32)left);
-		ns->shieldHP -= absorbed;
-		left -= (i32)absorbed;
-		if(ns->shieldHP <= 0) ns->until = localTime;
-		LOG("Status :: creature=%d shield %d absorbs %.0f (%.0f left)", (i32)npc.docID, ns->statusID, absorbed, ns->shieldHP);
-	}
-	npc.hp = MAX(npc.hp - left, 0);
+	npc.hp = MAX(npc.hp - AbsorbNpcShield(npc, dealt), 0);
+	if(IsStructure(npc)) attacker.damageStats[END_DMG_BUILDING_DEALT] += (u32)(hpBefore - npc.hp);
 	if(npc.ownerUID == ActorUID::INVALID) OnMonsterDamaged(npc, hpBefore);
 	if(npc.ownerUID == ActorUID::INVALID && npc.monsterAi && (npc.faction == Faction::ORANGE || npc.faction == Faction::MONSTER) && npc.monsterTarget == ActorUID::INVALID && npc.hp > 0) {
 		npc.monsterTarget = attacker.Main().UID;
@@ -430,13 +428,28 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	}
 }
 
+i32 World::AbsorbNpcShield(const ActorNpc& npc, i32 dealt)
+{
+	i32 left = dealt;
+	foreach(ns, npcStatuses) {
+		if(left <= 0) break;
+		if(ns->npcUID != npc.UID || ns->shieldHP <= 0 || localTime >= ns->until) continue;
+		const f32 absorbed = MIN(ns->shieldHP, (f32)left);
+		ns->shieldHP -= absorbed;
+		left -= (i32)absorbed;
+		if(ns->shieldHP <= 0) ns->until = localTime;
+		LOG("Status :: creature=%d shield %d absorbs %.0f (%.0f left)", (i32)npc.docID, ns->statusID, absorbed, ns->shieldHP);
+	}
+	return left;
+}
+
 void World::DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i32 remote)
 {
 	if(damage <= 0 || target.hp <= 0 || target.removeAt != Time::ZERO) return;
 	if(NpcHasStatusType(target, StatusType::GODMODE)) return;
 	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(target.defence, 0.0f)) + 0.5f), 1);
 	const i32 hpBefore = target.hp;
-	target.hp = MAX(target.hp - dealt, 0);
+	target.hp = MAX(target.hp - AbsorbNpcShield(target, dealt), 0);
 	OnMonsterDamaged(target, hpBefore);
 	replication->SendDamageToAll(attacker.UID, target.UID, SkillID::INVALID, dealt, target.hp, target.hpMax);
 	if(target.hp <= 0) MonsterDie(target, attacker.UID, attacker.docID);

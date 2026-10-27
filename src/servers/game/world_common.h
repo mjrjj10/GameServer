@@ -4,6 +4,8 @@
 #include <mxm/game_content.h>
 #include "world.h"
 
+enum EndDamageStat: u8 { END_DMG_MAX_DEALT = 0, END_DMG_NORMAL_DEALT, END_DMG_SKILL_DEALT, END_DMG_BUILDING_DEALT, END_DMG_TAKEN, END_DMG_MAX_TAKEN, END_DMG_NORMAL_TAKEN, END_DMG_SKILL_TAKEN, END_DMG_HEAL };
+
 static const f32 FIRE_NODE_HEIGHT = 158.0f;
 static const f32 COMBAT_ATTACK_STAT = 0.0f;
 static const f32 WEAPON_TARGET_RADIUS = 110.0f;

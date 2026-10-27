@@ -1082,6 +1082,9 @@ bool GameXmlContent::LoadMonsterAi()
 		ai.destroy = pInfo->FloatAttribute("destroy");
 		ai.radius = pInfo->FloatAttribute("radius");
 		ai.tagKey = StatusTypeKey(pInfo->Attribute("tag") ? pInfo->Attribute("tag") : "");
+		if(const char* idle = pInfo->Attribute("idle")) ai.idle = ActionStateFromString(idle);
+		if(const char* awake = pInfo->Attribute("awake")) if(*awake) ai.awake = ActionStateFromString(awake);
+		ai.awakeTime = pInfo->FloatAttribute("awakeTime");
 		if(const char* enemies = pInfo->Attribute("enemies")) {
 			const char* at = enemies;
 			while(*at && !ai.enemyTags.full()) {
@@ -1107,9 +1110,14 @@ bool GameXmlContent::LoadMonsterAi()
 			attack.multiplier = pAttack->FloatAttribute("multiplier");
 			attack.speed = pAttack->FloatAttribute("speed");
 			attack.status = pAttack->IntAttribute("status");
+			const char* kind = pAttack->Attribute("kind");
+			attack.special = kind && EA::StdC::Strcmp(kind, "special") == 0;
+			attack.radius = pAttack->FloatAttribute("radius");
+			attack.hits = (u8)MAX(pAttack->IntAttribute("hits", 1), 1);
+			attack.interval = pAttack->FloatAttribute("interval");
 			ai.attacks.push_back(attack);
 		}
-		foreach_const(a, ai.attacks) ai.byTarget[a->target] = &*a;
+		foreach_const(a, ai.attacks) if(!a->special && !ai.byTarget[a->target]) ai.byTarget[a->target] = &*a;
 	}
 	LOG("Loaded AI of %d monsters", (i32)monsterAi.size());
 	return true;
@@ -3985,6 +3993,8 @@ bool GameXmlContent::LoadInteractions()
 		pData->QueryFloatAttribute("_ActiveDistance", &info.activeDistance);
 		const char* action = pData->Attribute("_Action");
 		info.carry = action && EA::StdC::Strcmp(action, "IT_ACTION_TELEPORT") == 0;
+		if(action && EA::StdC::Strcmp(action, "IT_ACTION_TOTEM") == 0) info.action = InteractionInfo::TOTEM;
+		else if(action && EA::StdC::Strcmp(action, "IT_ACTION_OCCUPY") == 0) info.action = InteractionInfo::OCCUPY;
 		const char* kind = pData->Attribute("_Type");
 		info.individual = kind && EA::StdC::Strcmp(kind, "IT_TYPE_INDIVIDUAL") == 0;
 		const char* active = pData->Attribute("_Active");
@@ -4003,6 +4013,12 @@ bool GameXmlContent::LoadInteractions()
 			found->second.points = pC->IntAttribute("points");
 			found->second.ownerMask[0] = pC->UnsignedAttribute("ownerMask3");
 			found->second.ownerMask[1] = pC->UnsignedAttribute("ownerMask4");
+		}
+	}
+	XMLDocument xmlShield;
+	if(LoadXMLFile(L"/StatusShield.xml", xmlShield, true)) {
+		for(XMLElement* pS = xmlShield.FirstChildElement()->FirstChildElement("STATUS"); pS; pS = pS->NextSiblingElement("STATUS")) {
+			statusShield[pS->IntAttribute("ID")] = pS->FloatAttribute("shield");
 		}
 	}
 	XMLDocument xmlTeleport;
@@ -4061,6 +4077,17 @@ bool GameXmlContent::LoadBotBrain()
 			if(EA::StdC::Strcmp(k, "BOTLOGIC_STAGELEVEL_KEY_NORMALSKILL_COOLTIME") == 0) botNormalSkillCoolTime = v;
 			else if(EA::StdC::Strcmp(k, "BOTLOGIC_STAGELEVEL_KEY_UGSKILL_COOLTIME") == 0) botUgSkillCoolTime = v;
 			else if(EA::StdC::Strcmp(k, "BOTLOGIC_STAGELEVEL_KEY_AFTER_SKILL_DELAY") == 0) botAfterSkillDelay = v;
+		}
+	}
+	for(XMLElement* p = pRoot ? pRoot->FirstChildElement("_ConstantData") : nullptr; p; p = p->NextSiblingElement("_ConstantData")) {
+		const char* key = p->Attribute("DATAKEY");
+		if(key) botConstants[StatusTypeKey(key)] = p->FloatAttribute("DATA");
+	}
+	if(XMLElement* p = pRoot ? pRoot->FirstChildElement("_CommonSkillIndexData") : nullptr) {
+		for(i32 i = 0; i < (i32)botStageSkills.size(); i++) {
+			char attr[16];
+			EA::StdC::Snprintf(attr, sizeof(attr), "_StageSkill%d", i);
+			botStageSkills[i] = p->IntAttribute(attr);
 		}
 	}
 	LOG("Loaded bot skills for %d masters (skill cd %.0f, ult cd %.0f, after skill %.1f)", (i32)botSkills.size(), botNormalSkillCoolTime, botUgSkillCoolTime, botAfterSkillDelay);

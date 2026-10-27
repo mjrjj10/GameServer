@@ -3,6 +3,64 @@
 #include "world_common.h"
 #include <mxm/game_content.h>
 
+static const f32 BOT_TITAN_MELEE_SKILL_DIST = 400.0f;
+
+f32 World::BotTitanSkillDistance(i32 skill) const
+{
+	const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput(skill);
+	return in && in->maxDistance > 0 ? in->maxDistance : BOT_TITAN_MELEE_SKILL_DIST;
+}
+
+static const i32 BOT_STAGE_RECOVERY = 0;
+static const i32 BOT_STAGE_SHIELD = 1;
+
+static f32 HpRatio(i32 hp, i32 hpMax)
+{
+	return hpMax > 0 ? (f32)hp / (f32)hpMax : 1.0f;
+}
+
+bool World::BotStageSkill(Player& bot)
+{
+	const auto& content = GetGameXmlContent();
+	const i32 skill = (i32)bot.stageSkills[1];
+	if(skill <= 0 || bot.titanForm >= 0 || localTime < bot.botStageSkillReady) return false;
+	const vec3 pos = bot.body->GetWorldPos();
+	ActorUID target = ActorUID::INVALID;
+	vec3 at = pos;
+	switch(content.BotStageSkillKind(skill)) {
+		case BOT_STAGE_RECOVERY: {
+			bool use = HpRatio(bot.Main().hp, bot.Main().hpMax) < content.BotConstant("BOTLOGIC_CONSTANT_KEY_MY_LESS_HP_RATIO_FOR_RECOVERY_STAGE_SKILL");
+			i32 hurt = 0;
+			const f32 radius = content.BotConstant("BOTLOGIC_CONSTANT_KEY_FRIENDLY_CHECK_RADIUS_FOR_RECOVERY_STAGE_SKILL");
+			foreach_const(p, players) {
+				if(p->index == bot.index || p->team != bot.team || p->dead || glm::length(vec2(p->body->GetWorldPos()) - vec2(pos)) > radius) continue;
+				if(HpRatio(p->Main().hp, p->Main().hpMax) < content.BotConstant("BOTLOGIC_CONSTANT_KEY_FRIENDLY_HP_RATIO_FOR_RECOVERY_STAGE_SKILL")) hurt++;
+			}
+			if(hurt >= (i32)content.BotConstant("BOTLOGIC_CONSTANT_KEY_NUM_MIN_FRIENDLY_FOR_RECOVERY_STAGE_SKILL")) use = true;
+			if(!use) return false;
+		} break;
+		case BOT_STAGE_SHIELD: {
+			static const u32 towerCenterTag = StatusTypeKey("Tower_Center");
+			static const u32 towerSideTag = StatusTypeKey("Tower_Side");
+			const f32 radius = content.BotConstant("BOTLOGIC_CONSTANT_KEY_TOWER_CHECK_RADIUS_FOR_SHIELD_STAGE_SKILL");
+			const f32 ratio = content.BotConstant("BOTLOGIC_CONSTANT_KEY_TOWER_HP_RATIO_FOR_SHIELD_STAGE_SKILL");
+			foreach_const(npc, actorNpcList) {
+				if(!npc->monsterAi || (npc->monsterAi->tagKey != towerCenterTag && npc->monsterAi->tagKey != towerSideTag) || npc->hp <= 0) continue;
+				if((i32)npc->faction != (i32)bot.team || glm::length(vec2(npc->pos) - vec2(pos)) > radius || HpRatio(npc->hp, npc->hpMax) >= ratio) continue;
+				target = npc->UID;
+				at = npc->pos;
+				break;
+			}
+			if(target == ActorUID::INVALID) return false;
+		} break;
+		default: return false;
+	}
+	bot.botStageSkillReady = TimeAdd(localTime, TimeMsToTime(MAX(content.GetSkillCoolTime(skill), 1.0f) * 1000.0));
+	LOG("BotSkill :: %ls uses stage skill %d", bot.name.data(), skill);
+	PlayerCastSkill(bot, SkillID(skill), at, Slice<const ActorUID>(&target, target != ActorUID::INVALID ? 1 : 0), 0);
+	return true;
+}
+
 void World::UpdateBotSkills()
 {
 	const auto& content = GetGameXmlContent();
@@ -12,9 +70,11 @@ void World::UpdateBotSkills()
 		if(localTime < bot.tNextBotSkill || localTime < bot.ccUntil) continue;
 		if(IsBlocked(bot, false, true, false)) continue;
 		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500));
+		if(bot.casting.skillID != SkillID::INVALID || BotStageSkill(bot)) continue;
 
 		const ActorMaster& master = bot.Main();
-		const auto* skills = content.FindBotSkills(100000000 + (i32)master.classType);
+		const bool titan = bot.titanForm >= 0 && bot.titanForm < (i32)content.titan.forms.size();
+		const auto* skills = content.FindBotSkills(titan ? content.titan.forms[bot.titanForm].doc : 100000000 + (i32)master.classType);
 		if(!skills) continue;
 
 		const vec3 pos = bot.body->GetWorldPos();
@@ -32,8 +92,9 @@ void World::UpdateBotSkills()
 		for(i32 i = 0; i < 5; i++) {
 			const i32 skill = (*skills)[i];
 			if(skill == 0 || localTime < bot.botSkillReady[i]) continue;
-			if(i != 4 && !Config().DevShowcase && (i32)bot.skills[base] != skill && (i32)bot.skills[base + 1] != skill) continue;
-			const f32 maxDist = content.GetBotSkillMaxDistance(skill);
+			if(!titan && i != 4 && !Config().DevShowcase && (i32)bot.skills[base] != skill && (i32)bot.skills[base + 1] != skill) continue;
+			if(titan && i == 4) continue;
+			const f32 maxDist = titan ? BotTitanSkillDistance(skill) : content.GetBotSkillMaxDistance(skill);
 			if(maxDist <= 0 || best > maxDist) continue;
 			if(!Config().DevShowcase && !Config().DevMirror && !SkillCostAffordable(bot, skill, PlayerSkillConsumeMP(bot, skill))) continue;
 			ready.push_back(i);

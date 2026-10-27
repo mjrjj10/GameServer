@@ -308,6 +308,8 @@ u32 World::KillPoints() const
 	return map && map->ingameLevels ? (u32)GetGameXmlContent().ingameLevel.killPoints : 1;
 }
 
+static const i32 GIANT_POINTS_STEP = 100;
+
 void World::AddPoints(Player& player, i32 points)
 {
 	if(!map || !map->ingameLevels || points <= 0) return;
@@ -315,6 +317,15 @@ void World::AddPoints(Player& player, i32 points)
 	i32 teamPoints = 0;
 	foreach_const(p, players) if(p->team == player.team) teamPoints += p->points;
 	replication->SendPointsToAll(player.userID, player.team, player.points, teamPoints);
+	for(i32 step = (teamPoints - points) / GIANT_POINTS_STEP + 1; step <= teamPoints / GIANT_POINTS_STEP; step++) SummonGiant(player.team);
+}
+
+bool World::IsStructure(const ActorNpc& npc) const
+{
+	static const u32 towerCenterTag = StatusTypeKey("Tower_Center");
+	static const u32 towerSideTag = StatusTypeKey("Tower_Side");
+	static const u32 coreTag = StatusTypeKey("Core");
+	return npc.monsterAi && (npc.monsterAi->tagKey == towerCenterTag || npc.monsterAi->tagKey == towerSideTag || npc.monsterAi->tagKey == coreTag);
 }
 
 void World::GrantMonsterKillPoints(const ActorNpc& npc, ActorUID killerUID)
@@ -343,10 +354,6 @@ void World::GrantMonsterKillPoints(const ActorNpc& npc, ActorUID killerUID)
 	AddPoints(*killer->parent, found->second.points);
 }
 
-static const f64 GIANT_FIRST_WAVE_SEC = 222.0;
-static const f64 GIANT_WAVE_PERIOD_SEC = 180.0;
-static const u32 GIANT_TEAM_SPREAD_MS = 40000;
-
 void World::BuildGiantTriggers()
 {
 	giantTriggersBuilt = true;
@@ -359,7 +366,7 @@ void World::BuildGiantTriggers()
 			const GameXmlContent::LevelEventNode* c = map->FindLevelEvent(open[k]);
 			if(!c) continue;
 			if(c->kind == GameXmlContent::LevelEventNode::CALL_MONSTER) {
-				if((c->team == Faction::RED || c->team == Faction::BLUE) && content.FindMonsterDieSpawn(c->monster) && !giantTriggers.full()) giantTriggers.push_back({ n->aiIndex, (i32)c->team, c->monster });
+				if((c->team == Faction::RED || c->team == Faction::BLUE) && content.FindMonsterDieSpawn(c->monster) && !giantTriggers.full()) giantTriggers.push_back({ n->aiIndex, (i32)c->team, c->monster, c->tagID });
 				break;
 			}
 			if(c->kind != GameXmlContent::LevelEventNode::DELAY) continue;
@@ -367,40 +374,46 @@ void World::BuildGiantTriggers()
 		}
 	}
 	eastl::sort(giantTriggers.begin(), giantTriggers.end(), [](const GiantTrigger& a, const GiantTrigger& b) { return a.monster < b.monster; });
-	LOG("Titan :: %d giant triggers", (i32)giantTriggers.size());
+	foreach_const(n, map->levelEvents) {
+		if(n->kind != GameXmlContent::LevelEventNode::AI_TRIGGER) continue;
+		bool giant = false;
+		foreach_const(t, giantTriggers) if(t->aiIndex == n->aiIndex) giant = true;
+		if(giant) continue;
+		eastl::fixed_vector<i32,16,false> open;
+		foreach_const(o, n->outputs) open.push_back(*o);
+		for(i32 k = 0; k < (i32)open.size(); k++) {
+			const GameXmlContent::LevelEventNode* c = map->FindLevelEvent(open[k]);
+			if(!c) continue;
+			if(c->kind == GameXmlContent::LevelEventNode::STATUS_CHANGE) {
+				foreach_const(t, giantTriggers) if(t->tagID >= 0 && t->tagID == c->tagID) firstGiantTrigger[t->team] = n->aiIndex;
+			}
+			if(c->kind == GameXmlContent::LevelEventNode::DELAY) foreach_const(o, c->outputs) if(!open.full()) open.push_back(*o);
+		}
+	}
+	LOG("Titan :: %d giant triggers, first giant triggers %d/%d", (i32)giantTriggers.size(), firstGiantTrigger[0], firstGiantTrigger[1]);
 }
 
-void World::UpdateGiantWaves()
+void World::SummonGiant(i32 team)
 {
-	if(!map || gameStartedAt == Time::ZERO || frozen) return;
+	if(!map || team < 0 || team > 1) return;
 	if(!giantTriggersBuilt) BuildGiantTriggers();
-	if(giantTriggers.empty()) return;
-	if(giantNextWaveAt == Time::ZERO) giantNextWaveAt = TimeAdd(gameStartedAt, TimeMsToTime(GIANT_FIRST_WAVE_SEC * 1000.0));
-	if(localTime >= giantNextWaveAt) {
-		giantNextWaveAt = TimeAdd(giantNextWaveAt, TimeMsToTime(GIANT_WAVE_PERIOD_SEC * 1000.0));
-		const i32 first = (i32)(RandUint() % 2);
-		giantTeamAt[first] = localTime;
-		giantTeamAt[1 - first] = TimeAdd(localTime, TimeMsToTime((f64)(RandUint() % GIANT_TEAM_SPREAD_MS)));
-	}
-	for(i32 team = 0; team < 2; team++) {
-		if(giantTeamAt[team] == Time::ZERO || localTime < giantTeamAt[team]) continue;
-		giantTeamAt[team] = Time::ZERO;
-		const auto& order = GetGameXmlContent().titan.giants;
-		i32 variants = 0;
-		foreach_const(t, giantTriggers) if(t->team == team) variants++;
-		if(variants == 0) continue;
-		const u32 pick = giantCycle++;
-		i32 rank = 0;
-		foreach_const(t, giantTriggers) {
-			if(t->team != team) continue;
-			const bool chosen = order.empty() ? rank == (i32)(pick % (u32)variants) : t->monster == order[pick % (u32)order.size()];
-			rank++;
-			if(!chosen) continue;
-			LOG("Titan :: giant %d for team %d", t->monster, team);
-			if(!giantSummons[team].full()) giantSummons[team].push_back(t->monster);
-			FireAITrigger(t->aiIndex, -1);
-			break;
-		}
+	const auto& order = GetGameXmlContent().titan.giants;
+	i32 variants = 0;
+	foreach_const(t, giantTriggers) if(t->team == team) variants++;
+	if(variants == 0) return;
+	const u32 pick = giantCycle++;
+	i32 rank = 0;
+	foreach_const(t, giantTriggers) {
+		if(t->team != team) continue;
+		const bool chosen = order.empty() ? rank == (i32)(pick % (u32)variants) : t->monster == order[pick % (u32)order.size()];
+		rank++;
+		if(!chosen) continue;
+		LOG("Titan :: giant %d for team %d", t->monster, team);
+		const bool first = giantSummons[0].empty() && giantSummons[1].empty();
+		if(!giantSummons[team].full()) giantSummons[team].push_back(t->monster);
+		FireAITrigger(t->aiIndex, -1);
+		if(first && firstGiantTrigger[team] >= 0) FireAITrigger(firstGiantTrigger[team], -1);
+		return;
 	}
 }
 
@@ -477,11 +490,37 @@ void World::UpdateTitans()
 	}
 }
 
+static const f64 BOT_TITAN_HUMAN_GRACE_SEC = 20.0;
+
+void World::UpdateBotTitanVotes()
+{
+	const GameXmlContent::TitanInfo& titan = GetGameXmlContent().titan;
+	if(titan.forms.empty() || gameStartedAt == Time::ZERO || winnerTeam >= 0) return;
+	for(i32 team = 0; team < 2; team++) {
+		if(teamTitanPieces[team] < titan.cost) { teamTitanReadyAt[team] = Time::ZERO; continue; }
+		if(teamTitanReadyAt[team] == Time::ZERO) teamTitanReadyAt[team] = localTime;
+		const TeamVote& vote = teamVotes[team];
+		if(vote.active || localTime < vote.cooldownUntil) continue;
+		bool titanActive = false, human = false;
+		Player* pick = nullptr;
+		foreach(p, players) {
+			if(p->team != team) continue;
+			if(p->titanForm >= 0) titanActive = true;
+			if(p->clientHd != ClientHandle::INVALID) human = true;
+			else if(!p->dead && localTime >= p->titanVoteBlockedUntil && (!pick || p->Main().hp > pick->Main().hp)) pick = &*p;
+		}
+		if(titanActive || !pick) continue;
+		if(human && TimeDiffSec(TimeDiff(teamTitanReadyAt[team], localTime)) < BOT_TITAN_HUMAN_GRACE_SEC) continue;
+		LOG("Titan :: bot %ls asks for the Titan (team %d, %d pieces)", pick->name.data(), team, teamTitanPieces[team]);
+		RequestVote(*pick, VOTE_TYPE_TITAN);
+	}
+}
+
 void World::UpdateIngameLevels()
 {
 	UpdateVotes();
+	UpdateBotTitanVotes();
 	UpdateTitans();
-	UpdateGiantWaves();
 	if(!map || !map->ingameLevels || frozen || nextPassiveExpAt == Time::ZERO || localTime < nextPassiveExpAt) return;
 	const GameXmlContent::IngameLevelInfo& info = GetGameXmlContent().ingameLevel;
 	nextPassiveExpAt = TimeAdd(nextPassiveExpAt, TimeMsToTime(info.passivePeriod * 1000.0));

@@ -82,11 +82,25 @@ void World::MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const Gam
 	const i32 damage = (i32)(MonsterAttackPower(attacker) * attack.multiplier + 0.5f);
 	if(damage <= 0) return;
 	auto targetIt = actorNpcMap.find(targetUID);
+	ActorMaster* master = targetIt == actorNpcMap.end() ? FindMasterActor(targetUID) : nullptr;
+	if(attack.radius > 0) {
+		vec3 center = attacker.pos;
+		if(targetIt != actorNpcMap.end()) center = targetIt->second->pos;
+		else if(master && master->parent) center = master->parent->body->GetWorldPos();
+		foreach(p, players) {
+			if(p->dead || !p->body || !MonsterHostile(attacker, *p) || glm::length(vec2(p->body->GetWorldPos()) - vec2(center)) > attack.radius) continue;
+			DamagePlayerFromNpc(attacker, *p, damage, attack.remote, attack.status);
+		}
+		foreach(o, actorNpcList) {
+			if(&*o == &attacker || o->hp <= 0 || !MonsterHostile(attacker, *o) || glm::length(vec2(o->pos) - vec2(center)) > attack.radius) continue;
+			DamageNpcFromNpc(attacker, *o, damage, attack.remote);
+		}
+		return;
+	}
 	if(targetIt != actorNpcMap.end()) {
 		DamageNpcFromNpc(attacker, *targetIt->second, damage, attack.remote);
 		return;
 	}
-	ActorMaster* master = FindMasterActor(targetUID);
 	if(master && master->parent) DamagePlayerFromNpc(attacker, *master->parent, damage, attack.remote, attack.status);
 }
 
@@ -117,6 +131,10 @@ void World::UpdateMonsterAi(f32 delta)
 			if(localTime < TimeAdd(npc.spawnedAt, TimeMsToTime(MONSTER_START_DELAY_MS))) continue;
 			npc.monsterStarted = true;
 			npc.actionState = ActionStateID::NONE_BEHAVIORSTATE;
+			if(ai.idle != ActionStateID::INVALID) {
+				npc.actionState = ai.idle;
+				replication->SendMonsterStateToAll(npc.UID, ai.idle, npc.pos, 0.0f);
+			}
 			if(npc.path && ai.walk > 0) {
 				npc.monsterWalking = true;
 				replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, ai.walk);
@@ -171,6 +189,11 @@ void World::UpdateMonsterAi(f32 delta)
 				npc.monsterReturning = false;
 				npc.monsterChasing = false;
 				npc.hp = npc.hpMax;
+				if(ai.idle != ActionStateID::INVALID) {
+					npc.monsterAwake = false;
+					npc.actionState = ai.idle;
+					replication->SendMonsterStateToAll(npc.UID, ai.idle, npc.pos, 0.0f);
+				}
 				replication->SendHpToAll(npc.UID, npc.hp, npc.hpMax);
 				LOG("Monster :: neutral creature=%d (local %d) back home, healed", (i32)npc.docID, npc.localID);
 				replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, npc.rot.z, 0.0f);
@@ -203,6 +226,17 @@ void World::UpdateMonsterAi(f32 delta)
 			}
 		}
 
+		if(targetPos && attack && ai.awake != ActionStateID::INVALID && !npc.monsterAwake) {
+			npc.monsterAwake = true;
+			npc.actionState = ai.awake;
+			replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, 0.0f);
+			replication->SendMonsterStateToAll(npc.UID, ai.awake, npc.pos, 0.0f);
+			replication->SendAiSetTargetToAll(npc.UID, npc.monsterTarget);
+			npc.monsterHoldUntil = TimeAdd(localTime, TimeMsToTime(ai.awakeTime * 1000.0));
+			LOG("Monster :: creature=%d (local %d) wakes up", (i32)npc.docID, npc.localID);
+			continue;
+		}
+		if(targetPos && localTime < npc.monsterHoldUntil) continue;
 		if(targetPos && attack) {
 			const vec2 rel = vec2(*targetPos) - vec2(npc.pos);
 			const f32 dist = glm::length(rel);
@@ -229,12 +263,24 @@ void World::UpdateMonsterAi(f32 delta)
 			npc.monsterWalking = false;
 			if(localTime < npc.monsterNextAttack) continue;
 			npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime(attack->cooldown * 1000.0));
+			for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)npc.monsterSkillReady.size(); s++) {
+				const GameXmlContent::MonsterAttack& special = ai.attacks[s];
+				if(!special.special || special.target != attack->target || localTime < npc.monsterSkillReady[s]) continue;
+				if(npc.monsterSkillReady[s] == Time::ZERO) { npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime(special.cooldown * 1000.0)); continue; }
+				if(dist > special.range + (reach - attack->range)) continue;
+				npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime(special.cooldown * 1000.0));
+				attack = &special;
+				LOG("Monster :: creature=%d (local %d) uses %s", (i32)npc.docID, npc.localID, ActionStateToString(special.state));
+				break;
+			}
 			npc.rot.z = yaw;
 			npc.actionState = attack->state;
 			replication->SendNpcTurnToAll(npc.UID, yaw);
 			replication->SendMonsterStateToAll(npc.UID, attack->state, npc.pos, ai.run);
 			const f32 travel = attack->speed > 0 ? dist / attack->speed : 0.0f;
-			monsterHits.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime((attack->delay + travel) * 1000.0)), attack });
+			for(i32 h = 0; h < (i32)attack->hits && !monsterHits.full(); h++) {
+				monsterHits.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime((attack->delay + travel + h * attack->interval) * 1000.0)), attack });
+			}
 			continue;
 		}
 

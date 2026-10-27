@@ -126,6 +126,9 @@ struct World
 		i32 assists = 0;
 		bool firstBlood = false;
 		i64 damageDealt = 0;
+		eastl::array<u32,9> damageStats = {};
+		u8 statueCaptures = 0;
+		u8 visionCaptures = 0;
 		eastl::fixed_vector<Replication::DamageTaken,48,false> recentDamage;
 		Time lastKillAt = Time::ZERO;
 		Time botAttackStateUntil = Time::ZERO;
@@ -192,6 +195,7 @@ struct World
 		ActorUID pendingChildTarget = ActorUID::INVALID;
 		eastl::array<Time,5> botSkillReady = { Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO };
 		Time tNextBotSkill = Time::ZERO;
+		Time botStageSkillReady = Time::ZERO;
 		ActorUID botAimTarget = ActorUID::INVALID;
 		f32 ultGauge = -1.0f;
 		f32 stamina = -1.0f;
@@ -432,10 +436,13 @@ struct World
 		const eastl::fixed_vector<vec3,48,true>* path = nullptr;
 		i32 pathPoint = 0;
 		bool monsterStarted = false;
+		bool monsterAwake = false;
+		Time monsterHoldUntil = Time::ZERO;
 		bool monsterWalking = false;
 		bool monsterChasing = false;
 		ActorUID monsterTarget = ActorUID::INVALID;
 		Time monsterNextAttack = Time::ZERO;
+		eastl::array<Time,16> monsterSkillReady = {};
 		Time monsterNextSearch = Time::ZERO;
 		Time monsterNextSync = Time::ZERO;
 		bool monsterReturning = false;
@@ -966,6 +973,7 @@ public:
 	void ApplyLevelStats(Player& player);
 	u32 KillPoints() const;
 	void AddPoints(Player& player, i32 points);
+	bool IsStructure(const ActorNpc& npc) const;
 	void GrantMonsterKillPoints(const ActorNpc& npc, ActorUID killerUID);
 	Time nextPassiveExpAt = Time::ZERO;
 	eastl::hash_map<i32,i32> deadCounts;
@@ -989,15 +997,18 @@ public:
 	void SpawnDropGroupAt(i32 dropIndex, const vec3& pos, i32 tagID);
 	void SpawnGroundItemAt(i32 itemIndex, const vec3& pos, i32 tagID);
 	eastl::array<i32,2> teamTitanPieces = {{ 0, 0 }};
+	eastl::array<Time,2> teamTitanReadyAt = {{ Time::ZERO, Time::ZERO }};
+	void UpdateBotTitanVotes();
+	f32 BotTitanSkillDistance(i32 skill) const;
+	bool BotStageSkill(Player& bot);
 	void SetCarriedPieces(Player& player, i32 count);
 	void AddTeamPieces(i32 team, i32 count);
 	void DropTitanPieces(Player& player);
 	void FireAITrigger(i32 index, i32 playerIndex);
-	struct GiantTrigger { i32 aiIndex; i32 team; i32 monster; };
+	struct GiantTrigger { i32 aiIndex; i32 team; i32 monster; i32 tagID; };
+	eastl::array<i32,2> firstGiantTrigger = {{ -1, -1 }};
 	eastl::fixed_vector<GiantTrigger,8,false> giantTriggers;
 	bool giantTriggersBuilt = false;
-	Time giantNextWaveAt = Time::ZERO;
-	eastl::array<Time,2> giantTeamAt = {{ Time::ZERO, Time::ZERO }};
 	u32 giantCycle = 0;
 	eastl::array<eastl::fixed_vector<i32,32,false>,2> giantSummons;
 	void BuildGiantTriggers();
@@ -1017,7 +1028,7 @@ public:
 	enum EndKill { END_KILL_TOWER = 0, END_KILL_BOSS, END_KILL_MINION, END_KILL_NEUTRAL };
 	bool titanSaveAreasBuilt = false;
 	bool BotObjective(const Player& bot, vec2* goal);
-	void UpdateGiantWaves();
+	void SummonGiant(i32 team);
 	bool TakeGroundItem(Player& player, u32 itemUID);
 	struct GroundItem { u32 uid; i32 itemIndex; vec3 pos; i32 tagID; Time expireAt; };
 	eastl::fixed_vector<GroundItem,64,false> groundItems;
@@ -1032,6 +1043,7 @@ public:
 	bool levelEventsStarted = false;
 	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; };
 	void ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool remove);
+	i32 AbsorbNpcShield(const ActorNpc& npc, i32 dealt);
 	bool TeleportNextToTarget(Player& player, ActorUID target);
 	eastl::fixed_vector<NpcStatus,128,false> npcStatuses;
 	void ToggleOn(Player& player, SkillID skillID, const vec3& castPos);
