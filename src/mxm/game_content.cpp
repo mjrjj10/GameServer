@@ -1101,6 +1101,17 @@ bool GameXmlContent::LoadMonsterAi()
 		ai.groggyChance = pInfo->FloatAttribute("groggyChance");
 		ai.groggyTime = pInfo->FloatAttribute("groggyTime");
 		ai.spawnTime = pInfo->FloatAttribute("spawnTime");
+		if(const char* victory = pInfo->Attribute("victory")) {
+			char first[64] = {}, second[64] = {};
+			if(EA::StdC::Sscanf(victory, "%63s %63s", first, second) == 2) {
+				ai.victoryStates[0] = ActionStateFromString(first);
+				ai.victoryStates[1] = ActionStateFromString(second);
+			}
+			if(const char* times = pInfo->Attribute("victoryTimes")) EA::StdC::Sscanf(times, "%f %f", &ai.victoryTimes[0], &ai.victoryTimes[1]);
+			ParseIdList(pInfo->Attribute("victoryStatus"), ai.victoryStatuses);
+			ai.victoryStatusDelay = pInfo->FloatAttribute("victoryStatusDelay");
+			ai.victoryHeal = pInfo->FloatAttribute("victoryHeal");
+		}
 		ParseIdList(pInfo->Attribute("groggyStatus"), ai.groggyStatuses);
 		if(const char* cc = pInfo->Attribute("cc")) {
 			const char* at = cc;

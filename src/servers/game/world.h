@@ -448,6 +448,10 @@ struct World
 		Time defeatLieAt = Time::ZERO;
 		Time stateEndAt = Time::ZERO;
 		f32 speedMul = 1.0f;
+		u8 victoryStep = 0;
+		Time victoryPendingAt = Time::ZERO;
+		Time victoryNext = Time::ZERO;
+		Time victoryHealAt = Time::ZERO;
 		Time monsterWeakUntil = Time::ZERO;
 		u32 fogHiddenFrom = 0;
 		bool monsterWeakHit = false;
@@ -973,6 +977,8 @@ public:
 	f32 NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info);
 	void ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 statusID);
 	void UpdateNpcDefeat(ActorNpc& npc);
+	void StartTitanVictory(Faction deadFaction, const vec3& deadPos, ActorUID soulUID, ActorUID triggerUID);
+	void UpdateNpcVictory(ActorNpc& npc);
 	bool NpcHasStatusType(const ActorNpc& npc, StatusType type) const;
 	void OnMonsterDeath(ActorNpc& npc, ActorUID killerUID);
 	void OnMonsterDamaged(ActorNpc& npc, i32 hpBefore);

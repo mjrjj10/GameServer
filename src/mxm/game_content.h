@@ -972,6 +972,11 @@ struct GameXmlContent
 		f32 groggyChance = 0;
 		f32 groggyTime = 0;
 		f32 spawnTime = 0;
+		eastl::array<ActionStateID,2> victoryStates = {{ ActionStateID::INVALID, ActionStateID::INVALID }};
+		eastl::array<f32,2> victoryTimes = {{ 0, 0 }};
+		eastl::fixed_vector<i32,4,false> victoryStatuses;
+		f32 victoryStatusDelay = 0;
+		f32 victoryHeal = 0;
 		eastl::fixed_vector<i32,4,false> groggyStatuses;
 		eastl::fixed_vector<StatusType,8,false> ccTypes;
 		eastl::fixed_vector<u32,10,false> enemyTags;

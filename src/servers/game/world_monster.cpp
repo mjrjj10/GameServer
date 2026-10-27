@@ -72,7 +72,86 @@ void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDo
 	if(const auto* spawns = GetGameXmlContent().FindMonsterDieSpawn((i32)npc.docID)) {
 		const vec3 pos = npc.pos;
 		const vec3 rot = npc.rot;
-		for(const i32 s : *spawns) SpawnMonster((CreatureIndex)s, 0, pos, rot, Faction::MONSTER, -1);
+		const Faction faction = npc.faction;
+		const bool titan = npc.monsterAi && MonsterTargetKind(*npc.monsterAi) == GameXmlContent::MonsterAttack::TITAN;
+		eastl::fixed_vector<ActorUID,4,false> helpers;
+		for(const i32 s : *spawns) {
+			ActorNpc& helper = SpawnMonster((CreatureIndex)s, 0, pos, rot, Faction::MONSTER, -1);
+			if(!helpers.full()) helpers.push_back(helper.UID);
+		}
+		if(titan && !helpers.empty()) StartTitanVictory(faction, pos, helpers.front(), helpers.back());
+	}
+}
+
+static const f32 TITAN_VICTORY_RANGE = 1600.0f;
+static const f64 TITAN_VICTORY_START_MS = 500.0;
+static const i32 STATUS_TITAN_VICTORY_FLAG = 1200100045;
+static const i32 STATUS_TITAN_TARGET_FLAG = 1200100047;
+static const i32 STATUS_TITAN_READY_FLAG = 1200100046;
+
+void World::StartTitanVictory(Faction deadFaction, const vec3& deadPos, ActorUID soulUID, ActorUID triggerUID)
+{
+	ActorNpc* victor = nullptr;
+	f32 best = TITAN_VICTORY_RANGE;
+	foreach(o, actorNpcList) {
+		if(o->hp <= 0 || o->removeAt != Time::ZERO || !o->monsterAi || o->monsterAi->victoryStates[0] == ActionStateID::INVALID) continue;
+		if(!FactionsOppose(o->faction, deadFaction) || MonsterTargetKind(*o->monsterAi) != GameXmlContent::MonsterAttack::TITAN) continue;
+		const f32 d = glm::length(vec2(o->pos) - vec2(deadPos));
+		if(d < best) { best = d; victor = &*o; }
+	}
+	if(!victor || victor->victoryStep != 0) return;
+	if(const ActorNpc* trigger = FindNpcActor(triggerUID)) ApplyStatusToNpcFromNpc(*trigger, *victor, STATUS_TITAN_VICTORY_FLAG);
+	if(const ActorNpc* soul = FindNpcActor(soulUID)) ApplyStatusToNpcFromNpc(*soul, *victor, STATUS_TITAN_TARGET_FLAG);
+	victor->victoryPendingAt = TimeAdd(localTime, TimeMsToTime(TITAN_VICTORY_START_MS));
+	LOG("Titan :: creature=%d (local %d) absorbs a dead titan", (i32)victor->docID, victor->localID);
+}
+
+void World::UpdateNpcVictory(ActorNpc& npc)
+{
+	const GameXmlContent::MonsterAi& ai = *npc.monsterAi;
+	if(npc.victoryStep == 0) {
+		if(npc.victoryPendingAt == Time::ZERO || localTime < npc.victoryPendingAt || localTime < npc.monsterHoldUntil) return;
+		npc.victoryPendingAt = Time::ZERO;
+		npc.victoryStep = 1;
+		npc.stateEndAt = Time::ZERO;
+		npc.actionState = ai.victoryStates[0];
+		replication->SendMonsterStateToAll(npc.UID, ai.victoryStates[0], npc.pos, 0.0f);
+		npc.victoryNext = TimeAdd(localTime, TimeMsToTime(ai.victoryTimes[0] * 1000.0));
+		npc.monsterHoldUntil = TimeAdd(npc.victoryNext, TimeMsToTime(ai.victoryTimes[1] * 1000.0));
+		return;
+	}
+	if(npc.victoryStep == 1 && localTime >= npc.victoryNext) {
+		npc.victoryStep = 2;
+		npc.actionState = ai.victoryStates[1];
+		replication->SendMonsterStateToAll(npc.UID, ai.victoryStates[1], npc.pos, 0.0f);
+		ApplyMonsterStatus(npc, STATUS_TITAN_READY_FLAG, true);
+		npc.victoryNext = TimeAdd(localTime, TimeMsToTime(ai.victoryStatusDelay * 1000.0));
+		return;
+	}
+	if(npc.victoryStep == 2 && localTime >= npc.victoryNext) {
+		npc.victoryStep = 3;
+		f32 healDelay = 0;
+		foreach_const(st, ai.victoryStatuses) {
+			ApplyMonsterStatus(npc, *st, true);
+			const StatusInfo* info = GetGameXmlContent().FindStatus(*st);
+			if(info && info->type == StatusType::HEAL) healDelay = MAX(info->intervalSec, info->durationSec);
+		}
+		if(ai.victoryHeal > 0) npc.victoryHealAt = TimeAdd(localTime, TimeMsToTime(healDelay * 1000.0));
+		npc.victoryNext = TimeAdd(localTime, TimeMsToTime(MAX(ai.victoryTimes[1] - ai.victoryStatusDelay, 0.0f) * 1000.0));
+		return;
+	}
+	if(npc.victoryStep == 3) {
+		if(npc.victoryHealAt != Time::ZERO && localTime >= npc.victoryHealAt) {
+			npc.victoryHealAt = Time::ZERO;
+			npc.hp = MIN(npc.hp + (i32)(npc.hpMax * ai.victoryHeal), npc.hpMax);
+			replication->SendHpToAll(npc.UID, npc.hp, npc.hpMax);
+			LOG("Titan :: creature=%d (local %d) healed to %d/%d by absorbing", (i32)npc.docID, npc.localID, npc.hp, npc.hpMax);
+		}
+		if(localTime >= npc.victoryNext && npc.victoryHealAt == Time::ZERO) {
+			npc.victoryStep = 0;
+			npc.actionState = ActionStateID::NONE_BEHAVIORSTATE;
+			replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, 0.0f);
+		}
 	}
 }
 
@@ -161,6 +240,7 @@ void World::UpdateMonsterAi(f32 delta)
 		const f32 walk = ai.walk * npc.speedMul;
 		const f32 run = ai.run * npc.speedMul;
 		UpdateNpcDefeat(npc);
+		UpdateNpcVictory(npc);
 		if(!npc.monsterStarted) {
 			if(localTime < TimeAdd(npc.spawnedAt, TimeMsToTime(MAX(MONSTER_START_DELAY_MS, (f64)ai.spawnTime * 1000.0)))) continue;
 			npc.monsterStarted = true;
