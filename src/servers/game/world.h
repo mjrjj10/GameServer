@@ -1093,6 +1093,10 @@ public:
 	bool TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID);
 	void UpdateNpcFog();
 	void RevealToTeam(Player& player, i32 team);
+	void LightAttacker(const vec3& attackerPos, i32 victimTeam);
+	void UpdateLitCells();
+	struct LitCell { u32 cell; u8 team; Time until; };
+	eastl::fixed_vector<LitCell,512,true> litCells;
 	Time nextFogUpdate = Time::ZERO;
 	void ShowHiddenToEnemies(Player& player, ActorUID was, ActorUID hidden);
 	void SendHideDetectToAll(ActorUID detectorUID, ActorUID targetUID, u8 flag);

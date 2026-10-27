@@ -339,6 +339,7 @@ struct Replication
 	void SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, SkillID skillID, i32 damage, i32 hp, i32 hpMax, u32 damageType = 0, i32 statusID = 0);
 	void SendHpToAll(ActorUID actorUID, i32 hp, i32 hpMax);
 	void SendBushStateToAll(ActorUID actorUID, ActorUID bushUID);
+	void SendLightArea(ClientHandle clientHd, bool on, u32 cell, u8 team, u8 radius);
 	void SendTeamPointsToAll(u8 team, i32 teamPoints);
 	void SendEnterNpc(ClientHandle clientHd, ActorUID actorUID, CreatureIndex docID, const vec3& pos, f32 yaw, f32 speed, ActionStateID action, i32 hp, i32 hpMax, f32 growthLevel);
 	void SendDoConnectChannel(ClientHandle clientHd, const wchar* nickname, const i32 hubIP[4], u16 hubPort);

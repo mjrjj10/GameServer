@@ -3206,6 +3206,8 @@ DEFAULT_SERIALIZE(Sv::SN_StageSkillAvailable);
 DEFAULT_SERIALIZE(Sv::SA_StageSkillSelect);
 DEFAULT_SERIALIZE(Sv::SN_StageSkillSelect);
 DEFAULT_SERIALIZE(Sv::SN_BushObjectState);
+DEFAULT_SERIALIZE(Sv::SN_LightOnArea);
+DEFAULT_SERIALIZE(Sv::SN_LightOffArea);
 #undef DEFAULT_SERIALIZE
 
 template<>

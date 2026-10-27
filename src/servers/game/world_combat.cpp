@@ -251,6 +251,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		damageIn, (u32)(proj ? proj->remoteDoc : remoteDoc), (i32)(elementMul * 100.0f));
 	if(attacker.team != target.team) {
 		RevealToTeam(attacker, target.team);
+		LightAttacker(attacker.body->GetWorldPos(), target.team);
 		attacker.damageDealt += damage;
 		const bool normalHit = proj && skillID == SkillID::INVALID && damageStatusID == 0;
 		attacker.damageStats[END_DMG_MAX_DEALT] = MAX(attacker.damageStats[END_DMG_MAX_DEALT], (u32)damage);
@@ -411,7 +412,10 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	npc.hp = MAX(npc.hp - AbsorbNpcShield(npc, dealt), 0);
 	if(npc.monsterWeakUntil != Time::ZERO && localTime < npc.monsterWeakUntil) npc.monsterWeakHit = true;
 	if(IsStructure(npc)) attacker.damageStats[END_DMG_BUILDING_DEALT] += (u32)(hpBefore - npc.hp);
-	if(npc.faction == Faction::RED || npc.faction == Faction::BLUE) RevealToTeam(attacker, (i32)npc.faction);
+	if(npc.faction == Faction::RED || npc.faction == Faction::BLUE) {
+		RevealToTeam(attacker, (i32)npc.faction);
+		LightAttacker(attacker.body->GetWorldPos(), (i32)npc.faction);
+	}
 	if(npc.ownerUID == ActorUID::INVALID) OnMonsterDamaged(npc, hpBefore);
 	if(npc.ownerUID == ActorUID::INVALID && npc.monsterAi && (npc.faction == Faction::ORANGE || npc.faction == Faction::MONSTER) && npc.monsterTarget == ActorUID::INVALID && npc.hp > 0) {
 		npc.monsterTarget = attacker.Main().UID;
@@ -464,6 +468,7 @@ void World::DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i
 	const i32 hpBefore = target.hp;
 	target.hp = MAX(target.hp - AbsorbNpcShield(target, dealt), 0);
 	OnMonsterDamaged(target, hpBefore);
+	if((target.faction == Faction::RED || target.faction == Faction::BLUE) && (attacker.faction == Faction::RED || attacker.faction == Faction::BLUE) && attacker.faction != target.faction) LightAttacker(attacker.pos, (i32)target.faction);
 	SendNpcHit(attacker, target.UID, target.pos, remote, remoteID, dealt, target.hp, target.hpMax);
 	if(status > 0) ApplyStatusToNpcFromNpc(attacker, target, status);
 	if(target.hp <= 0) MonsterDie(target, attacker.UID, attacker.docID);
@@ -506,6 +511,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	if(ShowcaseKeepsAlive(target)) chara.hp = MAX(chara.hp, 1);
 	if(chara.hp == 0) PassiveOnLethal(target);
 	if(target.casting.skillID != SkillID::INVALID && target.casting.interruptByAttacked) CancelCast(target, "attacked");
+	if((attacker.faction == Faction::RED || attacker.faction == Faction::BLUE) && (i32)attacker.faction != (i32)target.team) LightAttacker(attacker.pos, target.team);
 	SendNpcHit(attacker, chara.UID, target.body->GetWorldPos(), remote, remoteID, damage, chara.hp, chara.hpMax);
 	if(chara.hp > 0) {
 		LOG("Damage :: creature %d -> %ls damage=%d hp=%d/%d", (i32)attacker.docID, target.name.data(), damage, chara.hp, chara.hpMax);

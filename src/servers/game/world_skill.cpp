@@ -1089,6 +1089,42 @@ void World::RevealToTeam(Player& player, i32 team)
 	player.fogRevealUntil[team] = TimeAdd(localTime, TimeMsToTime(FOG_REVEAL_MS));
 }
 
+static const f32 LIGHT_CELL_SIZE = 100.0f;
+static const i32 LIGHT_GRID_WIDTH = 512;
+static const u8 LIGHT_RADIUS_CELLS = 2;
+static const f64 LIGHT_DURATION_MS = 3000.0;
+static const u8 NETWORK_TEAM_BASE = 3;
+
+void World::LightAttacker(const vec3& attackerPos, i32 victimTeam)
+{
+	if(!replication->titanMode || victimTeam < 0 || victimTeam > 1) return;
+	const i32 cx = (i32)(attackerPos.x / LIGHT_CELL_SIZE);
+	const i32 cy = (i32)(attackerPos.y / LIGHT_CELL_SIZE);
+	if(cx < 0 || cy < 0 || cx >= LIGHT_GRID_WIDTH) return;
+	const u32 cell = (u32)(cx + cy * LIGHT_GRID_WIDTH);
+	const Time until = TimeAdd(localTime, TimeMsToTime(LIGHT_DURATION_MS));
+	foreach(it, litCells) {
+		if(it->cell == cell && it->team == (u8)victimTeam) { it->until = until; return; }
+	}
+	if(litCells.full()) return;
+	litCells.push_back({ cell, (u8)victimTeam, until });
+	foreach_const(p, players) {
+		if(p->clientHd != ClientHandle::INVALID && p->team == (u8)victimTeam) replication->SendLightArea(p->clientHd, true, cell, (u8)(NETWORK_TEAM_BASE + victimTeam), LIGHT_RADIUS_CELLS);
+	}
+}
+
+void World::UpdateLitCells()
+{
+	for(i32 i = 0; i < (i32)litCells.size(); ) {
+		if(localTime < litCells[i].until) { i++; continue; }
+		const LitCell lit = litCells[i];
+		litCells.erase(litCells.begin() + i);
+		foreach_const(p, players) {
+			if(p->clientHd != ClientHandle::INVALID && p->team == lit.team) replication->SendLightArea(p->clientHd, false, lit.cell, (u8)(NETWORK_TEAM_BASE + lit.team), LIGHT_RADIUS_CELLS);
+		}
+	}
+}
+
 bool World::TeamSees(i32 team, const Player& target)
 {
 	if(target.fogRevealUntil[team] != Time::ZERO && localTime < target.fogRevealUntil[team]) return true;
@@ -1109,6 +1145,11 @@ bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID)
 		if(!physics.RaycastStatic(from + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit)) return true;
 	}
 	if(bushUID != ActorUID::INVALID) return false;
+	foreach_const(lit, litCells) {
+		if(lit->team != (u8)team) continue;
+		const vec2 center = vec2(((lit->cell % LIGHT_GRID_WIDTH) + 0.5f) * LIGHT_CELL_SIZE, ((lit->cell / LIGHT_GRID_WIDTH) + 0.5f) * LIGHT_CELL_SIZE);
+		if(glm::length(vec2(at) - center) <= LIGHT_RADIUS_CELLS * LIGHT_CELL_SIZE) return true;
+	}
 	foreach_const(npc, actorNpcList) {
 		if(npc->hp <= 0 || npc->removeAt != Time::ZERO || (npc->despawnAt != Time::ZERO && localTime >= npc->despawnAt)) continue;
 		const i32 npcTeam = npc->ownerUID != ActorUID::INVALID ? (i32)players[npc->ownerIndex].team : (npc->faction == Faction::RED ? 0 : npc->faction == Faction::BLUE ? 1 : -1);
@@ -1122,7 +1163,9 @@ bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID)
 
 void World::UpdateFog()
 {
-	if(!replication->titanMode || localTime < nextFogUpdate) return;
+	if(!replication->titanMode) return;
+	UpdateLitCells();
+	if(localTime < nextFogUpdate) return;
 	nextFogUpdate = TimeAdd(localTime, TimeMsToTime(FOG_UPDATE_MS));
 	const auto& content = GetGameXmlContent();
 	foreach(p, players) {

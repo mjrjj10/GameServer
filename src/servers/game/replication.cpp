@@ -2158,6 +2158,24 @@ void Replication::SendHideDetect(ClientHandle clientHd, ActorUID detectorUID, Ac
 	SendPacket(clientHd, packet);
 }
 
+void Replication::SendLightArea(ClientHandle clientHd, bool on, u32 cell, u8 team, u8 radius)
+{
+	if(on) {
+		Sv::SN_LightOnArea packet;
+		packet.cellArrayIndex = cell;
+		packet.team = team;
+		packet.radius = radius;
+		SendPacket(clientHd, packet);
+	}
+	else {
+		Sv::SN_LightOffArea packet;
+		packet.cellArrayIndex = cell;
+		packet.team = team;
+		packet.radius = radius;
+		SendPacket(clientHd, packet);
+	}
+}
+
 void Replication::SendBushStateToAll(ActorUID actorUID, ActorUID bushUID)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
