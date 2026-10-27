@@ -1030,7 +1030,9 @@ public:
 	eastl::fixed_vector<LevelEventTimer,128,false> levelEventTimers;
 	u32 nextGroundItemUID = 0xC0000400;
 	bool levelEventsStarted = false;
-	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; };
+	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; };
+	void ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool remove);
+	bool TeleportNextToTarget(Player& player, ActorUID target);
 	eastl::fixed_vector<NpcStatus,128,false> npcStatuses;
 	void ToggleOn(Player& player, SkillID skillID, const vec3& castPos);
 	void ToggleOff(Player& player);

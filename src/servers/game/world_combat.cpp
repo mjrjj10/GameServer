@@ -400,7 +400,17 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	if(npc.ownerUID == ActorUID::INVALID && NpcHasStatusType(npc, StatusType::GODMODE)) return;
 	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence, 0.0f)) + 0.5f), 1);
 	const i32 hpBefore = npc.hp;
-	npc.hp = MAX(npc.hp - dealt, 0);
+	i32 left = dealt;
+	foreach(ns, npcStatuses) {
+		if(left <= 0) break;
+		if(ns->npcUID != npc.UID || ns->shieldHP <= 0 || localTime >= ns->until) continue;
+		const f32 absorbed = MIN(ns->shieldHP, (f32)left);
+		ns->shieldHP -= absorbed;
+		left -= (i32)absorbed;
+		if(ns->shieldHP <= 0) ns->until = localTime;
+		LOG("Status :: creature=%d shield %d absorbs %.0f (%.0f left)", (i32)npc.docID, ns->statusID, absorbed, ns->shieldHP);
+	}
+	npc.hp = MAX(npc.hp - left, 0);
 	if(npc.ownerUID == ActorUID::INVALID) OnMonsterDamaged(npc, hpBefore);
 	if(npc.ownerUID == ActorUID::INVALID && npc.monsterAi && (npc.faction == Faction::ORANGE || npc.faction == Faction::MONSTER) && npc.monsterTarget == ActorUID::INVALID && npc.hp > 0) {
 		npc.monsterTarget = attacker.Main().UID;

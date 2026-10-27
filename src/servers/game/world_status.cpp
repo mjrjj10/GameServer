@@ -958,6 +958,9 @@ void World::UpdateStatuses()
 				LOG("Status :: %ls status=%d removed by action", targetMaster->parent->name.data(), ps->statusID);
 			}
 		}
+		else if(!targetMaster && ps->targetUID != ActorUID::INVALID) {
+			if(ActorNpc* npc = FindNpcActor(ps->targetUID)) ApplyStatusToNpc(caster, *npc, ps->statusID, ps->remove);
+		}
 		else if(!caster.dead && targetMaster) {
 			statusCasterOverride = ps->sourceUID;
 			statusAniEnd = ps->aniEnd;

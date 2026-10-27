@@ -752,6 +752,7 @@ struct GameXmlContent
 				struct {
 					u8 toLastChild;
 					u8 toSpawnPoint;
+					u8 toTarget;
 				} teleport;
 
 				struct {
@@ -1180,6 +1181,8 @@ struct GameXmlContent
 	}
 	struct InteractionInfo { f32 activeDistance = 0; bool carry = false; bool individual = false; CreatureIndex receiver = CreatureIndex::Invalid; bool active = true; bool repeat = false; f32 repeatInterval = 0; i32 castMs = 0; u32 announcement = 0; i32 points = 0; eastl::array<u32,2> ownerMask = {{ 0, 0 }}; };
 	eastl::hash_map<i32, i32> dynamicInteraction;
+	eastl::hash_map<i32, f32> stageTeleportDistance;
+	f32 FindStageTeleportDistance(i32 doc) const { auto f = stageTeleportDistance.find(doc); return f == stageTeleportDistance.end() ? -1.0f : f->second; }
 	i32 FindDynamicInteraction(i32 doc) const { auto f = dynamicInteraction.find(doc); return f == dynamicInteraction.end() ? 0 : f->second; }
 	eastl::hash_map<i32, InteractionInfo> interactions;
 	eastl::hash_map<i32, i32> dynamicDensity;
@@ -1310,6 +1313,7 @@ private:
 	bool LoadSkillUpgrades();
 	bool LoadCharacterElements();
 	bool LoadSummons();
+	void LoadSummonInfo(tinyxml2::XMLElement* pInfo);
 	bool LoadStageTimeLimits();
 	bool LoadAnimationSequenceTimes();
 	bool LoadMoveGraphs();

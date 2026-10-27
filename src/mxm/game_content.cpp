@@ -1993,6 +1993,7 @@ bool GameXmlContent::LoadAnimationData()
 				cmd.teleport.toLastChild = Param1 && TargetPreset && EA::StdC::Strcmp(Param1, "TELEPORT_TARGET_ENTITY") == 0 &&
 					ActionCommand::TargetPresetFromString(TargetPreset) == ActionCommand::TargetPreset::LAST_CHILD_FFF ? 1 : 0;
 				cmd.teleport.toSpawnPoint = Param1 && EA::StdC::Strcmp(Param1, "TELEPORT_TARGET_SPAWN_POINT") == 0 ? 1 : 0;
+				cmd.teleport.toTarget = Param1 && !TargetPreset && EA::StdC::Strcmp(Param1, "TELEPORT_TARGET_ENTITY") == 0 ? 1 : 0;
 			} break;
 
 			case ActionCommand::Type::INTERACTION: {
@@ -3322,7 +3323,29 @@ bool GameXmlContent::LoadSummons()
 {
 	XMLDocument xmlSummon;
 	if(!LoadXMLFile(L"/client/CREATURE_MONSTER_SUMMON.xml", xmlSummon)) return false;
-	for(XMLElement* pInfo = xmlSummon.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+	for(XMLElement* pInfo = xmlSummon.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) LoadSummonInfo(pInfo);
+	eastl::hash_set<i32> sharedEntities;
+	XMLDocument xmlShared;
+	if(LoadXMLFile(L"/client/ActionBase_Class.xml", xmlShared)) {
+		for(XMLElement* pA = xmlShared.FirstChildElement()->FirstChildElement(); pA; pA = pA->NextSiblingElement()) {
+			const char* type = pA->Attribute("CommandType");
+			if(type && EA::StdC::Strcmp(type, "ENTITY") == 0) sharedEntities.insert(pA->IntAttribute("EntityIndex"));
+		}
+	}
+	XMLDocument xmlPvp;
+	if(LoadXMLFile(L"/client/CREATURE_MONSTER_PvP.xml", xmlPvp)) {
+		for(XMLElement* pInfo = xmlPvp.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+			const i32 id = pInfo->IntAttribute("ID");
+			if(sharedEntities.find(id) != sharedEntities.end() && summonMap.find(id) == summonMap.end()) LoadSummonInfo(pInfo);
+		}
+	}
+	LOG("Loaded %d summon creatures", (i32)summonMap.size());
+	return true;
+}
+
+void GameXmlContent::LoadSummonInfo(XMLElement* pInfo)
+{
+	{
 		i32 id = 0;
 		pInfo->QueryAttribute("ID", &id);
 		SummonInfo si;
@@ -3367,8 +3390,6 @@ bool GameXmlContent::LoadSummons()
 		}
 		summonMap[id] = si;
 	}
-	LOG("Loaded %d summon creatures", (i32)summonMap.size());
-	return true;
 }
 
 bool GameXmlContent::LoadStageTimeLimits()
@@ -3982,6 +4003,12 @@ bool GameXmlContent::LoadInteractions()
 			found->second.points = pC->IntAttribute("points");
 			found->second.ownerMask[0] = pC->UnsignedAttribute("ownerMask3");
 			found->second.ownerMask[1] = pC->UnsignedAttribute("ownerMask4");
+		}
+	}
+	XMLDocument xmlTeleport;
+	if(LoadXMLFile(L"/StageTeleport.xml", xmlTeleport, true)) {
+		for(XMLElement* pT = xmlTeleport.FirstChildElement()->FirstChildElement("TARGET"); pT; pT = pT->NextSiblingElement("TARGET")) {
+			stageTeleportDistance[pT->IntAttribute("ID")] = pT->FloatAttribute("distance");
 		}
 	}
 	return true;

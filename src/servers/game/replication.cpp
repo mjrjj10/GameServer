@@ -2234,10 +2234,10 @@ void Replication::SendTeleportRequest(ClientHandle clientHd, ActorUID actorUID, 
 	SendPacketData<Sv::SQ_TeleportObject>(clientHd, sizeof(packet), &packet);
 }
 
-void Replication::SendPlayerSyncTeleportToOthers(ClientHandle except, ActorUID actorUID, const vec3& pos)
+void Replication::SendPlayerSyncTeleportToAll(ActorUID actorUID, const vec3& pos)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
-		if(playerState[clientID].cur < PlayerState::IN_GAME || clientHandle[clientID] == except) continue;
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const LocalActorID local = GetLocalActorID(clientHandle[clientID], actorUID);
 		if(local == LocalActorID::INVALID) continue;
 		Sv::SN_PlayerSyncTeleport packet;

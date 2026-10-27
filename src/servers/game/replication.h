@@ -384,7 +384,7 @@ struct Replication
 	void SendEnterActor(ClientHandle clientHd, ActorUID actorUID, ClassType classType, const vec3& pos, f32 bodyYaw, f32 upperYaw, const vec3& moveTo, bool battle, f32 speed, ActionStateID action, i32 hp, i32 hpMax);
 	void SendChangeSkillSlot(ClientHandle clientHd, ActorUID actorUID, i32 slot, SkillID skill, i32 resetCooltimeID);
 	void SendTeleportRequest(ClientHandle clientHd, ActorUID actorUID, const vec3& pos);
-	void SendPlayerSyncTeleportToOthers(ClientHandle except, ActorUID actorUID, const vec3& pos);
+	void SendPlayerSyncTeleportToAll(ActorUID actorUID, const vec3& pos);
 	void SendSelfTeleport(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, f32 worldYaw, const vec3* clientPos = nullptr);
 	void SendSelfMove(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, const vec2& moveDir, f32 speed, f32 worldYaw);
 	void RelayPlayerMove(ClientHandle fromHd, ActorUID actorUID, const Cl::CN_GameUpdatePosition& update);

@@ -374,6 +374,57 @@ void World::TrackNpcSelfStatus(ActorUID npcUID, const StatusInfo& info)
 	npcStatuses.push_back(ns);
 }
 
+void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool remove)
+{
+	for(i32 i = 0; i < (i32)npcStatuses.size(); i++) {
+		if(npcStatuses[i].npcUID != npc.UID || npcStatuses[i].statusID != statusID || npcStatuses[i].linked) continue;
+		npcStatuses[i].until = localTime;
+	}
+	if(remove) return;
+	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
+	const f32 duration = info && info->durationSec > 0 ? info->durationSec : 0.0f;
+	replication->SendAddStatusToAll(statusID, npc.UID, caster.Main().UID, duration, npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false, false);
+	if(npcStatuses.full()) return;
+	NpcStatus ns;
+	ns.npcUID = npc.UID;
+	ns.statusID = statusID;
+	ns.casterUID = caster.Main().UID;
+	ns.until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
+	ns.linked = false;
+	if(info && info->type == StatusType::SHIELD) {
+		foreach_const(m, info->mods) if(m->stat == StatusMod::SHIELD_DEFENCE && !m->mul) ns.shieldHP += m->value;
+	}
+	npcStatuses.push_back(ns);
+	LOG("Status :: %ls gives creature=%d status=%d for %.1fs shield=%.0f", caster.name.data(), (i32)npc.docID, statusID, duration, ns.shieldHP);
+}
+
+bool World::TeleportNextToTarget(Player& player, ActorUID target)
+{
+	vec3 targetPos;
+	i32 targetDoc = 0;
+	if(const ActorNpc* npc = FindNpcActor(target)) { targetPos = npc->pos; targetDoc = (i32)npc->docID; }
+	else {
+		auto dyn = actorDynamicMap.find(target);
+		if(dyn == actorDynamicMap.end()) return false;
+		targetPos = dyn->second->pos;
+		targetDoc = (i32)dyn->second->docID;
+	}
+	static const f32 TELEPORT_PROBE_DIST = 800.0f;
+	static const f32 TELEPORT_PROBE_HEIGHT = 100.0f;
+	vec2 dir = vec2(player.body->GetWorldPos()) - vec2(targetPos);
+	const f32 len = glm::length(dir);
+	dir = len > 1.0f ? dir / len : vec2(1, 0);
+	const vec3 probe = vec3(vec2(targetPos) + dir * TELEPORT_PROBE_DIST, targetPos.z + TELEPORT_PROBE_HEIGHT);
+	f32 hit = 0;
+	vec3 dest = targetPos;
+	const f32 measured = GetGameXmlContent().FindStageTeleportDistance(targetDoc);
+	if(measured >= 0) dest = vec3(vec2(targetPos) + dir * measured, targetPos.z);
+	else if(physics.RaycastStatic(probe, vec3(vec2(targetPos), targetPos.z + TELEPORT_PROBE_HEIGHT), &hit)) dest = vec3(vec2(targetPos) + dir * (TELEPORT_PROBE_DIST - hit + HitRadius(player)), targetPos.z);
+	LOG("Teleport :: %ls next to target %u at (%.0f, %.0f), %.0f from it", player.name.data(), (u32)target, dest.x, dest.y, glm::length(vec2(dest) - vec2(targetPos)));
+	WarpPlayer(player, dest, atan2f(-dir.y, -dir.x));
+	return true;
+}
+
 void World::UpdateNpcStatuses()
 {
 	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
@@ -588,6 +639,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	bool scheduled = false;
 	bool teleportToChild = false;
 	bool teleportToSpawn = false;
+	bool teleportToTarget = false;
 	eastl::fixed_vector<SkillAnimPass,8,false>& animPasses = lastAnimPasses;
 	animPasses.clear();
 	if(anim == 0 && forceAnim < 0) {
@@ -671,6 +723,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		}
 		if(cmd->type == ActionCommand::Type::TELEPORT && cmd->teleport.toLastChild && t <= 0.001f) teleportToChild = true;
 		if(cmd->type == ActionCommand::Type::TELEPORT && cmd->teleport.toSpawnPoint) teleportToSpawn = true;
+		if(cmd->type == ActionCommand::Type::TELEPORT && cmd->teleport.toTarget) teleportToTarget = true;
 		if(cmd->type == ActionCommand::Type::INTERACTION && cmd->interaction.interactionID != 0 && !pendingInteractions.full()) {
 			PendingInteraction pi;
 			pi.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
@@ -738,6 +791,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	}
 	}
 
+	if(teleportToTarget && !player.dead && currentTarget != ActorUID::INVALID) TeleportNextToTarget(player, currentTarget);
 	if(teleportToSpawn && !player.dead) {
 		LOG("Teleport :: %ls back to spawn (%.0f, %.0f)", player.name.data(), player.spawnPos.x, player.spawnPos.y);
 		WarpPlayer(player, player.spawnPos, player.input.rot.upperYaw);

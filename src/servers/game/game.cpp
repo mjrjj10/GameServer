@@ -805,7 +805,7 @@ void Game::OnPlayerSyncTeleport(ClientHandle clientHd, ActorUID actorUID, const 
 	World::Player& player = world.GetPlayer(found->second->playerIndex);
 	if(player.Main().UID != actorUID) return;
 	world.TeleportPlayer(player, pos, player.input.rot.bodyYaw);
-	replication.SendPlayerSyncTeleportToOthers(clientHd, actorUID, pos);
+	replication.SendPlayerSyncTeleportToAll(actorUID, pos);
 	LOG("Teleport :: %ls confirmed at (%.0f, %.0f, %.0f)", player.name.data(), pos.x, pos.y, pos.z);
 }
 
@@ -1050,6 +1050,24 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			World::Player& playerActor = world.GetPlayer(p.playerIndex);
 			world.SpawnGroundItemAt(itemIndex, playerActor.body->GetWorldPos(), -1);
 			SendDbgMsg(clientHd, LFMT(L"Item %d dropped", itemIndex));
+			return true;
+		}
+
+		i32 enemyCreature = 0;
+		if(EA::StdC::Sscanf(msg, L"enemysummon %d", &enemyCreature) == 1) {
+			World::Player& playerActor = world.GetPlayer(p.playerIndex);
+			foreach_const(e, world.players) {
+				if(e->team == playerActor.team || world.pendingSummons.full()) continue;
+				World::PendingSummon ps;
+				ps.time = world.localTime;
+				ps.creature = enemyCreature;
+				ps.ownerIndex = e->index;
+				ps.pos = playerActor.body->GetWorldPos() + vec3(150, 0, 0);
+				ps.rot = vec3(0);
+				world.pendingSummons.push_back(ps);
+				SendDbgMsg(clientHd, LFMT(L"Creature %d summoned for %ls", enemyCreature, e->name.data()));
+				break;
+			}
 			return true;
 		}
 
