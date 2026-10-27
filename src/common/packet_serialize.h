@@ -3200,6 +3200,7 @@ DEFAULT_SERIALIZE(Sv::SA_TransformCharacter);
 DEFAULT_SERIALIZE(Sv::SN_TransformCharacter);
 DEFAULT_SERIALIZE(Sv::SN_ChangeCharacterMode);
 DEFAULT_SERIALIZE(Sv::SN_PvpResultScoreGot);
+DEFAULT_SERIALIZE(Sv::SN_MonsterRespawnTime);
 #undef DEFAULT_SERIALIZE
 
 template<>

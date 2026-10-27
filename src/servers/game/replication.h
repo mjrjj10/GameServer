@@ -427,6 +427,7 @@ struct Replication
 	void SendSafeZone(ClientHandle clientHd, UserID userID, bool inside);
 	void SendPvpAnnouncementRaw(ClientHandle clientHd, u32 type, u32 data, u32 score, u32 attacker);
 	void SendTransformAnswer(ClientHandle clientHd, ActorUID charUID, i32 doc);
+	void SendMonsterRespawnTimeToAll(u32 stringKey, u32 localID, u32 remainMs);
 	void SendTitanFormToAll(bool modeChange, ActorUID charUID, i32 doc, u32 durationMs, i32 weapon, i32 skill1, i32 skill2, i32 ug, const StatValue* stats, u16 count, f32 curHp, f32 curStamina, f32 curUlt, f32 moveSpeed);
 	void SendRequestVoting(ClientHandle clientHd, UserID requestor, u32 type, u32 periodMs, i32 voters, bool modify);
 	void SendVote(ClientHandle clientHd, u32 type, u32 choice);

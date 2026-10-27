@@ -1716,6 +1716,18 @@ void Replication::SendVotingResult(ClientHandle clientHd, UserID candidate, u32 
 	SendPacket(clientHd, packet);
 }
 
+void Replication::SendMonsterRespawnTimeToAll(u32 stringKey, u32 localID, u32 remainMs)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		Sv::SN_MonsterRespawnTime packet;
+		packet.stringKey = stringKey;
+		packet.localId = localID;
+		packet.remainTime = remainMs;
+		SendPacket(clientHandle[clientID], packet);
+	}
+}
+
 void Replication::SendTransformAnswer(ClientHandle clientHd, ActorUID charUID, i32 doc)
 {
 	Sv::SA_TransformCharacter packet;

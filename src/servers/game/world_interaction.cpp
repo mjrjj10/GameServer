@@ -416,6 +416,8 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 			p.inSafeZone = node->active;
 			if(p.clientHd != ClientHandle::INVALID) replication->SendSafeZone(p.clientHd, p.userID, node->active);
 		} break;
+		case GameXmlContent::LevelEventNode::INVOKE_AI_TRIGGER: FireAITrigger(node->aiIndex, playerIndex); break;
+		case GameXmlContent::LevelEventNode::NOTIFY_RESPAWN: replication->SendMonsterRespawnTimeToAll((u32)node->count, (u32)node->localID, (u32)(node->delay * 1000.0f)); break;
 		case GameXmlContent::LevelEventNode::TEAM_CONDITION: {
 			if(playerIndex < 0 || node->team == Faction::INVALID || (Faction)players[playerIndex].team != node->team) return;
 		} break;

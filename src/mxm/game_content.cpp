@@ -3577,6 +3577,15 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(XMLElement* e = pNode->FirstChildElement("_AddGotPieceInfo")) { node.kind = LevelEventNode::ADD_GOT_PIECE; node.count = e->IntAttribute("_Count", 1); if(const char* team = e->Attribute("_TeamType")) node.team = StringToFaction(team); }
 		else if(pNode->FirstChildElement("_SaveGotPieceInfo")) node.kind = LevelEventNode::SAVE_GOT_PIECE;
 		else if(XMLElement* e = pNode->FirstChildElement("_AITriggerData")) { node.kind = LevelEventNode::AI_TRIGGER; node.aiIndex = e->IntAttribute("_INDEX"); }
+		else if(XMLElement* e = pNode->FirstChildElement("_InvokeAITriggerInfo")) { node.kind = LevelEventNode::INVOKE_AI_TRIGGER; node.aiIndex = e->IntAttribute("_INDEX"); }
+		else if(XMLElement* e = pNode->FirstChildElement("_NotifyRespawnTime")) {
+			node.kind = LevelEventNode::NOTIFY_RESPAWN;
+			node.localID = e->IntAttribute("_LocalID");
+			node.delay = e->FloatAttribute("_RemainTime");
+			i32 message = 0;
+			if(const char* key = e->Attribute("_StringKey")) EA::StdC::Sscanf(key, "MONSTER_RESPAWN_MESSAGE_%d", &message);
+			node.count = MAX(message - 1, 0);
+		}
 		else if(pNode->FirstChildElement("_PrintMessageInfo") || pNode->FirstChildElement("_BGMEventInfo") || pNode->FirstChildElement("_ChangeCameraInfo") || pNode->FirstChildElement("_SetNameTagVisibillityInfo") || pNode->FirstChildElement("_InputLockInfo") || pNode->FirstChildElement("_ActiveInteractionInfo") || pNode->FirstChildElement("_ClientDrivenActionChangeInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
 		map->levelEvents.push_back(node);
 	}
