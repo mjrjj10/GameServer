@@ -981,6 +981,12 @@ public:
 	void ApplyLevelStats(Player& player);
 	u32 KillPoints() const;
 	void AddPoints(Player& player, i32 points);
+	void AddTeamPoints(i32 team, i32 points);
+	i32 TeamPoints(i32 team) const;
+	void OnTeamPointsChanged(i32 team, i32 before, i32 after);
+	eastl::array<i32,2> teamBonusPoints = {{ 0, 0 }};
+	eastl::array<i32,2> giantsKilled = {{ 0, 0 }};
+	f64 GameTimeSec() const { return gameStartedAt == Time::ZERO ? 0.0 : TimeDiffSec(TimeDiff(gameStartedAt, localTime)); }
 	bool IsStructure(const ActorNpc& npc) const;
 	void GrantMonsterKillPoints(const ActorNpc& npc, ActorUID killerUID);
 	Time nextPassiveExpAt = Time::ZERO;
@@ -1008,6 +1014,7 @@ public:
 	eastl::array<Time,2> teamTitanReadyAt = {{ Time::ZERO, Time::ZERO }};
 	void UpdateBotTitanVotes();
 	f32 BotTitanSkillDistance(i32 skill) const;
+	bool BotFarmTarget(const Player& bot, vec2* goal);
 	bool BotStageSkill(Player& bot);
 	void SetCarriedPieces(Player& player, i32 count);
 	void AddTeamPieces(i32 team, i32 count);

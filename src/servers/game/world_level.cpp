@@ -310,14 +310,36 @@ u32 World::KillPoints() const
 
 static const i32 GIANT_POINTS_STEP = 100;
 
+static const i32 GIANT_KILL_POINTS_STEP = 3;
+
+i32 World::TeamPoints(i32 team) const
+{
+	i32 total = team >= 0 && team < 2 ? teamBonusPoints[team] : 0;
+	foreach_const(p, players) if((i32)p->team == team) total += p->points;
+	return total;
+}
+
+void World::OnTeamPointsChanged(i32 team, i32 before, i32 after)
+{
+	for(i32 step = before / GIANT_POINTS_STEP + 1; step <= after / GIANT_POINTS_STEP; step++) SummonGiant(team);
+}
+
 void World::AddPoints(Player& player, i32 points)
 {
 	if(!map || !map->ingameLevels || points <= 0) return;
 	player.points += points;
-	i32 teamPoints = 0;
-	foreach_const(p, players) if(p->team == player.team) teamPoints += p->points;
+	const i32 teamPoints = TeamPoints(player.team);
 	replication->SendPointsToAll(player.userID, player.team, player.points, teamPoints);
-	for(i32 step = (teamPoints - points) / GIANT_POINTS_STEP + 1; step <= teamPoints / GIANT_POINTS_STEP; step++) SummonGiant(player.team);
+	OnTeamPointsChanged(player.team, teamPoints - points, teamPoints);
+}
+
+void World::AddTeamPoints(i32 team, i32 points)
+{
+	if(!map || !map->ingameLevels || points <= 0 || team < 0 || team > 1) return;
+	teamBonusPoints[team] += points;
+	const i32 teamPoints = TeamPoints(team);
+	replication->SendTeamPointsToAll((u8)team, teamPoints);
+	OnTeamPointsChanged(team, teamPoints - points, teamPoints);
 }
 
 bool World::IsStructure(const ActorNpc& npc) const
@@ -345,6 +367,17 @@ void World::GrantMonsterKillPoints(const ActorNpc& npc, ActorUID killerUID)
 			else if(npc.faction == Faction::MONSTER) kind = END_KILL_NEUTRAL;
 			if(kind >= 0 && master->parent->monsterKills[kind] < 255) master->parent->monsterKills[kind]++;
 		}
+	}
+	const auto& giants = GetGameXmlContent().titan.giants;
+	if(eastl::find(giants.begin(), giants.end(), (i32)npc.docID) != giants.end() && (npc.faction == Faction::RED || npc.faction == Faction::BLUE)) {
+		const i32 giantTeam = (i32)npc.faction;
+		const i32 points = GIANT_KILL_POINTS_STEP * ++giantsKilled[giantTeam];
+		replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_MONSTER_KILL, 0, killerUID, npc.UID, (u32)points);
+		ActorMaster* giantKiller = FindMasterActor(killerUID);
+		if(giantKiller && giantKiller->parent && (i32)giantKiller->parent->team != giantTeam) AddPoints(*giantKiller->parent, points);
+		else AddTeamPoints(1 - giantTeam, points);
+		LOG("Titan :: giant of team %d killed (%d), +%d points to team %d", giantTeam, giantsKilled[giantTeam], points, 1 - giantTeam);
+		return;
 	}
 	const GameXmlContent::IngameLevelInfo& info = GetGameXmlContent().ingameLevel;
 	auto found = info.monsters.find((i32)npc.docID);

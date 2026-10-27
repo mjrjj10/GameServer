@@ -133,6 +133,27 @@ static const f32 BOT_ROAM_STEP = 800.0f;
 static const f32 BOT_PIECE_SEARCH_RANGE = 4000.0f;
 static const i32 BOT_TITAN_PIECE_ITEM = 130100904;
 
+static const f32 BOT_FARM_RANGE = 4000.0f;
+
+bool World::BotFarmTarget(const Player& bot, vec2* goal)
+{
+	if(!map || !map->ingameLevels) return false;
+	const vec2 here = vec2(bot.body->GetWorldPos());
+	f32 bestMinion = BOT_FARM_RANGE, bestNeutral = BOT_FARM_RANGE;
+	vec2 minion, neutral;
+	foreach_const(npc, actorNpcList) {
+		if(!npc->monsterAi || npc->ownerUID != ActorUID::INVALID || IsStructure(*npc) || !NpcHittableBy(*npc, bot)) continue;
+		const f32 d = glm::length(vec2(npc->pos) - here);
+		if(npc->faction == Faction::RED || npc->faction == Faction::BLUE) {
+			if(d < bestMinion && !BotDangerAt(bot, vec2(npc->pos), nullptr, nullptr)) { bestMinion = d; minion = vec2(npc->pos); }
+		}
+		else if((npc->faction == Faction::ORANGE || npc->faction == Faction::MONSTER) && d < bestNeutral) { bestNeutral = d; neutral = vec2(npc->pos); }
+	}
+	if(bestMinion < BOT_FARM_RANGE) { *goal = minion; return true; }
+	if(bestNeutral < BOT_FARM_RANGE) { *goal = neutral; return true; }
+	return false;
+}
+
 bool World::BotObjective(const Player& bot, vec2* goal)
 {
 	if(!map) return false;
@@ -240,6 +261,15 @@ void World::UpdateBotMovement()
 			const f32 len = glm::length(d);
 			if(len > BOT_ROAM_STEP) goal = here + d / len * BOT_ROAM_STEP;
 		}
+		else if(BotFarmTarget(bot, &goal)) {
+			const f32 range = WeaponIsMelee(bot) ? BOT_MELEE_RANGE : MIN(WeaponRange(bot) * BOT_RANGE_FRACTION, BOT_RANGED_MAX);
+			const vec2 d = here - goal;
+			const f32 len = glm::length(d);
+			const f32 face = atan2f(goal.y - here.y, goal.x - here.x);
+			bot.input.rot.upperYaw = face;
+			bot.input.rot.bodyYaw = face;
+			goal = goal + (len > 1.0f ? d / len : vec2(1, 0)) * range;
+		}
 		else if(target) {
 			const vec2 toward = glm::normalize(vec2(target->body->GetWorldPos()) - here);
 			goal = here + RotateVec(toward, bot.botStrafe * 0.3f) * BOT_ROAM_STEP;
@@ -273,13 +303,20 @@ void World::UpdateBotCombat()
 		if(IsBlocked(bot, true, false, false)) continue;
 		if(WeaponIsMelee(bot) && Config().DevShowcase) continue;
 		if(WeaponIsMelee(bot)) {
+			bool swing = false;
 			foreach_const(e, players) {
 				if(e->dead || e->team == bot.team || !(e->fogSeenBy & (1u << bot.team))) continue;
-				if(glm::length(vec2(e->body->GetWorldPos()) - vec2(bot.body->GetWorldPos())) <= BOT_MELEE_RANGE + HitRadius(*e) + HitRadius(bot)) {
-					bot.weaponFired = true;
-					bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot) * 1000.0));
-					break;
+				if(glm::length(vec2(e->body->GetWorldPos()) - vec2(bot.body->GetWorldPos())) <= BOT_MELEE_RANGE + HitRadius(*e) + HitRadius(bot)) { swing = true; break; }
+			}
+			if(!swing && !Config().DevShowcase) {
+				foreach_const(npc, actorNpcList) {
+					if(!NpcHittableBy(*npc, bot)) continue;
+					if(glm::length(vec2(npc->pos) - vec2(bot.body->GetWorldPos())) <= BOT_MELEE_RANGE + NpcHitRadius(*npc) + HitRadius(bot)) { swing = true; break; }
 				}
+			}
+			if(swing) {
+				bot.weaponFired = true;
+				bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot) * 1000.0));
 			}
 			continue;
 		}

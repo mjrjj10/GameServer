@@ -699,6 +699,7 @@ void Game::EndGame()
 		const i32 score = world.map && world.map->ingameLevels ? p.points : p.kills;
 		if(p.team == 0) red += score; else blue += score;
 	}
+	if(world.map && world.map->ingameLevels) { red += world.teamBonusPoints[0]; blue += world.teamBonusPoints[1]; }
 	LOG("Game :: time over, red %d - blue %d", red, blue);
 	const f64 playSec = TimeDiffSec(TimeDiff(tGameStarted, localTime));
 	const u32 minutes = (u32)(playSec / 60.0);

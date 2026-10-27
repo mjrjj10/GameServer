@@ -252,7 +252,11 @@ bool World::NpcHasStatusType(const ActorNpc& npc, StatusType type) const
 void World::OnMonsterDeath(ActorNpc& npc, ActorUID killerUID)
 {
 	Faction killerTeam = Faction::INVALID;
-	if(ActorMaster* m = FindMasterActor(killerUID)) killerTeam = m->parent ? (Faction)m->parent->team : Faction::INVALID;
+	i32 killerIndex = -1;
+	if(ActorMaster* m = FindMasterActor(killerUID)) {
+		killerTeam = m->parent ? (Faction)m->parent->team : Faction::INVALID;
+		killerIndex = m->parent ? (i32)m->parent->index : -1;
+	}
 	else {
 		auto killer = actorNpcMap.find(killerUID);
 		if(killer != actorNpcMap.end()) killerTeam = killer->second->faction;
@@ -265,7 +269,7 @@ void World::OnMonsterDeath(ActorNpc& npc, ActorUID killerUID)
 			if(++count < n->count) continue;
 			count = 0;
 			LOG("LevelEvent :: dead count of tag %d reached (node %d)", npc.tagID, n->id);
-			foreach_const(o, n->outputs) FireLevelEvent(*o);
+			foreach_const(o, n->outputs) FireLevelEvent(*o, killerIndex);
 		}
 	}
 	if(const i32 drop = GetGameXmlContent().FindMonsterDrop((i32)npc.docID)) SpawnDropGroupAt(drop, npc.pos, -1);
@@ -361,7 +365,7 @@ void World::CallMonsters(const GameXmlContent::LevelEventNode& node)
 		npc.spawnAnim = node.spawnAnim;
 		npc.wanderDist = node.wander;
 	}
-	LOG("LevelEvent :: node %d calls %d x monster %d (tag %d) in area %d", node.id, node.count, node.monster, node.tagID, node.areaID);
+	LOG("LevelEvent :: node %d calls %d x monster %d (tag %d) in area %d at t=%.1f", node.id, node.count, node.monster, node.tagID, node.areaID, GameTimeSec());
 }
 
 void World::DespawnEntities(i32 localID, i32 tagID)

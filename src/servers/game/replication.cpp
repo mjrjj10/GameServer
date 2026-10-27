@@ -2605,6 +2605,20 @@ void Replication::SendPointsToAll(UserID userID, u8 team, i32 points, i32 teamPo
 	}
 }
 
+void Replication::SendTeamPointsToAll(u8 team, i32 teamPoints)
+{
+	enum : u32 { SCORE = 0 };
+	PacketWriter<Sv::SN_ScoreUpdate> teamPacket;
+	teamPacket.Write<u32>(0);
+	teamPacket.Write<TeamType>(team == 0 ? TeamType::RED : TeamType::BLUE);
+	teamPacket.Write<u16>(1);
+	teamPacket.Write<u32>(SCORE); teamPacket.Write<u32>((u32)teamPoints);
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		SendPacket(clientHandle[clientID], teamPacket);
+	}
+}
+
 void Replication::SendPvpAnnouncementToAll(u32 type, u32 data, ActorUID attackerUID, ActorUID victimUID, u32 score)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {

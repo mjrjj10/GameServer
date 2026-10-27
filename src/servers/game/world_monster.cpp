@@ -63,7 +63,7 @@ void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDo
 	npc.monsterTarget = ActorUID::INVALID;
 	const f32 destroy = npc.monsterAi ? npc.monsterAi->destroy : 0.0f;
 	npc.removeAt = TimeAdd(localTime, TimeMsToTime(MAX(destroy, 1.0f) * 1000.0));
-	LOG("Monster :: creature=%d (local %d) dies at (%.0f, %.0f)", (i32)npc.docID, npc.localID, npc.pos.x, npc.pos.y);
+	LOG("Monster :: creature=%d (local %d) dies at (%.0f, %.0f) t=%.1f killer=%d", (i32)npc.docID, npc.localID, npc.pos.x, npc.pos.y, GameTimeSec(), (i32)killerDoc);
 	GrantMonsterKillExp(npc, killerUID);
 	GrantMonsterKillPoints(npc, killerUID);
 	OnMonsterDeath(npc, killerUID);
