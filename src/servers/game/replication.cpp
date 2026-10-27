@@ -1658,6 +1658,18 @@ void Replication::SendVotingResult(ClientHandle clientHd, UserID candidate, u32 
 	SendPacket(clientHd, packet);
 }
 
+void Replication::SendPvpAnnouncementRaw(ClientHandle clientHd, u32 type, u32 data, u32 score, u32 attacker)
+{
+	Sv::SN_PvpEventAnnouncement packet;
+	packet.stAnnounceMent.announcementType = type;
+	packet.stAnnounceMent.announcementData = data;
+	packet.stAnnounceMent.score = score;
+	packet.stAnnounceMent.attackerID = attacker;
+	packet.stAnnounceMent.attackeeID = 0;
+	packet.stAnnounceMent.isAllDead = 0;
+	SendPacket(clientHd, packet);
+}
+
 void Replication::SendSafeZone(ClientHandle clientHd, UserID userID, bool inside)
 {
 	Sv::SN_NotifyIsInSafeZone packet;

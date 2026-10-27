@@ -1121,6 +1121,18 @@ bool GameXmlContent::LoadMonsterStats()
 	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
 		const i32 id = pInfo->IntAttribute("ID");
 		auto& stats = monsterStats[id];
+		if(const i32 drop = pInfo->IntAttribute("drop")) monsterDrop[id] = drop;
+		if(const f32 life = pInfo->FloatAttribute("lifeTime")) monsterLifeTime[id] = life;
+		if(const char* spawns = pInfo->Attribute("dieSpawn")) {
+			auto& list = monsterDieSpawn[id];
+			for(const char* c = spawns; *c && !list.full(); ) {
+				char* end = nullptr;
+				const long v = strtol(c, &end, 10);
+				if(end == c) break;
+				list.push_back((i32)v);
+				c = end;
+			}
+		}
 		for(XMLElement* st = pInfo->FirstChildElement("STAT"); st && !stats.full(); st = st->NextSiblingElement("STAT")) {
 			stats.push_back({ (u8)st->IntAttribute("type"), st->FloatAttribute("value") });
 			const f32 growth = st->FloatAttribute("growth");
@@ -2795,7 +2807,8 @@ bool GameXmlContent::LoadStatusData()
 
 	XMLDocument xmlDynamic;
 	XMLDocument xmlMob;
-	XMLDocument* docs[3] = { &xml, LoadXMLFile(L"/client/STATUS_DYNAMIC.xml", xmlDynamic, true) ? &xmlDynamic : nullptr, LoadXMLFile(L"/client/STATUS_MOB.xml", xmlMob, true) ? &xmlMob : nullptr };
+	XMLDocument xmlItem;
+	XMLDocument* docs[4] = { &xml, LoadXMLFile(L"/client/STATUS_DYNAMIC.xml", xmlDynamic, true) ? &xmlDynamic : nullptr, LoadXMLFile(L"/client/STATUS_MOB.xml", xmlMob, true) ? &xmlMob : nullptr, LoadXMLFile(L"/client/STATUS_ITEM.xml", xmlItem, true) ? &xmlItem : nullptr };
 	for(XMLDocument* doc : docs) {
 		if(!doc) continue;
 		for(XMLElement* pInfo = doc->FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
@@ -3520,6 +3533,10 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(XMLElement* e = pNode->FirstChildElement("_EventOrConditionInfo")) { node.kind = LevelEventNode::OR_CONDITION; node.resetAfter = e->IntAttribute("_ResetAfterEvent") == 1; node.active = true; }
 		else if(XMLElement* e = pNode->FirstChildElement("_GameEndTriggerData")) { node.kind = LevelEventNode::GAME_END_TRIGGER; if(const char* team = e->Attribute("_Team")) node.team = StringToFaction(team); }
 		else if(pNode->FirstChildElement("_TimeRecordStartTriggerData")) node.kind = LevelEventNode::TIME_RECORD_START;
+		else if(XMLElement* e = pNode->FirstChildElement("_EventTeamConditionInfo")) { node.kind = LevelEventNode::TEAM_CONDITION; if(const char* team = e->Attribute("_Team")) node.team = StringToFaction(team); }
+		else if(XMLElement* e = pNode->FirstChildElement("_AddGotPieceInfo")) { node.kind = LevelEventNode::ADD_GOT_PIECE; node.count = e->IntAttribute("_Count", 1); if(const char* team = e->Attribute("_TeamType")) node.team = StringToFaction(team); }
+		else if(pNode->FirstChildElement("_SaveGotPieceInfo")) node.kind = LevelEventNode::SAVE_GOT_PIECE;
+		else if(XMLElement* e = pNode->FirstChildElement("_AITriggerData")) { node.kind = LevelEventNode::AI_TRIGGER; node.aiIndex = e->IntAttribute("_INDEX"); }
 		else if(pNode->FirstChildElement("_PrintMessageInfo") || pNode->FirstChildElement("_BGMEventInfo") || pNode->FirstChildElement("_ChangeCameraInfo") || pNode->FirstChildElement("_SetNameTagVisibillityInfo") || pNode->FirstChildElement("_InputLockInfo") || pNode->FirstChildElement("_ActiveInteractionInfo") || pNode->FirstChildElement("_ClientDrivenActionChangeInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
 		map->levelEvents.push_back(node);
 	}

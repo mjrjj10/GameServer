@@ -225,7 +225,7 @@
     <STAT type="52" value="100" />
     <STAT type="64" value="150" />
   </INFO>
-  <INFO ID="105000800">
+  <INFO ID="105000800" drop="151000995">
     <STAT type="0" value="1200" />
     <STAT type="6" value="230.4" />
     <STAT type="7" value="113.333" />
@@ -285,7 +285,7 @@
     <STAT type="52" value="100" />
     <STAT type="64" value="150" />
   </INFO>
-  <INFO ID="105001100">
+  <INFO ID="105001100" dieSpawn="105001105 105001108">
     <STAT type="0" value="37000" growth="2750" />
     <STAT type="6" value="576" growth="35" />
     <STAT type="7" value="113.333" />
@@ -298,7 +298,7 @@
     <STAT type="52" value="100" />
     <STAT type="64" value="150" />
   </INFO>
-  <INFO ID="105001101">
+  <INFO ID="105001101" dieSpawn="105001106 105001108">
     <STAT type="0" value="37000" growth="2750" />
     <STAT type="6" value="576" growth="35" />
     <STAT type="7" value="113.333" />
@@ -311,7 +311,7 @@
     <STAT type="52" value="100" />
     <STAT type="64" value="150" />
   </INFO>
-  <INFO ID="105001102">
+  <INFO ID="105001102" dieSpawn="105001107 105001108">
     <STAT type="0" value="37000" growth="2750" />
     <STAT type="6" value="576" growth="35" />
     <STAT type="7" value="113.333" />
@@ -324,7 +324,7 @@
     <STAT type="52" value="100" />
     <STAT type="64" value="150" />
   </INFO>
-  <INFO ID="105001105">
+  <INFO ID="105001105" drop="151000998" lifeTime="5.04">
     <STAT type="0" value="30900" />
     <STAT type="6" value="576" />
     <STAT type="7" value="113.333" />
@@ -336,7 +336,7 @@
     <STAT type="52" value="100" />
     <STAT type="64" value="150" />
   </INFO>
-  <INFO ID="105001106">
+  <INFO ID="105001106" drop="151000998" lifeTime="4.89">
     <STAT type="0" value="30900" />
     <STAT type="6" value="576" />
     <STAT type="7" value="113.333" />
@@ -348,7 +348,7 @@
     <STAT type="52" value="100" />
     <STAT type="64" value="150" />
   </INFO>
-  <INFO ID="105001107">
+  <INFO ID="105001107" drop="151000998" lifeTime="4.89">
     <STAT type="0" value="30900" />
     <STAT type="6" value="576" />
     <STAT type="7" value="113.333" />
@@ -360,7 +360,7 @@
     <STAT type="52" value="100" />
     <STAT type="64" value="150" />
   </INFO>
-  <INFO ID="105001108">
+  <INFO ID="105001108" lifeTime="0.34">
     <STAT type="0" value="30900" />
     <STAT type="6" value="576" />
     <STAT type="7" value="113.333" />
@@ -410,7 +410,7 @@
     <STAT type="52" value="100" />
     <STAT type="64" value="150" />
   </INFO>
-  <INFO ID="105001402">
+  <INFO ID="105001402" drop="151000998">
     <STAT type="0" value="8300" />
     <STAT type="6" value="537.6" />
     <STAT type="7" value="113.333" />

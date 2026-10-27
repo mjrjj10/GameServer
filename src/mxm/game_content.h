@@ -582,7 +582,7 @@ struct GameXmlContent
 
 	struct LevelEventNode
 	{
-		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM, BOUND_TRIGGER, STATUS_CHANGE, ACTIVATE_TRIGGER, ON_HIT_TRIGGER, ACTION_CHANGE, CLIENT_EVENT, CALL_MONSTER, DESPAWN_ENTITY, PASS_THROUGH, TIME_RECORD_START, DEAD_COUNT, HP_TRIGGER, OR_CONDITION, GAME_END_TRIGGER, SAFE_ZONE };
+		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM, BOUND_TRIGGER, STATUS_CHANGE, ACTIVATE_TRIGGER, ON_HIT_TRIGGER, ACTION_CHANGE, CLIENT_EVENT, CALL_MONSTER, DESPAWN_ENTITY, PASS_THROUGH, TIME_RECORD_START, DEAD_COUNT, HP_TRIGGER, OR_CONDITION, GAME_END_TRIGGER, SAFE_ZONE, TEAM_CONDITION, ADD_GOT_PIECE, SAVE_GOT_PIECE, AI_TRIGGER };
 		enum ApplyType: u8 { APPLY_MY_CHAR = 0, APPLY_LOCAL_ID, APPLY_OTHER };
 		i32 id = 0;
 		Kind kind = OTHER;
@@ -613,6 +613,7 @@ struct GameXmlContent
 		bool resetAfter = false;
 		bool ownTeamOnly = false;
 		f32 hpPercent = 0;
+		i32 aiIndex = 0;
 		eastl::fixed_vector<i32,8,false> outputs;
 	};
 
@@ -1018,6 +1019,12 @@ struct GameXmlContent
 	const eastl::fixed_vector<StatValue,24,false>* FindMonsterStats(i32 creatureID) const { auto f = monsterStats.find(creatureID); return f == monsterStats.end() ? nullptr : &f->second; }
 	eastl::hash_map<i32, eastl::fixed_vector<StatValue,24,false>> monsterStats;
 	eastl::hash_map<i32, eastl::fixed_vector<StatValue,4,false>> monsterGrowth;
+	eastl::hash_map<i32, i32> monsterDrop;
+	i32 FindMonsterDrop(i32 creatureID) const { auto f = monsterDrop.find(creatureID); return f == monsterDrop.end() ? 0 : f->second; }
+	eastl::hash_map<i32, eastl::fixed_vector<i32,4,false>> monsterDieSpawn;
+	eastl::hash_map<i32, f32> monsterLifeTime;
+	const eastl::fixed_vector<i32,4,false>* FindMonsterDieSpawn(i32 creatureID) const { auto f = monsterDieSpawn.find(creatureID); return f == monsterDieSpawn.end() ? nullptr : &f->second; }
+	f32 FindMonsterLifeTime(i32 creatureID) const { auto f = monsterLifeTime.find(creatureID); return f == monsterLifeTime.end() ? 0.0f : f->second; }
 	f32 monsterGrowthPeriod = 0;
 	i32 monsterGrowthCap = 0;
 	f32 MonsterGrowth(i32 creatureID, u8 type) const

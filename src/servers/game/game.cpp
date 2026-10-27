@@ -1000,6 +1000,14 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			return true;
 		}
 
+		i32 itemIndex = 0;
+		if(EA::StdC::Sscanf(msg, L"item %d", &itemIndex) == 1) {
+			World::Player& playerActor = world.GetPlayer(p.playerIndex);
+			world.SpawnGroundItemAt(itemIndex, playerActor.body->GetWorldPos(), -1);
+			SendDbgMsg(clientHd, LFMT(L"Item %d dropped", itemIndex));
+			return true;
+		}
+
 		i32 eventSeq = 0;
 		if(EA::StdC::Sscanf(msg, L"es %d", &eventSeq) == 1) {
 			replication.SendChatMessageToClient(clientHd, L"Dbg", EChatType::NOTICE_CHAT, LFMT(L"Event Sequence (%d)", eventSeq));

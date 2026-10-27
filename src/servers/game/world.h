@@ -138,6 +138,7 @@ struct World
 		i32 ingameExp = 0;
 		i32 points = 0;
 		bool inSafeZone = false;
+		i32 titanPieces = 0;
 		Time nextSkillPointAt = Time::ZERO;
 		u8 botUpgradeTurn = 0;
 		u32 resourceGainCast = 0;
@@ -378,6 +379,7 @@ struct World
 		ActorUID ownerUID = ActorUID::INVALID;
 		Time despawnAt = Time::ZERO;
 		Time spawnedAt = Time::ZERO;
+		Time selfDestructAt = Time::ZERO;
 		Time standAt = Time::ZERO;
 		Time dieStandAt = Time::ZERO;
 		Time removeAt = Time::ZERO;
@@ -961,6 +963,21 @@ public:
 	void OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos);
 	bool LevelTriggerActive(const GameXmlContent::LevelEventNode& node) const;
 	void SpawnGroundItems(i32 dropIndex, i32 areaID, i32 tagID);
+	void SpawnDropGroupAt(i32 dropIndex, const vec3& pos, i32 tagID);
+	void SpawnGroundItemAt(i32 itemIndex, const vec3& pos, i32 tagID);
+	eastl::array<i32,2> teamTitanPieces = {{ 0, 0 }};
+	void SetCarriedPieces(Player& player, i32 count);
+	void AddTeamPieces(i32 team, i32 count);
+	void DropTitanPieces(Player& player);
+	void FireAITrigger(i32 index, i32 playerIndex);
+	struct GiantTrigger { i32 aiIndex; i32 team; i32 monster; };
+	eastl::fixed_vector<GiantTrigger,8,false> giantTriggers;
+	bool giantTriggersBuilt = false;
+	Time giantNextWaveAt = Time::ZERO;
+	eastl::array<Time,2> giantTeamAt = {{ Time::ZERO, Time::ZERO }};
+	u32 giantCycle = 0;
+	void BuildGiantTriggers();
+	void UpdateGiantWaves();
 	bool TakeGroundItem(Player& player, u32 itemUID);
 	struct GroundItem { u32 uid; i32 itemIndex; vec3 pos; i32 tagID; Time expireAt; };
 	eastl::fixed_vector<GroundItem,64,false> groundItems;

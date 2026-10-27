@@ -265,6 +265,7 @@ void World::OnMonsterDeath(ActorNpc& npc, ActorUID killerUID)
 			foreach_const(o, n->outputs) FireLevelEvent(*o);
 		}
 	}
+	if(const i32 drop = GetGameXmlContent().FindMonsterDrop((i32)npc.docID)) SpawnDropGroupAt(drop, npc.pos, -1);
 	static const u32 coreTag = StatusTypeKey("Core");
 	if(npc.monsterAi && npc.monsterAi->tagKey == coreTag && winnerTeam < 0 && (npc.faction == Faction::RED || npc.faction == Faction::BLUE)) {
 		winnerTeam = npc.faction == Faction::RED ? 1 : 0;
@@ -333,6 +334,7 @@ World::ActorNpc& World::SpawnMonster(CreatureIndex docID, i32 localID, const vec
 	npc.actionState = ActionStateID::SPAWN_BEHAVIORSTATE;
 	npc.seed = (i32)RandUint();
 	InitMonsterStats(npc);
+	if(const f32 life = GetGameXmlContent().FindMonsterLifeTime((i32)docID)) npc.selfDestructAt = TimeAdd(localTime, TimeMsToTime(life * 1000.0));
 	return npc;
 }
 
@@ -369,6 +371,17 @@ void World::DespawnEntities(i32 localID, i32 tagID)
 	LOG("LevelEvent :: despawn local %d tag %d", localID, tagID);
 }
 
+static const i32 AI_TRIGGER_SAVE_TITAN_PIECE = 3333;
+
+void World::FireAITrigger(i32 index, i32 playerIndex)
+{
+	foreach_const(n, map->levelEvents) {
+		if(n->kind != GameXmlContent::LevelEventNode::AI_TRIGGER || n->aiIndex != index) continue;
+		LOG("LevelEvent :: AI trigger %d (node %d)", index, n->id);
+		foreach_const(o, n->outputs) FireLevelEvent(*o, playerIndex);
+	}
+}
+
 void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 {
 	const GameXmlContent::LevelEventNode* node = map->FindLevelEvent(nodeID);
@@ -403,13 +416,30 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 			p.inSafeZone = node->active;
 			if(p.clientHd != ClientHandle::INVALID) replication->SendSafeZone(p.clientHd, p.userID, node->active);
 		} break;
+		case GameXmlContent::LevelEventNode::TEAM_CONDITION: {
+			if(playerIndex < 0 || node->team == Faction::INVALID || (Faction)players[playerIndex].team != node->team) return;
+		} break;
+		case GameXmlContent::LevelEventNode::ADD_GOT_PIECE: {
+			if(node->team == Faction::RED || node->team == Faction::BLUE) AddTeamPieces((i32)node->team, node->count);
+		} break;
+		case GameXmlContent::LevelEventNode::SAVE_GOT_PIECE: {
+			if(playerIndex < 0) break;
+			Player& p = players[playerIndex];
+			if(p.titanPieces <= 0) break;
+			const i32 saved = p.titanPieces;
+			SetCarriedPieces(p, 0);
+			AddTeamPieces((i32)p.team, saved);
+			LOG("Titan :: %ls saves %d piece(s)", p.name.data(), saved);
+			FireAITrigger(AI_TRIGGER_SAVE_TITAN_PIECE, playerIndex);
+		} break;
 		case GameXmlContent::LevelEventNode::OR_CONDITION: {
 			if(!LevelTriggerActive(*node)) return;
 			if(node->resetAfter) SetLevelTriggerActive(node->nameKey, false);
 		} break;
 		case GameXmlContent::LevelEventNode::DEAD_COUNT:
 		case GameXmlContent::LevelEventNode::HP_TRIGGER:
-		case GameXmlContent::LevelEventNode::GAME_END_TRIGGER: return;
+		case GameXmlContent::LevelEventNode::GAME_END_TRIGGER:
+		case GameXmlContent::LevelEventNode::AI_TRIGGER: return;
 		case GameXmlContent::LevelEventNode::ACTION_CHANGE: {
 			foreach(d, actorDynamicList) {
 				if(d->localID != node->localID || node->action == ActionStateID::INVALID) continue;
@@ -435,29 +465,68 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 void World::SpawnGroundItems(i32 dropIndex, i32 areaID, i32 tagID)
 {
 	const auto& content = GetGameXmlContent();
-	const GameXmlContent::DropGroup* group = content.FindDropGroup(dropIndex);
 	const GameXmlContent::Map::Area* area = map->FindArea(areaID);
-	if(!group || !area) {
+	if(!content.FindDropGroup(dropIndex) || !area) {
 		LOG("GroundItem :: drop group %d or area %d not found", dropIndex, areaID);
 		return;
 	}
+	SpawnDropGroupAt(dropIndex, area->pos, tagID);
+}
+
+void World::SpawnDropGroupAt(i32 dropIndex, const vec3& pos, i32 tagID)
+{
+	const GameXmlContent::DropGroup* group = GetGameXmlContent().FindDropGroup(dropIndex);
+	if(!group) return;
 	foreach_const(e, group->entries) {
 		if(group->piece && (f32)(RandUint() % 10000) / 100.0f >= e->rate) continue;
-		const GameXmlContent::GroundItemInfo* info = content.FindGroundItem(e->item);
-		if(!info) continue;
 		const i32 count = e->minCount + (e->maxCount > e->minCount ? (i32)(RandUint() % (u32)(e->maxCount - e->minCount + 1)) : 0);
-		for(i32 k = 0; k < count && !groundItems.full(); k++) {
-			GroundItem item;
-			item.uid = nextGroundItemUID++;
-			item.itemIndex = e->item;
-			item.pos = area->pos;
-			item.tagID = tagID;
-			item.expireAt = info->lifeTime > 0 ? TimeAdd(localTime, TimeMsToTime(info->lifeTime * 1000.0)) : Time::ZERO;
-			groundItems.push_back(item);
-			replication->SendCreateGroundItemToAll(item.uid, item.itemIndex, item.pos);
-			LOG("GroundItem :: item %d spawned at area %d (%.0f, %.0f) tag %d", item.itemIndex, areaID, item.pos.x, item.pos.y, tagID);
-		}
+		for(i32 k = 0; k < count; k++) SpawnGroundItemAt(e->item, pos, tagID);
 	}
+}
+
+void World::SpawnGroundItemAt(i32 itemIndex, const vec3& pos, i32 tagID)
+{
+	const GameXmlContent::GroundItemInfo* info = GetGameXmlContent().FindGroundItem(itemIndex);
+	if(!info || groundItems.full()) return;
+	GroundItem item;
+	item.uid = nextGroundItemUID++;
+	item.itemIndex = itemIndex;
+	item.pos = pos;
+	item.tagID = tagID;
+	item.expireAt = info->lifeTime > 0 ? TimeAdd(localTime, TimeMsToTime(info->lifeTime * 1000.0)) : Time::ZERO;
+	groundItems.push_back(item);
+	replication->SendCreateGroundItemToAll(item.uid, item.itemIndex, item.pos);
+	LOG("GroundItem :: item %d spawned at (%.0f, %.0f) tag %d", item.itemIndex, item.pos.x, item.pos.y, tagID);
+}
+
+static const i32 TITAN_PIECE_ITEM = 130100904;
+static const u32 PVP_ANNOUNCE_PIECE_CARRIED = 13;
+static const u32 PVP_ANNOUNCE_TEAM_PIECES = 14;
+
+void World::SetCarriedPieces(Player& player, i32 count)
+{
+	player.titanPieces = count;
+	replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_PIECE_CARRIED, 0, player.Main().UID, ActorUID::INVALID, (u32)count);
+}
+
+void World::AddTeamPieces(i32 team, i32 count)
+{
+	if(team < 0 || team > 1) return;
+	teamTitanPieces[team] = MAX(teamTitanPieces[team] + count, 0);
+	const u32 teamType = (u32)(team == 0 ? TeamType::RED : TeamType::BLUE);
+	foreach_const(p, players) {
+		if(p->team == team && p->clientHd != ClientHandle::INVALID) replication->SendPvpAnnouncementRaw(p->clientHd, PVP_ANNOUNCE_TEAM_PIECES, 0, (u32)teamTitanPieces[team], teamType);
+	}
+	LOG("Titan :: team %d has %d piece(s)", team, teamTitanPieces[team]);
+}
+
+void World::DropTitanPieces(Player& player)
+{
+	if(player.titanPieces <= 0) return;
+	const vec3 pos = player.body ? player.body->GetWorldPos() : vec3(0);
+	for(i32 k = 0; k < player.titanPieces; k++) SpawnGroundItemAt(TITAN_PIECE_ITEM, pos, -1);
+	LOG("Titan :: %ls drops %d piece(s)", player.name.data(), player.titanPieces);
+	SetCarriedPieces(player, 0);
 }
 
 static f32 ItemStatMax(const World::Player& player, u8 type)
@@ -511,6 +580,7 @@ bool World::TakeGroundItem(Player& player, u32 itemUID)
 	if(player.clientHd != ClientHandle::INVALID) replication->SendGroundItemTaken(player.clientHd, player.Main().UID, itemUID);
 	replication->SendPublicGroundItemTaken(player.clientHd, player.Main().UID, itemUID);
 	LOG("GroundItem :: %ls takes item %d (tag %d)", player.name.data(), item.itemIndex, item.tagID);
+	if(item.itemIndex == TITAN_PIECE_ITEM) SetCarriedPieces(player, player.titanPieces + 1);
 	foreach_const(n, map->levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::TAKE_ITEM || n->tagID != item.tagID || item.tagID < 0) continue;
 		foreach_const(o, n->outputs) FireLevelEvent(*o);
@@ -559,15 +629,16 @@ void World::UpdateBoundTriggers()
 		const GameXmlContent::Map::Area* area = levelMap.FindArea(n->areaID);
 		if(!area) continue;
 		const i32 ownerTeam = n->ownTeamOnly ? AreaOwnerTeam(*area) : -1;
+		const i32 slot = (i32)(n - levelMap.levelEvents.begin());
 		foreach(p, players) {
 			if(p->dead || !p->body) continue;
 			if(ownerTeam >= 0 && (i32)p->team != ownerTeam) continue;
 			const vec3 pos = p->body->GetWorldPos();
 			const bool inside = area->type == AREA_TYPE_CIRCLE ? glm::length(vec2(pos) - vec2(area->pos)) <= area->size.z : fabsf(pos.x - area->pos.x) <= area->size.z && fabsf(pos.y - area->pos.y) <= area->size.y;
 			BoundTriggerState* state = nullptr;
-			foreach(s, boundTriggerStates) if(s->node == n->id && s->playerIndex == p->index) state = &*s;
+			foreach(s, boundTriggerStates) if(s->node == slot && s->playerIndex == p->index) state = &*s;
 			if(!state) {
-				boundTriggerStates.push_back({ n->id, p->index, n->ownTeamOnly ? !inside : inside, Time::ZERO });
+				boundTriggerStates.push_back({ slot, p->index, n->ownTeamOnly ? !inside : inside, Time::ZERO });
 				if(!n->ownTeamOnly) continue;
 				state = &boundTriggerStates.back();
 			}

@@ -67,6 +67,11 @@ void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDo
 	GrantMonsterKillExp(npc, killerUID);
 	GrantMonsterKillPoints(npc, killerUID);
 	OnMonsterDeath(npc, killerUID);
+	if(const auto* spawns = GetGameXmlContent().FindMonsterDieSpawn((i32)npc.docID)) {
+		const vec3 pos = npc.pos;
+		const vec3 rot = npc.rot;
+		for(const i32 s : *spawns) SpawnMonster((CreatureIndex)s, 0, pos, rot, Faction::MONSTER, -1);
+	}
 }
 
 void World::MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const GameXmlContent::MonsterAttack& attack)
@@ -101,6 +106,10 @@ void World::UpdateMonsterAi(f32 delta)
 	if(frozen) return;
 	foreach(it, actorNpcList) {
 		ActorNpc& npc = *it;
+		if(npc.selfDestructAt != Time::ZERO && localTime >= npc.selfDestructAt && npc.hp > 0 && npc.removeAt == Time::ZERO) {
+			MonsterDie(npc, ActorUID::INVALID, CreatureIndex(0));
+			continue;
+		}
 		if(!npc.monsterAi || npc.hp <= 0 || npc.removeAt != Time::ZERO) continue;
 		if(npc.despawnAt != Time::ZERO && localTime >= npc.despawnAt) continue;
 		const GameXmlContent::MonsterAi& ai = *npc.monsterAi;
