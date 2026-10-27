@@ -402,7 +402,7 @@ f32 World::NpcHitRadius(const ActorNpc& npc) const
 	return npc.monsterAi ? npc.monsterAi->radius : 0.0f;
 }
 
-void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage)
+void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage, const Replication::RemoteDamage* remoteHit)
 {
 	if(damage <= 0 || !NpcHittableBy(npc, attacker)) return;
 	if(npc.ownerUID == ActorUID::INVALID && NpcHasStatusType(npc, StatusType::GODMODE)) return;
@@ -419,7 +419,17 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 		LOG("Monster :: neutral creature=%d (local %d) attacked by %ls", (i32)npc.docID, npc.localID, attacker.name.data());
 		replication->SendAiSetTargetToAll(npc.UID, npc.monsterTarget);
 	}
-	replication->SendDamageToAll(attacker.Main().UID, npc.UID, skillID, dealt, npc.hp, npc.hpMax);
+	if(remoteHit && remoteHit->remoteID != 0) {
+		Replication::RemoteDamage hit = *remoteHit;
+		hit.attackerUID = attacker.Main().UID;
+		hit.targetUID = npc.UID;
+		hit.targetPos = npc.pos;
+		hit.damage = dealt;
+		hit.hp = npc.hp;
+		hit.hpMax = npc.hpMax;
+		replication->SendRemoteDamageToAll(hit);
+	}
+	else replication->SendDamageToAll(attacker.Main().UID, npc.UID, skillID, dealt, npc.hp, npc.hpMax);
 	LOG("Summon :: creature=%d takes %d from %ls hp=%d/%d", (i32)npc.docID, dealt, attacker.name.data(), npc.hp, npc.hpMax);
 	if(npc.hp <= 0) {
 		if(npc.ownerUID == ActorUID::INVALID) {

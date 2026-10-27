@@ -601,7 +601,13 @@ void World::RemoteHitNpcs(RemoteInst& inst)
 			if(along < -r || along > length + r || fabsf(glm::dot(local, Perp(inst.dir))) > remote.boundSize[0] * 0.5f + r) continue;
 		}
 		inst.npcHits.push_back(npc->UID);
-		DamageNpc(owner, *npc, inst.skillID, (i32)(base * RemoteDistanceFalloff(remote, dist)));
+		Replication::RemoteDamage hit;
+		hit.remoteID = inst.clientRemoteID != 0 ? inst.clientRemoteID : inst.damageRemoteID;
+		hit.remoteDoc = remote.ID;
+		hit.remotePos = inst.pos;
+		hit.dir = inst.dir;
+		hit.seedOwnerHd = inst.seedOwnerHd;
+		DamageNpc(owner, *npc, inst.skillID, (i32)(base * RemoteDistanceFalloff(remote, dist)), &hit);
 	}
 }
 

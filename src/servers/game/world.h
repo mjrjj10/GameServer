@@ -956,7 +956,7 @@ public:
 	void UpdateNpcStatuses();
 	void TrackNpcSelfStatus(ActorUID npcUID, const StatusInfo& info);
 	bool NpcHittableBy(const ActorNpc& npc, const Player& attacker) const;
-	void DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage);
+	void DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage, const Replication::RemoteDamage* remoteHit = nullptr);
 	void RemoteHitNpcs(RemoteInst& inst);
 	void StartLevelEvents();
 	void StartTimeRecord();

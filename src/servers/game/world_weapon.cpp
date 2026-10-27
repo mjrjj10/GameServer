@@ -399,7 +399,13 @@ void World::UpdateProjectiles(f32 delta)
 				if(eastl::find(proj->npcHitList.begin(), proj->npcHitList.end(), npc->UID) != proj->npcHitList.end()) continue;
 				if(SegmentPointDist2D(from, to, vec2(npc->pos)) > proj->halfWidth + NpcHitRadius(*npc)) continue;
 				proj->npcHitList.push_back(npc->UID);
-				DamageNpc(owner, *npc, SkillID::INVALID, proj->damage);
+				Replication::RemoteDamage hit;
+				hit.remoteID = proj->remoteID;
+				hit.remoteDoc = proj->remoteDoc;
+				hit.remotePos = vec3(vec2(proj->pos), npc->pos.z);
+				hit.dir = proj->dir;
+				hit.seedOwnerHd = proj->seedOwnerHd;
+				DamageNpc(owner, *npc, SkillID::INVALID, proj->damage, &hit);
 				proj->hitsLeft--;
 				if(proj->hitsLeft <= 0) {
 					proj->pos = vec3(vec2(npc->pos), proj->pos.z);
