@@ -1100,7 +1100,18 @@ bool GameXmlContent::LoadMonsterAi()
 		ai.awakeTime = pInfo->FloatAttribute("awakeTime");
 		ai.groggyChance = pInfo->FloatAttribute("groggyChance");
 		ai.groggyTime = pInfo->FloatAttribute("groggyTime");
+		ai.spawnTime = pInfo->FloatAttribute("spawnTime");
 		ParseIdList(pInfo->Attribute("groggyStatus"), ai.groggyStatuses);
+		if(const char* cc = pInfo->Attribute("cc")) {
+			const char* at = cc;
+			while(*at && !ai.ccTypes.full()) {
+				while(*at == ' ') at++;
+				if(!*at) break;
+				eastl::fixed_string<char,48,false> name;
+				while(*at && *at != ' ') name.push_back(*at++);
+				ai.ccTypes.push_back(StatusTypeFromString(name.c_str()));
+			}
+		}
 		if(const char* enemies = pInfo->Attribute("enemies")) {
 			const char* at = enemies;
 			while(*at && !ai.enemyTags.full()) {
@@ -1117,11 +1128,16 @@ bool GameXmlContent::LoadMonsterAi()
 			if(!target) continue;
 			if(EA::StdC::Strcmp(target, "master") == 0) attack.target = MonsterAttack::MASTER;
 			else if(EA::StdC::Strcmp(target, "minion") == 0) attack.target = MonsterAttack::MINION;
+			else if(EA::StdC::Strcmp(target, "titan") == 0) attack.target = MonsterAttack::TITAN;
 			else attack.target = MonsterAttack::STRUCTURE;
 			if(const char* state = pAttack->Attribute("state")) attack.state = ActionStateFromString(state);
 			attack.range = pAttack->FloatAttribute("range");
 			attack.cooldown = pAttack->FloatAttribute("cooldown");
 			attack.remote = pAttack->IntAttribute("remote");
+			attack.hitRemote = pAttack->IntAttribute("hitRemote", attack.remote);
+			attack.executeMinion = pAttack->BoolAttribute("executeMinion");
+			attack.anim = pAttack->FloatAttribute("anim");
+			attack.noDamage = pAttack->BoolAttribute("noDamage");
 			attack.delay = pAttack->FloatAttribute("delay");
 			attack.multiplier = pAttack->FloatAttribute("multiplier");
 			attack.speed = pAttack->FloatAttribute("speed");
@@ -1139,6 +1155,7 @@ bool GameXmlContent::LoadMonsterAi()
 			ai.attacks.push_back(attack);
 		}
 		foreach_const(a, ai.attacks) if(!a->special && !ai.byTarget[a->target]) ai.byTarget[a->target] = &*a;
+		if(!ai.byTarget[MonsterAttack::TITAN]) ai.byTarget[MonsterAttack::TITAN] = ai.byTarget[MonsterAttack::STRUCTURE];
 	}
 	LOG("Loaded AI of %d monsters", (i32)monsterAi.size());
 	return true;

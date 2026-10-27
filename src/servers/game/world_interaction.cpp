@@ -239,6 +239,78 @@ void World::ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply)
 	LOG("Status :: creature=%d (local %d) gets status %d", (i32)npc.docID, npc.localID, statusID);
 }
 
+static const f32 NPC_DEFEAT_PUSH_SEC = 1.0f;
+static const f32 NPC_DEFEAT_AIRBORNE_SEC = 1.2f;
+static const f32 NPC_DEFEAT_KNOCKDOWN_SEC = 1.5f;
+static const f32 NPC_DEFEAT_FLY_SEC = 1.8f;
+static const f32 NPC_DEFEAT_SYNC_SEC = 1.0f;
+static const f32 NPC_LIE_SEC = 1.0f;
+
+f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
+{
+	if(!info || !npc.monsterAi) return 0.0f;
+	ActionStateID state;
+	f32 sec = 0;
+	bool lie = false;
+	switch(info->type) {
+		case StatusType::PUSH: state = ActionStateID::DEFEAT_PUSH_BEHAVIORSTATE; sec = NPC_DEFEAT_PUSH_SEC; break;
+		case StatusType::AIRBORNE: state = ActionStateID::DEFEAT_AIRBORNE_BEHAVIORSTATE; sec = NPC_DEFEAT_AIRBORNE_SEC; lie = true; break;
+		case StatusType::KNOCKDOWN: state = ActionStateID::DEFEAT_KNOCKDOWN_BEHAVIORSTATE; sec = NPC_DEFEAT_KNOCKDOWN_SEC; lie = true; break;
+		case StatusType::FLY: state = ActionStateID::DEFEAT_FLY_BEHAVIORSTATE; sec = info->durationSec > 0 ? info->durationSec : NPC_DEFEAT_FLY_SEC; lie = true; break;
+		case StatusType::STUN:
+		case StatusType::SHOCKED:
+		case StatusType::FREEZE: state = ActionStateID::DEFEAT_SYNC_BEHAVIORSTATE; sec = info->durationSec > 0 ? info->durationSec : NPC_DEFEAT_SYNC_SEC; break;
+		default: return 0.0f;
+	}
+	if(eastl::find(npc.monsterAi->ccTypes.begin(), npc.monsterAi->ccTypes.end(), info->type) == npc.monsterAi->ccTypes.end()) return -1.0f;
+	const f32 total = sec + (lie ? NPC_LIE_SEC : 0.0f);
+	npc.actionState = state;
+	replication->SendMonsterStateToAll(npc.UID, state, npc.pos, 0.0f);
+	npc.defeatLieAt = lie ? TimeAdd(localTime, TimeMsToTime(sec * 1000.0)) : Time::ZERO;
+	npc.stateEndAt = TimeAdd(localTime, TimeMsToTime(total * 1000.0));
+	if(npc.monsterHoldUntil < npc.stateEndAt) npc.monsterHoldUntil = npc.stateEndAt;
+	npc.monsterChasing = false;
+	npc.monsterWalking = false;
+	return total;
+}
+
+void World::UpdateNpcDefeat(ActorNpc& npc)
+{
+	if(npc.defeatLieAt != Time::ZERO && localTime >= npc.defeatLieAt) {
+		npc.defeatLieAt = Time::ZERO;
+		npc.actionState = ActionStateID::LIE_BEHAVIORSTATE;
+		replication->SendMonsterStateToAll(npc.UID, ActionStateID::LIE_BEHAVIORSTATE, npc.pos, 0.0f);
+	}
+	if(npc.stateEndAt != Time::ZERO && localTime >= npc.stateEndAt) {
+		npc.stateEndAt = Time::ZERO;
+		npc.actionState = ActionStateID::NONE_BEHAVIORSTATE;
+		replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, 0.0f);
+	}
+}
+
+void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 statusID)
+{
+	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
+	const f32 hold = NpcDefeatReaction(npc, info);
+	if(hold < 0) return;
+	const f32 duration = info && info->durationSec > 0 ? info->durationSec : hold;
+	if(duration <= 0) return;
+	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
+		if(npcStatuses[i].npcUID == npc.UID && npcStatuses[i].statusID == statusID) npcStatuses.erase(npcStatuses.begin() + i);
+		else i++;
+	}
+	replication->SendAddStatusToAll(statusID, npc.UID, caster.UID, duration, npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false, false);
+	if(npcStatuses.full()) return;
+	NpcStatus ns;
+	ns.npcUID = npc.UID;
+	ns.statusID = statusID;
+	ns.casterUID = caster.UID;
+	ns.until = TimeAdd(localTime, TimeMsToTime((f64)duration * 1000.0));
+	ns.linked = false;
+	if(info && info->type == StatusType::SHIELD) ns.shieldHP = GetGameXmlContent().StatusShieldAmount(*info);
+	npcStatuses.push_back(ns);
+}
+
 bool World::NpcHasStatusType(const ActorNpc& npc, StatusType type) const
 {
 	foreach_const(ns, npcStatuses) {

@@ -446,19 +446,20 @@ i32 World::AbsorbNpcShield(const ActorNpc& npc, i32 dealt)
 	return left;
 }
 
-void World::DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i32 remote)
+void World::DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i32 remote, u32 remoteID, i32 status, bool exact)
 {
 	if(damage <= 0 || target.hp <= 0 || target.removeAt != Time::ZERO) return;
 	if(NpcHasStatusType(target, StatusType::GODMODE)) return;
-	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(target.defence, 0.0f)) + 0.5f), 1);
+	const i32 dealt = exact ? damage : MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(target.defence, 0.0f)) + 0.5f), 1);
 	const i32 hpBefore = target.hp;
 	target.hp = MAX(target.hp - AbsorbNpcShield(target, dealt), 0);
 	OnMonsterDamaged(target, hpBefore);
-	replication->SendDamageToAll(attacker.UID, target.UID, SkillID::INVALID, dealt, target.hp, target.hpMax);
+	SendNpcHit(attacker, target.UID, target.pos, remote, remoteID, dealt, target.hp, target.hpMax);
+	if(status > 0) ApplyStatusToNpcFromNpc(attacker, target, status);
 	if(target.hp <= 0) MonsterDie(target, attacker.UID, attacker.docID);
 }
 
-void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, i32 remote, i32 status)
+void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, i32 remote, i32 status, u32 remoteID)
 {
 	if(frozen || target.dead || target.untargetable || damage <= 0) return;
 	if(HasStatusType(target, StatusType::GODMODE) || HasStatusType(target, StatusType::BURROW)) return;
@@ -481,7 +482,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	if(ShowcaseKeepsAlive(target)) chara.hp = MAX(chara.hp, 1);
 	if(chara.hp == 0) PassiveOnLethal(target);
 	if(target.casting.skillID != SkillID::INVALID && target.casting.interruptByAttacked) CancelCast(target, "attacked");
-	replication->SendDamageToAll(attacker.UID, chara.UID, SkillID::INVALID, damage, chara.hp, chara.hpMax);
+	SendNpcHit(attacker, chara.UID, target.body->GetWorldPos(), remote, remoteID, damage, chara.hp, chara.hpMax);
 	if(chara.hp > 0) {
 		LOG("Damage :: creature %d -> %ls damage=%d hp=%d/%d", (i32)attacker.docID, target.name.data(), damage, chara.hp, chara.hpMax);
 		PassiveOnDamaged(target);

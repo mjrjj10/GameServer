@@ -402,6 +402,7 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	}
 	if(remove) return;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
+	if(NpcDefeatReaction(npc, info) < 0) return;
 	const f32 duration = info && info->durationSec > 0 ? info->durationSec : 0.0f;
 	replication->SendAddStatusToAll(statusID, npc.UID, caster.Main().UID, duration, npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false, false);
 	if(npcStatuses.full()) return;
@@ -1184,11 +1185,11 @@ void World::UpdateNpcFog()
 			if(viewer->clientHd == ClientHandle::INVALID) continue;
 			const u32 bit = 1u << viewer->index;
 			const bool hidden = (npc->fogHiddenFrom & bit) != 0;
-			if(!sees[viewer->team] && !hidden) {
+			if(!sees[viewer->team] && !hidden && !viewer->devVision) {
 				replication->SendLeaveActor(viewer->clientHd, npc->UID);
 				npc->fogHiddenFrom |= bit;
 			}
-			else if(sees[viewer->team] && hidden) {
+			else if((sees[viewer->team] || viewer->devVision) && hidden) {
 				const f32 speed = npc->monsterAi ? (npc->monsterWalking ? npc->monsterAi->walk : npc->monsterAi->run) : 0.0f;
 				replication->SendEnterNpc(viewer->clientHd, npc->UID, npc->docID, npc->pos, npc->rot.z, speed, npc->actionState != ActionStateID::INVALID ? npc->actionState : ActionStateID::NONE_BEHAVIORSTATE, npc->hp, npc->hpMax, (f32)npc->growthLevel);
 				npc->fogHiddenFrom &= ~bit;

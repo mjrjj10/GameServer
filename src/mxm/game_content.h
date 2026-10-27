@@ -931,12 +931,16 @@ struct GameXmlContent
 
 	struct MonsterAttack
 	{
-		enum Target: u8 { MASTER = 0, MINION, STRUCTURE, _COUNT };
+		enum Target: u8 { MASTER = 0, MINION, STRUCTURE, TITAN, _COUNT };
 		Target target = MASTER;
 		ActionStateID state = ActionStateID::INVALID;
 		f32 range = 0;
 		f32 cooldown = 0;
 		i32 remote = 0;
+		i32 hitRemote = 0;
+		bool executeMinion = false;
+		f32 anim = 0;
+		bool noDamage = false;
 		f32 delay = 0;
 		f32 multiplier = 0;
 		f32 speed = 0;
@@ -967,10 +971,12 @@ struct GameXmlContent
 		f32 awakeTime = 0;
 		f32 groggyChance = 0;
 		f32 groggyTime = 0;
+		f32 spawnTime = 0;
 		eastl::fixed_vector<i32,4,false> groggyStatuses;
+		eastl::fixed_vector<StatusType,8,false> ccTypes;
 		eastl::fixed_vector<u32,10,false> enemyTags;
 		eastl::array<const MonsterAttack*,MonsterAttack::_COUNT> byTarget = {};
-		eastl::fixed_vector<MonsterAttack,16,false> attacks;
+		eastl::fixed_vector<MonsterAttack,24,false> attacks;
 		bool Hates(u32 tag) const { return eastl::find(enemyTags.begin(), enemyTags.end(), tag) != enemyTags.end(); }
 	};
 

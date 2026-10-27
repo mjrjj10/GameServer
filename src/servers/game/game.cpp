@@ -1050,6 +1050,20 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			return true;
 		}
 
+		i32 pointsTeam = 0, pointsAdd = 0;
+		if(EA::StdC::Sscanf(msg, L"points %d %d", &pointsTeam, &pointsAdd) == 2 && (pointsTeam == 0 || pointsTeam == 1)) {
+			world.AddTeamPoints(pointsTeam, pointsAdd);
+			SendDbgMsg(clientHd, LFMT(L"Team %d +%d points", pointsTeam, pointsAdd));
+			return true;
+		}
+
+		if(EA::StdC::Strcmp(msg, L"vision") == 0) {
+			World::Player& playerActor = world.GetPlayer(p.playerIndex);
+			playerActor.devVision = !playerActor.devVision;
+			SendDbgMsg(clientHd, playerActor.devVision ? L"Full vision on" : L"Full vision off");
+			return true;
+		}
+
 		if(EA::StdC::Strcmp(msg, L"titan") == 0) {
 			world.RequestVote(world.GetPlayer(p.playerIndex), 1);
 			SendDbgMsg(clientHd, L"Titan vote requested");

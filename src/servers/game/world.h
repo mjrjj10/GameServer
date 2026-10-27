@@ -127,6 +127,7 @@ struct World
 		bool firstBlood = false;
 		i64 damageDealt = 0;
 		bool devGod = false;
+		bool devVision = false;
 		ActorUID bushUID = ActorUID::INVALID;
 		ActorUID fogHiddenUID = ActorUID::INVALID;
 		u8 fogSeenBy = 3;
@@ -444,6 +445,8 @@ struct World
 		bool monsterStarted = false;
 		bool monsterAwake = false;
 		Time monsterHoldUntil = Time::ZERO;
+		Time defeatLieAt = Time::ZERO;
+		Time stateEndAt = Time::ZERO;
 		Time monsterWeakUntil = Time::ZERO;
 		u32 fogHiddenFrom = 0;
 		bool monsterWeakHit = false;
@@ -451,7 +454,7 @@ struct World
 		bool monsterChasing = false;
 		ActorUID monsterTarget = ActorUID::INVALID;
 		Time monsterNextAttack = Time::ZERO;
-		eastl::array<Time,16> monsterSkillReady = {};
+		eastl::array<Time,24> monsterSkillReady = {};
 		Time monsterNextSearch = Time::ZERO;
 		Time monsterNextSync = Time::ZERO;
 		bool monsterReturning = false;
@@ -783,11 +786,13 @@ struct World
 	void UpdateMonsterHits();
 	bool MonsterHostile(const ActorNpc& monster, const ActorNpc& other) const;
 	bool MonsterHostile(const ActorNpc& monster, const Player& player) const;
-	void MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const GameXmlContent::MonsterAttack& attack);
-	void DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i32 remote);
-	void DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, i32 remote, i32 status);
+	void MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const GameXmlContent::MonsterAttack& attack, u32 remoteID);
+	void SendNpcHit(const ActorNpc& attacker, ActorUID targetUID, const vec3& targetPos, i32 remote, u32 remoteID, i32 damage, i32 hp, i32 hpMax);
+	void DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i32 remote, u32 remoteID = 0, i32 status = 0, bool exact = false);
+	void DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, i32 remote, i32 status, u32 remoteID = 0);
 	void MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDoc);
-	struct MonsterHit { ActorUID attacker; ActorUID target; Time at; const GameXmlContent::MonsterAttack* attack; };
+	struct MonsterHit { ActorUID attacker; ActorUID target; Time at; const GameXmlContent::MonsterAttack* attack; u32 remoteID; };
+	u32 nextMonsterRemoteID = 0;
 	eastl::fixed_vector<MonsterHit,256,true> monsterHits;
 	void UpdateSummonAttack(ActorNpc& npc, f32 delta);
 	void UpdateShowcase();
@@ -964,6 +969,9 @@ public:
 	void SetLevelTriggerActive(u32 nameKey, bool active);
 	i32 AreaOwnerTeam(const GameXmlContent::Map::Area& area) const;
 	void ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply);
+	f32 NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info);
+	void ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 statusID);
+	void UpdateNpcDefeat(ActorNpc& npc);
 	bool NpcHasStatusType(const ActorNpc& npc, StatusType type) const;
 	void OnMonsterDeath(ActorNpc& npc, ActorUID killerUID);
 	void OnMonsterDamaged(ActorNpc& npc, i32 hpBefore);
