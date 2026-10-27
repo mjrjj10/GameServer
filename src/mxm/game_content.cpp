@@ -1101,6 +1101,7 @@ bool GameXmlContent::LoadMonsterAi()
 		ai.groggyChance = pInfo->FloatAttribute("groggyChance");
 		ai.groggyTime = pInfo->FloatAttribute("groggyTime");
 		ai.spawnTime = pInfo->FloatAttribute("spawnTime");
+		ai.masterMark = pInfo->IntAttribute("masterMark");
 		if(const char* hpBuffs = pInfo->Attribute("hpBuffs")) {
 			const char* at = hpBuffs;
 			while(*at && !ai.hpBuffs.full()) {
@@ -1160,6 +1161,9 @@ bool GameXmlContent::LoadMonsterAi()
 			attack.executeMinion = pAttack->BoolAttribute("executeMinion");
 			attack.anim = pAttack->FloatAttribute("anim");
 			attack.noDamage = pAttack->BoolAttribute("noDamage");
+			attack.allyStatus = pAttack->IntAttribute("allyStatus");
+			attack.allyRadius = pAttack->FloatAttribute("allyRadius");
+			attack.allyDelay = pAttack->FloatAttribute("allyDelay");
 			attack.delay = pAttack->FloatAttribute("delay");
 			attack.multiplier = pAttack->FloatAttribute("multiplier");
 			attack.speed = pAttack->FloatAttribute("speed");

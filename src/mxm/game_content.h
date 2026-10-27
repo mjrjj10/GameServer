@@ -941,6 +941,9 @@ struct GameXmlContent
 		bool executeMinion = false;
 		f32 anim = 0;
 		bool noDamage = false;
+		i32 allyStatus = 0;
+		f32 allyRadius = 0;
+		f32 allyDelay = 0;
 		f32 delay = 0;
 		f32 multiplier = 0;
 		f32 speed = 0;
@@ -972,6 +975,7 @@ struct GameXmlContent
 		f32 groggyChance = 0;
 		f32 groggyTime = 0;
 		f32 spawnTime = 0;
+		i32 masterMark = 0;
 		eastl::array<ActionStateID,2> victoryStates = {{ ActionStateID::INVALID, ActionStateID::INVALID }};
 		eastl::array<f32,2> victoryTimes = {{ 0, 0 }};
 		eastl::fixed_vector<i32,4,false> victoryStatuses;

@@ -795,9 +795,10 @@ struct World
 	void MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const GameXmlContent::MonsterAttack& attack, u32 remoteID);
 	void SendNpcHit(const ActorNpc& attacker, ActorUID targetUID, const vec3& targetPos, i32 remote, u32 remoteID, i32 damage, i32 hp, i32 hpMax);
 	void DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i32 remote, u32 remoteID = 0, i32 status = 0, bool exact = false);
+	void ApplyStatusFromNpc(const ActorNpc& caster, Player& target, i32 statusID);
 	void DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, i32 remote, i32 status, u32 remoteID = 0);
 	void MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDoc);
-	struct MonsterHit { ActorUID attacker; ActorUID target; Time at; const GameXmlContent::MonsterAttack* attack; u32 remoteID; };
+	struct MonsterHit { ActorUID attacker; ActorUID target; Time at; const GameXmlContent::MonsterAttack* attack; u32 remoteID; bool ally; };
 	u32 nextMonsterRemoteID = 0;
 	eastl::fixed_vector<MonsterHit,256,true> monsterHits;
 	void UpdateSummonAttack(ActorNpc& npc, f32 delta);
@@ -978,6 +979,7 @@ public:
 	f32 NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info);
 	void ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 statusID);
 	void UpdateNpcDefeat(ActorNpc& npc);
+	void ApplyMonsterAllyStatus(ActorUID casterUID, const GameXmlContent::MonsterAttack& attack);
 	void StartTitanVictory(Faction deadFaction, const vec3& deadPos, ActorUID soulUID, ActorUID triggerUID);
 	void UpdateNpcVictory(ActorNpc& npc);
 	bool NpcHasStatusType(const ActorNpc& npc, StatusType type) const;

@@ -469,6 +469,20 @@ void World::DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i
 	if(target.hp <= 0) MonsterDie(target, attacker.UID, attacker.docID);
 }
 
+void World::ApplyStatusFromNpc(const ActorNpc& caster, Player& target, i32 statusID)
+{
+	const ActorUID prevCaster = statusCasterOverride;
+	const bool prevCenterSet = statusForceCenterSet;
+	const vec3 prevCenter = statusForceCenter;
+	statusCasterOverride = caster.UID;
+	statusForceCenterSet = true;
+	statusForceCenter = caster.pos;
+	ApplyStatus(target, target, statusID);
+	statusCasterOverride = prevCaster;
+	statusForceCenterSet = prevCenterSet;
+	statusForceCenter = prevCenter;
+}
+
 void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, i32 remote, i32 status, u32 remoteID)
 {
 	if(frozen || target.dead || target.untargetable || damage <= 0) return;
@@ -496,6 +510,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	if(chara.hp > 0) {
 		LOG("Damage :: creature %d -> %ls damage=%d hp=%d/%d", (i32)attacker.docID, target.name.data(), damage, chara.hp, chara.hpMax);
 		PassiveOnDamaged(target);
+		if(status > 0) ApplyStatusFromNpc(attacker, target, status);
 		return;
 	}
 	target.dead = true;

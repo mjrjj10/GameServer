@@ -181,6 +181,23 @@ void World::SendNpcHit(const ActorNpc& attacker, ActorUID targetUID, const vec3&
 	replication->SendRemoteDamageToAll(hit);
 }
 
+void World::ApplyMonsterAllyStatus(ActorUID casterUID, const GameXmlContent::MonsterAttack& attack)
+{
+	const ActorNpc* caster = FindNpcActor(casterUID);
+	if(!caster || caster->hp <= 0) return;
+	const vec2 center = vec2(caster->pos);
+	foreach(o, actorNpcList) {
+		if(&*o == caster || o->hp <= 0 || o->removeAt != Time::ZERO || !o->monsterAi || o->faction != caster->faction) continue;
+		if(glm::length(vec2(o->pos) - center) > attack.allyRadius) continue;
+		ApplyStatusToNpcFromNpc(*caster, *o, attack.allyStatus);
+	}
+	foreach(p, players) {
+		if(p->dead || !p->body || (Faction)p->team != caster->faction) continue;
+		if(glm::length(vec2(p->body->GetWorldPos()) - center) > attack.allyRadius) continue;
+		ApplyStatusFromNpc(*caster, *p, attack.allyStatus);
+	}
+}
+
 void World::MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const GameXmlContent::MonsterAttack& attack, u32 remoteID)
 {
 	auto attackerIt = actorNpcMap.find(attackerUID);
@@ -220,7 +237,8 @@ void World::UpdateMonsterHits()
 		if(localTime < monsterHits[i].at) { i++; continue; }
 		const MonsterHit hit = monsterHits[i];
 		monsterHits.erase(monsterHits.begin() + i);
-		MonsterAttackHit(hit.attacker, hit.target, *hit.attack, hit.remoteID);
+		if(hit.ally) ApplyMonsterAllyStatus(hit.attacker, *hit.attack);
+		else MonsterAttackHit(hit.attacker, hit.target, *hit.attack, hit.remoteID);
 	}
 }
 
@@ -418,6 +436,10 @@ void World::UpdateMonsterAi(f32 delta)
 			}
 			npc.rot.z = yaw;
 			npc.actionState = attack->state;
+			if(ai.masterMark != 0 && attack->target == GameXmlContent::MonsterAttack::MASTER) {
+				ActorMaster* marked = FindMasterActor(npc.monsterTarget);
+				if(marked && marked->parent) ApplyStatusFromNpc(npc, *marked->parent, ai.masterMark);
+			}
 			replication->SendNpcTurnToAll(npc.UID, yaw);
 			replication->SendMonsterStateToAll(npc.UID, attack->state, npc.pos, run);
 			if(attack->anim > 0) {
@@ -432,8 +454,9 @@ void World::UpdateMonsterAi(f32 delta)
 			const f32 travel = attack->speed > 0 ? dist / attack->speed : 0.0f;
 			const u32 remoteID = MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID++ & MONSTER_REMOTE_ID_MASK);
 			for(i32 h = 0; !attack->noDamage && h < (i32)attack->hits && !monsterHits.full(); h++) {
-				monsterHits.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime((attack->delay + travel + h * attack->interval) * 1000.0)), attack, remoteID });
+				monsterHits.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime((attack->delay + travel + h * attack->interval) * 1000.0)), attack, remoteID, false });
 			}
+			if(attack->allyStatus != 0 && !monsterHits.full()) monsterHits.push_back({ npc.UID, npc.UID, TimeAdd(localTime, TimeMsToTime(attack->allyDelay * 1000.0)), attack, 0, true });
 			continue;
 		}
 
