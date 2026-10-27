@@ -427,6 +427,7 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 			Player& p = players[playerIndex];
 			if(p.titanPieces <= 0) break;
 			const i32 saved = p.titanPieces;
+			p.savedPieces += saved;
 			SetCarriedPieces(p, 0);
 			AddTeamPieces((i32)p.team, saved);
 			LOG("Titan :: %ls saves %d piece(s)", p.name.data(), saved);

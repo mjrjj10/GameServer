@@ -139,6 +139,7 @@ struct World
 		i32 points = 0;
 		bool inSafeZone = false;
 		i32 titanPieces = 0;
+		i32 savedPieces = 0;
 		i32 titanForm = -1;
 		Time titanUntil = Time::ZERO;
 		Time titanModeAt = Time::ZERO;
@@ -985,7 +986,12 @@ public:
 	Time giantNextWaveAt = Time::ZERO;
 	eastl::array<Time,2> giantTeamAt = {{ Time::ZERO, Time::ZERO }};
 	u32 giantCycle = 0;
+	eastl::array<eastl::fixed_vector<i32,32,false>,2> giantSummons;
 	void BuildGiantTriggers();
+	eastl::array<vec2,2> titanSaveAreas;
+	eastl::array<bool,2> titanSaveAreaKnown = {{ false, false }};
+	bool titanSaveAreasBuilt = false;
+	bool BotObjective(const Player& bot, vec2* goal);
 	void UpdateGiantWaves();
 	bool TakeGroundItem(Player& player, u32 itemUID);
 	struct GroundItem { u32 uid; i32 itemIndex; vec3 pos; i32 tagID; Time expireAt; };

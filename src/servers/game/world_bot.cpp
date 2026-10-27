@@ -69,6 +69,44 @@ static const f32 BOT_STRAFE_STEP = 0.6f;
 static const f32 BOT_REPATH_DIST = 150.0f;
 static const f32 BOT_STUCK_DIST = 20.0f;
 static const f32 BOT_ROAM_STEP = 800.0f;
+static const f32 BOT_PIECE_SEARCH_RANGE = 4000.0f;
+static const i32 BOT_TITAN_PIECE_ITEM = 130100904;
+
+bool World::BotObjective(const Player& bot, vec2* goal)
+{
+	if(!map) return false;
+	if(!titanSaveAreasBuilt) {
+		titanSaveAreasBuilt = true;
+		foreach_const(n, map->levelEvents) {
+			if(n->kind != GameXmlContent::LevelEventNode::BOUND_TRIGGER) continue;
+			const GameXmlContent::Map::Area* area = map->FindArea(n->areaID);
+			if(!area) continue;
+			foreach_const(o, n->outputs) {
+				const GameXmlContent::LevelEventNode* cond = map->FindLevelEvent(*o);
+				if(!cond || cond->kind != GameXmlContent::LevelEventNode::TEAM_CONDITION || (cond->team != Faction::RED && cond->team != Faction::BLUE)) continue;
+				foreach_const(s, cond->outputs) {
+					const GameXmlContent::LevelEventNode* save = map->FindLevelEvent(*s);
+					if(!save || save->kind != GameXmlContent::LevelEventNode::SAVE_GOT_PIECE) continue;
+					titanSaveAreas[(i32)cond->team] = vec2(area->pos);
+					titanSaveAreaKnown[(i32)cond->team] = true;
+				}
+			}
+		}
+	}
+	const vec2 here = vec2(bot.body->GetWorldPos());
+	if(bot.titanPieces > 0 && titanSaveAreaKnown[bot.team]) {
+		*goal = titanSaveAreas[bot.team];
+		return true;
+	}
+	f32 best = BOT_PIECE_SEARCH_RANGE;
+	bool found = false;
+	foreach_const(g, groundItems) {
+		if(g->itemIndex != BOT_TITAN_PIECE_ITEM) continue;
+		const f32 d = glm::length(vec2(g->pos) - here);
+		if(d < best) { best = d; *goal = vec2(g->pos); found = true; }
+	}
+	return found;
+}
 static const u32 BOT_DECISION_MIN_MS = 400;
 static const u32 BOT_DECISION_SPAN_MS = 500;
 static const u32 BOT_STUCK_CHECK_MS = 500;
@@ -135,6 +173,11 @@ void World::UpdateBotMovement()
 			bot.input.rot.upperYaw = face;
 			bot.input.rot.bodyYaw = face;
 			bot.input.rot.upperPitch = 0;
+		}
+		else if(BotObjective(bot, &goal)) {
+			const vec2 d = goal - here;
+			const f32 len = glm::length(d);
+			if(len > BOT_ROAM_STEP) goal = here + d / len * BOT_ROAM_STEP;
 		}
 		else if(target) {
 			const vec2 toward = glm::normalize(vec2(target->body->GetWorldPos()) - here);

@@ -78,4 +78,17 @@
   <INFO ID="105000800" class="PvP_GoT_Fish" walk="400" run="400" perception="300" lost="1000" tag="" enemies="Player" destroy="1" radius="50">
     <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" range="300" cooldown="3.43" remote="1480000420" delay="0" multiplier="2" speed="0" status="1200070904" samples="28" />
   </INFO>
+  <INFO ID="105001100" class="PvP_GoT_Titan_Speed" walk="400" run="400" perception="1500" lost="1800" tag="Titan" enemies="Titan|Chief|Tower_Center|Core|Minion|Player|Player_Summonee" destroy="12" radius="320">
+    <ATTACK target="master" state="SKILL_4_BEHAVIORSTATE" range="1477" cooldown="2.00" remote="1480000106" delay="0" multiplier="1" speed="0" status="0" samples="36" />
+    <ATTACK target="structure" state="SKILL_3_BEHAVIORSTATE" range="788" cooldown="2.97" remote="1480000120" delay="1.75" multiplier="8" speed="0" status="1200070900" samples="99" />
+  </INFO>
+  <INFO ID="105001101" class="PvP_GoT_Titan_Attack" walk="400" run="400" perception="1500" lost="1800" tag="Titan" enemies="Titan|Chief|Tower_Center|Core|Minion|Player|Player_Summonee" destroy="12" radius="320">
+    <ATTACK target="master" state="SKILL_4_BEHAVIORSTATE" range="1265" cooldown="2.00" remote="1480000161" delay="0.25" multiplier="1" speed="0" status="0" samples="29" />
+    <ATTACK target="minion" state="SKILL_5_BEHAVIORSTATE" range="782" cooldown="2.25" remote="1480000113" delay="0.86" multiplier="6" speed="0" status="1200070400" samples="42" />
+    <ATTACK target="structure" state="SKILL_1_BEHAVIORSTATE" range="785" cooldown="1.98" remote="1480000100" delay="0.8" multiplier="4" speed="0" status="0" samples="73" />
+  </INFO>
+  <INFO ID="105001102" class="PvP_GoT_Titan_Defence" walk="400" run="400" perception="1500" lost="1800" tag="Titan" enemies="Titan|Chief|Tower_Center|Core|Minion|Player|Player_Summonee" destroy="12" radius="320">
+    <ATTACK target="master" state="SKILL_4_BEHAVIORSTATE" range="1113" cooldown="2.00" remote="1480000103" delay="0.25" multiplier="1" speed="0" status="0" samples="38" />
+    <ATTACK target="structure" state="SKILL_1_BEHAVIORSTATE" range="783" cooldown="1.99" remote="1480000100" delay="0.8" multiplier="4" speed="0" status="0" samples="178" />
+  </INFO>
 </MONSTER_AI>

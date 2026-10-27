@@ -965,10 +965,67 @@ void Replication::SendDoConnectChannel(ClientHandle clientHd, const wchar* nickn
 	SendPacket(clientHd, packet);
 }
 
-void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore, i32 blueScore, u32 playTimeMs)
+void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore, i32 blueScore, u32 playTimeMs, i32 winnerTeam, const EndGot* got)
 {
-	const u32 redResult = redScore > blueScore ? 1 : (redScore < blueScore ? 2 : 3);
-	const u32 blueResult = redScore < blueScore ? 1 : (redScore > blueScore ? 2 : 3);
+	u32 redResult = redScore > blueScore ? 1 : (redScore < blueScore ? 2 : 3);
+	u32 blueResult = redScore < blueScore ? 1 : (redScore > blueScore ? 2 : 3);
+	if(winnerTeam == 0 || winnerTeam == 1) {
+		redResult = winnerTeam == 0 ? 1 : 2;
+		blueResult = winnerTeam == 1 ? 1 : 2;
+	}
+
+	PacketWriter<Sv::SN_PvpResultScoreGot,8192> scoreGot;
+	if(got) {
+		scoreGot.Write<u16>(2);
+		for(i32 team = 0; team < 2; team++) {
+			scoreGot.Write<TeamType>(team == 0 ? TeamType::RED : TeamType::BLUE);
+			scoreGot.Write<u32>((u32)(team == 0 ? redScore : blueScore));
+			scoreGot.Write<u16>((u16)got->summons[team].size());
+			foreach_const(s, got->summons[team]) scoreGot.Write<u32>((u32)*s);
+		}
+		scoreGot.Write<u16>((u16)count);
+		for(i32 i = 0; i < count; i++) {
+			const EndPlayer& p = players[i];
+			scoreGot.Write<u32>((u32)p.userID);
+			scoreGot.WriteStringObj(p.name, (i32)EA::StdC::Strlen(p.name));
+			scoreGot.Write<TeamType>(p.team == 0 ? TeamType::RED : TeamType::BLUE);
+			scoreGot.Write<u8>(0);
+			scoreGot.Write<u8>(p.ingameLevel);
+			scoreGot.Write<u32>((u32)p.points);
+			for(int m = 0; m < 2; m++) {
+				u16 n = 0;
+				for(u8 lv : p.traits[m]) if(lv > 0) n++;
+				scoreGot.Write<u16>(n);
+				for(u8 t = 0; t < 4; t++) {
+					if(p.traits[m][t] == 0) continue;
+					scoreGot.Write<u8>(t);
+					scoreGot.Write<u8>(p.traits[m][t]);
+				}
+			}
+			scoreGot.Write<u16>(2);
+			for(int m = 0; m < 2; m++) {
+				const bool main = m == 0;
+				scoreGot.Write<u32>((u32)p.masters[m]);
+				scoreGot.Write<u32>(playTimeMs / 2);
+				scoreGot.Write<u8>((u8)(main ? p.kills : 0));
+				scoreGot.Write<u8>((u8)(main ? p.bestKillStreak : 0));
+				scoreGot.Write<u8>(0);
+				scoreGot.Write<u8>((u8)(main ? p.deaths : 0));
+				scoreGot.Write<u8>((u8)(main ? p.assists : 0));
+				scoreGot.Write<u32>((u32)(main ? p.damageDealt : 0));
+				for(int d = 0; d < 9; d++) scoreGot.Write<u32>(0);
+				scoreGot.Write<u8>(0);
+				scoreGot.Write<u8>(0);
+				scoreGot.Write<u8>(0);
+				scoreGot.Write<u8>((u8)(main ? p.savedPieces : 0));
+				scoreGot.Write<u8>(0);
+				scoreGot.Write<u8>(0);
+				scoreGot.Write<u8>(0);
+			}
+			scoreGot.Write<u16>(0);
+			scoreGot.Write<u16>(0);
+		}
+	}
 
 	PacketWriter<Sv::SN_PvpResultScoreDeathmatch,4096> score;
 	score.Write<u16>(2);
@@ -1023,7 +1080,8 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 		res.Write<u16>(0);
 		res.Write<u16>(0);
 		SendPacket(clientHd, res);
-		SendPacket(clientHd, score);
+		if(got) SendPacket(clientHd, scoreGot);
+		else SendPacket(clientHd, score);
 	}
 	for(i32 i = 0; i < count; i++) {
 		const ClientHandle clientHd = players[i].clientHd;

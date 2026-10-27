@@ -3199,6 +3199,7 @@ DEFAULT_SERIALIZE(Sv::SN_VotingResult);
 DEFAULT_SERIALIZE(Sv::SA_TransformCharacter);
 DEFAULT_SERIALIZE(Sv::SN_TransformCharacter);
 DEFAULT_SERIALIZE(Sv::SN_ChangeCharacterMode);
+DEFAULT_SERIALIZE(Sv::SN_PvpResultScoreGot);
 #undef DEFAULT_SERIALIZE
 
 template<>

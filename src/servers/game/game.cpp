@@ -678,6 +678,14 @@ void Game::EndGame()
 		e.deaths = p.deaths;
 		e.masters[0] = CreatureIndex(100000000 + (i32)p.mainClass);
 		e.masters[1] = CreatureIndex(100000000 + (i32)p.subClass);
+		e.assists = p.assists;
+		e.bestKillStreak = p.bestKillStreak;
+		e.points = p.points;
+		e.ingameLevel = (u8)p.ingameLevel;
+		e.damageDealt = p.damageDealt;
+		e.savedPieces = p.savedPieces;
+		e.traits[0] = p.Main().traits;
+		e.traits[1] = p.Sub().traits;
 		list.push_back(e);
 		const i32 score = world.map && world.map->ingameLevels ? p.points : p.kills;
 		if(p.team == 0) red += score; else blue += score;
@@ -711,7 +719,12 @@ void Game::EndGame()
 		AccountGameRecordAppend(e->name, record);
 		LOG("Game :: %ls reward %u gold %u exp (%u min, %s)", e->name, e->gold, e->exp, minutes, won ? "win" : (own == other ? "draw" : "loss"));
 	}
-	replication.SendGameEnd(list.data(), (i32)list.size(), red, blue, (u32)(TimeDiffSec(TimeDiff(tGameStarted, localTime)) * 1000.0));
+	Replication::EndGot got;
+	const bool titanEnd = replication.titanMode;
+	if(titanEnd) {
+		for(i32 team = 0; team < 2; team++) foreach_const(s, world.giantSummons[team]) got.summons[team].push_back(*s);
+	}
+	replication.SendGameEnd(list.data(), (i32)list.size(), red, blue, (u32)(TimeDiffSec(TimeDiff(tGameStarted, localTime)) * 1000.0), world.winnerTeam, titanEnd ? &got : nullptr);
 }
 
 void Game::OnPlayerReturnToChannel(ClientHandle clientHd)

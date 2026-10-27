@@ -379,6 +379,7 @@ void World::UpdateGiantWaves()
 			rank++;
 			if(!chosen) continue;
 			LOG("Titan :: giant %d for team %d", t->monster, team);
+			if(!giantSummons[team].full()) giantSummons[team].push_back(t->monster);
 			FireAITrigger(t->aiIndex, -1);
 			break;
 		}

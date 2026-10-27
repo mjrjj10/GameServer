@@ -351,8 +351,19 @@ struct Replication
 		CreatureIndex masters[2];
 		u32 gold = 0;
 		u32 exp = 0;
+		i32 assists = 0;
+		i32 bestKillStreak = 0;
+		i32 points = 0;
+		u8 ingameLevel = 1;
+		i64 damageDealt = 0;
+		i32 savedPieces = 0;
+		eastl::array<u8,4> traits[2] = {};
 	};
-	void SendGameEnd(const EndPlayer* players, i32 count, i32 redScore, i32 blueScore, u32 playTimeMs);
+	struct EndGot
+	{
+		eastl::fixed_vector<i32,32,false> summons[2];
+	};
+	void SendGameEnd(const EndPlayer* players, i32 count, i32 redScore, i32 blueScore, u32 playTimeMs, i32 winnerTeam = -1, const EndGot* got = nullptr);
 	void SendGaugeToAll(UserID userID, u8 updateType, bool overheated, f32 overheatTime, u16 gauge, u16 maxGauge);
 	void SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 max, u32 reason = 0);
 	void SendStanceToAll(ActorUID actorUID, i32 stance, f32 durationSec);
