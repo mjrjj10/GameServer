@@ -185,7 +185,7 @@ void World::StartLevelEvents()
 	if(levelEventsStarted) return;
 	levelEventsStarted = true;
 	foreach_const(n, map->levelEvents) {
-		if(n->kind != GameXmlContent::LevelEventNode::LEVEL_START) continue;
+		if(n->kind != GameXmlContent::LevelEventNode::LEVEL_START || !NodeInDifficulty(*n)) continue;
 		foreach_const(o, n->outputs) FireLevelEvent(*o);
 	}
 }
@@ -439,9 +439,18 @@ World::ActorNpc& World::SpawnMonster(CreatureIndex docID, i32 localID, const vec
 	return npc;
 }
 
-void World::CallMonsters(const GameXmlContent::LevelEventNode& node)
+void World::CallMonsters(const GameXmlContent::LevelEventNode& node, i32 playerIndex)
 {
+	GameXmlContent::Map::Area relativeArea;
 	const GameXmlContent::Map::Area* area = map->FindArea(node.areaID);
+	if(node.relative) {
+		const Player* anchor = playerIndex >= 0 && playerIndex < (i32)players.size() && !players[playerIndex].dead ? &players[playerIndex] : nullptr;
+		foreach_const(p, players) if(!anchor && !p->dead && p->body && !p->removed) anchor = &*p;
+		if(!anchor || !anchor->body) return;
+		relativeArea.pos = anchor->body->GetWorldPos();
+		relativeArea.rot = vec3(0);
+		area = &relativeArea;
+	}
 	if(!area) {
 		WARN("LevelEvent :: node %d calls monster %d in unknown area %d", node.id, node.monster, node.areaID);
 		return;
@@ -460,6 +469,39 @@ void World::CallMonsters(const GameXmlContent::LevelEventNode& node)
 		npc.wanderDist = node.wander;
 	}
 	LOG("LevelEvent :: node %d calls %d x monster %d (tag %d) in area %d at t=%.1f", node.id, node.count, node.monster, node.tagID, node.areaID, GameTimeSec());
+}
+
+void World::FireRandomCondition(const GameXmlContent::LevelEventNode& node, i32 playerIndex)
+{
+	i32 total = 0;
+	u8 lastBranch = 0xff;
+	foreach_const(e, node.randomEvents) {
+		if(e->branch != lastBranch) total += e->weight;
+		lastBranch = e->branch;
+	}
+	if(total <= 0) return;
+	i32 roll = (i32)(RandUint() % (u32)total);
+	i32 chosen = -1;
+	lastBranch = 0xff;
+	foreach_const(e, node.randomEvents) {
+		if(e->branch == lastBranch) continue;
+		lastBranch = e->branch;
+		if(roll < e->weight) { chosen = e->branch; break; }
+		roll -= e->weight;
+	}
+	foreach_const(e, node.randomEvents) {
+		if(e->branch != chosen) continue;
+		if(const GameXmlContent::LevelEventNode* target = map->FindLevelEventByName(e->nameKey)) FireLevelEvent(target->id, playerIndex);
+	}
+	LOG("LevelEvent :: random node %d picks branch %d", node.id, chosen);
+}
+
+void World::FireDialogTrigger(i32 dialogID, i32 playerIndex)
+{
+	foreach_const(n, map->levelEvents) {
+		if(n->kind != GameXmlContent::LevelEventNode::DIALOG_TRIGGER || n->aiIndex != dialogID || !NodeInDifficulty(*n)) continue;
+		foreach_const(o, n->outputs) FireLevelEvent(*o, playerIndex);
+	}
 }
 
 void World::DespawnEntities(i32 localID, i32 tagID)
@@ -486,8 +528,30 @@ void World::FireAITrigger(i32 index, i32 playerIndex)
 void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 {
 	const GameXmlContent::LevelEventNode* node = map->FindLevelEvent(nodeID);
-	if(!node) return;
+	if(!node || !NodeInDifficulty(*node)) return;
 	switch(node->kind) {
+		case GameXmlContent::LevelEventNode::RANDOM_CONDITION: FireRandomCondition(*node, playerIndex); return;
+		case GameXmlContent::LevelEventNode::PORTAL: {
+			portalRequested = true;
+			LOG("LevelEvent :: portal (node %d)", node->id);
+		} break;
+		case GameXmlContent::LevelEventNode::KILL_TARGET: {
+			foreach(npc, actorNpcList) {
+				if(npc->hp <= 0 || npc->removeAt != Time::ZERO || npc->ownerUID != ActorUID::INVALID) continue;
+				if(node->tagID >= 0 ? npc->tagID != node->tagID : npc->localID != node->localID) continue;
+				MonsterDie(*npc, ActorUID::INVALID, CreatureIndex(0));
+			}
+		} break;
+		case GameXmlContent::LevelEventNode::ACTIVE_AREA_TRIGGER: {
+			foreach_const(n, map->levelEvents) {
+				if(n->kind == GameXmlContent::LevelEventNode::BOUND_TRIGGER && n->areaID == node->areaID) SetLevelTriggerActive(n->nameKey, node->active);
+			}
+		} break;
+		case GameXmlContent::LevelEventNode::INVOKE_DIALOG: {
+			replication->SendClientLevelEventToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID);
+			FireDialogTrigger(node->aiIndex, playerIndex);
+		} break;
+		case GameXmlContent::LevelEventNode::DIALOG_TRIGGER: return;
 		case GameXmlContent::LevelEventNode::DELAY: {
 			const f32 jitter = node->variance > 0 ? ((f32)(RandUint() % 2001) / 1000.0f - 1.0f) * node->variance : 0.0f;
 			const Time at = TimeAdd(localTime, TimeMsToTime(MAX(node->delay + jitter, 0.0f) * 1000.0));
@@ -590,7 +654,7 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 		} break;
 		case GameXmlContent::LevelEventNode::CALL_MONSTER: {
 			const f32 jitter = node->variance > 0 ? ((f32)(RandUint() % 2001) / 1000.0f - 1.0f) * node->variance : 0.0f;
-			if(!monsterCalls.full()) monsterCalls.push_back({ node->id, TimeAdd(localTime, TimeMsToTime(MAX(node->callDelay + jitter, 0.0f) * 1000.0)), node->callCount });
+			if(!monsterCalls.full()) monsterCalls.push_back({ node->id, TimeAdd(localTime, TimeMsToTime(MAX(node->callDelay + jitter, 0.0f) * 1000.0)), node->callCount, playerIndex });
 		} break;
 		case GameXmlContent::LevelEventNode::DESPAWN_ENTITY: DespawnEntities(node->localID, node->tagID); break;
 		case GameXmlContent::LevelEventNode::PASS_THROUGH: break;
@@ -754,6 +818,7 @@ void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle s
 
 bool World::LevelTriggerActive(const GameXmlContent::LevelEventNode& node) const
 {
+	if(!NodeInDifficulty(node)) return false;
 	foreach_const(t, levelTriggerOverrides) if(t->first == node.nameKey) return t->second;
 	return node.active;
 }
@@ -960,7 +1025,7 @@ void World::UpdateLevelEvents()
 		MonsterCall& call = monsterCalls[i];
 		if(localTime < call.at) { i++; continue; }
 		const GameXmlContent::LevelEventNode* node = map->FindLevelEvent(call.node);
-		if(node) CallMonsters(*node);
+		if(node) CallMonsters(*node, call.playerIndex);
 		if(!node || --call.remaining <= 0) {
 			monsterCalls.erase(monsterCalls.begin() + i);
 			continue;

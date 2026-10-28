@@ -39,6 +39,16 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 	replication.surrenderAbleTime = gameInfo.surrenderAbleTime;
 	replication.supportKitIndex = -1;
 	world.Init(&replication);
+	if(const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(gameInfo.stageIndex)) {
+		const bool pve = stage->gameMode == GameModeType::GAME_MODE_STAGE || stage->gameMode == GameModeType::GAME_MODE_DEFENCE;
+		world.hostileMonsters = pve;
+		if(pve) world.difficultyBit = stage->difficultyBit;
+		if(stage->gameMode == GameModeType::GAME_MODE_STAGE) {
+			foreach_const(m, stage->maps) if(!zoneMaps.full()) zoneMaps.push_back(*m);
+			if(stage->bossMap != MapIndex(0) && !zoneMaps.full()) zoneMaps.push_back(stage->bossMap);
+			LOG("Stage :: %d zone(s), difficulty bit %d", (i32)zoneMaps.size(), (i32)world.difficultyBit);
+		}
+	}
 
 	LoadMap();
 
@@ -83,8 +93,10 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 			(u16)master1.character.getColliderHeight(),
 		};
 
-		const auto& spawnPoints = mapSpawnPoints[p.team];
-		const SpawnPoint& spawnPoint = spawnPoints[spawnPointIndex[p.team]++ % spawnPoints.size()];
+		const auto& spawnPoints = mapSpawnPoints[p.team].empty() ? mapSpawnPoints[p.team ^ 1] : mapSpawnPoints[p.team];
+		const SpawnPoint fallback = { vec3(0), vec3(0) };
+		const SpawnPoint& spawnPoint = spawnPoints.empty() ? fallback : spawnPoints[spawnPointIndex[p.team]++ % spawnPoints.size()];
+		if(spawnPoints.empty()) WARN("Spawn :: map %d has no spawn point", (i32)replication.mapIndex);
 
 		LOG("Spawn :: %ls team=%d masters=(%d, %d) skins=(%d, %d) weapons=(%d, %d)", desc.name.data(), (i32)desc.team, (i32)desc.masters[0], (i32)desc.masters[1], (i32)desc.skins[0], (i32)desc.skins[1], (i32)desc.weapons[0], (i32)desc.weapons[1]);
 		World::Player& worldPlayer = world.CreatePlayer(desc, spawnPoint.pos, RotationHumanoid{0.f, 0.f, MxmYawToWorldYaw(spawnPoint.rot.z)});
@@ -198,6 +210,7 @@ void Game::Update(Time localTime_)
 		} break;
 
 		case Phase::Game: {
+			if(world.portalRequested && !gameEnded) MoveToNextZone();
 			if(!gameEnded && tGameStarted != Time::ZERO && world.winnerTeam < 0 && replication.titanMode) {
 				const i32 scoreLimit = GetGameXmlContent().GetStageScoreLimit((i32)replication.stageIndex);
 				for(i32 team = 0; team < 2 && scoreLimit > 0; team++) {
@@ -351,7 +364,7 @@ bool Game::LoadMap()
 	foreach(it, map->creatures) {
 		// don't spawn "spawn points"
 		if(it->IsSpawnPoint()) {
-			if(it->faction != Faction::INVALID) {
+			if(it->faction == Faction::RED || it->faction == Faction::BLUE) {
 				mapSpawnPoints[(i32)it->faction].push_back(SpawnPoint{ it->pos, it->rot });
 			}
 			continue;
@@ -432,6 +445,41 @@ bool Game::LoadMap()
 		}
 	}
 	return true;
+}
+
+void Game::MoveToNextZone()
+{
+	world.portalRequested = false;
+	if(zoneIndex + 1 >= (i32)zoneMaps.size()) {
+		LOG("Stage :: portal without a next zone");
+		return;
+	}
+	zoneIndex++;
+	replication.mapIndex = zoneMaps[zoneIndex];
+	LOG("Stage :: moving to zone %d (map %d)", zoneIndex, (i32)replication.mapIndex);
+	foreach_const(p, playerList) {
+		if(p->clientHd == ClientHandle::INVALID) continue;
+		replication.SendGameAreaMove(p->clientHd, replication.mapIndex);
+		replication.ResetClientForAreaMove(p->clientHd);
+	}
+	world.ClearMapContent();
+	foreach(sp, mapSpawnPoints) sp->clear();
+	LoadMap();
+	PlacePlayersAtSpawn();
+	zoneLoading = true;
+}
+
+void Game::PlacePlayersAtSpawn()
+{
+	i32 spawnPointIndex[2] = { 0 };
+	foreach(p, world.players) {
+		if(p->removed || p->team > 1) continue;
+		const auto& spawnPoints = mapSpawnPoints[p->team];
+		if(spawnPoints.empty()) continue;
+		const SpawnPoint& sp = spawnPoints[spawnPointIndex[p->team]++ % spawnPoints.size()];
+		p->spawnPos = sp.pos;
+		world.TeleportPlayer(*p, sp.pos, MxmYawToWorldYaw(sp.rot.z));
+	}
 }
 
 void Game::OnPlayerDisconnect(ClientHandle clientHd)
@@ -1049,6 +1097,11 @@ void Game::OnPlayerGameIsReady(ClientHandle clientHd)
 	World::Player& player = world.GetPlayer(p.playerIndex);
 	ASSERT(player.clientHd == clientHd);
 
+	if(zoneLoading) {
+		zoneLoading = false;
+		world.StartLevelEvents();
+		LOG("Stage :: zone %d ready, level events started", zoneIndex);
+	}
 	if(phase == Phase::WaitingForFirstPlayer) {
 		phase = Phase::WaitingForReady;
 		phaseTime = TimeAdd(localTime, TimeMsToTime(READY_WAIT));

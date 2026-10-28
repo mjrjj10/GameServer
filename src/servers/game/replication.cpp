@@ -151,6 +151,22 @@ void Replication::OnPlayerConnect(ClientHandle clientHd, u32 playerIndex)
 	clientHandle[playerIndex] = clientHd;
 }
 
+void Replication::SendGameAreaMove(ClientHandle clientHd, MapIndex map)
+{
+	Sv::SN_GameAreaMove packet;
+	packet.dwAreaIDX = (u32)map;
+	SendPacket(clientHd, packet);
+}
+
+void Replication::ResetClientForAreaMove(ClientHandle clientHd)
+{
+	const i32 clientID = playerMap.at(clientHd);
+	playerState[clientID].cur = PlayerState::CONNECTED;
+	playerState[clientID].prev = PlayerState::CONNECTED;
+	playerLocalInfo[clientID].actorUIDSet.clear();
+	playerLocalInfo[clientID].hiddenActors.clear();
+}
+
 void Replication::SendMasterTrainingEvent(ClientHandle clientHd, u8 eventType, u32 ret, u32 entityID, u32 param1, u32 param2)
 {
 	Sv::SA_MasterTrainingEvent packet;

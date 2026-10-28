@@ -1011,6 +1011,34 @@ void World::WarpPlayer(Player& p, const vec3& pos, f32 yaw)
 	if(p.clientHd != ClientHandle::INVALID) replication->SendTeleportRequest(p.clientHd, p.Main().UID, pos);
 }
 
+void World::ClearMapContent()
+{
+	actorNpcList.clear();
+	actorNpcMap.clear();
+	actorDynamicList.clear();
+	actorDynamicMap.clear();
+	remoteInsts.clear();
+	pendingRemotes.clear();
+	groundAuras.clear();
+	projectileList.clear();
+	pendingSummonCommands.clear();
+	groundItems.clear();
+	monsterCalls.clear();
+	monsterHits.clear();
+	deathHits.clear();
+	boundTriggerStates.clear();
+	levelTriggerOverrides.clear();
+	levelEventTimers.clear();
+	npcStatuses.clear();
+	mapInteractions.clear();
+	deadCounts.clear();
+	hpTriggersFired.clear();
+	levelEventsStarted = false;
+	mapInteractionsBuilt = false;
+	portalRequested = false;
+	physics.ClearMapStatics();
+}
+
 void World::RemovePlayer(Player& player)
 {
 	player.removed = true;

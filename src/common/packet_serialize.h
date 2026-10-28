@@ -3221,6 +3221,7 @@ DEFAULT_SERIALIZE(Sv::SA_MyPveRanking);
 DEFAULT_SERIALIZE(Sv::SA_RequestSummaryInfoEach);
 DEFAULT_SERIALIZE(Sv::SA_StartGame);
 DEFAULT_SERIALIZE(Sv::SA_MasterTrainingEvent);
+DEFAULT_SERIALIZE(Sv::SN_GameAreaMove);
 #undef DEFAULT_SERIALIZE
 
 template<>

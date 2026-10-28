@@ -20,14 +20,20 @@ static f32 MonsterAttackPower(const World::ActorNpc& npc)
 	return 0;
 }
 
-static bool FactionsOppose(Faction a, Faction b)
+static bool IsTeamFaction(Faction f)
 {
-	return (a == Faction::RED && b == Faction::BLUE) || (a == Faction::BLUE && b == Faction::RED);
+	return f == Faction::RED || f == Faction::BLUE;
 }
 
-static bool MonsterNeutral(const World::ActorNpc& npc)
+static bool FactionsOppose(Faction a, Faction b, bool hostileMonsters)
 {
-	return npc.faction == Faction::ORANGE || npc.faction == Faction::MONSTER;
+	if((a == Faction::RED && b == Faction::BLUE) || (a == Faction::BLUE && b == Faction::RED)) return true;
+	return hostileMonsters && ((a == Faction::MONSTER && IsTeamFaction(b)) || (b == Faction::MONSTER && IsTeamFaction(a)));
+}
+
+static bool MonsterNeutral(const World::ActorNpc& npc, bool hostileMonsters)
+{
+	return npc.faction == Faction::ORANGE || (npc.faction == Faction::MONSTER && !hostileMonsters);
 }
 
 static GameXmlContent::MonsterAttack::Target MonsterTargetKind(const GameXmlContent::MonsterAi& ai)
@@ -42,15 +48,15 @@ bool World::MonsterHostile(const ActorNpc& monster, const ActorNpc& other) const
 {
 	if(&monster == &other || !other.monsterAi || other.hp <= 0 || other.removeAt != Time::ZERO) return false;
 	if(other.despawnAt != Time::ZERO && localTime >= other.despawnAt) return false;
-	return FactionsOppose(monster.faction, other.faction) && monster.monsterAi->Hates(other.monsterAi->tagKey);
+	return FactionsOppose(monster.faction, other.faction, hostileMonsters) && monster.monsterAi->Hates(other.monsterAi->tagKey);
 }
 
 bool World::MonsterHostile(const ActorNpc& monster, const Player& player) const
 {
 	static const u32 playerTag = StatusTypeKey("Player");
 	if(player.dead || player.untargetable || !player.body) return false;
-	if(MonsterNeutral(monster)) return monster.monsterTarget == player.Main().UID;
-	return FactionsOppose(monster.faction, (Faction)player.team) && monster.monsterAi->Hates(playerTag);
+	if(MonsterNeutral(monster, hostileMonsters)) return monster.monsterTarget == player.Main().UID;
+	return FactionsOppose(monster.faction, (Faction)player.team, hostileMonsters) && (monster.monsterAi->Hates(playerTag) || (hostileMonsters && monster.monsterAi->enemyTags.empty()));
 }
 
 static const u32 MONSTER_REMOTE_ID_BASE = 0xC0000000u;
@@ -147,7 +153,7 @@ void World::StartTitanVictory(Faction deadFaction, const vec3& deadPos, ActorUID
 	f32 best = TITAN_VICTORY_RANGE;
 	foreach(o, actorNpcList) {
 		if(o->hp <= 0 || o->removeAt != Time::ZERO || !o->monsterAi || o->monsterAi->victoryStates[0] == ActionStateID::INVALID) continue;
-		if(!FactionsOppose(o->faction, deadFaction) || MonsterTargetKind(*o->monsterAi) != GameXmlContent::MonsterAttack::TITAN) continue;
+		if(!FactionsOppose(o->faction, deadFaction, hostileMonsters) || MonsterTargetKind(*o->monsterAi) != GameXmlContent::MonsterAttack::TITAN) continue;
 		const f32 d = glm::length(vec2(o->pos) - vec2(deadPos));
 		if(d < best) { best = d; victor = &*o; }
 	}
@@ -355,7 +361,7 @@ void World::UpdateMonsterAi(f32 delta)
 				targetLost = true;
 			}
 		}
-		const bool neutral = MonsterNeutral(npc);
+		const bool neutral = MonsterNeutral(npc, hostileMonsters);
 		if(neutral && targetLost) {
 			targetLost = false;
 			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);

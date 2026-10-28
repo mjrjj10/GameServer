@@ -111,6 +111,11 @@ struct Game
 	void OnPlayerTag(ClientHandle clientHd, ActorUID actorUID);
 	void OnMasterTrainingEvent(ClientHandle clientHd, const u8* data, i32 size);
 	void SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team);
+	eastl::fixed_vector<MapIndex,8,false> zoneMaps;
+	i32 zoneIndex = 0;
+	bool zoneLoading = false;
+	void MoveToNextZone();
+	void PlacePlayersAtSpawn();
 	void OnTitanIncarnate(ClientHandle clientHd, i32 formDoc);
 	eastl::fixed_vector<u32,MAX_PLAYERS,false> trainingBots;
 	void OnPlayerReturnToChannel(ClientHandle clientHd);

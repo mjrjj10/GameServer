@@ -999,6 +999,10 @@ bool GameXmlContent::LoadPvpMaps()
 		}
 		LOG("PvP map %d: %d creatures, %d dynamics, %d areas, %d level events, %d colliders", (i32)index, (i32)map.creatures.size(), (i32)map.dynamic.size(), (i32)map.areas.size(), (i32)map.levelEvents.size(), (i32)map.colliders.size());
 	}
+	for(XMLElement* pAlias = pRoot->FirstChildElement("_Alias"); pAlias; pAlias = pAlias->NextSiblingElement("_Alias")) {
+		pvpMapAliases[pAlias->IntAttribute("_Index")] = pAlias->IntAttribute("_Map");
+	}
+	LOG("Loaded %d map aliases", (i32)pvpMapAliases.size());
 	return FindPvpMap(MapIndex::PVP_DEATHMATCH) != nullptr;
 }
 
@@ -1259,6 +1263,8 @@ bool GameXmlContent::LoadMonsterStats()
 
 const GameXmlContent::Map* GameXmlContent::FindPvpMap(MapIndex index) const
 {
+	auto alias = pvpMapAliases.find((i32)index);
+	if(alias != pvpMapAliases.end()) index = (MapIndex)alias->second;
 	foreach_const(m, pvpMaps) if(m->index == index) return &*m;
 	return nullptr;
 }
@@ -1601,11 +1607,27 @@ bool GameXmlContent::LoadStageMaps()
 			const i32 candidate = pC->IntAttribute("DATA");
 			if(candidate != 0 && !stage.stageSkillCandidates.full()) stage.stageSkillCandidates.push_back(SkillID(candidate));
 		}
+		static const char* DIFFICULTY_NAMES[] = { "WORLD_STAGE_DIFFICULT_EASY", "WORLD_STAGE_DIFFICULT_NORMAL", "WORLD_STAGE_DIFFICULT_HARD", "WORLD_STAGE_DIFFICULT_EXTREME", "WORLD_STAGE_DIFFICULT_HELL" };
+		const char* difficulty = pStage->Attribute("_Difficult");
+		for(i32 d = 0; d < (i32)ARRAY_COUNT(DIFFICULTY_NAMES); d++) {
+			if(difficulty && EA::StdC::Strcmp(difficulty, DIFFICULTY_NAMES[d]) == 0) stage.difficultyBit = (u8)(1 << d);
+		}
+		if(XMLElement* pSuccess = pStage->FirstChildElement("_SUCCESS_CONDITION_LIST")) {
+			for(XMLElement* pSet = pSuccess->FirstChildElement("_MCASESET"); pSet; pSet = pSet->NextSiblingElement("_MCASESET")) {
+				for(XMLElement* pCond = pSet->FirstChildElement("_MCONDITION"); pCond; pCond = pCond->NextSiblingElement("_MCONDITION")) {
+					const char* type = pCond->Attribute("_Type");
+					if(!type || EA::StdC::Strcmp(type, "E_CONDITION_TYPE_MONSTER_KILL") != 0) continue;
+					stage.clearMonster = pCond->IntAttribute("_Index");
+					stage.clearCount = pCond->IntAttribute("_Value", 1);
+				}
+			}
+		}
 		XMLElement* pWorldMap = pStage->FirstChildElement("_WORLD_STAGE_MAP");
 		if(!pWorldMap) continue;
 		for(XMLElement* pGroup = pWorldMap->FirstChildElement("_WORLD_STAGE_MAP_GROUP");
 			pGroup;
 			pGroup = pGroup->NextSiblingElement("_WORLD_STAGE_MAP_GROUP")) {
+			if(stage.bossMap == MapIndex(0)) stage.bossMap = MapIndex(pGroup->IntAttribute("_BossMapIndex"));
 			for(XMLElement* pMap = pGroup->FirstChildElement("_WORLD_STAGE_MAPINFO");
 				pMap;
 				pMap = pMap->NextSiblingElement("_WORLD_STAGE_MAPINFO")) {
@@ -2621,6 +2643,9 @@ bool GameXmlContent::Load()
 	r = LoadTradeItems();
 	if(!r) return false;
 
+	r = LoadStageEntries();
+	if(!r) return false;
+
 	r = LoadGroundItems();
 	if(!r) return false;
 
@@ -2690,6 +2715,7 @@ Faction GameXmlContent::StringToFaction(const char* s)
 	static const eastl::hash_map<eastl::string, Faction> factionMap = {
 		{"TEAM_RED", Faction::RED},
 		{"TEAM_BLUE", Faction::BLUE},
+		{"TEAM_PLAYER", Faction::RED},
 		{"TEAM_DYNAMIC", Faction::DYNAMIC},
 		{"TEAM_ORANGE", Faction::ORANGE},
 		{"TEAM_TYPE_INVALID", Faction::MONSTER}
@@ -3565,6 +3591,35 @@ bool GameXmlContent::LoadDeathRemotes()
 	return true;
 }
 
+bool GameXmlContent::LoadStageEntries()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/StageEntries.xml", doc, true)) return true;
+	for(XMLElement* pEntry = doc.FirstChildElement()->FirstChildElement("ENTRY"); pEntry && !stageEntries.full(); pEntry = pEntry->NextSiblingElement("ENTRY")) {
+		stageEntries.push_back();
+		StageEntry& entry = stageEntries.back();
+		entry.ID = pEntry->IntAttribute("ID");
+		for(XMLElement* pArea = pEntry->FirstChildElement("AREA"); pArea && !entry.areas.full(); pArea = pArea->NextSiblingElement("AREA")) {
+			entry.areas.push_back();
+			StageEntryArea& area = entry.areas.back();
+			area.area = AreaIndex(pArea->IntAttribute("ID"));
+			for(XMLElement* pStage = pArea->FirstChildElement("STAGE"); pStage && !area.stages.full(); pStage = pStage->NextSiblingElement("STAGE")) {
+				area.stages.push_back();
+				StageEntryStage& stage = area.stages.back();
+				stage.stage = StageIndex(pStage->IntAttribute("ID"));
+				const char* types = pStage->Attribute("gameTypes");
+				i32 value = 0, read = 0;
+				while(types && *types && !stage.gameTypes.full() && EA::StdC::Sscanf(types, "%d%n", &value, &read) == 1) {
+					stage.gameTypes.push_back((u8)value);
+					types += read;
+				}
+			}
+		}
+	}
+	LOG("Loaded %d stage entries", (i32)stageEntries.size());
+	return true;
+}
+
 bool GameXmlContent::LoadTradeItems()
 {
 	XMLDocument doc;
@@ -3805,6 +3860,12 @@ bool GameXmlContent::LoadGroundItems()
 	return true;
 }
 
+static XMLElement* FirstChildOf(XMLElement* parent, const char* a, const char* b)
+{
+	XMLElement* e = parent->FirstChildElement(a);
+	return e ? e : parent->FirstChildElement(b);
+}
+
 bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 {
 	XMLDocument doc;
@@ -3815,6 +3876,7 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		LevelEventNode node;
 		node.id = pNode->IntAttribute("_ConvertedEventDataID");
 		node.nameKey = StatusTypeKey(pNode->Attribute("_EventDataID"));
+		node.difficultyMask = (u8)pNode->IntAttribute("_StageDifficultyMask", ALL_DIFFICULTIES);
 		for(XMLElement* out = pNode->FirstChildElement("_OutputLink"); out && !node.outputs.full(); out = out->NextSiblingElement("_OutputLink")) node.outputs.push_back(out->IntAttribute("_ConvertedEventDataID"));
 		if(pNode->FirstChildElement("_LevelStartTriggerData")) node.kind = LevelEventNode::LEVEL_START;
 		else if(XMLElement* e = pNode->FirstChildElement("_TakeItemTriggerData")) { node.kind = LevelEventNode::TAKE_ITEM; node.tagID = e->IntAttribute("_TagID", -1); }
@@ -3835,8 +3897,9 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(XMLElement* e = pNode->FirstChildElement("_OnHitTriggerData")) { node.kind = LevelEventNode::ON_HIT_TRIGGER; node.localID = e->IntAttribute("_LocalID"); node.delay = e->FloatAttribute("_DelayTime"); node.hitCount = e->IntAttribute("_HitCount"); }
 		else if(XMLElement* e = pNode->FirstChildElement("_ActionChangeInfo")) { node.kind = LevelEventNode::ACTION_CHANGE; node.localID = e->IntAttribute("_ID"); if(const char* a = e->Attribute("_ActionIndex")) node.action = ActionStateFromString(a); }
 		else if(XMLElement* e = pNode->FirstChildElement("_ActiveEventTriggerInfo")) { node.kind = LevelEventNode::ACTIVATE_TRIGGER; node.targetKey = StatusTypeKey(e->Attribute("_TriggerID")); node.active = e->IntAttribute("_Active") == 1; }
-		else if(XMLElement* e = pNode->FirstChildElement("_CallMonsterInfo")) {
+		else if(XMLElement* e = FirstChildOf(pNode, "_CallMonsterInfo", "_RelativeCallMonsterInfo")) {
 			node.kind = LevelEventNode::CALL_MONSTER;
+			node.relative = pNode->FirstChildElement("_RelativeCallMonsterInfo") != nullptr;
 			node.monster = e->IntAttribute("_Index");
 			node.count = MAX(e->IntAttribute("_Count", 1), 1);
 			node.callCount = MAX(e->IntAttribute("_CallCount", 1), 1);
@@ -3885,6 +3948,22 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 			if(const char* key = e->Attribute("_StringKey")) EA::StdC::Sscanf(key, "MONSTER_RESPAWN_MESSAGE_%d", &message);
 			node.count = MAX(message - 1, 0);
 		}
+		else if(XMLElement* e = pNode->FirstChildElement("_RandomConditionInfo")) {
+			node.kind = LevelEventNode::RANDOM_CONDITION;
+			u8 branch = 0;
+			for(XMLElement* b = e->FirstChildElement("_RandomNodeList"); b; b = b->NextSiblingElement("_RandomNodeList"), branch++) {
+				for(XMLElement* ev = b->FirstChildElement("_EvtList"); ev && !node.randomEvents.full(); ev = ev->NextSiblingElement("_EvtList")) {
+					node.randomEvents.push_back({ branch, (u16)b->IntAttribute("_Probability"), StatusTypeKey(ev->Attribute("_EvtID")) });
+				}
+			}
+		}
+		else if(pNode->FirstChildElement("_PortalEntityInfo")) node.kind = LevelEventNode::PORTAL;
+		else if(XMLElement* e = pNode->FirstChildElement("_KillTargetEntityInfo")) { node.kind = LevelEventNode::KILL_TARGET; node.localID = e->IntAttribute("_LocalID"); node.tagID = e->IntAttribute("_TagID", -1); }
+		else if(XMLElement* e = pNode->FirstChildElement("_ActiveTriggerInfo")) { node.kind = LevelEventNode::ACTIVE_AREA_TRIGGER; node.areaID = e->IntAttribute("_AreaID"); node.active = e->IntAttribute("_Active") == 1; }
+		else if(XMLElement* e = pNode->FirstChildElement("_InvokeDialogTriggerInfo")) { node.kind = LevelEventNode::INVOKE_DIALOG; node.aiIndex = e->IntAttribute("_DialogID"); }
+		else if(XMLElement* e = pNode->FirstChildElement("_DialogTriggerData")) { node.kind = LevelEventNode::DIALOG_TRIGGER; node.aiIndex = e->IntAttribute("_ID"); }
+		else if(pNode->FirstChildElement("_EventPartyConditionInfo") || pNode->FirstChildElement("_EventBehaviorInfo") || pNode->FirstChildElement("_CallRemoteInfo")) node.kind = LevelEventNode::PASS_THROUGH;
+		else if(pNode->FirstChildElement("_UpdateObjectivePointInfo") || pNode->FirstChildElement("_ShowProgressMessageInfo") || pNode->FirstChildElement("_CameraWallInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
 		else if(pNode->FirstChildElement("_PrintMessageInfo") || pNode->FirstChildElement("_BGMEventInfo") || pNode->FirstChildElement("_ChangeCameraInfo") || pNode->FirstChildElement("_SetNameTagVisibillityInfo") || pNode->FirstChildElement("_InputLockInfo") || pNode->FirstChildElement("_ClientDrivenActionChangeInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
 		map->levelEvents.push_back(node);
 	}

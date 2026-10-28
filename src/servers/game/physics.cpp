@@ -156,7 +156,11 @@ bool PhysicsContext::LoadCollisionMeshes(const FileBuffer& file)
 		}
 
 		const size_t key = eastl::hash<const char*>{}(eastl::fixed_string<char,128,true>(name, nameLen).data());
-		ASSERT(triangleMeshMap.find(key) == triangleMeshMap.end());
+		if(triangleMeshMap.find(key) != triangleMeshMap.end()) {
+			LOG("[PhysX] WARNING: duplicate mesh '%.*s' ignored", nameLen, name);
+			tri->release();
+			continue;
+		}
 		triangleMeshMap.emplace(key, tri);
 
 		LOG("[PhysX] '%.*s' loaded", nameLen, name);
@@ -270,7 +274,17 @@ PxRigidStatic* PhysicsScene::CreateStaticCollider(const char* meshName, const ve
 	glm::quat quat(vec3(rot.x, rot.y, -rot.z)); // quaternion from euler angles
 	ground->setGlobalPose(PxTransform(PxVec3(pos.x, pos.y, pos.z), PxQuat(quat.x, quat.y, quat.z, quat.w)));
 	scene->addActor(*ground);
+	mapStatics.push_back(ground);
 	return ground;
+}
+
+void PhysicsScene::ClearMapStatics()
+{
+	foreach(s, mapStatics) {
+		if((*s)->getScene()) scene->removeActor(**s);
+		(*s)->release();
+	}
+	mapStatics.clear();
 }
 
 void PhysicsScene::SetStaticEnabled(PxRigidStatic* actor, bool enabled)

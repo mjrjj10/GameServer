@@ -305,6 +305,8 @@ struct Replication
 
 	void OnPlayerConnect(ClientHandle clientHd, u32 playerIndex);
 	void SendLoadPvpMap(ClientHandle clientHd, MapIndex stageIndex);
+	void SendGameAreaMove(ClientHandle clientHd, MapIndex map);
+	void ResetClientForAreaMove(ClientHandle clientHd);
 	void SendMasterTrainingEvent(ClientHandle clientHd, u8 eventType, u32 ret, u32 entityID, u32 param1, u32 param2);
 	void SetPlayerAsInGame(ClientHandle clientHd);
 	void SetPlayerLoaded(ClientHandle clientHd);

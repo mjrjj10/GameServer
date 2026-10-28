@@ -880,13 +880,45 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 
 }
 
+static const u16 MEASURED_FIXED_ENTRY_COUNT = 7;
+static const u8 STAGE_ENTRY_FIRST_AREA_KEY = 12;
+
+template<typename Writer>
+static void WriteStageEntries(Writer& packet, const GameXmlContent& content)
+{
+	u8 areaKey = STAGE_ENTRY_FIRST_AREA_KEY;
+	foreach_const(e, content.stageEntries) {
+		packet.template Write<u32>((u32)e->ID);
+		packet.template Write<u16>((u16)e->areas.size());
+		u16 stageCount = 0;
+		foreach_const(a, e->areas) {
+			packet.template Write<u8>((u8)(areaKey + (a - e->areas.begin())));
+			packet.template Write<AreaIndex>(a->area);
+			stageCount += (u16)a->stages.size();
+		}
+		packet.template Write<u16>(stageCount);
+		foreach_const(a, e->areas) {
+			const u8 key = (u8)(areaKey + (a - e->areas.begin()));
+			foreach_const(s, a->stages) {
+				packet.template Write<u8>(key);
+				packet.template Write<i32>((i32)s->stage);
+				packet.template Write<u16>((u16)s->gameTypes.size());
+				foreach_const(t, s->gameTypes) packet.template Write<u8>(*t);
+			}
+		}
+		areaKey = (u8)(areaKey + e->areas.size());
+	}
+}
+
 void HubReplication::SendUpdateEntrySystem(ClientHandle clientHd)
 {
 	// SN_UpdateEntrySystem
 	{
-		PacketWriter<Sv::SN_UpdateEntrySystem,2048> packet;
+		PacketWriter<Sv::SN_UpdateEntrySystem,4096> packet;
 
-		packet.Write<u16>(7); // entrySystemListCount
+		const GameXmlContent& entryContent = GetGameXmlContent();
+		packet.Write<u16>((u16)(MEASURED_FIXED_ENTRY_COUNT + entryContent.stageEntries.size())); // entrySystemListCount
+		WriteStageEntries(packet, entryContent);
 
 		{
 			packet.Write<u32>(210036011); // entrySystemIndex

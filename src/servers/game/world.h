@@ -942,6 +942,7 @@ public:
 	void GrantSkillPoint(Player& player);
 	bool UpgradeSkillSlot(Player& player, i32 slot);
 	void RemovePlayer(Player& player);
+	void ClearMapContent();
 	void ResetSkillPoints(Player& player);
 	const GameXmlContent::SkillUpgrade* LatestUpgrade(const Player& player, i32 skillID, GameXmlContent::SkillUpgrade::Type type) const;
 	ActionStateID UpgradeAction(const Player& player, i32 skillID) const;
@@ -981,7 +982,9 @@ public:
 	void StartTimeRecord();
 	void UpdateLevelEvents();
 	void FireLevelEvent(i32 nodeID, i32 playerIndex = -1);
-	void CallMonsters(const GameXmlContent::LevelEventNode& node);
+	void CallMonsters(const GameXmlContent::LevelEventNode& node, i32 playerIndex);
+	void FireRandomCondition(const GameXmlContent::LevelEventNode& node, i32 playerIndex);
+	void FireDialogTrigger(i32 dialogID, i32 playerIndex);
 	ActorNpc& SpawnMonster(CreatureIndex docID, i32 localID, const vec3& pos, const vec3& rot, Faction faction, i32 tagID);
 	void InitMonsterStats(ActorNpc& npc);
 	void DespawnEntities(i32 localID, i32 tagID);
@@ -1079,7 +1082,7 @@ public:
 	struct GroundItem { u32 uid; i32 itemIndex; vec3 pos; i32 tagID; Time expireAt; };
 	eastl::fixed_vector<GroundItem,64,false> groundItems;
 	struct LevelEventTimer { i32 node; Time at; i32 playerIndex; };
-	struct MonsterCall { i32 node; Time at; i32 remaining; };
+	struct MonsterCall { i32 node; Time at; i32 remaining; i32 playerIndex; };
 	eastl::fixed_vector<MonsterCall,128,false> monsterCalls;
 	struct BoundTriggerState { i32 node; u32 playerIndex; bool inside; Time last; };
 	eastl::fixed_vector<BoundTriggerState,128,true> boundTriggerStates;
@@ -1087,6 +1090,10 @@ public:
 	eastl::fixed_vector<LevelEventTimer,128,false> levelEventTimers;
 	u32 nextGroundItemUID = 0xC0000400;
 	bool levelEventsStarted = false;
+	bool hostileMonsters = false;
+	u8 difficultyBit = GameXmlContent::ALL_DIFFICULTIES;
+	bool portalRequested = false;
+	bool NodeInDifficulty(const GameXmlContent::LevelEventNode& node) const { return difficultyBit == GameXmlContent::ALL_DIFFICULTIES || (node.difficultyMask & difficultyBit) != 0; }
 	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; };
 	void ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool remove);
 	i32 AbsorbNpcShield(const ActorNpc& npc, i32 dealt);

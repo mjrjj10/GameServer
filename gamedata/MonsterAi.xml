@@ -196,4 +196,200 @@
     <ATTACK target="titan" state="SKILL_3_BEHAVIORSTATE" kind="special" range="788" cooldown="3.50" remote="1480000120" delay="1.4" multiplier="8" speed="0" status="1200070900" radius="0" hits="1" interval="0" samples="54" share="0.233" hitRemote="1480000120" selfStatus="1200070915" weakTime="3" anim="2.33" />
     <ATTACK target="titan" state="SKILL_6_BEHAVIORSTATE" kind="special" range="783" cooldown="1.98" remote="1480000112" delay="0.8" multiplier="4" speed="0" status="0" radius="0" hits="1" interval="0" samples="1" share="0.004" hitRemote="1480000112" anim="1.69" />
   </INFO>
+  <INFO ID="106010100" class="POCO" walk="180" run="420" perception="1800" lost="5000" tag="" enemies="" destroy="6" radius="90" cc="STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="1.32">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="0" cooldown="3.09" remote="1466010011" delay="0.4" multiplier="1" speed="0" status="0" radius="0" hits="1" interval="0" samples="13" share="1.000" hitRemote="1466010011" anim="0.99" />
+  </INFO>
+  <INFO ID="106010200" class="POCO_RED" walk="180" run="420" perception="1800" lost="5000" tag="" enemies="" destroy="6" radius="90" spawnTime="1.31">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="0" cooldown="4.06" remote="1466010011" delay="0.4" multiplier="1" speed="0" status="0" radius="0" hits="1" interval="0" samples="10" share="1.000" hitRemote="1466010011" anim="0.99" />
+  </INFO>
+  <INFO ID="106010300" class="POCO_SPIDER" walk="200" run="400" perception="1800" lost="5000" tag="" enemies="" destroy="4" radius="119" cc="STATUS_TYPE_STUN" spawnTime="3.00">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="1800" cooldown="3.67" remote="1466010051" delay="0" multiplier="1" speed="600" status="0" radius="0" hits="1" interval="0" samples="87" share="1.000" hitRemote="1466010051" anim="0.99" />
+  </INFO>
+  <INFO ID="106030100" class="BOLTON" walk="200" run="400" perception="1800" lost="5000" tag="" enemies="" destroy="4" radius="73" cc="STATUS_TYPE_STUN" spawnTime="1.32">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="0" cooldown="4.32" remote="1466030041" delay="0.4" multiplier="1" speed="0" status="0" radius="0" hits="1" interval="0" samples="9" share="0.529" hitRemote="1466030041" anim="0.99" />
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" kind="special" range="0" cooldown="9.69" remote="1466030011" delay="0.8" multiplier="1" speed="0" status="1261510000" radius="700" hits="1" interval="0" samples="8" share="0.471" hitRemote="1466030011" hpMin="0.2" hpMax="1.0" anim="1.83" />
+  </INFO>
+  <INFO ID="106030200" class="PARD" walk="180" run="420" perception="1800" lost="5000" tag="" enemies="" destroy="6" radius="70" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_PUSH">
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" kind="basic" range="0" cooldown="3.30" remote="1466030031" delay="0" multiplier="1" speed="600" status="0" radius="0" hits="1" interval="0" samples="5" share="0.556" hitRemote="1466030031" anim="1.50" />
+    <ATTACK target="master" state="SKILL_3_BEHAVIORSTATE" kind="special" range="1800" cooldown="13.20" remote="1466030023" delay="0" multiplier="1" speed="0" status="0" radius="60" hits="1" interval="0" samples="4" share="0.444" hitRemote="1466030023" hpMin="0.6" hpMax="1.0" anim="3.00" />
+  </INFO>
+  <INFO ID="106040100" class="ODE" walk="200" run="400" perception="1800" lost="5000" tag="" enemies="" destroy="6" radius="60">
+  </INFO>
+  <INFO ID="106040200" class="SPION" walk="180" run="420" perception="1800" lost="5000" tag="" enemies="" destroy="6" radius="60">
+    <ATTACK target="master" state="SKILL_3_BEHAVIORSTATE" kind="basic" range="0" cooldown="4.94" remote="1466040031" delay="0.6" multiplier="1" speed="600" status="0" radius="80" hits="1" interval="0" samples="15" share="0.682" hitRemote="1466040031" anim="3.00" />
+  </INFO>
+  <INFO ID="106050102" class="T-3" walk="1" run="1" perception="1800" lost="5000" tag="" enemies="" destroy="4" radius="79">
+  </INFO>
+  <INFO ID="106050300" class="T-3V" walk="1" run="1" perception="1800" lost="5000" tag="" enemies="" destroy="4" radius="134" spawnTime="0.29">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="0" cooldown="2.97" remote="1466050013" delay="0.4" multiplier="1" speed="900" status="0" radius="0" hits="1" interval="0" samples="16" share="0.667" hitRemote="1466050013" anim="0.99" />
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" kind="special" range="1800" cooldown="2.39" remote="1466050016" delay="0.4" multiplier="1" speed="900" status="0" radius="0" hits="1" interval="0" samples="8" share="0.333" hitRemote="1466050016" hpMin="0.3" hpMax="1.0" anim="0.99" />
+  </INFO>
+  <INFO ID="106060200" class="G-4" walk="180" run="420" perception="1800" lost="5000" tag="" enemies="" destroy="6" radius="70" cc="STATUS_TYPE_STUN">
+    <ATTACK target="master" state="ATTACK_BEHAVIORSTATE" kind="basic" range="0" cooldown="4.56" remote="1466060011" delay="0" multiplier="1" speed="600" status="0" radius="0" hits="1" interval="0" samples="15" share="1.000" hitRemote="1466060011" anim="1.69" />
+  </INFO>
+  <INFO ID="106060300" class="G-6" walk="180" run="420" perception="1800" lost="5000" tag="" enemies="" destroy="6" radius="70" cc="STATUS_TYPE_AIRBORNE">
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" kind="basic" range="0" cooldown="2.00" remote="1466060021" delay="0" multiplier="0.6" speed="0" status="0" radius="0" hits="1" interval="0" samples="3" share="1.000" hitRemote="1466060021" anim="5.18" />
+  </INFO>
+  <INFO ID="106140101" class="SawtoothRobot" walk="200" run="420" perception="3000" lost="5000" tag="" enemies="" destroy="4" radius="70" cc="STATUS_TYPE_AIRBORNE" spawnTime="1.31">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="0" cooldown="4.29" remote="1466130011" delay="0.4" multiplier="1" speed="600" status="0" radius="120" hits="1" interval="0" samples="6" share="0.600" hitRemote="1466130011" anim="0.99" />
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" kind="special" range="0" cooldown="10.24" remote="1466130023" delay="0.4" multiplier="1" speed="0" status="0" radius="120" hits="1" interval="0" samples="4" share="0.400" hitRemote="1466130021" hpMin="0.4" hpMax="1.0" anim="0.99" />
+  </INFO>
+  <INFO ID="107020000" class="Desert_Sand_Slime" walk="200" run="400" perception="1800" lost="5000" tag="" enemies="" destroy="4" radius="80" cc="STATUS_TYPE_SHOCKED STATUS_TYPE_STUN" spawnTime="0.99">
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" kind="basic" range="566" cooldown="3.03" remote="1467020000" delay="1" multiplier="1" speed="0" status="1260107005" radius="170" hits="1" interval="0" samples="94" share="1.000" hitRemote="1467020000" anim="1.98" />
+  </INFO>
+  <INFO ID="107020001" class="Desert_Sand_Slime" walk="200" run="400" perception="4000" lost="6000" tag="" enemies="" destroy="4" radius="80" cc="STATUS_TYPE_STUN" spawnTime="0.99">
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" kind="basic" range="428" cooldown="3.75" remote="1467020000" delay="1" multiplier="1" speed="0" status="1260107005" radius="170" hits="1" interval="0" samples="118" share="1.000" hitRemote="1467020000" anim="1.98" />
+  </INFO>
+  <INFO ID="107020100" class="Desert_Sand_Lump" walk="200" run="400" perception="1800" lost="5000" tag="" enemies="" destroy="4" radius="70" cc="STATUS_TYPE_SHOCKED STATUS_TYPE_STUN" spawnTime="0.99">
+  </INFO>
+  <INFO ID="107020101" class="Desert_Sand_Lump" walk="200" run="400" perception="4000" lost="6000" tag="" enemies="" destroy="4" radius="70" spawnTime="0.99">
+  </INFO>
+  <INFO ID="107020200" class="Desert_Sand_Freak" walk="200" run="400" perception="1800" lost="5000" tag="" enemies="" destroy="4" radius="70" cc="STATUS_TYPE_SHOCKED STATUS_TYPE_STUN" spawnTime="0.99">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="1052" cooldown="2.41" remote="1467020211" delay="1.75" multiplier="1.5" speed="0" status="1200070014" radius="0" hits="1" interval="0" samples="63" share="0.663" hitRemote="1467020211" anim="2.64" />
+    <ATTACK target="master" state="SKILL_5_BEHAVIORSTATE" kind="special" range="1072" cooldown="6.73" remote="1467020212" delay="0.05" multiplier="1" speed="1300" status="0" radius="0" hits="1" interval="0" samples="32" share="0.337" hitRemote="1467020212" anim="2.42" />
+  </INFO>
+  <INFO ID="107020320" class="Desert_Huge_Golem" walk="195" run="500" perception="1800" lost="5000" tag="" enemies="" destroy="20" radius="340" cc="STATUS_TYPE_STUN">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="0" cooldown="4.41" remote="1467020300" delay="1" multiplier="1.5" speed="0" status="1261510000" radius="0" hits="1" interval="0" samples="9" share="0.429" hitRemote="1467020300" anim="3.87" />
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" kind="special" range="1215" cooldown="19.78" remote="1467020302" delay="2.9" multiplier="1.5" speed="0" status="1200070020" radius="1200" hits="1" interval="0" samples="5" share="0.238" hitRemote="1467020302" hpMin="0.2" hpMax="0.9" anim="0.29" />
+    <ATTACK target="master" state="SKILL_3_BEHAVIORSTATE" kind="special" range="1146" cooldown="19.76" remote="1467020330" delay="0" multiplier="2" speed="0" status="1260107005" radius="1500" hits="1" interval="0" samples="4" share="0.190" hitRemote="1467020330" hpMin="0.3" hpMax="1.0" anim="6.54" />
+    <ATTACK target="master" state="SKILL_4_BEHAVIORSTATE" kind="special" range="1334" cooldown="28.07" remote="1467020310" delay="0" multiplier="1" speed="0" status="1260107005" radius="0" hits="1" interval="0" samples="3" share="0.143" hitRemote="1467020310" hpMin="0.1" hpMax="0.8" anim="11.63" />
+  </INFO>
+  <INFO ID="107020420" class="Desert_Huge_Musa" walk="195" run="500" perception="1800" lost="5000" tag="" enemies="" destroy="20" radius="147">
+    <ATTACK target="master" state="SKILL_4_BEHAVIORSTATE" kind="basic" range="0" cooldown="2.00" remote="1467020410" delay="0.6" multiplier="2" speed="0" status="1200070014" radius="0" hits="1" interval="0" samples="8" share="0.364" hitRemote="1467020410" anim="3.81" />
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" kind="special" range="1074" cooldown="6.02" remote="1467020402" delay="1.6" multiplier="1.5" speed="0" status="1200070014" radius="2400" hits="1" interval="0" samples="4" share="0.182" hitRemote="1467020402" hpMin="0.1" hpMax="1.0" anim="3.00" />
+    <ATTACK target="master" state="SKILL_3_BEHAVIORSTATE" kind="special" range="749" cooldown="21.00" remote="1467020402" delay="1.5" multiplier="1.5" speed="0" status="1200070014" radius="2400" hits="1" interval="0" samples="3" share="0.136" hitRemote="1467020402" hpMin="0.4" hpMax="0.9" anim="3.00" />
+    <ATTACK target="master" state="SKILL_5_BEHAVIORSTATE" kind="special" range="885" cooldown="6.51" remote="1467020415" delay="1.95" multiplier="2.5" speed="0" status="1200070011" radius="3300" hits="1" interval="0" samples="3" share="0.136" hitRemote="1467020415" hpMin="0.0" hpMax="0.4" anim="4.26" />
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="special" range="0" cooldown="30.00" remote="1467020400" delay="1.1" multiplier="1.5" speed="0" status="1200070014" radius="0" hits="1" interval="0" samples="2" share="0.091" hitRemote="1467020400" hpMin="0.1" hpMax="1.0" />
+    <ATTACK target="master" state="SKILL_6_BEHAVIORSTATE" kind="special" range="0" cooldown="30.00" remote="1467020419" delay="3.1" multiplier="1" speed="0" status="0" radius="0" hits="1" interval="0" samples="2" share="0.091" hitRemote="1467020419" hpMin="0.4" hpMax="0.8" />
+  </INFO>
+  <INFO ID="107020520" class="DESERT_Huge_Shaman" walk="195" run="500" perception="1800" lost="5000" tag="" enemies="" destroy="20" radius="165" cc="STATUS_TYPE_STUN">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="0" cooldown="2.00" remote="1467020500" delay="0" multiplier="1" speed="100" status="1262530030" radius="0" hits="1" interval="0" samples="9" share="0.529" hitRemote="1467020500" anim="3.27" />
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" kind="special" range="625" cooldown="22.11" remote="1467020504" delay="0.15" multiplier="1" speed="0" status="1262530030" radius="1000" hits="1" interval="0" samples="5" share="0.294" hitRemote="1467020504" hpMin="0.2" hpMax="0.9" anim="0.98" />
+    <ATTACK target="master" state="SKILL_5_BEHAVIORSTATE" kind="special" range="0" cooldown="30.00" remote="1467020530" delay="0.75" multiplier="1.5" speed="0" status="1262530030" radius="800" hits="1" interval="0" samples="2" share="0.118" hitRemote="1467020531" hpMin="0.3" hpMax="0.8" />
+    <ATTACK target="master" state="SKILL_6_BEHAVIORSTATE" kind="special" range="0" cooldown="30.00" remote="1467020520" delay="0" multiplier="2" speed="1100" status="1262530032" radius="0" hits="1" interval="0" samples="1" share="0.059" hitRemote="1467020520" hpMin="0.3" hpMax="0.4" />
+  </INFO>
+  <INFO ID="107020603" class="Desert_Sand_Freak" walk="360" run="400" perception="1800" lost="5000" tag="" enemies="" destroy="4" radius="50" cc="STATUS_TYPE_SHOCKED">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="0" cooldown="2.49" remote="1467020211" delay="1.75" multiplier="1.5" speed="0" status="1200070014" radius="0" hits="1" interval="0" samples="4" share="0.571" hitRemote="1467020211" anim="2.66" />
+    <ATTACK target="master" state="SKILL_5_BEHAVIORSTATE" kind="special" range="1475" cooldown="6.21" remote="1467020212" delay="0.05" multiplier="1" speed="1300" status="0" radius="0" hits="1" interval="0" samples="3" share="0.429" hitRemote="1467020212" hpMin="0.1" hpMax="1.0" anim="2.40" />
+  </INFO>
+  <INFO ID="107050400" class="DESERT_ATLASSANDSTORM" walk="150" run="350" perception="4000" lost="6000" tag="" enemies="" destroy="1200" radius="365">
+    <ATTACK target="master" state="SKILL_18_BEHAVIORSTATE" kind="basic" range="1616" cooldown="2.00" remote="1467050042" delay="0" multiplier="1.2" speed="0" status="1262530032" radius="1900" hits="1" interval="0" samples="13" share="0.464" hitRemote="1467050042" anim="5.93" />
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="special" range="1287" cooldown="23.64" remote="1467050040" delay="0" multiplier="1.2" speed="0" status="1262530032" radius="1100" hits="1" interval="0" samples="4" share="0.143" hitRemote="1467050040" hpMin="0.3" hpMax="1.0" anim="3.00" />
+    <ATTACK target="master" state="SKILL_14_BEHAVIORSTATE" kind="special" range="822" cooldown="23.95" remote="1467050016" delay="0" multiplier="1.5" speed="0" status="1200070404" radius="1900" hits="1" interval="0" samples="3" share="0.107" hitRemote="1467050017" hpMin="0.5" hpMax="1.0" anim="0.33" />
+    <ATTACK target="master" state="SKILL_6_BEHAVIORSTATE" kind="special" range="1574" cooldown="29.02" remote="1467050040" delay="0" multiplier="1.2" speed="0" status="1262530032" radius="1100" hits="1" interval="0" samples="3" share="0.107" hitRemote="1467050040" hpMin="0.3" hpMax="0.9" />
+    <ATTACK target="master" state="SKILL_20_BEHAVIORSTATE" kind="special" range="1666" cooldown="29.05" remote="1467050000" delay="2" multiplier="1" speed="0" status="1260107005" radius="4500" hits="1" interval="0" samples="3" share="0.107" hitRemote="1467050000" hpMin="0.1" hpMax="0.3" anim="1.33" />
+    <ATTACK target="master" state="SKILL_5_BEHAVIORSTATE" kind="special" range="1616" cooldown="30.00" remote="1467050040" delay="1" multiplier="1.2" speed="0" status="1262530032" radius="1100" hits="1" interval="0" samples="1" share="0.036" hitRemote="1467050040" hpMin="0.6" hpMax="0.7" />
+    <ATTACK target="master" state="SKILL_16_BEHAVIORSTATE" kind="special" range="1616" cooldown="30.00" remote="1467050042" delay="1" multiplier="1.2" speed="0" status="1262530032" radius="1900" hits="1" interval="0" samples="1" share="0.036" hitRemote="1467050042" hpMin="0.4" hpMax="0.5" />
+  </INFO>
+  <INFO ID="108012300" class="DF_SCOUT" walk="800" run="800" perception="0" lost="0" tag="" enemies="" destroy="4" radius="80" cc="STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="1.32">
+  </INFO>
+  <INFO ID="108012301" class="DF_SCOUT" walk="800" run="800" perception="0" lost="0" tag="" enemies="" destroy="4" radius="80" cc="STATUS_TYPE_FREEZE STATUS_TYPE_STUN" spawnTime="1.32">
+  </INFO>
+  <INFO ID="108012350" class="DF_YOUNG" walk="600" run="600" perception="400" lost="400" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="95" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="0.00">
+  </INFO>
+  <INFO ID="108012351" class="DF_WILD" walk="550" run="550" perception="800" lost="800" tag="Monster" enemies="KoomWall|Player|DefenceGate|Tower|Core" destroy="4" radius="120" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="0.00">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="429" cooldown="1.98" remote="1468012097" delay="0.42" multiplier="1.4" speed="0" status="1201201903" radius="0" hits="1" interval="0" samples="80" share="0.548" hitRemote="1468012093" anim="1.32" />
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" kind="special" range="800" cooldown="7.86" remote="1468012060" delay="0.27" multiplier="1" speed="0" status="0" radius="800" hits="1" interval="0" samples="66" share="0.452" hitRemote="1468012091" anim="3.00" />
+  </INFO>
+  <INFO ID="108012352" class="DF_PRIVATE_SPEED" walk="600" run="600" perception="400" lost="400" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="95" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="1.32">
+  </INFO>
+  <INFO ID="108012353" class="DF_PRIVATE_BLAZE" walk="600" run="600" perception="600" lost="600" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="95" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FREEZE STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="1.32">
+  </INFO>
+  <INFO ID="108012355" class="DF_PRIVATE_REGEN" walk="600" run="600" perception="400" lost="400" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="95" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="1.32">
+  </INFO>
+  <INFO ID="108012357" class="DF_PRIVATE" walk="600" run="600" perception="600" lost="600" tag="Monster" enemies="KoomWall|Player|DefenceGate|Tower|Core" destroy="4" radius="95" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="0.00">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="185" cooldown="2.24" remote="1468012099" delay="0.54" multiplier="0.5" speed="0" status="0" radius="500" hits="1" interval="0" samples="316" share="0.966" hitRemote="1468012099" anim="1.19" />
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" kind="special" range="457" cooldown="10.00" remote="0" delay="0" multiplier="1" speed="0" status="0" radius="0" hits="1" interval="0" samples="11" share="0.034" hitRemote="0" selfStatus="1200082602 1261500004" anim="0.15" />
+  </INFO>
+  <INFO ID="108012358" class="DF_INFILTRATOR" walk="500" run="500" perception="3500" lost="3500" tag="Monster" enemies="KoomWall|Player" destroy="4" radius="95" cc="STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_PUSH" spawnTime="0.00">
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" kind="special" range="724" cooldown="4.86" remote="0" delay="0" multiplier="1" speed="0" status="0" radius="0" hits="1" interval="0" samples="35" share="0.625" hitRemote="0" selfStatus="1260102126 1263500002 1260102129" noDamage="1" anim="1.19" />
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="254" cooldown="2.00" remote="1468012026" delay="0.1" multiplier="1" speed="0" status="1201200901" radius="0" hits="1" interval="0" samples="21" share="0.375" hitRemote="1468012026" anim="0.99" />
+  </INFO>
+  <INFO ID="108012359" class="DF_TROLL" walk="500" run="500" perception="2000" lost="2000" tag="Monster" enemies="KoomWall|Player" destroy="4" radius="80" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="1.32">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="1654" cooldown="3.64" remote="1468012047" delay="0" multiplier="1.5" speed="0" status="1261510000" radius="350" hits="1" interval="0" samples="136" share="1.000" hitRemote="1468012045" selfStatus="1262530040 1262530040" anim="1.26" />
+  </INFO>
+  <INFO ID="108012360" class="DF_SHIELD" walk="400" run="400" perception="750" lost="750" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="150" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="1.32">
+  </INFO>
+  <INFO ID="108012361" class="DF_BOMB" walk="700" run="700" perception="900" lost="900" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="120" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FREEZE STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="0.00">
+  </INFO>
+  <INFO ID="108012362" class="DF_BEAMTANK" walk="400" run="400" perception="2000" lost="2000" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="150" cc="STATUS_TYPE_FREEZE" spawnTime="0.00">
+  </INFO>
+  <INFO ID="108012363" class="DF_CANNON" walk="400" run="400" perception="6000" lost="6000" tag="Monster" enemies="Core" destroy="4" radius="150" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_PUSH" spawnTime="0.00">
+  </INFO>
+  <INFO ID="108012364" class="DF_YOUNG_SPEED" walk="600" run="600" perception="400" lost="400" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="95" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="0.00">
+  </INFO>
+  <INFO ID="108012365" class="DF_BOMB" walk="700" run="700" perception="900" lost="900" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="120" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="0.00">
+  </INFO>
+  <INFO ID="108012366" class="DF_BOMB_BIG" walk="550" run="550" perception="500" lost="500" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="150" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="0.00">
+  </INFO>
+  <INFO ID="108012367" class="DF_SIEGE" walk="550" run="550" perception="500" lost="500" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="95" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="0.00">
+  </INFO>
+  <INFO ID="108012372" class="DF_PRIVATE" walk="600" run="600" perception="400" lost="400" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="95" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="0.00">
+  </INFO>
+  <INFO ID="108012373" class="DF_PRIVATE" walk="600" run="600" perception="400" lost="400" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="95" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FREEZE STATUS_TYPE_STUN" spawnTime="0.00">
+  </INFO>
+  <INFO ID="108012375" class="DF_TITAN_DEFENCE" walk="550" run="550" perception="1400" lost="1400" tag="Titan" enemies="KoomWall|DefenceGate|Guardian|Tower|Core" destroy="8" radius="352" spawnTime="4.74">
+  </INFO>
+  <INFO ID="108012376" class="DF_TITAN_ATTACK" walk="600" run="600" perception="1400" lost="1400" tag="Titan" enemies="KoomWall|DefenceGate|Guardian|Tower|Core" destroy="8" radius="352" spawnTime="4.73">
+  </INFO>
+  <INFO ID="108012377" class="DF_TITAN_SPEED" walk="650" run="650" perception="1400" lost="1400" tag="Titan" enemies="KoomWall|DefenceGate|Guardian|Tower|Core" destroy="8" radius="295">
+  </INFO>
+  <INFO ID="108012378" class="DF_TITAN_SPEED" walk="650" run="650" perception="1400" lost="1400" tag="Titan" enemies="KoomWall|DefenceGate|Guardian|Tower|Core|Player" destroy="8" radius="295" groggyChance="0.100" groggyStatus="1263500051 1260102162 1230090040" groggyTime="6.5">
+    <ATTACK target="master" state="SKILL_5_BEHAVIORSTATE" kind="basic" range="0" cooldown="2.00" remote="1468012203" delay="0.68" multiplier="3" speed="0" status="1263510000" radius="350" hits="1" interval="0" samples="3" share="0.500" hitRemote="1468012205" selfStatus="1263500055" weakTime="1.5" anim="2.01" />
+    <ATTACK target="master" state="SKILL_4_BEHAVIORSTATE" kind="special" range="0" cooldown="30.00" remote="1468012211" delay="0" multiplier="1" speed="0" status="1200070906" radius="600" hits="1" interval="0" samples="2" share="0.333" hitRemote="1468012210" hpMin="0.6" hpMax="1.0" selfStatus="1263500053" weakTime="3" anim="3.00" />
+    <ATTACK target="master" state="SKILL_3_BEHAVIORSTATE" kind="special" range="0" cooldown="30.00" remote="1468012213" delay="1.789" multiplier="0.8" speed="2500" status="1200082220" radius="600" hits="1" interval="0" samples="1" share="0.167" hitRemote="1468012213" hpMin="0.3" hpMax="0.4" selfStatus="1263500053" weakTime="3" />
+  </INFO>
+  <INFO ID="108012379" class="DF_TITAN_ATTACK" walk="600" run="600" perception="1400" lost="1400" tag="Titan" enemies="KoomWall|DefenceGate|Guardian|Tower|Core|Player" destroy="8" radius="352" groggyChance="0.182" groggyStatus="1263500051 1260102162" groggyTime="6.5" spawnTime="4.73">
+    <ATTACK target="master" state="SKILL_3_BEHAVIORSTATE" kind="basic" range="690" cooldown="2.00" remote="1468012239" delay="1.38" multiplier="3" speed="0" status="1200070011" radius="1000" hits="1" interval="0" samples="11" share="0.407" hitRemote="1468012238" selfStatus="1263500055" weakTime="1.5" anim="2.67" />
+    <ATTACK target="master" state="SKILL_5_BEHAVIORSTATE" kind="special" range="862" cooldown="17.51" remote="1468012245" delay="0.1" multiplier="1.2" speed="0" status="1200070404" radius="0" hits="1" interval="0" samples="7" share="0.259" hitRemote="1468012245" hpMin="0.1" hpMax="1.0" anim="2.76" />
+    <ATTACK target="master" state="SKILL_7_BEHAVIORSTATE" kind="special" range="1329" cooldown="10.00" remote="1468012245" delay="0.1" multiplier="1.2" speed="0" status="1200070404" radius="0" hits="1" interval="0" samples="5" share="0.185" hitRemote="1468012245" hpMin="0.5" hpMax="1.0" selfStatus="1263500053" weakTime="3" anim="2.76" />
+    <ATTACK target="master" state="SKILL_4_BEHAVIORSTATE" kind="special" range="1400" cooldown="10.00" remote="1468012234" delay="1.6" multiplier="1" speed="0" status="1200070011" radius="0" hits="1" interval="0" samples="4" share="0.148" hitRemote="1468012231" hpMin="0.1" hpMax="0.5" selfStatus="1263500053" weakTime="3" anim="2.82" />
+  </INFO>
+  <INFO ID="108012380" class="DF_MONOS_SHOCK_STUN" walk="400" run="400" perception="450" lost="450" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="2" radius="60" cc="STATUS_TYPE_FLY" spawnTime="0.34">
+  </INFO>
+  <INFO ID="108012381" class="DF_MONOS_BURN" walk="400" run="400" perception="450" lost="450" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="2" radius="60" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_PUSH" spawnTime="0.33">
+  </INFO>
+  <INFO ID="108012383" class="DF_MONOS_BLEED" walk="400" run="400" perception="450" lost="450" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="2" radius="60" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="0.33">
+  </INFO>
+  <INFO ID="108012384" class="DF_MONOS_SLOW" walk="400" run="400" perception="450" lost="450" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="2" radius="60" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="0.33">
+  </INFO>
+  <INFO ID="108012386" class="DF_TITAN_DEFENCE" walk="550" run="550" perception="1400" lost="1400" tag="Titan" enemies="KoomWall|DefenceGate|Guardian|Tower|Core|Player" destroy="8" radius="352" groggyChance="0.211" groggyStatus="1263500051 1260102162" groggyTime="6.5">
+    <ATTACK target="master" state="SKILL_5_BEHAVIORSTATE" kind="basic" range="0" cooldown="2.00" remote="1468012225" delay="0.89" multiplier="3" speed="0" status="1200070011" radius="700" hits="1" interval="0" samples="8" share="0.615" hitRemote="1468012224" selfStatus="1263500055" weakTime="1.5" anim="2.00" />
+    <ATTACK target="master" state="SKILL_3_BEHAVIORSTATE" kind="special" range="1400" cooldown="28.06" remote="1468012227" delay="1.32" multiplier="0.3" speed="0" status="1260102160" radius="5300" hits="1" interval="0" samples="4" share="0.308" hitRemote="1468012227" hpMin="0.2" hpMax="1.0" selfStatus="1263500053" weakTime="3" anim="2.82" />
+    <ATTACK target="master" state="SKILL_4_BEHAVIORSTATE" kind="special" range="0" cooldown="30.00" remote="1468012222" delay="0.25" multiplier="1" speed="0" status="0" radius="0" hits="1" interval="0" samples="1" share="0.077" hitRemote="1468012222" hpMin="0.2" hpMax="0.3" selfStatus="1263500053" weakTime="3" allyStatus="1260102161" allyRadius="1400" allyDelay="2.25" anim="3.33" />
+  </INFO>
+  <INFO ID="108012390" class="DF_PRIVATE_BOUNCE" walk="600" run="600" perception="400" lost="400" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="95" cc="STATUS_TYPE_PUSH">
+  </INFO>
+  <INFO ID="108012391" class="DF_GUARDIAN" walk="550" run="550" perception="1500" lost="1500" tag="Guardian" enemies="Titan|Monster" destroy="4" radius="117" spawnTime="2.61">
+    <ATTACK target="titan" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="670" cooldown="1.61" remote="1468012264" delay="0.53" multiplier="1" speed="0" status="1200070011" radius="1000" hits="1" interval="0" samples="15" share="1.000" hitRemote="1468012264" anim="1.50" />
+  </INFO>
+  <INFO ID="108012393" class="DF_WEAKWIZARD" walk="400" run="400" perception="1800" lost="1800" tag="Monster" enemies="KoomWall|Player|Tower|Core" destroy="4" radius="120" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="0.00">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="1198" cooldown="2.00" remote="1468012080" delay="0" multiplier="0.1" speed="0" status="1260102112" radius="0" hits="1" interval="0" samples="15" share="1.000" hitRemote="1468012080" anim="3.57" />
+  </INFO>
+  <INFO ID="108012395" class="DF_TURRET_FRIENDLY_3" walk="0" run="0" perception="1500" lost="1500" tag="Tower" enemies="Titan|Monster" destroy="3" radius="100" spawnTime="0.63">
+    <ATTACK target="titan" state="SKILL_2_BEHAVIORSTATE" kind="basic" range="1080" cooldown="2.50" remote="1468012043" delay="0.75" multiplier="1.5" speed="3000" status="0" radius="0" hits="1" interval="0" samples="10" share="1.000" hitRemote="1468012043" anim="0.99" />
+  </INFO>
+  <INFO ID="108012396" class="DF_TURRET_FRIENDLY_2" walk="0" run="0" perception="1200" lost="1200" tag="Tower" enemies="Titan|Monster" destroy="3" radius="100" spawnTime="0.63">
+    <ATTACK target="titan" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="841" cooldown="1.02" remote="1468012151" delay="0" multiplier="1" speed="0" status="1260102136" radius="500" hits="1" interval="0" samples="112" share="1.000" hitRemote="1468012156" anim="0.99" />
+  </INFO>
+  <INFO ID="108012397" class="DF_FENCE_9m" walk="0" run="0" perception="0" lost="0" tag="DefenceGate" enemies="" destroy="3" radius="0" spawnTime="0.00">
+  </INFO>
+  <INFO ID="108012398" class="DF_FENCE_10m" walk="0" run="0" perception="0" lost="0" tag="DefenceGate" enemies="" destroy="3" radius="0" spawnTime="0.00">
+  </INFO>
+  <INFO ID="108012399" class="DF_FENCE_12m" walk="0" run="0" perception="0" lost="0" tag="DefenceGate" enemies="" destroy="3" radius="0" spawnTime="0.00">
+  </INFO>
+  <INFO ID="108012450" class="DF_YOUNG" walk="600" run="600" perception="400" lost="400" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="95" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="0.00">
+  </INFO>
+  <INFO ID="108012452" class="DF_PRIVATE_SPEED" walk="600" run="600" perception="400" lost="400" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="95" cc="STATUS_TYPE_PUSH" spawnTime="1.32">
+  </INFO>
+  <INFO ID="108012457" class="DF_PRIVATE" walk="600" run="600" perception="600" lost="600" tag="Monster" enemies="KoomWall|Player|DefenceGate|Tower|Core" destroy="4" radius="95" cc="STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="0.00">
+    <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="basic" range="0" cooldown="1.80" remote="1468012099" delay="0.54" multiplier="0.5" speed="0" status="0" radius="500" hits="1" interval="0" samples="7" share="0.875" hitRemote="1468012099" anim="0.53" />
+    <ATTACK target="master" state="SKILL_2_BEHAVIORSTATE" kind="special" range="0" cooldown="30.00" remote="0" delay="0" multiplier="1" speed="0" status="0" radius="0" hits="1" interval="0" samples="1" share="0.125" hitRemote="0" hpMin="0.4" hpMax="0.5" selfStatus="1200082602 1261500004" anim="0.15" />
+  </INFO>
+  <INFO ID="108012461" class="DF_BOMB" walk="700" run="700" perception="900" lost="900" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="120" cc="STATUS_TYPE_AIRBORNE" spawnTime="0.00">
+  </INFO>
+  <INFO ID="108012462" class="DF_BOMB" walk="700" run="700" perception="1500" lost="1500" tag="Monster" enemies="KoomWall|Player|DefenceGate|Tower|Core" destroy="4" radius="120" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_STUN" spawnTime="1.40">
+  </INFO>
+  <INFO ID="108012464" class="DF_YOUNG_SPEED" walk="600" run="600" perception="400" lost="400" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="95" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="0.00">
+  </INFO>
 </MONSTER_AI>
