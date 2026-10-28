@@ -31,7 +31,36 @@ static const u8 MEASURED_STAGE_GRADE_DEATH = 4;
 static const u32 MEASURED_STAGE_GRADE_SCALE = 100;
 static const u32 MEASURED_TIME_SCORE_RANK = 1;
 static const f64 MEASURED_STAGE_RANK_PERIOD_MS = 1000.0;
-static const u32 HYP_PVE_BASE_EXP = 750;
+static const u32 MEASURED_PVE_BASE_EXP = 750;
+static const u32 MEASURED_REWARD_BONUS_EVENT = 1;
+static const u32 MEASURED_REWARD_BONUS_VIP = 6;
+static const u32 MEASURED_REWARD_BONUS_GUILDSKILL = 7;
+static const i32 MEASURED_MEMBERSHIP_REWARD_PERCENT = 25;
+
+static void AddRewardBonus(Replication::RewardBonusList* list, u32 type, u32 base, i32 percent)
+{
+	const u32 amount = (u32)((u64)base * (u64)MAX(percent, 0) / 100);
+	if(amount > 0 && !list->full()) list->push_back({ type, amount });
+}
+
+static u32 RewardBonusTotal(const Replication::RewardBonusList& list)
+{
+	u32 total = 0;
+	foreach_const(b, list) total += b->amount;
+	return total;
+}
+
+static void ComputeRewardBonuses(GameType type, StageIndex stage, u32 baseRon, u32 baseExp, const eastl::array<u16,2>& guildBoost, Replication::RewardBonusList* bonusRon, Replication::RewardBonusList* bonusExp)
+{
+	i32 eventExp = 0, eventRon = 0;
+	GetGameXmlContent().ActiveEventBonus(type, stage, &eventExp, &eventRon);
+	AddRewardBonus(bonusRon, MEASURED_REWARD_BONUS_EVENT, baseRon, eventRon);
+	AddRewardBonus(bonusExp, MEASURED_REWARD_BONUS_EVENT, baseExp, eventExp);
+	AddRewardBonus(bonusRon, MEASURED_REWARD_BONUS_VIP, baseRon, MEASURED_MEMBERSHIP_REWARD_PERCENT);
+	AddRewardBonus(bonusExp, MEASURED_REWARD_BONUS_VIP, baseExp, MEASURED_MEMBERSHIP_REWARD_PERCENT);
+	AddRewardBonus(bonusRon, MEASURED_REWARD_BONUS_GUILDSKILL, baseRon, guildBoost[0]);
+	AddRewardBonus(bonusExp, MEASURED_REWARD_BONUS_GUILDSKILL, baseExp, guildBoost[1]);
+}
 static const i32 HYP_ATTACK_SCORE_PER_KILL = 3;
 static const i32 HYP_DEFENSE_SCORE_PER_DEATH = 33;
 static const u32 HYP_TIME_SCORE = 70;
@@ -132,6 +161,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 		World::Player& worldPlayer = world.CreatePlayer(desc, spawnPoint.pos, RotationHumanoid{0.f, 0.f, MxmYawToWorldYaw(spawnPoint.rot.z)});
 
 		playerList.emplace_back(desc.clientHd, p.accountUID, desc.name, worldPlayer.index);
+		if(worldPlayer.index < guildBoost.size()) guildBoost[worldPlayer.index] = { p.guildBoostGold, p.guildBoostExp };
 		if(desc.clientHd != ClientHandle::INVALID) {
 			playerMap.emplace(desc.clientHd, --playerList.end());
 
@@ -994,10 +1024,11 @@ void Game::EndGame()
 		const bool won = world.winnerTeam >= 0 ? e->team == world.winnerTeam : own > other;
 		e->gold = minutes * (won ? rule.winGoldPerMin : rule.loseGoldPerMin);
 		e->exp = minutes * (won ? rule.winExpPerMin : rule.loseExpPerMin);
+		ComputeRewardBonuses(replication.gameType, replication.stageIndex, e->gold, e->exp, guildBoost[e->playerIndex], &e->bonusRon, &e->bonusExp);
 		const World::Player& p = world.GetPlayer(e->playerIndex);
 		AccountGameRecord record;
-		record.gold = e->gold;
-		record.exp = e->exp;
+		record.gold = e->gold + RewardBonusTotal(e->bonusRon);
+		record.exp = e->exp + RewardBonusTotal(e->bonusExp);
 		record.won = won;
 		record.draw = world.winnerTeam < 0 && own == other;
 		record.kills = p.kills;
@@ -1010,7 +1041,7 @@ void Game::EndGame()
 		record.classTypes = { (i32)p.mainClass, (i32)p.subClass };
 		record.playSeconds = tGameStarted != Time::ZERO ? (u32)TimeDiffSec(TimeDiff(tGameStarted, localTime)) : 0;
 		AccountGameRecordAppend(e->name, record);
-		LOG("Game :: %ls reward %u gold %u exp (%u min, %s)", e->name, e->gold, e->exp, minutes, won ? "win" : (own == other ? "draw" : "loss"));
+		LOG("Game :: %ls reward %u gold %u exp (+%u / +%u bonus, %u min, %s)", e->name, e->gold, e->exp, RewardBonusTotal(e->bonusRon), RewardBonusTotal(e->bonusExp), minutes, won ? "win" : (own == other ? "draw" : "loss"));
 	}
 	Replication::EndGot got;
 	const bool titanEnd = replication.titanMode;
@@ -1028,7 +1059,7 @@ void Game::BuildRewardCards(const GameXmlContent::StageMaps& stage)
 	}
 	for(i32 i = 0; (i32)rewardCards.size() < MEASURED_REWARD_CARD_COUNT; i++) {
 		const i32 percent = HYP_REWARD_EXP_MIN_PERCENT + (i * HYP_REWARD_EXP_STEP_PERCENT) % (HYP_REWARD_EXP_MAX_PERCENT - HYP_REWARD_EXP_MIN_PERCENT);
-		rewardCards.push_back({ MEASURED_REWARD_TYPE_EXP, -1, MAX(HYP_PVE_BASE_EXP * (u32)percent / 100, 1u) });
+		rewardCards.push_back({ MEASURED_REWARD_TYPE_EXP, -1, MAX(MEASURED_PVE_BASE_EXP * (u32)percent / 100, 1u) });
 	}
 	for(i32 i = (i32)rewardCards.size() - 1; i > 0; i--) eastl::swap(rewardCards[i], rewardCards[RandUint() % (u32)(i + 1)]);
 }
@@ -1073,20 +1104,21 @@ void Game::EndStage(bool cleared)
 		clear.playTimeMs = playMs;
 		clear.rank = StageGrade(*p);
 		clear.baseRon = (u32)stage->moneyReward;
-		clear.baseExp = HYP_PVE_BASE_EXP;
+		clear.baseExp = MEASURED_PVE_BASE_EXP;
 		clear.attackScore = (u32)MIN(p->pveKills * HYP_ATTACK_SCORE_PER_KILL, 100);
 		clear.defenseScore = (u32)MAX(100 - p->deaths * HYP_DEFENSE_SCORE_PER_DEATH, 0);
 		clear.timeScore = HYP_TIME_SCORE;
 		clear.totalScore = (clear.attackScore + clear.defenseScore + clear.timeScore) / 3;
 		clear.technicGrade = MEASURED_TECHNIC_GRADE;
-		replication.SendExpGain(p->clientHd, clear.baseExp);
+		ComputeRewardBonuses(replication.gameType, replication.stageIndex, clear.baseRon, clear.baseExp, guildBoost[p->index], &clear.bonusRon, &clear.bonusExp);
+		replication.SendExpGain(p->clientHd, clear.baseExp + RewardBonusTotal(clear.bonusExp));
 		replication.SendStageClearResult(p->clientHd, clear, members.data(), (i32)members.size());
 		replication.SendRewardItemList(p->clientHd, rewardCards.data(), (i32)rewardCards.size());
 		replication.SendClearedStage(p->clientHd, clear.stage);
 		AccountStageCleared(p->name.data(), clear.stage);
 		AccountGameRecord record;
-		record.gold = clear.baseRon + PickedGold(*p);
-		record.exp = clear.baseExp;
+		record.gold = clear.baseRon + RewardBonusTotal(clear.bonusRon) + PickedGold(*p);
+		record.exp = clear.baseExp + RewardBonusTotal(clear.bonusExp);
 		record.won = 1;
 		record.kills = p->pveKills;
 		record.stageIndex = clear.stage;

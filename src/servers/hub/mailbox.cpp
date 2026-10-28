@@ -18,6 +18,7 @@ static const char* MAIL_TMP_PATH = "accounts/mail.txt.tmp";
 
 static const i64 FILETIME_UNIX_EPOCH = 116444736000000000LL;
 static const i64 FILETIME_PER_SEC = 10000000LL;
+static const i64 MAIL_NO_EXPIRY = 0;
 
 static i64 NowFiletime()
 {
@@ -67,7 +68,9 @@ static void SaveMails()
 		WriteHex(f, m->subject.data(), (i32)m->subject.size());
 		fputc(' ', f);
 		WriteHex(f, m->content.data(), (i32)m->content.size());
-		fprintf(f, " %lld %lld %u %u\n",(long long)m->sendFiletime, (long long)m->expireFiletime, (u32)m->mailbox, (u32)m->read);
+		fprintf(f, " %lld %lld %u %u %u %u",(long long)m->sendFiletime, (long long)m->expireFiletime, (u32)m->mailbox, (u32)m->read, (u32)m->system, (u32)m->items.size());
+		foreach_const(it, m->items) fprintf(f, " %d %d", it->index, it->count);
+		fputc('\n', f);
 	}
 	fclose(f);
 	remove(MAIL_PATH);
@@ -94,8 +97,13 @@ static void LoadMails()
 			continue;
 		}
 		long long sendTime = 0, expireTime = 0;
-		u32 mailbox = 0, read = 0;
-		if(sscanf(line, "M %llu %511s %511s %1023s %4095s %lld %lld %u %u", &id, owner, from, subject, content, &sendTime, &expireTime, &mailbox, &read) != 9) continue;
+		u32 mailbox = 0, read = 0, system = 0, itemCount = 0;
+		i32 used = 0;
+		if(sscanf(line, "M %llu %511s %511s %1023s %4095s %lld %lld %u %u%n", &id, owner, from, subject, content, &sendTime, &expireTime, &mailbox, &read, &used) != 9) continue;
+		const char* tail = line + used;
+		i32 tailUsed = 0;
+		if(sscanf(tail, " %u %u%n", &system, &itemCount, &tailUsed) == 2) tail += tailUsed;
+		else itemCount = 0;
 		MailMessage mail;
 		mail.ID = (u64)id;
 		if(!ReadHex(owner, &mail.owner) || !ReadHex(from, &mail.from) || !ReadHex(subject, &mail.subject) || !ReadHex(content, &mail.content)) continue;
@@ -103,6 +111,13 @@ static void LoadMails()
 		mail.expireFiletime = (i64)expireTime;
 		mail.mailbox = (u8)mailbox;
 		mail.read = read != 0;
+		mail.system = system != 0;
+		for(u32 i = 0; i < itemCount && !mail.items.full(); i++) {
+			MailItem item;
+			if(sscanf(tail, " %d %d%n", &item.index, &item.count, &tailUsed) != 2) break;
+			tail += tailUsed;
+			mail.items.push_back(item);
+		}
 		g_mails.push_back(mail);
 		if(mail.ID >= g_nextMailID) g_nextMailID = mail.ID + 1;
 	}
@@ -119,7 +134,7 @@ static void PurgeExpired(i64 now)
 {
 	LoadMails();
 	const size_t before = g_mails.size();
-	g_mails.erase(eastl::remove_if(g_mails.begin(), g_mails.end(), [now](const MailMessage& m) { return m.expireFiletime <= now; }), g_mails.end());
+	g_mails.erase(eastl::remove_if(g_mails.begin(), g_mails.end(), [now](const MailMessage& m) { return m.expireFiletime != MAIL_NO_EXPIRY && m.expireFiletime <= now; }), g_mails.end());
 	if(g_mails.size() != before) SaveMails();
 }
 
@@ -211,6 +226,7 @@ i32 MailMove(const wchar* owner, u8 moveType, const u64* ids, i32 count)
 		for(auto m = g_mails.begin(); m != g_mails.end(); ++m) {
 			if(m->ID != ids[i] || m->owner.compare(owner) != 0) continue;
 			if(moveType == MAIL_MOVE_ARCHIVE) m->mailbox = MAILBOX_ARCHIVE;
+			else if(moveType == MAIL_MOVE_DELETE && !m->items.empty()) break;
 			else if(moveType == MAIL_MOVE_DELETE) g_mails.erase(m);
 			else {
 				if(moved > 0) SaveMails();
@@ -222,4 +238,47 @@ i32 MailMove(const wchar* owner, u8 moveType, const u64* ids, i32 count)
 	}
 	if(moved > 0) SaveMails();
 	return moved;
+}
+
+bool MailSendSystem(const wchar* to, const wchar* subjectKey, const wchar* contentKey, const MailItem* items, i32 itemCount, MailMessage* sent)
+{
+	std::lock_guard<std::mutex> lock(g_mailMutex);
+	LoadMails();
+	if(!KnownAccount(to)) return false;
+	const i64 now = NowFiletime();
+	PurgeExpired(now);
+	MailMessage mail;
+	mail.ID = g_nextMailID++;
+	mail.owner = to;
+	mail.from = MEASURED_SYSTEM_MAIL_SENDER;
+	mail.subject = subjectKey;
+	mail.content = contentKey;
+	mail.sendFiletime = now;
+	mail.mailbox = MAILBOX_INBOX;
+	mail.read = false;
+	mail.system = true;
+	for(i32 i = 0; i < itemCount && !mail.items.full(); i++) mail.items.push_back(items[i]);
+	mail.expireFiletime = mail.items.empty() ? now + MAIL_LIFETIME_DAYS * 86400 * FILETIME_PER_SEC : MAIL_NO_EXPIRY;
+	g_mails.push_back(mail);
+	SaveMails();
+	if(sent) *sent = mail;
+	return true;
+}
+
+bool MailTakeAttachments(const wchar* owner, u64 mailID, MailMessage* taken)
+{
+	std::lock_guard<std::mutex> lock(g_mailMutex);
+	LoadMails();
+	foreach(m, g_mails) {
+		if(m->ID != mailID || m->owner.compare(owner) != 0) continue;
+		if(m->items.empty()) return false;
+		*taken = *m;
+		m->items.clear();
+		m->read = true;
+		m->expireFiletime = NowFiletime() + MAIL_LIFETIME_DAYS * 86400 * FILETIME_PER_SEC;
+		taken->expireFiletime = m->expireFiletime;
+		SaveMails();
+		return true;
+	}
+	return false;
 }

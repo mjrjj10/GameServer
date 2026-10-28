@@ -158,6 +158,8 @@ struct HQ_RoomCreateGame
 		eastl::array<i32,2> characterType;
 		StrGuildTag guildTag;
 		SkillID stageSkill;
+		u16 guildBoostGold;
+		u16 guildBoostExp;
 	};
 
 	SortieUID sortieUID;
@@ -250,6 +252,8 @@ struct MQ_CreateGame
 		eastl::array<i32,2> characterType;
 		StrGuildTag guildTag;
 		SkillID stageSkill;
+		u16 guildBoostGold;
+		u16 guildBoostExp;
 	};
 
 	SortieUID sortieUID;

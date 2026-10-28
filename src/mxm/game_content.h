@@ -928,6 +928,8 @@ struct GameXmlContent
 	struct GuildSkillInfo
 	{
 		eastl::fixed_string<char,64,false> key;
+		u8 type = 0;
+		i32 limitedHours = 0;
 		eastl::fixed_vector<GuildSkillLevel,12,false> levels;
 	};
 
@@ -940,6 +942,12 @@ struct GameXmlContent
 	i32 guildDonationUnit = 100;
 	i32 guildFundExchangeRate = 100;
 	i32 guildRollcallPoint = 50;
+	i32 guildActivityCapWeekend = 250;
+	i32 guildTagChangeCost = 0;
+	i32 guildMedalItem = 0;
+	i32 guildMembershipCapacity = 0;
+	const GuildSkillInfo* FindGuildSkill(u8 type) const { foreach_const(s, guildSkills) if(s->type == type) return &*s; return nullptr; }
+	i32 GuildSkillValueByType(u8 type, i32 level) const { const GuildSkillInfo* s = FindGuildSkill(type); if(!s) return 0; foreach_const(l, s->levels) if(l->level == level) return l->value; return 0; }
 
 	i32 GuildLevelForPoints(i32 points) const;
 	i32 GuildSkillValue(const char* key, i32 level) const;
@@ -1106,6 +1114,17 @@ struct GameXmlContent
 	u8 FindMonsterRank(i32 creatureID) const { auto f = monsterRank.find(creatureID); return f == monsterRank.end() ? NO_RANK : f->second; }
 	static const u8 NO_RANK = 0xff;
 	bool LoadMonsterRanks();
+	struct GameEvent
+	{
+		i32 index = 0;
+		i32 expBonusPercent = 0;
+		i32 ronBonusPercent = 0;
+		eastl::fixed_vector<GameType,8,false> gameTypes;
+		eastl::fixed_vector<i32,32,true> stages;
+	};
+	eastl::fixed_vector<GameEvent,16,false> activeGameEvents;
+	bool LoadGameEvents();
+	void ActiveEventBonus(GameType type, StageIndex stage, i32* expPercent, i32* ronPercent) const;
 	eastl::hash_map<i32, eastl::fixed_vector<i32,4,false>> monsterDieSpawn;
 	eastl::hash_map<i32, f32> monsterLifeTime;
 	const eastl::fixed_vector<i32,4,false>* FindMonsterDieSpawn(i32 creatureID) const { auto f = monsterDieSpawn.find(creatureID); return f == monsterDieSpawn.end() ? nullptr : &f->second; }

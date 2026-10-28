@@ -1,6 +1,7 @@
 #include "game.h"
 #include "coordinator.h"
 #include "guild_store.h"
+#include "mailbox.h"
 #include "town_rules.h"
 #include "mission_rules.h"
 #include <mxm/game_content.h>
@@ -39,9 +40,65 @@ static i32 GuildLevel(const GuildRecord& guild)
 	return MAX(1, GetGameXmlContent().GuildLevelForPoints(guild.point));
 }
 
-static i32 GuildMemberMax(const GuildRecord&)
+static const i64 FILETIME_PER_HOUR = 36000000000LL;
+
+static i32 GuildSkillLevel(const GuildRecord& guild, u8 type)
 {
-	return 10 + GetGameXmlContent().GuildSkillValue("GUILD_MEMBER_MAX_UP", 0);
+	foreach_const(s, guild.skills) {
+		if(s->type != type) continue;
+		if(type > MEASURED_GUILD_SKILL_LIMITED_START && s->expiry <= NowFiletime()) return 0;
+		return s->level;
+	}
+	return 0;
+}
+
+static i32 GuildSkillBonus(const GuildRecord& guild, u8 type)
+{
+	return GetGameXmlContent().GuildSkillValueByType(type, GuildSkillLevel(guild, type));
+}
+
+static i32 GuildMemberMax(const GuildRecord& guild)
+{
+	return MEASURED_GUILD_BASE_MEMBER_MAX + GuildSkillBonus(guild, MEASURED_GUILD_SKILL_MEMBER_MAX);
+}
+
+static bool ServerWeekend()
+{
+	const time_t now = time(nullptr);
+	tm utc;
+	gmtime_s(&utc, &now);
+	return utc.tm_wday == 0 || utc.tm_wday == 6;
+}
+
+static i32 GuildDailyCap(const GuildRecord& guild, u8 skillType)
+{
+	const GameXmlContent& content = GetGameXmlContent();
+	return (ServerWeekend() ? content.guildActivityCapWeekend : content.guildActivityCapWeekday) + GuildSkillBonus(guild, skillType);
+}
+
+static const GameXmlContent::GuildSkillLevel* FindGuildSkillLevel(const GameXmlContent::GuildSkillInfo& info, i32 level)
+{
+	foreach_const(l, info.levels) if(l->level == level) return &*l;
+	return nullptr;
+}
+
+static GuildSkillRecord* FindGuildSkillRecord(GuildRecord& guild, u8 type)
+{
+	foreach(s, guild.skills) if(s->type == type) return &*s;
+	return nullptr;
+}
+
+template<typename Writer>
+static void WriteGuildRights(Writer& packet, const eastl::array<u8,10>& rights)
+{
+	for(u8 v : rights) packet.template Write<u8>(v);
+}
+
+static bool ReadGuildRights(ConstBuffer& buff, eastl::array<u8,10>* rights)
+{
+	if(!buff.CanRead(10)) return false;
+	for(u8& v : *rights) v = buff.Read<u8>() ? 1 : 0;
+	return true;
 }
 
 static const GuildClass* FindGuildClass(const GuildRecord& guild, i32 membershipID)
@@ -159,6 +216,7 @@ void HubGame::GuildOnConnect(i32 userID)
 		me.contributedPoint += points;
 		GuildLevelCheck(*guild, before);
 		SendGuildPointAndFund(*guild);
+		if(me.joinedDay != day) SendGuildRewardMail(nick, MEASURED_GUILD_ROLLCALL_MAIL_SUBJECT, MEASURED_GUILD_ROLLCALL_MAIL_CONTENT, GetGameXmlContent().guildMedalItem, MEASURED_GUILD_ROLLCALL_MEDALS);
 		LOG("[client%x] Guild :: %ls roll call in %ls (+%d)", clientHd, nick.data(), guild->name.data(), points);
 	}
 	store.Save();
@@ -215,10 +273,40 @@ bool HubGame::GuildChat(i32 userID, const wchar* msg, i32 msgLen)
 	return true;
 }
 
+void HubGame::SendGuildConstraint(const GuildRecord& guild)
+{
+	PacketWriter<Sv::SN_GuildconstraintChange> packet;
+	packet.Write<i64>(NowFiletime());
+	packet.Write<u8>((u8)GuildMemberMax(guild));
+	packet.Write<u8>((u8)GuildSkillLevel(guild, MEASURED_GUILD_SKILL_EMBLEM));
+	packet.Write<u8>((u8)GuildSkillLevel(guild, MEASURED_GUILD_SKILL_MISSION));
+	packet.Write<u16>((u16)GuildDailyCap(guild, MEASURED_GUILD_SKILL_STAGE_POINT));
+	packet.Write<u16>((u16)GuildDailyCap(guild, MEASURED_GUILD_SKILL_ARENA_POINT));
+	ForEachOnlineGuildMember(guild, [&](i32, ClientHandle hd) { replication.SendWriter(hd, packet); });
+}
+
+void HubGame::SendGuildRewardMail(const WideString& nick, const wchar* subject, const wchar* content, i32 item, i32 count)
+{
+	if(item <= 0 || count <= 0) return;
+	const MailItem attachment = { item, count };
+	MailMessage mail;
+	if(!MailSendSystem(nick.data(), subject, content, &attachment, 1, &mail)) return;
+	const i32 memberID = FindUserByNickname(nick);
+	if(memberID >= 0 && playerMap[memberID] != playerList.end()) {
+		replication.SendMailNewInbox(playerMap[memberID]->clientHd, mail);
+		replication.SendMailUnreadNotice(playerMap[memberID]->clientHd, nick.data());
+	}
+}
+
 void HubGame::GuildLevelCheck(GuildRecord& guild, i32 levelBefore)
 {
 	const i32 levelAfter = GuildLevel(guild);
 	if(levelAfter <= levelBefore) return;
+	const GameXmlContent& content = GetGameXmlContent();
+	i32 medals = 0;
+	foreach_const(l, content.guildLevels) if(l->level > levelBefore && l->level <= levelAfter) medals += l->medalGiftCount;
+	foreach_const(m, guild.members) SendGuildRewardMail(m->nickname, MEASURED_GUILD_LEVELUP_MAIL_SUBJECT, MEASURED_GUILD_LEVELUP_MAIL_CONTENT, content.guildMedalItem, medals);
+	SendGuildConstraint(guild);
 	GetGuildStore().AddHistory(guild, MEASURED_GUILD_HISTORY_LEVEL, MEASURED_GUILD_EVENT_LEVELUP, NowFiletime(), WideString(), WideString(), levelBefore, levelAfter);
 	PacketWriter<Sv::SN_GuildLevelup> packet;
 	packet.Write<u8>((u8)levelBefore);
@@ -265,11 +353,17 @@ void HubGame::SendGuildProfile(ClientHandle clientHd, const GuildRecord* guild)
 		packet.WriteStringObj(c->name.data());
 		for(u8 v : c->rights) packet.Write<u8>(v);
 	}
-	packet.Write<u16>(0);
+	packet.Write<u16>((u16)guild->skills.size());
+	foreach_const(s, guild->skills) {
+		packet.Write<u8>(s->type);
+		packet.Write<u8>(s->level);
+		packet.Write<i64>(s->expiry);
+		packet.Write<u16>(s->extensionCount);
+	}
 	packet.Write<i32>(0);
-	packet.Write<i32>(content.guildActivityCapWeekday);
+	packet.Write<i32>(GuildDailyCap(*guild, MEASURED_GUILD_SKILL_STAGE_POINT));
 	packet.Write<i32>(0);
-	packet.Write<i32>(content.guildActivityCapWeekday);
+	packet.Write<i32>(GuildDailyCap(*guild, MEASURED_GUILD_SKILL_ARENA_POINT));
 	packet.Write<u8>((u8)guild->todayRollCall);
 	replication.SendWriter(clientHd, packet);
 }
@@ -340,6 +434,7 @@ void HubGame::GuildAddMember(GuildRecord& guild, const WideString& nick)
 	member.nickname = nick;
 	member.membershipID = MEASURED_GUILD_REGULAR_MEMBERSHIP;
 	member.lastLogout = NowFiletime();
+	member.joinedDay = ComputeMissionCalendar((i64)time(nullptr)).periodDay;
 	guild.members.push_back(member);
 	guild.joinRequests.erase(eastl::remove(guild.joinRequests.begin(), guild.joinRequests.end(), nick), guild.joinRequests.end());
 	guild.invitations.erase(eastl::remove_if(guild.invitations.begin(), guild.invitations.end(), [&](const GuildInvitation& i) { return i.invitee == nick; }), guild.invitations.end());
@@ -407,7 +502,9 @@ void HubGame::OnGuildPacket(ClientHandle clientHd, u16 netID, const u8* data, i3
 	GuildRecord* guild = store.FindByMember(nick);
 	GuildMemberRecord* me = guild ? store.FindMember(*guild, nick) : nullptr;
 	ConstBuffer buff(data, size);
-	NT_LOG("[client%x] Client :: guild packet %u size=%d", clientHd, (u32)netID, size);
+	char hex[3 * 32 + 1] = {};
+	for(i32 i = 0; i < size && i < 32; i++) snprintf(hex + i * 3, 4, "%02x ", data[i]);
+	NT_LOG("[client%x] Client :: guild packet %u size=%d :: %s", clientHd, (u32)netID, size, hex);
 
 	switch(netID) {
 		case Cl::CQ_GetGuildProfile::NET_ID: SendGuildProfile(clientHd, guild); break;
@@ -469,6 +566,7 @@ void HubGame::OnGuildPacket(ClientHandle clientHd, u16 netID, const u8* data, i3
 			master.membershipID = MEASURED_GUILD_MASTER_MEMBERSHIP;
 			master.lastLogout = created.created;
 			master.lastRollcallDay = ComputeMissionCalendar((i64)time(nullptr)).periodDay;
+			master.joinedDay = master.lastRollcallDay;
 			created.members.push_back(master);
 			created.rollcallDay = master.lastRollcallDay;
 			created.todayRollCall = 1;
@@ -773,8 +871,360 @@ void HubGame::OnGuildPacket(ClientHandle clientHd, u16 netID, const u8* data, i3
 			replication.SendWriter(clientHd, answer);
 		} break;
 
+		case MEASURED_CQ_GET_GUILD_SKILL_LIST: {
+			PacketWriter<Sv::SA_GetGuildskilllist,1024> answer;
+			answer.Write<u32>(guild ? 0 : MEASURED_GUILD_NOT_JOINED);
+			answer.Write<u16>(guild ? (u16)guild->skills.size() : 0);
+			if(guild) foreach_const(s, guild->skills) {
+				answer.Write<u8>(s->type);
+				answer.Write<u8>(s->level);
+				answer.Write<i64>(s->expiry);
+				answer.Write<u16>(s->extensionCount);
+			}
+			replication.SendWriter(clientHd, answer);
+		} break;
+
+		case MEASURED_CQ_BUY_GUILD_SKILL: {
+			if(!buff.CanRead(3)) break;
+			const u8 type = buff.Read<u8>();
+			buff.Read<u8>();
+			const u8 level = buff.Read<u8>();
+			const GameXmlContent::GuildSkillInfo* info = content.FindGuildSkill(type);
+			const GameXmlContent::GuildSkillLevel* lvl = info ? FindGuildSkillLevel(*info, level) : nullptr;
+			const i32 current = guild ? GuildSkillLevel(*guild, type) : 0;
+			const bool limited = info && info->limitedHours > 0;
+			u32 result = 0;
+			if(!guild) result = MEASURED_GUILD_NOT_JOINED;
+			else if(!HasGuildRight(*guild, *me, MEASURED_GUILD_RIGHT_FUND)) result = MEASURED_GUILD_NO_PERMISSION_BUYGUILDSKILL;
+			else if(!lvl) result = MEASURED_GUILD_NOT_FOUND_SKILL;
+			else if(limited ? current > 0 : level <= current) result = MEASURED_GUILD_DUPLICATED_SKILL;
+			else if((!limited && level != current + 1) || GuildLevel(*guild) < lvl->unlockGuildLevel) result = MEASURED_GUILD_NOT_SATISFIED_REQUIREMENTS_FOR_SKILL;
+			else if(guild->fund < lvl->cost) result = MEASURED_GUILD_NOT_ENOUGH_FUND;
+			PacketWriter<Sv::SA_BuyGuildskill> answer;
+			answer.Write<u32>(result);
+			answer.Write<u8>(type);
+			answer.Write<u8>(level);
+			if(result != 0) {
+				answer.Write<i64>(0);
+				answer.Write<u16>(0);
+				answer.Write<u32>(0);
+				answer.Write<u32>(guild ? (u32)guild->fund : 0);
+				replication.SendWriter(clientHd, answer);
+				break;
+			}
+			GuildSkillRecord* record = FindGuildSkillRecord(*guild, type);
+			if(!record) {
+				guild->skills.push_back(GuildSkillRecord());
+				record = &guild->skills.back();
+				record->type = type;
+			}
+			record->level = level;
+			record->expiry = limited ? NowFiletime() + (i64)info->limitedHours * FILETIME_PER_HOUR : 0;
+			record->extensionCount = 0;
+			guild->fund -= lvl->cost;
+			const bool acquired = current == 0;
+			store.AddHistory(*guild, MEASURED_GUILD_HISTORY_LEVEL, acquired ? MEASURED_GUILD_EVENT_SKILLACQUISITION : MEASURED_GUILD_EVENT_SKILLUPGRADE, NowFiletime(), nick, WideString(), type, level);
+			store.Save();
+			answer.Write<i64>(record->expiry);
+			answer.Write<u16>((u16)info->limitedHours);
+			answer.Write<u32>((u32)lvl->cost);
+			answer.Write<u32>((u32)guild->fund);
+			replication.SendWriter(clientHd, answer);
+			PacketWriter<Sv::SN_GuildskillAcquired,256> note;
+			note.WriteStringObj(nick.data());
+			note.Write<u8>(type);
+			note.Write<u8>(level);
+			note.Write<u16>((u16)info->limitedHours);
+			note.Write<i64>(record->expiry);
+			note.Write<u32>((u32)lvl->cost);
+			note.Write<u32>((u32)guild->fund);
+			const u16 noteID = acquired ? (u16)Sv::SN_GuildskillAcquired::NET_ID : (u16)Sv::SN_GuildskillUpgraded::NET_ID;
+			ForEachOnlineGuildMember(*guild, [&](i32, ClientHandle hd) { replication.server->SendPacketData(hd, noteID, (u16)note.size, note.data); });
+			SendGuildPointAndFund(*guild);
+			SendGuildConstraint(*guild);
+			LOG("[client%x] Guild :: %ls buys skill %u level %u for %ls (%d fund left)", clientHd, nick.data(), (u32)type, (u32)level, guild->name.data(), guild->fund);
+		} break;
+
+		case MEASURED_CQ_EXTEND_GUILD_LIMITED_SKILL: {
+			if(!buff.CanRead(4)) break;
+			const u8 type = buff.Read<u8>();
+			const u16 extension = buff.Read<u16>();
+			buff.Read<u8>();
+			const GameXmlContent::GuildSkillInfo* info = content.FindGuildSkill(type);
+			const i32 current = guild ? GuildSkillLevel(*guild, type) : 0;
+			const GameXmlContent::GuildSkillLevel* lvl = info ? FindGuildSkillLevel(*info, current) : nullptr;
+			const i32 cost = lvl ? lvl->cost * (i32)extension : 0;
+			u32 result = 0;
+			if(!guild) result = MEASURED_GUILD_NOT_JOINED;
+			else if(!HasGuildRight(*guild, *me, MEASURED_GUILD_RIGHT_FUND)) result = MEASURED_GUILD_NO_PERMISSION_EXTENDGUILDSKILL;
+			else if(!info || info->limitedHours <= 0 || !lvl || extension == 0) result = MEASURED_GUILD_NOT_FOUND_SKILL;
+			else if(guild->fund < cost) result = MEASURED_GUILD_NOT_ENOUGH_FUND;
+			GuildSkillRecord* record = result == 0 ? FindGuildSkillRecord(*guild, type) : nullptr;
+			if(record) {
+				record->expiry += (i64)info->limitedHours * extension * FILETIME_PER_HOUR;
+				record->extensionCount += extension;
+				guild->fund -= cost;
+				store.AddHistory(*guild, MEASURED_GUILD_HISTORY_LEVEL, MEASURED_GUILD_EVENT_SKILLEXTENSION, NowFiletime(), nick, WideString(), type, current);
+				store.Save();
+			}
+			PacketWriter<Sv::SA_ExtendGuildlimitedskill> answer;
+			answer.Write<u32>(record ? 0 : (result != 0 ? result : MEASURED_GUILD_NOT_FOUND_SKILL));
+			answer.Write<u8>(type);
+			answer.Write<u8>((u8)current);
+			answer.Write<u16>(extension);
+			answer.Write<i64>(record ? record->expiry : 0);
+			answer.Write<u32>(record ? (u32)cost : 0);
+			answer.Write<u32>(guild ? (u32)guild->fund : 0);
+			replication.SendWriter(clientHd, answer);
+			if(!record) break;
+			PacketWriter<Sv::SN_GuildskillExtended,256> note;
+			note.WriteStringObj(nick.data());
+			note.Write<u8>(type);
+			note.Write<u8>((u8)current);
+			note.Write<u16>(record->extensionCount);
+			note.Write<u16>((u16)(info->limitedHours * extension));
+			note.Write<i64>(record->expiry);
+			note.Write<u32>((u32)cost);
+			note.Write<u32>((u32)guild->fund);
+			ForEachOnlineGuildMember(*guild, [&](i32, ClientHandle hd) { replication.SendWriter(hd, note); });
+			SendGuildPointAndFund(*guild);
+		} break;
+
+		case MEASURED_CQ_EDIT_GUILD_TAG: {
+			WideString tag;
+			if(!ReadWideString(buff, &tag, 8)) break;
+			u32 result = 0;
+			if(!guild) result = MEASURED_GUILD_NOT_JOINED;
+			else if(me->membershipID != MEASURED_GUILD_MASTER_MEMBERSHIP) result = MEASURED_GUILD_NO_PERMISSION_EDITTAG;
+			else if(!ValidGuildText(tag, 2, 4)) result = MEASURED_GUILD_ILLEGAL_TAG;
+			else if(guild->fund < content.guildTagChangeCost) result = MEASURED_GUILD_NOT_ENOUGH_FUND;
+			PacketWriter<Sv::SA_EditGuildtag,128> answer;
+			answer.Write<u32>(result);
+			answer.WriteStringObj(tag.data());
+			answer.Write<u32>(result == 0 ? (u32)content.guildTagChangeCost : 0);
+			if(result != 0) {
+				answer.Write<u32>(guild ? (u32)guild->fund : 0);
+				replication.SendWriter(clientHd, answer);
+				break;
+			}
+			store.AddHistory(*guild, MEASURED_GUILD_HISTORY_MANAGEMENT, MEASURED_GUILD_EVENT_TAGCHANGE, NowFiletime(), guild->tag, tag, 0, 0);
+			guild->fund -= content.guildTagChangeCost;
+			guild->tag = tag;
+			store.Save();
+			answer.Write<u32>((u32)guild->fund);
+			replication.SendWriter(clientHd, answer);
+			PacketWriter<Sv::SN_GuildtagChanged,128> note;
+			note.WriteStringObj(tag.data());
+			note.Write<u32>((u32)content.guildTagChangeCost);
+			note.Write<u32>((u32)guild->fund);
+			ForEachOnlineGuildMember(*guild, [&](i32 memberID, ClientHandle hd) {
+				replication.SendWriter(hd, note);
+				auto found = GetAccountManager().accountMap.find(playerAccountData[memberID]->UID);
+				if(found != GetAccountManager().accountMap.end()) found->second->guildTag = tag;
+			});
+			LOG("[client%x] Guild :: %ls renames the tag of %ls to %ls", clientHd, nick.data(), guild->name.data(), tag.data());
+		} break;
+
+		case MEASURED_CQ_SET_GUILD_EMBLEM: {
+			if(!buff.CanRead(4)) break;
+			const i32 emblem = buff.Read<i32>();
+			i32 index = -1;
+			for(i32 i = 0; i < (i32)content.validGuildEmblems.size(); i++) if(content.validGuildEmblems[i] == emblem) index = i;
+			u32 result = 0;
+			if(!guild) result = MEASURED_GUILD_NOT_JOINED;
+			else if(!HasGuildRight(*guild, *me, MEASURED_GUILD_RIGHT_EMBLEM)) result = MEASURED_GUILD_NO_PERMISSION_CHGEMBLEM;
+			else if(index < 0) result = MEASURED_GUILD_PARAMETER_ERROR;
+			else if(index >= HYP_GUILD_BASE_EMBLEMS + GuildSkillBonus(*guild, MEASURED_GUILD_SKILL_EMBLEM)) result = MEASURED_GUILD_LOCKED_GUILDEMBLEM_LEVEL;
+			if(result == 0) {
+				guild->emblemIndex = emblem;
+				store.Save();
+			}
+			PacketWriter<Sv::SA_SetGuildemblem> answer;
+			answer.Write<u32>(result);
+			answer.Write<i32>(emblem);
+			replication.SendWriter(clientHd, answer);
+			if(result != 0) break;
+			PacketWriter<Sv::SN_GuildemblemChange> note;
+			note.Write<i32>(emblem);
+			ForEachOnlineGuildMember(*guild, [&](i32, ClientHandle hd) { if(hd != clientHd) replication.SendWriter(hd, note); });
+		} break;
+
+		case MEASURED_CQ_CREATE_GUILD_MEMBERSHIP:
+		case MEASURED_CQ_EDIT_GUILD_MEMBERSHIP: {
+			const bool create = netID == MEASURED_CQ_CREATE_GUILD_MEMBERSHIP;
+			i32 id = 0;
+			if(!create) {
+				if(!buff.CanRead(4)) break;
+				id = buff.Read<i32>();
+			}
+			if(!buff.CanRead(1)) break;
+			const u8 icon = buff.Read<u8>();
+			WideString name;
+			eastl::array<u8,10> rights = {};
+			if(!ReadWideString(buff, &name, 32) || !ReadGuildRights(buff, &rights)) break;
+			GuildClass* target = nullptr;
+			if(guild && !create) foreach(c, guild->classes) if(c->id == id) target = &*c;
+			bool duplicated = false;
+			if(guild) foreach_const(c, guild->classes) if(c->name == name && (create || c->id != id)) duplicated = true;
+			u32 result = 0;
+			if(!guild) result = MEASURED_GUILD_NOT_JOINED;
+			else if(!HasGuildRight(*guild, *me, MEASURED_GUILD_RIGHT_MEMBERSHIP)) result = MEASURED_GUILD_NO_PERMISSION_EDITMEMBERSHIP;
+			else if(!create && !target) result = MEASURED_GUILD_NOT_FOUND_GUILDMEMBERSHIP;
+			else if(create && (i32)guild->classes.size() >= content.guildMembershipCapacity) result = MEASURED_GUILD_TOO_MANY_GUILDMEMBERSHIP;
+			else if(name.empty()) result = MEASURED_GUILD_ILLEGAL_CLASSNAME;
+			else if(duplicated) result = MEASURED_GUILD_DUPLICATED_GUILDMEMBERSHIPNAME;
+			if(result == 0 && create) {
+				GuildClass c;
+				foreach_const(o, guild->classes) id = MAX(id, o->id);
+				c.id = id + 1;
+				c.type = MEASURED_GUILD_CLASS_CUSTOM;
+				guild->classes.push_back(c);
+				target = &guild->classes.back();
+				id = c.id;
+			}
+			if(result == 0) {
+				target->iconIndex = icon;
+				target->name = name;
+				target->rights = rights;
+				store.Save();
+			}
+			PacketWriter<Sv::SA_CreateGuildmembership,256> answer;
+			answer.Write<u32>(result);
+			answer.Write<i32>(id);
+			answer.Write<u8>(icon);
+			answer.WriteStringObj(name.data());
+			WriteGuildRights(answer, rights);
+			replication.server->SendPacketData(clientHd, create ? (u16)Sv::SA_CreateGuildmembership::NET_ID : (u16)Sv::SA_EditGuildmembership::NET_ID, (u16)answer.size, answer.data);
+			if(result != 0) break;
+			PacketWriter<Sv::SN_GuildmembershipAdded,256> note;
+			note.Write<i32>(id);
+			note.Write<u8>(icon);
+			note.WriteStringObj(name.data());
+			WriteGuildRights(note, rights);
+			const u16 noteID = create ? (u16)Sv::SN_GuildmembershipAdded::NET_ID : (u16)Sv::SN_GuildmembershipModified::NET_ID;
+			ForEachOnlineGuildMember(*guild, [&](i32, ClientHandle hd) { if(hd != clientHd) replication.server->SendPacketData(hd, noteID, (u16)note.size, note.data); });
+		} break;
+
+		case MEASURED_CQ_DELETE_GUILD_MEMBERSHIP: {
+			if(!buff.CanRead(4)) break;
+			const i32 id = buff.Read<i32>();
+			const GuildClass* target = guild ? FindGuildClass(*guild, id) : nullptr;
+			const GuildClass* regular = guild ? FindGuildClass(*guild, MEASURED_GUILD_REGULAR_MEMBERSHIP) : nullptr;
+			u32 result = 0;
+			if(!guild) result = MEASURED_GUILD_NOT_JOINED;
+			else if(!HasGuildRight(*guild, *me, MEASURED_GUILD_RIGHT_MEMBERSHIP)) result = MEASURED_GUILD_NO_PERMISSION_EDITMEMBERSHIP;
+			else if(!target || !regular) result = MEASURED_GUILD_NOT_FOUND_GUILDMEMBERSHIP;
+			else if(target->type != MEASURED_GUILD_CLASS_CUSTOM) result = MEASURED_GUILD_NOT_DELETABLE_GUILDMEMBERSHIP;
+			eastl::fixed_vector<WideString,64,true> moved;
+			if(result == 0) {
+				foreach(m, guild->members) {
+					if(m->membershipID != id) continue;
+					m->membershipID = MEASURED_GUILD_REGULAR_MEMBERSHIP;
+					moved.push_back(m->nickname);
+				}
+			}
+			PacketWriter<Sv::SA_DeleteGuildmembership,2048> answer;
+			answer.Write<u32>(result);
+			answer.Write<i32>(id);
+			answer.Write<i32>(MEASURED_GUILD_REGULAR_MEMBERSHIP);
+			answer.WriteStringObj(regular ? regular->name.data() : L"");
+			answer.Write<u16>((u16)moved.size());
+			foreach_const(n, moved) answer.WriteStringObj(n->data());
+			const WideString regularName = regular ? regular->name : WideString();
+			if(result == 0) {
+				guild->classes.erase(eastl::remove_if(guild->classes.begin(), guild->classes.end(), [&](const GuildClass& c) { return c.id == id; }), guild->classes.end());
+				store.Save();
+			}
+			replication.SendWriter(clientHd, answer);
+			if(result != 0) break;
+			PacketWriter<Sv::SN_GuildmembershipRemoved> removed;
+			removed.Write<i32>(id);
+			ForEachOnlineGuildMember(*guild, [&](i32, ClientHandle hd) {
+				if(hd != clientHd) replication.SendWriter(hd, removed);
+				foreach_const(n, moved) {
+					PacketWriter<Sv::SN_GuildmemberChgclass,256> chg;
+					chg.Write<i32>(id);
+					chg.Write<i32>(MEASURED_GUILD_REGULAR_MEMBERSHIP);
+					chg.WriteStringObj(regularName.data());
+					chg.WriteStringObj(n->data());
+					replication.SendWriter(hd, chg);
+				}
+			});
+		} break;
+
+		case MEASURED_CQ_SET_GUILD_MEMBER_CLASS: {
+			WideString target;
+			if(!ReadWideString(buff, &target, 32) || !buff.CanRead(8)) break;
+			const i32 oldID = buff.Read<i32>();
+			const i32 newID = buff.Read<i32>();
+			GuildMemberRecord* member = guild ? store.FindMember(*guild, target) : nullptr;
+			const GuildClass* cls = guild ? FindGuildClass(*guild, newID) : nullptr;
+			u32 result = 0;
+			if(!guild) result = MEASURED_GUILD_NOT_JOINED;
+			else if(!HasGuildRight(*guild, *me, MEASURED_GUILD_RIGHT_ASSIGN)) result = MEASURED_GUILD_NO_PERMISSION_ASSIGNCLASS;
+			else if(!member || member->membershipID == MEASURED_GUILD_MASTER_MEMBERSHIP) result = MEASURED_GUILD_NOT_FOUND_INVITEE;
+			else if(!cls) result = MEASURED_GUILD_NOT_FOUND_GUILDMEMBERSHIP;
+			const i32 previous = member ? member->membershipID : oldID;
+			if(result == 0) {
+				member->membershipID = newID;
+				store.AddHistory(*guild, MEASURED_GUILD_HISTORY_MANAGEMENT, MEASURED_GUILD_EVENT_ASSIGN, NowFiletime(), nick, target, previous, newID);
+				store.Save();
+			}
+			PacketWriter<Sv::SA_SetGuildmemberclass,256> answer;
+			answer.Write<u32>(result);
+			answer.WriteStringObj(target.data());
+			answer.Write<i32>(previous);
+			answer.Write<i32>(newID);
+			answer.WriteStringObj(cls ? cls->name.data() : L"");
+			replication.SendWriter(clientHd, answer);
+			if(result != 0) break;
+			PacketWriter<Sv::SN_GuildmemberChgclass,256> note;
+			note.Write<i32>(previous);
+			note.Write<i32>(newID);
+			note.WriteStringObj(cls->name.data());
+			note.WriteStringObj(target.data());
+			ForEachOnlineGuildMember(*guild, [&](i32, ClientHandle hd) { replication.SendWriter(hd, note); });
+		} break;
+
+		case MEASURED_CQ_SET_GUILD_MASTER: {
+			WideString target;
+			if(!ReadWideString(buff, &target, 32)) break;
+			GuildMemberRecord* member = guild ? store.FindMember(*guild, target) : nullptr;
+			u32 result = 0;
+			if(!guild) result = MEASURED_GUILD_NOT_JOINED;
+			else if(me->membershipID != MEASURED_GUILD_MASTER_MEMBERSHIP) result = MEASURED_GUILD_NO_PERMISSION_DELEGATEMASTER;
+			else if(!member || target == nick) result = MEASURED_GUILD_INCORRECT_MASTER_DELEGATION;
+			if(result == 0) {
+				member->membershipID = MEASURED_GUILD_MASTER_MEMBERSHIP;
+				me->membershipID = MEASURED_GUILD_REGULAR_MEMBERSHIP;
+				store.AddHistory(*guild, MEASURED_GUILD_HISTORY_MANAGEMENT, MEASURED_GUILD_EVENT_DELEGATION, NowFiletime(), nick, target, 0, 0);
+				store.Save();
+			}
+			PacketWriter<Sv::SA_SetGuildmaster,128> answer;
+			answer.Write<u32>(result);
+			answer.Write<i32>(MEASURED_GUILD_REGULAR_MEMBERSHIP);
+			answer.WriteStringObj(target.data());
+			replication.SendWriter(clientHd, answer);
+			if(result != 0) break;
+			PacketWriter<Sv::SN_GuildmasterDelegation,128> note;
+			note.WriteStringObj(nick.data());
+			note.Write<i32>(MEASURED_GUILD_REGULAR_MEMBERSHIP);
+			note.WriteStringObj(target.data());
+			ForEachOnlineGuildMember(*guild, [&](i32, ClientHandle hd) { replication.SendWriter(hd, note); });
+			LOG("[client%x] Guild :: %ls hands %ls over to %ls", clientHd, nick.data(), guild->name.data(), target.data());
+		} break;
+
 		default: {
 			WARN("[client%x] Guild :: packet %u not handled", clientHd, (u32)netID);
 		} break;
 	}
+}
+
+void GuildRewardBoost(const WideString& nickname, u16* goldRate, u16* expRate)
+{
+	GuildStore& store = GetGuildStore();
+	std::lock_guard<std::recursive_mutex> lock(store.mutex);
+	const GuildRecord* guild = store.FindByMember(nickname);
+	*goldRate = guild ? (u16)(GuildSkillBonus(*guild, MEASURED_GUILD_SKILL_GOLD) + GuildSkillBonus(*guild, MEASURED_GUILD_SKILL_LIMITED_GOLD)) : 0;
+	*expRate = guild ? (u16)(GuildSkillBonus(*guild, MEASURED_GUILD_SKILL_XP) + GuildSkillBonus(*guild, MEASURED_GUILD_SKILL_LIMITED_XP)) : 0;
 }

@@ -7,6 +7,7 @@
 #include "instance.h"
 #include "account.h"
 #include "matchmaker_connector.h"
+#include "guild_store.h"
 #include "bot_loadouts.h"
 
 bool HubInstance::Init(Server* server_)
@@ -520,6 +521,7 @@ void RoomInstance::Update(Time localTime_)
 				rp.stageSkill = u->stageSkill;
 				auto account = GetAccountManager().accountMap.find(u->accountUID);
 				if(!u->isBot && account != GetAccountManager().accountMap.end() && account->second->guildTag.size() <= ARRAY_COUNT(rp.guildTag.data)) rp.guildTag.Copy(account->second->guildTag);
+				if(!u->isBot && account != GetAccountManager().accountMap.end()) GuildRewardBoost(account->second->nickname, &rp.guildBoostGold, &rp.guildBoostExp);
 				rpList.push_back(rp);
 			}
 

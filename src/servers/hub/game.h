@@ -132,6 +132,8 @@ struct HubGame
 	void GuildBroadcastState(i32 userID, u8 state);
 	bool GuildChat(i32 userID, const wchar* msg, i32 msgLen);
 	void GuildLevelCheck(GuildRecord& guild, i32 levelBefore);
+	void SendGuildConstraint(const GuildRecord& guild);
+	void SendGuildRewardMail(const WideString& nick, const wchar* subject, const wchar* content, i32 item, i32 count);
 	void GuildAddMember(GuildRecord& guild, const WideString& nick);
 	void GuildRemoveMember(GuildRecord& guild, const WideString& nick, bool kicked);
 	u16 GuildLeaderClass(const WideString& nickname);
@@ -173,6 +175,7 @@ struct HubGame
 	void OnMailRead(ClientHandle clientHd, u64 mailID);
 	void OnMailWrite(ClientHandle clientHd, const wchar* to, const wchar* subject, i32 subjectLen, const wchar* content, i32 contentLen);
 	void OnMailMove(ClientHandle clientHd, u8 moveType, const u64* ids, i32 count);
+	void OnMailGetAttachments(ClientHandle clientHd, const u64* ids, i32 count);
 	void OnMissionReward(ClientHandle clientHd, i32 missionID);
 	void OnDailyMissionChange(ClientHandle clientHd, i32 step);
 

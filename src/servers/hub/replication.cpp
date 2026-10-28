@@ -1144,11 +1144,12 @@ static void WriteMailEx(Writer& packet, const MailMessage& m)
 	packet.Write<i64>(m.sendFiletime);
 	packet.Write<i64>(m.expireFiletime);
 	packet.Write<u8>(m.read);
-	packet.Write<u8>(0);
-	packet.Write<u8>(0);
+	packet.Write<u8>(m.system);
+	packet.Write<u8>(!m.items.empty());
 	packet.WriteStringObj(m.from.data());
 	packet.WriteStringObj(m.subject.data());
-	packet.Write<u16>(0);
+	packet.Write<u16>((u16)m.items.size());
+	foreach_const(it, m.items) packet.Write<i32>(it->index);
 }
 
 void HubReplication::SendMailUnreadNotice(ClientHandle clientHd, const wchar* owner)
@@ -1187,7 +1188,7 @@ void HubReplication::SendMailRead(ClientHandle clientHd, const MailMessage& mail
 	PacketWriter<Sv::SN_MailRead,2048> packet;
 	packet.Write<i64>((i64)mail.ID);
 	packet.Write<u8>(mail.read);
-	packet.Write<u8>(0);
+	packet.Write<u8>(mail.system);
 	packet.WriteStringObj(mail.from.data());
 	packet.WriteStringObj(mail.subject.data());
 	packet.WriteStringObj(mail.content.data());
@@ -1197,6 +1198,19 @@ void HubReplication::SendMailRead(ClientHandle clientHd, const MailMessage& mail
 	packet.Write<i64>(0);
 	packet.Write<i64>(0);
 	packet.Write<u32>(0);
+	packet.Write<u16>((u16)mail.items.size());
+	foreach_const(it, mail.items) { packet.Write<i32>(it->index); packet.Write<i32>(it->count); }
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendMailAttachmentResult(ClientHandle clientHd, u32 result, const MailMessage& mail)
+{
+	PacketWriter<Sv::SN_MailGetAttachmentResult,256> packet;
+	packet.Write<u32>(result);
+	packet.Write<i64>((i64)mail.ID);
+	packet.Write<i64>(mail.expireFiletime);
+	packet.Write<u16>(result == 0 ? (u16)mail.items.size() : (u16)0);
+	if(result == 0) foreach_const(it, mail.items) { packet.Write<i32>(it->index); packet.Write<i32>(it->count); }
 	packet.Write<u16>(0);
 	SendPacket(clientHd, packet);
 }
@@ -2657,7 +2671,9 @@ void HubReplication::SendTownBurst(ClientHandle clientHd)
 	SendUpdateEntrySystem(clientHd);
 	{
 		PacketWriter<Sv::SN_GameEventActivated> packet;
-		packet.Write<u16>(0);
+		const auto& events = GetGameXmlContent().activeGameEvents;
+		packet.Write<u16>((u16)events.size());
+		foreach_const(ev, events) packet.Write<i32>(ev->index);
 		SendPacket(clientHd, packet);
 	}
 	{

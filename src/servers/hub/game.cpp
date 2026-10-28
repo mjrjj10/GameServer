@@ -1603,12 +1603,38 @@ void HubGame::OnMailWrite(ClientHandle clientHd, const wchar* to, const wchar* s
 	}
 }
 
+void HubGame::OnMailGetAttachments(ClientHandle clientHd, const u64* ids, i32 count)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	const wchar* nickname = playerAccountData[userID]->nickname.data();
+	for(i32 i = 0; i < count; i++) {
+		MailMessage mail;
+		if(!MailTakeAttachments(nickname, ids[i], &mail)) {
+			WARN("[client%x] HubGame :: mail %llu has no attachment to take", clientHd, ids[i]);
+			mail.ID = ids[i];
+			mail.expireFiletime = 0;
+			replication.SendMailAttachmentResult(clientHd, (u32)ErrorType::MAIL_GET_ATTACHMENT_NO_ATTACHMENT, mail);
+			continue;
+		}
+		foreach_const(it, mail.items) {
+			if(!GrantItem(userID, it->index, it->count, MEASURED_ITEM_UPDATE_REASON_MAIL, MEASURED_ITEM_ACQUISITION_REASON_MAIL)) {
+				WARN("[client%x] HubGame :: mail %llu item %d x%d could not be granted", clientHd, mail.ID, it->index, it->count);
+			}
+		}
+		replication.SendMailAttachmentResult(clientHd, 0, mail);
+		LOG("[client%x] HubGame :: %ls takes the attachments of mail %llu (%d item(s))", clientHd, nickname, mail.ID, (i32)mail.items.size());
+	}
+	replication.SendMailUnreadNotice(clientHd, nickname);
+}
+
 void HubGame::OnMailMove(ClientHandle clientHd, u8 moveType, const u64* ids, i32 count)
 {
 	const i32 userID = plidMap->Get(clientHd);
 	ASSERT(playerAccountData[userID]);
 	const i32 moved = MailMove(playerAccountData[userID]->nickname.data(), moveType, ids, count);
 	LOG("[client%x] HubGame :: mail move type %u: %d of %d", clientHd, moveType, moved, count);
-	replication.SendMailMoveResult(clientHd, ErrorType::SUCCESS);
+	const bool keptAttachments = moveType == MAIL_MOVE_DELETE && moved < count;
+	replication.SendMailMoveResult(clientHd, keptAttachments ? ErrorType::MAIL_MOVE_DELETE_FAIL_HAS_ITEM : ErrorType::SUCCESS);
 	replication.SendMailUnreadNotice(clientHd, playerAccountData[userID]->nickname.data());
 }

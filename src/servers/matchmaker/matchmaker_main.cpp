@@ -107,6 +107,8 @@ struct Matchmaker
 			u8 isBot = false;
 			In::StrGuildTag guildTag = {};
 			SkillID stageSkill = SkillID::INVALID;
+			u16 guildBoostGold = 0;
+			u16 guildBoostExp = 0;
 
 			eastl::array<Master,2> masters;
 
@@ -454,6 +456,8 @@ struct Matchmaker
 					p.masters[1].characterType = pp.characterType[1];
 					p.guildTag = pp.guildTag;
 					p.stageSkill = pp.stageSkill;
+					p.guildBoostGold = pp.guildBoostGold;
+					p.guildBoostExp = pp.guildBoostExp;
 				}
 
 				RoomCreateGame(room);
@@ -727,6 +731,8 @@ struct Matchmaker
 				player.characterType[1] = p->masters[1].characterType;
 				player.guildTag = p->guildTag;
 				player.stageSkill = p->stageSkill;
+				player.guildBoostGold = p->guildBoostGold;
+				player.guildBoostExp = p->guildBoostExp;
 				packet.players[packet.playerCount++] = player;
 			}
 		}

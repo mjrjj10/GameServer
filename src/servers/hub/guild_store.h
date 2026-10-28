@@ -25,6 +25,15 @@ struct GuildMemberRecord
 	i32 contributedFund = 0;
 	i64 lastLogout = 0;
 	i64 lastRollcallDay = -1;
+	i64 joinedDay = -1;
+};
+
+struct GuildSkillRecord
+{
+	u8 type = 0;
+	u8 level = 0;
+	i64 expiry = 0;
+	u16 extensionCount = 0;
 };
 
 struct GuildHistoryRecord
@@ -65,6 +74,7 @@ struct GuildRecord
 	eastl::vector<GuildHistoryRecord> history;
 	eastl::vector<WideString> joinRequests;
 	eastl::vector<GuildInvitation> invitations;
+	eastl::vector<GuildSkillRecord> skills;
 };
 
 struct GuildStore
@@ -84,3 +94,4 @@ struct GuildStore
 };
 
 GuildStore& GetGuildStore();
+void GuildRewardBoost(const WideString& nickname, u16* goldRate, u16* expRate);

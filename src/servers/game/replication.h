@@ -309,7 +309,9 @@ struct Replication
 	void SendLoadPvpMap(ClientHandle clientHd, MapIndex stageIndex);
 	void SendGameAreaMove(ClientHandle clientHd, MapIndex map);
 	struct StageMember { ClassType mainClass; ClassType subClass; const wchar* name; };
-	struct StageClear { LocalActorID player; i32 stage; i32 kills; i32 deaths; u32 playTimeMs; u8 rank; u32 baseRon; u32 baseExp; u32 attackScore; u32 defenseScore; u32 timeScore; u32 totalScore; u8 technicGrade; };
+	struct RewardBonus { u32 type; u32 amount; };
+	typedef eastl::fixed_vector<RewardBonus,4,false> RewardBonusList;
+	struct StageClear { LocalActorID player; i32 stage; i32 kills; i32 deaths; u32 playTimeMs; u8 rank; u32 baseRon; u32 baseExp; u32 attackScore; u32 defenseScore; u32 timeScore; u32 totalScore; u8 technicGrade; RewardBonusList bonusRon; RewardBonusList bonusExp; };
 	struct RewardCard { u32 type; i32 index; u32 amount; };
 	void SendStageClearResult(ClientHandle clientHd, const StageClear& clear, const StageMember* members, i32 memberCount);
 	void SendExpGain(ClientHandle clientHd, u32 exp);
@@ -382,6 +384,8 @@ struct Replication
 		CreatureIndex masters[2];
 		u32 gold = 0;
 		u32 exp = 0;
+		RewardBonusList bonusRon;
+		RewardBonusList bonusExp;
 		i32 assists = 0;
 		i32 bestKillStreak = 0;
 		i32 points = 0;

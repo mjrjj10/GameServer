@@ -1770,6 +1770,24 @@ CreatureIndex GameXmlContent::FindDeathMatchBotIndex(ClassType classType) const
 }
 
 
+static u8 MeasuredGuildSkillType(const char* key)
+{
+	static const struct { const char* key; u8 type; } TYPES[] = {
+		{ "GUILD_MEMBER_MAX_UP", 1 },
+		{ "STAGE_POINT_LIMIT_UP", 2 },
+		{ "ARENA_POINT_LIMIT_UP", 3 },
+		{ "GAIN_GOLD_UP", 4 },
+		{ "GAIN_XP_UP", 5 },
+		{ "GUILD_MISSION", 6 },
+		{ "GUILD_EMBLEM", 7 },
+		{ "LIMITED_REWARD_SLOT_ADD", 21 },
+		{ "LIMITED_GAIN_GOLD_UP", 22 },
+		{ "LIMITED_GAIN_XP_UP", 23 },
+	};
+	for(const auto& t : TYPES) if(strcmp(t.key, key) == 0) return t.type;
+	return 0;
+}
+
 bool GameXmlContent::LoadGuildData()
 {
 	XMLDocument doc;
@@ -1779,6 +1797,9 @@ bool GameXmlContent::LoadGuildData()
 	if(!pInfo) return false;
 	guildFoundationLevel = pInfo->IntAttribute("_RequiredLevelForGuildFoundation", guildFoundationLevel);
 	guildFoundationGold = pInfo->IntAttribute("_GuildFoundationGold", guildFoundationGold);
+	guildTagChangeCost = pInfo->IntAttribute("_GuildTagChangeCost", guildTagChangeCost);
+	guildMedalItem = pInfo->IntAttribute("_GuildMedalItemDocIndex", guildMedalItem);
+	if(XMLElement* pMembership = pInfo->FirstChildElement("_GuildMembership")) guildMembershipCapacity = pMembership->IntAttribute("_Capacity", guildMembershipCapacity);
 	if(XMLElement* pDonation = pInfo->FirstChildElement("_GuildDonation")) {
 		guildDonationUnit = MAX(1, pDonation->IntAttribute("_Unit", guildDonationUnit));
 		guildFundExchangeRate = MAX(1, pDonation->IntAttribute("_ExchangeRateForOneFund", guildFundExchangeRate));
@@ -1804,6 +1825,8 @@ bool GameXmlContent::LoadGuildData()
 			const char* key = pSkill->Attribute("DATAKEY");
 			if(!key) continue;
 			skill.key = key;
+			skill.type = MeasuredGuildSkillType(key);
+			skill.limitedHours = pSkill->IntAttribute("_LimitedHours", 0);
 			for(XMLElement* pLvl = pSkill->FirstChildElement("_GuildSkillLevel");
 				pLvl;
 				pLvl = pLvl->NextSiblingElement("_GuildSkillLevel")) {
@@ -1829,6 +1852,7 @@ bool GameXmlContent::LoadGuildData()
 	if(XMLElement* pAct = pInfo->FirstChildElement("_MaxGuildActivityPointPerDay")) {
 		if(XMLElement* pStage = pAct->FirstChildElement("_Stage")) {
 			pStage->QueryIntAttribute("_Weekday", &guildActivityCapWeekday);
+			pStage->QueryIntAttribute("_Weekend", &guildActivityCapWeekend);
 		}
 	}
 
@@ -2703,6 +2727,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadMonsterRanks();
+	if(!r) return false;
+
+	r = LoadGameEvents();
 	if(!r) return false;
 
 	r = LoadChildSkills();
@@ -3889,6 +3916,72 @@ u8 GameXmlContent::RankID(const char* name)
 	if(rankNames.full()) return NO_RANK;
 	rankNames.push_back(name);
 	return (u8)(rankNames.size() - 1);
+}
+
+static GameType GameTypeFromString(const char* name)
+{
+	static const struct { const char* name; GameType type; } TYPES[] = {
+		{ "GAME_TYPE_PVE_NORMAL", GameType::PVE_NORMAL },
+		{ "GAME_TYPE_PVE_RANDOM", GameType::PVE_RANDOM },
+		{ "GAME_TYPE_PVE_TICKET", GameType::PVE_TICKET },
+		{ "GAME_TYPE_PVP_NORMAL", GameType::PVP_NORMAL },
+		{ "GAME_TYPE_PVP_RANK", GameType::PVP_RANK },
+		{ "GAME_TYPE_PVP_AI", GameType::PVP_AI },
+		{ "GAME_TYPE_PVP_NORMAL_FFA", GameType::PVP_NORMAL_FFA },
+		{ "GAME_TYPE_PVP_GUILD", GameType::PVP_GUILD },
+		{ "GAME_TYPE_PVP_FAKE_AI", GameType::PVP_FAKE_AI },
+	};
+	for(const auto& t : TYPES) if(strcmp(t.name, name) == 0) return t.type;
+	return GameType::INVALID;
+}
+
+bool GameXmlContent::LoadGameEvents()
+{
+	XMLDocument schedule;
+	if(!LoadXMLFile(L"/GameEventSchedule.xml", schedule, true)) return true;
+	eastl::fixed_set<i32,16,false> active;
+	for(XMLElement* a = schedule.FirstChildElement()->FirstChildElement("_Active"); a; a = a->NextSiblingElement("_Active")) {
+		if(active.size() < activeGameEvents.capacity()) active.insert(a->IntAttribute("_Index", 0));
+	}
+	if(active.empty()) return true;
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/client/GAME_EVENT.xml", doc)) return false;
+	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+		XMLElement* ev = pInfo->FirstChildElement("ST_GAME_EVENT");
+		if(!ev || !active.count(ev->IntAttribute("_Index", 0)) || activeGameEvents.full()) continue;
+		GameEvent event;
+		event.index = ev->IntAttribute("_Index", 0);
+		for(XMLElement* e = ev->FirstChildElement("_EFFECT"); e; e = e->NextSiblingElement("_EFFECT")) {
+			const char* type = e->Attribute("_Type");
+			const char* calc = e->Attribute("_CalcType");
+			if(!type || !calc || strcmp(calc, "ADD") != 0) continue;
+			if(strcmp(type, "GAME_EVENT_TYPE_EXP_BONUS") == 0) event.expBonusPercent += e->IntAttribute("_Data", 0);
+			if(strcmp(type, "GAME_EVENT_TYPE_RON_DROP_BONUS") == 0) event.ronBonusPercent += e->IntAttribute("_Data", 0);
+		}
+		if(XMLElement* cond = ev->FirstChildElement("_TRIGGER_CONDITION")) {
+			for(XMLElement* t = cond->FirstChildElement("_TargetGameType"); t; t = t->NextSiblingElement("_TargetGameType")) {
+				const char* name = t->Attribute("DATA");
+				const GameType gt = name ? GameTypeFromString(name) : GameType::INVALID;
+				if(gt != GameType::INVALID && !event.gameTypes.full()) event.gameTypes.push_back(gt);
+			}
+			for(XMLElement* s = cond->FirstChildElement("_TargetStage"); s; s = s->NextSiblingElement("_TargetStage")) event.stages.push_back(s->IntAttribute("DATA", 0));
+		}
+		activeGameEvents.push_back(event);
+		LOG("GameContent :: active game event %d (exp +%d%%, gold +%d%%, %d game types, %d stages)", event.index, event.expBonusPercent, event.ronBonusPercent, (i32)event.gameTypes.size(), (i32)event.stages.size());
+	}
+	return true;
+}
+
+void GameXmlContent::ActiveEventBonus(GameType type, StageIndex stage, i32* expPercent, i32* ronPercent) const
+{
+	*expPercent = 0;
+	*ronPercent = 0;
+	foreach_const(ev, activeGameEvents) {
+		if(!ev->gameTypes.empty() && eastl::find(ev->gameTypes.begin(), ev->gameTypes.end(), type) == ev->gameTypes.end()) continue;
+		if(!ev->stages.empty() && eastl::find(ev->stages.begin(), ev->stages.end(), (i32)stage) == ev->stages.end()) continue;
+		*expPercent += ev->expBonusPercent;
+		*ronPercent += ev->ronBonusPercent;
+	}
 }
 
 bool GameXmlContent::LoadMonsterRanks()

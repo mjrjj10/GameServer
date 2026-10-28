@@ -229,6 +229,15 @@ inline bool ValidatePacket<Cl::CQ_MailWrite>(const void* packetData, i32 packetS
 }
 
 template<>
+inline bool ValidatePacket<Cl::CQ_MailGetAttachmentMulti>(const void* packetData, i32 packetSize)
+{
+	ConstBuffer buff(packetData, packetSize);
+	if(!buff.CanRead(sizeof(u16))) return false;
+	const u16 count = buff.Read<u16>();
+	return count <= 64 && buff.CanRead(count * sizeof(u64));
+}
+
+template<>
 inline bool ValidatePacket<Cl::CQ_MailMove>(const void* packetData, i32 packetSize)
 {
 	ConstBuffer buff(packetData, packetSize);

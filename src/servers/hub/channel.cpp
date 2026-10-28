@@ -94,6 +94,8 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CQ_DailyMissionChange);
 		HANDLE_CASE(CQ_MailWrite);
 		HANDLE_CASE(CQ_MailMove);
+		HANDLE_CASE(CQ_MailGetAttachment);
+		HANDLE_CASE(CQ_MailGetAttachmentMulti);
 
 		case Cl::CQ_GetGuildProfile::NET_ID:
 		case Cl::CQ_GetGuildMemberList::NET_ID:
@@ -117,6 +119,16 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		case Cl::CQ_SetGuildInterest::NET_ID:
 		case Cl::CQ_SetGuildJoinType::NET_ID:
 		case MEASURED_CQ_DONATE_TO_GUILD:
+		case MEASURED_CQ_EDIT_GUILD_TAG:
+		case MEASURED_CQ_SET_GUILD_EMBLEM:
+		case MEASURED_CQ_SET_GUILD_MEMBER_CLASS:
+		case MEASURED_CQ_SET_GUILD_MASTER:
+		case MEASURED_CQ_CREATE_GUILD_MEMBERSHIP:
+		case MEASURED_CQ_DELETE_GUILD_MEMBERSHIP:
+		case MEASURED_CQ_EDIT_GUILD_MEMBERSHIP:
+		case MEASURED_CQ_GET_GUILD_SKILL_LIST:
+		case MEASURED_CQ_BUY_GUILD_SKILL:
+		case MEASURED_CQ_EXTEND_GUILD_LIMITED_SKILL:
 		case Cl::CQ_GetRecommendedGuildList::NET_ID:
 			game->OnGuildPacket(clientHd, header.netID, packetData, packetSize);
 			break;
@@ -907,6 +919,31 @@ void HubPacketHandler::HandlePacket_CQ_MailWrite(ClientHandle clientHd, const Ne
 	WideString toNick;
 	toNick.assign(to, toLen);
 	game->OnMailWrite(clientHd, toNick.data(), subject, subjectLen, content, contentLen);
+}
+
+void HubPacketHandler::HandlePacket_CQ_MailGetAttachment(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_MailGetAttachment>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_MailGetAttachment (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const Cl::CQ_MailGetAttachment& packet = SafeCast<Cl::CQ_MailGetAttachment>(packetData, packetSize);
+	NT_LOG("[client%x] Client :: CQ_MailGetAttachment :: mail=%llu", clientHd, (unsigned long long)packet.mailUID);
+	game->OnMailGetAttachments(clientHd, &packet.mailUID, 1);
+}
+
+void HubPacketHandler::HandlePacket_CQ_MailGetAttachmentMulti(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_MailGetAttachmentMulti>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_MailGetAttachmentMulti (size=%d)", clientHd, packetSize);
+		return;
+	}
+	ConstBuffer buff(packetData, packetSize);
+	const u16 count = buff.Read<u16>();
+	eastl::fixed_vector<u64,64,true> ids;
+	for(u16 i = 0; i < count; i++) ids.push_back(buff.Read<u64>());
+	NT_LOG("[client%x] Client :: CQ_MailGetAttachmentMulti :: %u mail(s)", clientHd, (u32)count);
+	game->OnMailGetAttachments(clientHd, ids.data(), (i32)ids.size());
 }
 
 void HubPacketHandler::HandlePacket_CQ_MailMove(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

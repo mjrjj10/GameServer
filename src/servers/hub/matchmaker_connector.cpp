@@ -133,6 +133,8 @@ void MatchmakerConnector::Update()
 							player.characterType = rp.characterType;
 							player.guildTag = rp.guildTag;
 							player.stageSkill = rp.stageSkill;
+							player.guildBoostGold = rp.guildBoostGold;
+							player.guildBoostExp = rp.guildBoostExp;
 							packet.players[packet.playerCount++] = player;
 						}
 					}

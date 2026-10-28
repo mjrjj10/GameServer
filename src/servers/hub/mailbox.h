@@ -3,6 +3,13 @@
 #include <common/utils.h>
 #include <EASTL/vector.h>
 #include <EASTL/fixed_string.h>
+#include <EASTL/fixed_vector.h>
+
+struct MailItem
+{
+	i32 index;
+	i32 count;
+};
 
 struct MailMessage
 {
@@ -15,6 +22,8 @@ struct MailMessage
 	i64 expireFiletime;
 	u8 mailbox;
 	bool read;
+	bool system = false;
+	eastl::fixed_vector<MailItem,8,false> items;
 };
 
 struct MailCounts
@@ -48,3 +57,7 @@ MailCounts MailGetCounts(const wchar* owner);
 void MailList(const wchar* owner, u8 mailbox, eastl::vector<MailMessage>* out);
 bool MailRead(const wchar* owner, u64 mailID, MailMessage* out);
 i32 MailMove(const wchar* owner, u8 moveType, const u64* ids, i32 count);
+bool MailSendSystem(const wchar* to, const wchar* subjectKey, const wchar* contentKey, const MailItem* items, i32 itemCount, MailMessage* sent);
+bool MailTakeAttachments(const wchar* owner, u64 mailID, MailMessage* taken);
+static const wchar* MEASURED_SYSTEM_MAIL_SENDER = L"$$SYS_NAME";
+

@@ -102,6 +102,7 @@ void GuildStore::Load()
 			m.contributedFund = atoi(tok[3]);
 			m.lastLogout = _atoi64(tok[4]);
 			m.lastRollcallDay = _atoi64(tok[5]);
+			if(n >= 7) m.joinedDay = _atoi64(tok[6]);
 			guild->members.push_back(m);
 		}
 		else if(kind[0] == 'H' && n >= 7) {
@@ -114,6 +115,14 @@ void GuildStore::Load()
 			h.l1 = atoi(tok[5]);
 			h.l2 = atoi(tok[6]);
 			guild->history.push_back(h);
+		}
+		else if(kind[0] == 'S' && n >= 4) {
+			GuildSkillRecord s;
+			s.type = (u8)atoi(tok[0]);
+			s.level = (u8)atoi(tok[1]);
+			s.expiry = _atoi64(tok[2]);
+			s.extensionCount = (u16)atoi(tok[3]);
+			guild->skills.push_back(s);
 		}
 		else if(kind[0] == 'R' && n >= 1) {
 			WideString nick;
@@ -155,7 +164,7 @@ void GuildStore::Save()
 		foreach_const(m, g->members) {
 			fputs("M", f);
 			WriteHex(f, m->nickname);
-			fprintf(f, " %d %d %d %lld %lld\n", m->membershipID, m->contributedPoint, m->contributedFund, (long long)m->lastLogout, (long long)m->lastRollcallDay);
+			fprintf(f, " %d %d %d %lld %lld %lld\n", m->membershipID, m->contributedPoint, m->contributedFund, (long long)m->lastLogout, (long long)m->lastRollcallDay, (long long)m->joinedDay);
 		}
 		foreach_const(h, g->history) {
 			fprintf(f, "H %u %u %lld", (u32)h->historyType, (u32)h->eventType, (long long)h->date);
@@ -163,6 +172,7 @@ void GuildStore::Save()
 			WriteHex(f, h->s2);
 			fprintf(f, " %d %d\n", h->l1, h->l2);
 		}
+		foreach_const(s, g->skills) fprintf(f, "S %u %u %lld %u\n", (u32)s->type, (u32)s->level, (long long)s->expiry, (u32)s->extensionCount);
 		foreach_const(r, g->joinRequests) {
 			fputs("R", f);
 			WriteHex(f, *r);

@@ -32,6 +32,8 @@ struct MatchmakerConnector
 		eastl::array<i32,2> characterType;
 		In::StrGuildTag guildTag;
 		SkillID stageSkill;
+		u16 guildBoostGold = 0;
+		u16 guildBoostExp = 0;
 	};
 
 	struct Query

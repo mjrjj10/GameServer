@@ -175,9 +175,11 @@ void Replication::SendStageClearResult(ClientHandle clientHd, const StageClear& 
 	packet.Write<u8>(clear.rank);
 	packet.Write<u32>(0);
 	packet.Write<u32>(clear.baseRon);
-	packet.Write<u16>(0);
+	packet.Write<u16>((u16)clear.bonusRon.size());
+	foreach_const(b, clear.bonusRon) { packet.Write<u32>(b->type); packet.Write<u32>(b->amount); }
 	packet.Write<u32>(clear.baseExp);
-	packet.Write<u16>(0);
+	packet.Write<u16>((u16)clear.bonusExp.size());
+	foreach_const(b, clear.bonusExp) { packet.Write<u32>(b->type); packet.Write<u32>(b->amount); }
 	packet.Write<u32>(clear.attackScore);
 	packet.Write<u32>(clear.defenseScore);
 	packet.Write<u32>(clear.timeScore);
@@ -1364,9 +1366,11 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 		res.Write<u32>(blueResult);
 		res.Write<u32>((u32)players[i].userID);
 		res.Write<u32>(players[i].gold);
-		res.Write<u16>(0);
+		res.Write<u16>((u16)players[i].bonusRon.size());
+		foreach_const(b, players[i].bonusRon) { res.Write<u32>(b->type); res.Write<u32>(b->amount); }
 		res.Write<u32>(players[i].exp);
-		res.Write<u16>(0);
+		res.Write<u16>((u16)players[i].bonusExp.size());
+		foreach_const(b, players[i].bonusExp) { res.Write<u32>(b->type); res.Write<u32>(b->amount); }
 		res.Write<u16>(0);
 		for(int z = 0; z < 15; z++) res.Write<u8>(0);
 		for(int z = 0; z < 12; z++) res.Write<u8>(0);
