@@ -8,6 +8,32 @@
 #include "account.h"
 #include "matchmaker_connector.h"
 #include "guild_store.h"
+#include <mxm/account_progress.h>
+
+static const u32 GEAR_SELECT_OK = 0;
+
+template<typename Writer>
+static void WriteMasterGearPages(Writer& packet, const wchar* nickname)
+{
+	const AccountGears gears = AccountGearsLoad(nickname);
+	const AccountInventory inventory = AccountInventoryLoad(nickname);
+	packet.template Write<u16>((u16)gears.pages.size());
+	for(i32 i = 0; i < (i32)gears.pages.size(); i++) {
+		const AccountGearPage& page = gears.pages[i];
+		packet.template Write<u8>((u8)(i + 1));
+		packet.WriteStringObj(page.name.data());
+		packet.template Write<u16>((u16)page.items.size());
+		for(u32 uid : page.items) {
+			i32 type = -1;
+			foreach_const(it, inventory.items) {
+				if(uid == 0 || it->uid != uid) continue;
+				if(const GameXmlContent::GearItem* gear = GetGameXmlContent().FindGearItem(it->docIndex)) type = gear->slotType;
+			}
+			packet.template Write<i32>(type);
+			packet.template Write<u32>(type >= 0 ? uid : 0);
+		}
+	}
+}
 #include "bot_loadouts.h"
 
 bool HubInstance::Init(Server* server_)
@@ -167,6 +193,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 
 			packet.Write<u16>(allowedMastersSet.size()); // charaList_count
 
+			const AccountGears gears = AccountGearsLoad(user.name.data());
 			foreach_const(it, allowedMastersSet) {
 				const GameXmlContent::Master& master = *content.masterClassTypeMap.at(*it);
 
@@ -182,7 +209,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 				chara.characterType = 1;
 				chara.skinIndex = SkinIndex::DEFAULT;
 				chara.weaponIndex = master.weaponIDs[1];
-				chara.masterGearNo = 1;
+				chara.masterGearNo = gears.SelectedPage((i32)master.classType);
 				packet.Write(chara);
 			}
 
@@ -226,22 +253,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 		{
 			PacketWriter<Sv::SN_ProfileMasterGears,2048> packet;
 
-			// NOTE: we send one empty gear page for now
-
-			packet.Write<u16>(1); // masterGears_count
-
-			// 0
-			packet.Write<u8>(1); // masterGearNo
-			packet.WriteStringObj(L"Default");
-			const Sv::SN_ProfileMasterGears::Slot slots[] = {
-				{ -1, ItemUID::INVALID },
-				{ -1, ItemUID::INVALID },
-				{ -1, ItemUID::INVALID },
-				{ -1, ItemUID::INVALID },
-				{ -1, ItemUID::INVALID },
-				{ -1, ItemUID::INVALID },
-			};
-			packet.WriteVec(slots, ARRAY_COUNT(slots));
+			WriteMasterGearPages(packet, user.name.data());
 
 			SendPacket(user.clientHd, packet);
 		}
@@ -973,6 +985,28 @@ void RoomInstance::OnClientPacket(ClientHandle clientHd, const NetHeader& header
 			}
 		} break;
 
+		case Cl::CQ_MasterGearRepair::NET_ID: {
+			User* user = FindUser(clientHd);
+			if(!user || packetSize != 5) break;
+			ConstBuffer buff(packetData, packetSize);
+			const u32 characterID = buff.Read<u32>();
+			const u8 page = buff.Read<u8>();
+			const ClassType cls = (ClassType)((i32)characterID - (i32)LocalActorID::FIRST_SELF_MASTER);
+			AccountGears gears = AccountGearsLoad(user->name.data());
+			if(page < 1 || page > gears.pages.size()) break;
+			bool found = false;
+			foreach(s, gears.selected) if(s->first == (i32)cls) { s->second = page; found = true; }
+			if(!found && !gears.selected.full()) gears.selected.push_back(eastl::make_pair((i32)cls, page));
+			AccountGearsSave(user->name.data(), gears);
+			for(int mi = 0; mi < 2; mi++) if(user->masters[mi].classType == cls) user->masters[mi].masterGearNo = page;
+			Sv::SA_MastergearSelect ack;
+			ack.result = GEAR_SELECT_OK;
+			ack.characterID = characterID;
+			ack.masterGearNo = page;
+			SendPacket(clientHd, ack);
+			LOG("[Room] %ls selects gear page %d for class %d", user->name.data(), (i32)page, (i32)cls);
+		} break;
+
 		case Cl::CQ_SelectSkin::NET_ID: {
 			if(!ValidatePacket<Cl::CQ_SelectSkin>(packetData, packetSize)) {
 				WARN("[client%x] WARNING: invalid CQ_SelectSkin (size=%d)", clientHd, packetSize);
@@ -1115,7 +1149,7 @@ bool RoomInstance::TryPickMaster(User* user, ClassType classType)
 				user->Main().weapon = master.weaponIDs.size() > 1 ? master.weaponIDs[1] : master.weaponIDs[0];
 			}
 			user->Main().weaponGrade = 0;
-			user->Main().masterGearNo = 1;
+			user->Main().masterGearNo = user->isBot ? 1 : AccountGearsLoad(user->name.data()).SelectedPage((i32)classType);
 			user->Main().characterType = 1;
 		}
 		else if(user->Main().classType != classType) {
@@ -1130,7 +1164,7 @@ bool RoomInstance::TryPickMaster(User* user, ClassType classType)
 				user->Sub().weapon = master.weaponIDs.size() > 1 ? master.weaponIDs[1] : master.weaponIDs[0];
 			}
 			user->Sub().weaponGrade = 0;
-			user->Sub().masterGearNo = 1;
+			user->Sub().masterGearNo = user->isBot ? 1 : AccountGearsLoad(user->name.data()).SelectedPage((i32)classType);
 			user->Sub().characterType = 1;
 		}
 		else {

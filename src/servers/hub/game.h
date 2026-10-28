@@ -117,6 +117,11 @@ struct HubGame
 	void OnHonor(ClientHandle clientHd, const WideString& nickname);
 	bool GrantItem(i32 userID, i32 docIndex, i32 amount, u32 updateReason, u32 acquisitionReason, eastl::fixed_vector<AccountItem,8,false>* granted = nullptr);
 	void OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count);
+	struct Account* GearAccount(ClientHandle clientHd);
+	void OnGearEquip(ClientHandle clientHd, u8 pageNo, u32 itemUID, u32 slot);
+	void OnGearUnequip(ClientHandle clientHd, u8 pageNo, u32 slot);
+	void OnMasterGearSelect(ClientHandle clientHd, u32 characterID, u8 pageNo);
+	void OnMasterGearRename(ClientHandle clientHd, u8 pageNo, const wchar* name, i32 len);
 	void OnActivityReward(ClientHandle clientHd, i32 tier);
 	void OnSaveSettings(ClientHandle clientHd, u8 settingType, const u8* data, i32 size);
 	void OnInventoryExpand(ClientHandle clientHd, i32 tab);

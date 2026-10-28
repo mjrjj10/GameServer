@@ -2,6 +2,7 @@
 #include <common/base.h>
 #include <EASTL/array.h>
 #include <EASTL/fixed_vector.h>
+#include <EASTL/fixed_string.h>
 #include <common/utils.h>
 
 struct AccountProgress
@@ -36,10 +37,28 @@ struct AccountInventory
 };
 
 AccountInventory AccountInventoryLoad(const wchar* nickname);
+static const i32 MEASURED_GEAR_SLOTS = 6;
+static const i32 MEASURED_GEAR_DEFAULT_PAGES = 2;
+static const i32 GEAR_MAX_PAGES = 32;
+static const u8 MEASURED_GEAR_INVEN_TYPE = 4;
+struct AccountGearPage
+{
+	eastl::fixed_string<wchar,32,false> name;
+	eastl::array<u32,MEASURED_GEAR_SLOTS> items = {};
+};
+struct AccountGears
+{
+	eastl::fixed_vector<AccountGearPage,GEAR_MAX_PAGES,false> pages;
+	eastl::fixed_vector<eastl::pair<i32,u8>,64,false> selected;
+	u8 SelectedPage(i32 classType) const { foreach_const(s, selected) if(s->first == classType) return s->second; return 1; }
+};
+AccountGears AccountGearsLoad(const wchar* nickname);
+void AccountGearsSave(const wchar* nickname, const AccountGears& gears);
 void AccountInventorySave(const wchar* nickname, const AccountInventory& inventory);
 static const i32 MEASURED_INVENTORY_FIRST_SLOT = 200;
 typedef eastl::fixed_vector<AccountItem,8,false> AccountItemList;
-void AccountInventoryAdd(AccountInventory* inventory, i32 docIndex, i32 count, i32 maxStack, AccountItemList* touched);
+void AccountInventoryAdd(AccountInventory* inventory, i32 docIndex, i32 count, i32 maxStack, AccountItemList* touched, i32 firstSlot = MEASURED_INVENTORY_FIRST_SLOT);
+i32 AccountInventoryFreeSlot(const AccountInventory& inventory, i32 firstSlot);
 
 struct AccountGameRecord
 {

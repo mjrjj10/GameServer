@@ -358,6 +358,76 @@ void HubReplication::SendCCoin(ClientHandle clientHd, i64 amount, u32 reason)
 	SendPacket(clientHd, packet);
 }
 
+void HubReplication::SendItemsUpdate(ClientHandle clientHd, const AccountItem* items, i32 count, u32 reason)
+{
+	PacketWriter<Sv::SN_ItemUpdate> packet;
+	packet.Write<u16>((u16)count);
+	for(i32 i = 0; i < count; i++) WriteInventoryItem(packet, items[i]);
+	packet.Write<u32>(reason);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendProfileMasterGears(ClientHandle clientHd, const wchar* nickname)
+{
+	const AccountGears gears = AccountGearsLoad(nickname);
+	const AccountInventory inventory = AccountInventoryLoad(nickname);
+	PacketWriter<Sv::SN_ProfileMasterGears,4096> packet;
+	packet.Write<u16>((u16)gears.pages.size());
+	for(i32 i = 0; i < (i32)gears.pages.size(); i++) {
+		const AccountGearPage& page = gears.pages[i];
+		packet.Write<u8>((u8)(i + 1));
+		packet.WriteStringObj(page.name.data());
+		packet.Write<u16>((u16)page.items.size());
+		for(u32 uid : page.items) {
+			i32 type = -1;
+			foreach_const(it, inventory.items) {
+				if(uid == 0 || it->uid != uid) continue;
+				if(const GameXmlContent::GearItem* gear = GetGameXmlContent().FindGearItem(it->docIndex)) type = gear->slotType;
+			}
+			packet.Write<i32>(type);
+			packet.Write<u32>(type >= 0 ? uid : 0);
+		}
+	}
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendGearEquip(ClientHandle clientHd, u32 result, u8 pageNo, u32 itemUID, u32 slot)
+{
+	Sv::SA_GearEquip packet;
+	packet.result = result;
+	packet.masterGearNo = pageNo;
+	packet.gearItemID = (ItemUID)itemUID;
+	packet.slot = slot;
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendGearUnequip(ClientHandle clientHd, u32 result, u8 pageNo, u32 slot)
+{
+	Sv::SA_GearUnequip packet;
+	packet.result = result;
+	packet.masterGearNo = pageNo;
+	packet.slot = slot;
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendMasterGearSelect(ClientHandle clientHd, u32 result, u32 characterID, u8 pageNo)
+{
+	Sv::SA_MastergearSelect packet;
+	packet.result = result;
+	packet.characterID = characterID;
+	packet.masterGearNo = pageNo;
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendMasterGearRename(ClientHandle clientHd, u32 result, u8 pageNo, const wchar* name)
+{
+	PacketWriter<Sv::SA_MastergearRename> packet;
+	packet.Write<u32>(result);
+	packet.Write<u8>(pageNo);
+	packet.WriteStringObj(name);
+	SendPacket(clientHd, packet);
+}
+
 void HubReplication::SendItemUpdate(ClientHandle clientHd, const AccountItem& item, u32 reason)
 {
 	PacketWriter<Sv::SN_ItemUpdate> packet;
@@ -733,18 +803,20 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 		SendPacket(clientHd, packet);
 	}
 
-	// SN_ProfileMasterGears
-	{
-		PacketWriter<Sv::SN_ProfileMasterGears> packet;
-
-		packet.Write<u16>(0); // masterGears_count
-
-		SendPacket(clientHd, packet);
-	}
+	SendProfileMasterGears(clientHd, account.nickname.data());
 
 	// SN_ProfileItems
 	{
-		const AccountInventory inventory = AccountInventoryLoad(account.nickname.data());
+		AccountInventory inventory = AccountInventoryLoad(account.nickname.data());
+		bool moved = false;
+		foreach(it, inventory.items) {
+			const GameXmlContent::ItemInfo* info = GetGameXmlContent().FindItemInfo(it->docIndex);
+			if(!info || info->firstSlot == MEASURED_INVENTORY_FIRST_SLOT || it->invenType != 0 || it->slot / 100 == info->firstSlot / 100) continue;
+			it->slot = -1;
+			it->slot = AccountInventoryFreeSlot(inventory, info->firstSlot);
+			moved = true;
+		}
+		if(moved) AccountInventorySave(account.nickname.data(), inventory);
 		PacketWriter<Sv::SN_ProfileItems,8192> packet;
 		packet.Write<u8>(1);
 		packet.Write<u16>((u16)inventory.items.size());

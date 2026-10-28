@@ -566,6 +566,15 @@ struct GameXmlContent
 		CharacterModel character;
 	};
 
+	struct GearItem
+	{
+		i32 slotType = -1;
+		eastl::fixed_vector<StatValue,4,false> statMul;
+		eastl::fixed_vector<StatValue,4,false> statAdd;
+	};
+	eastl::hash_map<i32, GearItem> gearItems;
+	const GearItem* FindGearItem(i32 doc) const { auto f = gearItems.find(doc); return f == gearItems.end() ? nullptr : &f->second; }
+
 	struct GroundItemInfo
 	{
 		i32 id = 0;
@@ -888,6 +897,7 @@ struct GameXmlContent
 	{
 		i32 ID = 0;
 		i32 maxStack = 1;
+		i32 firstSlot = 200;
 		u8 buyType = 0;
 		i32 buyValue = 0;
 		i32 sellValue = 0;

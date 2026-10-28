@@ -123,7 +123,7 @@ void World::RefreshMasterHealth(Player& player, ActorMaster& chara)
 f32 World::StatBonus(const Player& player, u8 statType) const
 {
 	const ActorMaster& chara = player.Main();
-	return LevelBonus(player, chara.classType, statType) + GetGameXmlContent().MasterTraitBonus(chara.classType, chara.traits, statType);
+	return LevelBonus(player, chara.classType, statType) + GetGameXmlContent().MasterTraitBonus(chara.classType, chara.traits, statType) + chara.GearBonus(statType);
 }
 
 void World::SendTraitStats(Player& player, ActorMaster& chara)

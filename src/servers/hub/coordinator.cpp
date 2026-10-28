@@ -744,7 +744,7 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 			foreach_const(ri, rewardItems) {
 				const GameXmlContent::ItemInfo* info = GetGameXmlContent().FindItemInfo(ri->first);
 				if(!info || ri->second <= 0) continue;
-				AccountInventoryAdd(&inventory, ri->first, ri->second, info->maxStack, nullptr);
+				AccountInventoryAdd(&inventory, ri->first, ri->second, info->maxStack, nullptr, info->firstSlot);
 				LOG("[client%x] Account :: %ls receives reward item %d x%d", clientHd, account.nickname.data(), ri->first, ri->second);
 			}
 			AccountInventorySave(account.nickname.data(), inventory);

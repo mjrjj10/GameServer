@@ -149,6 +149,19 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 		desc.weapons = p.weapons;
 		desc.weaponGrades = p.weaponGrades;
 		desc.masterGearNo = p.masterGearNo;
+		{
+			const AccountGears gears = AccountGearsLoad(desc.name.data());
+			const AccountInventory inventory = AccountInventoryLoad(desc.name.data());
+			for(int mi = 0; mi < 2; mi++) {
+				const i32 page = (i32)desc.masterGearNo[mi] - 1;
+				if(page < 0 || page >= (i32)gears.pages.size()) continue;
+				for(u32 uid : gears.pages[page].items) {
+					if(uid == 0) continue;
+					foreach_const(it, inventory.items) if(it->uid == uid && !desc.gearDocs[mi].full()) desc.gearDocs[mi].push_back(it->docIndex);
+				}
+			}
+			if(!desc.gearDocs[0].empty() || !desc.gearDocs[1].empty()) LOG("Gear :: %ls pages (%d, %d) items (%d, %d)", desc.name.data(), (i32)desc.masterGearNo[0], (i32)desc.masterGearNo[1], (i32)desc.gearDocs[0].size(), (i32)desc.gearDocs[1].size());
+		}
 		desc.characterType = p.characterType;
 
 		const auto& master0 = xml.GetMaster(p.masters[0]);
@@ -1315,7 +1328,7 @@ void Game::OnPlayerTakeGroundItem(ClientHandle clientHd, u32 itemUID)
 	u32 itemISN = 0;
 	if(const GameXmlContent::ItemInfo* info = GetGameXmlContent().FindItemInfo(taken.itemIndex)) {
 		AccountItemList touched;
-		AccountInventoryAdd(&loot.inventory, taken.itemIndex, taken.count, info->maxStack, &touched);
+		AccountInventoryAdd(&loot.inventory, taken.itemIndex, taken.count, info->maxStack, &touched, info->firstSlot);
 		foreach_const(t, touched) {
 			replication.SendItemMerge(clientHd, t->uid, t->count);
 			replication.SendItemUpdate(clientHd, *t, MEASURED_ITEM_UPDATE_REASON_PICKUP);

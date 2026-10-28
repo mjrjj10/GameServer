@@ -3920,6 +3920,8 @@ void GameXmlContent::LoadItemInfos(XMLDocument& doc)
 		ItemInfo item;
 		pInfo->QueryAttribute("ID", &item.ID);
 		item.maxStack = MAX(1, common->IntAttribute("_MaxStack", 1));
+		static const i32 MEASURED_GEAR_FIRST_SLOT = 100;
+		if(pInfo->FirstChildElement("GearComData")) item.firstSlot = MEASURED_GEAR_FIRST_SLOT;
 		const char* buyType = common->Attribute("_BuyType");
 		if(buyType && EA::StdC::Strcmp(buyType, "BUY_TYPE_GOLD") == 0) item.buyType = 1;
 		else if(buyType && EA::StdC::Strcmp(buyType, "BUY_TYPE_CCOIN") == 0) item.buyType = 2;
@@ -3931,6 +3933,24 @@ void GameXmlContent::LoadItemInfos(XMLDocument& doc)
 
 static const i32 MAX_DROP_DEPTH = 8;
 static const i32 NORMAL_DIFFICULTY_INDEX = 1;
+
+static u8 GearStatType(const char* name)
+{
+	static const struct { const char* name; StatType type; } STATS[] = {
+		{ "STAT_TYPE_HEALTH", StatType::STAT_TYPE_HEALTH },
+		{ "STAT_TYPE_HEALTHREGEN", StatType::STAT_TYPE_HEALTHREGEN },
+		{ "STAT_TYPE_ATTACK", StatType::STAT_TYPE_ATTACK },
+		{ "STAT_TYPE_DEFENCE", StatType::STAT_TYPE_DEFENCE },
+		{ "STAT_TYPE_SKILLPOWER", StatType::STAT_TYPE_SKILLPOWER },
+		{ "STAT_TYPE_ENERGY", StatType::STAT_TYPE_ENERGY },
+		{ "STAT_TYPE_PICKUP_RADIUS", StatType::STAT_TYPE_PICKUP_RADIUS },
+		{ "STAT_TYPE_MANA", StatType::STAT_TYPE_MANA },
+		{ "STAT_TYPE_ULTIMATE", StatType::STAT_TYPE_ULTIMATE },
+	};
+	if(!name) return 0xff;
+	for(const auto& s : STATS) if(EA::StdC::Strcmp(name, s.name) == 0) return (u8)s.type;
+	return 0xff;
+}
 
 i32 GameXmlContent::GearKey(const char* gearType, const char* rank)
 {
@@ -4088,6 +4108,18 @@ bool GameXmlContent::LoadGroundItems()
 		if(gear && itemData) {
 			const i32 key = GearKey(gear->Attribute("_Type"), itemData->Attribute("_Rank"));
 			if(key >= 0) gearDocs[key].push_back(pInfo->IntAttribute("ID"));
+			static const i32 MEASURED_GEAR_SLOT_TYPES[] = { 60, 70, 80 };
+			GearItem& g = gearItems[pInfo->IntAttribute("ID")];
+			if(key >= 0) g.slotType = MEASURED_GEAR_SLOT_TYPES[key / 5];
+			if(XMLElement* effect = itemData->FirstChildElement("_Effect")) {
+				for(XMLElement* e = effect->FirstChildElement(); e; e = e->NextSiblingElement()) {
+					const u8 type = GearStatType(e->Attribute("DATAKEY"));
+					if(type == 0xff) continue;
+					StatValue v = { type, e->FloatAttribute("DATA") };
+					if(EA::StdC::Strcmp(e->Name(), "_STAT_MUL") == 0 && !g.statMul.full()) g.statMul.push_back(v);
+					else if(EA::StdC::Strcmp(e->Name(), "_STAT_ADD") == 0 && !g.statAdd.full()) g.statAdd.push_back(v);
+				}
+			}
 			continue;
 		}
 		XMLElement* etc = pInfo->FirstChildElement("EtcItemComData");

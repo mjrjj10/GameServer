@@ -34,6 +34,7 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 {
 	const i32 packetSize = header.size - sizeof(NetHeader);
 
+static const u16 MEASURED_CQ_MASTERGEAR_RENAME = 60066;
 #define HANDLE_CASE(PACKET) case Cl::PACKET::NET_ID: { HandlePacket_##PACKET(clientHd, header, packetData, packetSize); } break
 
 	switch(header.netID) {
@@ -83,6 +84,10 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CN_SortieRoomConfirm);
 		HANDLE_CASE(CQ_GetUserInfo);
 		HANDLE_CASE(CQ_ItemTrade);
+		HANDLE_CASE(CQ_GearEquip);
+		HANDLE_CASE(CQ_GearUnequip);
+		HANDLE_CASE(CQ_MasterGearRepair);
+		case MEASURED_CQ_MASTERGEAR_RENAME: HandleMasterGearRename(clientHd, packetData, packetSize); break;
 		HANDLE_CASE(CQ_BuyGift);
 		HANDLE_CASE(CQ_PveRanking);
 		HANDLE_CASE(CQ_SaveSettings);
@@ -866,6 +871,60 @@ void HubPacketHandler::HandlePacket_CQ_BuyGift(ClientHandle clientHd, const NetH
 	const Cl::CQ_BuyGift& packet = SafeCast<Cl::CQ_BuyGift>(packetData, packetSize);
 	NT_LOG("[client%x] Client :: CQ_BuyGift (activity reward) :: tier=%u", clientHd, (u32)packet.amount_u8);
 	game->OnActivityReward(clientHd, (i32)packet.amount_u8);
+}
+
+void HubPacketHandler::HandlePacket_CQ_GearEquip(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	ConstBuffer buff(packetData, packetSize);
+	if(packetSize != 9) {
+		WARN("[client%x] WARNING: invalid CQ_GearEquip (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const u8 page = buff.Read<u8>();
+	const u32 uid = buff.Read<u32>();
+	const u32 slot = buff.Read<u32>();
+	NT_LOG("[client%x] Client :: CQ_GearEquip :: page=%d item=0x%x slot=%u", clientHd, (i32)page, uid, slot);
+	game->OnGearEquip(clientHd, page, uid, slot);
+}
+
+void HubPacketHandler::HandlePacket_CQ_GearUnequip(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	ConstBuffer buff(packetData, packetSize);
+	if(packetSize != 5) {
+		WARN("[client%x] WARNING: unexpected CQ_GearUnequip (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const u8 page = buff.Read<u8>();
+	const u32 slot = buff.Read<u32>();
+	NT_LOG("[client%x] Client :: CQ_GearUnequip :: page=%d slot=%u", clientHd, (i32)page, slot);
+	game->OnGearUnequip(clientHd, page, slot);
+}
+
+void HubPacketHandler::HandlePacket_CQ_MasterGearRepair(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	ConstBuffer buff(packetData, packetSize);
+	if(packetSize != 5) {
+		WARN("[client%x] WARNING: invalid master gear select (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const u32 characterID = buff.Read<u32>();
+	const u8 page = buff.Read<u8>();
+	NT_LOG("[client%x] Client :: master gear select :: character=0x%x page=%d", clientHd, characterID, (i32)page);
+	game->OnMasterGearSelect(clientHd, characterID, page);
+}
+
+void HubPacketHandler::HandleMasterGearRename(ClientHandle clientHd, const u8* packetData, const i32 packetSize)
+{
+	ConstBuffer buff(packetData, packetSize);
+	if(!buff.CanRead(3)) return;
+	const u8 page = buff.Read<u8>();
+	const u16 len = buff.Read<u16>();
+	if(len > 32 || packetSize != 3 + len * 2) {
+		WARN("[client%x] WARNING: unexpected master gear rename (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: master gear rename :: page=%d", clientHd, (i32)page);
+	game->OnMasterGearRename(clientHd, page, (const wchar*)buff.ReadRaw(len * 2), len);
 }
 
 void HubPacketHandler::HandlePacket_CQ_ItemTrade(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

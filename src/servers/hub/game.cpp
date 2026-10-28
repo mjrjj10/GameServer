@@ -8,6 +8,7 @@
 #include "mission_rules.h"
 #include "town_rules.h"
 #include <EASTL/algorithm.h>
+#include <EAStdC/EASprintf.h>
 #include <mxm/account_progress.h>
 #include <time.h>
 #include <EAStdC/EAString.h>
@@ -407,11 +408,7 @@ bool HubGame::GrantItem(i32 userID, i32 docIndex, i32 amount, u32 updateReason, 
 		if(inventory.items.full()) break;
 		AccountItem item;
 		item.uid = inventory.nextUid++;
-		item.slot = MEASURED_INVENTORY_FIRST_SLOT;
-		for(bool taken = true; taken; ) {
-			taken = false;
-			foreach_const(it, inventory.items) if(it->invenType == item.invenType && it->slot == item.slot) { taken = true; item.slot++; break; }
-		}
+		item.slot = AccountInventoryFreeSlot(inventory, info->firstSlot);
 		item.docIndex = docIndex;
 		item.count = MIN(left, info->maxStack);
 		left -= item.count;
@@ -1485,6 +1482,13 @@ bool HubGame::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i3
 
 	if(msg[0] == L'!') {
 		msg++;
+
+		i32 giveDoc = 0, giveCount = 1;
+		if(EA::StdC::Sscanf(msg, L"give %d %d", &giveDoc, &giveCount) >= 1) {
+			const bool ok = GrantItem(userID, giveDoc, MAX(giveCount, 1), MEASURED_ITEM_UPDATE_REASON_TRADE, MEASURED_ITEM_ACQUISITION_REASON_TRADE);
+			SendDbgMsg(clientHd, LFMT(L"Give %d x%d: %s", giveDoc, MAX(giveCount, 1), ok ? L"ok" : L"unknown item"));
+			return true;
+		}
 
 		if(EA::StdC::Strncmp(msg, L"lego", 4) == 0) {
 			WorldHub::ActorCore* playerActor = world.FindPlayerActor(playerActorUID[userID]);

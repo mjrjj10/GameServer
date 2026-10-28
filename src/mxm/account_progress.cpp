@@ -404,6 +404,54 @@ void AccountFriendsSave(const wchar* nickname, const AccountFriends& friends)
 	rename(tmp, path);
 }
 
+AccountGears AccountGearsLoad(const wchar* nickname)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	AccountGears gears;
+	char path[512];
+	AccountPath(nickname, "gears", path, sizeof(path));
+	FILE* f = fopen(path, "rb");
+	if(f) {
+		char line[512];
+		while(fgets(line, sizeof(line), f)) {
+			AccountGearPage page;
+			char name[160] = {};
+			i32 classType = 0, selected = 0;
+			if(sscanf(line, "P %159s %u %u %u %u %u %u", name, &page.items[0], &page.items[1], &page.items[2], &page.items[3], &page.items[4], &page.items[5]) == 7 && !gears.pages.full()) {
+				for(const char* c = name; c[0] && c[1] && c[2] && c[3] && !page.name.full(); c += 4) {
+					u32 v = 0;
+					if(sscanf(c, "%4x", &v) != 1) break;
+					page.name.push_back((wchar)v);
+				}
+				gears.pages.push_back(page);
+			}
+			else if(sscanf(line, "S %d %d", &classType, &selected) == 2 && !gears.selected.full()) gears.selected.push_back(eastl::make_pair(classType, (u8)selected));
+		}
+		fclose(f);
+	}
+	while((i32)gears.pages.size() < MEASURED_GEAR_DEFAULT_PAGES) gears.pages.push_back(AccountGearPage());
+	return gears;
+}
+
+void AccountGearsSave(const wchar* nickname, const AccountGears& gears)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	_mkdir(ACCOUNT_DIR);
+	char path[512];
+	AccountPath(nickname, "gears", path, sizeof(path));
+	FILE* f = fopen(path, "wb");
+	ASSERT(f);
+	foreach_const(p, gears.pages) {
+		fprintf(f, "P ");
+		if(p->name.empty()) fprintf(f, "-");
+		foreach_const(c, p->name) fprintf(f, "%04x", (u32)*c);
+		for(u32 uid : p->items) fprintf(f, " %u", uid);
+		fprintf(f, "\n");
+	}
+	foreach_const(s, gears.selected) fprintf(f, "S %d %d\n", s->first, (i32)s->second);
+	fclose(f);
+}
+
 AccountInventory AccountInventoryLoad(const wchar* nickname)
 {
 	std::lock_guard<std::mutex> lock(g_accountFileMutex);
@@ -439,7 +487,17 @@ AccountInventory AccountInventoryLoad(const wchar* nickname)
 	return inventory;
 }
 
-void AccountInventoryAdd(AccountInventory* inventory, i32 docIndex, i32 count, i32 maxStack, AccountItemList* touched)
+i32 AccountInventoryFreeSlot(const AccountInventory& inventory, i32 firstSlot)
+{
+	i32 slot = firstSlot;
+	for(bool taken = true; taken; ) {
+		taken = false;
+		foreach_const(it, inventory.items) if(it->invenType == 0 && it->slot == slot) { taken = true; slot++; break; }
+	}
+	return slot;
+}
+
+void AccountInventoryAdd(AccountInventory* inventory, i32 docIndex, i32 count, i32 maxStack, AccountItemList* touched, i32 firstSlot)
 {
 	i32 left = count;
 	foreach(it, inventory->items) {
@@ -453,11 +511,7 @@ void AccountInventoryAdd(AccountInventory* inventory, i32 docIndex, i32 count, i
 	while(left > 0 && !inventory->items.full()) {
 		AccountItem item;
 		item.uid = inventory->nextUid++;
-		item.slot = MEASURED_INVENTORY_FIRST_SLOT;
-		for(bool taken = true; taken; ) {
-			taken = false;
-			foreach_const(it, inventory->items) if(it->invenType == item.invenType && it->slot == item.slot) { taken = true; item.slot++; break; }
-		}
+		item.slot = AccountInventoryFreeSlot(*inventory, firstSlot);
 		item.docIndex = docIndex;
 		item.count = MIN(left, maxStack);
 		left -= item.count;

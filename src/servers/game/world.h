@@ -61,6 +61,7 @@ struct World
 		eastl::array<i32,2> weaponGrades;
 		eastl::array<u8,2> masterGearNo;
 		eastl::array<i32,2> characterType;
+		eastl::array<eastl::fixed_vector<i32,6,false>,2> gearDocs;
 	};
 
 	struct Player
@@ -101,6 +102,7 @@ struct World
 		const i32 mainWeaponGrade;
 		const i32 subWeaponGrade;
 		const u8 mainMasterGearNo;
+		const eastl::array<eastl::fixed_vector<i32,6,false>,2> gearDocs;
 		const u8 subMasterGearNo;
 		const i32 mainCharacterType;
 		const i32 subCharacterType;
@@ -352,7 +354,8 @@ struct World
 			mainMasterGearNo(desc.masterGearNo[0]),
 			subMasterGearNo(desc.masterGearNo[1]),
 			mainCharacterType(desc.characterType[0]),
-			subCharacterType(desc.characterType[1])
+			subCharacterType(desc.characterType[1]),
+			gearDocs(desc.gearDocs)
 		{
 
 		}
@@ -373,6 +376,8 @@ struct World
 		i32 traitPoints = 0;
 		Time traitResetAt = Time::ZERO;
 		i32 seed;
+		eastl::fixed_vector<eastl::pair<u8,f32>,8,false> gearBonus;
+		f32 GearBonus(u8 statType) const { f32 sum = 0; foreach_const(g, gearBonus) if(g->first == statType) sum += g->second; return sum; }
 		i32 spawnAnim = -1;
 		i32 ownerID = 0;
 		u8 dirToNearPC = 0;
