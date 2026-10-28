@@ -192,6 +192,7 @@ struct HubReplication
 		LocalActorID nextNpcLocalActorID;
 		LocalActorID nextMonsterLocalActorID;
 		bool isFirstLoad;
+		bool selfExpPending;
 
 		void Reset();
 	};

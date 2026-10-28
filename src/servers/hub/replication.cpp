@@ -57,6 +57,7 @@ void HubReplication::PlayerLocalInfo::Reset()
 	nextNpcLocalActorID = LocalActorID::FIRST_NPC;
 	nextMonsterLocalActorID = LocalActorID::INVALID;
 	isFirstLoad = true;
+	selfExpPending = false;
 }
 
 void HubReplication::Init(Server* server_)
@@ -2325,7 +2326,10 @@ void HubReplication::SendActorPlayerSpawn(ClientHandle clientHd, const ActorPlay
 	}
 
 	const bool self = (u32)localActorID < (u32)LocalActorID::FIRST_OTHER_PLAYER;
-	if(actor.parentActorUID == ActorUID::INVALID && !self) {
+	PlayerLocalInfo& localInfo = playerLocalInfo[plidMap->Get(clientHd)];
+	const bool sendExp = !self || localInfo.selfExpPending;
+	if(self) localInfo.selfExpPending = false;
+	if(actor.parentActorUID == ActorUID::INVALID && sendExp) {
 		PacketWriter<Sv::SN_Exp> packet;
 		packet.Write<LocalActorID>(localActorID);
 		packet.WriteStringObj(actor.name.data());
@@ -2576,8 +2580,10 @@ void HubReplication::SendInitialFrame(ClientHandle clientHd)
 
 void HubReplication::SendSelfExp(ClientHandle clientHd)
 {
-	const Account* account = playerAccount[plidMap->Get(clientHd)];
+	const i32 clientID = plidMap->Get(clientHd);
+	const Account* account = playerAccount[clientID];
 	if(!account) return;
+	playerLocalInfo[clientID].selfExpPending = true;
 	foreach_const(p, frameCur->playerList) {
 		if(p->parentActorUID != ActorUID::INVALID) continue;
 		const LocalActorID localActorID = GetLocalActorID(clientHd, p->actorUID);
@@ -2589,6 +2595,7 @@ void HubReplication::SendSelfExp(ClientHandle clientHd)
 		packet.Write<u16>(account->level);
 		packet.Write<u32>(account->levelExp);
 		SendPacket(clientHd, packet);
+		playerLocalInfo[clientID].selfExpPending = false;
 		return;
 	}
 }
