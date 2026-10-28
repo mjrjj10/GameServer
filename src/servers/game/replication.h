@@ -293,6 +293,9 @@ struct Replication
 	i32 surrenderAbleTime = 0;
 	bool titanMode = false;
 	bool occupyMode = false;
+	bool pveTeams = false;
+	i32 PlayerTeamType(i32 team) const { return pveTeams ? (i32)TeamType::PLAYER : (i32)TeamType::RED + team; }
+	TeamType ActorTeamType(Faction faction) const { return pveTeams && (faction == Faction::RED || faction == Faction::BLUE) ? TeamType::PLAYER : FactionTeamType(faction); }
 	i8 titanNextIndex = 0;
 	i32 supportKitIndex = -1;
 
@@ -317,6 +320,9 @@ struct Replication
 	struct DefenceClear { LocalActorID player; i32 stage; i32 clearStep; u32 clearMs; u32 baseRon; u32 baseExp; RewardBonusList bonusRon; RewardBonusList bonusExp; eastl::fixed_vector<RewardCard,4,false> items; u32 guildBase; u32 guildBonus; u8 guildMembers; u16 boostGold; u16 boostExp; };
 	void SendDefenceClearResult(ClientHandle clientHd, const DefenceClear& clear, const StageMember* members, i32 memberCount);
 	void SendPhaseStartToAll(i32 step);
+	enum : u32 { SCORE_TYPE_MINERAL_CARRIER_KILLS = 0, SCORE_TYPE_MINERAL = 40 };
+	void SendTeamScoreToAll(u32 type, i32 value);
+	void SendDefenceBestRecord(ClientHandle clientHd, i32 personalStep, u32 personalMs, i32 worldStep, u32 worldMs);
 	void SendPhaseEndToAll(i32 step, u32 reason, u32 clearMs);
 	void SendStageClearResult(ClientHandle clientHd, const StageClear& clear, const StageMember* members, i32 memberCount);
 	void SendExpGain(ClientHandle clientHd, u32 exp);

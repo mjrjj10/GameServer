@@ -233,6 +233,30 @@ void Replication::SendDefenceClearResult(ClientHandle clientHd, const DefenceCle
 	SendPacket(clientHd, packet);
 }
 
+void Replication::SendDefenceBestRecord(ClientHandle clientHd, i32 personalStep, u32 personalMs, i32 worldStep, u32 worldMs)
+{
+	Sv::SA_DefenceBestRecord packet;
+	packet.personalClearStepIndex = (u32)personalStep;
+	packet.personalClearTime = personalMs;
+	packet.worldClearStepIndex = (u32)worldStep;
+	packet.worldClearTime = worldMs;
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendTeamScoreToAll(u32 type, i32 value)
+{
+	PacketWriter<Sv::SN_ScoreUpdate> packet;
+	packet.Write<u32>(0);
+	packet.Write<u32>(0);
+	packet.Write<u16>(1);
+	packet.Write<u32>(type);
+	packet.Write<u32>((u32)MAX(value, 0));
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		SendPacket(clientHandle[clientID], packet);
+	}
+}
+
 void Replication::SendPhaseStartToAll(i32 step)
 {
 	Sv::SN_PhaseStart packet;
@@ -1033,7 +1057,7 @@ void Replication::SendPvpLoadingComplete(ClientHandle clientHd)
 
 			packet.Write<UserID>(p.userID);
 			packet.WriteStringObj(p.name.data());
-			packet.Write<TeamType>(p.team == 0 ? TeamType::RED : TeamType::BLUE);
+			packet.Write<TeamType>((TeamType)PlayerTeamType(p.team));
 			packet.Write<CreatureIndex>(CreatureIndex(100000000 + (i32)main->classType));
 			packet.Write<CreatureIndex>(CreatureIndex(100000000 + (i32)sub->classType));
 		}
@@ -3619,7 +3643,7 @@ void Replication::SendActorMasterSpawn(ClientHandle clientHd, const ActorMaster&
 			packet.Write<i32>(actor.wanderDist);
 			packet.Write<i32>(actor.tagID);
 
-			packet.Write<i32>(3 + parent.team); // faction
+			packet.Write<i32>(PlayerTeamType(parent.team)); // faction
 			packet.Write<ClassType>(actor.classType); // classType
 			packet.Write<SkinIndex>(actor.skinIndex); // skinIndex
 			packet.Write<i32>(actor.seed);
@@ -3663,7 +3687,7 @@ void Replication::SendActorMasterSpawn(ClientHandle clientHd, const ActorMaster&
 			packet.Write<i32>(actor.ownerID);
 			packet.Write<i32>(actor.tagID);
 
-			packet.Write<i32>(3 + parent.team);
+			packet.Write<i32>(PlayerTeamType(parent.team));
 			packet.Write<ClassType>(actor.classType);
 			packet.Write<SkinIndex>(actor.skinIndex);
 			packet.Write<i32>(actor.seed);
@@ -3781,7 +3805,7 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 		packet.Write<u8>(actor.dirToNearPC);
 		packet.Write<i32>(actor.wanderDist);
 		packet.Write<i32>(actor.tagID);
-		packet.Write<TeamType>(FactionTeamType(actor.faction));
+		packet.Write<TeamType>(ActorTeamType(actor.faction));
 		packet.Write<ClassType>(ClassType::NONE);
 		packet.Write<SkinIndex>(SkinIndex::DEFAULT);
 		packet.Write<i32>(actor.seed);
@@ -3897,7 +3921,7 @@ void Replication::SendActorDynamicSpawn(ClientHandle clientHd, const ActorDynami
 		packet.Write<u8>(actor.dirToNearPC);
 		packet.Write<i32>(actor.wanderDist);
 		packet.Write<i32>(actor.tagID);
-		packet.Write<TeamType>(FactionTeamType(actor.faction));
+		packet.Write<TeamType>(ActorTeamType(actor.faction));
 		packet.Write<ClassType>(ClassType::NONE);
 		packet.Write<SkinIndex>(SkinIndex::DEFAULT);
 		packet.Write<i32>(actor.seed);

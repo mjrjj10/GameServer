@@ -179,6 +179,55 @@ void AccountStageCleared(const wchar* nickname, i32 stageIndex)
 	AccountStagesSave(nickname, stages);
 }
 
+static const char* DEFENCE_WORLD_RECORD_PATH = "accounts/defence_world.txt";
+
+static bool DefenceRecordBetter(const DefenceRecord& a, const DefenceRecord& b)
+{
+	return a.step > b.step || (a.step == b.step && a.step > 0 && a.timeMs < b.timeMs);
+}
+
+static DefenceRecord DefenceRecordRead(const char* path)
+{
+	DefenceRecord record;
+	FILE* f = fopen(path, "rb");
+	if(!f) return record;
+	if(fscanf(f, "%d %u", &record.step, &record.timeMs) != 2) record = DefenceRecord();
+	fclose(f);
+	return record;
+}
+
+static void DefenceRecordWrite(const char* path, const DefenceRecord& record)
+{
+	_mkdir(ACCOUNT_DIR);
+	FILE* f = fopen(path, "wb");
+	if(!f) return;
+	fprintf(f, "%d %u\n", record.step, record.timeMs);
+	fclose(f);
+}
+
+DefenceRecord AccountDefenceRecordLoad(const wchar* nickname)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	char path[512];
+	AccountPath(nickname, "defence", path, sizeof(path));
+	return DefenceRecordRead(path);
+}
+
+DefenceRecord DefenceWorldRecordLoad()
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	return DefenceRecordRead(DEFENCE_WORLD_RECORD_PATH);
+}
+
+void AccountDefenceRecordSubmit(const wchar* nickname, const DefenceRecord& record)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	char path[512];
+	AccountPath(nickname, "defence", path, sizeof(path));
+	if(DefenceRecordBetter(record, DefenceRecordRead(path))) DefenceRecordWrite(path, record);
+	if(DefenceRecordBetter(record, DefenceRecordRead(DEFENCE_WORLD_RECORD_PATH))) DefenceRecordWrite(DEFENCE_WORLD_RECORD_PATH, record);
+}
+
 static const u32 HYP_ACTIVITY_MAX_SECONDS_PER_GAME = 1800;
 
 AccountReward AccountRewardTake(const wchar* nickname)

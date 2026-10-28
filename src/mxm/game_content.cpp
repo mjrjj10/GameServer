@@ -1117,6 +1117,7 @@ bool GameXmlContent::LoadMonsterAi()
 			ai.masterMark = pInfo->IntAttribute("masterMark");
 			ai.teamBuff = pInfo->IntAttribute("teamBuff");
 			if(const char* team = pInfo->Attribute("team")) ai.playerSide = EA::StdC::Strcmp(team, "player") == 0;
+			ai.mineral = pInfo->BoolAttribute("mineral");
 			if(const char* hpBuffs = pInfo->Attribute("hpBuffs")) {
 				const char* at = hpBuffs;
 				while(*at && !ai.hpBuffs.full()) {
@@ -4614,6 +4615,10 @@ bool GameXmlContent::LoadInteractions()
 		const char* repeat = pData->Attribute("_Repeat");
 		info.repeat = repeat && EA::StdC::Stricmp(repeat, "True") == 0;
 		pData->QueryFloatAttribute("_RepeatInterval", &info.repeatInterval);
+		for(XMLElement* pR = pData->FirstChildElement("_RequireResource"); pR; pR = pR->NextSiblingElement("_RequireResource")) {
+			const char* type = pR->Attribute("_Type");
+			if(type && EA::StdC::Strcmp(type, "SCORE_TYPE_MINERAL") == 0) info.requireMinerals = pR->IntAttribute("_Count");
+		}
 	}
 	XMLDocument xmlCast;
 	if(LoadXMLFile(L"/InteractionCast.xml", xmlCast, true)) {

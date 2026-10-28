@@ -1024,6 +1024,9 @@ public:
 		Time nextStartAt = Time::ZERO;
 	};
 	DefenceState defence;
+	i32 minerals = 0;
+	i32 mineralCarrierKills = 0;
+	void SendMinerals();
 	i32 fixedRespawnMs = 0;
 	void StartDefence(i32 coreDoc);
 	void UpdateDefence();

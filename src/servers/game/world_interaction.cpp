@@ -197,6 +197,7 @@ void World::StartLevelEvents()
 		if(n->kind != GameXmlContent::LevelEventNode::LEVEL_START || !NodeInDifficulty(*n)) continue;
 		foreach_const(o, n->outputs) FireLevelEvent(*o, -1, n->id);
 	}
+	if(defence.active) SendMinerals();
 }
 
 i32 World::AreaOwnerTeam(const GameXmlContent::Map::Area& area) const
@@ -977,6 +978,10 @@ bool World::StartMapInteraction(Player& player, ActorUID target)
 	if(!info || !MapInteractionPos(m, &objPos) || !m.active || (m.occupiedTeam != INTERACTION_NOT_OCCUPIED && !contestable) || player.interactSlot >= 0) return true;
 	if(!(m.openMask & (1u << (PLAYER_FACTION_BASE + player.team)))) return true;
 	if(!info->individual) foreach_const(p, players) if(p->interactSlot == slot) return true;
+	if(info->requireMinerals > minerals) {
+		LOG("Interaction :: %ls lacks minerals for object %d (%d/%d)", player.name.data(), m.localID, minerals, info->requireMinerals);
+		return true;
+	}
 	const vec2 here = vec2(player.body->GetWorldPos());
 	if(info->activeDistance > 0 && glm::length(here - vec2(objPos)) > info->activeDistance + HitRadius(player)) {
 		LOG("Interaction :: %ls too far from object %d", player.name.data(), m.localID);
@@ -1013,6 +1018,10 @@ void World::CompleteMapInteraction(Player& player)
 	}
 	replication->SendInteractionExecuteOnlyToAll(player.Main().UID, m.object, (u32)ActionStateID::INTERACTION_EXECUTE_BEHAVIORSTAT);
 	LOG("Interaction :: %ls takes object %d (team %d)", player.name.data(), m.localID, (i32)player.team);
+	if(info->requireMinerals > 0) {
+		minerals = MAX(minerals - info->requireMinerals, 0);
+		SendMinerals();
+	}
 	if(info->action == GameXmlContent::InteractionInfo::TOTEM && player.statueCaptures < 255) player.statueCaptures++;
 	if(info->action == GameXmlContent::InteractionInfo::OCCUPY && player.visionCaptures < 255) player.visionCaptures++;
 	if(info->pvpOccupy && occupyMode) {
@@ -1028,7 +1037,7 @@ void World::CompleteMapInteraction(Player& player)
 	if(info->announcement != 0 && !(info->pvpOccupy && occupyMode)) {
 		if(!m.creature) player.occupyStreak++;
 		replication->SendPvpAnnouncementToAll(info->announcement, m.creature ? 0 : player.occupyStreak, player.Main().UID, m.object, (u32)info->points);
-		if(info->points > 0) AddPoints(player, info->points);
+		if(info->points > 0 && info->requireMinerals == 0) AddPoints(player, info->points);
 	}
 	if(!m.creature && !stageCommonDrop.empty()) {
 		auto obj = actorDynamicMap.find(m.object);

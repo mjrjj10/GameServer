@@ -4,12 +4,16 @@
 
 static const u32 MEASURED_PHASE_END_KILLS = 2;
 static const u32 HYP_PHASE_END_TIMEOUT = 1;
+static const i32 MEASURED_DEFENCE_START_MINERALS = 1;
+static const u32 MEASURED_ANNOUNCE_MINERAL_GAIN = 16;
 
 void World::StartDefence(i32 coreDoc)
 {
 	defence = DefenceState();
 	defence.active = !GetGameXmlContent().defencePhases.empty();
 	defence.coreDoc = coreDoc;
+	minerals = defence.active ? MEASURED_DEFENCE_START_MINERALS : 0;
+	mineralCarrierKills = 0;
 	LOG("Defence :: %d phases, core %d", (i32)GetGameXmlContent().defencePhases.size(), coreDoc);
 }
 
@@ -63,6 +67,7 @@ void World::UpdateDefence()
 		defence.kills = 0;
 		defence.waveStartAt = localTime;
 		replication->SendPhaseStartToAll(defence.step);
+		if(defence.step == 1) SendMinerals();
 		FirePhaseTriggers(GameXmlContent::LevelEventNode::START_PHASE, defence.step);
 		LOG("Defence :: phase %d starts t=%.1f", defence.step, GameTimeSec());
 		return;
@@ -72,9 +77,22 @@ void World::UpdateDefence()
 	else if(phase.timeout > 0 && TimeDiffSec(TimeDiff(defence.waveStartAt, localTime)) >= phase.timeout && !DefenceMonstersAlive()) EndDefencePhase(HYP_PHASE_END_TIMEOUT);
 }
 
+void World::SendMinerals()
+{
+	replication->SendTeamScoreToAll(Replication::SCORE_TYPE_MINERAL, minerals);
+}
+
 void World::DefenceMonsterDied(const ActorNpc& npc)
 {
 	if(!defence.active) return;
+	if(npc.monsterAi && npc.monsterAi->mineral && npc.killerUID != ActorUID::INVALID && FindMasterActor(npc.killerUID)) {
+		minerals++;
+		mineralCarrierKills++;
+		replication->SendPvpAnnouncementToAll(MEASURED_ANNOUNCE_MINERAL_GAIN, 0, npc.killerUID, npc.UID, 1);
+		SendMinerals();
+		replication->SendTeamScoreToAll(Replication::SCORE_TYPE_MINERAL_CARRIER_KILLS, mineralCarrierKills);
+		LOG("Defence :: mineral carrier killed, %d mineral(s)", minerals);
+	}
 	if(defence.coreDoc != 0 && (i32)npc.docID == defence.coreDoc) {
 		defence.failed = true;
 		LOG("Defence :: core destroyed at phase %d t=%.1f", defence.step, GameTimeSec());

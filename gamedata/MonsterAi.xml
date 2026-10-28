@@ -281,9 +281,9 @@
     <ATTACK target="master" state="SKILL_5_BEHAVIORSTATE" kind="special" range="1616" cooldown="30.00" remote="1467050040" delay="1" multiplier="1.2" speed="0" status="1262530032" radius="1100" hits="1" interval="0" samples="1" share="0.036" hitRemote="1467050040" hpMin="0.6" hpMax="0.7" />
     <ATTACK target="master" state="SKILL_16_BEHAVIORSTATE" kind="special" range="1616" cooldown="30.00" remote="1467050042" delay="1" multiplier="1.2" speed="0" status="1262530032" radius="1900" hits="1" interval="0" samples="1" share="0.036" hitRemote="1467050042" hpMin="0.4" hpMax="0.5" />
   </INFO>
-  <INFO ID="108012300" class="DF_SCOUT" walk="800" run="800" perception="0" lost="0" tag="" enemies="" destroy="4" radius="80" cc="STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="1.32">
+  <INFO ID="108012300" class="DF_SCOUT" walk="800" run="800" perception="0" lost="0" tag="" enemies="" destroy="4" radius="80" cc="STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" mineral="1" spawnTime="1.32">
   </INFO>
-  <INFO ID="108012301" class="DF_SCOUT" walk="800" run="800" perception="0" lost="0" tag="" enemies="" destroy="4" radius="80" cc="STATUS_TYPE_FREEZE STATUS_TYPE_STUN" spawnTime="1.32">
+  <INFO ID="108012301" class="DF_SCOUT" walk="800" run="800" perception="0" lost="0" tag="" enemies="" destroy="4" radius="80" cc="STATUS_TYPE_FREEZE STATUS_TYPE_STUN" mineral="1" spawnTime="1.32">
   </INFO>
   <INFO ID="108012350" class="DF_YOUNG" walk="600" run="600" perception="400" lost="400" tag="Monster" enemies="KoomWall|DefenceGate|Tower|Core" destroy="4" radius="95" cc="STATUS_TYPE_AIRBORNE STATUS_TYPE_FLY STATUS_TYPE_FREEZE STATUS_TYPE_KNOCKDOWN STATUS_TYPE_PUSH STATUS_TYPE_STUN" spawnTime="0.00">
     <ATTACK target="structure" state="SKILL_2_BEHAVIORSTATE" kind="basic" range="285" cooldown="2.00" remote="1468012042" delay="0.15" multiplier="1" speed="0" status="0" radius="800" hits="1" interval="0" samples="100" share="1.000" hitRemote="1468012042" selfStatus="1200082602 1261500004" selfDie="1" anim="0.15" />

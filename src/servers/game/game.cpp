@@ -98,6 +98,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 	if(const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(gameInfo.stageIndex)) {
 		const bool pve = stage->gameMode == GameModeType::GAME_MODE_STAGE || stage->gameMode == GameModeType::GAME_MODE_DEFENCE;
 		world.hostileMonsters = pve;
+		replication.pveTeams = pve;
 		world.occupyMode = stage->gameMode == GameModeType::GAME_MODE_OCCUPY;
 		replication.occupyMode = world.occupyMode;
 		if(pve) world.difficultyBit = stage->difficultyBit;
@@ -242,6 +243,14 @@ void Game::Update(Time localTime_)
 
 				foreach_const(p, playerList) {
 					replication.SendPreGameLevelEvents(p->clientHd);
+				}
+				if(defenceStage) {
+					const DefenceRecord best = DefenceWorldRecordLoad();
+					foreach_const(p, world.players) {
+						if(p->clientHd == ClientHandle::INVALID || p->removed) continue;
+						const DefenceRecord mine = AccountDefenceRecordLoad(p->name.data());
+						replication.SendDefenceBestRecord(p->clientHd, mine.step, mine.timeMs, best.step, best.timeMs);
+					}
 				}
 			}
 		} break;
@@ -1194,6 +1203,7 @@ void Game::EndDefence()
 		replication.SendDefenceClearResult(p->clientHd, clear, members.data(), (i32)members.size());
 		foreach_const(it, clear.items) AccountRewardItemAppend(p->name.data(), it->index, (i32)it->amount);
 		if(world.defence.won) AccountStageCleared(p->name.data(), clear.stage);
+		if(cleared > 0) AccountDefenceRecordSubmit(p->name.data(), { cleared, world.defence.clearMs });
 		AccountGameRecord record;
 		record.gold = clear.baseRon + RewardBonusTotal(clear.bonusRon);
 		record.exp = clear.baseExp + RewardBonusTotal(clear.bonusExp);
