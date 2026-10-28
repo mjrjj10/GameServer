@@ -1128,6 +1128,50 @@ void HubGame::SendFriendsOnConnect(i32 userID)
 	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_ONLINE);
 }
 
+void HubGame::OnQuickRunArena(ClientHandle clientHd)
+{
+	static const StageIndex MEASURED_QUICK_RUN_STAGES[] = { StageIndex(200020102), StageIndex(200006112), StageIndex(200101000) };
+	const i32 userID = plidMap->Get(clientHd);
+	if(userID < 0 || playerMap[userID] == playerList.end()) return;
+	auto f = partyMap.find(playerMap[userID]->partyUID);
+	if(f == partyMap.end()) {
+		WARN("[client%x] HubGame :: quick run without a party", clientHd);
+		return;
+	}
+	Party& party = *f->second;
+	eastl::fixed_vector<StageIndex,4,false> available;
+	for(StageIndex s : MEASURED_QUICK_RUN_STAGES) {
+		Party probe = party;
+		if(SetPartyStage(probe, s)) available.push_back(s);
+	}
+	if(available.empty()) {
+		WARN("[client%x] HubGame :: quick run has no available stage for entry %d", clientHd, (i32)party.entry);
+		return;
+	}
+	const StageIndex chosen = available[RandUint() % (u32)available.size()];
+	SetPartyStage(party, chosen);
+	party.gameType = GameType::PVP_NORMAL;
+	party.gameDefinition = GameDefinition::System;
+	party.selectMasterType = 0;
+	replication.SendQuickRunArena(clientHd, MEASURED_QUICK_RUN_STAGES, (i32)ARRAY_COUNT(MEASURED_QUICK_RUN_STAGES), GameType::PVP_NORMAL, GameDefinition::System);
+	LOG("[client%x] HubGame :: quick run arena -> stage %d", clientHd, (i32)chosen);
+}
+
+void HubGame::OnFriendStateChange(ClientHandle clientHd, u32 state)
+{
+	static const u32 MEASURED_FRIEND_STATE_UNCHANGED = 377;
+	const i32 userID = plidMap->Get(clientHd);
+	if(userID < 0 || !playerAccountData[userID]) return;
+	if(chosenFriendState[userID] == state) {
+		replication.SendFriendStateChangeResult(clientHd, MEASURED_FRIEND_STATE_UNCHANGED);
+		return;
+	}
+	chosenFriendState[userID] = state;
+	replication.SendFriendStateChangeResult(clientHd, 0);
+	BroadcastFriendState(userID, (u8)state);
+	LOG("[client%x] HubGame :: %ls sets friend state %u", clientHd, playerAccountData[userID]->nickname.data(), state);
+}
+
 void HubGame::BroadcastFriendState(i32 userID, u8 state)
 {
 	const Account& account = *playerAccountData[userID];

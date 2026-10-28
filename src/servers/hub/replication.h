@@ -238,6 +238,8 @@ struct HubReplication
 	void SendShopBuyResult(ClientHandle clientHd, bool npShop, u32 result, u32 goodsID, u32 quantity, i32 itemIndex);
 	void SendItemUpdate(ClientHandle clientHd, const struct AccountItem& item, u32 reason);
 	void SendItemsUpdate(ClientHandle clientHd, const struct AccountItem* items, i32 count, u32 reason);
+	void SendFriendStateChangeResult(ClientHandle clientHd, u32 result);
+	void SendQuickRunArena(ClientHandle clientHd, const StageIndex* stages, i32 count, GameType gameType, GameDefinition gameDefinition);
 	void SendProfileMasterGears(ClientHandle clientHd, const wchar* nickname);
 	void SendGearEquip(ClientHandle clientHd, u32 result, u8 pageNo, u32 itemUID, u32 slot);
 	void SendGearUnequip(ClientHandle clientHd, u32 result, u8 pageNo, u32 slot);

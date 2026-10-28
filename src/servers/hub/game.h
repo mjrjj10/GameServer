@@ -119,6 +119,9 @@ struct HubGame
 	void OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count);
 	struct Account* GearAccount(ClientHandle clientHd);
 	const wchar* AccountNickname(ClientHandle clientHd);
+	eastl::array<u32,MAX_PLAYERS> chosenFriendState = {};
+	void OnFriendStateChange(ClientHandle clientHd, u32 state);
+	void OnQuickRunArena(ClientHandle clientHd);
 	void OnGearEquip(ClientHandle clientHd, u8 pageNo, u32 itemUID, u32 slot);
 	void OnGearUnequip(ClientHandle clientHd, u8 pageNo, u32 slot);
 	void OnMasterGearSelect(ClientHandle clientHd, u32 characterID, u8 pageNo);

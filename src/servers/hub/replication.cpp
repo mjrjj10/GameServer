@@ -358,6 +358,25 @@ void HubReplication::SendCCoin(ClientHandle clientHd, i64 amount, u32 reason)
 	SendPacket(clientHd, packet);
 }
 
+void HubReplication::SendQuickRunArena(ClientHandle clientHd, const StageIndex* stages, i32 count, GameType gameType, GameDefinition gameDefinition)
+{
+	PacketWriter<Sv::SA_QuickRunArena,128> packet;
+	packet.Write<u32>(0);
+	packet.Write<u16>((u16)count);
+	for(i32 i = 0; i < count; i++) packet.Write<StageIndex>(stages[i]);
+	packet.Write<u32>((u32)gameType);
+	packet.Write<u32>((u32)gameDefinition);
+	packet.Write<u8>(0);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendFriendStateChangeResult(ClientHandle clientHd, u32 result)
+{
+	Sv::SA_FriendStateChange packet;
+	packet.retval = result;
+	SendPacket(clientHd, packet);
+}
+
 void HubReplication::SendItemsUpdate(ClientHandle clientHd, const AccountItem* items, i32 count, u32 reason)
 {
 	PacketWriter<Sv::SN_ItemUpdate> packet;

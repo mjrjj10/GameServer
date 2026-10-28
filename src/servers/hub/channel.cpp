@@ -88,6 +88,8 @@ static const u16 MEASURED_CQ_PVP_RECORD = 60228;
 		HANDLE_CASE(CQ_ItemTrade);
 		HANDLE_CASE(CQ_GearEquip);
 		HANDLE_CASE(CQ_PvpDetailRecord);
+		HANDLE_CASE(CQ_UNKNOWN_60118);
+		HANDLE_CASE(CQ_QuickRunArena);
 		case MEASURED_CQ_PVP_RECORD: HandlePvpRecord(clientHd); break;
 		HANDLE_CASE(CQ_GearUnequip);
 		HANDLE_CASE(CQ_MasterGearRepair);
@@ -892,6 +894,20 @@ void HubPacketHandler::HandlePacket_CQ_BuyGift(ClientHandle clientHd, const NetH
 
 static const i64 PVP_FILETIME_UNIX_EPOCH = 116444736000000000LL;
 static const i64 PVP_FILETIME_PER_SEC = 10000000LL;
+
+void HubPacketHandler::HandlePacket_CQ_UNKNOWN_60118(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(packetSize != 4) return;
+	const u32 state = SafeCast<Cl::CQ_UNKNOWN_60118>(packetData, packetSize).percentValue;
+	NT_LOG("[client%x] Client :: friend state change :: %u", clientHd, state);
+	game->OnFriendStateChange(clientHd, state);
+}
+
+void HubPacketHandler::HandlePacket_CQ_QuickRunArena(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	NT_LOG("[client%x] Client :: CQ_QuickRunArena", clientHd);
+	game->OnQuickRunArena(clientHd);
+}
 
 void HubPacketHandler::HandlePvpRecord(ClientHandle clientHd)
 {
