@@ -79,6 +79,10 @@ struct HubGame
 	eastl::fixed_vector<PraiseCount,64,true> praiseCounts;
 	eastl::array<GameType,MAX_PLAYERS> pendingPartyGameType;
 	eastl::array<StageIndex,MAX_PLAYERS> pendingPartyStageIndex;
+	struct SortieMember { AccountUID accountUID; u8 row; u32 teamType; bool bot; };
+	struct SortieRoster { SortieUID sortieUID; eastl::fixed_vector<SortieMember,16,false> members; };
+	eastl::fixed_vector<SortieRoster,MAX_PLAYERS,false> sortieRosters;
+	void BroadcastSortieConfirm(const SortieRoster& roster, u8 row, u32 teamType, bool confirm);
 
 	eastl::fixed_vector<SpawnPoint,128> mapSpawnPoints;
 

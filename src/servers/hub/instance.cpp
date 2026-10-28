@@ -644,13 +644,24 @@ void RoomInstance::Replicate()
 			pickEnemy.characterSelectInfos[1].skillSlot1 = SkillID::INVALID;
 			pickEnemy.characterSelectInfos[1].skillSlot2 = SkillID::INVALID;
 
+			const bool unpick = user.replicate.masterUnpick;
+			user.replicate.masterUnpick = false;
 			foreach_const(cu, connectedUsers) {
-				if((*cu)->team == u->team) {
-					SendPacket((*cu)->clientHd, pickTeam);
+				const Sv::SN_MasterPick& view = (*cu)->team == u->team ? pickTeam : pickEnemy;
+				if(!unpick) {
+					SendPacket((*cu)->clientHd, view);
+					continue;
 				}
-				else {
-					SendPacket((*cu)->clientHd, pickEnemy);
+				PacketWriter<Sv::SN_MasterUnpick,64> packet;
+				packet.Write<u32>((u32)view.userID);
+				packet.Write<u16>(view.characterSelectInfos_count);
+				for(i32 mi = 0; mi < view.characterSelectInfos_count; mi++) {
+					packet.Write<u32>((u32)view.characterSelectInfos[mi].characterID);
+					packet.Write<u32>((u32)view.characterSelectInfos[mi].creatureIndex);
+					packet.Write<u32>((u32)view.characterSelectInfos[mi].skillSlot1);
+					packet.Write<u32>((u32)view.characterSelectInfos[mi].skillSlot2);
 				}
+				SendPacket((*cu)->clientHd, packet);
 			}
 		}
 
@@ -733,6 +744,11 @@ void RoomInstance::OnClientPacket(ClientHandle clientHd, const NetHeader& header
 
 			ClassType selected = ClassType((u32)packet.localMasterID - (u32)LocalActorID::FIRST_SELF_MASTER);
 			UnpickMaster(user, selected);
+			user->replicate.masterUnpick = true;
+			Sv::SA_MasterUnpick answer;
+			answer.retval = 0;
+			answer.characterID = (u32)packet.localMasterID;
+			SendPacket(clientHd, answer);
 		} break;
 
 		case Cl::CQ_MasterReset::NET_ID: {

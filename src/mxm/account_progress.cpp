@@ -14,6 +14,43 @@ static void AccountPath(const wchar* nickname, const char* ext, char* out, i32 o
 	snprintf(out + o, outSize - o, ".%s", ext);
 }
 
+static const i32 NEW_ACCOUNT_CLEARED_STAGES[] = { 200003200, 200007101, 200008000 };
+
+AccountStages AccountStagesLoad(const wchar* nickname)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	AccountStages stages;
+	char path[512];
+	AccountPath(nickname, "stages", path, sizeof(path));
+	FILE* f = fopen(path, "rb");
+	if(!f) {
+		for(const i32 s : NEW_ACCOUNT_CLEARED_STAGES) stages.cleared.push_back(s);
+		return stages;
+	}
+	i32 id = 0;
+	while(fscanf(f, "%d", &id) == 1) {
+		if(!stages.cleared.full()) stages.cleared.push_back(id);
+	}
+	fclose(f);
+	return stages;
+}
+
+void AccountStagesSave(const wchar* nickname, const AccountStages& stages)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	_mkdir(ACCOUNT_DIR);
+	char path[512];
+	char tmp[520];
+	AccountPath(nickname, "stages", path, sizeof(path));
+	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+	FILE* f = fopen(tmp, "wb");
+	ASSERT(f);
+	foreach_const(s, stages.cleared) fprintf(f, "%d\n", *s);
+	fclose(f);
+	remove(path);
+	rename(tmp, path);
+}
+
 AccountProgress AccountProgressLoad(const wchar* nickname)
 {
 	std::lock_guard<std::mutex> lock(g_accountFileMutex);

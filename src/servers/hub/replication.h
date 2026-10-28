@@ -263,6 +263,9 @@ struct HubReplication
 	void SendGameReady(ClientHandle clientHd);
 
 	void SendCalendar(ClientHandle clientHd);
+	void SendCalendarSchedule(ClientHandle clientHd);
+	void SendProfileCharactersWeapons(ClientHandle clientHd);
+	void SendProfileSkillsSkins(ClientHandle clientHd);
 	void SendAreaPopularity(ClientHandle clientHd, AreaIndex areaID);
 	void SendPartyCreateSucess(ClientHandle clientHd, UserID ownerUserID, StageType stageType);
 
@@ -293,6 +296,7 @@ struct HubReplication
 	void SendFriendAdded(ClientHandle clientHd, const FriendEntry& entry);
 	void SendFriendRemoveResult(ClientHandle clientHd, u32 result, const wchar* nickname);
 	void SendFriendRemoved(ClientHandle clientHd, const wchar* nickname);
+	void SendMatchingPartyConfirm(ClientHandle clientHd, u8 row, u32 teamType, bool confirm);
 	void SendMatchingPartyFound(ClientHandle clientHd, const In::MN_MatchingPartyFound& matchingParty, StageIndex stageIndex, const eastl::fixed_vector<UserID,16>& rowIDs, u8 myTeam);
 
 	void OnClientDisconnect(ClientHandle clientHd);

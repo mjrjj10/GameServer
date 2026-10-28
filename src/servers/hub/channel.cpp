@@ -81,6 +81,7 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CQ_EnqueueGame);
 		HANDLE_CASE(CA_SortieRoomFound);
 		HANDLE_CASE(CN_SortieRoomConfirm);
+		HANDLE_CASE(CQ_GetUserInfo);
 		HANDLE_CASE(CQ_MailShowList);
 		HANDLE_CASE(CQ_MailRead);
 		HANDLE_CASE(CQ_RequestMissionReward);
@@ -751,6 +752,17 @@ void HubPacketHandler::HandlePacket_CN_SortieRoomConfirm(ClientHandle clientHd, 
 	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CN_SortieRoomConfirm>(packetData, packetSize));
 
 	game->OnSortieRoomConfirm(clientHd, packet.confirm);
+}
+
+void HubPacketHandler::HandlePacket_CQ_GetUserInfo(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_GetUserInfo>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_GetUserInfo (size=%d)", clientHd, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_GetUserInfo>(packetData, packetSize));
+	replication->SendProfileCharactersWeapons(clientHd);
+	replication->SendProfileSkillsSkins(clientHd);
 }
 
 void HubPacketHandler::HandlePacket_CQ_MailShowList(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

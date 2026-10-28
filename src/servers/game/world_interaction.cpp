@@ -505,6 +505,7 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 		case GameXmlContent::LevelEventNode::STATUS_CHANGE: {
 			if(node->applyType == GameXmlContent::LevelEventNode::APPLY_MY_CHAR) {
 				if(node->apply && playerIndex >= 0 && node->statusIndex != 0 && !players[playerIndex].dead) ApplyStatus(players[playerIndex], players[playerIndex], node->statusIndex);
+				else if(!node->apply && playerIndex >= 0 && node->statusIndex != 0) ConsumeStatus((u32)playerIndex, node->statusIndex);
 			}
 			else if(node->applyType == GameXmlContent::LevelEventNode::APPLY_LOCAL_ID && node->statusIndex != 0) {
 				foreach(npc, actorNpcList) {

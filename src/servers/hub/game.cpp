@@ -1060,6 +1060,21 @@ void HubGame::OnSortieRoomConfirm(ClientHandle clientHd, bool confirm)
 {
 	const i32 userID = plidMap->Get(clientHd);
 	matchmaker->QueryPlayerRoomConfirm(playerAccountData[userID]->UID, playerMap[userID]->sortieUID, confirm);
+	foreach_const(r, sortieRosters) {
+		if(r->sortieUID != playerMap[userID]->sortieUID) continue;
+		foreach_const(m, r->members) {
+			if(m->accountUID == playerAccountData[userID]->UID) BroadcastSortieConfirm(*r, m->row, m->teamType, confirm);
+		}
+	}
+}
+
+void HubGame::BroadcastSortieConfirm(const SortieRoster& roster, u8 row, u32 teamType, bool confirm)
+{
+	foreach_const(m, roster.members) {
+		if(m->bot) continue;
+		auto h = accountClientHandleMap.find(m->accountUID);
+		if(h != accountClientHandleMap.end()) replication.SendMatchingPartyConfirm(h->second, row, teamType, confirm);
+	}
 }
 
 void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
@@ -1123,6 +1138,19 @@ void HubGame::MmOnMatchFound(const In::MN_MatchingPartyFound& matchingParty)
 	for(i32 i = 0; i < matchingParty.playerCount; i++) {
 		rowIDs.push_back(UserID(i + 1));
 	}
+	SortieRoster* roster = nullptr;
+	foreach(r, sortieRosters) if(r->sortieUID == matchingParty.sortieUID) roster = &*r;
+	if(!roster) {
+		if(sortieRosters.size() >= MAX_PLAYERS) sortieRosters.erase(sortieRosters.begin());
+		sortieRosters.push_back();
+		roster = &sortieRosters.back();
+		roster->sortieUID = matchingParty.sortieUID;
+		const bool pve = matchingParty.gameType == GameType::PVE_NORMAL || matchingParty.gameType == GameType::PVE_RANDOM || matchingParty.gameType == GameType::PVE_TICKET;
+		for(i32 i = 0; i < matchingParty.playerCount && !roster->members.full(); i++) {
+			const auto& p = matchingParty.playerList[i];
+			roster->members.push_back({ p.accountUID, (u8)rowIDs[i], pve || p.team > 1 ? 0u : (u32)TeamType::RED + p.team, p.isBot != 0 });
+		}
+	}
 	foreach_const(m, party.memberList) {
 		auto h = accountClientHandleMap.find(m->accountUID);
 		if(h == accountClientHandleMap.end()) continue;
@@ -1136,6 +1164,7 @@ void HubGame::MmOnMatchFound(const In::MN_MatchingPartyFound& matchingParty)
 			if(matchingParty.playerList[i].accountUID == m->accountUID) myTeam = matchingParty.playerList[i].team;
 		}
 		replication.SendMatchingPartyFound(clientHd, matchingParty, party.stageIndex, rowIDs, myTeam);
+		foreach_const(b, roster->members) if(b->bot) replication.SendMatchingPartyConfirm(clientHd, b->row, b->teamType, true);
 		BroadcastPlayerStateInTown(userID, 0, nullptr, 0);
 		BroadcastFriendState(userID, MEASURED_FRIEND_STATE_IN_SORTIE);
 	}

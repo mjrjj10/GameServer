@@ -3210,6 +3210,12 @@ DEFAULT_SERIALIZE(Sv::SN_LightOnArea);
 DEFAULT_SERIALIZE(Sv::SN_LightOffArea);
 DEFAULT_SERIALIZE(Sv::SN_UpdateGamePlayerTagCooltime);
 DEFAULT_SERIALIZE(Sv::SN_UpdateCanCastSkillSlotUg);
+DEFAULT_SERIALIZE(Sv::SN_JukeboxHotTrackList);
+DEFAULT_SERIALIZE(Sv::SN_Calendar);
+DEFAULT_SERIALIZE(Sv::SN_MatchingPartyConfirm);
+DEFAULT_SERIALIZE(Cl::CQ_GetUserInfo);
+DEFAULT_SERIALIZE(Sv::SA_MasterUnpick);
+DEFAULT_SERIALIZE(Sv::SN_MasterUnpick);
 #undef DEFAULT_SERIALIZE
 
 template<>

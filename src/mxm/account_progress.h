@@ -94,6 +94,13 @@ struct AccountFriends
 bool AccountExists(const wchar* nickname);
 AccountFriends AccountFriendsLoad(const wchar* nickname);
 void AccountFriendsSave(const wchar* nickname, const AccountFriends& friends);
+struct AccountStages
+{
+	eastl::fixed_vector<i32,512,true> cleared;
+};
+
+AccountStages AccountStagesLoad(const wchar* nickname);
+void AccountStagesSave(const wchar* nickname, const AccountStages& stages);
 AccountProgress AccountProgressLoad(const wchar* nickname);
 void AccountProgressSave(const wchar* nickname, const AccountProgress& progress);
 void AccountGameRecordAppend(const wchar* nickname, const AccountGameRecord& record);

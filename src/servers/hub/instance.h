@@ -85,6 +85,7 @@ struct RoomInstance
 
 		struct {
 			u8 masterPick: 1;
+			u8 masterUnpick: 1;
 			u8 ready: 1;
 			// TODO: add other stuff
 		} replicate = {0};

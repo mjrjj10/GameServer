@@ -16,6 +16,8 @@
 #include "character_base_data.h"
 #include <mxm/account_progress.h>
 
+static const i32 MEASURED_JUKEBOX_HOT_TRACKS[] = { 7770015, 7770005, 7770002 };
+
 template<typename Writer>
 static void WriteInventoryItem(Writer& packet, const AccountItem& item)
 {
@@ -504,6 +506,135 @@ void HubReplication::SendChatWhisperToClient(ClientHandle destClientHd, const wc
 	SendPacket(destClientHd, packet);
 }
 
+void HubReplication::SendProfileCharactersWeapons(ClientHandle clientHd)
+{
+	const GameXmlContent& content = GetGameXmlContent();
+	// SN_ProfileCharacters
+	{
+		PacketWriter<Sv::SN_ProfileCharacters,2048> packet;
+
+		packet.Write<u16>(content.masters.size()); // charaList_count
+
+		foreach(it, content.masters) {
+			Sv::SN_ProfileCharacters::Character chara;
+			chara.characterID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (i32)it->classType);
+			chara.creatureIndex = it->ID;
+			chara.skillSlot1 = it->skillIDs[0];
+			chara.skillSlot2 = it->skillIDs[1];
+			chara.classType = it->classType;
+			chara.x = 0;
+			chara.y = 0;
+			chara.z = 0;
+			chara.characterType = 1;
+			chara.skinIndex = SkinIndex::DEFAULT;
+			chara.weaponIndex = it->defaultWeaponIDs[0];
+			chara.masterGearNo = 1;
+			packet.Write(chara);
+		}
+
+		SendPacket(clientHd, packet);
+	}
+
+	// SN_ProfileWeapons
+	{
+		PacketWriter<Sv::SN_ProfileWeapons,4096> packet;
+
+		u16 weaponCount = content.masters.size() * 3;
+		packet.Write<u16>(weaponCount); // weaponList_count
+
+		foreach_const(it, content.masters) {
+			const GameXmlContent::Master& master = *it;
+
+			Sv::SN_ProfileWeapons::Weapon weapon;
+			weapon.characterID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (i32)master.classType);
+
+			for(int wi = 0; wi < 3; wi++) {
+				weapon.weaponType = wi+1;
+				// FIXME: because we load weapons from WEAPON.xml instead of CREATURE_CHARACTER.xml
+				// we don't get the default weapons. This can be fixed later when we have a real unlock system.
+				// - LordSk (10/10/2021)
+				weapon.weaponIndex = master.weaponIDs[1 + wi*4];
+				weapon.grade = 0;
+				weapon.isUnlocked = wi == 0;
+				weapon.isActivated = wi == 0;
+				packet.Write(weapon);
+			}
+		}
+
+		SendPacket(clientHd, packet);
+	}
+
+}
+
+void HubReplication::SendProfileSkillsSkins(ClientHandle clientHd)
+{
+	const GameXmlContent& content = GetGameXmlContent();
+	// SN_ProfileSkills
+	{
+		PacketWriter<Sv::SN_ProfileSkills,8192> packet;
+
+		packet.Write<u8>(1); // packetNum
+
+		i32 skillCount = 0;
+		foreach_const(it, content.masters) {
+			foreach_const(skill, it->skillIDs) {
+				skillCount++;
+			}
+		}
+		packet.Write<u16>(skillCount); // skills_count
+
+		foreach_const(it, content.masters) {
+			const LocalActorID characterID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (i32)it->classType);
+			for(int si = 0; si < (int)it->skillIDs.size(); si++) {
+				packet.Write(characterID);
+				packet.Write(it->skillIDs[si]);
+				const u8 unlocked = (si < (int)it->skillUnlocked.size()) ? it->skillUnlocked[si] : (u8)1;
+				packet.Write<u8>(unlocked);
+				packet.Write<u8>(1);
+				packet.Write<u16>(0);
+			}
+		}
+
+		SendPacket(clientHd, packet);
+	}
+
+	// SN_ProfileTitles
+	{
+		PacketWriter<Sv::SN_ProfileTitles> packet;
+
+		packet.Write<u16>(1); // titles_count
+		packet.Write<i32>(320080004); // titles[0]
+
+		SendPacket(clientHd, packet);
+	}
+
+	// SN_ProfileCharacterSkinList
+	{
+		PacketWriter<Sv::SN_ProfileCharacterSkinList,4096> packet;
+
+		i32 skinCount = 0;
+		foreach(it, content.masters) {
+			skinCount += it->skinIDs.size();
+		}
+
+		packet.Write<u16>(skinCount); // skins_count
+
+		foreach(it, content.masters) {
+			const ClassType classType = it->classType;
+
+			foreach(s, it->skinIDs) {
+				packet.Write<ClassType>(classType); // classType
+				packet.Write<SkinIndex>(*s); // skinIndex
+				packet.Write<i32>(0); // bufCount
+				packet.Write<i64>(0); // expireDateTime
+			}
+		}
+
+		SendPacket(clientHd, packet);
+	}
+
+}
+
 void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& account)
 {
 	// SN_RegionServicePolicy
@@ -580,60 +711,7 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 
 	const GameXmlContent& content = GetGameXmlContent();
 
-	// SN_ProfileCharacters
-	{
-		PacketWriter<Sv::SN_ProfileCharacters,2048> packet;
-
-		packet.Write<u16>(content.masters.size()); // charaList_count
-
-		foreach(it, content.masters) {
-			Sv::SN_ProfileCharacters::Character chara;
-			chara.characterID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (i32)it->classType);
-			chara.creatureIndex = it->ID;
-			chara.skillSlot1 = it->skillIDs[0];
-			chara.skillSlot2 = it->skillIDs[1];
-			chara.classType = it->classType;
-			chara.x = 0;
-			chara.y = 0;
-			chara.z = 0;
-			chara.characterType = 1;
-			chara.skinIndex = SkinIndex::DEFAULT;
-			chara.weaponIndex = it->defaultWeaponIDs[0];
-			chara.masterGearNo = 1;
-			packet.Write(chara);
-		}
-
-		SendPacket(clientHd, packet);
-	}
-
-	// SN_ProfileWeapons
-	{
-		PacketWriter<Sv::SN_ProfileWeapons,4096> packet;
-
-		u16 weaponCount = content.masters.size() * 3;
-		packet.Write<u16>(weaponCount); // weaponList_count
-
-		foreach_const(it, content.masters) {
-			const GameXmlContent::Master& master = *it;
-
-			Sv::SN_ProfileWeapons::Weapon weapon;
-			weapon.characterID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (i32)master.classType);
-
-			for(int wi = 0; wi < 3; wi++) {
-				weapon.weaponType = wi+1;
-				// FIXME: because we load weapons from WEAPON.xml instead of CREATURE_CHARACTER.xml
-				// we don't get the default weapons. This can be fixed later when we have a real unlock system.
-				// - LordSk (10/10/2021)
-				weapon.weaponIndex = master.weaponIDs[1 + wi*4];
-				weapon.grade = 0;
-				weapon.isUnlocked = wi == 0;
-				weapon.isActivated = wi == 0;
-				packet.Write(weapon);
-			}
-		}
-
-		SendPacket(clientHd, packet);
-	}
+	SendProfileCharactersWeapons(clientHd);
 
 	GuildStore& guildStore = GetGuildStore();
 	std::lock_guard<std::recursive_mutex> guildLock(guildStore.mutex);
@@ -665,69 +743,7 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 		SendPacket(clientHd, packet);
 	}
 
-	// SN_ProfileSkills
-	{
-		PacketWriter<Sv::SN_ProfileSkills,8192> packet;
-
-		packet.Write<u8>(1); // packetNum
-
-		i32 skillCount = 0;
-		foreach_const(it, content.masters) {
-			foreach_const(skill, it->skillIDs) {
-				skillCount++;
-			}
-		}
-		packet.Write<u16>(skillCount); // skills_count
-
-		foreach_const(it, content.masters) {
-			const LocalActorID characterID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (i32)it->classType);
-			for(int si = 0; si < (int)it->skillIDs.size(); si++) {
-				packet.Write(characterID);
-				packet.Write(it->skillIDs[si]);
-				const u8 unlocked = (si < (int)it->skillUnlocked.size()) ? it->skillUnlocked[si] : (u8)1;
-				packet.Write<u8>(unlocked);
-				packet.Write<u8>(1);
-				packet.Write<u16>(0);
-			}
-		}
-
-		SendPacket(clientHd, packet);
-	}
-
-	// SN_ProfileTitles
-	{
-		PacketWriter<Sv::SN_ProfileTitles> packet;
-
-		packet.Write<u16>(1); // titles_count
-		packet.Write<i32>(320080004); // titles[0]
-
-		SendPacket(clientHd, packet);
-	}
-
-	// SN_ProfileCharacterSkinList
-	{
-		PacketWriter<Sv::SN_ProfileCharacterSkinList,4096> packet;
-
-		i32 skinCount = 0;
-		foreach(it, content.masters) {
-			skinCount += it->skinIDs.size();
-		}
-
-		packet.Write<u16>(skinCount); // skins_count
-
-		foreach(it, content.masters) {
-			const ClassType classType = it->classType;
-
-			foreach(s, it->skinIDs) {
-				packet.Write<ClassType>(classType); // classType
-				packet.Write<SkinIndex>(*s); // skinIndex
-				packet.Write<i32>(0); // bufCount
-				packet.Write<i64>(0); // expireDateTime
-			}
-		}
-
-		SendPacket(clientHd, packet);
-	}
+	SendProfileSkillsSkins(clientHd);
 
 	// SN_AccountInfo
 	{
@@ -780,6 +796,14 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 
 		packet.Write<i32>(-1);
 
+		SendPacket(clientHd, packet);
+	}
+
+	{
+		const AccountStages stages = AccountStagesLoad(account.nickname.data());
+		PacketWriter<Sv::SN_LoadClearedStages,4096> packet;
+		packet.Write<u16>((u16)stages.cleared.size());
+		foreach_const(s, stages.cleared) packet.Write<i32>(*s);
 		SendPacket(clientHd, packet);
 	}
 
@@ -1303,457 +1327,133 @@ void HubReplication::SendGameReady(ClientHandle clientHd)
 	*/
 }
 
+static const i64 FILETIME_UNIX_EPOCH = 116444736000000000LL;
+static const i64 FILETIME_PER_SEC = 10000000LL;
+static const i64 DAY_SEC = 24 * 3600;
+static const i32 EASTERN_STANDARD_OFFSET_HOURS = 5;
+static const i32 EASTERN_DAYLIGHT_OFFSET_HOURS = 4;
+static const i32 CALENDAR_DAYS_BEFORE_SUNDAY = 8;
+static const i32 CALENDAR_DAYS_AFTER_SUNDAY = 14;
+static const u8 CALENDAR_TYPE_AREA_EVENT = 4;
+static const u32 WEEKLY_AREA_EVENTS[7] = { 80602005, 80602001, 80602002, 80602003, 80602004, 80602006, 80602007 };
+static const u32 WEEKEND_AREA_EVENT = 70600002;
+static const u32 MONTHLY_AREA_EVENTS[] = { 70600011, 70600012 };
+
+static i64 UnixToFiletime(i64 unixSec) { return unixSec * FILETIME_PER_SEC + FILETIME_UNIX_EPOCH; }
+
+static i64 NthSundayUtc(i32 year, i32 month, i32 nth, i32 hourUtc)
+{
+	tm t = {};
+	t.tm_year = year - 1900;
+	t.tm_mon = month;
+	t.tm_mday = 1;
+	t.tm_hour = hourUtc;
+	const i64 first = (i64)_mkgmtime(&t);
+	const i32 firstWeekday = (i32)(((first / DAY_SEC) + 4) % 7);
+	return first + (i64)(((7 - firstWeekday) % 7) + (nth - 1) * 7) * DAY_SEC;
+}
+
+static i32 EasternOffsetHours(i64 unixUtc)
+{
+	const time_t tt = (time_t)unixUtc;
+	tm t = {};
+	gmtime_s(&t, &tt);
+	const i32 year = t.tm_year + 1900;
+	const i64 dstStart = NthSundayUtc(year, 2, 2, 7);
+	const i64 dstEnd = NthSundayUtc(year, 10, 1, 6);
+	return unixUtc >= dstStart && unixUtc < dstEnd ? EASTERN_DAYLIGHT_OFFSET_HOURS : EASTERN_STANDARD_OFFSET_HOURS;
+}
+
+static i64 EasternDayStartUtc(i64 unixUtc)
+{
+	const i64 offset = (i64)EasternOffsetHours(unixUtc) * 3600;
+	const i64 local = unixUtc - offset;
+	const i64 dayLocal = local - (((local % DAY_SEC) + DAY_SEC) % DAY_SEC);
+	return dayLocal + (i64)EasternOffsetHours(dayLocal + offset) * 3600;
+}
+
+static i32 EasternWeekday(i64 dayStartUtc)
+{
+	const i64 local = dayStartUtc - (i64)EasternOffsetHours(dayStartUtc) * 3600;
+	return (i32)((((local / DAY_SEC) + 4) % 7 + 7) % 7);
+}
+
+struct CalendarEvent { u8 type; u32 index; i64 start; i64 end; };
+
+static void CalendarEventsOfDay(i64 dayStartUtc, eastl::fixed_vector<CalendarEvent,8,false>& out)
+{
+	const i32 weekday = EasternWeekday(dayStartUtc);
+	const i64 next = EasternDayStartUtc(dayStartUtc + DAY_SEC + 3600);
+	out.push_back({ CALENDAR_TYPE_AREA_EVENT, WEEKLY_AREA_EVENTS[weekday], UnixToFiletime(dayStartUtc), UnixToFiletime(next) });
+	if(weekday == 6 || weekday == 0) {
+		const i64 saturday = weekday == 6 ? dayStartUtc : EasternDayStartUtc(dayStartUtc - DAY_SEC + 3600);
+		const i64 monday = EasternDayStartUtc(saturday + 2 * DAY_SEC + 3600);
+		out.push_back({ CALENDAR_TYPE_AREA_EVENT, WEEKEND_AREA_EVENT, UnixToFiletime(saturday), UnixToFiletime(monday) });
+	}
+	const time_t tt = (time_t)(dayStartUtc - (i64)EasternOffsetHours(dayStartUtc) * 3600);
+	tm t = {};
+	gmtime_s(&t, &tt);
+	tm first = {};
+	first.tm_year = t.tm_year;
+	first.tm_mon = t.tm_mon;
+	first.tm_mday = 1;
+	tm nextMonth = first;
+	nextMonth.tm_mon += 1;
+	const i64 monthStart = EasternDayStartUtc((i64)_mkgmtime(&first) + 12 * 3600);
+	const i64 monthEnd = EasternDayStartUtc((i64)_mkgmtime(&nextMonth) + 12 * 3600);
+	for(const u32 m : MONTHLY_AREA_EVENTS) {
+		if(!out.full()) out.push_back({ CALENDAR_TYPE_AREA_EVENT, m, UnixToFiletime(monthStart), UnixToFiletime(monthEnd) });
+	}
+}
+
 void HubReplication::SendCalendar(ClientHandle clientHd)
 {
-	// SA_CalendarDetail
+	const u64 nowFt = CurrentFiletimeTimestampUTC();
+	const i64 nowUnix = ((i64)nowFt - FILETIME_UNIX_EPOCH) / FILETIME_PER_SEC;
+	const i64 today = EasternDayStartUtc(nowUnix);
 	{
 		PacketWriter<Sv::SA_CalendarDetail,2048> packet;
-
-		const u64 now = CurrentFiletimeTimestampUTC();
-		const u64 before = now - (2*24*3600*10000000ull); // 2 days before
-		const u64 after = now + (2*24*3600*10000000ull); // 2 days after
-
-		packet.Write<u64>(now); // todayUTCDateTime
-
-		const Sv::SA_CalendarDetail::Event events[] = {
-			{
-				4,
-				80602001,
-				before,
-				after
-			},
-			{
-				4,
-				80602002,
-				before,
-				after
-			},
-			{
-				4,
-				80602003,
-				before,
-				after
-			},
-			{
-				4,
-				80602004,
-				before,
-				after
-			},
-			{
-				4,
-				80602006,
-				before,
-				after
-			},
-			{
-				4,
-				80602007,
-				before,
-				after
-			},
-			{
-				4,
-				80602005,
-				before,
-				after
-			},
-			{
-				4,
-				70600005,
-				before,
-				after
-			},
-			{
-				4,
-				70600006,
-				before,
-				after
-			},
-			{
-				4,
-				70600008,
-				before,
-				after
-			},
-			{
-				4,
-				70600009,
-				before,
-				after
-			},
-			{
-				4,
-				70600010,
-				before,
-				after
-			},
-			{
-				4,
-				70600012,
-				before,
-				after
-			},
-			{
-				4,
-				70600002,
-				before,
-				after
-			},
-			{
-				6,
-				980000714,
-				before,
-				after
-			},
-			{
-				6,
-				980000168,
-				before,
-				after
-			},
-			{
-				6,
-				980000147,
-				before,
-				after
-			},
-			{
-				6,
-				980000735,
-				before,
-				after
-			},
-			{
-				6,
-				980000756,
-				before,
-				after
-			},
-			{
-				6,
-				980000777,
-				before,
-				after
-			},
-			{
-				6,
-				980000798,
-				before,
-				after
-			},
-			{
-				6,
-				980000819,
-				before,
-				after
-			},
-			{
-				6,
-				980000840,
-				before,
-				after
-			},
-			{
-				6,
-				980000861,
-				before,
-				after
-			},
-			{
-				4,
-				80602001,
-				before,
-				after
-			},
-			{
-				4,
-				80602002,
-				before,
-				after
-			},
-			{
-				4,
-				80602003,
-				before,
-				after
-			},
-			{
-				4,
-				80602004,
-				before,
-				after
-			},
-			{
-				4,
-				80602006,
-				before,
-				after
-			},
-			{
-				4,
-				80602007,
-				before,
-				after
-			},
-			{
-				4,
-				80602005,
-				before,
-				after
-			},
-			{
-				4,
-				70600005,
-				before,
-				after
-			},
-			{
-				4,
-				70600006,
-				before,
-				after
-			},
-			{
-				4,
-				70600008,
-				before,
-				after
-			},
-			{
-				4,
-				70600009,
-				before,
-				after
-			},
-			{
-				4,
-				70600010,
-				before,
-				after
-			},
-			{
-				4,
-				70600012,
-				before,
-				after
-			},
-			{
-				4,
-				70600002,
-				before,
-				after
-			},
-			{
-				6,
-				980000714,
-				before,
-				after
-			},
-			{
-				6,
-				980000168,
-				before,
-				after
-			},
-			{
-				6,
-				980000147,
-				before,
-				after
-			},
-			{
-				6,
-				980000735,
-				before,
-				after
-			},
-			{
-				6,
-				980000756,
-				before,
-				after
-			},
-			{
-				6,
-				980000777,
-				before,
-				after
-			},
-			{
-				6,
-				980000798,
-				before,
-				after
-			},
-			{
-				6,
-				980000819,
-				before,
-				after
-			},
-			{
-				6,
-				980000840,
-				before,
-				after
-			},
-			{
-				6,
-				980000861,
-				before,
-				after
-			},
-			{
-				4,
-				80602001,
-				before,
-				after
-			},
-			{
-				4,
-				80602002,
-				before,
-				after
-			},
-			{
-				4,
-				80602003,
-				before,
-				after
-			},
-			{
-				4,
-				80602004,
-				before,
-				after
-			},
-			{
-				4,
-				80602006,
-				before,
-				after
-			},
-			{
-				4,
-				80602007,
-				before,
-				after
-			},
-			{
-				4,
-				80602005,
-				before,
-				after
-			},
-			{
-				4,
-				70600005,
-				before,
-				after
-			},
-			{
-				4,
-				70600006,
-				before,
-				after
-			},
-			{
-				4,
-				70600008,
-				before,
-				after
-			},
-			{
-				4,
-				70600009,
-				before,
-				after
-			},
-			{
-				4,
-				70600010,
-				before,
-				after
-			},
-			{
-				4,
-				70600012,
-				before,
-				after
-			},
-			{
-				4,
-				70600002,
-				before,
-				after
-			},
-			{
-				6,
-				980000714,
-				before,
-				after
-			},
-			{
-				6,
-				980000168,
-				before,
-				after
-			},
-			{
-				6,
-				980000147,
-				before,
-				after
-			},
-			{
-				6,
-				980000735,
-				before,
-				after
-			},
-			{
-				6,
-				980000756,
-				before,
-				after
-			},
-			{
-				6,
-				980000777,
-				before,
-				after
-			},
-			{
-				6,
-				980000798,
-				before,
-				after
-			},
-			{
-				6,
-				980000819,
-				before,
-				after
-			},
-			{
-				6,
-				980000840,
-				before,
-				after
-			},
-			{
-				6,
-				980000861,
-				before,
-				after
-			}
-		};
-
-		packet.WriteVec(events, ARRAY_COUNT(events));
-
+		packet.Write<u64>(nowFt);
+		eastl::fixed_vector<CalendarEvent,24,false> all;
+		for(i32 d = -1; d <= 1; d++) {
+			eastl::fixed_vector<CalendarEvent,8,false> day;
+			CalendarEventsOfDay(EasternDayStartUtc(today + d * DAY_SEC + 3600), day);
+			foreach_const(e, day) if(!all.full()) all.push_back(*e);
+		}
+		packet.Write<u16>((u16)all.size());
+		foreach_const(e, all) {
+			packet.Write<u8>(e->type);
+			packet.Write<i32>((i32)e->index);
+			packet.Write<u64>((u64)e->start);
+			packet.Write<u64>((u64)e->end);
+		}
 		SendPacket(clientHd, packet);
 	}
+}
+
+void HubReplication::SendCalendarSchedule(ClientHandle clientHd)
+{
+	const u64 nowFt = CurrentFiletimeTimestampUTC();
+	const i64 nowUnix = ((i64)nowFt - FILETIME_UNIX_EPOCH) / FILETIME_PER_SEC;
+	const i64 today = EasternDayStartUtc(nowUnix);
+	const i64 sunday = EasternDayStartUtc(today - (i64)EasternWeekday(today) * DAY_SEC + 3600);
+	PacketWriter<Sv::SN_Calendar,4096> packet;
+	const i32 days = CALENDAR_DAYS_BEFORE_SUNDAY + CALENDAR_DAYS_AFTER_SUNDAY + 1;
+	packet.Write<u16>((u16)days);
+	for(i32 d = -CALENDAR_DAYS_BEFORE_SUNDAY; d <= CALENDAR_DAYS_AFTER_SUNDAY; d++) {
+		const i64 day = EasternDayStartUtc(sunday + d * DAY_SEC + 3600);
+		eastl::fixed_vector<CalendarEvent,8,false> events;
+		CalendarEventsOfDay(day, events);
+		packet.Write<u64>((u64)UnixToFiletime(day));
+		packet.Write<u16>((u16)events.size());
+		foreach_const(e, events) {
+			packet.Write<u8>(e->type);
+			packet.Write<u32>(e->index);
+			packet.Write<u64>((u64)e->start);
+			packet.Write<u64>((u64)e->end);
+		}
+	}
+	SendPacket(clientHd, packet);
 }
 
 void HubReplication::SendAreaPopularity(ClientHandle clientHd, AreaIndex areaID)
@@ -2077,6 +1777,15 @@ void HubReplication::SendPartyEnqueue(ClientHandle clientHd, StageIndex stageInd
 	matching.disableMatchExpansion = 0;
 	matching.isMatchingExpanded = 0;
 	SendPacket(clientHd, matching);
+}
+
+void HubReplication::SendMatchingPartyConfirm(ClientHandle clientHd, u8 row, u32 teamType, bool confirm)
+{
+	PacketWriter<Sv::SN_MatchingPartyConfirm> packet;
+	packet.Write<u32>(row);
+	packet.Write<u32>(teamType);
+	packet.Write<u8>(confirm ? 1 : 0);
+	SendPacket(clientHd, packet);
 }
 
 void HubReplication::SendMatchingPartyFound(ClientHandle clientHd, const In::MN_MatchingPartyFound& matchingParty, StageIndex stageIndex, const eastl::fixed_vector<UserID,16>& rowIDs, u8 myTeam)
@@ -2697,17 +2406,12 @@ void HubReplication::SendJukeboxSpawn(ClientHandle clientHd, const HubReplicatio
 		SendPacket(clientHd, packet);
 	}
 
-	/*
-	// SN_JukeboxHotTrackList
 	{
-		PacketWriter<> packet;
-
-		packet.Write<u16>(0); // trackList_count
-
-		LOG("[client%03d] Server :: SN_JukeboxHotTrackList ::", clientID);
-		SendPacket<>(clientID, Sv::SN_JukeboxHotTrackListpacket);
+		PacketWriter<Sv::SN_JukeboxHotTrackList> packet;
+		packet.Write<u16>((u16)ARRAY_COUNT(MEASURED_JUKEBOX_HOT_TRACKS));
+		for(const i32 t : MEASURED_JUKEBOX_HOT_TRACKS) packet.Write<i32>(t);
+		SendPacket(clientHd, packet);
 	}
-	*/
 
 	SongID songID = actor.currentSong.songID;
 	if(songID == SongID::INVALID) {
@@ -2874,6 +2578,7 @@ void HubReplication::SendTownBurst(ClientHandle clientHd)
 		SendPacket(clientHd, packet);
 	}
 	if(account) SendMissionList(clientHd, *account);
+	SendCalendarSchedule(clientHd);
 	SendMasterRotation(clientHd);
 	{
 		PacketWriter<Sv::SN_AddictionWarning> packet;
