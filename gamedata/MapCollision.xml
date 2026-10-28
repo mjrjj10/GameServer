@@ -14830,4 +14830,44 @@
     <_Collider _Mesh="CLG_Lamp_LightD_01/CLG_Lamp_LightD_01_Collision" x="763.69" y="5339.35" z="465.99" angx="0" angy="0" angz="-0.7854096" scale="1" />
     <_Collider _Mesh="VTS_Gate_IronB_04/VTS_Gate_IronB_04_Collision" x="14656.1" y="5378.71" z="-416" angx="0" angy="0" angz="1.570796" scale="1" />
   </_Map>
+  <_Map _Index="160006151">
+    <_File _Path="collision/PVP_GOT_Stone_CaveStA01_01.physx_static" />
+    <_File _Path="collision/PVP_Titan_Ruins_ENV_02.physx_static" />
+    <_File _Path="collision/PVP_Titan_Ruins_ENV_01.physx_static" />
+    <_File _Path="collision/PVP_GOT_ENV_Boss_02.physx_static" />
+    <_File _Path="collision/PVP_GOT_ENV_Boss_01.physx_static" />
+    <_Collider _Mesh="PVP_GOT_Stone_CaveStA01_01/PVP_GOT_Stone_CaveStA01_01_Collision" x="12432.43" y="13783.57" z="-87.75" angx="0.2069889" angy="-0.1881465" angz="2.488136" scale="1.41" />
+    <_Collider _Mesh="PVP_Titan_Ruins_ENV_02/FogCheck_PVP_Titan_Ruins_Collision" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Titan_Ruins_ENV_02/FogCheck_PVP_Titan_Ruins_Water_Collision" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_GOT_Stone_CaveStA01_01/PVP_GOT_Stone_CaveStA01_01_Collision" x="19099.77" y="15779.47" z="-87.68" angx="-0.2069889" angy="0.1881465" angz="-0.6534562" scale="1.41" />
+    <_Collider _Mesh="PVP_Titan_Ruins_ENV_01/PVP_Titan_Ruins_Aim" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Titan_Ruins_ENV_01/PVP_Titan_Ruins_sidewall_Jumpguard" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Titan_Ruins_ENV_01/PVP_Titan_Ruins_Guardrailmob_UnSightable" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Titan_Ruins_ENV_01/PVP_Titan_Ruins_Guardrailmob" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Titan_Ruins_ENV_01/Grave_Position_Box" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_GOT_ENV_Boss_02/PVP_GOT_ENV_Boss_02_Collision01" x="47353.73" y="6757.69" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_GOT_ENV_Boss_01/Exclude_Fog" x="47200.47" y="6759.74" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_GOT_ENV_Boss_01/PVP_GOT_ENV_Boss_01_Aim" x="47200.47" y="6759.74" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_GOT_ENV_Boss_01/PVP_GOT_ENV_Boss_01_Guardrailmob" x="47200.47" y="6759.74" z="0" angx="0" angy="0" angz="0" scale="1" />
+  </_Map>
+  <_Map _Index="160006152">
+    <_File _Path="collision/PVP_GOT_Stone_CaveStA01_01.physx_static" />
+    <_File _Path="collision/PVP_Titan_Ruins_ENV_02.physx_static" />
+    <_File _Path="collision/PVP_Titan_Ruins_ENV_01.physx_static" />
+    <_File _Path="collision/PVP_GOT_ENV_Boss_02.physx_static" />
+    <_File _Path="collision/PVP_GOT_ENV_Boss_01.physx_static" />
+    <_Collider _Mesh="PVP_GOT_Stone_CaveStA01_01/PVP_GOT_Stone_CaveStA01_01_Collision" x="12432.43" y="13783.57" z="-87.75" angx="0.2069889" angy="-0.1881465" angz="2.488136" scale="1.41" />
+    <_Collider _Mesh="PVP_Titan_Ruins_ENV_02/FogCheck_PVP_Titan_Ruins_Collision" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Titan_Ruins_ENV_02/FogCheck_PVP_Titan_Ruins_Water_Collision" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_GOT_Stone_CaveStA01_01/PVP_GOT_Stone_CaveStA01_01_Collision" x="19099.77" y="15779.47" z="-87.68" angx="-0.2069889" angy="0.1881465" angz="-0.6534562" scale="1.41" />
+    <_Collider _Mesh="PVP_Titan_Ruins_ENV_01/PVP_Titan_Ruins_Aim" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Titan_Ruins_ENV_01/PVP_Titan_Ruins_sidewall_Jumpguard" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Titan_Ruins_ENV_01/PVP_Titan_Ruins_Guardrailmob_UnSightable" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Titan_Ruins_ENV_01/PVP_Titan_Ruins_Guardrailmob" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Titan_Ruins_ENV_01/Grave_Position_Box" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_GOT_ENV_Boss_02/PVP_GOT_ENV_Boss_02_Collision01" x="47353.73" y="6757.69" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_GOT_ENV_Boss_01/Exclude_Fog" x="47200.47" y="6759.74" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_GOT_ENV_Boss_01/PVP_GOT_ENV_Boss_01_Aim" x="47200.47" y="6759.74" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_GOT_ENV_Boss_01/PVP_GOT_ENV_Boss_01_Guardrailmob" x="47200.47" y="6759.74" z="0" angx="0" angy="0" angz="0" scale="1" />
+  </_Map>
 </MAP_COLLISION>

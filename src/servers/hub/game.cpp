@@ -758,6 +758,14 @@ void HubGame::OnPartyAddBot(ClientHandle clientHd)
 	Party::Member bot;
 	bot.accountUID = AccountUID::INVALID;
 	bot.isBot = true;
+	if(party && party->gameDefinition == GameDefinition::System && party->memberList.front().accountUID == playerAccountData[userID]->UID) {
+		static const u32 MEASURED_SYSTEM_BOT_USER_ID = 2;
+		static const u8 MEASURED_SYSTEM_BOT_TEAM = 1;
+		replication.SendPartyJoin(clientHd, MEASURED_SYSTEM_BOT_USER_ID, MEASURED_PARTY_BOT_NAME, CreatureIndex(100000001), true, party->gameType, party->gameDefinition, MEASURED_SYSTEM_BOT_TEAM, 0, true);
+		replication.SendPartyAddBotAnswer(clientHd, 0);
+		LOG("[client%x] HubGame :: party %u (system) accepts a bot, filled by the matchmaker", clientHd, (u32)party->UID);
+		return;
+	}
 	if(!party || party->gameDefinition != GameDefinition::User || party->memberList.front().accountUID != playerAccountData[userID]->UID || party->memberList.full() || !PartyPlaceMember(*party, &bot) || bot.team == MEASURED_PARTY_TEAM_SPECTATOR) {
 		replication.SendPartyAddBotAnswer(clientHd, HYP_PARTY_CUSTOM_REFUSED);
 		return;
