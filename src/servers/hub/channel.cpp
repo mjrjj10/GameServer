@@ -84,6 +84,7 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CQ_GetUserInfo);
 		HANDLE_CASE(CQ_ItemTrade);
 		HANDLE_CASE(CQ_PveRanking);
+		HANDLE_CASE(CQ_SaveSettings);
 		HANDLE_CASE(CQ_RequestSummaryInfoEach);
 		HANDLE_CASE(CQ_RestartVote);
 		HANDLE_CASE(CQ_MailShowList);
@@ -756,6 +757,23 @@ void HubPacketHandler::HandlePacket_CN_SortieRoomConfirm(ClientHandle clientHd, 
 	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CN_SortieRoomConfirm>(packetData, packetSize));
 
 	game->OnSortieRoomConfirm(clientHd, packet.confirm);
+}
+
+void HubPacketHandler::HandlePacket_CQ_SaveSettings(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	ConstBuffer buff(packetData, packetSize);
+	if(!buff.CanRead(3)) {
+		WARN("[client%x] WARNING: invalid CQ_SaveSettings (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const u8 settingType = buff.Read<u8>();
+	const u16 len = buff.Read<u16>();
+	if(!buff.CanRead(len)) {
+		WARN("[client%x] WARNING: invalid CQ_SaveSettings length %d (size=%d)", clientHd, (i32)len, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: CQ_SaveSettings :: type=%u len=%u", clientHd, (u32)settingType, (u32)len);
+	game->OnSaveSettings(clientHd, settingType, (const u8*)buff.ReadRaw(len), len);
 }
 
 void HubPacketHandler::HandlePacket_CQ_PveRanking(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

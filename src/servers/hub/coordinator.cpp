@@ -751,6 +751,9 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 
 void Coordinator::ClientSendAccountData(ClientHandle clientHd)
 {
+	const AccountUID settingsAccount = clientAccountUID[plidMap.Get(clientHd)];
+	auto settingsFound = GetAccountManager().accountMap.find(settingsAccount);
+	const wchar* accountNick = settingsFound != GetAccountManager().accountMap.end() ? settingsFound->second->nickname.data() : L"";
 	// SN_ClientSettings
 	{
 		PacketWriter<Sv::SN_ClientSettings,2048> packet;
@@ -873,8 +876,15 @@ void Coordinator::ClientSendAccountData(ClientHandle clientHd)
 		}
 
 		packet.Write<u8>(0); // settingType
-		packet.Write<u16>(destLen);
-		packet.WriteRaw(dest, destLen);
+		const AccountSettingsBlob stored = AccountSettingsLoad(accountNick, 0);
+		if(!stored.data.empty()) {
+			packet.Write<u16>((u16)stored.data.size());
+			packet.WriteRaw(stored.data.data(), stored.data.size());
+		}
+		else {
+			packet.Write<u16>(destLen);
+			packet.WriteRaw(dest, destLen);
+		}
 
 		SendPacket(clientHd, packet);
 	}
@@ -969,8 +979,15 @@ void Coordinator::ClientSendAccountData(ClientHandle clientHd)
 		}
 
 		packet.Write<u8>(1); // settingType
-		packet.Write<u16>(destLen);
-		packet.WriteRaw(dest, destLen);
+		const AccountSettingsBlob stored = AccountSettingsLoad(accountNick, 1);
+		if(!stored.data.empty()) {
+			packet.Write<u16>((u16)stored.data.size());
+			packet.WriteRaw(stored.data.data(), stored.data.size());
+		}
+		else {
+			packet.Write<u16>(destLen);
+			packet.WriteRaw(dest, destLen);
+		}
 
 		SendPacket(clientHd, packet);
 	}
@@ -1099,8 +1116,15 @@ void Coordinator::ClientSendAccountData(ClientHandle clientHd)
 		}
 
 		packet.Write<u8>(2); // settingType
-		packet.Write<u16>(destLen);
-		packet.WriteRaw(dest, destLen);
+		const AccountSettingsBlob stored = AccountSettingsLoad(accountNick, 2);
+		if(!stored.data.empty()) {
+			packet.Write<u16>((u16)stored.data.size());
+			packet.WriteRaw(stored.data.data(), stored.data.size());
+		}
+		else {
+			packet.Write<u16>(destLen);
+			packet.WriteRaw(dest, destLen);
+		}
 
 		SendPacket(clientHd, packet);
 	}

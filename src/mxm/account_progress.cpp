@@ -14,6 +14,41 @@ static void AccountPath(const wchar* nickname, const char* ext, char* out, i32 o
 	snprintf(out + o, outSize - o, ".%s", ext);
 }
 
+AccountSettingsBlob AccountSettingsLoad(const wchar* nickname, u8 settingType)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	AccountSettingsBlob blob;
+	char ext[16];
+	snprintf(ext, sizeof(ext), "settings%u", (u32)settingType);
+	char path[512];
+	AccountPath(nickname, ext, path, sizeof(path));
+	FILE* f = fopen(path, "rb");
+	if(!f) return blob;
+	u8 buff[4096];
+	const size_t n = fread(buff, 1, sizeof(buff), f);
+	fclose(f);
+	blob.data.assign(buff, buff + n);
+	return blob;
+}
+
+void AccountSettingsSave(const wchar* nickname, u8 settingType, const u8* data, i32 size)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	_mkdir(ACCOUNT_DIR);
+	char ext[16];
+	snprintf(ext, sizeof(ext), "settings%u", (u32)settingType);
+	char path[512];
+	char tmp[520];
+	AccountPath(nickname, ext, path, sizeof(path));
+	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+	FILE* f = fopen(tmp, "wb");
+	ASSERT(f);
+	fwrite(data, 1, size, f);
+	fclose(f);
+	remove(path);
+	rename(tmp, path);
+}
+
 static const i32 NEW_ACCOUNT_CLEARED_STAGES[] = { 200003200, 200007101, 200008000 };
 
 AccountStages AccountStagesLoad(const wchar* nickname)

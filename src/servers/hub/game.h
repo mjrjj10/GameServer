@@ -110,6 +110,7 @@ struct HubGame
 	void OnHonor(ClientHandle clientHd, const WideString& nickname);
 	bool GrantItem(i32 userID, i32 docIndex, i32 amount, u32 updateReason, u32 acquisitionReason, eastl::fixed_vector<AccountItem,8,false>* granted = nullptr);
 	void OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count);
+	void OnSaveSettings(ClientHandle clientHd, u8 settingType, const u8* data, i32 size);
 	void OnInventoryExpand(ClientHandle clientHd, i32 tab);
 	void OnShopBuyItem(ClientHandle clientHd, u32 goodsID, i32 quantity, i32 itemIndex, i32 itemCount, bool npShop);
 	void OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID characterID, SkinIndex skinIndex);

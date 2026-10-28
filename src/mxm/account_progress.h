@@ -99,6 +99,13 @@ struct AccountStages
 	eastl::fixed_vector<i32,512,true> cleared;
 };
 
+struct AccountSettingsBlob
+{
+	eastl::fixed_vector<u8,4096,false> data;
+};
+
+AccountSettingsBlob AccountSettingsLoad(const wchar* nickname, u8 settingType);
+void AccountSettingsSave(const wchar* nickname, u8 settingType, const u8* data, i32 size);
 AccountStages AccountStagesLoad(const wchar* nickname);
 void AccountStagesSave(const wchar* nickname, const AccountStages& stages);
 AccountProgress AccountProgressLoad(const wchar* nickname);

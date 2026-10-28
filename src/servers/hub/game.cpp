@@ -455,6 +455,17 @@ void HubGame::OnInventoryExpand(ClientHandle clientHd, i32 tab)
 	replication.SendInventoryExpand(clientHd, 0, tab, progress.inventoryLines[tab]);
 }
 
+static const u8 MEASURED_SETTING_TYPE_COUNT = 3;
+static const i32 SETTINGS_MAX_BYTES = 2040;
+
+void HubGame::OnSaveSettings(ClientHandle clientHd, u8 settingType, const u8* data, i32 size)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	if(!playerAccountData[userID] || settingType >= MEASURED_SETTING_TYPE_COUNT || size <= 0 || size > SETTINGS_MAX_BYTES) return;
+	AccountSettingsSave(playerAccountData[userID]->nickname.data(), settingType, data, size);
+	LOG("[client%x] HubGame :: %ls saves settings %u (%d bytes)", clientHd, playerAccountData[userID]->nickname.data(), (u32)settingType, size);
+}
+
 void HubGame::OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count)
 {
 	const i32 userID = plidMap->Get(clientHd);
