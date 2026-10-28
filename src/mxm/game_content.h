@@ -1279,6 +1279,8 @@ struct GameXmlContent
 	}
 	f32 FindStageTeleportDistance(i32 doc) const { auto f = stageTeleportDistance.find(doc); return f == stageTeleportDistance.end() ? -1.0f : f->second; }
 	i32 FindDynamicInteraction(i32 doc) const { auto f = dynamicInteraction.find(doc); return f == dynamicInteraction.end() ? 0 : f->second; }
+	eastl::hash_map<i32, eastl::array<i32,5>> dynamicDrop;
+	i32 FindDynamicDrop(i32 doc, u8 difficultyBit) const;
 	eastl::hash_map<i32, InteractionInfo> interactions;
 	eastl::hash_map<i32, i32> dynamicDensity;
 	const InteractionInfo* FindInteraction(i32 id) const { auto f = interactions.find(id); return f == interactions.end() ? nullptr : &f->second; }

@@ -3852,6 +3852,7 @@ void GameXmlContent::LoadItemInfos(XMLDocument& doc)
 }
 
 static const i32 MAX_DROP_DEPTH = 8;
+static const i32 NORMAL_DIFFICULTY_INDEX = 1;
 
 u8 GameXmlContent::RankID(const char* name)
 {
@@ -4467,6 +4468,14 @@ bool GameXmlContent::LoadInteractions()
 	return true;
 }
 
+i32 GameXmlContent::FindDynamicDrop(i32 doc, u8 difficultyBit) const
+{
+	auto found = dynamicDrop.find(doc);
+	if(found == dynamicDrop.end()) return 0;
+	for(i32 d = 0; d < (i32)found->second.size(); d++) if(difficultyBit == (u8)(1 << d)) return found->second[d];
+	return found->second[NORMAL_DIFFICULTY_INDEX];
+}
+
 bool GameXmlContent::LoadInteractionReceivers()
 {
 	XMLDocument xmlDynamic;
@@ -4477,6 +4486,17 @@ bool GameXmlContent::LoadInteractionReceivers()
 		i32 interaction = 0;
 		XMLElement* pEntity = pInfo->FirstChildElement("EntityComData");
 		if(pEntity && pInfo->QueryAttribute("ID", &id) == XML_SUCCESS) pEntity->QueryAttribute("_DensityCount", &dynamicDensity[id]);
+		if(XMLElement* pStats = pInfo->FirstChildElement("StatsComData")) {
+			if(const i32 baseDrop = pStats->IntAttribute("_DropIndex")) {
+				static const char* DIFFICULTY_TAGS[] = { "_EASY", nullptr, "_HARD", "_EXTREME", "_HELL" };
+				eastl::array<i32,5> drops;
+				for(i32 d = 0; d < (i32)drops.size(); d++) {
+					XMLElement* pDiff = DIFFICULTY_TAGS[d] ? pStats->FirstChildElement(DIFFICULTY_TAGS[d]) : nullptr;
+					drops[d] = pDiff ? pDiff->IntAttribute("_DropIndex", baseDrop) : baseDrop;
+				}
+				dynamicDrop[pInfo->IntAttribute("ID")] = drops;
+			}
+		}
 		if(!pRecv || pInfo->QueryAttribute("ID", &id) != XML_SUCCESS || pRecv->QueryAttribute("_Index", &interaction) != XML_SUCCESS) continue;
 		auto found = interactions.find(interaction);
 		if(found != interactions.end() && found->second.receiver == CreatureIndex::Invalid) found->second.receiver = CreatureIndex(id);

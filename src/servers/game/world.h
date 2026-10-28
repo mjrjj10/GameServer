@@ -1071,6 +1071,7 @@ public:
 	struct MapInteraction { ActorUID object; i32 localID; i32 interactionID; bool active; i32 occupiedTeam; Time coolUntil; eastl::array<i32,2> extraCastMs; u32 openMask; bool creature; bool statusPending; };
 	eastl::fixed_vector<MapInteraction,64,false> mapInteractions;
 	void AddCreatureInteraction(const ActorNpc& npc, i32 interactionID, u8 ownerTeam);
+	void AddDynamicInteraction(const ActorDynamic& dyn, i32 interactionID);
 	bool MapInteractionPos(const MapInteraction& m, vec3* pos) const;
 	bool mapInteractionsBuilt = false;
 	void BuildMapInteractions();

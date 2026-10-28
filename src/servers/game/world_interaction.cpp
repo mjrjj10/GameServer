@@ -465,6 +465,7 @@ void World::CallMonsters(const GameXmlContent::LevelEventNode& node, i32 playerI
 			dyn.rot = area->rot;
 			dyn.tagID = node.tagID;
 			if(node.team != Faction::INVALID && node.team != Faction::MONSTER) dyn.faction = node.team;
+			if(const i32 interaction = GetGameXmlContent().FindDynamicInteraction(node.monster)) AddDynamicInteraction(dyn, interaction);
 			continue;
 		}
 		ActorNpc& npc = SpawnMonster((CreatureIndex)node.monster, node.areaID, area->pos, area->rot, node.team, node.tagID);
@@ -804,11 +805,11 @@ bool World::TakeGroundItem(Player& player, u32 itemUID, GroundItem* taken)
 	const GroundItem item = *found;
 	groundItems.erase(found);
 	if(taken) *taken = item;
-	if(item.owner >= 0) {
+	const GameXmlContent::GroundItemInfo* info = item.ron ? nullptr : GetGameXmlContent().FindGroundItem(item.itemIndex);
+	if(item.owner >= 0 && !info) {
 		LOG("GroundItem :: %ls takes private drop %d x%d%s", player.name.data(), item.itemIndex, item.count, item.ron ? " (ron)" : "");
 		return true;
 	}
-	const GameXmlContent::GroundItemInfo* info = GetGameXmlContent().FindGroundItem(item.itemIndex);
 	if(info) {
 		auto apply = [&](u8 type, f32 amount) {
 			const f32 max = ItemStatMax(player, type);
@@ -844,7 +845,7 @@ bool World::TakeGroundItem(Player& player, u32 itemUID, GroundItem* taken)
 		foreach_const(st, info->statuses) ApplyStatus(player, player, *st);
 	}
 	if(player.clientHd != ClientHandle::INVALID) replication->SendGroundItemTaken(player.clientHd, player.Main().UID, itemUID);
-	replication->SendPublicGroundItemTaken(player.clientHd, player.Main().UID, itemUID);
+	if(item.owner < 0) replication->SendPublicGroundItemTaken(player.clientHd, player.Main().UID, itemUID);
 	LOG("GroundItem :: %ls takes item %d (tag %d)", player.name.data(), item.itemIndex, item.tagID);
 	if(item.itemIndex == TITAN_PIECE_ITEM) SetCarriedPieces(player, player.titanPieces + 1);
 	foreach_const(n, map->levelEvents) {
@@ -928,6 +929,15 @@ void World::AddCreatureInteraction(const ActorNpc& npc, i32 interactionID, u8 ow
 	if(!mapInteractions.full()) mapInteractions.push_back(entry);
 }
 
+void World::AddDynamicInteraction(const ActorDynamic& dyn, i32 interactionID)
+{
+	const GameXmlContent::InteractionInfo* info = GetGameXmlContent().FindInteraction(interactionID);
+	if(!info) return;
+	BuildMapInteractions();
+	if(mapInteractions.full()) return;
+	mapInteractions.push_back({ dyn.UID, dyn.localID, interactionID, info->active, INTERACTION_NOT_OCCUPIED, Time::ZERO, {{ 0, 0 }}, INTERACTION_ALL_TEAMS, false, true });
+}
+
 bool World::MapInteractionPos(const MapInteraction& m, vec3* pos) const
 {
 	if(m.creature) {
@@ -997,6 +1007,21 @@ void World::CompleteMapInteraction(Player& player)
 		replication->SendPvpAnnouncementToAll(info->announcement, m.creature ? 0 : player.occupyStreak, player.Main().UID, m.object, (u32)info->points);
 		if(info->points > 0) AddPoints(player, info->points);
 	}
+	if(!m.creature && !stageCommonDrop.empty()) {
+		auto obj = actorDynamicMap.find(m.object);
+		const i32 drop = obj != actorDynamicMap.end() ? GetGameXmlContent().FindDynamicDrop((i32)obj->second->docID, difficultyBit) : 0;
+		if(drop != 0) {
+			const vec3 pos = obj->second->pos;
+			replication->SendStatToAll(m.object, (i32)StatType::STAT_TYPE_HEALTH, 0, 1, 0);
+			replication->SendNpcDeadAckToAll(m.object, player.Main().UID, (u32)CreatureIndex(100000000 + (i32)player.Main().classType));
+			foreach_const(p, players) if(p->clientHd != ClientHandle::INVALID && !p->removed) SpawnPrivateDropGroup(*p, drop, pos);
+			if(m.active) {
+				m.active = false;
+				SendMapInteractionStatus(m);
+			}
+			LOG("Interaction :: %ls opens dynamic %d (drop %d)", player.name.data(), m.localID, drop);
+		}
+	}
 	if(m.creature) {
 		if(ActorNpc* npc = FindNpcActor(m.object)) {
 			GrantMonsterKillExp(*npc, player.Main().UID);
@@ -1025,6 +1050,14 @@ void World::UpdateMapInteractions()
 	}
 	for(i32 i = 0; i < (i32)mapInteractions.size(); i++) {
 		MapInteraction& m = mapInteractions[i];
+		if(!m.creature && m.statusPending && actorDynamicMap.find(m.object) != actorDynamicMap.end()) {
+			bool known = true;
+			foreach_const(p, players) if(p->clientHd != ClientHandle::INVALID && !p->removed && replication->GetLocalActorID(p->clientHd, m.object) == LocalActorID::INVALID) known = false;
+			if(known) {
+				m.statusPending = false;
+				SendMapInteractionStatus(m);
+			}
+		}
 		if(!m.creature || m.object == ActorUID::INVALID) continue;
 		const ActorNpc* npc = FindNpcActor(m.object);
 		if(npc && (npc->despawnAt == Time::ZERO || localTime < npc->despawnAt)) {

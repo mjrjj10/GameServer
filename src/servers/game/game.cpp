@@ -1111,7 +1111,7 @@ void Game::OnPlayerTakeGroundItem(ClientHandle clientHd, u32 itemUID)
 		LOG("GroundItem :: %ls take 0x%08x refused", player.name.data(), itemUID);
 		return;
 	}
-	if(taken.owner < 0) return;
+	if(taken.owner < 0 || (!taken.ron && GetGameXmlContent().FindGroundItem(taken.itemIndex))) return;
 	PveLoot& loot = LootFor(player);
 	const ActorUID takerUID = player.Main().UID;
 	if(taken.ron) {
