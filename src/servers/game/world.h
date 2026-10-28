@@ -1009,6 +1009,29 @@ public:
 	void OnMonsterDeath(ActorNpc& npc, ActorUID killerUID);
 	void OnMonsterDamaged(ActorNpc& npc, i32 hpBefore);
 	void FireGameEndTriggers(i32 winnerTeam);
+	struct DefenceState
+	{
+		bool active = false;
+		bool inWave = false;
+		bool won = false;
+		bool failed = false;
+		i32 step = 0;
+		i32 cleared = 0;
+		i32 kills = 0;
+		i32 coreDoc = 0;
+		u32 clearMs = 0;
+		Time waveStartAt = Time::ZERO;
+		Time nextStartAt = Time::ZERO;
+	};
+	DefenceState defence;
+	i32 fixedRespawnMs = 0;
+	void StartDefence(i32 coreDoc);
+	void UpdateDefence();
+	void EndDefencePhase(u32 reason);
+	bool DefenceMonstersAlive() const;
+	void DefenceMonsterDied(const ActorNpc& npc);
+	void FirePhaseTriggers(GameXmlContent::LevelEventNode::Kind kind, i32 phase);
+	Faction PlayerSideFaction() const;
 	void StartIngameLevels();
 	void UpdateIngameLevels();
 	void GrantIngameExp(Player& player, i32 gain, ActorUID target);

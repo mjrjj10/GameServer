@@ -314,6 +314,10 @@ struct Replication
 	typedef eastl::fixed_vector<RewardBonus,4,false> RewardBonusList;
 	struct StageClear { LocalActorID player; i32 stage; i32 kills; i32 deaths; u32 playTimeMs; u8 rank; u32 baseRon; u32 baseExp; u32 attackScore; u32 defenseScore; u32 timeScore; u32 totalScore; u8 technicGrade; RewardBonusList bonusRon; RewardBonusList bonusExp; };
 	struct RewardCard { u32 type; i32 index; u32 amount; };
+	struct DefenceClear { LocalActorID player; i32 stage; i32 clearStep; u32 clearMs; u32 baseRon; u32 baseExp; RewardBonusList bonusRon; RewardBonusList bonusExp; eastl::fixed_vector<RewardCard,4,false> items; u32 guildBase; u32 guildBonus; u8 guildMembers; u16 boostGold; u16 boostExp; };
+	void SendDefenceClearResult(ClientHandle clientHd, const DefenceClear& clear, const StageMember* members, i32 memberCount);
+	void SendPhaseStartToAll(i32 step);
+	void SendPhaseEndToAll(i32 step, u32 reason, u32 clearMs);
 	void SendStageClearResult(ClientHandle clientHd, const StageClear& clear, const StageMember* members, i32 memberCount);
 	void SendExpGain(ClientHandle clientHd, u32 exp);
 	void SendClearedStage(ClientHandle clientHd, i32 stage);

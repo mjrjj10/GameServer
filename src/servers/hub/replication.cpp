@@ -1442,6 +1442,8 @@ static void CalendarEventsOfDay(i64 dayStartUtc, eastl::fixed_vector<CalendarEve
 	const i32 weekday = EasternWeekday(dayStartUtc);
 	const i64 next = EasternDayStartUtc(dayStartUtc + DAY_SEC + 3600);
 	out.push_back({ CALENDAR_TYPE_AREA_EVENT, WEEKLY_AREA_EVENTS[weekday], UnixToFiletime(dayStartUtc), UnixToFiletime(next) });
+	const u32 devEvent = (u32)Config().DevDailyAreaEvent;
+	if(devEvent != 0 && devEvent != WEEKLY_AREA_EVENTS[weekday]) out.push_back({ CALENDAR_TYPE_AREA_EVENT, devEvent, UnixToFiletime(dayStartUtc), UnixToFiletime(next) });
 	if(weekday == 6 || weekday == 0) {
 		const i64 saturday = weekday == 6 ? dayStartUtc : EasternDayStartUtc(dayStartUtc - DAY_SEC + 3600);
 		const i64 monday = EasternDayStartUtc(saturday + 2 * DAY_SEC + 3600);

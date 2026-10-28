@@ -196,6 +196,65 @@ void Replication::SendStageClearResult(ClientHandle clientHd, const StageClear& 
 	SendPacket(clientHd, packet);
 }
 
+static const i32 MEASURED_PC_CAFE_ITEM_NONE = -1;
+
+void Replication::SendDefenceClearResult(ClientHandle clientHd, const DefenceClear& clear, const StageMember* members, i32 memberCount)
+{
+	PacketWriter<Sv::SN_DefenceClearResult,1024> packet;
+	packet.Write<LocalActorID>(clear.player);
+	packet.Write<u16>((u16)memberCount);
+	for(i32 i = 0; i < memberCount; i++) {
+		packet.Write<u32>((u32)members[i].mainClass);
+		packet.Write<u32>((u32)members[i].subClass);
+		packet.WriteStringObj(members[i].name);
+	}
+	packet.Write<i32>(clear.stage);
+	packet.Write<i32>(clear.clearStep);
+	packet.Write<u32>(clear.clearMs);
+	packet.Write<u32>(0);
+	packet.Write<u32>(clear.baseRon);
+	packet.Write<u16>((u16)clear.bonusRon.size());
+	foreach_const(b, clear.bonusRon) { packet.Write<u32>(b->type); packet.Write<u32>(b->amount); }
+	packet.Write<u32>(clear.baseExp);
+	packet.Write<u16>((u16)clear.bonusExp.size());
+	foreach_const(b, clear.bonusExp) { packet.Write<u32>(b->type); packet.Write<u32>(b->amount); }
+	packet.Write<u16>((u16)clear.items.size());
+	foreach_const(it, clear.items) { packet.Write<u32>(it->type); packet.Write<i32>(it->index); packet.Write<u32>(it->amount); }
+	packet.Write<u32>(clear.guildBase);
+	packet.Write<u32>(clear.guildBonus);
+	packet.Write<u8>(clear.guildMembers);
+	packet.Write<u16>(clear.boostGold);
+	packet.Write<u16>(clear.boostExp);
+	packet.Write<u16>(0);
+	packet.Write<u32>(0);
+	packet.Write<i32>(MEASURED_PC_CAFE_ITEM_NONE);
+	packet.Write<u32>(0);
+	packet.Write<u16>(0);
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendPhaseStartToAll(i32 step)
+{
+	Sv::SN_PhaseStart packet;
+	packet.step = (u32)step;
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		SendPacket(clientHandle[clientID], packet);
+	}
+}
+
+void Replication::SendPhaseEndToAll(i32 step, u32 reason, u32 clearMs)
+{
+	Sv::SN_PhaseEnd packet;
+	packet.step = (u32)step;
+	packet.endReason = reason;
+	packet.clearTime = clearMs;
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		SendPacket(clientHandle[clientID], packet);
+	}
+}
+
 void Replication::SendExpGain(ClientHandle clientHd, u32 exp)
 {
 	PacketWriter<Sv::SN_ExpGain,16> packet;

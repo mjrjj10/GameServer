@@ -1401,7 +1401,7 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 	if(pendingPartyStageIndex[userID] != StageIndex(0)) SetPartyStage(party, pendingPartyStageIndex[userID]);
 	if(party.gameDefinition == GameDefinition::User) PartyPlaceMember(party, &party.memberList.front());
 
-	replication.SendPartyCreateSucess(clientHd, UserID(1), StageType::PVP_GAME);
+	replication.SendPartyCreateSucess(clientHd, UserID(1), party.stageType);
 	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_IN_CREATION);
 	if(Config().DevShowcase || Config().DevAutoQueue) OnEnqueueGame(clientHd);
 }

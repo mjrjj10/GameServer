@@ -7,6 +7,7 @@ static const f64 MONSTER_START_DELAY_MS = 90.0;
 static const f64 MONSTER_SEARCH_MS = 250.0;
 static const f64 MONSTER_SYNC_MS = 500.0;
 static const f32 MONSTER_WAYPOINT_REACHED = 60.0f;
+static const f32 MONSTER_REACH_TOLERANCE = 1.0f;
 static const u8 MONSTER_ATTACK_STAT = 6;
 static const u32 NPC_DEAD_NO_KILLER_DOC = 0;
 
@@ -112,6 +113,7 @@ void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDo
 	if(ActorMaster* killer = killerUID != ActorUID::INVALID ? FindMasterActor(killerUID) : nullptr) {
 		if(killer->parent) killer->parent->pveKills++;
 	}
+	DefenceMonsterDied(npc);
 	if(stageClearMonster != 0 && (i32)npc.docID == stageClearMonster && ++stageClearKills >= MAX(stageClearCount, 1)) {
 		stageCleared = true;
 		LOG("Stage :: clear monster %d killed", stageClearMonster);
@@ -308,6 +310,10 @@ void World::UpdateMonsterHits()
 		monsterHits.erase(monsterHits.begin() + i);
 		if(hit.ally) ApplyMonsterAllyStatus(hit.attacker, *hit.attack);
 		else MonsterAttackHit(hit.attacker, hit.target, *hit.attack, hit.remoteID);
+		if(!hit.ally && hit.attack->selfDie) {
+			auto self = actorNpcMap.find(hit.attacker);
+			if(self != actorNpcMap.end() && self->second->hp > 0) MonsterDie(*self->second, ActorUID::INVALID, CreatureIndex(0));
+		}
 	}
 }
 
@@ -461,7 +467,7 @@ void World::UpdateMonsterAi(f32 delta)
 			const f32 dist = glm::length(rel);
 			const f32 yaw = dist > 1.0f ? atan2f(rel.y, rel.x) : npc.rot.z;
 			const f32 reach = attack->range;
-			if(dist > reach) {
+			if(dist > reach + MONSTER_REACH_TOLERANCE) {
 				if(run <= 0) continue;
 				npc.monsterWalking = false;
 				const f32 step = MIN(run * delta, dist - reach);

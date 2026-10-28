@@ -590,7 +590,7 @@ struct GameXmlContent
 
 	struct LevelEventNode
 	{
-		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM, BOUND_TRIGGER, STATUS_CHANGE, ACTIVATE_TRIGGER, ON_HIT_TRIGGER, ACTION_CHANGE, CLIENT_EVENT, CALL_MONSTER, DESPAWN_ENTITY, PASS_THROUGH, TIME_RECORD_START, DEAD_COUNT, HP_TRIGGER, OR_CONDITION, GAME_END_TRIGGER, SAFE_ZONE, TEAM_CONDITION, ADD_GOT_PIECE, SAVE_GOT_PIECE, AI_TRIGGER, INVOKE_AI_TRIGGER, NOTIFY_RESPAWN, ACTIVE_INTERACTION, INTERACTION_TRIGGER, ADD_CAST_TIME, TELEPORT_TO, RANDOM_CONDITION, PORTAL, KILL_TARGET, ACTIVE_AREA_TRIGGER, INVOKE_DIALOG, DIALOG_TRIGGER, SET_ACTIVATION, AND_CONDITION };
+		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM, BOUND_TRIGGER, STATUS_CHANGE, ACTIVATE_TRIGGER, ON_HIT_TRIGGER, ACTION_CHANGE, CLIENT_EVENT, CALL_MONSTER, DESPAWN_ENTITY, PASS_THROUGH, TIME_RECORD_START, DEAD_COUNT, HP_TRIGGER, OR_CONDITION, GAME_END_TRIGGER, SAFE_ZONE, TEAM_CONDITION, ADD_GOT_PIECE, SAVE_GOT_PIECE, AI_TRIGGER, INVOKE_AI_TRIGGER, NOTIFY_RESPAWN, ACTIVE_INTERACTION, INTERACTION_TRIGGER, ADD_CAST_TIME, TELEPORT_TO, RANDOM_CONDITION, PORTAL, KILL_TARGET, ACTIVE_AREA_TRIGGER, INVOKE_DIALOG, DIALOG_TRIGGER, SET_ACTIVATION, AND_CONDITION, START_PHASE, END_PHASE };
 		enum ApplyType: u8 { APPLY_MY_CHAR = 0, APPLY_LOCAL_ID, APPLY_OTHER };
 		i32 id = 0;
 		Kind kind = OTHER;
@@ -626,6 +626,7 @@ struct GameXmlContent
 		bool ownTeamOnly = false;
 		f32 hpPercent = 0;
 		i32 aiIndex = 0;
+		i32 phase = 0;
 		u8 difficultyMask = ALL_DIFFICULTIES;
 		bool relative = false;
 		struct RandomEvent { u8 branch; u16 weight; u32 nameKey; };
@@ -831,6 +832,7 @@ struct GameXmlContent
 		u8 difficultyBit = ALL_DIFFICULTIES;
 		i32 clearMonster = 0;
 		i32 clearCount = 0;
+		i32 defendTarget = 0;
 		i32 moneyReward = 0;
 		eastl::fixed_vector<i32,8,false> viewRewards;
 		eastl::fixed_vector<eastl::pair<u8,i32>,32,false> commonDrop;
@@ -968,6 +970,22 @@ struct GameXmlContent
 	CreatureIndex FindDeathMatchBotIndex(ClassType classType) const;
 	eastl::hash_map<i32,eastl::fixed_vector<ClassType,16,false>> stageBotClasses;
 	bool LoadStageBots();
+
+	struct DefencePhase
+	{
+		i32 step = 0;
+		f32 timeout = 0;
+		f32 endDelay = 0;
+		i32 killCount = 0;
+		eastl::fixed_vector<i32,16,false> excluded;
+		u32 gold = 0;
+		u32 exp = 0;
+		u32 guildPoint = 0;
+		eastl::fixed_vector<eastl::pair<i32,i32>,4,false> items;
+		bool Excludes(i32 doc) const { return eastl::find(excluded.begin(), excluded.end(), doc) != excluded.end(); }
+	};
+	eastl::vector<DefencePhase> defencePhases;
+	bool LoadDefencePhases();
 	const eastl::fixed_vector<ClassType,16,false>* FindStageBots(StageIndex stage) const { auto f = stageBotClasses.find((i32)stage); return f == stageBotClasses.end() ? nullptr : &f->second; }
 
 	eastl::vector<FileBuffer> collisionFiles;
@@ -990,6 +1008,7 @@ struct GameXmlContent
 		bool executeMinion = false;
 		f32 anim = 0;
 		bool noDamage = false;
+		bool selfDie = false;
 		i32 allyStatus = 0;
 		f32 allyRadius = 0;
 		f32 allyDelay = 0;
@@ -1026,6 +1045,7 @@ struct GameXmlContent
 		f32 spawnTime = 0;
 		i32 masterMark = 0;
 		i32 teamBuff = 0;
+		bool playerSide = false;
 		eastl::array<ActionStateID,2> victoryStates = {{ ActionStateID::INVALID, ActionStateID::INVALID }};
 		eastl::array<f32,2> victoryTimes = {{ 0, 0 }};
 		eastl::fixed_vector<i32,4,false> victoryStatuses;

@@ -440,6 +440,7 @@ World::ActorNpc& World::SpawnMonster(CreatureIndex docID, i32 localID, const vec
 	npc.actionState = ActionStateID::SPAWN_BEHAVIORSTATE;
 	npc.seed = (i32)RandUint();
 	InitMonsterStats(npc);
+	if(npc.monsterAi && npc.monsterAi->playerSide && (faction == Faction::MONSTER || faction == Faction::INVALID)) npc.faction = PlayerSideFaction();
 	if(npc.monsterAi && npc.monsterAi->teamBuff != 0 && (faction == Faction::RED || faction == Faction::BLUE)) {
 		foreach(p, players) {
 			if(p->dead || !p->body || (Faction)p->team != faction || p->Main().classType == ClassType::NONE) continue;

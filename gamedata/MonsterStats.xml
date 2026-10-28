@@ -1400,4 +1400,9 @@
     <STAT type="52" value="100" />
     <STAT type="64" value="150" />
   </INFO>
+  <INFO ID="110070003">
+    <STAT type="0" value="11976" />
+    <STAT type="6" value="480" />
+    <STAT type="7" value="113.333" />
+  </INFO>
 </MONSTER_STATS>

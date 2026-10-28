@@ -329,7 +329,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			if(it->team == attacker.team) teamKills += it->kills;
 			if(it->team == target.team) victimTeamKills += it->kills;
 		}
-		const i32 respawnMs = map && map->ingameLevels ? IngameRespawnDelayMs(target) : gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills);
+		const i32 respawnMs = fixedRespawnMs > 0 ? fixedRespawnMs : map && map->ingameLevels ? IngameRespawnDelayMs(target) : gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills);
 		target.tRespawn = TimeAdd(localTime, TimeMsToTime(noRespawn ? NO_RESPAWN_MS : (f64)respawnMs));
 		LOG("Death :: %ls killed by %ls (respawn %d ms)", target.name.data(), attacker.name.data(), respawnMs);
 		if(target.hiddenUID != ActorUID::INVALID) {
@@ -547,7 +547,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 		if(it->team == target.team) victimTeamKills += it->kills;
 		else teamKills += it->kills;
 	}
-	const i32 respawnMs = map && map->ingameLevels ? IngameRespawnDelayMs(target) : gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills);
+	const i32 respawnMs = fixedRespawnMs > 0 ? fixedRespawnMs : map && map->ingameLevels ? IngameRespawnDelayMs(target) : gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills);
 	target.tRespawn = TimeAdd(localTime, TimeMsToTime(noRespawn ? NO_RESPAWN_MS : (f64)respawnMs));
 	target.killStreak = 0;
 	target.recentDamage.clear();

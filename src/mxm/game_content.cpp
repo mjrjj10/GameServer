@@ -1116,6 +1116,7 @@ bool GameXmlContent::LoadMonsterAi()
 			ai.spawnTime = pInfo->FloatAttribute("spawnTime");
 			ai.masterMark = pInfo->IntAttribute("masterMark");
 			ai.teamBuff = pInfo->IntAttribute("teamBuff");
+			if(const char* team = pInfo->Attribute("team")) ai.playerSide = EA::StdC::Strcmp(team, "player") == 0;
 			if(const char* hpBuffs = pInfo->Attribute("hpBuffs")) {
 				const char* at = hpBuffs;
 				while(*at && !ai.hpBuffs.full()) {
@@ -1175,6 +1176,7 @@ bool GameXmlContent::LoadMonsterAi()
 				attack.executeMinion = pAttack->BoolAttribute("executeMinion");
 				attack.anim = pAttack->FloatAttribute("anim");
 				attack.noDamage = pAttack->BoolAttribute("noDamage");
+				attack.selfDie = pAttack->BoolAttribute("selfDie");
 				attack.allyStatus = pAttack->IntAttribute("allyStatus");
 				attack.allyRadius = pAttack->FloatAttribute("allyRadius");
 				attack.allyDelay = pAttack->FloatAttribute("allyDelay");
@@ -1517,8 +1519,11 @@ bool GameXmlContent::LoadEntrySystems()
 		for(XMLElement* pStage = pInfo->FirstChildElement()->FirstChildElement("_StageList");
 			pStage;
 			pStage = pStage->NextSiblingElement("_StageList")) {
+			static const char* STAGE_INDEX_ATTRIBUTES[] = { "_NormalStageIndex", "_EasyStageIndex", "_HardStageIndex", "_ExtremeStageIndex", "_HellStageIndex" };
 			i32 stageID = 0;
-			if(pStage->QueryIntAttribute("_NormalStageIndex", &stageID) != XML_SUCCESS) continue;
+			for(const char* attribute : STAGE_INDEX_ATTRIBUTES) {
+				if(pStage->QueryIntAttribute(attribute, &stageID) == XML_SUCCESS && stageID != 0) break;
+			}
 			if(stageID != 0 && area.stages.size() < area.stages.capacity()) area.stages.push_back(StageIndex(stageID));
 		}
 		if(areaStages.size() < areaStages.capacity()) areaStages.push_back(area);
@@ -1654,6 +1659,7 @@ bool GameXmlContent::LoadStageMaps()
 				}
 				for(XMLElement* pCond = pSet->FirstChildElement("_MCONDITION"); pCond; pCond = pCond->NextSiblingElement("_MCONDITION")) {
 					const char* type = pCond->Attribute("_Type");
+					if(type && EA::StdC::Strcmp(type, "E_CONDITION_TYPE_DYNAMIC_KILL") == 0) stage.defendTarget = pCond->IntAttribute("_Index");
 					if(!type || EA::StdC::Strcmp(type, "E_CONDITION_TYPE_MONSTER_KILL") != 0) continue;
 					stage.clearMonster = pCond->IntAttribute("_Index");
 					stage.clearCount = pCond->IntAttribute("_Value", 1);
@@ -1740,6 +1746,31 @@ bool GameXmlContent::LoadBotCreatures()
 	}
 
 	LOG("Loaded %d deathmatch bot creatures", (i32)deathMatchBotIndex.size());
+	return true;
+}
+
+bool GameXmlContent::LoadDefencePhases()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/client/Phase.xml", doc)) return true;
+	XMLElement* pInfo = doc.FirstChildElement() ? doc.FirstChildElement()->FirstChildElement("INFO") : nullptr;
+	XMLElement* pList = pInfo ? pInfo->FirstChildElement("ST_PHASE_INFO") : nullptr;
+	for(XMLElement* p = pList ? pList->FirstChildElement("_Phase") : nullptr; p; p = p->NextSiblingElement("_Phase")) {
+		DefencePhase phase;
+		phase.step = p->IntAttribute("_StepIndex");
+		phase.timeout = p->FloatAttribute("_PhaseTimeOut");
+		phase.endDelay = p->FloatAttribute("_PhaseEndDelay");
+		phase.killCount = p->IntAttribute("_PhaseKillCount");
+		for(XMLElement* e = p->FirstChildElement("_ExcludeKillCount"); e && !phase.excluded.full(); e = e->NextSiblingElement("_ExcludeKillCount")) phase.excluded.push_back(e->IntAttribute("_Index"));
+		if(XMLElement* r = p->FirstChildElement("_Reward")) {
+			phase.gold = r->UnsignedAttribute("_Gold");
+			phase.exp = r->UnsignedAttribute("_Exp");
+			phase.guildPoint = r->UnsignedAttribute("_GuildPoint");
+			for(XMLElement* it = r->FirstChildElement("_Item"); it && !phase.items.full(); it = it->NextSiblingElement("_Item")) phase.items.push_back(eastl::make_pair(it->IntAttribute("_Index"), it->IntAttribute("_Value", 1)));
+		}
+		defencePhases.push_back(phase);
+	}
+	LOG("Loaded %d defence phases", (i32)defencePhases.size());
 	return true;
 }
 
@@ -2657,6 +2688,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadStageBots();
+	if(!r) return false;
+
+	r = LoadDefencePhases();
 	if(!r) return false;
 
 
@@ -4214,6 +4248,8 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(pNode->FirstChildElement("_PortalEntityInfo")) node.kind = LevelEventNode::PORTAL;
 		else if(XMLElement* e = pNode->FirstChildElement("_SetLvEvtActivationInfo")) { node.kind = LevelEventNode::SET_ACTIVATION; node.targetKey = StatusTypeKey(e->Attribute("_LvEvtID")); node.active = e->IntAttribute("_Active") == 1; }
 		else if(XMLElement* e = pNode->FirstChildElement("_EventAndConditionInfo")) { node.kind = LevelEventNode::AND_CONDITION; node.resetAfter = e->IntAttribute("_ResetAfterEvent") == 1; }
+		else if(XMLElement* e = pNode->FirstChildElement("_StartPhaseTriggerData")) { node.kind = LevelEventNode::START_PHASE; node.phase = e->IntAttribute("_PhaseID"); }
+		else if(XMLElement* e = pNode->FirstChildElement("_EndPhaseTriggerData")) { node.kind = LevelEventNode::END_PHASE; node.phase = e->IntAttribute("_PhaseID"); }
 		else if(pNode->FirstChildElement("_SaveKillZSpawnArea")) node.kind = LevelEventNode::PASS_THROUGH;
 		else if(pNode->FirstChildElement("_SceneAniStartInfo") || pNode->FirstChildElement("_SceneAniControlInfo") || pNode->FirstChildElement("_EntityHideObjInfo") || pNode->FirstChildElement("_EntityHighlightInfo") || pNode->FirstChildElement("_UIEventInfo") || pNode->FirstChildElement("_EventBgmStopInfo") || pNode->FirstChildElement("_BgmPlayInfo") || pNode->FirstChildElement("_HideObjInfo") || pNode->FirstChildElement("_LightActiveInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
 		else if(XMLElement* e = pNode->FirstChildElement("_KillTargetEntityInfo")) { node.kind = LevelEventNode::KILL_TARGET; node.localID = e->IntAttribute("_LocalID"); node.tagID = e->IntAttribute("_TagID", -1); }

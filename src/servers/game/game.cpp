@@ -12,6 +12,9 @@
 static const f32 STAGE_TIME_LIMIT_FALLBACK_SEC = 300.0f;
 static const f64 RETURN_TO_LOBBY_DELAY_SEC = 20.0;
 static const u32 MEASURED_PVE_FAIL_RETURN_MS = 15000;
+static const u32 MEASURED_DEFENCE_RETURN_MS = 280;
+static const i32 MEASURED_DEFENCE_RESPAWN_MS = 12000;
+static const u8 HYP_DEFENCE_GUILD_MEMBERS = 1;
 static const f64 PVE_REWARD_TIMEOUT_SEC = 60.0;
 static const u32 MEASURED_REWARD_WAIT_MS = 30000;
 static const u8 MEASURED_REWARD_SLOT_COUNT = 4;
@@ -108,6 +111,11 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 			foreach_const(m, stage->maps) if(!zoneMaps.full()) zoneMaps.push_back(*m);
 			if(stage->bossMap != MapIndex(0) && !zoneMaps.full()) zoneMaps.push_back(stage->bossMap);
 			LOG("Stage :: %d zone(s), difficulty bit %d", (i32)zoneMaps.size(), (i32)world.difficultyBit);
+		}
+		if(stage->gameMode == GameModeType::GAME_MODE_DEFENCE) {
+			defenceStage = true;
+			world.fixedRespawnMs = MEASURED_DEFENCE_RESPAWN_MS;
+			world.StartDefence(stage->defendTarget);
 		}
 	}
 
@@ -274,6 +282,7 @@ void Game::Update(Time localTime_)
 		case Phase::Game: {
 			if(world.portalRequested && !gameEnded) MoveToNextZone();
 			if(pveStage && world.stageCleared && !gameEnded) EndStage(true);
+			if(defenceStage && !gameEnded && (world.defence.won || world.defence.failed)) EndDefence();
 			foreach(r, rewardStates) {
 				if(r->finished || r->startedAt == Time::ZERO || r->picks >= MEASURED_REWARD_SLOT_COUNT) continue;
 				if(TimeDurationMs(r->startedAt, localTime) >= (f64)MEASURED_REWARD_WAIT_MS) AutoPickRewards(r->clientHd);
@@ -302,15 +311,16 @@ void Game::Update(Time localTime_)
 				if(Config().DevGameTimeSec > 0) limit = (f32)Config().DevGameTimeSec;
 				if(TimeDiffSec(TimeDiff(tGameStarted, localTime)) >= limit) {
 					if(pveStage) EndStage(false);
+					else if(defenceStage) { world.defence.failed = true; EndDefence(); }
 					else EndGame();
 				}
 			}
-			const f64 lobbyDelay = pveStage && !world.stageCleared ? (f64)MEASURED_PVE_FAIL_RETURN_MS / 1000.0 : pveStage ? PVE_REWARD_TIMEOUT_SEC : RETURN_TO_LOBBY_DELAY_SEC;
+			const f64 lobbyDelay = defenceStage ? (f64)MEASURED_DEFENCE_RETURN_MS / 1000.0 : pveStage && !world.stageCleared ? (f64)MEASURED_PVE_FAIL_RETURN_MS / 1000.0 : pveStage ? PVE_REWARD_TIMEOUT_SEC : RETURN_TO_LOBBY_DELAY_SEC;
 			if(gameEnded && !sentBackToLobby && TimeDiffSec(TimeDiff(tGameEnded, localTime)) >= lobbyDelay) {
 				sentBackToLobby = true;
 				foreach_const(p, playerList) {
 					if(p->clientHd == ClientHandle::INVALID) continue;
-					if(pveStage) replication.SendPrepareHandover(p->clientHd);
+					if(pveStage || defenceStage) replication.SendPrepareHandover(p->clientHd);
 					else OnPlayerReturnToChannel(p->clientHd);
 				}
 				LOG("Game :: players sent back to the lobby");
@@ -469,6 +479,22 @@ bool Game::LoadMap()
 	}
 
 	foreach(it, map->dynamic) {
+		if(world.hostileMonsters && GetGameXmlContent().FindMonsterAi((i32)it->docID)) {
+			World::ActorNpc& npc = world.SpawnNpcActor(it->docID, it->localID);
+			npc.pos = it->pos;
+			npc.rot = it->rot;
+			npc.home = it->pos;
+			npc.spawnAnim = it->spawnAnim;
+			npc.tagID = it->tagID;
+			npc.ownerID = it->ownerID;
+			npc.dirToNearPC = it->dirToNearPC;
+			npc.actionState = it->actionState;
+			npc.entityType = it->entityType;
+			npc.seed = (i32)RandUint();
+			world.InitMonsterStats(npc);
+			npc.faction = npc.monsterAi->playerSide ? world.PlayerSideFaction() : Faction::MONSTER;
+			continue;
+		}
 		// spawn dynamic
 		auto& actor = world.SpawnDynamic(it->docID, it->localID);
 		actor.pos = it->pos;
@@ -1135,6 +1161,53 @@ void Game::EndStage(bool cleared)
 	}
 }
 
+void Game::EndDefence()
+{
+	gameEnded = true;
+	tGameEnded = localTime;
+	world.frozen = true;
+	const auto& phases = GetGameXmlContent().defencePhases;
+	const i32 cleared = world.defence.cleared;
+	const GameXmlContent::DefencePhase* phase = cleared > 0 && cleared <= (i32)phases.size() ? &phases[cleared - 1] : nullptr;
+	eastl::fixed_vector<Replication::StageMember,MAX_PLAYERS,false> members;
+	foreach_const(p, world.players) {
+		if(p->clientHd == ClientHandle::INVALID || p->removed) continue;
+		members.push_back({ p->mainClass, p->subClass, p->name.data() });
+	}
+	foreach_const(p, world.players) {
+		if(p->clientHd == ClientHandle::INVALID || p->removed) continue;
+		Replication::DefenceClear clear;
+		clear.player = replication.GetLocalActorID(p->clientHd, p->Main().UID);
+		clear.stage = (i32)replication.stageIndex;
+		clear.clearStep = cleared;
+		clear.clearMs = world.defence.clearMs;
+		clear.baseRon = phase ? phase->gold : 0;
+		clear.baseExp = phase ? phase->exp : 0;
+		ComputeRewardBonuses(replication.gameType, replication.stageIndex, clear.baseRon, clear.baseExp, guildBoost[p->index], &clear.bonusRon, &clear.bonusExp);
+		if(phase) foreach_const(it, phase->items) if(!clear.items.full()) clear.items.push_back({ MEASURED_REWARD_TYPE_ITEM, it->first, (u32)it->second });
+		clear.guildBase = phase ? phase->guildPoint : 0;
+		clear.guildBonus = 0;
+		clear.guildMembers = HYP_DEFENCE_GUILD_MEMBERS;
+		clear.boostGold = guildBoost[p->index][0];
+		clear.boostExp = guildBoost[p->index][1];
+		replication.SendExpGain(p->clientHd, clear.baseExp + RewardBonusTotal(clear.bonusExp));
+		replication.SendDefenceClearResult(p->clientHd, clear, members.data(), (i32)members.size());
+		foreach_const(it, clear.items) AccountRewardItemAppend(p->name.data(), it->index, (i32)it->amount);
+		if(world.defence.won) AccountStageCleared(p->name.data(), clear.stage);
+		AccountGameRecord record;
+		record.gold = clear.baseRon + RewardBonusTotal(clear.bonusRon);
+		record.exp = clear.baseExp + RewardBonusTotal(clear.bonusExp);
+		record.won = world.defence.won ? 1 : 0;
+		record.kills = p->pveKills;
+		record.stageIndex = clear.stage;
+		record.gameType = (i32)replication.gameType;
+		record.classTypes = { (i32)p->mainClass, (i32)p->subClass };
+		record.playSeconds = tGameStarted != Time::ZERO ? (u32)TimeDiffSec(TimeDiff(tGameStarted, localTime)) : 0;
+		AccountGameRecordAppend(p->name.data(), record);
+		LOG("Defence :: %ls ends at phase %d (%s), %u gold %u exp", p->name.data(), cleared, world.defence.won ? "won" : "failed", (u32)record.gold, record.exp);
+	}
+}
+
 void Game::OnRewardStageReady(ClientHandle clientHd)
 {
 	if(!stageEnded || rewardCards.empty()) return;
@@ -1542,6 +1615,29 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 		if(EA::StdC::Strcmp(msg, L"clear") == 0) {
 			world.stageCleared = true;
 			SendDbgMsg(clientHd, L"Stage cleared");
+			return true;
+		}
+
+		if(EA::StdC::Strcmp(msg, L"wave") == 0) {
+			if(world.defence.inWave) world.EndDefencePhase(2);
+			SendDbgMsg(clientHd, LFMT(L"Defence phase %d", world.defence.step));
+			return true;
+		}
+
+		if(EA::StdC::Strcmp(msg, L"defeat") == 0) {
+			world.defence.failed = true;
+			SendDbgMsg(clientHd, L"Defence failed");
+			return true;
+		}
+
+		if(EA::StdC::Strcmp(msg, L"monsters") == 0) {
+			i32 alive = 0;
+			foreach_const(npc, world.actorNpcList) {
+				if(npc->hp <= 0 || npc->removeAt != Time::ZERO || npc->faction != Faction::MONSTER) continue;
+				alive++;
+				LOG("Dev :: creature=%d (local %d) at (%.0f, %.0f) target %u path %d/%d walking %d chasing %d", (i32)npc->docID, npc->localID, npc->pos.x, npc->pos.y, (u32)npc->monsterTarget, npc->pathPoint, npc->path ? (i32)npc->path->size() : -1, (i32)npc->monsterWalking, (i32)npc->monsterChasing);
+			}
+			SendDbgMsg(clientHd, LFMT(L"%d monster(s) alive", alive));
 			return true;
 		}
 

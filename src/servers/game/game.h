@@ -117,11 +117,13 @@ struct Game
 	bool zoneLoading = false;
 	void MoveToNextZone();
 	bool pveStage = false;
+	bool defenceStage = false;
 	bool stageEnded = false;
 	eastl::fixed_vector<Replication::RewardCard,32,false> rewardCards;
 	struct RewardState { ClientHandle clientHd; i32 picks; bool finished; Time startedAt; eastl::fixed_vector<u32,8,false> slots; };
 	eastl::fixed_vector<RewardState,MAX_PLAYERS,false> rewardStates;
 	void EndStage(bool cleared);
+	void EndDefence();
 	void BuildRewardCards(const GameXmlContent::StageMaps& stage);
 	void OnRewardStageReady(ClientHandle clientHd);
 	void OnRewardSelectSlot(ClientHandle clientHd, u32 slot);

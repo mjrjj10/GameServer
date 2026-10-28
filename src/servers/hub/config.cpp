@@ -34,6 +34,7 @@ bool CConfigHub::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "DevMirror=%d", &DevMirror) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevMirrorPass=%d", &DevMirrorPass) == 1) return true;
 	if(EA::StdC::Sscanf(line, "LobbyMap=%d", &LobbyMap) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevDailyAreaEvent=%d", &DevDailyAreaEvent) == 1) return true;
 	if(ParseIdList(line, "RegionBanMaster=", regionBanMaster)) return true;
 	if(ParseIdList(line, "DevShowcaseList=", devShowcaseList)) return true;
 	if(ParseIdList(line, "DevHumanPick=", devHumanPick)) return true;
@@ -105,6 +106,7 @@ bool CConfigHub::SaveConfigFile()
 	out.append_sprintf("DevQuickConnect=%d\n", DevQuickConnect);
 	out.append_sprintf("TraceNetwork=%d\n", TraceNetwork);
 	out.append_sprintf("LobbyMap=%d\n", LobbyMap);
+	out.append_sprintf("DevDailyAreaEvent=%d\n", DevDailyAreaEvent);
 	AppendIdList(out, "RegionBanMaster", regionBanMaster);
 	AppendIdList(out, "RegionNewMaster", regionNewMaster);
 	AppendIdList(out, "EventBanMaster", eventBanMaster);
@@ -132,6 +134,7 @@ void CConfigHub::Print() const
 	LOG("	DevQuickConnect=%d", DevQuickConnect);
 	LOG("	TraceNetwork=%d", TraceNetwork);
 	LOG("	LobbyMap=%d", LobbyMap);
+	LOG("	DevDailyAreaEvent=%d", DevDailyAreaEvent);
 	LogIdList("RegionBanMaster", regionBanMaster);
 	LogIdList("RegionNewMaster", regionNewMaster);
 	LogIdList("EventBanMaster", eventBanMaster);

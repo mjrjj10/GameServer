@@ -222,6 +222,7 @@ void World::Update(Time localTime_)
 	UpdateSummons();
 	UpdateSummonAi((f32)tdelta);
 	UpdateMonsterAi((f32)tdelta);
+	UpdateDefence();
 	UpdateIngameLevels();
 	if(!frozen) UpdatePassives();
 	if(!frozen) UpdateStances();
