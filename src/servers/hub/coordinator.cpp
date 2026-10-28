@@ -4,7 +4,7 @@
 #include <common/inner_protocol.h>
 #include <mxm/game_content.h>
 #include <mxm/account_progress.h>
-#include "mission_progress.h"
+#include <mxm/mission_progress.h>
 #include "guild_store.h"
 #include "town_rules.h"
 #include <time.h>
@@ -715,9 +715,6 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 	const AccountReward reward = AccountRewardTake(account.nickname.data());
 	if(reward.games > 0) {
 		if(!reward.records.empty()) {
-			AccountMissions saved = AccountMissionsLoad(account.nickname.data());
-			ActiveMissionList list;
-			MissionBuildActive(account.nickname.data(), progress.level, (i64)time(nullptr), saved, &list);
 			foreach_const(r, reward.records) {
 				account.pendingGuildPoints += r->guildPoints;
 				if(r->gameType >= (i32)GameType::PVP_NORMAL && r->gameType <= (i32)GameType::PVP_FAKE_AI && r->pvpSaveType != 0) {
@@ -737,14 +734,11 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 				}
 				if(r->stageIndex == 0) continue;
 				if(r->gameType >= (i32)GameType::PVE_NORMAL && r->gameType <= (i32)GameType::PVE_TICKET && !r->won) account.pveFailedReturn = true;
-				MissionApplyGame(*r, &list);
 				if(r->gameType >= (i32)GameType::PVE_NORMAL && r->gameType <= (i32)GameType::PVE_TICKET) continue;
 				if(r->won) progress.wins++;
 				else if(r->draw) progress.draws++;
 				else progress.losses++;
 			}
-			MissionStore(list, &saved);
-			AccountMissionsSave(account.nickname.data(), saved);
 		}
 		progress.gold += reward.gold;
 		if(ProgressGainExp(&progress, reward.exp)) LOG("[client%x] Account :: %ls reaches level %u", clientHd, account.nickname.data(), (u32)progress.level);

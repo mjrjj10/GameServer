@@ -96,7 +96,39 @@ bool GameXmlContent::LoadAchievements()
 		if(a.sub == AchieveSub::COMMON_MULTI) foreach_const(o, a.objects) achievementParents[*o].push_back(a.index);
 		achievements.push_back(a);
 	}
-	LOG("Loaded %d achievements, %d sections", (i32)achievements.size(), (i32)sections.size());
+	XMLDocument docTitle;
+	if(LoadXMLFile(L"/Design/DOCUMENT/TITLE.xml", docTitle, true)) {
+		static const struct { const char* name; StatType type; } TITLE_STATS[] = {
+			{ "STAT_TYPE_HEALTH", StatType::STAT_TYPE_HEALTH }, { "STAT_TYPE_STAMINA", StatType::STAT_TYPE_STAMINA },
+			{ "STAT_TYPE_HEALTHREGEN", StatType::STAT_TYPE_HEALTHREGEN }, { "STAT_TYPE_STAMINAREGEN", StatType::STAT_TYPE_STAMINAREGEN },
+			{ "STAT_TYPE_ATTACK", StatType::STAT_TYPE_ATTACK }, { "STAT_TYPE_DEFENCE", StatType::STAT_TYPE_DEFENCE },
+			{ "STAT_TYPE_SKILLPOWER", StatType::STAT_TYPE_SKILLPOWER }, { "STAT_TYPE_CRITICALRATE", StatType::STAT_TYPE_CRITICALRATE },
+			{ "STAT_TYPE_CRITICALDAMAGE", StatType::STAT_TYPE_CRITICALDAMAGE }, { "STAT_TYPE_LIFESTEAL", StatType::STAT_TYPE_LIFESTEAL },
+			{ "STAT_TYPE_MOVESPEED", StatType::STAT_TYPE_MOVESPEED }, { "STAT_TYPE_DEFENCE_PENETRATION", StatType::STAT_TYPE_DEFENCE_PENETRATION },
+			{ "STAT_TYPE_TAG_HEALTHREGEN_VALUE", StatType::STAT_TYPE_TAG_HEALTHREGEN_VALUE }, { "STAT_TYPE_TAG_MANAREGEN_VALUE", StatType::STAT_TYPE_TAG_MANAREGEN_VALUE },
+			{ "STAT_TYPE_MANAREGEN", StatType::STAT_TYPE_MANAREGEN }, { "STAT_TYPE_ENERGYREGEN", StatType::STAT_TYPE_ENERGYREGEN },
+			{ "STAT_TYPE_ULTIMATEREGEN", StatType::STAT_TYPE_ULTIMATEREGEN },
+		};
+		for(XMLElement* info = docTitle.FirstChildElement()->FirstChildElement("INFO"); info; info = info->NextSiblingElement("INFO")) {
+			XMLElement* st = info->FirstChildElement("ST_TITLEINFO");
+			if(!st) continue;
+			const i32 title = st->IntAttribute("_Index");
+			for(XMLElement* e = st->FirstChildElement("_STATINFO"); e; e = e->NextSiblingElement("_STATINFO")) {
+				const char* type = e->Attribute("_Type");
+				for(const auto& t : TITLE_STATS) {
+					if(!type || EA::StdC::Strcmp(type, t.name) != 0) continue;
+					TitleStat ts;
+					ts.type = (u8)t.type;
+					ts.value = e->FloatAttribute("_Value");
+					const char* vt = e->Attribute("_ValueType");
+					ts.mul = vt && EA::StdC::Strcmp(vt, "MUL") == 0;
+					auto& list = titleStats[title];
+					if(!list.full()) list.push_back(ts);
+				}
+			}
+		}
+	}
+	LOG("Loaded %d achievements, %d sections, %d titles with stats", (i32)achievements.size(), (i32)sections.size(), (i32)titleStats.size());
 	return true;
 }
 

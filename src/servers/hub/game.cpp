@@ -5,8 +5,8 @@
 #include <mxm/game_content.h>
 #include "config.h"
 #include "mailbox.h"
-#include "mission_progress.h"
-#include "mission_rules.h"
+#include <mxm/mission_progress.h>
+#include <mxm/mission_rules.h>
 #include "town_rules.h"
 #include <EASTL/algorithm.h>
 #include <EAStdC/EASprintf.h>

@@ -318,6 +318,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	if(chara.hp == 0) {
 		target.dead = true;
 		attacker.kills++;
+		MissionLive(attacker, 1, 0);
 		target.deaths++;
 		GrantSkillPoint(target);
 		DropTitanPieces(target);
@@ -379,6 +380,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			}
 			if(!assisted) continue;
 			it->assists++;
+			MissionLive(*it, 0, 1);
 			i32 teamScore = 0;
 			foreach_const(p, players) if(p->team == it->team) teamScore += p->kills;
 			if(occupyMode) teamScore = TeamPoints(it->team);

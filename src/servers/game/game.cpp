@@ -269,6 +269,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 				}
 			}
 			if(!desc.stageSkillLevels.empty()) LOG("Arsenal :: %ls stage skill upgrades %d", desc.name.data(), (i32)desc.stageSkillLevels.size());
+			desc.statTitle = AccountAchievementsLoad(desc.name.data()).statTitle;
 		}
 
 		const auto& master0 = xml.GetMaster(p.masters[0]);

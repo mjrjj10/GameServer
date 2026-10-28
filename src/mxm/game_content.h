@@ -614,6 +614,9 @@ struct GameXmlContent
 	eastl::vector<eastl::vector<i32>> sections;
 	eastl::hash_map<size_t,i32> sectionByName;
 	bool LoadAchievements();
+	struct TitleStat { u8 type = 0; f32 value = 0; bool mul = false; };
+	eastl::hash_map<i32,eastl::fixed_vector<TitleStat,4,false>> titleStats;
+	const eastl::fixed_vector<TitleStat,4,false>* FindTitleStats(i32 title) const { auto f = titleStats.find(title); return f == titleStats.end() ? nullptr : &f->second; }
 	struct SummaryReward { u8 type = 0; i32 amount = 0; i32 item = 0; };
 	enum class SummaryChallenge: u8 { NONE, NODIE, STATUSTYPE, NOHITBYBOSS, KILL_IN_TIME, RANK_OVER, NOKILL, KILL_GREATER_EQUAL, STATUSINDEX, KILL_LESS };
 	struct SummaryChallengeInfo

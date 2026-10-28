@@ -6,6 +6,7 @@
 #include <mxm/game_content.h>
 #include <mxm/achievements.h>
 #include <mxm/summary.h>
+#include <mxm/mission_progress.h>
 
 #include <EASTL/array.h>
 #include <EASTL/fixed_list.h>
@@ -67,6 +68,7 @@ struct World
 		eastl::array<i32,2> characterType;
 		eastl::array<eastl::fixed_vector<i32,6,false>,2> gearDocs;
 		eastl::fixed_vector<eastl::pair<i32,u8>,12,false> stageSkillLevels;
+		i32 statTitle = -1;
 	};
 
 	struct Player
@@ -108,6 +110,7 @@ struct World
 		const i32 subWeaponGrade;
 		const u8 mainMasterGearNo;
 		const eastl::array<eastl::fixed_vector<i32,6,false>,2> gearDocs;
+		const i32 statTitle;
 		const u8 subMasterGearNo;
 		const i32 mainCharacterType;
 		const i32 subCharacterType;
@@ -366,7 +369,8 @@ struct World
 			subMasterGearNo(desc.masterGearNo[1]),
 			mainCharacterType(desc.characterType[0]),
 			subCharacterType(desc.characterType[1]),
-			gearDocs(desc.gearDocs)
+			gearDocs(desc.gearDocs),
+			statTitle(desc.statTitle)
 		{
 			foreach_const(s, desc.stageSkillLevels) skillLevels[s->first] = s->second;
 		}
@@ -387,7 +391,7 @@ struct World
 		i32 traitPoints = 0;
 		Time traitResetAt = Time::ZERO;
 		i32 seed;
-		eastl::fixed_vector<eastl::pair<u8,f32>,8,false> gearBonus;
+		eastl::fixed_vector<eastl::pair<u8,f32>,12,false> gearBonus;
 		f32 GearBonus(u8 statType) const { f32 sum = 0; foreach_const(g, gearBonus) if(g->first == statType) sum += g->second; return sum; }
 		i32 spawnAnim = -1;
 		i32 ownerID = 0;
@@ -547,6 +551,8 @@ struct World
 	eastl::fixed_vector<Player,10,false> players;
 	eastl::array<AccountAchievements,10> achieve;
 	eastl::array<AccountSummaries,10> summaries;
+	eastl::array<ActiveMissionList,10> missions;
+	eastl::array<AccountMissions,10> missionSaved;
 	eastl::array<u8,10> progressLoaded = {};
 	eastl::fixed_list<ActorMaster,512,true> actorMasterList;
 	eastl::fixed_list<ActorNpc,512,true> actorNpcList;
@@ -834,6 +840,8 @@ struct World
 	void AchieveLive(const Player& player, const AchieveEvent& ev);
 	void SummaryLive(const Player& player, i32 summary, i32 stage, u8 type, i32 data);
 	void SaveProgress(const Player& player);
+	void MissionLive(const Player& player, i32 kills, i32 assists);
+	void SendMissionChanges(const Player& player, const MissionChanges& changed);
 	void FinishProgress(const Player& player, const struct AccountGameRecord& record);
 	struct MonsterHit { ActorUID attacker; ActorUID target; Time at; const GameXmlContent::MonsterAttack* attack; u32 remoteID; bool ally; };
 	u32 nextMonsterRemoteID = 0;

@@ -4,7 +4,7 @@
 #include <mxm/achievements.h>
 #include <mxm/account_progress.h>
 #include <EASTL/sort.h>
-#include "mission_progress.h"
+#include <mxm/mission_progress.h>
 
 static const i32 MEASURED_SUMMARY_REWARD_MONEY_REASON = 15;
 static const u32 HYP_SUMMARY_ITEM_UPDATE_REASON = 3;

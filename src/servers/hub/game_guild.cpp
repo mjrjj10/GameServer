@@ -3,7 +3,7 @@
 #include "guild_store.h"
 #include "mailbox.h"
 #include "town_rules.h"
-#include "mission_rules.h"
+#include <mxm/mission_rules.h>
 #include <mxm/game_content.h>
 #include <mxm/account_progress.h>
 #include <EASTL/algorithm.h>

@@ -124,9 +124,41 @@ static bool SectionMatches(const Mission& mission, const AccountGameRecord& reco
 	}
 }
 
-void MissionApplyGame(const AccountGameRecord& record, ActiveMissionList* listPtr)
+typedef eastl::fixed_vector<eastl::pair<i64,bool>,64,false> MissionSnapshot;
+
+static void Snapshot(const ActiveMissionList& list, MissionSnapshot* out)
+{
+	foreach_const(a, list) out->push_back(eastl::make_pair(a->progress, a->cleared));
+}
+
+static void Diff(const ActiveMissionList& list, const MissionSnapshot& before, MissionChanges* changed)
+{
+	if(!changed) return;
+	for(i32 i = 0; i < (i32)list.size() && i < (i32)before.size(); i++) {
+		if(list[i].progress != before[i].first || list[i].cleared != before[i].second) changed->push_back(i);
+	}
+}
+
+void MissionApplyCombat(i32 kills, i32 assists, const AccountGameRecord& section, ActiveMissionList* listPtr, MissionChanges* changed)
 {
 	ActiveMissionList& list = *listPtr;
+	MissionSnapshot before;
+	Snapshot(list, &before);
+	foreach(a, list) {
+		const Mission& m = *a->mission;
+		if(!SectionMatches(m, section)) continue;
+		if(m.subType == Mission::SubType::PVP_KILL) a->progress += kills;
+		else if(m.subType == Mission::SubType::PVP_ASSIST) a->progress += assists;
+	}
+	RefreshCleared(listPtr);
+	Diff(list, before, changed);
+}
+
+void MissionApplyGame(const AccountGameRecord& record, ActiveMissionList* listPtr, MissionChanges* changed)
+{
+	ActiveMissionList& list = *listPtr;
+	MissionSnapshot before;
+	Snapshot(list, &before);
 	foreach(a, list) {
 		const Mission& m = *a->mission;
 		if(!SectionMatches(m, record)) continue;
@@ -154,6 +186,7 @@ void MissionApplyGame(const AccountGameRecord& record, ActiveMissionList* listPt
 		}
 	}
 	RefreshCleared(listPtr);
+	Diff(list, before, changed);
 }
 
 void MissionStore(const ActiveMissionList& list, AccountMissions* saved)

@@ -12,6 +12,19 @@ static const i32 SKILL_SLOT_ENUM_FIRST = 2;
 static const f32 OBSTRUCT_LOW_HEIGHT = 30.0f;
 static const i32 SKILL_SLOT_ENUM_UG = 6;
 
+static void AddTitleBonus(World::ActorMaster& chara, i32 title, WeaponIndex weapon)
+{
+	const auto* stats = GetGameXmlContent().FindTitleStats(title);
+	if(!stats) return;
+	for(const auto& t : *stats) {
+		const f32 base = t.type == STAT_ATTACK ? GetGameXmlContent().GetWeaponAttack((i32)weapon) : MasterStat(chara.classType, t.type);
+		const f32 value = t.mul ? base * t.value / 100.0f : t.value;
+		bool merged = false;
+		foreach(g, chara.gearBonus) if(g->first == t.type) { g->second += value; merged = true; }
+		if(!merged && !chara.gearBonus.full()) chara.gearBonus.push_back(eastl::make_pair(t.type, value));
+	}
+}
+
 static void ComputeGearBonus(World::ActorMaster& chara, const eastl::fixed_vector<i32,6,false>& docs, WeaponIndex weapon, i32 powerPercent)
 {
 	chara.gearBonus.clear();
@@ -515,6 +528,7 @@ void World::CreatePlayerMasters(Player& player)
 	main.classType = player.mainClass;
 	main.skinIndex = player.mainSkin;
 	ComputeGearBonus(main, player.gearDocs[0], player.mainWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType));
+	AddTitleBonus(main, player.statTitle, player.mainWeapon);
 	main.hpMax = (i32)(MasterStat(main.classType, STAT_HEALTH) + main.GearBonus(STAT_HEALTH));
 	main.hp = main.hpMax;
 	main.seed = (i32)RandUint();
@@ -526,6 +540,7 @@ void World::CreatePlayerMasters(Player& player)
 	sub.classType = player.subClass;
 	sub.skinIndex = player.subSkin;
 	ComputeGearBonus(sub, player.gearDocs[1], player.subWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType));
+	AddTitleBonus(sub, player.statTitle, player.subWeapon);
 	sub.hpMax = (i32)(MasterStat(sub.classType, STAT_HEALTH) + sub.GearBonus(STAT_HEALTH));
 	sub.hp = sub.hpMax;
 	ASSERT(main.hpMax > 0 && sub.hpMax > 0);

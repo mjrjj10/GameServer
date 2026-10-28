@@ -11,7 +11,7 @@
 #include <mxm/game_content.h>
 #include <EASTL/sort.h>
 #include <time.h>
-#include "mission_rules.h"
+#include <mxm/mission_rules.h>
 #include "town_rules.h"
 #include "character_base_data.h"
 #include <mxm/account_progress.h>
@@ -21,7 +21,7 @@
 static const i32 MEASURED_JUKEBOX_HOT_TRACKS[] = { 7770015, 7770005, 7770002 };
 
 
-#include "mission_progress.h"
+#include <mxm/mission_progress.h>
 #include "mailbox.h"
 #include "guild_store.h"
 
@@ -2863,6 +2863,28 @@ void HubReplication::SendTownBurst(ClientHandle clientHd)
 	{
 		PacketWriter<Sv::SN_GmDisabledStages> packet;
 		packet.Write<u16>(0);
+		SendPacket(clientHd, packet);
+	}
+	{
+		static const i32 MEASURED_RECOMMENDED_FRIENDS = 5;
+		const Account* self = playerAccount[plidMap->Get(clientHd)];
+		const AccountFriends friends = self ? AccountFriendsLoad(self->nickname.data()) : AccountFriends();
+		eastl::fixed_vector<const Account*,MEASURED_RECOMMENDED_FRIENDS,false> picks;
+		for(int clientID = 0; clientID < MAX_CLIENTS && !picks.full(); clientID++) {
+			const Account* other = playerAccount[clientID];
+			if(!other || other == self || playerState[clientID] != PlayerState::IN_GAME) continue;
+			bool known = false;
+			foreach_const(f, friends.friends) if(f->compare(other->nickname.data()) == 0) known = true;
+			if(!known) picks.push_back(other);
+		}
+		PacketWriter<Sv::SN_RecommendedfriendList,1024> packet;
+		packet.Write<u16>((u16)picks.size());
+		foreach_const(o, picks) {
+			packet.WriteStringObj((*o)->nickname.data());
+			const i32 leader = (*o)->leaderMasterID;
+			const GameXmlContent& content = GetGameXmlContent();
+			packet.Write<i32>(leader >= 0 && leader < (i32)content.masters.size() ? (i32)content.masters[leader].ID : 0);
+		}
 		SendPacket(clientHd, packet);
 	}
 	SendSelfExp(clientHd);

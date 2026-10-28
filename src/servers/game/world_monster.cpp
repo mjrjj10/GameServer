@@ -1,3 +1,4 @@
+#include <time.h>
 #include "config.h"
 #include "world.h"
 #include "world_common.h"
@@ -103,6 +104,9 @@ bool World::LoadProgress(const Player& player)
 	if(!progressLoaded[player.index]) {
 		achieve[player.index] = AccountAchievementsLoad(player.name.data());
 		summaries[player.index] = AccountSummariesLoad(player.name.data());
+		missionSaved[player.index] = AccountMissionsLoad(player.name.data());
+		missions[player.index].clear();
+		MissionBuildActive(player.name.data(), AccountProgressLoad(player.name.data()).level, (i64)time(nullptr), missionSaved[player.index], &missions[player.index]);
 		progressLoaded[player.index] = 1;
 	}
 	return true;
@@ -136,9 +140,45 @@ void World::SummaryLive(const Player& player, i32 summary, i32 stage, u8 type, i
 	LOG("Summary :: %ls stage %d type %u data %d", player.name.data(), stage, (u32)type, data);
 }
 
+void World::SendMissionChanges(const Player& player, const MissionChanges& changed)
+{
+	foreach_const(i, changed) {
+		const ActiveMission& m = missions[player.index][*i];
+		PacketWriter<Sv::SN_MissionUpdate,32> packet;
+		packet.Write<i32>(m.mission->ID);
+		packet.Write<i64>(m.progress);
+		packet.Write<u16>(m.changedCount);
+		packet.Write<u8>(m.cleared ? 1 : 0);
+		packet.Write<u8>(m.rewarded ? 1 : 0);
+		replication->SendWriter(player.clientHd, packet);
+	}
+}
+
+void World::MissionLive(const Player& player, i32 kills, i32 assists)
+{
+	if(!LoadProgress(player)) return;
+	AccountGameRecord section;
+	section.gameType = (i32)replication->gameType;
+	section.stageIndex = (i32)replication->stageIndex;
+	MissionChanges changed;
+	MissionApplyCombat(kills, assists, section, &missions[player.index], &changed);
+	if(changed.empty()) return;
+	progressLoaded[player.index] = 2;
+	SendMissionChanges(player, changed);
+}
+
 void World::FinishProgress(const Player& player, const AccountGameRecord& record)
 {
 	if(LoadProgress(player)) {
+		AccountGameRecord rest = record;
+		rest.kills = 0;
+		rest.assists = 0;
+		MissionChanges changed;
+		MissionApplyGame(rest, &missions[player.index], &changed);
+		if(!changed.empty()) {
+			progressLoaded[player.index] = 2;
+			SendMissionChanges(player, changed);
+		}
 		AchieveChanges changes;
 		AchieveApplyRecord(achieve[player.index], record, &changes);
 		if(!changes.indices.empty() || !changes.titles.empty()) {
@@ -154,6 +194,8 @@ void World::SaveProgress(const Player& player)
 	if(player.index >= achieve.size() || progressLoaded[player.index] != 2) return;
 	AccountAchievementsSave(player.name.data(), achieve[player.index]);
 	AccountSummariesSave(player.name.data(), summaries[player.index]);
+	MissionStore(missions[player.index], &missionSaved[player.index]);
+	AccountMissionsSave(player.name.data(), missionSaved[player.index]);
 	progressLoaded[player.index] = 1;
 }
 
