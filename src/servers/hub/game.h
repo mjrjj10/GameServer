@@ -130,6 +130,7 @@ struct HubGame
 	void OnGearEquip(ClientHandle clientHd, u8 pageNo, u32 itemUID, u32 slot);
 	void OnGearUnequip(ClientHandle clientHd, u8 pageNo, u32 slot);
 	void OnMasterGearSelect(ClientHandle clientHd, u32 characterID, u8 pageNo);
+	void OnMasterGearAdd(ClientHandle clientHd);
 	void OnMasterGearRename(ClientHandle clientHd, u8 pageNo, const wchar* name, i32 len);
 	void OnActivityReward(ClientHandle clientHd, i32 tier);
 	void OnSaveSettings(ClientHandle clientHd, u8 settingType, const u8* data, i32 size);

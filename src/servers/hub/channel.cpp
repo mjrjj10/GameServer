@@ -12,6 +12,7 @@ static const u16 MEASURED_CQ_MASTERGEAR_RENAME = 60066;
 static const u16 MEASURED_CQ_PVP_RECORD = 60228;
 static const u16 MEASURED_CQ_SUMMARY_REWARD = 60046;
 static const u16 MEASURED_CQ_TITLE_SELECT = 60056;
+static const u16 MEASURED_CQ_MASTERGEAR_ADD = 60068;
 
 bool HubPacketHandler::Init(HubGame* game_)
 {
@@ -105,6 +106,7 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CQ_RequestSummaryInfoEach);
 		case MEASURED_CQ_SUMMARY_REWARD: HandleSummaryReward(clientHd, packetData, packetSize); break;
 		case MEASURED_CQ_TITLE_SELECT: HandleTitleSelect(clientHd, packetData, packetSize); break;
+		case MEASURED_CQ_MASTERGEAR_ADD: NT_LOG("[client%x] Client :: master gear add", clientHd); game->OnMasterGearAdd(clientHd); break;
 		HANDLE_CASE(CQ_RestartVote);
 		HANDLE_CASE(CQ_PartySwapTeam);
 		HANDLE_CASE(CQ_PartyAddBot);

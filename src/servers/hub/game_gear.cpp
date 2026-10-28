@@ -90,6 +90,58 @@ void HubGame::OnGearUnequip(ClientHandle clientHd, u8 pageNo, u32 slot)
 	LOG("[client%x] Gear :: %ls unequips page %d slot %u", clientHd, account->nickname.data(), (i32)pageNo, slot);
 }
 
+void HubGame::OnMasterGearAdd(ClientHandle clientHd)
+{
+	static const u32 HYP_GEAR_ADD_FAILED = 1;
+	static const i32 HYP_MONEY_REASON_GEAR_ADD = 0;
+	static const u8 BUY_TYPE_GOLD_PRICE = 1;
+	Account* account = GearAccount(clientHd);
+	if(!account) return;
+	AccountGears gears = AccountGearsLoad(account->nickname.data());
+	const auto& costs = GetGameXmlContent().masterGearAddCost;
+	const i32 n = (i32)gears.pages.size();
+	PacketWriter<Sv::SA_MastergearAdd,128> packet;
+	if(gears.pages.full() || n >= (i32)costs.size()) {
+		packet.Write<u32>(HYP_GEAR_ADD_FAILED);
+		packet.Write<u8>(0);
+		packet.WriteStringObj(L"");
+		packet.Write<u16>(0);
+		replication.SendWriter(clientHd, packet);
+		return;
+	}
+	const GameXmlContent::PriceCost& cost = costs[n];
+	AccountProgress progress = AccountProgressLoad(account->nickname.data());
+	i64& wallet = cost.buyType == BUY_TYPE_GOLD_PRICE ? progress.gold : progress.ccoin;
+	if(wallet < cost.amount) {
+		packet.Write<u32>(HYP_GEAR_ADD_FAILED);
+		packet.Write<u8>(0);
+		packet.WriteStringObj(L"");
+		packet.Write<u16>(0);
+		replication.SendWriter(clientHd, packet);
+		return;
+	}
+	wallet -= cost.amount;
+	AccountProgressSave(account->nickname.data(), progress);
+	account->gold = progress.gold;
+	account->ccoin = progress.ccoin;
+	if(cost.amount > 0) {
+		if(cost.buyType == BUY_TYPE_GOLD_PRICE) replication.SendMoney(clientHd, progress.gold, HYP_MONEY_REASON_GEAR_ADD);
+		else replication.SendCCoin(clientHd, progress.ccoin, (u32)HYP_MONEY_REASON_GEAR_ADD);
+	}
+	gears.pages.push_back(AccountGearPage());
+	AccountGearsSave(account->nickname.data(), gears);
+	packet.Write<u32>(0);
+	packet.Write<u8>((u8)(n + 1));
+	packet.WriteStringObj(L"");
+	packet.Write<u16>((u16)MEASURED_GEAR_SLOTS);
+	for(i32 s = 0; s < MEASURED_GEAR_SLOTS; s++) {
+		packet.Write<i32>(-1);
+		packet.Write<u32>(0);
+	}
+	replication.SendWriter(clientHd, packet);
+	LOG("[client%x] Gear :: %ls buys page %d (%d)", clientHd, account->nickname.data(), n + 1, cost.amount);
+}
+
 void HubGame::OnMasterGearSelect(ClientHandle clientHd, u32 characterID, u8 pageNo)
 {
 	Account* account = GearAccount(clientHd);
