@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<STAGE_DIFFICULTY>
+  <DIFFICULTY bit="1" monsterStat="0.25" />
+  <DIFFICULTY bit="2" monsterStat="0.4" />
+  <DIFFICULTY bit="4" monsterStat="0.6" />
+  <DIFFICULTY bit="8" monsterStat="0.8" />
+  <DIFFICULTY bit="16" monsterStat="1" />
+</STAGE_DIFFICULTY>

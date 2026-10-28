@@ -126,7 +126,9 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 		CASE(CQ_RemoteSyncTarget);
 
 		default: {
-			NT_LOG("[client%x] Client :: Unknown packet :: size=%d netID=%d", clientHd, header.size, header.netID);
+			char hex[97] = {0};
+			for(i32 i = 0; i < packetSize && i < 48; i++) snprintf(hex + i * 2, 3, "%02x", packetData[i]);
+			NT_LOG("[client%x] Client :: Unknown packet :: size=%d netID=%d %s", clientHd, header.size, header.netID, hex);
 		} break;
 	}
 

@@ -2646,6 +2646,9 @@ bool GameXmlContent::Load()
 	r = LoadStageEntries();
 	if(!r) return false;
 
+	r = LoadStageDifficulty();
+	if(!r) return false;
+
 	r = LoadGroundItems();
 	if(!r) return false;
 
@@ -2716,6 +2719,7 @@ Faction GameXmlContent::StringToFaction(const char* s)
 		{"TEAM_RED", Faction::RED},
 		{"TEAM_BLUE", Faction::BLUE},
 		{"TEAM_PLAYER", Faction::RED},
+		{"TEAM_MONSTER", Faction::MONSTER},
 		{"TEAM_DYNAMIC", Faction::DYNAMIC},
 		{"TEAM_ORANGE", Faction::ORANGE},
 		{"TEAM_TYPE_INVALID", Faction::MONSTER}
@@ -3591,6 +3595,16 @@ bool GameXmlContent::LoadDeathRemotes()
 	return true;
 }
 
+bool GameXmlContent::LoadStageDifficulty()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/StageDifficulty.xml", doc, true)) return true;
+	for(XMLElement* p = doc.FirstChildElement()->FirstChildElement("DIFFICULTY"); p; p = p->NextSiblingElement("DIFFICULTY")) {
+		difficultyMonsterStat[p->IntAttribute("bit")] = p->FloatAttribute("monsterStat", 1.0f);
+	}
+	return true;
+}
+
 bool GameXmlContent::LoadStageEntries()
 {
 	XMLDocument doc;
@@ -3966,6 +3980,17 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(pNode->FirstChildElement("_UpdateObjectivePointInfo") || pNode->FirstChildElement("_ShowProgressMessageInfo") || pNode->FirstChildElement("_CameraWallInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
 		else if(pNode->FirstChildElement("_PrintMessageInfo") || pNode->FirstChildElement("_BGMEventInfo") || pNode->FirstChildElement("_ChangeCameraInfo") || pNode->FirstChildElement("_SetNameTagVisibillityInfo") || pNode->FirstChildElement("_InputLockInfo") || pNode->FirstChildElement("_ClientDrivenActionChangeInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
 		map->levelEvents.push_back(node);
+	}
+	eastl::vector<i32> pending;
+	foreach_const(n, map->levelEvents) if(n->kind == LevelEventNode::DIALOG_TRIGGER) pending.push_back(n->id);
+	while(!pending.empty()) {
+		const i32 id = pending.back();
+		pending.pop_back();
+		foreach(n, map->levelEvents) {
+			if(n->id != id || n->clientDriven) continue;
+			n->clientDriven = true;
+			foreach_const(o, n->outputs) pending.push_back(*o);
+		}
 	}
 	LOG("Loaded %d level event nodes", (i32)map->levelEvents.size());
 	return true;

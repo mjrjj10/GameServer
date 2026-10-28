@@ -616,6 +616,7 @@ struct GameXmlContent
 		bool apply = true;
 		bool resetAfter = false;
 		bool initTagCool = false;
+		bool clientDriven = false;
 		bool ownTeamOnly = false;
 		f32 hpPercent = 0;
 		i32 aiIndex = 0;
@@ -941,6 +942,9 @@ struct GameXmlContent
 	struct StageEntry { i32 ID; eastl::fixed_vector<StageEntryArea,8,false> areas; };
 	eastl::fixed_vector<StageEntry,4,false> stageEntries;
 	bool LoadStageEntries();
+	eastl::hash_map<i32,f32> difficultyMonsterStat;
+	bool LoadStageDifficulty();
+	f32 DifficultyMonsterStat(u8 bit) const { auto f = difficultyMonsterStat.find((i32)bit); return f == difficultyMonsterStat.end() ? 1.0f : f->second; }
 	CreatureIndex FindDeathMatchBotIndex(ClassType classType) const;
 	eastl::hash_map<i32,eastl::fixed_vector<ClassType,16,false>> stageBotClasses;
 	bool LoadStageBots();

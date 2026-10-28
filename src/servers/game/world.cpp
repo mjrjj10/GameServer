@@ -417,6 +417,7 @@ void World::Replicate()
 		rfl.ownerSkillPower = actor.ownerClass >= 0 ? MasterStat((ClassType)actor.ownerClass, STAT_SKILLPOWER) : 0.0f;
 		rfl.hp = actor.hp;
 		rfl.growthLevel = actor.growthLevel;
+		rfl.statScale = actor.statScale;
 
 
 		replication->FramePushNpcActor(rfl);

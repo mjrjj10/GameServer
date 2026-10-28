@@ -426,6 +426,7 @@ struct World
 		Time nextMoveSync = Time::ZERO;
 		bool legMoving = false;
 		vec3 home = vec3(0);
+		f32 statScale = 1.0f;
 		Time wanderResumeAt = Time::ZERO;
 		vec3 legGoal = vec3(0);
 		Time legAt = Time::ZERO;
@@ -1093,6 +1094,7 @@ public:
 	bool hostileMonsters = false;
 	u8 difficultyBit = GameXmlContent::ALL_DIFFICULTIES;
 	bool portalRequested = false;
+	f32 monsterStatScale = 1.0f;
 	bool NodeInDifficulty(const GameXmlContent::LevelEventNode& node) const { return difficultyBit == GameXmlContent::ALL_DIFFICULTIES || (node.difficultyMask & difficultyBit) != 0; }
 	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; };
 	void ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool remove);

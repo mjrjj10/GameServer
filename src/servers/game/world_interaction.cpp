@@ -401,6 +401,7 @@ void World::StartTimeRecord()
 void World::InitMonsterStats(ActorNpc& npc)
 {
 	npc.monsterAi = GetGameXmlContent().FindMonsterAi((i32)npc.docID);
+	npc.statScale = monsterStatScale;
 	auto path = map->paths.find(npc.localID);
 	npc.path = path != map->paths.end() && !path->second.empty() ? &path->second : nullptr;
 	const GameXmlContent& content = GetGameXmlContent();
@@ -412,7 +413,7 @@ void World::InitMonsterStats(ActorNpc& npc)
 	const auto& statList = *stats;
 	foreach_const(st, statList) {
 		const f32 value = st->value + content.MonsterGrowth((i32)npc.docID, st->type) * npc.growthLevel;
-		if(st->type == (u8)StatType::STAT_TYPE_HEALTH) npc.hp = npc.hpMax = (i32)value;
+		if(st->type == (u8)StatType::STAT_TYPE_HEALTH) npc.hp = npc.hpMax = MAX((i32)(value * npc.statScale), 1);
 		if(st->type == MONSTER_DEFENCE_STAT) npc.defence = value;
 		if(st->type == (u8)StatType::STAT_TYPE_MOVESPEED && value > 0) npc.speedMul = value / 100.0f;
 	}
@@ -562,7 +563,7 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 		}
 		case GameXmlContent::LevelEventNode::CALL_SFX: replication->SendClientLevelEventToAll(node->id); break;
 		case GameXmlContent::LevelEventNode::CLIENT_EVENT:
-			replication->SendClientLevelEventToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID);
+			if(!node->clientDriven) replication->SendClientLevelEventToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID);
 			if(node->initTagCool && playerIndex >= 0) SendTagCooltimeToTeam(players[playerIndex], 0);
 			break;
 		case GameXmlContent::LevelEventNode::CALL_ITEM: SpawnGroundItems(node->dropIndex, node->areaID, node->tagID); break;

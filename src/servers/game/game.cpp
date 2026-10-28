@@ -43,6 +43,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 		const bool pve = stage->gameMode == GameModeType::GAME_MODE_STAGE || stage->gameMode == GameModeType::GAME_MODE_DEFENCE;
 		world.hostileMonsters = pve;
 		if(pve) world.difficultyBit = stage->difficultyBit;
+		if(pve) world.monsterStatScale = GetGameXmlContent().DifficultyMonsterStat(stage->difficultyBit);
 		if(stage->gameMode == GameModeType::GAME_MODE_STAGE) {
 			foreach_const(m, stage->maps) if(!zoneMaps.full()) zoneMaps.push_back(*m);
 			if(stage->bossMap != MapIndex(0) && !zoneMaps.full()) zoneMaps.push_back(stage->bossMap);
@@ -374,7 +375,8 @@ bool Game::LoadMap()
 		World::ActorNpc& actor = world.SpawnNpcActor(it->docID, it->localID);
 		actor.pos = it->pos;
 		actor.rot = it->rot;
-		actor.faction = it->faction;
+		actor.home = it->pos;
+		actor.faction = world.hostileMonsters && it->faction == Faction::INVALID ? Faction::MONSTER : it->faction;
 		actor.spawnAnim = it->spawnAnim;
 		actor.wanderDist = it->wanderDist;
 		actor.tagID = it->tagID;

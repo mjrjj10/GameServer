@@ -132,6 +132,7 @@ struct Replication
 		f32 ownerSkillPower = 0;
 		i32 hp = 0;
 		i32 growthLevel = 0;
+		f32 statScale = 1.0f;
 
 
 		vec3 pos;

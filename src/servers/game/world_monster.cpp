@@ -16,7 +16,7 @@ static f32 MonsterAttackPower(const World::ActorNpc& npc)
 	const auto* stats = content.FindMonsterStats((i32)npc.docID);
 	if(!stats) return 0;
 	const auto& list = *stats;
-	foreach_const(st, list) if(st->type == MONSTER_ATTACK_STAT) return st->value + content.MonsterGrowth((i32)npc.docID, MONSTER_ATTACK_STAT) * npc.growthLevel;
+	foreach_const(st, list) if(st->type == MONSTER_ATTACK_STAT) return (st->value + content.MonsterGrowth((i32)npc.docID, MONSTER_ATTACK_STAT) * npc.growthLevel) * npc.statScale;
 	return 0;
 }
 

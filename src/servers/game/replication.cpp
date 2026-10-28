@@ -797,6 +797,8 @@ void Replication::SendPlayerSkillUpdateToAll(ActorUID charaUID, SkillID skill, b
 	}
 }
 
+static const i32 MEASURED_GAME_START_ACK_EVENT = 1000000;
+
 void Replication::SendPreGameLevelEvents(ClientHandle clientHd)
 {
 	// countdown
@@ -806,6 +808,16 @@ void Replication::SendPreGameLevelEvents(ClientHandle clientHd)
 	notifyTimestamp.maxCount = 5;
 	SendPacket(clientHd, notifyTimestamp);
 
+
+	if(mapIndex != MapIndex::PVP_DEATHMATCH) {
+		Sv::SN_RunClientLevelEventSeq seq;
+		seq.needCompleteTriggerAckID = MEASURED_GAME_START_ACK_EVENT;
+		seq.rootEventID = MEASURED_GAME_START_ACK_EVENT + 1;
+		seq.caller = 21035;
+		seq.serverTime = (i64)TimeDiffMs(TimeRelNow());
+		SendPacket(clientHd, seq);
+		return;
+	}
 
 	// EVENT: Starts music?
 	// Sv::SN_RunClientLevelEventSeq
@@ -3354,6 +3366,8 @@ void Replication::SendActorMasterSpawn(ClientHandle clientHd, const ActorMaster&
 	SendMasterSkillSlots(clientHd, actor, parent);
 }
 
+static const u8 MONSTER_ATTACK_STAT_TYPE = 6;
+
 void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor)
 {
 	DBG_ASSERT(actor.actorUID != ActorUID::INVALID);
@@ -3394,8 +3408,9 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 			packet.Write<u16>((u16)monsterStats->size());
 			const auto& statList = *monsterStats;
 			foreach_const(st, statList) {
+				const bool scaled = st->type == (u8)StatType::STAT_TYPE_HEALTH || st->type == MONSTER_ATTACK_STAT_TYPE;
 				packet.Write<u8>(st->type);
-				packet.Write<f32>(st->value + GetGameXmlContent().MonsterGrowth((i32)actor.docID, st->type) * actor.growthLevel);
+				packet.Write<f32>((st->value + GetGameXmlContent().MonsterGrowth((i32)actor.docID, st->type) * actor.growthLevel) * (scaled ? actor.statScale : 1.0f));
 			}
 			packet.Write<u16>(1);
 			packet.Write<u8>((u8)StatType::STAT_TYPE_HEALTH);
