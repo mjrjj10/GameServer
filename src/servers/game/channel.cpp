@@ -96,6 +96,18 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 			const LocalActorID local = buff.Read<LocalActorID>();
 			game->OnTraitReset(clientHd, replication->GetWorldActorUID(clientHd, local));
 		} break;
+		case Cl::CN_UNKNOWN_60260::NET_ID: {
+			NT_LOG("[client%x] Client :: titan incarnate size=%d", clientHd, packetSize);
+			if(packetSize < 8) break;
+			game->OnTitanIncarnate(clientHd, *(const i32*)(packetData + 4));
+		} break;
+		case Cl::CN_UNKNOWN_60296::NET_ID: {
+			char hex[128] = {0};
+			for(i32 i = 0; i < packetSize && i < 60; i++) snprintf(hex + i * 2, 3, "%02x", packetData[i]);
+			NT_LOG("[client%x] Client :: master training event size=%d %s", clientHd, packetSize, hex);
+			if(packetSize < 1) break;
+			game->OnMasterTrainingEvent(clientHd, packetData, packetSize);
+		} break;
 		CASE(CQ_SkillUpgradeIngame);
 		CASE(CQ_GetGroundItem);
 		CASE(CQ_PlayerCastSkill);

@@ -109,6 +109,10 @@ struct Game
 	void OnPlayerGameIsReady(ClientHandle clientHd);
 	void OnPlayerGameMapLoaded(ClientHandle clientHd);
 	void OnPlayerTag(ClientHandle clientHd, ActorUID actorUID);
+	void OnMasterTrainingEvent(ClientHandle clientHd, const u8* data, i32 size);
+	void SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team);
+	void OnTitanIncarnate(ClientHandle clientHd, i32 formDoc);
+	eastl::fixed_vector<u32,MAX_PLAYERS,false> trainingBots;
 	void OnPlayerReturnToChannel(ClientHandle clientHd);
 	void OnPlayerJump(ClientHandle clientHd, ActorUID actorUID, f32 rotate, f32 moveDirX, f32 moveDirY);
 	void OnPlayerSyncTeleport(ClientHandle clientHd, ActorUID actorUID, const vec3& pos);

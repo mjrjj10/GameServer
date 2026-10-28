@@ -958,6 +958,7 @@ bool GameXmlContent::LoadPvpMaps()
 	if(!LoadXMLFile(L"/MapCollision.xml", doc)) return false;
 	XMLElement* pRoot = doc.FirstChildElement();
 	if(!pRoot) return false;
+	eastl::hash_set<u32> loadedFiles;
 	for(XMLElement* pMap = pRoot->FirstChildElement("_Map"); pMap; pMap = pMap->NextSiblingElement("_Map")) {
 		const MapIndex index = (MapIndex)pMap->IntAttribute("_Index");
 		pvpMaps.emplace_back();
@@ -972,6 +973,7 @@ bool GameXmlContent::LoadPvpMaps()
 		for(XMLElement* pFile = pMap->FirstChildElement("_File"); pFile; pFile = pFile->NextSiblingElement("_File")) {
 			const char* file = pFile->Attribute("_Path");
 			if(!file) return false;
+			if(!loadedFiles.insert(eastl::hash<const char*>{}(file)).second) continue;
 			Path path = gameDataDir;
 			wchar_t fileWide[256] = {0};
 			wchar_t* fileWideOut = fileWide;
@@ -1666,6 +1668,25 @@ bool GameXmlContent::LoadBotCreatures()
 	}
 
 	LOG("Loaded %d deathmatch bot creatures", (i32)deathMatchBotIndex.size());
+	return true;
+}
+
+bool GameXmlContent::LoadStageBots()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/Design/DOCUMENT/BOT.xml", doc)) return true;
+	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+		XMLElement* pTable = pInfo->FirstChildElement("ST_BOT_TABLE");
+		if(!pTable) continue;
+		auto& classes = stageBotClasses[pTable->IntAttribute("_StageIndex")];
+		for(XMLElement* pBot = pTable->FirstChildElement("_BOT_INFO"); pBot && !classes.full(); pBot = pBot->NextSiblingElement("_BOT_INFO")) {
+			const char* className = pBot->Attribute("_Class");
+			if(!className) continue;
+			auto found = masterClassStringMap.find(strHash(className));
+			if(found != masterClassStringMap.end()) classes.push_back(found->second->classType);
+		}
+	}
+	LOG("Loaded %d stage bot tables", (i32)stageBotClasses.size());
 	return true;
 }
 
@@ -2537,6 +2558,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadBotCreatures();
+	if(!r) return false;
+
+	r = LoadStageBots();
 	if(!r) return false;
 
 

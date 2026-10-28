@@ -648,7 +648,14 @@ bool ExtractCollisionMesh(const CollisionNifReader& nif, const char* outPath)
 		if(streamVertices.componentList.size() == 3) {
 			vertexSize = 28; // pos, normal, colour
 		}
-		ASSERT(verticesBlock.size == vertexSize * verticesBlock.numIndices);
+		if(verticesBlock.numIndices > 0 && verticesBlock.size != vertexSize * verticesBlock.numIndices) {
+			vertexSize = verticesBlock.size / verticesBlock.numIndices;
+			LOG("vertex stride from block size = %d", vertexSize);
+		}
+		if(vertexSize < (i32)sizeof(Vector3)) {
+			LOG("ERROR: vertex stride %d too small", vertexSize);
+			return false;
+		}
 
 
 		// INDICES

@@ -659,14 +659,14 @@ struct GameXmlContent
 
 		struct Collider
 		{
-			eastl::fixed_string<char,64,false> mesh;
+			eastl::fixed_string<char,128,true> mesh;
 			vec3 pos;
 			vec3 rot;
 			f32 scale = 1;
 		};
 
 		MapIndex index = MapIndex(0);
-		eastl::fixed_vector<Collider,16,false> colliders;
+		eastl::vector<Collider> colliders;
 		bool ingameLevels = false;
 		f32 levelStartLead = 5.0f;
 
@@ -926,6 +926,9 @@ struct GameXmlContent
 	const StageMaps* FindStageMaps(StageIndex stageID) const;
 	bool HasEntrySystem(i32 entryID) const;
 	CreatureIndex FindDeathMatchBotIndex(ClassType classType) const;
+	eastl::hash_map<i32,eastl::fixed_vector<ClassType,16,false>> stageBotClasses;
+	bool LoadStageBots();
+	const eastl::fixed_vector<ClassType,16,false>* FindStageBots(StageIndex stage) const { auto f = stageBotClasses.find((i32)stage); return f == stageBotClasses.end() ? nullptr : &f->second; }
 
 	eastl::vector<FileBuffer> collisionFiles;
 	FileBuffer fileCylinderCollision;

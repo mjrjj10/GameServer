@@ -155,7 +155,7 @@ bool PhysicsContext::LoadCollisionMeshes(const FileBuffer& file)
 			return false;
 		}
 
-		const size_t key = eastl::hash<const char*>{}(FixedStr64(name, nameLen).data());
+		const size_t key = eastl::hash<const char*>{}(eastl::fixed_string<char,128,true>(name, nameLen).data());
 		ASSERT(triangleMeshMap.find(key) == triangleMeshMap.end());
 		triangleMeshMap.emplace(key, tri);
 

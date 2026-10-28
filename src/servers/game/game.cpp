@@ -658,6 +658,94 @@ void Game::OnPlayerGameMapLoaded(ClientHandle clientHd)
 
 }
 
+static const u8 MEASURED_TRAINING_EVENT_LOADOUT = 4;
+static const u8 MEASURED_TRAINING_EVENT_CREATE_AI = 5;
+static const u8 MEASURED_TRAINING_EVENT_REMOVE_AI = 6;
+static const u8 MEASURED_TRAINING_EVENT_RESET_SKILLS = 0;
+static const i32 HYP_TRAINING_BOT_SUB_OFFSET = 3;
+static const wchar* MEASURED_TRAINING_BOT_NAME = L"BOT_NAME_02";
+
+void Game::OnMasterTrainingEvent(ClientHandle clientHd, const u8* data, i32 size)
+{
+	const u8 eventType = data[0];
+	replication.SendMasterTrainingEvent(clientHd, eventType, 0, 0, 0, 0);
+	if(eventType == MEASURED_TRAINING_EVENT_LOADOUT) replication.SendMasterTrainingEvent(clientHd, eventType, 0, 1, 1, 1);
+	if(eventType == MEASURED_TRAINING_EVENT_CREATE_AI && size >= 9) {
+		const i32 choice = *(const i32*)(data + 5);
+		const auto* classes = GetGameXmlContent().FindStageBots(replication.stageIndex);
+		if(!classes || choice < 1 || choice > (i32)classes->size()) return;
+		const i32 n = (i32)classes->size();
+		const ClassType mainClass = (*classes)[choice - 1];
+		const ClassType subClass = (*classes)[(choice - 1 + HYP_TRAINING_BOT_SUB_OFFSET) % n];
+		auto pl = playerMap.find(clientHd);
+		const u8 humanTeam = pl != playerMap.end() ? world.GetPlayer(pl->second->playerIndex).team : 0;
+		SpawnTrainingBot(mainClass, subClass, humanTeam ^ 1);
+	}
+	if(eventType == MEASURED_TRAINING_EVENT_REMOVE_AI) {
+		foreach_const(t, trainingBots) {
+			world.RemovePlayer(world.GetPlayer(*t));
+			for(auto b = botList.begin(); b != botList.end(); ++b) {
+				if(b->playerIndex != *t) continue;
+				botList.erase(b);
+				break;
+			}
+		}
+		trainingBots.clear();
+	}
+	if(eventType == MEASURED_TRAINING_EVENT_RESET_SKILLS) {
+		auto pl = playerMap.find(clientHd);
+		if(pl != playerMap.end()) world.ResetSkillPoints(world.GetPlayer(pl->second->playerIndex));
+	}
+}
+
+void Game::OnTitanIncarnate(ClientHandle clientHd, i32 formDoc)
+{
+	auto pl = playerMap.find(clientHd);
+	if(pl == playerMap.end()) return;
+	const GameXmlContent::TitanInfo& titan = GetGameXmlContent().titan;
+	for(i32 i = 0; i < (i32)titan.forms.size(); i++) {
+		if(titan.forms[i].doc != formDoc) continue;
+		world.TransformTitan(world.GetPlayer(pl->second->playerIndex), i, true);
+		return;
+	}
+	WARN("Training :: unknown titan form %d", formDoc);
+}
+
+void Game::SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team)
+{
+	if(world.players.full()) return;
+	const GameXmlContent& xml = GetGameXmlContent();
+	World::PlayerDescription desc;
+	desc.userID = UserID(world.players.size() + 1);
+	desc.clientHd = ClientHandle::INVALID;
+	desc.name.assign(MEASURED_TRAINING_BOT_NAME);
+	desc.team = team;
+	const ClassType classes[2] = { mainClass, subClass };
+	for(int mi = 0; mi < 2; mi++) {
+		const GameXmlContent::Master& master = *xml.masterClassTypeMap.at(classes[mi]);
+		desc.masters[mi] = classes[mi];
+		desc.skins[mi] = SkinIndex::DEFAULT;
+		desc.skills[mi * 2] = master.skillIDs[0];
+		desc.skills[mi * 2 + 1] = master.skillIDs[1];
+		if(!master.fairPvpWeaponIDs.empty()) desc.weapons[mi] = master.fairPvpWeaponIDs[0];
+		else if(!master.defaultWeaponIDs.empty()) desc.weapons[mi] = master.defaultWeaponIDs[0];
+		else desc.weapons[mi] = master.weaponIDs.size() > 1 ? master.weaponIDs[1] : master.weaponIDs[0];
+		desc.weaponGrades[mi] = 0;
+		desc.masterGearNo[mi] = 1;
+		desc.characterType[mi] = 1;
+		desc.colliderSize[mi] = { (u16)master.character.getColliderRadius(), (u16)master.character.getColliderHeight() };
+	}
+	desc.stageSkills = { SkillID::INVALID, SkillID::INVALID };
+	const auto& spawnPoints = mapSpawnPoints[team];
+	const vec3 pos = spawnPoints.empty() ? world.GetPlayer(0).spawnPos : spawnPoints[0].pos;
+	const f32 yaw = spawnPoints.empty() ? 0.f : MxmYawToWorldYaw(spawnPoints[0].rot.z);
+	World::Player& worldPlayer = world.CreatePlayer(desc, pos, RotationHumanoid{0.f, 0.f, yaw});
+	playerList.emplace_back(desc.clientHd, AccountUID::INVALID, desc.name, worldPlayer.index);
+	botList.emplace_back(worldPlayer.index);
+	if(!trainingBots.full()) trainingBots.push_back(worldPlayer.index);
+	LOG("Training :: bot masters=(%d, %d) team=%d", (i32)mainClass, (i32)subClass, (i32)team);
+}
+
 void Game::OnPlayerTag(ClientHandle clientHd, ActorUID actorUID)
 {
 	Player& p = *playerMap.at(clientHd);

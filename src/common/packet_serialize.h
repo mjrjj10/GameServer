@@ -3220,6 +3220,7 @@ DEFAULT_SERIALIZE(Sv::SA_ItemTrade);
 DEFAULT_SERIALIZE(Sv::SA_MyPveRanking);
 DEFAULT_SERIALIZE(Sv::SA_RequestSummaryInfoEach);
 DEFAULT_SERIALIZE(Sv::SA_StartGame);
+DEFAULT_SERIALIZE(Sv::SA_MasterTrainingEvent);
 #undef DEFAULT_SERIALIZE
 
 template<>

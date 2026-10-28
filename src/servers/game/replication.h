@@ -305,6 +305,7 @@ struct Replication
 
 	void OnPlayerConnect(ClientHandle clientHd, u32 playerIndex);
 	void SendLoadPvpMap(ClientHandle clientHd, MapIndex stageIndex);
+	void SendMasterTrainingEvent(ClientHandle clientHd, u8 eventType, u32 ret, u32 entityID, u32 param1, u32 param2);
 	void SetPlayerAsInGame(ClientHandle clientHd);
 	void SetPlayerLoaded(ClientHandle clientHd);
 	void SendCharacterInfo(ClientHandle clientHd, ActorUID actorUID, CreatureIndex docID, ClassType classType, i32 health, i32 healthMax);

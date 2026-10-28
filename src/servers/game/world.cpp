@@ -4,6 +4,7 @@
 #include "world_common.h"
 
 static const i32 STAT_HEALTH = 0;
+static const f64 REMOVED_PLAYER_RESPAWN_MS = 1.0e12;
 static const i32 STATUS_PC_RESPAWN_INVICIBLE_3S = 1230000010;
 static const i32 STATUS_PC_TAG_GODMODE = 1230000020;
 static const f64 WEAPON_HIT_INTERVAL_MS = 80.0;
@@ -281,6 +282,7 @@ void World::Replicate()
 	// players
 	foreach_const(it, players) {
 		const Player& player = *it;
+		if(player.removed) continue;
 
 		Replication::Player rep;
 		rep.index = player.index;
@@ -1007,6 +1009,14 @@ void World::WarpPlayer(Player& p, const vec3& pos, f32 yaw)
 {
 	TeleportPlayer(p, pos, yaw);
 	if(p.clientHd != ClientHandle::INVALID) replication->SendTeleportRequest(p.clientHd, p.Main().UID, pos);
+}
+
+void World::RemovePlayer(Player& player)
+{
+	player.removed = true;
+	player.dead = true;
+	player.tRespawn = TimeAdd(localTime, TimeMsToTime(REMOVED_PLAYER_RESPAWN_MS));
+	TeleportPlayer(player, player.spawnPos, 0.f);
 }
 
 void World::RespawnPlayer(Player& player)

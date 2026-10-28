@@ -145,6 +145,8 @@ struct World
 		eastl::fixed_map<i32,u8,12,false> skillLevels;
 		eastl::fixed_map<u32,GameXmlContent::CostLevel,12,false> castMods;
 		i32 skillPoints = 1;
+		i32 skillPointsSpent = 0;
+		bool removed = false;
 		i32 ingameLevel = 1;
 		i32 ingameExp = 0;
 		i32 points = 0;
@@ -939,6 +941,8 @@ public:
 	bool botUpgrades = true;
 	void GrantSkillPoint(Player& player);
 	bool UpgradeSkillSlot(Player& player, i32 slot);
+	void RemovePlayer(Player& player);
+	void ResetSkillPoints(Player& player);
 	const GameXmlContent::SkillUpgrade* LatestUpgrade(const Player& player, i32 skillID, GameXmlContent::SkillUpgrade::Type type) const;
 	ActionStateID UpgradeAction(const Player& player, i32 skillID) const;
 	i32 ComboSkillFor(const Player& player, i32 skillID) const;

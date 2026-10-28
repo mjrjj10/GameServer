@@ -532,10 +532,13 @@ struct Matchmaker
 			const Party& party = *partyMap.at(*puid);
 			if(party.stageIndex == roomStage) humanCount += party.memberList.size();
 		}
-		if(!Config().SoloRooms && humanCount < teamSize * 2 && TimeDiffSec(TimeDiff(matchingStartTime, now)) < MATCHING_WAIT_SEC) return;
+		const GameType frontGameType = partyMap.at(matchingPartyList.front())->gameType;
+		const bool pve = frontGameType == GameType::PVE_NORMAL || frontGameType == GameType::PVE_RANDOM || frontGameType == GameType::PVE_TICKET;
+		const bool soloRoom = Config().SoloRooms || pve;
+		if(!soloRoom && humanCount < teamSize * 2 && TimeDiffSec(TimeDiff(matchingStartTime, now)) < MATCHING_WAIT_SEC) return;
 		matchingStartTime = Time::ZERO;
 		decltype(matchingPartyList) laterParties;
-		if(Config().SoloRooms) {
+		if(soloRoom) {
 			while(matchingPartyList.size() > 1) {
 				laterParties.push_back(matchingPartyList.back());
 				matchingPartyList.pop_back();
@@ -572,10 +575,10 @@ struct Matchmaker
 			const i32 redFree = teamSize - (i32)room.teamRed.size();
 			const i32 blueFree = teamSize - (i32)room.teamBlue.size();
 			const i32 size = (i32)party.memberList.size();
-			const bool red = (redFree >= size && (blueFree < size || room.teamRed.size() <= room.teamBlue.size())) || (redFree < size && blueFree < size && redFree >= blueFree);
+			const bool red = pve || (redFree >= size && (blueFree < size || room.teamRed.size() <= room.teamBlue.size())) || (redFree < size && blueFree < size && redFree >= blueFree);
 			foreach_const(pl, party.memberList) {
 				if(room.teamRed.size() >= teamSize && room.teamBlue.size() >= teamSize) break;
-				const bool toRed = red ? room.teamRed.size() < teamSize : room.teamBlue.size() >= teamSize;
+				const bool toRed = pve || (red ? room.teamRed.size() < teamSize : room.teamBlue.size() >= teamSize);
 				Room::Player player(pl->name, pl->accountUID, pl->instanceChd);
 				player.team = toRed ? Team::RED : Team::BLUE;
 				room.playerList.push_back(player);
@@ -585,7 +588,7 @@ struct Matchmaker
 		}
 
 		i32 botID = 1;
-		while(room.teamRed.size() < teamSize) {
+		while(!pve && room.teamRed.size() < teamSize) {
 			Room::Player player(LFMT(L"Bot%d", botID++), AccountUID::INVALID, ClientHandle::INVALID);
 			player.team = Team::RED;
 			player.isBot = true;
@@ -593,7 +596,7 @@ struct Matchmaker
 			room.playerList.push_back(player);
 			room.teamRed.push_back(&room.playerList.back());
 		}
-		while(room.teamBlue.size() < teamSize) {
+		while(!pve && room.teamBlue.size() < teamSize) {
 			Room::Player player(LFMT(L"Bot%d", botID++), AccountUID::INVALID, ClientHandle::INVALID);
 			player.team = Team::BLUE;
 			player.isBot = true;

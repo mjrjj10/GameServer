@@ -1324,6 +1324,23 @@ static void AcquiredProps(const World::Player& player, SkillID skill, eastl::fix
 	for(u8 i = 0; i < f->second && i < ups->size(); i++) out.push_back((*ups)[i].propertyID);
 }
 
+void World::ResetSkillPoints(Player& player)
+{
+	const i32 slots[] = { 0, 1, SKILL_UPGRADE_SLOT_ULTIMATE };
+	for(u32 m = 0; m < 2; m++) {
+		for(const i32 slot : slots) {
+			const SkillID skill = SlotSkill(player, m, slot);
+			if(skill == SkillID::INVALID) continue;
+			replication->SendPlayerSkillUpdateToAll(player.characters[m]->UID, skill, m == player.mainCharaID, Slice<const i32>());
+		}
+	}
+	player.skillPoints += player.skillPointsSpent;
+	player.skillPointsSpent = 0;
+	player.skillLevels.clear();
+	if(player.clientHd != ClientHandle::INVALID) replication->SendSkillPoints(player.clientHd, player.userID, player.skillPoints);
+	LOG("Upgrade :: %ls skill points reset to %d", player.name.data(), player.skillPoints);
+}
+
 bool World::UpgradeSkillSlot(Player& player, i32 slot)
 {
 	if(player.skillPoints <= 0) return false;
@@ -1344,6 +1361,7 @@ bool World::UpgradeSkillSlot(Player& player, i32 slot)
 	}
 	if(!upgraded) return false;
 	player.skillPoints--;
+	player.skillPointsSpent++;
 	if(player.clientHd != ClientHandle::INVALID) {
 		eastl::fixed_vector<i32,8,false> mainProps, subProps;
 		const SkillID mainSkill = SlotSkill(player, active, slot);

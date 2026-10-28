@@ -151,6 +151,17 @@ void Replication::OnPlayerConnect(ClientHandle clientHd, u32 playerIndex)
 	clientHandle[playerIndex] = clientHd;
 }
 
+void Replication::SendMasterTrainingEvent(ClientHandle clientHd, u8 eventType, u32 ret, u32 entityID, u32 param1, u32 param2)
+{
+	Sv::SA_MasterTrainingEvent packet;
+	packet.eventType = eventType;
+	packet.ret = ret;
+	packet.entityID = entityID;
+	packet.param1 = param1;
+	packet.param2 = param2;
+	SendPacket(clientHd, packet);
+}
+
 void Replication::SendLoadPvpMap(ClientHandle clientHd, MapIndex stageIndex)
 {
 	Sv::SN_UpdateGameOwner owner;
