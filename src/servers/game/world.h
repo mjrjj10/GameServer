@@ -928,7 +928,6 @@ private:
 	void UpdateProjectiles(f32 delta);
 	void SteerProjectile(Projectile& proj, f32 delta);
 	void Explode(Player& owner, const vec3& center, f32 radius, i32 damage, const Projectile* source = nullptr);
-	void RespawnPlayer(Player& player);
 	bool ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle, i32 forceAnim = -1, ActionStateID forcedAction = ActionStateID::INVALID);
 	RemoteInst* SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast = false, const vec3* aimPos = nullptr, u16 nodeName = 0, bool casterCreatesLocally = false, bool stopAtTarget = false, bool child = false, bool sendEntity = true);
 	void UpdateRemotes(f32 delta);
@@ -943,6 +942,7 @@ public:
 	bool botUpgrades = true;
 	void GrantSkillPoint(Player& player);
 	bool UpgradeSkillSlot(Player& player, i32 slot);
+	void RespawnPlayer(Player& player);
 	void RemovePlayer(Player& player);
 	void ClearMapContent();
 	void ResetSkillPoints(Player& player);
@@ -983,7 +983,9 @@ public:
 	void StartLevelEvents();
 	void StartTimeRecord();
 	void UpdateLevelEvents();
-	void FireLevelEvent(i32 nodeID, i32 playerIndex = -1);
+	void FireLevelEvent(i32 nodeID, i32 playerIndex = -1, i32 fromNode = -1);
+	bool NodeDeactivated(const GameXmlContent::LevelEventNode& node) const;
+	eastl::hash_map<i32,eastl::fixed_vector<i32,8,false>> andInputsFired;
 	void CallMonsters(const GameXmlContent::LevelEventNode& node, i32 playerIndex);
 	void FireRandomCondition(const GameXmlContent::LevelEventNode& node, i32 playerIndex);
 	void FireDialogTrigger(i32 dialogID, i32 playerIndex);
@@ -1083,7 +1085,7 @@ public:
 	bool TakeGroundItem(Player& player, u32 itemUID);
 	struct GroundItem { u32 uid; i32 itemIndex; vec3 pos; i32 tagID; Time expireAt; };
 	eastl::fixed_vector<GroundItem,64,false> groundItems;
-	struct LevelEventTimer { i32 node; Time at; i32 playerIndex; };
+	struct LevelEventTimer { i32 node; Time at; i32 playerIndex; i32 fromNode; };
 	struct MonsterCall { i32 node; Time at; i32 remaining; i32 playerIndex; };
 	eastl::fixed_vector<MonsterCall,128,false> monsterCalls;
 	struct BoundTriggerState { i32 node; u32 playerIndex; bool inside; Time last; };
@@ -1100,6 +1102,7 @@ public:
 	i32 stageClearCount = 0;
 	i32 stageClearKills = 0;
 	bool stageCleared = false;
+	bool noRespawn = false;
 	bool NodeInDifficulty(const GameXmlContent::LevelEventNode& node) const { return difficultyBit == GameXmlContent::ALL_DIFFICULTIES || (node.difficultyMask & difficultyBit) != 0; }
 	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; };
 	void ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool remove);

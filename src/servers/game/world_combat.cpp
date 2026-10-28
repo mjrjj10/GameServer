@@ -3,6 +3,7 @@
 #include "world_common.h"
 #include <mxm/game_content.h>
 
+static const f64 NO_RESPAWN_MS = 1.0e12;
 static const i32 STAT_CRITICALRATE = 9;
 static const i32 STAT_CRITICALDAMAGE = 10;
 static const i32 STAT_RAGE_ATTACK_RECOVERY_VALUE = 51;
@@ -329,7 +330,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			if(it->team == target.team) victimTeamKills += it->kills;
 		}
 		const i32 respawnMs = map && map->ingameLevels ? IngameRespawnDelayMs(target) : gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills);
-		target.tRespawn = TimeAdd(localTime, TimeMsToTime(respawnMs));
+		target.tRespawn = TimeAdd(localTime, TimeMsToTime(noRespawn ? NO_RESPAWN_MS : (f64)respawnMs));
 		LOG("Death :: %ls killed by %ls (respawn %d ms)", target.name.data(), attacker.name.data(), respawnMs);
 		if(target.hiddenUID != ActorUID::INVALID) {
 			ShowHiddenToEnemies(target, target.hiddenUID, ActorUID::INVALID);
@@ -545,7 +546,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 		else teamKills += it->kills;
 	}
 	const i32 respawnMs = map && map->ingameLevels ? IngameRespawnDelayMs(target) : gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills);
-	target.tRespawn = TimeAdd(localTime, TimeMsToTime(respawnMs));
+	target.tRespawn = TimeAdd(localTime, TimeMsToTime(noRespawn ? NO_RESPAWN_MS : (f64)respawnMs));
 	target.killStreak = 0;
 	target.recentDamage.clear();
 	LOG("Death :: %ls killed by creature %d (respawn %d ms)", target.name.data(), (i32)attacker.docID, respawnMs);

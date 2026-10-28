@@ -319,6 +319,8 @@ struct Replication
 	void SendRewardRequestFinish(ClientHandle clientHd);
 	void SendRewardStageEnd(ClientHandle clientHd, const RewardCard* cards, i32 count);
 	void SendWarnPveGameEnd(ClientHandle clientHd, u32 remainMs);
+	void SendUserLifeInfo(ClientHandle clientHd, i32 players);
+	void SendPrepareHandover(ClientHandle clientHd);
 	void ResetClientForAreaMove(ClientHandle clientHd);
 	void SendMasterTrainingEvent(ClientHandle clientHd, u8 eventType, u32 ret, u32 entityID, u32 param1, u32 param2);
 	void SetPlayerAsInGame(ClientHandle clientHd);

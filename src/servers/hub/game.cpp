@@ -154,7 +154,13 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 	LOG("[client%x] HubGame :: account %llu connected (%ls)", clientHd, (u64)accountData->UID, accountData->nickname.data());
 	SortieUID resultSortieUID = SortieUID::INVALID;
 	if(TakeAccountReturningFromGame(accountData->nickname, &resultSortieUID)) {
-		if(Config().DevShowcase || Config().DevAutoQueue) {
+		auto pveAccount = GetAccountManager().accountMap.find(accountData->UID);
+		if(pveAccount != GetAccountManager().accountMap.end() && pveAccount->second->pveFailedReturn) {
+			pveAccount->second->pveFailedReturn = false;
+			LOG("[client%x] HubGame :: back from a failed stage, loading the lobby", clientHd);
+			replication.SendLoadLobby(clientHd, MapIndex::LOBBY_NORMAL, true);
+		}
+		else if(Config().DevShowcase || Config().DevAutoQueue) {
 			LOG("[client%x] HubGame :: back from a game, loading the lobby", clientHd);
 			replication.SendLoadLobby(clientHd, MapIndex::LOBBY_NORMAL, true);
 		}

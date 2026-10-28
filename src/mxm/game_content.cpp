@@ -1089,106 +1089,114 @@ static void ParseIdList(const char* text, List& out)
 
 bool GameXmlContent::LoadMonsterAi()
 {
-	XMLDocument doc;
-	if(!LoadXMLFile(L"/MonsterAi.xml", doc)) return false;
-	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
-		MonsterAi& ai = monsterAi[pInfo->IntAttribute("ID")];
-		ai.className = pInfo->Attribute("class") ? pInfo->Attribute("class") : "";
-		ai.walk = pInfo->FloatAttribute("walk");
-		ai.run = pInfo->FloatAttribute("run");
-		ai.perception = pInfo->FloatAttribute("perception");
-		ai.lost = pInfo->FloatAttribute("lost");
-		ai.destroy = pInfo->FloatAttribute("destroy");
-		ai.radius = pInfo->FloatAttribute("radius");
-		ai.tagKey = StatusTypeKey(pInfo->Attribute("tag") ? pInfo->Attribute("tag") : "");
-		if(const char* idle = pInfo->Attribute("idle")) ai.idle = ActionStateFromString(idle);
-		if(const char* awake = pInfo->Attribute("awake")) if(*awake) ai.awake = ActionStateFromString(awake);
-		ai.awakeTime = pInfo->FloatAttribute("awakeTime");
-		ai.groggyChance = pInfo->FloatAttribute("groggyChance");
-		ai.groggyTime = pInfo->FloatAttribute("groggyTime");
-		ai.spawnTime = pInfo->FloatAttribute("spawnTime");
-		ai.masterMark = pInfo->IntAttribute("masterMark");
-		ai.teamBuff = pInfo->IntAttribute("teamBuff");
-		if(const char* hpBuffs = pInfo->Attribute("hpBuffs")) {
-			const char* at = hpBuffs;
-			while(*at && !ai.hpBuffs.full()) {
-				f32 ratio = 0;
-				i32 status = 0;
-				if(EA::StdC::Sscanf(at, "%f:%d", &ratio, &status) != 2) break;
-				ai.hpBuffs.push_back(eastl::make_pair(ratio, status));
-				while(*at && *at != ' ') at++;
-				while(*at == ' ') at++;
+	static const wchar* AI_FILES[] = { L"/MonsterAi.xml", L"/MonsterAiEstimated.xml" };
+	for(i32 fileIndex = 0; fileIndex < (i32)ARRAY_COUNT(AI_FILES); fileIndex++) {
+		const bool estimated = fileIndex > 0;
+		XMLDocument doc;
+		if(!LoadXMLFile(AI_FILES[fileIndex], doc, estimated)) {
+			if(estimated) continue;
+			return false;
+		}
+		for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+			if(estimated && monsterAi.find(pInfo->IntAttribute("ID")) != monsterAi.end()) continue;
+			MonsterAi& ai = monsterAi[pInfo->IntAttribute("ID")];
+			ai.className = pInfo->Attribute("class") ? pInfo->Attribute("class") : "";
+			ai.walk = pInfo->FloatAttribute("walk");
+			ai.run = pInfo->FloatAttribute("run");
+			ai.perception = pInfo->FloatAttribute("perception");
+			ai.lost = pInfo->FloatAttribute("lost");
+			ai.destroy = pInfo->FloatAttribute("destroy");
+			ai.radius = pInfo->FloatAttribute("radius");
+			ai.tagKey = StatusTypeKey(pInfo->Attribute("tag") ? pInfo->Attribute("tag") : "");
+			if(const char* idle = pInfo->Attribute("idle")) ai.idle = ActionStateFromString(idle);
+			if(const char* awake = pInfo->Attribute("awake")) if(*awake) ai.awake = ActionStateFromString(awake);
+			ai.awakeTime = pInfo->FloatAttribute("awakeTime");
+			ai.groggyChance = pInfo->FloatAttribute("groggyChance");
+			ai.groggyTime = pInfo->FloatAttribute("groggyTime");
+			ai.spawnTime = pInfo->FloatAttribute("spawnTime");
+			ai.masterMark = pInfo->IntAttribute("masterMark");
+			ai.teamBuff = pInfo->IntAttribute("teamBuff");
+			if(const char* hpBuffs = pInfo->Attribute("hpBuffs")) {
+				const char* at = hpBuffs;
+				while(*at && !ai.hpBuffs.full()) {
+					f32 ratio = 0;
+					i32 status = 0;
+					if(EA::StdC::Sscanf(at, "%f:%d", &ratio, &status) != 2) break;
+					ai.hpBuffs.push_back(eastl::make_pair(ratio, status));
+					while(*at && *at != ' ') at++;
+					while(*at == ' ') at++;
+				}
 			}
-		}
-		if(const char* victory = pInfo->Attribute("victory")) {
-			char first[64] = {}, second[64] = {};
-			if(EA::StdC::Sscanf(victory, "%63s %63s", first, second) == 2) {
-				ai.victoryStates[0] = ActionStateFromString(first);
-				ai.victoryStates[1] = ActionStateFromString(second);
+			if(const char* victory = pInfo->Attribute("victory")) {
+				char first[64] = {}, second[64] = {};
+				if(EA::StdC::Sscanf(victory, "%63s %63s", first, second) == 2) {
+					ai.victoryStates[0] = ActionStateFromString(first);
+					ai.victoryStates[1] = ActionStateFromString(second);
+				}
+				if(const char* times = pInfo->Attribute("victoryTimes")) EA::StdC::Sscanf(times, "%f %f", &ai.victoryTimes[0], &ai.victoryTimes[1]);
+				ParseIdList(pInfo->Attribute("victoryStatus"), ai.victoryStatuses);
+				ai.victoryStatusDelay = pInfo->FloatAttribute("victoryStatusDelay");
+				ai.victoryHeal = pInfo->FloatAttribute("victoryHeal");
 			}
-			if(const char* times = pInfo->Attribute("victoryTimes")) EA::StdC::Sscanf(times, "%f %f", &ai.victoryTimes[0], &ai.victoryTimes[1]);
-			ParseIdList(pInfo->Attribute("victoryStatus"), ai.victoryStatuses);
-			ai.victoryStatusDelay = pInfo->FloatAttribute("victoryStatusDelay");
-			ai.victoryHeal = pInfo->FloatAttribute("victoryHeal");
-		}
-		ParseIdList(pInfo->Attribute("groggyStatus"), ai.groggyStatuses);
-		if(const char* cc = pInfo->Attribute("cc")) {
-			const char* at = cc;
-			while(*at && !ai.ccTypes.full()) {
-				while(*at == ' ') at++;
-				if(!*at) break;
-				eastl::fixed_string<char,48,false> name;
-				while(*at && *at != ' ') name.push_back(*at++);
-				ai.ccTypes.push_back(StatusTypeFromString(name.c_str()));
+			ParseIdList(pInfo->Attribute("groggyStatus"), ai.groggyStatuses);
+			if(const char* cc = pInfo->Attribute("cc")) {
+				const char* at = cc;
+				while(*at && !ai.ccTypes.full()) {
+					while(*at == ' ') at++;
+					if(!*at) break;
+					eastl::fixed_string<char,48,false> name;
+					while(*at && *at != ' ') name.push_back(*at++);
+					ai.ccTypes.push_back(StatusTypeFromString(name.c_str()));
+				}
 			}
-		}
-		if(const char* enemies = pInfo->Attribute("enemies")) {
-			const char* at = enemies;
-			while(*at && !ai.enemyTags.full()) {
-				const char* end = at;
-				while(*end && *end != '|') end++;
-				eastl::fixed_string<char,32,false> tag(at, end);
-				ai.enemyTags.push_back(StatusTypeKey(tag.c_str()));
-				at = *end ? end + 1 : end;
+			if(const char* enemies = pInfo->Attribute("enemies")) {
+				const char* at = enemies;
+				while(*at && !ai.enemyTags.full()) {
+					const char* end = at;
+					while(*end && *end != '|') end++;
+					eastl::fixed_string<char,32,false> tag(at, end);
+					ai.enemyTags.push_back(StatusTypeKey(tag.c_str()));
+					at = *end ? end + 1 : end;
+				}
 			}
+			for(XMLElement* pAttack = pInfo->FirstChildElement("ATTACK"); pAttack && !ai.attacks.full(); pAttack = pAttack->NextSiblingElement("ATTACK")) {
+				MonsterAttack attack;
+				const char* target = pAttack->Attribute("target");
+				if(!target) continue;
+				if(EA::StdC::Strcmp(target, "master") == 0) attack.target = MonsterAttack::MASTER;
+				else if(EA::StdC::Strcmp(target, "minion") == 0) attack.target = MonsterAttack::MINION;
+				else if(EA::StdC::Strcmp(target, "titan") == 0) attack.target = MonsterAttack::TITAN;
+				else attack.target = MonsterAttack::STRUCTURE;
+				if(const char* state = pAttack->Attribute("state")) attack.state = ActionStateFromString(state);
+				attack.range = pAttack->FloatAttribute("range");
+				attack.cooldown = pAttack->FloatAttribute("cooldown");
+				attack.remote = pAttack->IntAttribute("remote");
+				attack.hitRemote = pAttack->IntAttribute("hitRemote", attack.remote);
+				attack.executeMinion = pAttack->BoolAttribute("executeMinion");
+				attack.anim = pAttack->FloatAttribute("anim");
+				attack.noDamage = pAttack->BoolAttribute("noDamage");
+				attack.allyStatus = pAttack->IntAttribute("allyStatus");
+				attack.allyRadius = pAttack->FloatAttribute("allyRadius");
+				attack.allyDelay = pAttack->FloatAttribute("allyDelay");
+				attack.delay = pAttack->FloatAttribute("delay");
+				attack.multiplier = pAttack->FloatAttribute("multiplier");
+				attack.speed = pAttack->FloatAttribute("speed");
+				attack.status = pAttack->IntAttribute("status");
+				const char* kind = pAttack->Attribute("kind");
+				attack.special = kind && EA::StdC::Strcmp(kind, "special") == 0;
+				attack.radius = pAttack->FloatAttribute("radius");
+				attack.hits = (u8)MAX(pAttack->IntAttribute("hits", 1), 1);
+				attack.interval = pAttack->FloatAttribute("interval");
+				attack.hpMin = pAttack->FloatAttribute("hpMin", 0.0f);
+				attack.hpMax = pAttack->FloatAttribute("hpMax", 1.0f);
+				attack.weakTime = pAttack->FloatAttribute("weakTime");
+				attack.share = pAttack->FloatAttribute("share", 1.0f);
+				ParseIdList(pAttack->Attribute("selfStatus"), attack.selfStatuses);
+				ai.attacks.push_back(attack);
+			}
+			foreach_const(a, ai.attacks) if(!a->special && !ai.byTarget[a->target]) ai.byTarget[a->target] = &*a;
+			if(!ai.byTarget[MonsterAttack::TITAN]) ai.byTarget[MonsterAttack::TITAN] = ai.byTarget[MonsterAttack::STRUCTURE];
 		}
-		for(XMLElement* pAttack = pInfo->FirstChildElement("ATTACK"); pAttack && !ai.attacks.full(); pAttack = pAttack->NextSiblingElement("ATTACK")) {
-			MonsterAttack attack;
-			const char* target = pAttack->Attribute("target");
-			if(!target) continue;
-			if(EA::StdC::Strcmp(target, "master") == 0) attack.target = MonsterAttack::MASTER;
-			else if(EA::StdC::Strcmp(target, "minion") == 0) attack.target = MonsterAttack::MINION;
-			else if(EA::StdC::Strcmp(target, "titan") == 0) attack.target = MonsterAttack::TITAN;
-			else attack.target = MonsterAttack::STRUCTURE;
-			if(const char* state = pAttack->Attribute("state")) attack.state = ActionStateFromString(state);
-			attack.range = pAttack->FloatAttribute("range");
-			attack.cooldown = pAttack->FloatAttribute("cooldown");
-			attack.remote = pAttack->IntAttribute("remote");
-			attack.hitRemote = pAttack->IntAttribute("hitRemote", attack.remote);
-			attack.executeMinion = pAttack->BoolAttribute("executeMinion");
-			attack.anim = pAttack->FloatAttribute("anim");
-			attack.noDamage = pAttack->BoolAttribute("noDamage");
-			attack.allyStatus = pAttack->IntAttribute("allyStatus");
-			attack.allyRadius = pAttack->FloatAttribute("allyRadius");
-			attack.allyDelay = pAttack->FloatAttribute("allyDelay");
-			attack.delay = pAttack->FloatAttribute("delay");
-			attack.multiplier = pAttack->FloatAttribute("multiplier");
-			attack.speed = pAttack->FloatAttribute("speed");
-			attack.status = pAttack->IntAttribute("status");
-			const char* kind = pAttack->Attribute("kind");
-			attack.special = kind && EA::StdC::Strcmp(kind, "special") == 0;
-			attack.radius = pAttack->FloatAttribute("radius");
-			attack.hits = (u8)MAX(pAttack->IntAttribute("hits", 1), 1);
-			attack.interval = pAttack->FloatAttribute("interval");
-			attack.hpMin = pAttack->FloatAttribute("hpMin", 0.0f);
-			attack.hpMax = pAttack->FloatAttribute("hpMax", 1.0f);
-			attack.weakTime = pAttack->FloatAttribute("weakTime");
-			attack.share = pAttack->FloatAttribute("share", 1.0f);
-			ParseIdList(pAttack->Attribute("selfStatus"), attack.selfStatuses);
-			ai.attacks.push_back(attack);
-		}
-		foreach_const(a, ai.attacks) if(!a->special && !ai.byTarget[a->target]) ai.byTarget[a->target] = &*a;
-		if(!ai.byTarget[MonsterAttack::TITAN]) ai.byTarget[MonsterAttack::TITAN] = ai.byTarget[MonsterAttack::STRUCTURE];
 	}
 	LOG("Loaded AI of %d monsters", (i32)monsterAi.size());
 	return true;
@@ -1232,29 +1240,39 @@ bool GameXmlContent::LoadTitan()
 
 bool GameXmlContent::LoadMonsterStats()
 {
-	XMLDocument doc;
-	if(!LoadXMLFile(L"/MonsterStats.xml", doc)) return false;
-	monsterGrowthPeriod = doc.FirstChildElement()->FloatAttribute("growthPeriod");
-	monsterGrowthCap = doc.FirstChildElement()->IntAttribute("growthCap");
-	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
-		const i32 id = pInfo->IntAttribute("ID");
-		auto& stats = monsterStats[id];
-		if(const i32 drop = pInfo->IntAttribute("drop")) monsterDrop[id] = drop;
-		if(const f32 life = pInfo->FloatAttribute("lifeTime")) monsterLifeTime[id] = life;
-		if(const char* spawns = pInfo->Attribute("dieSpawn")) {
-			auto& list = monsterDieSpawn[id];
-			for(const char* c = spawns; *c && !list.full(); ) {
-				char* end = nullptr;
-				const long v = strtol(c, &end, 10);
-				if(end == c) break;
-				list.push_back((i32)v);
-				c = end;
-			}
+	static const wchar* STAT_FILES[] = { L"/MonsterStats.xml", L"/MonsterStatsEstimated.xml" };
+	for(i32 fileIndex = 0; fileIndex < (i32)ARRAY_COUNT(STAT_FILES); fileIndex++) {
+		const bool estimated = fileIndex > 0;
+		XMLDocument doc;
+		if(!LoadXMLFile(STAT_FILES[fileIndex], doc, estimated)) {
+			if(estimated) continue;
+			return false;
 		}
-		for(XMLElement* st = pInfo->FirstChildElement("STAT"); st && !stats.full(); st = st->NextSiblingElement("STAT")) {
-			stats.push_back({ (u8)st->IntAttribute("type"), st->FloatAttribute("value") });
-			const f32 growth = st->FloatAttribute("growth");
-			if(growth != 0 && !monsterGrowth[id].full()) monsterGrowth[id].push_back({ (u8)st->IntAttribute("type"), growth });
+		if(!estimated) {
+			monsterGrowthPeriod = doc.FirstChildElement()->FloatAttribute("growthPeriod");
+			monsterGrowthCap = doc.FirstChildElement()->IntAttribute("growthCap");
+		}
+		for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+			const i32 id = pInfo->IntAttribute("ID");
+			if(estimated && monsterStats.find(id) != monsterStats.end()) continue;
+			auto& stats = monsterStats[id];
+			if(const i32 drop = pInfo->IntAttribute("drop")) monsterDrop[id] = drop;
+			if(const f32 life = pInfo->FloatAttribute("lifeTime")) monsterLifeTime[id] = life;
+			if(const char* spawns = pInfo->Attribute("dieSpawn")) {
+				auto& list = monsterDieSpawn[id];
+				for(const char* c = spawns; *c && !list.full(); ) {
+					char* end = nullptr;
+					const long v = strtol(c, &end, 10);
+					if(end == c) break;
+					list.push_back((i32)v);
+					c = end;
+				}
+			}
+			for(XMLElement* st = pInfo->FirstChildElement("STAT"); st && !stats.full(); st = st->NextSiblingElement("STAT")) {
+				stats.push_back({ (u8)st->IntAttribute("type"), st->FloatAttribute("value") });
+				const f32 growth = st->FloatAttribute("growth");
+				if(growth != 0 && !monsterGrowth[id].full()) monsterGrowth[id].push_back({ (u8)st->IntAttribute("type"), growth });
+			}
 		}
 	}
 	LOG("Loaded stats of %d monsters", (i32)monsterStats.size());
@@ -3898,6 +3916,7 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		node.id = pNode->IntAttribute("_ConvertedEventDataID");
 		node.nameKey = StatusTypeKey(pNode->Attribute("_EventDataID"));
 		node.difficultyMask = (u8)pNode->IntAttribute("_StageDifficultyMask", ALL_DIFFICULTIES);
+		for(XMLElement* in = pNode->FirstChildElement("_InputLink"); in && !node.inputs.full(); in = in->NextSiblingElement("_InputLink")) node.inputs.push_back(eastl::make_pair(in->IntAttribute("_ConvertedEventDataID"), (u8)in->IntAttribute("_StageDifficultyMask", ALL_DIFFICULTIES)));
 		for(XMLElement* out = pNode->FirstChildElement("_OutputLink"); out && !node.outputs.full(); out = out->NextSiblingElement("_OutputLink")) node.outputs.push_back(out->IntAttribute("_ConvertedEventDataID"));
 		if(pNode->FirstChildElement("_LevelStartTriggerData")) node.kind = LevelEventNode::LEVEL_START;
 		else if(XMLElement* e = pNode->FirstChildElement("_TakeItemTriggerData")) { node.kind = LevelEventNode::TAKE_ITEM; node.tagID = e->IntAttribute("_TagID", -1); }
@@ -3921,6 +3940,10 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(XMLElement* e = FirstChildOf(pNode, "_CallMonsterInfo", "_RelativeCallMonsterInfo")) {
 			node.kind = LevelEventNode::CALL_MONSTER;
 			node.relative = pNode->FirstChildElement("_RelativeCallMonsterInfo") != nullptr;
+			static const char* STAGE_LEVEL_NAMES[] = { "EASY", "NORMAL", "HARD", "EXTREME", "HELL" };
+			if(const char* level = e->Attribute("_StageLevel")) {
+				for(i32 d = 0; d < (i32)ARRAY_COUNT(STAGE_LEVEL_NAMES); d++) if(EA::StdC::Strcmp(level, STAGE_LEVEL_NAMES[d]) == 0) node.stageLevelBit = (u8)(1 << d);
+			}
 			node.monster = e->IntAttribute("_Index");
 			node.count = MAX(e->IntAttribute("_Count", 1), 1);
 			node.callCount = MAX(e->IntAttribute("_CallCount", 1), 1);
@@ -3979,6 +4002,10 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 			}
 		}
 		else if(pNode->FirstChildElement("_PortalEntityInfo")) node.kind = LevelEventNode::PORTAL;
+		else if(XMLElement* e = pNode->FirstChildElement("_SetLvEvtActivationInfo")) { node.kind = LevelEventNode::SET_ACTIVATION; node.targetKey = StatusTypeKey(e->Attribute("_LvEvtID")); node.active = e->IntAttribute("_Active") == 1; }
+		else if(XMLElement* e = pNode->FirstChildElement("_EventAndConditionInfo")) { node.kind = LevelEventNode::AND_CONDITION; node.resetAfter = e->IntAttribute("_ResetAfterEvent") == 1; }
+		else if(pNode->FirstChildElement("_SaveKillZSpawnArea")) node.kind = LevelEventNode::PASS_THROUGH;
+		else if(pNode->FirstChildElement("_SceneAniStartInfo") || pNode->FirstChildElement("_SceneAniControlInfo") || pNode->FirstChildElement("_EntityHideObjInfo") || pNode->FirstChildElement("_EntityHighlightInfo") || pNode->FirstChildElement("_UIEventInfo") || pNode->FirstChildElement("_EventBgmStopInfo") || pNode->FirstChildElement("_BgmPlayInfo") || pNode->FirstChildElement("_HideObjInfo") || pNode->FirstChildElement("_LightActiveInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
 		else if(XMLElement* e = pNode->FirstChildElement("_KillTargetEntityInfo")) { node.kind = LevelEventNode::KILL_TARGET; node.localID = e->IntAttribute("_LocalID"); node.tagID = e->IntAttribute("_TagID", -1); }
 		else if(XMLElement* e = pNode->FirstChildElement("_ActiveTriggerInfo")) { node.kind = LevelEventNode::ACTIVE_AREA_TRIGGER; node.areaID = e->IntAttribute("_AreaID"); node.active = e->IntAttribute("_Active") == 1; }
 		else if(XMLElement* e = pNode->FirstChildElement("_InvokeDialogTriggerInfo")) { node.kind = LevelEventNode::INVOKE_DIALOG; node.aiIndex = e->IntAttribute("_DialogID"); }

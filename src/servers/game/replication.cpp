@@ -152,6 +152,7 @@ void Replication::OnPlayerConnect(ClientHandle clientHd, u32 playerIndex)
 }
 
 static const u8 MEASURED_REWARD_NEXT_ACTION = 1;
+static const i32 MEASURED_PVE_REMAIN_LIFE = -1;
 
 void Replication::SendStageClearResult(ClientHandle clientHd, const StageClear& clear, const StageMember* members, i32 memberCount)
 {
@@ -263,6 +264,21 @@ void Replication::SendRewardStageEnd(ClientHandle clientHd, const RewardCard* ca
 	packet.Write<u16>(0);
 	packet.Write<u32>(0);
 	SendPacket(clientHd, packet);
+}
+
+void Replication::SendPrepareHandover(ClientHandle clientHd)
+{
+	SendPacketData<Sv::SQ_PrepareHandoverToChannel>(clientHd, 0, nullptr);
+}
+
+void Replication::SendUserLifeInfo(ClientHandle clientHd, i32 players)
+{
+	Sv::SN_NotifyUserLifeInfo lifeInfo;
+	lifeInfo.usn = players;
+	lifeInfo.lifeCount = 0;
+	lifeInfo.maxLifeCount = 0;
+	lifeInfo.remainLifeCount = MEASURED_PVE_REMAIN_LIFE;
+	SendPacket(clientHd, lifeInfo);
 }
 
 void Replication::SendWarnPveGameEnd(ClientHandle clientHd, u32 remainMs)

@@ -65,6 +65,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 		if(pve) world.monsterStatScale = GetGameXmlContent().DifficultyMonsterStat(stage->difficultyBit);
 		if(stage->gameMode == GameModeType::GAME_MODE_STAGE) {
 			pveStage = true;
+			world.noRespawn = true;
 			world.stageClearMonster = stage->clearMonster;
 			world.stageClearCount = stage->clearCount;
 			foreach_const(m, stage->maps) if(!zoneMaps.full()) zoneMaps.push_back(*m);
@@ -235,6 +236,11 @@ void Game::Update(Time localTime_)
 		case Phase::Game: {
 			if(world.portalRequested && !gameEnded) MoveToNextZone();
 			if(pveStage && world.stageCleared && !gameEnded) EndStage(true);
+			foreach(r, rewardStates) {
+				if(r->finished || r->startedAt == Time::ZERO || r->picks >= MEASURED_REWARD_SLOT_COUNT) continue;
+				if(TimeDurationMs(r->startedAt, localTime) >= (f64)MEASURED_REWARD_WAIT_MS) AutoPickRewards(r->clientHd);
+			}
+			if(pveStage && !gameEnded && tGameStarted != Time::ZERO && AllHumansDead()) EndStage(false);
 			if(!gameEnded && tGameStarted != Time::ZERO && world.winnerTeam < 0 && replication.titanMode) {
 				const i32 scoreLimit = GetGameXmlContent().GetStageScoreLimit((i32)replication.stageIndex);
 				for(i32 team = 0; team < 2 && scoreLimit > 0; team++) {
@@ -258,7 +264,9 @@ void Game::Update(Time localTime_)
 			if(gameEnded && !sentBackToLobby && TimeDiffSec(TimeDiff(tGameEnded, localTime)) >= lobbyDelay) {
 				sentBackToLobby = true;
 				foreach_const(p, playerList) {
-					if(p->clientHd != ClientHandle::INVALID) OnPlayerReturnToChannel(p->clientHd);
+					if(p->clientHd == ClientHandle::INVALID) continue;
+					if(pveStage) replication.SendPrepareHandover(p->clientHd);
+					else OnPlayerReturnToChannel(p->clientHd);
 				}
 				LOG("Game :: players sent back to the lobby");
 			}
@@ -498,11 +506,23 @@ void Game::MoveToNextZone()
 	zoneLoading = true;
 }
 
+bool Game::AllHumansDead() const
+{
+	i32 humans = 0;
+	foreach_const(p, world.players) {
+		if(p->clientHd == ClientHandle::INVALID || p->removed) continue;
+		humans++;
+		if(!p->dead) return false;
+	}
+	return humans > 0;
+}
+
 void Game::PlacePlayersAtSpawn()
 {
 	i32 spawnPointIndex[2] = { 0 };
 	foreach(p, world.players) {
 		if(p->removed || p->team > 1) continue;
+		if(p->dead) world.RespawnPlayer(*p);
 		const auto& spawnPoints = mapSpawnPoints[p->team];
 		if(spawnPoints.empty()) continue;
 		const SpawnPoint& sp = spawnPoints[spawnPointIndex[p->team]++ % spawnPoints.size()];
@@ -934,7 +954,16 @@ void Game::EndStage(bool cleared)
 	const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(replication.stageIndex);
 	if(!cleared || !stage) {
 		LOG("Stage :: failed");
-		foreach_const(p, playerList) if(p->clientHd != ClientHandle::INVALID) replication.SendWarnPveGameEnd(p->clientHd, MEASURED_PVE_FAIL_RETURN_MS);
+		foreach_const(p, world.players) {
+			if(p->clientHd == ClientHandle::INVALID || p->removed) continue;
+			replication.SendWarnPveGameEnd(p->clientHd, MEASURED_PVE_FAIL_RETURN_MS);
+			AccountGameRecord record;
+			record.kills = p->pveKills;
+			record.stageIndex = (i32)replication.stageIndex;
+			record.gameType = (i32)replication.gameType;
+			record.classTypes = { (i32)p->mainClass, (i32)p->subClass };
+			AccountGameRecordAppend(p->name.data(), record);
+		}
 		return;
 	}
 	BuildRewardCards(*stage);
@@ -974,7 +1003,7 @@ void Game::EndStage(bool cleared)
 		record.gameType = (i32)replication.gameType;
 		record.classTypes = { (i32)p->mainClass, (i32)p->subClass };
 		AccountGameRecordAppend(p->name.data(), record);
-		if(!rewardStates.full()) rewardStates.push_back({ p->clientHd, 0, false });
+		if(!rewardStates.full()) rewardStates.push_back({ p->clientHd, 0, false, Time::ZERO, {} });
 		LOG("Stage :: %ls cleared stage %d (%d kills, %d deaths, rank %d)", p->name.data(), clear.stage, clear.kills, clear.deaths, (i32)clear.rank);
 	}
 }
@@ -983,6 +1012,20 @@ void Game::OnRewardStageReady(ClientHandle clientHd)
 {
 	if(!stageEnded || rewardCards.empty()) return;
 	replication.SendRewardStageStart(clientHd, MEASURED_REWARD_WAIT_MS, MEASURED_REWARD_SLOT_COUNT);
+	foreach(r, rewardStates) if(r->clientHd == clientHd && r->startedAt == Time::ZERO) r->startedAt = localTime;
+}
+
+void Game::AutoPickRewards(ClientHandle clientHd)
+{
+	foreach(r, rewardStates) {
+		if(r->clientHd != clientHd || r->finished) continue;
+		for(u32 tries = 0; r->picks < MEASURED_REWARD_SLOT_COUNT && tries < rewardCards.size() * 4; tries++) {
+			const u32 slot = RandUint() % (u32)rewardCards.size();
+			if(eastl::find(r->slots.begin(), r->slots.end(), slot) != r->slots.end()) continue;
+			OnRewardSelectSlot(clientHd, slot);
+		}
+		return;
+	}
 }
 
 void Game::OnRewardSelectSlot(ClientHandle clientHd, u32 slot)
@@ -990,6 +1033,8 @@ void Game::OnRewardSelectSlot(ClientHandle clientHd, u32 slot)
 	foreach(r, rewardStates) {
 		if(r->clientHd != clientHd || r->finished) continue;
 		if(slot >= rewardCards.size() || r->picks >= MEASURED_REWARD_PICKS) return;
+		if(eastl::find(r->slots.begin(), r->slots.end(), slot) != r->slots.end()) return;
+		if(!r->slots.full()) r->slots.push_back(slot);
 		r->picks++;
 		const Replication::RewardCard& card = rewardCards[slot];
 		replication.SendRewardSelectSlot(clientHd, 0, slot, card);
@@ -1015,7 +1060,7 @@ void Game::OnRewardRequestFinish(ClientHandle clientHd)
 		r->finished = true;
 		replication.SendRewardRequestFinish(clientHd);
 		replication.SendRewardStageEnd(clientHd, rewardCards.data(), (i32)rewardCards.size());
-		OnPlayerReturnToChannel(clientHd);
+		replication.SendPrepareHandover(clientHd);
 		return;
 	}
 }
@@ -1234,6 +1279,11 @@ void Game::OnPlayerGameIsReady(ClientHandle clientHd)
 	World::Player& player = world.GetPlayer(p.playerIndex);
 	ASSERT(player.clientHd == clientHd);
 
+	if(pveStage) {
+		i32 humans = 0;
+		foreach_const(wp, world.players) if(wp->clientHd != ClientHandle::INVALID && !wp->removed) humans++;
+		replication.SendUserLifeInfo(clientHd, humans);
+	}
 	if(zoneLoading) {
 		zoneLoading = false;
 		world.StartLevelEvents();

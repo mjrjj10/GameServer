@@ -9,6 +9,7 @@ struct Account
 	WideString nickname;
 	WideString guildTag;
 	i32 leaderMasterID;
+	bool pveFailedReturn = false;
 	u16 level = 1;
 	u32 levelExp = 0;
 	i64 gold = 0;

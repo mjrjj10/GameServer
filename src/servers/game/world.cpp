@@ -1034,6 +1034,7 @@ void World::ClearMapContent()
 	mapInteractions.clear();
 	deadCounts.clear();
 	hpTriggersFired.clear();
+	andInputsFired.clear();
 	levelEventsStarted = false;
 	mapInteractionsBuilt = false;
 	portalRequested = false;

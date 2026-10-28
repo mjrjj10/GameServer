@@ -186,7 +186,7 @@ void World::StartLevelEvents()
 	levelEventsStarted = true;
 	foreach_const(n, map->levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::LEVEL_START || !NodeInDifficulty(*n)) continue;
-		foreach_const(o, n->outputs) FireLevelEvent(*o);
+		foreach_const(o, n->outputs) FireLevelEvent(*o, -1, n->id);
 	}
 }
 
@@ -341,7 +341,7 @@ void World::OnMonsterDeath(ActorNpc& npc, ActorUID killerUID)
 			if(++count < n->count) continue;
 			count = 0;
 			LOG("LevelEvent :: dead count of tag %d reached (node %d)", npc.tagID, n->id);
-			foreach_const(o, n->outputs) FireLevelEvent(*o, killerIndex);
+			foreach_const(o, n->outputs) FireLevelEvent(*o, killerIndex, n->id);
 		}
 	}
 	if(const i32 drop = GetGameXmlContent().FindMonsterDrop((i32)npc.docID)) SpawnDropGroupAt(drop, npc.pos, -1);
@@ -377,7 +377,7 @@ void World::OnMonsterDamaged(ActorNpc& npc, i32 hpBefore)
 		if(eastl::find(hpTriggersFired.begin(), hpTriggersFired.end(), n->id) != hpTriggersFired.end()) continue;
 		hpTriggersFired.push_back(n->id);
 		LOG("LevelEvent :: tag %d below %.0f%% hp (node %d)", npc.tagID, n->hpPercent, n->id);
-		foreach_const(o, n->outputs) FireLevelEvent(*o);
+		foreach_const(o, n->outputs) FireLevelEvent(*o, -1, n->id);
 	}
 }
 
@@ -386,7 +386,7 @@ void World::FireGameEndTriggers(i32 team)
 	const Faction winner = team == 0 ? Faction::RED : Faction::BLUE;
 	foreach_const(n, map->levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::GAME_END_TRIGGER || n->team != winner) continue;
-		foreach_const(o, n->outputs) FireLevelEvent(*o);
+		foreach_const(o, n->outputs) FireLevelEvent(*o, -1, n->id);
 	}
 }
 
@@ -394,7 +394,7 @@ void World::StartTimeRecord()
 {
 	foreach_const(n, map->levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::TIME_RECORD_START) continue;
-		foreach_const(o, n->outputs) FireLevelEvent(*o);
+		foreach_const(o, n->outputs) FireLevelEvent(*o, -1, n->id);
 	}
 }
 
@@ -501,7 +501,7 @@ void World::FireDialogTrigger(i32 dialogID, i32 playerIndex)
 {
 	foreach_const(n, map->levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::DIALOG_TRIGGER || n->aiIndex != dialogID || !NodeInDifficulty(*n)) continue;
-		foreach_const(o, n->outputs) FireLevelEvent(*o, playerIndex);
+		foreach_const(o, n->outputs) FireLevelEvent(*o, playerIndex, n->id);
 	}
 }
 
@@ -522,15 +522,36 @@ void World::FireAITrigger(i32 index, i32 playerIndex)
 	foreach_const(n, map->levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::AI_TRIGGER || n->aiIndex != index) continue;
 		LOG("LevelEvent :: AI trigger %d (node %d)", index, n->id);
-		foreach_const(o, n->outputs) FireLevelEvent(*o, playerIndex);
+		foreach_const(o, n->outputs) FireLevelEvent(*o, playerIndex, n->id);
 	}
 }
 
-void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
+bool World::NodeDeactivated(const GameXmlContent::LevelEventNode& node) const
+{
+	if(node.kind == GameXmlContent::LevelEventNode::BOUND_TRIGGER || node.kind == GameXmlContent::LevelEventNode::OR_CONDITION) return false;
+	foreach_const(t, levelTriggerOverrides) if(t->first == node.nameKey) return !t->second;
+	return false;
+}
+
+void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 {
 	const GameXmlContent::LevelEventNode* node = map->FindLevelEvent(nodeID);
-	if(!node || !NodeInDifficulty(*node)) return;
+	if(!node || !NodeInDifficulty(*node) || NodeDeactivated(*node)) return;
+	if(fromNode >= 0 && difficultyBit != GameXmlContent::ALL_DIFFICULTIES) {
+		foreach_const(in, node->inputs) if(in->first == fromNode && !(in->second & difficultyBit)) return;
+	}
 	switch(node->kind) {
+		case GameXmlContent::LevelEventNode::SET_ACTIVATION: SetLevelTriggerActive(node->targetKey, node->active); break;
+		case GameXmlContent::LevelEventNode::AND_CONDITION: {
+			auto& fired = andInputsFired[node->id];
+			if(fromNode >= 0 && eastl::find(fired.begin(), fired.end(), fromNode) == fired.end() && !fired.full()) fired.push_back(fromNode);
+			foreach_const(in, node->inputs) {
+				if(difficultyBit != GameXmlContent::ALL_DIFFICULTIES && !(in->second & difficultyBit)) continue;
+				if(eastl::find(fired.begin(), fired.end(), in->first) == fired.end()) return;
+			}
+			if(node->resetAfter) fired.clear();
+			LOG("LevelEvent :: and node %d complete", node->id);
+		} break;
 		case GameXmlContent::LevelEventNode::RANDOM_CONDITION: FireRandomCondition(*node, playerIndex); return;
 		case GameXmlContent::LevelEventNode::PORTAL: {
 			portalRequested = true;
@@ -557,7 +578,7 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 			const f32 jitter = node->variance > 0 ? ((f32)(RandUint() % 2001) / 1000.0f - 1.0f) * node->variance : 0.0f;
 			const Time at = TimeAdd(localTime, TimeMsToTime(MAX(node->delay + jitter, 0.0f) * 1000.0));
 			foreach_const(o, node->outputs) {
-				if(!levelEventTimers.full()) levelEventTimers.push_back({ *o, at, playerIndex });
+				if(!levelEventTimers.full()) levelEventTimers.push_back({ *o, at, playerIndex, node->id });
 			}
 			return;
 		}
@@ -654,6 +675,7 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 			}
 		} break;
 		case GameXmlContent::LevelEventNode::CALL_MONSTER: {
+			if(difficultyBit != GameXmlContent::ALL_DIFFICULTIES && !(node->stageLevelBit & difficultyBit)) break;
 			const f32 jitter = node->variance > 0 ? ((f32)(RandUint() % 2001) / 1000.0f - 1.0f) * node->variance : 0.0f;
 			if(!monsterCalls.full()) monsterCalls.push_back({ node->id, TimeAdd(localTime, TimeMsToTime(MAX(node->callDelay + jitter, 0.0f) * 1000.0)), node->callCount, playerIndex });
 		} break;
@@ -662,7 +684,7 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex)
 		case GameXmlContent::LevelEventNode::ACTIVATE_TRIGGER: SetLevelTriggerActive(node->targetKey, node->active); break;
 		default: return;
 	}
-	foreach_const(o, node->outputs) FireLevelEvent(*o, playerIndex);
+	foreach_const(o, node->outputs) FireLevelEvent(*o, playerIndex, node->id);
 }
 
 void World::SpawnGroundItems(i32 dropIndex, i32 areaID, i32 tagID)
@@ -786,7 +808,7 @@ bool World::TakeGroundItem(Player& player, u32 itemUID)
 	if(item.itemIndex == TITAN_PIECE_ITEM) SetCarriedPieces(player, player.titanPieces + 1);
 	foreach_const(n, map->levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::TAKE_ITEM || n->tagID != item.tagID || item.tagID < 0) continue;
-		foreach_const(o, n->outputs) FireLevelEvent(*o);
+		foreach_const(o, n->outputs) FireLevelEvent(*o, -1, n->id);
 	}
 	return true;
 }
@@ -812,7 +834,7 @@ void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle s
 		if((i32)hit->hits.size() < n->hitCount) return;
 		hit->hits.clear();
 		LOG("LevelEvent :: dynamic %d hit %d times in %.0f s", hit->localID, n->hitCount, n->delay);
-		foreach_const(o, n->outputs) FireLevelEvent(*o);
+		foreach_const(o, n->outputs) FireLevelEvent(*o, -1, n->id);
 		return;
 	}
 }
@@ -946,7 +968,7 @@ void World::CompleteMapInteraction(Player& player)
 	}
 	foreach_const(n, map->levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::INTERACTION_TRIGGER || n->localID != m.localID) continue;
-		foreach_const(o, n->outputs) FireLevelEvent(*o, (i32)player.index);
+		foreach_const(o, n->outputs) FireLevelEvent(*o, (i32)player.index, n->id);
 	}
 }
 
@@ -1008,7 +1030,7 @@ void World::UpdateBoundTriggers()
 			if(state->last != Time::ZERO && TimeDiffSec(TimeDiff(state->last, localTime)) < n->retrigger) continue;
 			state->last = localTime;
 			LOG("LevelEvent :: %ls %s area %d (node %d)", p->name.data(), inside ? "enters" : "leaves", n->areaID, n->id);
-			foreach_const(o, n->outputs) FireLevelEvent(*o, (i32)p->index);
+			foreach_const(o, n->outputs) FireLevelEvent(*o, (i32)p->index, n->id);
 		}
 	}
 }
@@ -1019,8 +1041,9 @@ void World::UpdateLevelEvents()
 		if(localTime < levelEventTimers[i].at) { i++; continue; }
 		const i32 node = levelEventTimers[i].node;
 		const i32 playerIndex = levelEventTimers[i].playerIndex;
+		const i32 fromNode = levelEventTimers[i].fromNode;
 		levelEventTimers.erase(levelEventTimers.begin() + i);
-		FireLevelEvent(node, playerIndex);
+		FireLevelEvent(node, playerIndex, fromNode);
 	}
 	for(i32 i = 0; i < (i32)monsterCalls.size(); ) {
 		MonsterCall& call = monsterCalls[i];
