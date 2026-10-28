@@ -9,6 +9,7 @@
 #include "matchmaker_connector.h"
 #include "guild_store.h"
 #include <mxm/account_progress.h>
+#include "arsenal.h"
 
 static const u32 GEAR_SELECT_OK = 0;
 
@@ -186,6 +187,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 		SendPacket(user.clientHd, gathered);
 
 		const GameXmlContent& content = GetGameXmlContent();
+		const AccountArsenal arsenal = AccountArsenalLoad(user.name.data());
 
 		// SN_ProfileCharacters
 		{
@@ -200,15 +202,19 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 				Sv::SN_ProfileCharacters::Character chara;
 				chara.characterID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (i32)master.classType);
 				chara.creatureIndex = master.ID;
-				chara.skillSlot1 = master.skillIDs[0];
-				chara.skillSlot2 = master.skillIDs[1];
+				SkillID loadout[2];
+				ArsenalSkills(arsenal, master, loadout);
+				chara.skillSlot1 = loadout[0];
+				chara.skillSlot2 = loadout[1];
 				chara.classType = master.classType;
 				chara.x = 0;
 				chara.y = 0;
 				chara.z = 0;
 				chara.characterType = 1;
 				chara.skinIndex = SkinIndex::DEFAULT;
-				chara.weaponIndex = master.weaponIDs[1];
+				const u8 equippedType = arsenal.EquippedType((i32)master.classType);
+				const i32 equipped = ArsenalWeaponIndex(master, equippedType, arsenal.Grade((i32)master.classType, equippedType));
+				chara.weaponIndex = equipped >= 0 ? (WeaponIndex)equipped : master.weaponIDs[1];
 				chara.masterGearNo = gears.SelectedPage((i32)master.classType);
 				packet.Write(chara);
 			}
@@ -235,13 +241,13 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 
 				for(int wi = 0; wi < 3; wi++) {
 					weapon.weaponType = wi+1;
-					// FIXME: because we load weapons from WEAPON.xml instead of CREATURE_CHARACTER.xml
-					// we don't get the default weapons. This can be fixed later when we have a real unlock system.
-					// - LordSk (10/10/2021)
-					weapon.weaponIndex = master.weaponIDs[1 + wi*4];
-					weapon.grade = 0;
-					weapon.isUnlocked = wi == 0;
-					weapon.isActivated = wi == 0;
+					const AccountArsenal::Weapon* state = arsenal.FindWeapon((i32)master.classType, (u8)(wi + 1));
+					const i32 grade = state ? state->grade : 0;
+					const i32 index = ArsenalWeaponIndex(master, (u32)(wi + 1), (u32)grade);
+					weapon.weaponIndex = (WeaponIndex)(index >= 0 ? index : (i32)master.weaponIDs[1 + wi*4]);
+					weapon.grade = index >= 0 ? grade : 0;
+					weapon.isUnlocked = wi == 0 || (state && state->unlocked);
+					weapon.isActivated = 1;
 					packet.Write(weapon);
 				}
 			}
@@ -260,7 +266,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 
 		// SN_ProfileSkills
 		{
-			PacketWriter<Sv::SN_ProfileSkills,8192> packet;
+			PacketWriter<Sv::SN_ProfileSkills,24576> packet;
 			// TODO: split in several packets?
 			packet.Write<u8>(1); // packetNum
 
@@ -278,10 +284,10 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 				for(int si = 0; si < (int)master.skillIDs.size(); si++) {
 					packet.Write(characterID);
 					packet.Write(master.skillIDs[si]);
-					const u8 unlocked = (si < (int)master.skillUnlocked.size()) ? master.skillUnlocked[si] : (u8)1;
+					const u8 unlocked = (si < (int)master.skillUnlocked.size() && !master.skillUnlocked[si]) ? (u8)arsenal.SkillUnlocked((i32)master.classType, (i32)master.skillIDs[si]) : (u8)1;
 					packet.Write<u8>(unlocked);
 					packet.Write<u8>(1);
-					packet.Write<u16>(0);
+					WriteSkillProperties(packet, (i32)master.skillIDs[si], arsenal.SkillLevel((i32)master.skillIDs[si]));
 				}
 			}
 
@@ -922,34 +928,28 @@ void RoomInstance::OnClientPacket(ClientHandle clientHd, const NetHeader& header
 
 		case Cl::CQ_RoomEquipSkill::NET_ID: {
 			User* user = FindUser(clientHd);
-			if(!user || packetSize < 12) break;
+			if(!user || user->isBot || packetSize < 12) break;
 			u32 v[3];
 			memmove(v, packetData, sizeof(v));
 			NT_LOG("[client%x] Client :: CQ_RoomEquipSkill :: %u %u %u", clientHd, v[0], v[1], v[2]);
+			auto found = GetAccountManager().accountMap.find(user->accountUID);
+			if(found == GetAccountManager().accountMap.end()) break;
+			ArsenalResult r;
+			ArsenalHandle(*found->second, header.netID, packetData, packetSize, &r);
+			ArsenalSend(r, [&](const auto& writer) { SendPacket(clientHd, writer); });
+			if(r.result != 0) break;
 			const u32 characterID = v[0];
-			const SkillID skill = SkillID(v[1]);
-			const i32 slot = (i32)v[2];
+			const SkillID skill = SkillID(r.skill);
+			const i32 slot = (i32)r.skillSlot;
 			const ClassType cls = ClassType((i32)characterID - (i32)LocalActorID::FIRST_SELF_MASTER);
-			i32 masterIndex = -1;
+			const AccountArsenal arsenal = AccountArsenalLoad(user->name.data());
+			auto master = GetGameXmlContent().masterClassTypeMap.find(cls);
 			for(int mi = 0; mi < 2; mi++) {
-				if(user->masters[mi].classType == cls) masterIndex = mi;
+				if(user->masters[mi].classType != cls || master == GetGameXmlContent().masterClassTypeMap.end()) continue;
+				ArsenalSkills(arsenal, *master->second, user->masters[mi].skills.data());
+				user->replicate.masterPick = true;
 			}
-			if(masterIndex < 0 || slot < 0 || slot > 1) {
-				WARN("[client%x] CQ_RoomEquipSkill ignored (%u %u %u): master not picked", clientHd, v[0], v[1], v[2]);
-				break;
-			}
-			auto& skills = user->masters[masterIndex].skills;
-			if(skills[slot ^ 1] == skill) skills[slot ^ 1] = skills[slot];
-			skills[slot] = skill;
-			user->replicate.masterPick = true;
-			LOG("[Room] %ls equips skill %d in slot %d of master %d", user->name.data(), (i32)skill, slot, masterIndex);
-
-			Sv::SA_SkillSelect ack;
-			ack.characterID = characterID;
-			ack.result = 0;
-			ack.dwSkillIndex = (u32)skill;
-			ack.dwSkillSlot = (u32)slot;
-			SendPacket(clientHd, ack);
+			LOG("[Room] %ls equips skill %d in slot %d of class %d", user->name.data(), (i32)skill, slot, (i32)cls);
 			Sv::SN_SkillSelect notify;
 			notify.userId = (u32)user->userID;
 			notify.characterID = characterID;
@@ -1052,9 +1052,30 @@ void RoomInstance::OnClientPacket(ClientHandle clientHd, const NetHeader& header
 			}
 		} break;
 
-		case Cl::CQ_RoomEquipWeapon::NET_ID: {
-			NT_LOG("[client%x] Client :: CQ_RoomEquip* :: size=%d", clientHd, packetSize);
-			SendDbgMsg(clientHd, L"Feature not implemented right now sorry :(");
+		case MEASURED_CQ_WEAPON_UNLOCK:
+		case MEASURED_CQ_WEAPON_EQUIP:
+		case MEASURED_CQ_SKILL_UNLOCK:
+		case MEASURED_CQ_WEAPON_UPGRADE: {
+			User* user = FindUser(clientHd);
+			if(!user || user->isBot) break;
+			auto found = GetAccountManager().accountMap.find(user->accountUID);
+			if(found == GetAccountManager().accountMap.end()) break;
+			ArsenalResult r;
+			if(!ArsenalHandle(*found->second, header.netID, packetData, packetSize, &r)) break;
+			ArsenalSend(r, [&](const auto& writer) { SendPacket(clientHd, writer); });
+			if(r.result != 0 || r.answer == MEASURED_CQ_SKILL_UNLOCK) break;
+			const AccountArsenal arsenal = AccountArsenalLoad(user->name.data());
+			for(int mi = 0; mi < 2; mi++) {
+				User::Master& m = user->masters[mi];
+				if(m.classType == ClassType::NONE) continue;
+				auto master = GetGameXmlContent().masterClassTypeMap.find(m.classType);
+				if(master == GetGameXmlContent().masterClassTypeMap.end()) continue;
+				i32 grade = 0;
+				const i32 weapon = ArsenalEquippedWeapon(arsenal, *master->second, &grade);
+				if(weapon < 0) continue;
+				m.weapon = (WeaponIndex)weapon;
+				m.weaponGrade = grade;
+			}
 		} break;
 
 		case Cl::CN_ChannelChatMessage::NET_ID: {
@@ -1149,6 +1170,16 @@ bool RoomInstance::TryPickMaster(User* user, ClassType classType)
 				user->Main().weapon = master.weaponIDs.size() > 1 ? master.weaponIDs[1] : master.weaponIDs[0];
 			}
 			user->Main().weaponGrade = 0;
+			if(!user->isBot) {
+				const AccountArsenal arsenal = AccountArsenalLoad(user->name.data());
+				i32 grade = 0;
+				const i32 owned = ArsenalEquippedWeapon(arsenal, master, &grade);
+				if(owned >= 0) {
+					user->Main().weapon = (WeaponIndex)owned;
+					user->Main().weaponGrade = grade;
+				}
+				ArsenalSkills(arsenal, master, user->Main().skills.data());
+			}
 			user->Main().masterGearNo = user->isBot ? 1 : AccountGearsLoad(user->name.data()).SelectedPage((i32)classType);
 			user->Main().characterType = 1;
 		}
@@ -1164,6 +1195,16 @@ bool RoomInstance::TryPickMaster(User* user, ClassType classType)
 				user->Sub().weapon = master.weaponIDs.size() > 1 ? master.weaponIDs[1] : master.weaponIDs[0];
 			}
 			user->Sub().weaponGrade = 0;
+			if(!user->isBot) {
+				const AccountArsenal arsenal = AccountArsenalLoad(user->name.data());
+				i32 grade = 0;
+				const i32 owned = ArsenalEquippedWeapon(arsenal, master, &grade);
+				if(owned >= 0) {
+					user->Sub().weapon = (WeaponIndex)owned;
+					user->Sub().weaponGrade = grade;
+				}
+				ArsenalSkills(arsenal, master, user->Sub().skills.data());
+			}
 			user->Sub().masterGearNo = user->isBot ? 1 : AccountGearsLoad(user->name.data()).SelectedPage((i32)classType);
 			user->Sub().characterType = 1;
 		}

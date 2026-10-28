@@ -53,6 +53,28 @@ struct AccountGears
 	u8 SelectedPage(i32 classType) const { foreach_const(s, selected) if(s->first == classType) return s->second; return 1; }
 };
 AccountGears AccountGearsLoad(const wchar* nickname);
+struct AccountArsenal
+{
+	struct Weapon { i32 classType = 0; u8 type = 0; u8 grade = 0; u8 unlocked = 0; };
+	eastl::fixed_vector<Weapon,192,false> weapons;
+	eastl::fixed_vector<eastl::pair<i32,i32>,192,false> skills;
+	Weapon* FindWeapon(i32 classType, u8 type) { foreach(w, weapons) if(w->classType == classType && w->type == type) return &*w; return nullptr; }
+	const Weapon* FindWeapon(i32 classType, u8 type) const { foreach_const(w, weapons) if(w->classType == classType && w->type == type) return &*w; return nullptr; }
+	eastl::fixed_vector<eastl::pair<i32,i32>,64,false> equipped;
+	struct SkillLoadout { i32 classType = 0; eastl::array<i32,2> skills = {}; };
+	eastl::fixed_vector<eastl::pair<i32,i32>,192,false> skillLevels;
+	i32 SkillLevel(i32 skill) const { foreach_const(s, skillLevels) if(s->first == skill) return s->second; return 0; }
+	void SetSkillLevel(i32 skill, i32 level) { foreach(s, skillLevels) if(s->first == skill) { s->second = level; return; } if(!skillLevels.full()) skillLevels.push_back(eastl::make_pair(skill, level)); }
+	eastl::fixed_vector<SkillLoadout,64,false> loadouts;
+	const SkillLoadout* FindLoadout(i32 classType) const { foreach_const(l, loadouts) if(l->classType == classType) return &*l; return nullptr; }
+	SkillLoadout* Loadout(i32 classType) { foreach(l, loadouts) if(l->classType == classType) return &*l; if(loadouts.full()) return nullptr; SkillLoadout n; n.classType = classType; loadouts.push_back(n); return &loadouts.back(); }
+	u8 EquippedType(i32 classType) const { foreach_const(e, equipped) if(e->first == classType) return (u8)e->second; return 1; }
+	void SetEquipped(i32 classType, u8 type) { foreach(e, equipped) if(e->first == classType) { e->second = type; return; } if(!equipped.full()) equipped.push_back(eastl::make_pair(classType, (i32)type)); }
+	u8 Grade(i32 classType, u8 type) const { const Weapon* w = FindWeapon(classType, type); return w ? w->grade : 0; }
+	bool SkillUnlocked(i32 classType, i32 skill) const { foreach_const(s, skills) if(s->first == classType && s->second == skill) return true; return false; }
+};
+AccountArsenal AccountArsenalLoad(const wchar* nickname);
+void AccountArsenalSave(const wchar* nickname, const AccountArsenal& arsenal);
 void AccountGearsSave(const wchar* nickname, const AccountGears& gears);
 void AccountInventorySave(const wchar* nickname, const AccountInventory& inventory);
 static const i32 MEASURED_INVENTORY_FIRST_SLOT = 200;

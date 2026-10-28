@@ -15,22 +15,10 @@
 #include "town_rules.h"
 #include "character_base_data.h"
 #include <mxm/account_progress.h>
+#include "arsenal.h"
 
 static const i32 MEASURED_JUKEBOX_HOT_TRACKS[] = { 7770015, 7770005, 7770002 };
 
-template<typename Writer>
-static void WriteInventoryItem(Writer& packet, const AccountItem& item)
-{
-	packet.template Write<u32>(item.uid);
-	packet.template Write<u8>(item.invenType);
-	packet.template Write<i32>(item.slot);
-	packet.template Write<i32>(item.docIndex);
-	packet.template Write<i32>(item.count);
-	packet.template Write<i32>(-1);
-	packet.template Write<u8>(0);
-	packet.template Write<i64>(0);
-	packet.template Write<u16>(0);
-}
 
 #include "mission_progress.h"
 #include "mailbox.h"
@@ -607,6 +595,8 @@ void HubReplication::SendChatWhisperToClient(ClientHandle destClientHd, const wc
 void HubReplication::SendProfileCharactersWeapons(ClientHandle clientHd)
 {
 	const GameXmlContent& content = GetGameXmlContent();
+	const Account* owner = playerAccount[plidMap->Get(clientHd)];
+	const AccountArsenal arsenal = owner ? AccountArsenalLoad(owner->nickname.data()) : AccountArsenal();
 	// SN_ProfileCharacters
 	{
 		PacketWriter<Sv::SN_ProfileCharacters,2048> packet;
@@ -617,15 +607,19 @@ void HubReplication::SendProfileCharactersWeapons(ClientHandle clientHd)
 			Sv::SN_ProfileCharacters::Character chara;
 			chara.characterID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (i32)it->classType);
 			chara.creatureIndex = it->ID;
-			chara.skillSlot1 = it->skillIDs[0];
-			chara.skillSlot2 = it->skillIDs[1];
+			SkillID loadout[2];
+			ArsenalSkills(arsenal, *it, loadout);
+			chara.skillSlot1 = loadout[0];
+			chara.skillSlot2 = loadout[1];
 			chara.classType = it->classType;
 			chara.x = 0;
 			chara.y = 0;
 			chara.z = 0;
 			chara.characterType = 1;
 			chara.skinIndex = SkinIndex::DEFAULT;
-			chara.weaponIndex = it->defaultWeaponIDs[0];
+			const u8 equippedType = arsenal.EquippedType((i32)it->classType);
+			const i32 equipped = ArsenalWeaponIndex(*it, equippedType, arsenal.Grade((i32)it->classType, equippedType));
+			chara.weaponIndex = equipped >= 0 ? (WeaponIndex)equipped : it->defaultWeaponIDs[0];
 			chara.masterGearNo = 1;
 			packet.Write(chara);
 		}
@@ -648,13 +642,13 @@ void HubReplication::SendProfileCharactersWeapons(ClientHandle clientHd)
 
 			for(int wi = 0; wi < 3; wi++) {
 				weapon.weaponType = wi+1;
-				// FIXME: because we load weapons from WEAPON.xml instead of CREATURE_CHARACTER.xml
-				// we don't get the default weapons. This can be fixed later when we have a real unlock system.
-				// - LordSk (10/10/2021)
-				weapon.weaponIndex = master.weaponIDs[1 + wi*4];
-				weapon.grade = 0;
-				weapon.isUnlocked = wi == 0;
-				weapon.isActivated = wi == 0;
+				const AccountArsenal::Weapon* state = arsenal.FindWeapon((i32)master.classType, (u8)(wi + 1));
+				const i32 grade = state ? state->grade : 0;
+				const i32 index = ArsenalWeaponIndex(master, (u32)(wi + 1), (u32)grade);
+				weapon.weaponIndex = (WeaponIndex)(index >= 0 ? index : (i32)master.weaponIDs[1 + wi*4]);
+				weapon.grade = index >= 0 ? grade : 0;
+				weapon.isUnlocked = wi == 0 || (state && state->unlocked);
+				weapon.isActivated = 1;
 				packet.Write(weapon);
 			}
 		}
@@ -667,9 +661,11 @@ void HubReplication::SendProfileCharactersWeapons(ClientHandle clientHd)
 void HubReplication::SendProfileSkillsSkins(ClientHandle clientHd)
 {
 	const GameXmlContent& content = GetGameXmlContent();
+	const Account* owner = playerAccount[plidMap->Get(clientHd)];
+	const AccountArsenal arsenal = owner ? AccountArsenalLoad(owner->nickname.data()) : AccountArsenal();
 	// SN_ProfileSkills
 	{
-		PacketWriter<Sv::SN_ProfileSkills,8192> packet;
+		PacketWriter<Sv::SN_ProfileSkills,24576> packet;
 
 		packet.Write<u8>(1); // packetNum
 
@@ -686,10 +682,10 @@ void HubReplication::SendProfileSkillsSkins(ClientHandle clientHd)
 			for(int si = 0; si < (int)it->skillIDs.size(); si++) {
 				packet.Write(characterID);
 				packet.Write(it->skillIDs[si]);
-				const u8 unlocked = (si < (int)it->skillUnlocked.size()) ? it->skillUnlocked[si] : (u8)1;
+				const u8 unlocked = (si < (int)it->skillUnlocked.size() && !it->skillUnlocked[si]) ? (u8)arsenal.SkillUnlocked((i32)it->classType, (i32)it->skillIDs[si]) : (u8)1;
 				packet.Write<u8>(unlocked);
 				packet.Write<u8>(1);
-				packet.Write<u16>(0);
+				WriteSkillProperties(packet, (i32)it->skillIDs[si], arsenal.SkillLevel((i32)it->skillIDs[si]));
 			}
 		}
 

@@ -175,6 +175,17 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 			if(!desc.gearDocs[0].empty() || !desc.gearDocs[1].empty()) LOG("Gear :: %ls pages (%d, %d) items (%d, %d)", desc.name.data(), (i32)desc.masterGearNo[0], (i32)desc.masterGearNo[1], (i32)desc.gearDocs[0].size(), (i32)desc.gearDocs[1].size());
 		}
 		desc.characterType = p.characterType;
+		if(gameInfo.gameType == GameType::PVE_NORMAL || gameInfo.gameType == GameType::PVE_RANDOM || gameInfo.gameType == GameType::PVE_TICKET) {
+			const AccountArsenal arsenal = AccountArsenalLoad(desc.name.data());
+			for(int mi = 0; mi < 2; mi++) {
+				if(p.masters[mi] == ClassType::NONE) continue;
+				foreach_const(sk, xml.GetMaster(p.masters[mi]).skillIDs) {
+					const i32 level = arsenal.SkillLevel((i32)*sk);
+					if(level > 0 && !desc.stageSkillLevels.full()) desc.stageSkillLevels.push_back(eastl::make_pair((i32)*sk, (u8)level));
+				}
+			}
+			if(!desc.stageSkillLevels.empty()) LOG("Arsenal :: %ls stage skill upgrades %d", desc.name.data(), (i32)desc.stageSkillLevels.size());
+		}
 
 		const auto& master0 = xml.GetMaster(p.masters[0]);
 		const auto& master1 = xml.GetMaster(p.masters[1]);

@@ -51,6 +51,7 @@ bool GameXmlContent::LoadMasterDefinitions()
 			u8 unlocked = 1;
 			if(unlock && (unlock[0] == 'F' || unlock[0] == 'f')) unlocked = 0;
 			master.skillUnlocked.push_back(unlocked);
+			master.skillUnlockOrder.push_back((u8)pSkillElt->IntAttribute("_UnlockOrder", 0));
 			pSkillElt = pSkillElt->NextSiblingElement();
 		} while(pSkillElt);
 
@@ -170,6 +171,12 @@ bool GameXmlContent::LoadMasterWeaponDefinitions()
 		else {
 			Master& master = *found->second;
 			master.weaponIDs.push_back((WeaponIndex)ID);
+		}
+		if(XMLElement* pWeapon = pWeapElt->FirstChildElement("WeaponComData")) {
+			for(XMLElement* r = pWeapon->FirstChildElement("_RequiredIngredients"); r; r = r->NextSiblingElement("_RequiredIngredients")) {
+				auto& list = weaponIngredients[ID];
+				if(!list.full()) list.push_back(eastl::make_pair(r->IntAttribute("_Index"), r->IntAttribute("_Count")));
+			}
 		}
 
 		pWeapElt = pWeapElt->NextSiblingElement();
@@ -1754,6 +1761,50 @@ bool GameXmlContent::LoadBotCreatures()
 	return true;
 }
 
+i32 GameXmlContent::WeaponIndexFor(const Master& master, u32 type, u32 grade) const
+{
+	static const i32 MEASURED_WEAPON_INDEX_BASE = 131100000;
+	if(type < 1 || type > 9) return -1;
+	const i32 doc = MEASURED_WEAPON_INDEX_BASE + (i32)master.classType * 1000 + (i32)type * 10 + (i32)grade + 1;
+	foreach_const(w, master.weaponIDs) if((i32)*w == doc) return doc;
+	return -1;
+}
+
+bool GameXmlContent::LoadServicePrice()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/Design/GAMEINFO/ServicePrice.xml", doc)) return true;
+	XMLElement* price = doc.FirstChildElement() ? doc.FirstChildElement()->FirstChildElement("ST_SERVICEPRICE") : nullptr;
+	if(!price) return true;
+	auto readCost = [](XMLElement* e) {
+		PriceCost c;
+		const char* type = e ? e->Attribute("_Type") : nullptr;
+		c.buyType = type && EA::StdC::Strcmp(type, "BUY_TYPE_CCOIN") == 0 ? 2 : 1;
+		c.amount = e ? e->IntAttribute("_Amount") : 0;
+		return c;
+	};
+	for(XMLElement* e = price->FirstChildElement("_SkillUnlockInfo"); e; e = e->NextSiblingElement("_SkillUnlockInfo")) {
+		const i32 order = e->IntAttribute("_UnlockOrder");
+		if(order >= 0 && order < (i32)skillUnlockCost.size()) skillUnlockCost[order] = readCost(e->FirstChildElement("_Cost"));
+	}
+	for(XMLElement* e = price->FirstChildElement("_WeaponUnlockInfo"); e; e = e->NextSiblingElement("_WeaponUnlockInfo")) {
+		const char* type = e->Attribute("_WeaponType");
+		i32 t = 0;
+		if(type) EA::StdC::Sscanf(type, "WEAPON_TYPE_%d", &t);
+		if(t >= 0 && t < (i32)weaponUnlockCost.size()) weaponUnlockCost[t] = readCost(e->FirstChildElement("_Cost"));
+	}
+	for(XMLElement* e = price->FirstChildElement("_PvESkillUpgradeCost"); e; e = e->NextSiblingElement("_PvESkillUpgradeCost")) {
+		const i32 level = e->IntAttribute("DATAKEY");
+		if(level < 1 || level > (i32)pveSkillUpgradeCost.capacity()) continue;
+		if((i32)pveSkillUpgradeCost.size() < level) pveSkillUpgradeCost.resize(level);
+		pveSkillUpgradeCost[level - 1] = readCost(e);
+	}
+	if(XMLElement* gear = price->FirstChildElement("_MasterGearCostInfo")) {
+		for(XMLElement* e = gear->FirstChildElement("_AddCost"); e && !masterGearAddCost.full(); e = e->NextSiblingElement("_AddCost")) masterGearAddCost.push_back(readCost(e));
+	}
+	return true;
+}
+
 bool GameXmlContent::LoadServiceRule()
 {
 	static const struct { const char* name; GameType type; } GAME_TYPES[] = {
@@ -2727,6 +2778,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadServiceRule();
+	if(!r) return false;
+
+	r = LoadServicePrice();
 	if(!r) return false;
 
 
@@ -3957,6 +4011,10 @@ void GameXmlContent::LoadItemInfos(XMLDocument& doc)
 		item.maxStack = MAX(1, common->IntAttribute("_MaxStack", 1));
 		static const i32 MEASURED_GEAR_FIRST_SLOT = 100;
 		if(pInfo->FirstChildElement("GearComData")) item.firstSlot = MEASURED_GEAR_FIRST_SLOT;
+		static const i32 MEASURED_MATERIAL_FIRST_SLOT = 300;
+		XMLElement* etc = pInfo->FirstChildElement("EtcItemComData");
+		const char* etcType = etc ? etc->Attribute("_Type") : nullptr;
+		if(etcType && EA::StdC::Strcmp(etcType, "ETC_TYPE_INGREDIENT") == 0) item.firstSlot = MEASURED_MATERIAL_FIRST_SLOT;
 		const char* buyType = common->Attribute("_BuyType");
 		if(buyType && EA::StdC::Strcmp(buyType, "BUY_TYPE_GOLD") == 0) item.buyType = 1;
 		else if(buyType && EA::StdC::Strcmp(buyType, "BUY_TYPE_CCOIN") == 0) item.buyType = 2;

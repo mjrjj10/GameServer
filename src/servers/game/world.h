@@ -62,6 +62,7 @@ struct World
 		eastl::array<u8,2> masterGearNo;
 		eastl::array<i32,2> characterType;
 		eastl::array<eastl::fixed_vector<i32,6,false>,2> gearDocs;
+		eastl::fixed_vector<eastl::pair<i32,u8>,12,false> stageSkillLevels;
 	};
 
 	struct Player
@@ -361,7 +362,7 @@ struct World
 			subCharacterType(desc.characterType[1]),
 			gearDocs(desc.gearDocs)
 		{
-
+			foreach_const(s, desc.stageSkillLevels) skillLevels[s->first] = s->second;
 		}
 
 		inline ActorMaster& Main() const { return *characters[mainCharaID]; }

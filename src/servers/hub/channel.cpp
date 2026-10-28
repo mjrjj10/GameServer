@@ -6,6 +6,10 @@
 #include <mxm/account_progress.h>
 #include "game.h"
 #include "town_rules.h"
+#include "arsenal.h"
+
+static const u16 MEASURED_CQ_MASTERGEAR_RENAME = 60066;
+static const u16 MEASURED_CQ_PVP_RECORD = 60228;
 
 bool HubPacketHandler::Init(HubGame* game_)
 {
@@ -35,8 +39,6 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 {
 	const i32 packetSize = header.size - sizeof(NetHeader);
 
-static const u16 MEASURED_CQ_MASTERGEAR_RENAME = 60066;
-static const u16 MEASURED_CQ_PVP_RECORD = 60228;
 #define HANDLE_CASE(PACKET) case Cl::PACKET::NET_ID: { HandlePacket_##PACKET(clientHd, header, packetData, packetSize); } break
 
 	switch(header.netID) {
@@ -91,6 +93,7 @@ static const u16 MEASURED_CQ_PVP_RECORD = 60228;
 		HANDLE_CASE(CQ_UNKNOWN_60118);
 		HANDLE_CASE(CQ_QuickRunArena);
 		case MEASURED_CQ_PVP_RECORD: HandlePvpRecord(clientHd); break;
+		case MEASURED_CQ_WEAPON_UNLOCK: case MEASURED_CQ_WEAPON_EQUIP: case MEASURED_CQ_SKILL_UNLOCK: case MEASURED_CQ_SKILL_EQUIP: case MEASURED_CQ_SKILL_UPGRADE: case MEASURED_CQ_WEAPON_UPGRADE: HandleArsenal(clientHd, header.netID, packetData, packetSize); break;
 		HANDLE_CASE(CQ_GearUnequip);
 		HANDLE_CASE(CQ_MasterGearRepair);
 		case MEASURED_CQ_MASTERGEAR_RENAME: HandleMasterGearRename(clientHd, packetData, packetSize); break;
@@ -907,6 +910,12 @@ void HubPacketHandler::HandlePacket_CQ_QuickRunArena(ClientHandle clientHd, cons
 {
 	NT_LOG("[client%x] Client :: CQ_QuickRunArena", clientHd);
 	game->OnQuickRunArena(clientHd);
+}
+
+void HubPacketHandler::HandleArsenal(ClientHandle clientHd, u16 netID, const u8* packetData, const i32 packetSize)
+{
+	NT_LOG("[client%x] Client :: arsenal request %u (size=%d)", clientHd, (u32)netID, packetSize);
+	game->OnArsenal(clientHd, netID, packetData, packetSize);
 }
 
 void HubPacketHandler::HandlePvpRecord(ClientHandle clientHd)

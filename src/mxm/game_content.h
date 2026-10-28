@@ -552,6 +552,7 @@ struct GameXmlContent
 		eastl::fixed_string<char,64,false> className;
 		eastl::fixed_vector<SkillID,32,false> skillIDs;
 		eastl::fixed_vector<u8,32,false> skillUnlocked;
+		eastl::fixed_vector<u8,32,false> skillUnlockOrder;
 		eastl::fixed_vector<SkinIndex,20,false> skinIDs;
 		eastl::fixed_vector<WeaponIndex,32,false> weaponIDs;
 		eastl::fixed_vector<WeaponIndex,3,false> defaultWeaponIDs;
@@ -576,6 +577,14 @@ struct GameXmlContent
 	eastl::array<i32,(i32)GameType::MAX> gearPowerPercent;
 	i32 GearPowerPercent(GameType type) const { return type > GameType::INVALID && type < GameType::MAX ? gearPowerPercent[(i32)type] : 100; }
 	bool LoadServiceRule();
+	eastl::hash_map<i32, eastl::fixed_vector<eastl::pair<i32,i32>,6,false>> weaponIngredients;
+	struct PriceCost { u8 buyType = 0; i32 amount = 0; };
+	eastl::array<PriceCost,4> weaponUnlockCost = {};
+	eastl::array<PriceCost,4> skillUnlockCost = {};
+	eastl::fixed_vector<PriceCost,8,false> pveSkillUpgradeCost;
+	eastl::fixed_vector<PriceCost,24,false> masterGearAddCost;
+	bool LoadServicePrice();
+	i32 WeaponIndexFor(const Master& master, u32 type, u32 grade) const;
 	const GearItem* FindGearItem(i32 doc) const { auto f = gearItems.find(doc); return f == gearItems.end() ? nullptr : &f->second; }
 
 	struct GroundItemInfo
