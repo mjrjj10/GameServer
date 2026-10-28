@@ -861,6 +861,55 @@ void HubGame::OnGuildPacket(ClientHandle clientHd, u16 netID, const u8* data, i3
 			LOG("[client%x] Guild :: %ls donates %u gold to %ls (+%u fund)", clientHd, nick.data(), gold, guild->name.data(), gain);
 		} break;
 
+		case Cl::CQ_UNKNOWN_60172::NET_ID: {
+			static const i32 HYP_SEARCH_TAIL = 5;
+			static const u8 HYP_SEARCH_ROWS = 8;
+			const eastl::fixed_string<wchar,256> query = buff.ReadWideStringObj();
+			u32 pageNo = 1;
+			u8 rows = HYP_SEARCH_ROWS;
+			if(size >= HYP_SEARCH_TAIL) {
+				ConstBuffer tail(data + size - HYP_SEARCH_TAIL, HYP_SEARCH_TAIL);
+				const u32 p = tail.Read<u32>();
+				const u8 r = tail.Read<u8>();
+				if(p >= 1 && p < 1000) pageNo = p;
+				if(r >= 1 && r <= 50) rows = r;
+			}
+			auto matches = [&](const GuildRecord& g) {
+				if(query.empty()) return true;
+				auto contains = [&](const auto& text) {
+					eastl::fixed_string<wchar,256,true> a(text.data()), b(query.data());
+					a.make_lower();
+					b.make_lower();
+					return a.find(b) != a.npos;
+				};
+				return contains(g.name) || contains(g.tag);
+			};
+			eastl::fixed_vector<const GuildRecord*,256,true> found;
+			foreach_const(g, store.guilds) if(g->joinType != MEASURED_GUILD_JOIN_PRIVATE && matches(*g)) found.push_back(&*g);
+			const u32 maxPage = MAX(((u32)found.size() + rows - 1) / rows, 1u);
+			const u32 first = (pageNo - 1) * rows;
+			PacketWriter<Sv::SA_SearchGuild,4096> answer;
+			answer.Write<u32>(0);
+			answer.Write<u32>(pageNo);
+			answer.Write<u8>(rows);
+			answer.Write<u32>(maxPage);
+			const u32 count = first < found.size() ? MIN((u32)found.size() - first, (u32)rows) : 0;
+			answer.Write<u16>((u16)count);
+			for(u32 i = first; i < first + count; i++) {
+				const GuildRecord& g = *found[i];
+				answer.WriteStringObj(g.name.data());
+				answer.WriteStringObj(g.tag.data());
+				answer.Write<u32>((u32)g.emblemIndex);
+				answer.Write<u8>((u8)GuildLevel(g));
+				answer.Write<u8>(g.joinType);
+				answer.Write<u8>((u8)g.members.size());
+				answer.Write<u8>((u8)GuildMemberMax(g));
+				for(u8 v : g.interest) answer.Write<u8>(v);
+			}
+			replication.SendWriter(clientHd, answer);
+			LOG("[client%x] Guild :: search '%ls' page %u -> %u result(s)", clientHd, query.data(), pageNo, count);
+		} break;
+
 		case Cl::CQ_GetRecommendedGuildList::NET_ID: {
 			const u8 wanted = buff.CanRead(1) ? buff.Read<u8>() : 8;
 			PacketWriter<Sv::SA_GetRecommendedguildlist,4096> answer;

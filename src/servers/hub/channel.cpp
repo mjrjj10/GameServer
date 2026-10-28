@@ -157,6 +157,7 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		case MEASURED_CQ_BUY_GUILD_SKILL:
 		case MEASURED_CQ_EXTEND_GUILD_LIMITED_SKILL:
 		case Cl::CQ_GetRecommendedGuildList::NET_ID:
+		case Cl::CQ_UNKNOWN_60172::NET_ID:
 			game->OnGuildPacket(clientHd, header.netID, packetData, packetSize);
 			break;
 
