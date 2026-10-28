@@ -1,5 +1,11 @@
 <?xml version="1.0"?>
 <STATUS_STAT_MODS>
+  <MOD status="1200100020" stat="STAT_TYPE_LIFESTEAL" value="20" source="GAMETIP_TITAN_LAYOUT_2_DESC_01" />
+  <MOD status="1200100020" stat="STAT_TYPE_STAMINAREGEN" value="5" source="GAMETIP_TITAN_LAYOUT_2_DESC_01" />
+  <MOD status="1200100022" stat="STAT_TYPE_HEALTHREGEN" value="30" source="GAMETIP_TITAN_LAYOUT_2_DESC_02" />
+  <MOD status="1200100022" stat="STAT_TYPE_DEFENCE" value="30" mul="1" source="GAMETIP_TITAN_LAYOUT_2_DESC_02" />
+  <MOD status="1200100021" stat="STAT_TYPE_MANAREGEN" value="10" source="GAMETIP_TITAN_LAYOUT_2_DESC_03" />
+  <MOD status="1200100021" stat="STAT_TYPE_ENERGYREGEN" value="3" source="GAMETIP_TITAN_LAYOUT_2_DESC_03" />
   <MOD status="1200100003" stat="STAT_TYPE_TAG_HEALTHREGEN_VALUE" value="40" samples="6" />
   <MOD status="1200100006" stat="STAT_TYPE_STAMINAREGEN" value="3" samples="6" />
   <MOD status="1200100006" stat="STAT_TYPE_MANAREGEN" value="12" samples="6" />

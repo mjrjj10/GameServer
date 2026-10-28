@@ -799,11 +799,15 @@ struct World
 	void MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const GameXmlContent::MonsterAttack& attack, u32 remoteID);
 	void SendNpcHit(const ActorNpc& attacker, ActorUID targetUID, const vec3& targetPos, i32 remote, u32 remoteID, i32 damage, i32 hp, i32 hpMax);
 	void DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i32 remote, u32 remoteID = 0, i32 status = 0, bool exact = false);
-	void ApplyStatusFromNpc(const ActorNpc& caster, Player& target, i32 statusID);
+	void ApplyStatusFromNpc(const ActorNpc& caster, Player& target, i32 statusID, f32 durationOverride = -1);
+	void WeaponLifesteal(Player& attacker, i32 damage);
 	void DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, i32 remote, i32 status, u32 remoteID = 0);
 	void MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDoc);
 	struct MonsterHit { ActorUID attacker; ActorUID target; Time at; const GameXmlContent::MonsterAttack* attack; u32 remoteID; bool ally; };
 	u32 nextMonsterRemoteID = 0;
+	struct DeathHit { ActorUID helper; Time at; const GameXmlContent::DeathRemote* remote; u32 remoteID; };
+	eastl::fixed_vector<DeathHit,32,true> deathHits;
+	void ApplyDeathHit(const DeathHit& hit);
 	eastl::fixed_vector<MonsterHit,256,true> monsterHits;
 	void UpdateSummonAttack(ActorNpc& npc, f32 delta);
 	void UpdateShowcase();

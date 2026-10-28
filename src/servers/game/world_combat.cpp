@@ -256,6 +256,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		LightAttacker(attacker.body->GetWorldPos(), target.team);
 		attacker.damageDealt += damage;
 		const bool normalHit = proj && skillID == SkillID::INVALID && damageStatusID == 0;
+		if(normalHit) WeaponLifesteal(attacker, damage);
 		attacker.damageStats[END_DMG_MAX_DEALT] = MAX(attacker.damageStats[END_DMG_MAX_DEALT], (u32)damage);
 		attacker.damageStats[normalHit ? END_DMG_NORMAL_DEALT : END_DMG_SKILL_DEALT] += (u32)damage;
 		target.damageStats[END_DMG_TAKEN] += (u32)damage;
@@ -405,6 +406,15 @@ f32 World::NpcHitRadius(const ActorNpc& npc) const
 	return npc.monsterAi ? npc.monsterAi->radius : 0.0f;
 }
 
+void World::WeaponLifesteal(Player& attacker, i32 damage)
+{
+	const f32 ratio = StatusRegenBonus(attacker, StatusMod::LIFESTEAL, false);
+	ActorMaster& chara = attacker.Main();
+	if(ratio <= 0 || damage <= 0 || attacker.dead || chara.hp <= 0 || chara.hp >= chara.hpMax) return;
+	chara.hp = MIN(chara.hp + MAX((i32)(damage * ratio / 100.0f), 1), chara.hpMax);
+	replication->SendStatToAll(chara.UID, (i32)StatType::STAT_TYPE_HEALTH, (f32)chara.hp, (f32)chara.hpMax);
+}
+
 void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage, const Replication::RemoteDamage* remoteHit)
 {
 	if(damage <= 0 || !NpcHittableBy(npc, attacker)) return;
@@ -414,6 +424,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	npc.hp = MAX(npc.hp - AbsorbNpcShield(npc, dealt), 0);
 	if(npc.monsterWeakUntil != Time::ZERO && localTime < npc.monsterWeakUntil) npc.monsterWeakHit = true;
 	if(IsStructure(npc)) attacker.damageStats[END_DMG_BUILDING_DEALT] += (u32)(hpBefore - npc.hp);
+	if(skillID == SkillID::INVALID && remoteHit) WeaponLifesteal(attacker, hpBefore - npc.hp);
 	if(npc.faction == Faction::RED || npc.faction == Faction::BLUE) {
 		RevealToTeam(attacker, (i32)npc.faction);
 		LightAttacker(attacker.body->GetWorldPos(), (i32)npc.faction);
@@ -476,7 +487,7 @@ void World::DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i
 	if(target.hp <= 0) MonsterDie(target, attacker.UID, attacker.docID);
 }
 
-void World::ApplyStatusFromNpc(const ActorNpc& caster, Player& target, i32 statusID)
+void World::ApplyStatusFromNpc(const ActorNpc& caster, Player& target, i32 statusID, f32 durationOverride)
 {
 	const ActorUID prevCaster = statusCasterOverride;
 	const bool prevCenterSet = statusForceCenterSet;
@@ -484,7 +495,7 @@ void World::ApplyStatusFromNpc(const ActorNpc& caster, Player& target, i32 statu
 	statusCasterOverride = caster.UID;
 	statusForceCenterSet = true;
 	statusForceCenter = caster.pos;
-	ApplyStatus(target, target, statusID);
+	ApplyStatus(target, target, statusID, 0, durationOverride);
 	statusCasterOverride = prevCaster;
 	statusForceCenterSet = prevCenterSet;
 	statusForceCenter = prevCenter;

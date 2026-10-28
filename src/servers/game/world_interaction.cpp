@@ -429,6 +429,12 @@ World::ActorNpc& World::SpawnMonster(CreatureIndex docID, i32 localID, const vec
 	npc.actionState = ActionStateID::SPAWN_BEHAVIORSTATE;
 	npc.seed = (i32)RandUint();
 	InitMonsterStats(npc);
+	if(npc.monsterAi && npc.monsterAi->teamBuff != 0 && (faction == Faction::RED || faction == Faction::BLUE)) {
+		foreach(p, players) {
+			if(p->dead || !p->body || (Faction)p->team != faction || p->Main().classType == ClassType::NONE) continue;
+			ApplyStatusFromNpc(npc, *p, npc.monsterAi->teamBuff, STATUS_INFINITE_DURATION_SEC);
+		}
+	}
 	if(const f32 life = GetGameXmlContent().FindMonsterLifeTime((i32)docID)) npc.selfDestructAt = TimeAdd(localTime, TimeMsToTime(life * 1000.0));
 	return npc;
 }

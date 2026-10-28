@@ -198,6 +198,15 @@ void Game::Update(Time localTime_)
 		} break;
 
 		case Phase::Game: {
+			if(!gameEnded && tGameStarted != Time::ZERO && world.winnerTeam < 0 && replication.titanMode) {
+				const i32 scoreLimit = GetGameXmlContent().GetStageScoreLimit((i32)replication.stageIndex);
+				for(i32 team = 0; team < 2 && scoreLimit > 0; team++) {
+					if(world.TeamPoints(team) >= scoreLimit && world.TeamPoints(team) > world.TeamPoints(1 - team)) {
+						world.winnerTeam = team;
+						LOG("Game :: team %d reaches %d points, wins", team, scoreLimit);
+					}
+				}
+			}
 			if(!gameEnded && tGameStarted != Time::ZERO && world.winnerTeam >= 0) EndGame();
 			if(!gameEnded && tGameStarted != Time::ZERO) {
 				f32 limit = GetGameXmlContent().GetStageTimeLimit((i32)replication.stageIndex);

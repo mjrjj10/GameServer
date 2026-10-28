@@ -53,6 +53,43 @@ bool World::MonsterHostile(const ActorNpc& monster, const Player& player) const
 	return FactionsOppose(monster.faction, (Faction)player.team) && monster.monsterAi->Hates(playerTag);
 }
 
+static const u32 MONSTER_REMOTE_ID_BASE = 0xC0000000u;
+static const u32 MONSTER_REMOTE_ID_MASK = 0x3FFFFFFFu;
+static const f32 DEATH_HIT_KEEP_SEC = 1.0f;
+
+void World::ApplyDeathHit(const DeathHit& hit)
+{
+	ActorNpc* helper = FindNpcActor(hit.helper);
+	if(!helper) return;
+	const GameXmlContent::DeathRemote& d = *hit.remote;
+	const bool teamed = helper->faction == Faction::RED || helper->faction == Faction::BLUE;
+	const i32 damage = (i32)(MonsterAttackPower(*helper) * d.multiplier + 0.5f);
+	const i32 firstStatus = d.statuses.empty() ? 0 : d.statuses[0];
+	if(d.pc) {
+		foreach(p, players) {
+			if(p->dead || !p->body || p->untargetable) continue;
+			const bool ally = teamed && (Faction)p->team == helper->faction;
+			if(ally != d.ally || (!teamed && d.ally)) continue;
+			if(glm::length(vec2(p->body->GetWorldPos()) - vec2(helper->pos)) > d.radius) continue;
+			if(damage > 0 && !d.ally) DamagePlayerFromNpc(*helper, *p, damage, d.remote, firstStatus, hit.remoteID);
+			else if(firstStatus != 0) ApplyStatusFromNpc(*helper, *p, firstStatus);
+			for(i32 s = 1; s < (i32)d.statuses.size(); s++) if(!p->dead) ApplyStatusFromNpc(*helper, *p, d.statuses[s]);
+		}
+	}
+	if(d.npc) {
+		foreach(o, actorNpcList) {
+			if(&*o == helper || o->hp <= 0 || o->removeAt != Time::ZERO || !o->monsterAi || (o->faction != Faction::RED && o->faction != Faction::BLUE)) continue;
+			const bool ally = teamed && o->faction == helper->faction;
+			if(ally != d.ally) continue;
+			if(glm::length(vec2(o->pos) - vec2(helper->pos)) > d.radius + o->monsterAi->radius) continue;
+			if(damage > 0 && !d.ally) DamageNpcFromNpc(*helper, *o, damage, d.remote, hit.remoteID, firstStatus);
+			else if(firstStatus != 0) ApplyStatusToNpcFromNpc(*helper, *o, firstStatus);
+			for(i32 s = 1; s < (i32)d.statuses.size(); s++) if(o->hp > 0) ApplyStatusToNpcFromNpc(*helper, *o, d.statuses[s]);
+		}
+	}
+	LOG("Monster :: creature=%d death remote %d (%s, radius %.0f, damage %d)", (i32)helper->docID, d.remote, d.ally ? "allies" : "enemies", d.radius, damage);
+}
+
 void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDoc)
 {
 	if(npc.removeAt != Time::ZERO) return;
@@ -66,6 +103,20 @@ void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDo
 	const f32 destroy = npc.monsterAi ? npc.monsterAi->destroy : 0.0f;
 	npc.removeAt = TimeAdd(localTime, TimeMsToTime(MAX(destroy, 1.0f) * 1000.0));
 	LOG("Monster :: creature=%d (local %d) dies at (%.0f, %.0f) t=%.1f killer=%d", (i32)npc.docID, npc.localID, npc.pos.x, npc.pos.y, GameTimeSec(), (i32)killerDoc);
+	if(npc.monsterAi && npc.monsterAi->teamBuff != 0) {
+		foreach(p, players) if((Faction)p->team == npc.faction) ConsumeStatus(p->index, npc.monsterAi->teamBuff);
+	}
+	if(const auto* deaths = GetGameXmlContent().FindDeathRemotes((i32)npc.docID)) {
+		f32 longest = 0;
+		const u32 remoteID = MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID++ & MONSTER_REMOTE_ID_MASK);
+		for(const auto& d : *deaths) {
+			if(deathHits.full()) break;
+			deathHits.push_back({ npc.UID, TimeAdd(localTime, TimeMsToTime(d.delay * 1000.0)), &d, remoteID });
+			longest = MAX(longest, d.delay);
+		}
+		const Time keep = TimeAdd(localTime, TimeMsToTime((longest + DEATH_HIT_KEEP_SEC) * 1000.0));
+		if(npc.removeAt < keep) npc.removeAt = keep;
+	}
 	GrantMonsterKillExp(npc, killerUID);
 	GrantMonsterKillPoints(npc, killerUID);
 	OnMonsterDeath(npc, killerUID);
@@ -75,8 +126,9 @@ void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDo
 		const Faction faction = npc.faction;
 		const bool titan = npc.monsterAi && MonsterTargetKind(*npc.monsterAi) == GameXmlContent::MonsterAttack::TITAN;
 		eastl::fixed_vector<ActorUID,4,false> helpers;
+		const Faction helperFaction = titan && (faction == Faction::RED || faction == Faction::BLUE) ? (faction == Faction::RED ? Faction::BLUE : Faction::RED) : Faction::MONSTER;
 		for(const i32 s : *spawns) {
-			ActorNpc& helper = SpawnMonster((CreatureIndex)s, 0, pos, rot, Faction::MONSTER, -1);
+			ActorNpc& helper = SpawnMonster((CreatureIndex)s, 0, pos, rot, helperFaction, -1);
 			if(!helpers.full()) helpers.push_back(helper.UID);
 		}
 		if(titan && !helpers.empty()) StartTitanVictory(faction, pos, helpers.front(), helpers.back());
@@ -155,8 +207,6 @@ void World::UpdateNpcVictory(ActorNpc& npc)
 	}
 }
 
-static const u32 MONSTER_REMOTE_ID_BASE = 0xC0000000u;
-static const u32 MONSTER_REMOTE_ID_MASK = 0x3FFFFFFFu;
 
 void World::SendNpcHit(const ActorNpc& attacker, ActorUID targetUID, const vec3& targetPos, i32 remote, u32 remoteID, i32 damage, i32 hp, i32 hpMax)
 {
@@ -233,6 +283,12 @@ void World::MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const Gam
 
 void World::UpdateMonsterHits()
 {
+	for(i32 i = 0; i < (i32)deathHits.size(); ) {
+		if(localTime < deathHits[i].at) { i++; continue; }
+		const DeathHit hit = deathHits[i];
+		deathHits.erase(deathHits.begin() + i);
+		ApplyDeathHit(hit);
+	}
 	for(i32 i = 0; i < (i32)monsterHits.size(); ) {
 		if(localTime < monsterHits[i].at) { i++; continue; }
 		const MonsterHit hit = monsterHits[i];

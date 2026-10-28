@@ -161,7 +161,7 @@ struct SummonInfo
 
 struct StatusMod
 {
-	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE, ATTACK, MOVESPEED, REFLECT_DAMAGE_RATIO, DEFENCE, MANAREGEN, RAGEREGEN, STAMINA, REMOTESPEED, STAMINAREGEN, ENERGYREGEN, TAG_HEALTHREGEN, TAG_COOLTIME };
+	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE, ATTACK, MOVESPEED, REFLECT_DAMAGE_RATIO, DEFENCE, MANAREGEN, RAGEREGEN, STAMINA, REMOTESPEED, STAMINAREGEN, ENERGYREGEN, TAG_HEALTHREGEN, TAG_COOLTIME, HEALTHREGEN, LIFESTEAL };
 	Stat stat = OTHER;
 	bool regen = false;
 	bool mul = false;
@@ -977,6 +977,7 @@ struct GameXmlContent
 		f32 groggyTime = 0;
 		f32 spawnTime = 0;
 		i32 masterMark = 0;
+		i32 teamBuff = 0;
 		eastl::array<ActionStateID,2> victoryStates = {{ ActionStateID::INVALID, ActionStateID::INVALID }};
 		eastl::array<f32,2> victoryTimes = {{ 0, 0 }};
 		eastl::fixed_vector<i32,4,false> victoryStatuses;
@@ -1062,6 +1063,10 @@ struct GameXmlContent
 	eastl::hash_map<i32, eastl::fixed_vector<i32,4,false>> monsterDieSpawn;
 	eastl::hash_map<i32, f32> monsterLifeTime;
 	const eastl::fixed_vector<i32,4,false>* FindMonsterDieSpawn(i32 creatureID) const { auto f = monsterDieSpawn.find(creatureID); return f == monsterDieSpawn.end() ? nullptr : &f->second; }
+	struct DeathRemote { i32 remote = 0; f32 delay = 0; f32 radius = 0; f32 multiplier = 0; eastl::fixed_vector<i32,4,false> statuses; bool ally = false; bool pc = false; bool npc = false; };
+	eastl::hash_map<i32, eastl::fixed_vector<DeathRemote,4,false>> deathRemotes;
+	const eastl::fixed_vector<DeathRemote,4,false>* FindDeathRemotes(i32 creatureID) const { auto f = deathRemotes.find(creatureID); return f == deathRemotes.end() ? nullptr : &f->second; }
+	bool LoadDeathRemotes();
 	f32 FindMonsterLifeTime(i32 creatureID) const { auto f = monsterLifeTime.find(creatureID); return f == monsterLifeTime.end() ? 0.0f : f->second; }
 	f32 monsterGrowthPeriod = 0;
 	i32 monsterGrowthCap = 0;
@@ -1262,6 +1267,7 @@ struct GameXmlContent
 		return 0;
 	}
 	f32 GetStageTimeLimit(i32 stageID) const { auto f = stageTimeLimit.find(stageID); return f == stageTimeLimit.end() ? 0 : f->second; }
+	i32 GetStageScoreLimit(i32 stageID) const { auto f = stageScoreLimit.find(stageID); return f == stageScoreLimit.end() ? 0 : f->second; }
 	const GroundItemInfo* FindGroundItem(i32 id) const { auto f = groundItemMap.find(id); return f == groundItemMap.end() ? nullptr : &f->second; }
 	const DropGroup* FindDropGroup(i32 id) const { auto f = dropGroupMap.find(id); return f == dropGroupMap.end() ? nullptr : &f->second; }
 	const SummonInfo* FindSummon(i32 creatureID) const { auto f = summonMap.find(creatureID); return f == summonMap.end() ? nullptr : &f->second; }
@@ -1354,6 +1360,7 @@ private:
 	eastl::hash_map<u64, f32> aniSeqTime;
 	eastl::hash_map<u64, MoveCurve> moveCurves;
 	eastl::hash_map<i32, f32> stageTimeLimit;
+	eastl::hash_map<i32, i32> stageScoreLimit;
 	eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,48,false>, f32>,128,true> lieEndTime;
 	eastl::hash_map<i32, Element> creatureElement;
 	bool LoadStatusData();

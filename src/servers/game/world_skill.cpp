@@ -147,6 +147,12 @@ void World::UpdateUltimateGauges(f32 delta)
 				regen(mainUID, (i32)StatType::STAT_TYPE_ULTIMATE, it->ultGauge, ultMax, MasterStat(cls, STAT_ULTIMATEREGEN));
 				regen(mainUID, STAT_STAMINA, it->stamina, staminaMax, staminaRegen);
 				regen(mainUID, STAT_MANA, it->mana, manaMax, manaRegen);
+				ActorMaster& mainChara = it->Main();
+				const i32 hpRegen = (i32)StatusRegenBonus(*it, StatusMod::HEALTHREGEN, false);
+				if(hpRegen > 0 && mainChara.hp > 0 && mainChara.hp < mainChara.hpMax) {
+					mainChara.hp = MIN(mainChara.hp + hpRegen, mainChara.hpMax);
+					replication->SendStatToAll(mainUID, (i32)StatType::STAT_TYPE_HEALTH, (f32)mainChara.hp, (f32)mainChara.hpMax, STAT_REASON_REGEN);
+				}
 				for(int r = 0; r < 3; r++) {
 					f32 amount = r == 1 ? rageRegen : r == 0 ? energyRegen : MasterStat(cls, RESOURCES[r].regenStat);
 					if(r == 1 && amount < 0 && localTime < TimeAdd(it->rageGainAt, TimeMsToTime(RAGE_DECAY_DELAY_MS))) amount = 0;

@@ -1102,6 +1102,7 @@ bool GameXmlContent::LoadMonsterAi()
 		ai.groggyTime = pInfo->FloatAttribute("groggyTime");
 		ai.spawnTime = pInfo->FloatAttribute("spawnTime");
 		ai.masterMark = pInfo->IntAttribute("masterMark");
+		ai.teamBuff = pInfo->IntAttribute("teamBuff");
 		if(const char* hpBuffs = pInfo->Attribute("hpBuffs")) {
 			const char* at = hpBuffs;
 			while(*at && !ai.hpBuffs.full()) {
@@ -2575,6 +2576,9 @@ bool GameXmlContent::Load()
 	r = LoadSightData();
 	if(!r) return false;
 
+	r = LoadDeathRemotes();
+	if(!r) return false;
+
 	r = LoadStageTimeLimits();
 	if(!r) return false;
 
@@ -3174,6 +3178,8 @@ static StatusMod::Stat StatusModStatFromName(const char* stat)
 		{ "STAT_TYPE_ENERGYREGEN", StatusMod::ENERGYREGEN },
 		{ "STAT_TYPE_TAG_HEALTHREGEN_VALUE", StatusMod::TAG_HEALTHREGEN },
 		{ "STAT_TYPE_TAG_COOLTIME", StatusMod::TAG_COOLTIME },
+		{ "STAT_TYPE_HEALTHREGEN", StatusMod::HEALTHREGEN },
+		{ "STAT_TYPE_LIFESTEAL", StatusMod::LIFESTEAL },
 	};
 	for(const auto& n : NAMES) {
 		if(EA::StdC::Strcmp(stat, n.name) == 0) return n.stat;
@@ -3507,6 +3513,31 @@ void GameXmlContent::LoadSummonInfo(XMLElement* pInfo)
 	}
 }
 
+bool GameXmlContent::LoadDeathRemotes()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/DeathRemotes.xml", doc)) return true;
+	i32 count = 0;
+	for(XMLElement* pD = doc.FirstChildElement()->FirstChildElement("DEATH"); pD; pD = pD->NextSiblingElement("DEATH")) {
+		auto& list = deathRemotes[pD->IntAttribute("doc")];
+		if(list.full()) continue;
+		DeathRemote d;
+		d.remote = pD->IntAttribute("remote");
+		d.delay = pD->FloatAttribute("delay");
+		d.radius = pD->FloatAttribute("radius");
+		d.multiplier = pD->FloatAttribute("multiplier");
+		ParseIdList(pD->Attribute("status"), d.statuses);
+		const char* group = pD->Attribute("group");
+		d.ally = group && EA::StdC::Strcmp(group, "ally") == 0;
+		d.pc = pD->IntAttribute("pc") != 0;
+		d.npc = pD->IntAttribute("npc") != 0;
+		list.push_back(d);
+		count++;
+	}
+	LOG("Loaded %d death remotes", count);
+	return true;
+}
+
 bool GameXmlContent::LoadSightData()
 {
 	static const wchar* CREATURE_FILES[] = { L"/client/CREATURE_CHARACTER.xml", L"/client/CREATURE_MONSTER_PvP.xml", L"/client/CREATURE_MONSTER_SUMMON.xml" };
@@ -3552,7 +3583,13 @@ bool GameXmlContent::LoadStageTimeLimits()
 		for(XMLElement* pC = pSet ? pSet->FirstChildElement("_MCONDITION") : nullptr; pC; pC = pC->NextSiblingElement("_MCONDITION")) {
 			const char* type = nullptr;
 			pC->QueryStringAttribute("_Type", &type);
-			if(!type || EA::StdC::Strcmp(type, "E_CONDITION_TYPE_TIME_COUNT") != 0) continue;
+			if(!type) continue;
+			if(EA::StdC::Strcmp(type, "E_CONDITION_TYPE_PVP_SCORE") == 0) {
+				const i32 score = pC->IntAttribute("_Value");
+				if(score > 0) stageScoreLimit[id] = score;
+				continue;
+			}
+			if(EA::StdC::Strcmp(type, "E_CONDITION_TYPE_TIME_COUNT") != 0) continue;
 			f32 v = 0;
 			pC->QueryFloatAttribute("_Value", &v);
 			if(v > 0) stageTimeLimit[id] = v;
