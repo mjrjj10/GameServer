@@ -3286,6 +3286,7 @@ DEFAULT_SERIALIZE(Sv::SA_MastergearAdd);
 DEFAULT_SERIALIZE(Sv::SN_MissionUpdate);
 DEFAULT_SERIALIZE(Sv::SN_RecommendedfriendList);
 DEFAULT_SERIALIZE(Sv::SA_SearchGuild);
+DEFAULT_SERIALIZE(Sv::SN_ActiveIngameEventList);
 DEFAULT_SERIALIZE(Sv::SA_TitleSelect);
 DEFAULT_SERIALIZE(Sv::SA_SkillUnlock);
 DEFAULT_SERIALIZE(Sv::SA_PvpDetailRecord);

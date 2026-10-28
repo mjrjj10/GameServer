@@ -189,6 +189,17 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 
 		const GameXmlContent& content = GetGameXmlContent();
 		const AccountArsenal arsenal = AccountArsenalLoad(user.name.data());
+		{
+			PacketWriter<Sv::SN_ActiveIngameEventList,128> packet;
+			eastl::fixed_vector<i32,16,false> active;
+			foreach_const(ev, content.activeGameEvents) {
+				const bool stageMatch = eastl::find(ev->stages.begin(), ev->stages.end(), (i32)stageIndex) != ev->stages.end();
+				if(stageMatch || (ev->stages.empty() && ev->gameTypes.empty())) active.push_back(ev->index);
+			}
+			packet.Write<u16>((u16)active.size());
+			foreach_const(i, active) packet.Write<i32>(*i);
+			SendPacket(user.clientHd, packet);
+		}
 
 		// SN_ProfileCharacters
 		{
