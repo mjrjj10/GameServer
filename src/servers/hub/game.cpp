@@ -637,6 +637,8 @@ void HubGame::OnCreateParty(ClientHandle clientHd, EntrySystemID entry, StageTyp
 	pendingPartyEntry[userID] = entry;
 	pendingPartyStage[userID] = stageType;
 	pendingPartyGameType[userID] = GameType::PVP_NORMAL;
+	pendingPartyDefinition[userID] = GameDefinition::System;
+	pendingPartySelectMaster[userID] = 0;
 	pendingPartyStageIndex[userID] = StageIndex(0);
 
 	// TODO: validate args
@@ -671,7 +673,179 @@ bool HubGame::SetPartyStage(Party& party, StageIndex stage)
 	return true;
 }
 
-void HubGame::OnPartyModify(ClientHandle clientHd, StageIndex stage, GameType gameType)
+i32 HubGame::PartyTeamCapacity(const Party& party, u32 team) const
+{
+	if(team == MEASURED_PARTY_TEAM_SPECTATOR) return MEASURED_CUSTOM_SPECTATOR_SLOTS;
+	const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(party.stageIndex);
+	return stage && stage->joinMemberMax > 0 ? stage->joinMemberMax : 1;
+}
+
+bool HubGame::PartyPlaceMember(Party& party, Party::Member* member) const
+{
+	i32 counts[2] = { 0, 0 };
+	foreach_const(m, party.memberList) {
+		if(m->team == MEASURED_PARTY_TEAM_RED) counts[0]++;
+		if(m->team == MEASURED_PARTY_TEAM_BLUE) counts[1]++;
+	}
+	const u32 order[3] = {
+		counts[1] < counts[0] ? MEASURED_PARTY_TEAM_BLUE : MEASURED_PARTY_TEAM_RED,
+		counts[1] < counts[0] ? MEASURED_PARTY_TEAM_RED : MEASURED_PARTY_TEAM_BLUE,
+		MEASURED_PARTY_TEAM_SPECTATOR,
+	};
+	for(u32 team : order) {
+		for(i32 slot = 0; slot < PartyTeamCapacity(party, team); slot++) {
+			bool taken = false;
+			foreach_const(m, party.memberList) if(m->team == team && m->slot == slot) taken = true;
+			if(taken) continue;
+			member->team = team;
+			member->slot = (u8)slot;
+			return true;
+		}
+	}
+	return false;
+}
+
+const wchar* HubGame::PartyMemberName(const Party::Member& member) const
+{
+	if(member.isBot) return MEASURED_PARTY_BOT_NAME;
+	auto h = accountClientHandleMap.find(member.accountUID);
+	if(h == accountClientHandleMap.end()) return L"";
+	return playerAccountData[plidMap->Get(h->second)]->nickname.data();
+}
+
+void HubGame::SendCustomPartyJoinAnswer(ClientHandle clientHd, const Party& party, u32 myTeam)
+{
+	const u32 otherTeam = myTeam == MEASURED_PARTY_TEAM_BLUE ? MEASURED_PARTY_TEAM_RED : MEASURED_PARTY_TEAM_BLUE;
+	const u32 teams[3] = { myTeam == MEASURED_PARTY_TEAM_SPECTATOR ? MEASURED_PARTY_TEAM_RED : myTeam, myTeam == MEASURED_PARTY_TEAM_SPECTATOR ? MEASURED_PARTY_TEAM_BLUE : otherTeam, MEASURED_PARTY_TEAM_SPECTATOR };
+	eastl::fixed_vector<HubReplication::PartySlot,16,false> slots[3];
+	for(i32 k = 0; k < 3; k++) {
+		for(i32 s = 0; s < PartyTeamCapacity(party, teams[k]); s++) {
+			HubReplication::PartySlot slot = { 0, L"", 0 };
+			foreach_const(m, party.memberList) {
+				if(m->team != teams[k] || m->slot != s) continue;
+				slot = { m->userId, PartyMemberName(*m), (u8)m->isBot };
+			}
+			slots[k].push_back(slot);
+		}
+	}
+	replication.SendCustomPartyJoinAnswer(clientHd, (i32)party.UID, party.stageType, party.gameType, party.gameDefinition,
+		slots[0].data(), (i32)slots[0].size(), teams[0], slots[1].data(), (i32)slots[1].size(), teams[1], slots[2].data(), (i32)slots[2].size(), myTeam == MEASURED_PARTY_TEAM_SPECTATOR);
+}
+
+void HubGame::OnPartySwapTeam(ClientHandle clientHd, u32 originTeam, u8 originSlot, u32 targetTeam, u8 targetSlot)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	Party* party = FindPlayerParty(userID);
+	const auto validTeam = [](u32 t) { return t == MEASURED_PARTY_TEAM_RED || t == MEASURED_PARTY_TEAM_BLUE || t == MEASURED_PARTY_TEAM_SPECTATOR; };
+	if(!party || party->gameDefinition != GameDefinition::User || party->memberList.front().accountUID != playerAccountData[userID]->UID ||
+	   !validTeam(originTeam) || !validTeam(targetTeam) || originSlot >= PartyTeamCapacity(*party, originTeam) || targetSlot >= PartyTeamCapacity(*party, targetTeam)) {
+		replication.SendPartySwapTeamAnswer(clientHd, HYP_PARTY_CUSTOM_REFUSED);
+		return;
+	}
+	foreach(m, party->memberList) {
+		if(m->team == originTeam && m->slot == originSlot) { m->team = targetTeam; m->slot = targetSlot; }
+		else if(m->team == targetTeam && m->slot == targetSlot) { m->team = originTeam; m->slot = originSlot; }
+	}
+	replication.SendPartySwapTeamAnswer(clientHd, 0);
+	foreach_const(m, party->memberList) {
+		auto h = accountClientHandleMap.find(m->accountUID);
+		if(h != accountClientHandleMap.end() && !m->isBot) replication.SendPartySwapTeam(h->second, originTeam, originSlot, targetTeam, targetSlot);
+	}
+	LOG("[client%x] HubGame :: party %u swaps (%u,%u) and (%u,%u)", clientHd, (u32)party->UID, originTeam, (u32)originSlot, targetTeam, (u32)targetSlot);
+}
+
+void HubGame::OnPartyAddBot(ClientHandle clientHd)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	Party* party = FindPlayerParty(userID);
+	Party::Member bot;
+	bot.accountUID = AccountUID::INVALID;
+	bot.isBot = true;
+	if(!party || party->gameDefinition != GameDefinition::User || party->memberList.front().accountUID != playerAccountData[userID]->UID || party->memberList.full() || !PartyPlaceMember(*party, &bot) || bot.team == MEASURED_PARTY_TEAM_SPECTATOR) {
+		replication.SendPartyAddBotAnswer(clientHd, HYP_PARTY_CUSTOM_REFUSED);
+		return;
+	}
+	bot.userId = 2;
+	for(bool taken = true; taken; ) {
+		taken = false;
+		foreach_const(m, party->memberList) if(m->userId == bot.userId) { taken = true; bot.userId++; break; }
+	}
+	party->memberList.push_back(bot);
+	foreach_const(m, party->memberList) {
+		auto h = accountClientHandleMap.find(m->accountUID);
+		if(h == accountClientHandleMap.end() || m->isBot) continue;
+		replication.SendPartyJoin(h->second, bot.userId, MEASURED_PARTY_BOT_NAME, CreatureIndex::Invalid, m == party->memberList.begin(), party->gameType, party->gameDefinition, bot.team, bot.slot, true);
+	}
+	replication.SendPartyAddBotAnswer(clientHd, 0);
+	LOG("[client%x] HubGame :: party %u adds a bot in team %u slot %u", clientHd, (u32)party->UID, bot.team, (u32)bot.slot);
+}
+
+void HubGame::OnPartyRemoveBot(ClientHandle clientHd, u32 userId)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	Party* party = FindPlayerParty(userID);
+	if(!party || party->memberList.front().accountUID != playerAccountData[userID]->UID) {
+		replication.SendPartyRemoveBotAnswer(clientHd, HYP_PARTY_CUSTOM_REFUSED);
+		return;
+	}
+	bool removed = false;
+	for(auto m = party->memberList.begin(); m != party->memberList.end(); ++m) {
+		if(!m->isBot || m->userId != userId) continue;
+		party->memberList.erase(m);
+		removed = true;
+		break;
+	}
+	if(removed) {
+		foreach_const(m, party->memberList) {
+			auto h = accountClientHandleMap.find(m->accountUID);
+			if(h == accountClientHandleMap.end() || m->isBot) continue;
+			replication.SendPartyLeave(h->second, userId, MEASURED_PARTY_BOT_NAME, m == party->memberList.begin());
+		}
+	}
+	replication.SendPartyRemoveBotAnswer(clientHd, removed ? 0 : HYP_PARTY_CUSTOM_REFUSED);
+	LOG("[client%x] HubGame :: party %u removes bot %u (%s)", clientHd, (u32)party->UID, userId, removed ? "done" : "not found");
+}
+
+void HubGame::OnStartGame(ClientHandle clientHd)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	Party* party = FindPlayerParty(userID);
+	if(!party || party->gameDefinition != GameDefinition::User) {
+		replication.SendStartGame(clientHd, 0);
+		OnEnqueueGame(clientHd);
+		return;
+	}
+	if(party->memberList.front().accountUID != playerAccountData[userID]->UID) {
+		replication.SendStartGame(clientHd, HYP_PARTY_CUSTOM_REFUSED);
+		return;
+	}
+	In::CustomTeams custom;
+	memset(&custom, 0, sizeof(custom));
+	bool aiFill = false;
+	foreach_const(m, party->memberList) if(m->isBot) aiFill = true;
+	if(aiFill) {
+		for(u8 team = 0; team < 2; team++) {
+			i32 used = 0;
+			const u32 teamType = team == 0 ? MEASURED_PARTY_TEAM_RED : MEASURED_PARTY_TEAM_BLUE;
+			foreach_const(m, party->memberList) if(m->team == teamType && !m->isBot) used++;
+			custom.bots[team] = (u8)MAX(PartyTeamCapacity(*party, teamType) - used, 0);
+		}
+	}
+	foreach_const(m, party->memberList) {
+		if(m->team != MEASURED_PARTY_TEAM_RED && m->team != MEASURED_PARTY_TEAM_BLUE) continue;
+		const u8 team = m->team == MEASURED_PARTY_TEAM_RED ? 0 : 1;
+		if(m->isBot) continue;
+		if(custom.count >= custom.accounts.size()) continue;
+		custom.accounts[custom.count] = m->accountUID;
+		custom.teams[custom.count] = team;
+		custom.count++;
+	}
+	replication.SendStartGame(clientHd, 0);
+	matchmaker->QueryPartyEnqueue(party->UID, party->areaIndex, party->stageIndex, party->mapIndex, party->gameType, &custom, party->selectMasterType != 0);
+	LOG("[client%x] HubGame :: custom party %u starts (%u player(s), %u + %u bot(s))", clientHd, (u32)party->UID, (u32)custom.count, (u32)custom.bots[0], (u32)custom.bots[1]);
+}
+
+void HubGame::OnPartyModify(ClientHandle clientHd, StageIndex stage, GameType gameType, GameDefinition gameDefinition, u8 selectMasterType)
 {
 	const i32 userID = plidMap->Get(clientHd);
 	if(gameType <= GameType::INVALID || gameType >= GameType::MAX) {
@@ -679,6 +853,8 @@ void HubGame::OnPartyModify(ClientHandle clientHd, StageIndex stage, GameType ga
 		return;
 	}
 	pendingPartyGameType[userID] = gameType;
+	pendingPartyDefinition[userID] = gameDefinition;
+	pendingPartySelectMaster[userID] = selectMasterType;
 	if(stage != StageIndex(0)) pendingPartyStageIndex[userID] = stage;
 	const PartyUID partyUID = playerMap[userID]->partyUID;
 	if(partyUID == PartyUID::INVALID) return;
@@ -686,7 +862,14 @@ void HubGame::OnPartyModify(ClientHandle clientHd, StageIndex stage, GameType ga
 	if(f == partyMap.end()) return;
 	if(f->second->memberList.front().accountUID != playerAccountData[userID]->UID) return;
 	f->second->gameType = gameType;
+	f->second->gameDefinition = gameDefinition;
+	f->second->selectMasterType = selectMasterType;
 	if(stage != StageIndex(0) && !SetPartyStage(*f->second, stage)) WARN("[client%x] WARNING: stage %d not available for entry %d", clientHd, (i32)stage, (i32)f->second->entry);
+	if(gameDefinition == GameDefinition::User) {
+		Party::Member& leader = f->second->memberList.front();
+		leader.team = 0;
+		PartyPlaceMember(*f->second, &leader);
+	}
 	const AccountFriends friends = AccountFriendsLoad(playerAccountData[userID]->nickname.data());
 	foreach_const(n, friends.friends) {
 		const i32 friendID = FindUserByNickname(*n);
@@ -746,7 +929,7 @@ void HubGame::OnPartyInvite(ClientHandle clientHd, const wchar* nickname, i32 ni
 		party->invites.push_back(targetUID);
 	}
 	LOG("[client%x] HubGame :: %ls invites %ls to party %u", clientHd, playerAccountData[userID]->nickname.data(), target.data(), (u32)party->UID);
-	replication.SendPartyInvite(playerMap[targetID]->clientHd, playerAccountData[userID]->nickname.data(), party->stageIndex, party->gameType, (i32)party->UID);
+	replication.SendPartyInvite(playerMap[targetID]->clientHd, playerAccountData[userID]->nickname.data(), party->stageIndex, party->gameType, party->gameDefinition, (i32)party->UID);
 }
 
 void HubGame::OnPartyInviteAccept(ClientHandle clientHd, i32 partyID)
@@ -767,7 +950,9 @@ void HubGame::OnPartyInviteAccept(ClientHandle clientHd, i32 partyID)
 	}
 	party.invites.erase(invite);
 	const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(party.stageIndex);
-	const i32 capacity = stage && stage->joinMemberMax > 0 ? stage->joinMemberMax : (i32)party.memberList.capacity();
+	const bool customParty = party.gameDefinition == GameDefinition::User;
+	const i32 teamSize = stage && stage->joinMemberMax > 0 ? stage->joinMemberMax : (i32)party.memberList.capacity();
+	const i32 capacity = customParty ? teamSize * 2 + MEASURED_CUSTOM_SPECTATOR_SLOTS : teamSize;
 	if((i32)party.memberList.size() >= capacity || party.memberList.full()) {
 		WARN("[client%x] HubGame :: party %d is full", clientHd, partyID);
 		return;
@@ -781,20 +966,25 @@ void HubGame::OnPartyInviteAccept(ClientHandle clientHd, i32 partyID)
 		taken = false;
 		foreach_const(m, party.memberList) if(m->userId == member.userId) { taken = true; member.userId++; break; }
 	}
+	if(customParty && !PartyPlaceMember(party, &member)) {
+		WARN("[client%x] HubGame :: custom party %d has no free slot", clientHd, partyID);
+		return;
+	}
 	party.memberList.push_back(member);
 	playerMap[userID]->partyUID = party.UID;
 	matchmaker->QueryPartyAddMember(party.UID, playerAccountData[userID]->nickname, accountUID);
 	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_IN_PARTY);
 	LOG("[client%x] HubGame :: %ls joins party %u as %u", clientHd, playerAccountData[userID]->nickname.data(), (u32)party.UID, member.userId);
 
-	eastl::fixed_vector<HubReplication::PartyUser,5,false> users;
+	eastl::fixed_vector<HubReplication::PartyUser,12,false> users;
 	foreach_const(m, party.memberList) {
 		auto h = accountClientHandleMap.find(m->accountUID);
 		if(h == accountClientHandleMap.end()) continue;
 		const i32 memberID = plidMap->Get(h->second);
 		users.push_back({ m->userId, playerAccountData[memberID]->nickname.data() });
 	}
-	replication.SendPartyJoinAnswer(clientHd, partyID, party.stageType, party.gameType, users.data(), (i32)users.size());
+	if(customParty) SendCustomPartyJoinAnswer(clientHd, party, member.team);
+	else replication.SendPartyJoinAnswer(clientHd, partyID, party.stageType, party.gameType, users.data(), (i32)users.size());
 
 	CreatureIndex leaderCreature = CreatureIndex::Invalid;
 	if(WorldHub::ActorPlayer* actor = world.FindPlayerActor(playerActorUID[userID])) leaderCreature = CreatureIndex(100000000 + (i32)actor->classType);
@@ -804,10 +994,10 @@ void HubGame::OnPartyInviteAccept(ClientHandle clientHd, i32 partyID)
 		slot++;
 	}
 	foreach_const(m, party.memberList) {
-		if(m->accountUID == accountUID) continue;
+		if(m->accountUID == accountUID || m->isBot) continue;
 		auto h = accountClientHandleMap.find(m->accountUID);
 		if(h == accountClientHandleMap.end()) continue;
-		replication.SendPartyJoin(h->second, member.userId, playerAccountData[userID]->nickname.data(), leaderCreature, m == party.memberList.begin(), party.gameType, slot);
+		replication.SendPartyJoin(h->second, member.userId, playerAccountData[userID]->nickname.data(), leaderCreature, m == party.memberList.begin(), party.gameType, party.gameDefinition, customParty ? member.team : 0, customParty ? member.slot : slot, false);
 	}
 }
 
@@ -1141,7 +1331,7 @@ void HubGame::OnEnqueueGame(ClientHandle clientHd)
 	ASSERT(party.areaIndex != AreaIndex(0));
 	ASSERT(party.stageIndex != StageIndex(0));
 	ASSERT(party.mapIndex != MapIndex(0));
-	matchmaker->QueryPartyEnqueue(partyUID, party.areaIndex, party.stageIndex, party.mapIndex, party.gameType);
+	matchmaker->QueryPartyEnqueue(partyUID, party.areaIndex, party.stageIndex, party.mapIndex, party.gameType, nullptr, party.gameType == GameType::PVP_RANK || party.selectMasterType != 0);
 }
 
 void HubGame::OnSortieRoomFound(ClientHandle clientHd, SortieUID sortieID)
@@ -1151,7 +1341,8 @@ void HubGame::OnSortieRoomFound(ClientHandle clientHd, SortieUID sortieID)
 
 	const i32 userID = plidMap->Get(clientHd);
 	matchmaker->QueryPlayerNotifyRoomFound(playerAccountData[userID]->UID, sortieID);
-	if(Config().DevShowcase || Config().DevAutoQueue) {
+	const Party* party = FindPlayerParty(userID);
+	if(Config().DevShowcase || Config().DevAutoQueue || (party && party->gameDefinition == GameDefinition::User)) {
 		playerMap[userID]->sortieUID = sortieID;
 		matchmaker->QueryPlayerRoomConfirm(playerAccountData[userID]->UID, sortieID, true);
 	}
@@ -1197,6 +1388,8 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 	party.entry = pendingPartyEntry[userID];
 	party.stageType = pendingPartyStage[userID];
 	party.gameType = pendingPartyGameType[userID];
+	party.gameDefinition = pendingPartyDefinition[userID];
+	party.selectMasterType = pendingPartySelectMaster[userID];
 	AreaIndex areaID = AreaIndex(0);
 	StageIndex stageID = StageIndex(0);
 	MapIndex mapID = MapIndex(0);
@@ -1206,6 +1399,7 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 	party.stageIndex = stageID;
 	party.mapIndex = mapID;
 	if(pendingPartyStageIndex[userID] != StageIndex(0)) SetPartyStage(party, pendingPartyStageIndex[userID]);
+	if(party.gameDefinition == GameDefinition::User) PartyPlaceMember(party, &party.memberList.front());
 
 	replication.SendPartyCreateSucess(clientHd, UserID(1), StageType::PVP_GAME);
 	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_IN_CREATION);
@@ -1264,7 +1458,7 @@ void HubGame::MmOnMatchFound(const In::MN_MatchingPartyFound& matchingParty)
 		for(i32 i = 0; i < matchingParty.playerCount; i++) {
 			if(matchingParty.playerList[i].accountUID == m->accountUID) myTeam = matchingParty.playerList[i].team;
 		}
-		replication.SendMatchingPartyFound(clientHd, matchingParty, party.stageIndex, rowIDs, myTeam);
+		replication.SendMatchingPartyFound(clientHd, matchingParty, party.stageIndex, party.gameDefinition, rowIDs, myTeam);
 		foreach_const(b, roster->members) if(b->bot) replication.SendMatchingPartyConfirm(clientHd, b->row, b->teamType, true);
 		BroadcastPlayerStateInTown(userID, 0, nullptr, 0);
 		BroadcastFriendState(userID, MEASURED_FRIEND_STATE_IN_SORTIE);

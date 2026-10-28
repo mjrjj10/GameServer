@@ -88,6 +88,9 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CQ_SaveSettings);
 		HANDLE_CASE(CQ_RequestSummaryInfoEach);
 		HANDLE_CASE(CQ_RestartVote);
+		HANDLE_CASE(CQ_PartySwapTeam);
+		HANDLE_CASE(CQ_PartyAddBot);
+		HANDLE_CASE(CQ_UNKNOWN_60082);
 		HANDLE_CASE(CQ_MailShowList);
 		HANDLE_CASE(CQ_MailRead);
 		HANDLE_CASE(CQ_RequestMissionReward);
@@ -127,6 +130,10 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		case MEASURED_CQ_DELETE_GUILD_MEMBERSHIP:
 		case MEASURED_CQ_EDIT_GUILD_MEMBERSHIP:
 		case MEASURED_CQ_GET_GUILD_SKILL_LIST:
+		case MEASURED_CQ_GET_GUILD_RANKING_LIST:
+		case MEASURED_CQ_GET_GUILD_RANKING:
+		case MEASURED_CQ_GET_GUILD_RANK_REWARD_INFO:
+		case MEASURED_CQ_GET_PLAYING_GUILD_PVP_LIST:
 		case MEASURED_CQ_BUY_GUILD_SKILL:
 		case MEASURED_CQ_EXTEND_GUILD_LIMITED_SKILL:
 		case Cl::CQ_GetRecommendedGuildList::NET_ID:
@@ -713,7 +720,10 @@ void HubPacketHandler::HandlePacket_CQ_PartyModify(ClientHandle clientHd, const 
 	if(buff.CanRead((i32)stageCount * 4 + 4)) {
 		const StageIndex stage = stageCount > 0 ? (StageIndex)buff.Read<i32>() : StageIndex(0);
 		if(stageCount > 1) buff.ReadRaw((i32)(stageCount - 1) * 4);
-		game->OnPartyModify(clientHd, stage, (GameType)buff.Read<i32>());
+		const GameType gameType = (GameType)buff.Read<i32>();
+		const GameDefinition gameDefinition = buff.CanRead(4) ? (GameDefinition)buff.Read<i32>() : GameDefinition::System;
+		const u8 selectMasterType = buff.CanRead(1) ? buff.Read<u8>() : 0;
+		game->OnPartyModify(clientHd, stage, gameType, gameDefinition == GameDefinition::User ? GameDefinition::User : GameDefinition::System, selectMasterType);
 	}
 
 	Sv::SA_PartyModify packet;
@@ -813,11 +823,38 @@ void HubPacketHandler::HandlePacket_CQ_RequestSummaryInfoEach(ClientHandle clien
 	replication->SendSummaryInfoEach(clientHd, summary);
 }
 
+void HubPacketHandler::HandlePacket_CQ_PartySwapTeam(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_PartySwapTeam>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_PartySwapTeam (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const Cl::CQ_PartySwapTeam& packet = SafeCast<Cl::CQ_PartySwapTeam>(packetData, packetSize);
+	NT_LOG("[client%x] Client :: CQ_PartySwapTeam :: (%u,%u) <-> (%u,%u)", clientHd, packet.originTeam, (u32)packet.originSlot, packet.targetTeam, (u32)packet.targetSlot);
+	game->OnPartySwapTeam(clientHd, packet.originTeam, packet.originSlot, packet.targetTeam, packet.targetSlot);
+}
+
+void HubPacketHandler::HandlePacket_CQ_UNKNOWN_60082(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_UNKNOWN_60082>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_PartyRemoveBot (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const Cl::CQ_UNKNOWN_60082& packet = SafeCast<Cl::CQ_UNKNOWN_60082>(packetData, packetSize);
+	NT_LOG("[client%x] Client :: CQ_PartyRemoveBot :: userId=%u", clientHd, packet.wideStringField);
+	game->OnPartyRemoveBot(clientHd, packet.wideStringField);
+}
+
+void HubPacketHandler::HandlePacket_CQ_PartyAddBot(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	NT_LOG("[client%x] Client :: CQ_PartyAddBot", clientHd);
+	game->OnPartyAddBot(clientHd);
+}
+
 void HubPacketHandler::HandlePacket_CQ_RestartVote(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
 {
-	NT_LOG("[client%x] Client :: CQ_RestartVote :: size=%d", clientHd, packetSize);
-	replication->SendStartGame(clientHd, 0);
-	game->OnEnqueueGame(clientHd);
+	NT_LOG("[client%x] Client :: CQ_RestartVote (start game) :: size=%d", clientHd, packetSize);
+	game->OnStartGame(clientHd);
 }
 
 void HubPacketHandler::HandlePacket_CQ_BuyGift(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

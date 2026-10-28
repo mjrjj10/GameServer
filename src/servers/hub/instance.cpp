@@ -68,6 +68,12 @@ void HubInstance::OnMatchmakerPacket(const NetHeader& header, const u8* packetDa
 }
 
 const i32 PICKING_TIME = 60;
+static const u32 MEASURED_BAN_TIME_SEC = 60;
+static const u32 MEASURED_BANS_PER_ROUND = 1;
+static const u8 MEASURED_BAN_ROUNDS = 2;
+static const u32 MEASURED_BAN_SLOT_STATE = 2;
+static const f64 HYP_BOT_BAN_DELAY_SEC = 5.0;
+static const u32 HYP_BAN_REFUSED = 1;
 const i32 MATCH_WAIT_TIME = 10;
 
 static std::mutex g_sentToGameMutex;
@@ -301,40 +307,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 			}
 		}
 
-		{
-			PacketWriter<Sv::SN_SortieMasterPickPhaseStart,1024> packet;
-			packet.Write<u8>(0);
-			packet.Write<u16>((u16)allowedMastersSet.size());
-			foreach_const(m, allowedMastersSet) {
-				packet.Write(CreatureIndex(100000000 + (i32)*m));
-				packet.Write<u16>(1);
-				packet.Write<i32>(0);
-			}
-			SendPacket(user.clientHd, packet);
-		}
-
-		// allow everyone to pick at once
-		{
-			PacketWriter<Sv::SN_SortieMasterPickPhaseStepStart> packet;
-			packet.Write<i32>(PICKING_TIME); // timeSec
-
-			eastl::fixed_vector<UserID,5> allyTeamUserIds;
-			eastl::fixed_vector<UserID,5> enemyTeamUserIds;
-
-			foreach_const(u, teamRed) {
-				if(user.team == Team::BLUE) enemyTeamUserIds.push_back((*u)->userID);
-				else allyTeamUserIds.push_back((*u)->userID);
-			}
-			foreach_const(u, teamBlue) {
-				if(user.team == Team::BLUE) allyTeamUserIds.push_back((*u)->userID);
-				else enemyTeamUserIds.push_back((*u)->userID);
-			}
-
-			packet.WriteVec(allyTeamUserIds.data(), allyTeamUserIds.size()); // alliesTeamUserIds
-			packet.WriteVec(enemyTeamUserIds.data(), enemyTeamUserIds.size()); // enemiesTeamUserIds
-
-			SendPacket(user.clientHd, packet);
-		}
+		if(!draft) SendPickPhaseStart(user);
 	}
 
 	if(Config().DevShowcase) {
@@ -435,7 +408,15 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 		}
 	}
 
-	// make bots pick random masters
+	if(draft) {
+		phase = Phase::Banning;
+		StartBanRound();
+	}
+	else PickBotMasters();
+}
+
+void RoomInstance::PickBotMasters()
+{
 	foreach(u, userList) {
 		if(u->isBot && !Config().DevShowcase && Config().devBotPool.empty()) {
 			static const ClassType botMasters[] = {
@@ -454,12 +435,148 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 	}
 }
 
+void RoomInstance::SendPickPhaseStart(const User& user)
+{
+	{
+		PacketWriter<Sv::SN_SortieMasterPickPhaseStart,1024> packet;
+		packet.Write<u8>(0);
+		packet.Write<u16>((u16)allowedMastersSet.size());
+		foreach_const(m, allowedMastersSet) {
+			packet.Write(CreatureIndex(100000000 + (i32)*m));
+			packet.Write<u16>(1);
+			packet.Write<i32>(0);
+		}
+		SendPacket(user.clientHd, packet);
+	}
+
+	{
+		PacketWriter<Sv::SN_SortieMasterPickPhaseStepStart> packet;
+		packet.Write<i32>(PICKING_TIME);
+
+		eastl::fixed_vector<UserID,5> allyTeamUserIds;
+		eastl::fixed_vector<UserID,5> enemyTeamUserIds;
+
+		foreach_const(u, teamRed) {
+			if(user.team == Team::BLUE) enemyTeamUserIds.push_back((*u)->userID);
+			else allyTeamUserIds.push_back((*u)->userID);
+		}
+		foreach_const(u, teamBlue) {
+			if(user.team == Team::BLUE) allyTeamUserIds.push_back((*u)->userID);
+			else enemyTeamUserIds.push_back((*u)->userID);
+		}
+
+		packet.WriteVec(allyTeamUserIds.data(), allyTeamUserIds.size());
+		packet.WriteVec(enemyTeamUserIds.data(), enemyTeamUserIds.size());
+
+		SendPacket(user.clientHd, packet);
+	}
+}
+
+const RoomInstance::User* RoomInstance::TeamLeader(i32 team) const
+{
+	const User* leader = nullptr;
+	foreach_const(u, userList) {
+		if(u->team != team) continue;
+		if(!leader || (leader->isBot && !u->isBot)) leader = &*u;
+	}
+	return leader;
+}
+
+void RoomInstance::StartBanRound()
+{
+	banRoundStart = localTime == Time::ZERO ? TimeNow() : localTime;
+	bannedThisRound = {{ false, false }};
+	foreach_const(cu, connectedUsers) {
+		const User& user = **cu;
+		const i32 enemy = user.team == Team::BLUE ? Team::RED : Team::BLUE;
+		const User* allies = TeamLeader(user.team == Team::BLUE ? Team::BLUE : Team::RED);
+		const User* enemies = TeamLeader(enemy);
+		PacketWriter<Sv::SN_SortieMasterBanPhaseStart,2048> packet;
+		packet.Write<u32>(allies ? (u32)allies->userID : 0);
+		packet.Write<u32>(enemies ? (u32)enemies->userID : 0);
+		packet.Write<u32>(MEASURED_BAN_TIME_SEC);
+		packet.Write<u32>(MEASURED_BANS_PER_ROUND);
+		packet.Write<u16>((u16)allowedMastersSet.size());
+		foreach_const(m, allowedMastersSet) {
+			packet.Write(CreatureIndex(100000000 + (i32)*m));
+			packet.Write<u16>(1);
+			packet.Write<u32>(bannedMasters.count(*m) ? MEASURED_BAN_SLOT_STATE : 0);
+		}
+		SendPacket(user.clientHd, packet);
+	}
+	LOG("[Room] ban round %d starts", (i32)banRound + 1);
+}
+
+bool RoomInstance::BanMaster(i32 team, ClassType classType)
+{
+	if(team != Team::RED && team != Team::BLUE) return false;
+	if(bannedThisRound[team] || !allowedMastersSet.count(classType) || bannedMasters.count(classType)) return false;
+	bannedThisRound[team] = true;
+	bannedMasters.insert(classType);
+	teamBans[team].push_back(classType);
+	const CreatureIndex creature = CreatureIndex(100000000 + (i32)classType);
+	foreach_const(cu, connectedUsers) {
+		Sv::SN_SortieMasterBan ban;
+		ban.teamType = (u32)(team == Team::RED ? TeamType::RED : TeamType::BLUE);
+		ban.creatureIndex = (u32)creature;
+		SendPacket((*cu)->clientHd, ban);
+		PacketWriter<Sv::SN_SortieCharacterSlotInfo,64> slot;
+		slot.Write<u16>(1);
+		slot.Write(creature);
+		slot.Write<u16>(1);
+		slot.Write<u32>(MEASURED_BAN_SLOT_STATE);
+		SendPacket((*cu)->clientHd, slot);
+	}
+	LOG("[Room] team %d bans master %d", team, (i32)classType);
+	return true;
+}
+
+void RoomInstance::UpdateBans()
+{
+	const f64 elapsed = TimeDurationSec(banRoundStart, localTime);
+	for(i32 team = Team::RED; team <= Team::BLUE; team++) {
+		if(bannedThisRound[team]) continue;
+		const User* leader = TeamLeader(team);
+		const bool botTurn = !leader || (leader->isBot && elapsed >= HYP_BOT_BAN_DELAY_SEC);
+		if(!botTurn && elapsed < MEASURED_BAN_TIME_SEC) continue;
+		eastl::fixed_vector<ClassType,100,false> pool;
+		foreach_const(m, allowedMastersSet) if(!bannedMasters.count(*m)) pool.push_back(*m);
+		if(pool.empty()) { bannedThisRound[team] = true; continue; }
+		BanMaster(team, pool[RandUint() % pool.size()]);
+	}
+	if(!bannedThisRound[Team::RED] || !bannedThisRound[Team::BLUE]) return;
+	foreach_const(cu, connectedUsers) {
+		const User& user = **cu;
+		const i32 ally = user.team == Team::BLUE ? Team::BLUE : Team::RED;
+		const i32 enemy = ally == Team::BLUE ? Team::RED : Team::BLUE;
+		PacketWriter<Sv::SN_SortieMasterBanPhaseEnd,128> end;
+		end.Write<u16>((u16)teamBans[ally].size());
+		foreach_const(b, teamBans[ally]) end.Write(CreatureIndex(100000000 + (i32)*b));
+		end.Write<u16>((u16)teamBans[enemy].size());
+		foreach_const(b, teamBans[enemy]) end.Write(CreatureIndex(100000000 + (i32)*b));
+		SendPacket(user.clientHd, end);
+	}
+	banRound++;
+	if(banRound < MEASURED_BAN_ROUNDS) {
+		StartBanRound();
+		return;
+	}
+	foreach_const(b, bannedMasters) allowedMastersSet.erase(*b);
+	phase = Phase::Picking;
+	startTime = localTime;
+	PickBotMasters();
+	foreach_const(cu, connectedUsers) SendPickPhaseStart(**cu);
+	LOG("[Room] bans done (%d), picking starts", (i32)bannedMasters.size());
+}
+
 void RoomInstance::Update(Time localTime_)
 {
 	localTime = localTime_;
 	if(startTime == Time::ZERO) startTime = localTime_;
 
 	Replicate();
+
+	if(phase == Phase::Banning) UpdateBans();
 
 	if(phase == Phase::Picking) {
 		bool allReady = true;
@@ -734,6 +851,22 @@ void RoomInstance::OnClientPacket(ClientHandle clientHd, const NetHeader& header
 			SendPacket(clientHd, answer);
 		} break;
 
+		case Cl::CQ_SortieMasterBan::NET_ID: {
+			if(!ValidatePacket<Cl::CQ_SortieMasterBan>(packetData, packetSize)) {
+				WARN("[client%x] WARNING: invalid CQ_SortieMasterBan (size=%d)", clientHd, packetSize);
+				break;
+			}
+			const Cl::CQ_SortieMasterBan& packet = SafeCast<Cl::CQ_SortieMasterBan>(packetData, packetSize);
+			NT_LOG("[client%x] Client :: CQ_SortieMasterBan :: creature=%u", clientHd, packet.input_value_u32);
+			User* user = FindUser(clientHd);
+			ASSERT(user);
+			const bool leader = TeamLeader(user->team) == user;
+			const bool ok = phase == Phase::Banning && leader && BanMaster(user->team, ClassType((i32)packet.input_value_u32 - 100000000));
+			Sv::SA_SortieMasterBan answer;
+			answer.retval = ok ? 0 : HYP_BAN_REFUSED;
+			SendPacket(clientHd, answer);
+		} break;
+
 		case Cl::CQ_MasterUnpick::NET_ID: {
 			if(!ValidatePacket<Cl::CQ_MasterUnpick>(packetData, packetSize)) {
 				WARN("[client%x] WARNING: invalid CQ_MasterUnpick (size=%d)", clientHd, packetSize);
@@ -958,6 +1091,7 @@ static void PickMeasuredLoadout(const GameXmlContent::Master& master, ClassType 
 
 bool RoomInstance::TryPickMaster(User* user, ClassType classType)
 {
+	if(bannedMasters.count(classType)) return false;
 	if(teamMasterPickCount[user->team][(i32)classType] < 2) {
 		const GameXmlContent& content = GetGameXmlContent();
 		const GameXmlContent::Master& master = *content.masterClassTypeMap.at(classType);

@@ -134,6 +134,8 @@ struct World
 		eastl::array<Time,2> fogRevealUntil = {{ Time::ZERO, Time::ZERO }};
 		eastl::array<u32,9> damageStats = {};
 		u8 statueCaptures = 0;
+		u8 occupyCaptures = 0;
+		i32 occupyScore = 0;
 		u8 visionCaptures = 0;
 		eastl::fixed_vector<Replication::DamageTaken,48,false> recentDamage;
 		Time lastKillAt = Time::ZERO;
@@ -1070,7 +1072,12 @@ public:
 	u32 giantCycle = 0;
 	eastl::array<eastl::fixed_vector<i32,32,false>,2> giantSummons;
 	void BuildGiantTriggers();
-	struct MapInteraction { ActorUID object; i32 localID; i32 interactionID; bool active; i32 occupiedTeam; Time coolUntil; eastl::array<i32,2> extraCastMs; u32 openMask; bool creature; bool statusPending; };
+	struct MapInteraction { ActorUID object; i32 localID; i32 interactionID; bool active; i32 occupiedTeam; Time coolUntil; eastl::array<i32,2> extraCastMs; u32 openMask; bool creature; bool statusPending; i32 occupier = -1; Time nextOccupyTick = Time::ZERO; };
+	bool occupyMode = false;
+	void OccupyScore(Player& player, i32 points, bool capture);
+	i32 TeamHeldPoints(i32 team) const;
+	void UpdateOccupy();
+	bool OccupyTarget(const Player& bot, vec2* point, ActorUID* object, f32* reach) const;
 	eastl::fixed_vector<MapInteraction,64,false> mapInteractions;
 	void AddCreatureInteraction(const ActorNpc& npc, i32 interactionID, u8 ownerTeam);
 	void AddDynamicInteraction(const ActorDynamic& dyn, i32 interactionID);

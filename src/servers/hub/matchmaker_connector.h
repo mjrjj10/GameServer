@@ -80,6 +80,8 @@ struct MatchmakerConnector
 				StageIndex stageIndex;
 				MapIndex mapIndex;
 				GameType gameType;
+				In::CustomTeams custom;
+				u8 draft;
 			} PartyEnqueue;
 
 			struct {
@@ -122,7 +124,7 @@ struct MatchmakerConnector
 	void QueryPartyAddMember(PartyUID partyUID, const WideString& name, AccountUID accountUID);
 	void QueryPartyRemoveMember(PartyUID partyUID, AccountUID accountUID);
 	void QueryPartyCancelMatching(PartyUID partyUID);
-	void QueryPartyEnqueue(PartyUID partyUID, AreaIndex areaIndex, StageIndex stageIndex, MapIndex mapIndex, GameType gameType);
+	void QueryPartyEnqueue(PartyUID partyUID, AreaIndex areaIndex, StageIndex stageIndex, MapIndex mapIndex, GameType gameType, const In::CustomTeams* custom, bool draft);
 	void QueryPlayerNotifyRoomFound(AccountUID playerAccountUID, SortieUID sortieUID);
 	void QueryPlayerRoomConfirm(AccountUID playerAccountUID, SortieUID sortieUID, u8 confirm);
 	void QueryRoomCreateGame(SortieUID sortieUID, const RoomPlayer* playerList, u32 playerCount);

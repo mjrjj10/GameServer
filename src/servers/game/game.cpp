@@ -95,6 +95,8 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 	if(const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(gameInfo.stageIndex)) {
 		const bool pve = stage->gameMode == GameModeType::GAME_MODE_STAGE || stage->gameMode == GameModeType::GAME_MODE_DEFENCE;
 		world.hostileMonsters = pve;
+		world.occupyMode = stage->gameMode == GameModeType::GAME_MODE_OCCUPY;
+		replication.occupyMode = world.occupyMode;
 		if(pve) world.difficultyBit = stage->difficultyBit;
 		if(pve) world.monsterStatScale = GetGameXmlContent().DifficultyMonsterStat(stage->difficultyBit);
 		if(stage->gameMode == GameModeType::GAME_MODE_STAGE) {
@@ -284,7 +286,7 @@ void Game::Update(Time localTime_)
 					replication.SendStageRank(p->clientHd, StageGrade(*p) * MEASURED_STAGE_GRADE_SCALE, MEASURED_TIME_SCORE_RANK);
 				}
 			}
-			if(!gameEnded && tGameStarted != Time::ZERO && world.winnerTeam < 0 && replication.titanMode) {
+			if(!gameEnded && tGameStarted != Time::ZERO && world.winnerTeam < 0 && (replication.titanMode || world.occupyMode)) {
 				const i32 scoreLimit = GetGameXmlContent().GetStageScoreLimit((i32)replication.stageIndex);
 				for(i32 team = 0; team < 2 && scoreLimit > 0; team++) {
 					if(world.TeamPoints(team) >= scoreLimit && world.TeamPoints(team) > world.TeamPoints(1 - team)) {
@@ -1000,6 +1002,8 @@ void Game::EndGame()
 		e.points = p.points;
 		e.ingameLevel = (u8)p.ingameLevel;
 		e.damageDealt = p.damageDealt;
+		e.occupyCaptures = p.occupyCaptures;
+		e.occupyScore = p.occupyScore;
 		e.savedPieces = p.savedPieces;
 		e.damageStats = p.damageStats;
 		e.statueCaptures = p.statueCaptures;
@@ -1008,7 +1012,7 @@ void Game::EndGame()
 		e.traits[0] = p.Main().traits;
 		e.traits[1] = p.Sub().traits;
 		list.push_back(e);
-		const i32 score = world.map && world.map->ingameLevels ? p.points : p.kills;
+		const i32 score = (world.map && world.map->ingameLevels) || world.occupyMode ? p.points : p.kills;
 		if(p.team == 0) red += score; else blue += score;
 	}
 	if(world.map && world.map->ingameLevels) { red += world.teamBonusPoints[0]; blue += world.teamBonusPoints[1]; }

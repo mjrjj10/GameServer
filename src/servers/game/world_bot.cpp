@@ -190,6 +190,7 @@ bool World::BotObjective(const Player& bot, vec2* goal)
 	return found;
 }
 static const u32 BOT_DECISION_MIN_MS = 400;
+static const f32 HYP_BOT_OCCUPY_FIGHT_RANGE = 600.0f;
 static const u32 BOT_DECISION_SPAN_MS = 500;
 static const u32 BOT_STUCK_CHECK_MS = 500;
 static const f32 BOT_TOWER_MARGIN = 200.0f;
@@ -223,6 +224,7 @@ void World::UpdateBotMovement()
 		Player& bot = *it;
 		if(bot.clientHd != ClientHandle::INVALID || bot.dead || bot.Main().classType == ClassType::NONE) continue;
 		if(localTime < bot.ccUntil || localTime < bot.dashUntil || bot.casting.skillID != SkillID::INVALID || AttachedToCaster(bot)) continue;
+		if(bot.interactSlot >= 0) continue;
 		const vec3 pos = bot.body->GetWorldPos();
 		const vec2 here = vec2(pos);
 		bool stuck = false;
@@ -245,7 +247,16 @@ void World::UpdateBotMovement()
 			if(d < best) { best = d; target = &*e; }
 		}
 		vec2 goal;
-		if(target && best <= BOT_ENGAGE_RANGE) {
+		vec2 occupyPoint;
+		ActorUID occupyObject = ActorUID::INVALID;
+		f32 occupyReach = 0;
+		const bool occupyGoal = OccupyTarget(bot, &occupyPoint, &occupyObject, &occupyReach);
+		if(occupyGoal && glm::length(occupyPoint - here) <= occupyReach && (!target || best > HYP_BOT_OCCUPY_FIGHT_RANGE)) {
+			bot.input.moveTo = pos;
+			StartMapInteraction(bot, occupyObject);
+			continue;
+		}
+		if(target && best <= (occupyGoal ? HYP_BOT_OCCUPY_FIGHT_RANGE : BOT_ENGAGE_RANGE)) {
 			const vec2 tp = vec2(target->body->GetWorldPos());
 			const f32 range = WeaponIsMelee(bot) ? BOT_MELEE_RANGE : MIN(WeaponRange(bot) * BOT_RANGE_FRACTION, BOT_RANGED_MAX);
 			const vec2 from = here - tp;
@@ -255,6 +266,11 @@ void World::UpdateBotMovement()
 			bot.input.rot.upperYaw = face;
 			bot.input.rot.bodyYaw = face;
 			bot.input.rot.upperPitch = 0;
+		}
+		else if(occupyGoal) {
+			const vec2 d = occupyPoint - here;
+			const f32 len = glm::length(d);
+			goal = len > BOT_ROAM_STEP ? here + d / len * BOT_ROAM_STEP : occupyPoint;
 		}
 		else if(BotObjective(bot, &goal)) {
 			const vec2 d = goal - here;

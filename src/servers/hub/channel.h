@@ -79,6 +79,9 @@ private:
 	void HandlePacket_CQ_PveRanking(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_RequestSummaryInfoEach(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_RestartVote(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
+	void HandlePacket_CQ_PartySwapTeam(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
+	void HandlePacket_CQ_PartyAddBot(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
+	void HandlePacket_CQ_UNKNOWN_60082(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 
 	template<typename Packet>
 	inline void SendPacket(ClientHandle clientHd, const Packet& packet)

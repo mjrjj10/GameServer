@@ -8,6 +8,14 @@ static const f64 RON_ITEM_LIFETIME_SEC = 120.0;
 static const f32 TELEPORT_SPREAD = 80.0f;
 static const i32 INTERACTION_NOT_OCCUPIED = -1;
 static const u32 PLAYER_FACTION_BASE = 3;
+static const f64 MEASURED_OCCUPY_TICK_MS = 5000.0;
+static const i32 MEASURED_OCCUPY_TICK_POINTS = 1;
+static const i32 MEASURED_OCCUPY_CAPTURE_POINTS = 3;
+static const i32 MEASURED_OCCUPY_MID_CAPTURE_POINTS = 10;
+static const i32 MEASURED_OCCUPY_MID_POINTS[] = { 110045552, 110045557 };
+static const u32 MEASURED_ANNOUNCE_OCCUPY_CAPTURE = 9;
+static const u32 MEASURED_ANNOUNCE_OCCUPY_TICK = 10;
+static const f32 HYP_BOT_OCCUPY_REACH = 0.8f;
 static const f32 CARRY_SYNC_SEC = 0.1f;
 static const f32 TOOLTIP_INTERACTION_OPEN_SEC = 3.0f;
 static const i32 INTERACTION_OBJECT_LOCAL_BASE = 41000;
@@ -909,9 +917,12 @@ void World::BuildMapInteractions()
 void World::SendMapInteractionStatus(const MapInteraction& m)
 {
 	const bool cooling = m.coolUntil != Time::ZERO && localTime < m.coolUntil;
-	const bool open = m.active && !cooling && m.occupiedTeam == INTERACTION_NOT_OCCUPIED;
+	const GameXmlContent::InteractionInfo* info = GetGameXmlContent().FindInteraction(m.interactionID);
+	const bool contestable = info && info->pvpOccupy && m.occupiedTeam != INTERACTION_NOT_OCCUPIED;
+	const bool open = m.active && !cooling && (m.occupiedTeam == INTERACTION_NOT_OCCUPIED || contestable);
+	const u32 mask = contestable ? m.openMask & ~(1u << (u32)m.occupiedTeam) : m.openMask;
 	const f32 cool = cooling ? (f32)TimeDiffSec(TimeDiff(localTime, m.coolUntil)) : 0.0f;
-	replication->SendInteractionStatusToAll(m.object, open ? m.openMask : 0, m.interactionID, m.occupiedTeam, ClientHandle::INVALID, cool);
+	replication->SendInteractionStatusToAll(m.object, open ? mask : 0, m.interactionID, m.occupiedTeam, ClientHandle::INVALID, cool);
 }
 
 void World::AddCreatureInteraction(const ActorNpc& npc, i32 interactionID, u8 ownerTeam)
@@ -961,7 +972,8 @@ bool World::StartMapInteraction(Player& player, ActorUID target)
 	const MapInteraction& m = mapInteractions[slot];
 	const GameXmlContent::InteractionInfo* info = GetGameXmlContent().FindInteraction(m.interactionID);
 	vec3 objPos;
-	if(!info || !MapInteractionPos(m, &objPos) || !m.active || m.occupiedTeam != INTERACTION_NOT_OCCUPIED || player.interactSlot >= 0) return true;
+	const bool contestable = info && info->pvpOccupy && m.occupiedTeam != INTERACTION_NOT_OCCUPIED && m.occupiedTeam != (i32)PLAYER_FACTION_BASE + (i32)player.team && (m.coolUntil == Time::ZERO || localTime >= m.coolUntil);
+	if(!info || !MapInteractionPos(m, &objPos) || !m.active || (m.occupiedTeam != INTERACTION_NOT_OCCUPIED && !contestable) || player.interactSlot >= 0) return true;
 	if(!(m.openMask & (1u << (PLAYER_FACTION_BASE + player.team)))) return true;
 	if(!info->individual) foreach_const(p, players) if(p->interactSlot == slot) return true;
 	const vec2 here = vec2(player.body->GetWorldPos());
@@ -1002,7 +1014,17 @@ void World::CompleteMapInteraction(Player& player)
 	LOG("Interaction :: %ls takes object %d (team %d)", player.name.data(), m.localID, (i32)player.team);
 	if(info->action == GameXmlContent::InteractionInfo::TOTEM && player.statueCaptures < 255) player.statueCaptures++;
 	if(info->action == GameXmlContent::InteractionInfo::OCCUPY && player.visionCaptures < 255) player.visionCaptures++;
-	if(info->announcement != 0) {
+	if(info->pvpOccupy && occupyMode) {
+		m.occupier = (i32)player.index;
+		m.nextOccupyTick = TimeAdd(localTime, TimeMsToTime(MEASURED_OCCUPY_TICK_MS));
+		const auto obj = actorDynamicMap.find(m.object);
+		bool mid = false;
+		if(obj != actorDynamicMap.end()) for(i32 doc : MEASURED_OCCUPY_MID_POINTS) if((i32)obj->second->docID == doc) mid = true;
+		const i32 points = mid ? MEASURED_OCCUPY_MID_CAPTURE_POINTS : (info->points > 0 ? info->points : MEASURED_OCCUPY_CAPTURE_POINTS);
+		replication->SendPvpAnnouncementToAll(MEASURED_ANNOUNCE_OCCUPY_CAPTURE, 1, player.Main().UID, m.object, (u32)points);
+		OccupyScore(player, points, true);
+	}
+	if(info->announcement != 0 && !(info->pvpOccupy && occupyMode)) {
 		if(!m.creature) player.occupyStreak++;
 		replication->SendPvpAnnouncementToAll(info->announcement, m.creature ? 0 : player.occupyStreak, player.Main().UID, m.object, (u32)info->points);
 		if(info->points > 0) AddPoints(player, info->points);
@@ -1038,8 +1060,64 @@ void World::CompleteMapInteraction(Player& player)
 	}
 }
 
+
+i32 World::TeamHeldPoints(i32 team) const
+{
+	i32 held = 0;
+	foreach_const(m, mapInteractions) {
+		const GameXmlContent::InteractionInfo* info = GetGameXmlContent().FindInteraction(m->interactionID);
+		if(info && info->pvpOccupy && m->occupiedTeam == (i32)PLAYER_FACTION_BASE + team) held++;
+	}
+	return held;
+}
+
+void World::OccupyScore(Player& player, i32 points, bool capture)
+{
+	player.points += points;
+	player.occupyScore += points;
+	if(capture && player.occupyCaptures < 255) player.occupyCaptures++;
+	replication->SendOccupyScoreToAll(player.userID, player.team, player.occupyCaptures, player.occupyScore, player.points, TeamHeldPoints(player.team), TeamPoints(player.team), TeamHeldPoints(player.team ^ 1), capture);
+}
+
+bool World::OccupyTarget(const Player& bot, vec2* point, ActorUID* object, f32* reach) const
+{
+	if(!occupyMode) return false;
+	const vec2 here = vec2(bot.body->GetWorldPos());
+	f32 best = 1e9f;
+	bool found = false;
+	foreach_const(m, mapInteractions) {
+		const GameXmlContent::InteractionInfo* info = GetGameXmlContent().FindInteraction(m->interactionID);
+		if(!info || !info->pvpOccupy || !m->active || m->occupiedTeam == (i32)PLAYER_FACTION_BASE + (i32)bot.team) continue;
+		if(m->coolUntil != Time::ZERO && localTime < m->coolUntil) continue;
+		vec3 pos;
+		if(!MapInteractionPos(*m, &pos)) continue;
+		const f32 d = glm::length(vec2(pos) - here);
+		if(d >= best) continue;
+		best = d;
+		*point = vec2(pos);
+		*object = m->object;
+		*reach = info->activeDistance * HYP_BOT_OCCUPY_REACH;
+		found = true;
+	}
+	return found;
+}
+
+void World::UpdateOccupy()
+{
+	if(!occupyMode || winnerTeam >= 0) return;
+	foreach(m, mapInteractions) {
+		if(m->occupier < 0 || m->occupiedTeam == INTERACTION_NOT_OCCUPIED || localTime < m->nextOccupyTick) continue;
+		Player& owner = players[m->occupier];
+		m->nextOccupyTick = TimeAdd(m->nextOccupyTick, TimeMsToTime(MEASURED_OCCUPY_TICK_MS));
+		if(owner.removed || (i32)PLAYER_FACTION_BASE + (i32)owner.team != m->occupiedTeam) continue;
+		replication->SendPvpAnnouncementToAll(MEASURED_ANNOUNCE_OCCUPY_TICK, 0, owner.Main().UID, m->object, MEASURED_OCCUPY_TICK_POINTS);
+		OccupyScore(owner, MEASURED_OCCUPY_TICK_POINTS, false);
+	}
+}
+
 void World::UpdateMapInteractions()
 {
+	UpdateOccupy();
 	if(!levelEventsStarted) return;
 	BuildMapInteractions();
 	static const f32 INTERACTION_MOVE_CANCEL_DIST = 60.0f;
@@ -1071,7 +1149,8 @@ void World::UpdateMapInteractions()
 	foreach(m, mapInteractions) {
 		if(m->coolUntil == Time::ZERO || localTime < m->coolUntil) continue;
 		m->coolUntil = Time::ZERO;
-		m->occupiedTeam = INTERACTION_NOT_OCCUPIED;
+		const GameXmlContent::InteractionInfo* info = GetGameXmlContent().FindInteraction(m->interactionID);
+		if(!info || !info->pvpOccupy) m->occupiedTeam = INTERACTION_NOT_OCCUPIED;
 		SendMapInteractionStatus(*m);
 	}
 }

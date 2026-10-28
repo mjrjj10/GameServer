@@ -1283,7 +1283,7 @@ struct GameXmlContent
 		for(const char* c = key; *c; c++) { h ^= (u8)(*c >= 'a' && *c <= 'z' ? *c - 32 : *c); h *= 16777619u; }
 		return ((u64)h << 32) | (u32)seqID;
 	}
-	struct InteractionInfo { enum Action: u8 { OTHER, TOTEM, OCCUPY }; Action action = OTHER; f32 activeDistance = 0; bool carry = false; bool individual = false; CreatureIndex receiver = CreatureIndex::Invalid; bool active = true; bool repeat = false; f32 repeatInterval = 0; i32 castMs = 0; u32 announcement = 0; i32 points = 0; eastl::array<u32,2> ownerMask = {{ 0, 0 }}; };
+	struct InteractionInfo { enum Action: u8 { OTHER, TOTEM, OCCUPY }; Action action = OTHER; bool pvpOccupy = false; f32 activeDistance = 0; bool carry = false; bool individual = false; CreatureIndex receiver = CreatureIndex::Invalid; bool active = true; bool repeat = false; f32 repeatInterval = 0; i32 castMs = 0; u32 announcement = 0; i32 points = 0; eastl::array<u32,2> ownerMask = {{ 0, 0 }}; };
 	eastl::hash_map<i32, i32> dynamicInteraction;
 	eastl::hash_map<i32, f32> stageTeleportDistance;
 	eastl::hash_map<i32, f32> statusShield;

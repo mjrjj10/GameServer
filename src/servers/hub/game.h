@@ -41,6 +41,9 @@ struct HubGame
 		struct Member {
 			AccountUID accountUID;
 			u32 userId = 1;
+			u32 team = 0;
+			u8 slot = 0;
+			bool isBot = false;
 		};
 
 		const PartyUID UID;
@@ -50,8 +53,10 @@ struct HubGame
 		StageIndex stageIndex = StageIndex(0);
 		MapIndex mapIndex = MapIndex(0);
 		GameType gameType = GameType::PVP_NORMAL;
+		GameDefinition gameDefinition = GameDefinition::System;
+		u8 selectMasterType = 0;
 
-		eastl::fixed_vector<Member,5> memberList; // NOTE: first is leader
+		eastl::fixed_vector<Member,12> memberList;
 		eastl::fixed_vector<AccountUID,8> invites;
 
 		Party(PartyUID UID_): UID(UID_) {}
@@ -79,6 +84,8 @@ struct HubGame
 	struct PraiseCount { SortieUID sortieUID; WideString nickname; u32 count; };
 	eastl::fixed_vector<PraiseCount,64,true> praiseCounts;
 	eastl::array<GameType,MAX_PLAYERS> pendingPartyGameType;
+	eastl::array<GameDefinition,MAX_PLAYERS> pendingPartyDefinition;
+	eastl::array<u8,MAX_PLAYERS> pendingPartySelectMaster;
 	eastl::array<StageIndex,MAX_PLAYERS> pendingPartyStageIndex;
 	struct SortieMember { AccountUID accountUID; u8 row; u32 teamType; bool bot; };
 	struct SortieRoster { SortieUID sortieUID; eastl::fixed_vector<SortieMember,16,false> members; };
@@ -119,7 +126,16 @@ struct HubGame
 	void OnPlayerJukeboxQueueSong(ClientHandle clientHd, SongID songID);
 	void OnPlayerReadyToLoad(ClientHandle clientHd);
 	void OnCreateParty(ClientHandle clientHd, EntrySystemID entry, StageType stageType);
-	void OnPartyModify(ClientHandle clientHd, StageIndex stage, GameType gameType);
+	void OnPartyModify(ClientHandle clientHd, StageIndex stage, GameType gameType, GameDefinition gameDefinition, u8 selectMasterType);
+	void OnPartySwapTeam(ClientHandle clientHd, u32 originTeam, u8 originSlot, u32 targetTeam, u8 targetSlot);
+	void OnPartyAddBot(ClientHandle clientHd);
+	void OnPartyRemoveBot(ClientHandle clientHd, u32 userId);
+	void OnStartGame(ClientHandle clientHd);
+	i32 PartyTeamCapacity(const Party& party, u32 team) const;
+	bool PartyPlaceMember(Party& party, Party::Member* member) const;
+	const wchar* PartyMemberName(const Party::Member& member) const;
+	void SendCustomPartyJoinAnswer(ClientHandle clientHd, const Party& party, u32 myTeam);
+
 	bool SetPartyStage(Party& party, StageIndex stage);
 	void OnPartyInvite(ClientHandle clientHd, const wchar* nickname, i32 nicknameLen);
 	void OnPartyInviteAccept(ClientHandle clientHd, i32 partyID);

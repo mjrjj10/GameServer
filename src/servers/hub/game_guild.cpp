@@ -7,6 +7,7 @@
 #include <mxm/game_content.h>
 #include <mxm/account_progress.h>
 #include <EASTL/algorithm.h>
+#include <EASTL/sort.h>
 #include <time.h>
 
 static i64 NowFiletime()
@@ -868,6 +869,90 @@ void HubGame::OnGuildPacket(ClientHandle clientHd, u16 netID, const u8* data, i3
 				for(u8 v : g->interest) answer.Write<u8>(v);
 				written++;
 			}
+			replication.SendWriter(clientHd, answer);
+		} break;
+
+		case MEASURED_CQ_GET_GUILD_RANKING_LIST: {
+			if(!buff.CanRead(8)) break;
+			const u8 rankingType = buff.Read<u8>();
+			const u16 seasonNo = buff.Read<u16>();
+			const u32 pageNo = MAX(buff.Read<u32>(), 1u);
+			const u8 rows = MAX(buff.Read<u8>(), (u8)1);
+			eastl::fixed_vector<const GuildRecord*,256,true> ranked;
+			if(rankingType == MEASURED_GUILD_RANKING_POINT) foreach_const(g, store.guilds) ranked.push_back(&*g);
+			eastl::sort(ranked.begin(), ranked.end(), [](const GuildRecord* a, const GuildRecord* b) { return a->point > b->point; });
+			const u32 maxPage = ((u32)ranked.size() + rows - 1) / rows;
+			const u32 first = (pageNo - 1) * rows;
+			PacketWriter<Sv::SA_GetGuildranklist,4096> answer;
+			answer.Write<i32>(0);
+			answer.Write<u8>(rankingType);
+			answer.Write<u16>(seasonNo);
+			answer.Write<u32>(pageNo);
+			answer.Write<u8>(rows);
+			answer.Write<u32>(maxPage);
+			answer.Write<i64>(NowFiletime());
+			const u32 last = MIN(first + rows, (u32)ranked.size());
+			answer.Write<u16>((u16)(last > first ? last - first : 0));
+			for(u32 r = first; r < last; r++) {
+				const GuildRecord* g = ranked[r];
+				const GuildMemberRecord* owner = nullptr;
+				foreach_const(m, g->members) if(m->membershipID == MEASURED_GUILD_MASTER_MEMBERSHIP) owner = &*m;
+				answer.Write<u32>(r + 1);
+				answer.Write<u32>(r + 1);
+				answer.WriteStringObj(g->tag.data());
+				answer.WriteStringObj(g->name.data());
+				answer.WriteStringObj(owner ? owner->nickname.data() : L"");
+				answer.Write<u32>((u32)g->point);
+			}
+			replication.SendWriter(clientHd, answer);
+		} break;
+
+		case MEASURED_CQ_GET_GUILD_RANKING: {
+			if(!buff.CanRead(3)) break;
+			const u8 rankingType = buff.Read<u8>();
+			const u16 seasonNo = buff.Read<u16>();
+			WideString name;
+			if(!ReadWideString(buff, &name, 32)) break;
+			const GuildRecord* target = store.FindByName(name);
+			u32 rank = MEASURED_GUILD_UNRANKED;
+			if(target && rankingType == MEASURED_GUILD_RANKING_POINT) {
+				rank = 1;
+				foreach_const(g, store.guilds) if(g->point > target->point) rank++;
+			}
+			const GuildMemberRecord* owner = nullptr;
+			if(target) foreach_const(m, target->members) if(m->membershipID == MEASURED_GUILD_MASTER_MEMBERSHIP) owner = &*m;
+			const bool ranked = rank != MEASURED_GUILD_UNRANKED;
+			PacketWriter<Sv::SA_GetGuildrank,512> answer;
+			answer.Write<i32>(0);
+			answer.Write<u8>(rankingType);
+			answer.Write<u16>(seasonNo);
+			answer.Write<u32>(rank);
+			answer.Write<u32>(rank);
+			answer.WriteStringObj(ranked ? target->tag.data() : L"");
+			answer.WriteStringObj(ranked ? target->name.data() : L"");
+			answer.WriteStringObj(ranked && owner ? owner->nickname.data() : L"");
+			answer.Write<u32>(ranked ? (u32)target->point : 0);
+			replication.SendWriter(clientHd, answer);
+		} break;
+
+		case MEASURED_CQ_GET_GUILD_RANK_REWARD_INFO: {
+			const u8 rankingType = buff.CanRead(1) ? buff.Read<u8>() : 0;
+			PacketWriter<Sv::SA_GetGuildrankrewardinfo> answer;
+			answer.Write<i32>(0);
+			answer.Write<u8>(rankingType);
+			answer.Write<u16>(0);
+			replication.SendWriter(clientHd, answer);
+		} break;
+
+		case MEASURED_CQ_GET_PLAYING_GUILD_PVP_LIST: {
+			const u16 pageNo = buff.CanRead(2) ? buff.Read<u16>() : 1;
+			const u8 rows = buff.CanRead(1) ? buff.Read<u8>() : 0;
+			PacketWriter<Sv::SA_GetPlayingGuildpvplist> answer;
+			answer.Write<i32>(0);
+			answer.Write<u16>(pageNo);
+			answer.Write<u8>(rows);
+			answer.Write<u16>(0);
+			answer.Write<u16>(0);
 			replication.SendWriter(clientHd, answer);
 		} break;
 

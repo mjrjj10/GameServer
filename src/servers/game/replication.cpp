@@ -1326,6 +1326,38 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 		}
 	}
 
+	PacketWriter<Sv::SN_PvpResultScoreOccupy,8192> scoreOccupy;
+	if(occupyMode) {
+		scoreOccupy.Write<u16>(2);
+		scoreOccupy.Write<TeamType>(TeamType::RED);
+		scoreOccupy.Write<u32>((u32)redScore);
+		scoreOccupy.Write<TeamType>(TeamType::BLUE);
+		scoreOccupy.Write<u32>((u32)blueScore);
+		scoreOccupy.Write<u16>((u16)count);
+		for(i32 i = 0; i < count; i++) {
+			const EndPlayer& p = players[i];
+			scoreOccupy.Write<u32>((u32)p.userID);
+			scoreOccupy.WriteStringObj(p.name, (i32)EA::StdC::Strlen(p.name));
+			scoreOccupy.Write<TeamType>(p.team == 0 ? TeamType::RED : TeamType::BLUE);
+			scoreOccupy.Write<u8>(0);
+			scoreOccupy.Write<u16>(2);
+			for(int m = 0; m < 2; m++) {
+				const bool main = m == 0;
+				scoreOccupy.Write<u32>((u32)p.masters[m]);
+				scoreOccupy.Write<u32>(playTimeMs / 2);
+				scoreOccupy.Write<u8>((u8)(main ? p.kills : 0));
+				scoreOccupy.Write<u8>((u8)(main ? p.bestKillStreak : 0));
+				scoreOccupy.Write<u8>(0);
+				scoreOccupy.Write<u8>((u8)(main ? p.deaths : 0));
+				scoreOccupy.Write<u8>((u8)(main ? p.assists : 0));
+				scoreOccupy.Write<u32>((u32)(main ? p.damageDealt : 0));
+				for(int d = 0; d < 7; d++) scoreOccupy.Write<u32>(0);
+				scoreOccupy.Write<u8>(main ? p.occupyCaptures : 0);
+				scoreOccupy.Write<u16>((u16)(main ? p.occupyScore : 0));
+			}
+		}
+	}
+
 	PacketWriter<Sv::SN_PvpResultScoreDeathmatch,4096> score;
 	score.Write<u16>(2);
 	score.Write<TeamType>(TeamType::RED);
@@ -1382,6 +1414,7 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 		res.Write<u16>(0);
 		SendPacket(clientHd, res);
 		if(got) SendPacket(clientHd, scoreGot);
+		else if(occupyMode) SendPacket(clientHd, scoreOccupy);
 		else SendPacket(clientHd, score);
 	}
 	for(i32 i = 0; i < count; i++) {
@@ -1423,7 +1456,7 @@ void Replication::SendGaugeToAll(UserID userID, u8 updateType, bool overheated, 
 	}
 }
 
-void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKills, UserID victimID, u8 victimTeam, i32 victimDeaths, i32 victimTeamKills)
+void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 score, i32 teamKills, i32 teamScore, UserID victimID, u8 victimTeam, i32 victimDeaths, i32 victimTeamKills)
 {
 	enum : u32 { SCORE = 0, KILL_COUNT = 1, DEAD_COUNT = 14 };
 
@@ -1432,14 +1465,14 @@ void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKi
 	killerPacket.Write<TeamType>(TeamType::INVALID);
 	killerPacket.Write<u16>(2);
 	killerPacket.Write<u32>(KILL_COUNT); killerPacket.Write<u32>((u32)kills);
-	killerPacket.Write<u32>(SCORE);      killerPacket.Write<u32>((u32)kills);
+	killerPacket.Write<u32>(SCORE);      killerPacket.Write<u32>((u32)score);
 
 	PacketWriter<Sv::SN_ScoreUpdate> teamPacket;
 	teamPacket.Write<u32>(0);
 	teamPacket.Write<TeamType>(team == 0 ? TeamType::RED : TeamType::BLUE);
 	teamPacket.Write<u16>(2);
 	teamPacket.Write<u32>(KILL_COUNT); teamPacket.Write<u32>((u32)teamKills);
-	teamPacket.Write<u32>(SCORE);      teamPacket.Write<u32>((u32)teamKills);
+	teamPacket.Write<u32>(SCORE);      teamPacket.Write<u32>((u32)teamScore);
 
 	PacketWriter<Sv::SN_ScoreUpdate> victimPacket;
 	victimPacket.Write<u32>((u32)victimID);
@@ -1459,6 +1492,36 @@ void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKi
 		SendPacket(clientHandle[clientID], teamPacket);
 		SendPacket(clientHandle[clientID], victimPacket);
 		SendPacket(clientHandle[clientID], victimTeamPacket);
+	}
+}
+
+void Replication::SendOccupyScoreToAll(UserID userID, u8 team, i32 captures, i32 occupyScore, i32 score, i32 teamHeld, i32 teamScore, i32 otherHeld, bool capture)
+{
+	enum : u32 { SCORE = 0, OCCUPY_COUNT = 27, OCCUPY_SCORE = 28 };
+	const TeamType teamType = team == 0 ? TeamType::RED : TeamType::BLUE;
+	PacketWriter<Sv::SN_ScoreUpdate> playerPacket;
+	playerPacket.Write<u32>((u32)userID);
+	playerPacket.Write<TeamType>(TeamType::INVALID);
+	playerPacket.Write<u16>(capture ? 3 : 2);
+	if(capture) { playerPacket.Write<u32>(OCCUPY_COUNT); playerPacket.Write<u32>((u32)captures); }
+	playerPacket.Write<u32>(OCCUPY_SCORE); playerPacket.Write<u32>((u32)occupyScore);
+	playerPacket.Write<u32>(SCORE); playerPacket.Write<u32>((u32)score);
+	PacketWriter<Sv::SN_ScoreUpdate> teamPacket;
+	teamPacket.Write<u32>(0);
+	teamPacket.Write<TeamType>(teamType);
+	teamPacket.Write<u16>(capture ? 2 : 1);
+	if(capture) { teamPacket.Write<u32>(OCCUPY_COUNT); teamPacket.Write<u32>((u32)teamHeld); }
+	teamPacket.Write<u32>(SCORE); teamPacket.Write<u32>((u32)teamScore);
+	PacketWriter<Sv::SN_ScoreUpdate> otherPacket;
+	otherPacket.Write<u32>(0);
+	otherPacket.Write<TeamType>(team == 0 ? TeamType::BLUE : TeamType::RED);
+	otherPacket.Write<u16>(1);
+	otherPacket.Write<u32>(OCCUPY_COUNT); otherPacket.Write<u32>((u32)otherHeld);
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		SendPacket(clientHandle[clientID], playerPacket);
+		SendPacket(clientHandle[clientID], teamPacket);
+		if(capture) SendPacket(clientHandle[clientID], otherPacket);
 	}
 }
 

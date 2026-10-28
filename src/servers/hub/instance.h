@@ -108,7 +108,8 @@ struct RoomInstance
 	enum class Phase: u8 {
 		Picking = 0,
 		StartingMatch,
-		MatchReady
+		MatchReady,
+		Banning
 	};
 
 	Server* server;
@@ -132,6 +133,12 @@ struct RoomInstance
 
 	bool markedAsRemove = false;
 	Phase phase = Phase::Picking;
+	bool draft = false;
+	u8 banRound = 0;
+	Time banRoundStart = Time::ZERO;
+	eastl::array<eastl::fixed_vector<ClassType,8,false>,2> teamBans;
+	eastl::array<bool,2> bannedThisRound = {{ false, false }};
+	eastl::fixed_set<ClassType,100,false> bannedMasters;
 
 	eastl::array<u8,4> matchServerIp = {0};
 	u16 matchServerPort = 0x0;
@@ -145,6 +152,12 @@ struct RoomInstance
 	}
 
 	void Init(Server* server_, const NewUser* userlist, const i32 userCount);
+	void SendPickPhaseStart(const struct User& user);
+	void StartBanRound();
+	void PickBotMasters();
+	void UpdateBans();
+	bool BanMaster(i32 team, ClassType classType);
+	const struct User* TeamLeader(i32 team) const;
 	void Update(Time localTime_);
 	void Replicate();
 

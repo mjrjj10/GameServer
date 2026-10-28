@@ -1413,10 +1413,13 @@ PUSH_PACKED
 struct CQ_PartySwapTeam
 {
 	enum { NET_ID = 60077 };
-	u32 field1_id_id; // 4 bytes
+	u32 originTeam;
+	u8 originSlot;
+	u32 targetTeam;
+	u8 targetSlot;
 };
 POP_PACKED
-ASSERT_SIZE(CQ_PartySwapTeam, 4);
+ASSERT_SIZE(CQ_PartySwapTeam, 10);
 
 PUSH_PACKED
 struct CQ_PartyInvite

@@ -186,6 +186,7 @@ void InstancePool::Lane::Update()
 		}
 
 		room.stageIndex = cr->stageIndex;
+		room.draft = cr->draft;
 		room.Init(server, cr->users.data(), cr->users.size());
 	}
 
@@ -402,7 +403,7 @@ void InstancePool::QueuePushPlayerToHub(ClientHandle clientHd, AccountUID accoun
 	l.hubPushPlayerQueue.push_back(player);
 }
 
-void InstancePool::QueueCreateRoom(SortieUID sortieUID, StageIndex stageIndex, const RoomUser* userList, const i32 userCount)
+void InstancePool::QueueCreateRoom(SortieUID sortieUID, StageIndex stageIndex, bool draft, const RoomUser* userList, const i32 userCount)
 {
 	// TODO: choose a lane based on capacity
 	Lane& roomLane = lanes.front();
@@ -430,6 +431,7 @@ void InstancePool::QueueCreateRoom(SortieUID sortieUID, StageIndex stageIndex, c
 	Lane::CreateRoomEntry create;
 	create.sortieUID = sortieUID;
 	create.stageIndex = stageIndex;
+	create.draft = draft;
 
 	for(i32 i = 0; i < userCount; i++) {
 		const RoomUser& user = userList[i];
@@ -570,7 +572,7 @@ void Coordinator::Update(f64 delta)
 				}
 			}
 
-			instancePool.QueueCreateRoom(packet.sortieUID, packet.stageIndex, roomClientList.data(), roomClientList.size());
+			instancePool.QueueCreateRoom(packet.sortieUID, packet.stageIndex, packet.draft != 0, roomClientList.data(), roomClientList.size());
 		}
 	}
 	matchmaker.packetQueue.Clear();

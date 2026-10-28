@@ -63,7 +63,9 @@ struct Matchmaker
 			ClientHandle instanceChd;
 		};
 
-		eastl::fixed_vector<Member,5,false> memberList;
+		eastl::fixed_vector<Member,10,false> memberList;
+		In::CustomTeams custom = {};
+		u8 draft = 0;
 		AreaIndex areaIndex = AreaIndex(0);
 		StageIndex stageIndex = StageIndex(0);
 		MapIndex mapIndex = MapIndex(0);
@@ -124,6 +126,7 @@ struct Matchmaker
 		StageIndex stageIndex = StageIndex(0);
 		MapIndex mapIndex = MapIndex(0);
 		GameType gameType = GameType::PVP_NORMAL;
+		u8 draft = 0;
 		eastl::fixed_vector<Player,16,false> playerList;
 		eastl::fixed_vector<decltype(playerList)::iterator,5> teamRed;
 		eastl::fixed_vector<decltype(playerList)::iterator,5> teamBlue;
@@ -364,9 +367,11 @@ struct Matchmaker
 				party.mapIndex = packet.mapIndex;
 				party.gameType = packet.gameType;
 				party.teamSize = packet.teamSize;
+				party.custom = packet.custom;
+				party.draft = packet.draft;
 				matchingPartyList.push_back(packet.partyUID);
 
-				eastl::fixed_set<ClientHandle,5,false> setInstance;
+				eastl::fixed_set<ClientHandle,10,false> setInstance;
 				foreach_const(mem, party.memberList) {
 					setInstance.insert(mem->instanceChd);
 				}
@@ -538,7 +543,9 @@ struct Matchmaker
 		}
 		const GameType frontGameType = partyMap.at(matchingPartyList.front())->gameType;
 		const bool pve = frontGameType == GameType::PVE_NORMAL || frontGameType == GameType::PVE_RANDOM || frontGameType == GameType::PVE_TICKET;
-		const bool soloRoom = Config().SoloRooms || pve;
+		const In::CustomTeams frontCustom = partyMap.at(matchingPartyList.front())->custom;
+		const bool custom = frontCustom.count > 0;
+		const bool soloRoom = Config().SoloRooms || pve || custom;
 		if(!soloRoom && humanCount < teamSize * 2 && TimeDiffSec(TimeDiff(matchingStartTime, now)) < MATCHING_WAIT_SEC) return;
 		matchingStartTime = Time::ZERO;
 		decltype(matchingPartyList) laterParties;
@@ -571,10 +578,28 @@ struct Matchmaker
 		room.stageIndex = firstParty.stageIndex;
 		room.mapIndex = firstParty.mapIndex;
 		room.gameType = firstParty.gameType;
+		room.draft = firstParty.draft;
 
 		LOG("MatchParties :: creating room %llu with %d player(s) from %d party(ies)", (u64)room.UID, humanCount, (i32)matchingPartyList.size());
 
 		foreach_const(puid, matchingPartyList) {
+			if(!custom) break;
+			const Party& party = *partyMap.at(*puid);
+			for(i32 i = 0; i < frontCustom.count; i++) {
+				const Party::Member* found = nullptr;
+				foreach_const(pl, party.memberList) if(pl->accountUID == frontCustom.accounts[i]) found = &*pl;
+				if(!found) continue;
+				const bool toRed = frontCustom.teams[i] == (u8)Team::RED;
+				Room::Player player(found->name, found->accountUID, found->instanceChd);
+				player.team = toRed ? Team::RED : Team::BLUE;
+				room.playerList.push_back(player);
+				if(toRed) room.teamRed.push_back(&room.playerList.back());
+				else room.teamBlue.push_back(&room.playerList.back());
+			}
+		}
+
+		foreach_const(puid, matchingPartyList) {
+			if(custom) break;
 			const Party& party = *partyMap.at(*puid);
 			const i32 redFree = teamSize - (i32)room.teamRed.size();
 			const i32 blueFree = teamSize - (i32)room.teamBlue.size();
@@ -592,7 +617,17 @@ struct Matchmaker
 		}
 
 		i32 botID = 1;
-		while(!pve && room.teamRed.size() < teamSize) {
+		for(i32 t = 0; custom && t < 2; t++) {
+			for(u8 b = 0; b < frontCustom.bots[t]; b++) {
+				Room::Player player(LFMT(L"Bot%d", botID++), AccountUID::INVALID, ClientHandle::INVALID);
+				player.team = t == 0 ? Team::RED : Team::BLUE;
+				player.isBot = true;
+				room.playerList.push_back(player);
+				if(t == 0) room.teamRed.push_back(&room.playerList.back());
+				else room.teamBlue.push_back(&room.playerList.back());
+			}
+		}
+		while(!pve && !custom && room.teamRed.size() < teamSize) {
 			Room::Player player(LFMT(L"Bot%d", botID++), AccountUID::INVALID, ClientHandle::INVALID);
 			player.team = Team::RED;
 			player.isBot = true;
@@ -600,7 +635,7 @@ struct Matchmaker
 			room.playerList.push_back(player);
 			room.teamRed.push_back(&room.playerList.back());
 		}
-		while(!pve && room.teamBlue.size() < teamSize) {
+		while(!pve && !custom && room.teamBlue.size() < teamSize) {
 			Room::Player player(LFMT(L"Bot%d", botID++), AccountUID::INVALID, ClientHandle::INVALID);
 			player.team = Team::BLUE;
 			player.isBot = true;
@@ -666,6 +701,7 @@ struct Matchmaker
 				In::MN_RoomCreated packet;
 				packet.sortieUID = r->UID;
 				packet.stageIndex = r->stageIndex;
+				packet.draft = r->draft;
 				packet.playerCount = 0;
 
 				foreach_const(pl, r->playerList) {

@@ -277,11 +277,17 @@ struct HubReplication
 	void SendPartyCreateSucess(ClientHandle clientHd, UserID ownerUserID, StageType stageType);
 
 	void SendPartyEnqueue(ClientHandle clientHd, StageIndex stageIndex, bool leader);
-	void SendPartyInvite(ClientHandle clientHd, const wchar* inviterNick, StageIndex stageIndex, GameType gameType, i32 partyID);
+	void SendPartyInvite(ClientHandle clientHd, const wchar* inviterNick, StageIndex stageIndex, GameType gameType, GameDefinition gameDefinition, i32 partyID);
 	void SendPartyInviteResult(ClientHandle clientHd, u32 result, const wchar* nickname);
 	struct PartyUser { u32 userId; const wchar* nickname; };
 	void SendPartyJoinAnswer(ClientHandle clientHd, i32 partyID, StageType stageType, GameType gameType, const PartyUser* members, i32 count);
-	void SendPartyJoin(ClientHandle clientHd, u32 userId, const wchar* nickname, CreatureIndex leaderCreature, bool receiverIsOwner, GameType gameType, u8 slot);
+	void SendPartyJoin(ClientHandle clientHd, u32 userId, const wchar* nickname, CreatureIndex leaderCreature, bool receiverIsOwner, GameType gameType, GameDefinition gameDefinition, u32 team, u8 slot, bool isBot);
+	struct PartySlot { u32 userId; const wchar* nickname; u8 isBot; };
+	void SendCustomPartyJoinAnswer(ClientHandle clientHd, i32 partyID, StageType stageType, GameType gameType, GameDefinition gameDefinition, const PartySlot* allies, i32 alliesCount, u32 alliesTeam, const PartySlot* enemies, i32 enemiesCount, u32 enemiesTeam, const PartySlot* spectators, i32 spectatorCount, bool isSpectator);
+	void SendPartySwapTeamAnswer(ClientHandle clientHd, u32 result);
+	void SendPartySwapTeam(ClientHandle clientHd, u32 originTeam, u8 originSlot, u32 targetTeam, u8 targetSlot);
+	void SendPartyAddBotAnswer(ClientHandle clientHd, u32 result);
+	void SendPartyRemoveBotAnswer(ClientHandle clientHd, u32 result);
 	void SendPartyLeave(ClientHandle clientHd, u32 userId, const wchar* nickname, bool receiverIsOwner);
 	void SendPartyBreakupAnswer(ClientHandle clientHd, i32 remainMemberCount);
 	void SendPartyBreakup(ClientHandle clientHd);
@@ -304,7 +310,7 @@ struct HubReplication
 	void SendFriendRemoveResult(ClientHandle clientHd, u32 result, const wchar* nickname);
 	void SendFriendRemoved(ClientHandle clientHd, const wchar* nickname);
 	void SendMatchingPartyConfirm(ClientHandle clientHd, u8 row, u32 teamType, bool confirm);
-	void SendMatchingPartyFound(ClientHandle clientHd, const In::MN_MatchingPartyFound& matchingParty, StageIndex stageIndex, const eastl::fixed_vector<UserID,16>& rowIDs, u8 myTeam);
+	void SendMatchingPartyFound(ClientHandle clientHd, const In::MN_MatchingPartyFound& matchingParty, StageIndex stageIndex, GameDefinition gameDefinition, const eastl::fixed_vector<UserID,16>& rowIDs, u8 myTeam);
 
 	void OnClientDisconnect(ClientHandle clientHd);
 

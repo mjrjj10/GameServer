@@ -4572,6 +4572,7 @@ bool GameXmlContent::LoadInteractions()
 		else if(action && EA::StdC::Strcmp(action, "IT_ACTION_OCCUPY") == 0) info.action = InteractionInfo::OCCUPY;
 		const char* kind = pData->Attribute("_Type");
 		info.individual = kind && EA::StdC::Strcmp(kind, "IT_TYPE_INDIVIDUAL") == 0;
+		info.pvpOccupy = kind && EA::StdC::Strcmp(kind, "IT_TYPE_PVP_OCCUPY") == 0;
 		const char* active = pData->Attribute("_Active");
 		info.active = !active || EA::StdC::Stricmp(active, "False") != 0;
 		const char* repeat = pData->Attribute("_Repeat");

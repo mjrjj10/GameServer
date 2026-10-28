@@ -1581,7 +1581,7 @@ void HubReplication::SendPartyCreateSucess(ClientHandle clientHd, UserID ownerUs
 	SendPacket(clientHd, packet);
 }
 
-void HubReplication::SendPartyInvite(ClientHandle clientHd, const wchar* inviterNick, StageIndex stageIndex, GameType gameType, i32 partyID)
+void HubReplication::SendPartyInvite(ClientHandle clientHd, const wchar* inviterNick, StageIndex stageIndex, GameType gameType, GameDefinition gameDefinition, i32 partyID)
 {
 	PacketWriter<Sv::SN_PartyInvite> packet;
 	packet.Write<u32>(0);
@@ -1589,7 +1589,7 @@ void HubReplication::SendPartyInvite(ClientHandle clientHd, const wchar* inviter
 	packet.Write<u16>(1);
 	packet.Write(stageIndex);
 	packet.Write<u32>((u32)gameType);
-	packet.Write<u32>((u32)GameDefinition::System);
+	packet.Write<u32>((u32)gameDefinition);
 	packet.Write<u32>((u32)StageRule::Unfair);
 	packet.Write<i32>(partyID);
 	packet.Write<u32>(0);
@@ -1630,18 +1630,78 @@ void HubReplication::SendPartyJoinAnswer(ClientHandle clientHd, i32 partyID, Sta
 	SendPacket(clientHd, packet);
 }
 
-void HubReplication::SendPartyJoin(ClientHandle clientHd, u32 userId, const wchar* nickname, CreatureIndex leaderCreature, bool receiverIsOwner, GameType gameType, u8 slot)
+void HubReplication::SendPartyJoin(ClientHandle clientHd, u32 userId, const wchar* nickname, CreatureIndex leaderCreature, bool receiverIsOwner, GameType gameType, GameDefinition gameDefinition, u32 team, u8 slot, bool isBot)
 {
 	PacketWriter<Sv::SN_PartyJoin> packet;
 	packet.Write<u32>(userId);
 	packet.WriteStringObj(nickname);
-	packet.Write<u8>(0);
+	packet.Write<u8>(isBot ? 1 : 0);
 	packet.Write(leaderCreature);
 	packet.Write<u8>(receiverIsOwner ? 1 : 0);
 	packet.Write<u32>((u32)gameType);
-	packet.Write<u32>((u32)GameDefinition::System);
-	packet.Write<u32>(0);
+	packet.Write<u32>((u32)gameDefinition);
+	packet.Write<u32>(team);
 	packet.Write<u8>(slot);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendCustomPartyJoinAnswer(ClientHandle clientHd, i32 partyID, StageType stageType, GameType gameType, GameDefinition gameDefinition, const PartySlot* allies, i32 alliesCount, u32 alliesTeam, const PartySlot* enemies, i32 enemiesCount, u32 enemiesTeam, const PartySlot* spectators, i32 spectatorCount, bool isSpectator)
+{
+	PacketWriter<Sv::SA_PartyJoin,2048> packet;
+	packet.Write<i32>(0);
+	packet.Write<i32>(partyID);
+	packet.Write<u32>((u32)stageType);
+	packet.Write<u32>((u32)gameType);
+	packet.Write<u32>((u32)gameDefinition);
+	const auto writeSlots = [&](const PartySlot* slots, i32 count) {
+		packet.Write<u16>((u16)count);
+		for(i32 i = 0; i < count; i++) {
+			packet.Write<u32>(slots[i].userId);
+			packet.WriteStringObj(slots[i].nickname);
+			packet.Write<u8>(slots[i].isBot);
+			packet.Write<i32>(0);
+			packet.Write<i32>(0);
+			packet.Write<i32>(0);
+			packet.Write<f32>(0.f);
+		}
+	};
+	writeSlots(allies, alliesCount);
+	packet.Write<u32>(alliesTeam);
+	writeSlots(enemies, enemiesCount);
+	packet.Write<u32>(enemiesTeam);
+	writeSlots(spectators, spectatorCount);
+	packet.Write<u8>(isSpectator ? 1 : 0);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendPartySwapTeamAnswer(ClientHandle clientHd, u32 result)
+{
+	Sv::SA_PartySwapTeam packet;
+	packet.retval = result;
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendPartySwapTeam(ClientHandle clientHd, u32 originTeam, u8 originSlot, u32 targetTeam, u8 targetSlot)
+{
+	Sv::SN_PartySwapTeam packet;
+	packet.originTeam = originTeam;
+	packet.originSlotIndex = originSlot;
+	packet.targetTeam = targetTeam;
+	packet.targetSlotIndex = targetSlot;
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendPartyRemoveBotAnswer(ClientHandle clientHd, u32 result)
+{
+	Sv::SA_PartyRemoveBot packet;
+	packet.retval = result;
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendPartyAddBotAnswer(ClientHandle clientHd, u32 result)
+{
+	Sv::SA_PartyAddBot packet;
+	packet.retval = result;
 	SendPacket(clientHd, packet);
 }
 
@@ -1884,14 +1944,16 @@ void HubReplication::SendMatchingPartyConfirm(ClientHandle clientHd, u8 row, u32
 	SendPacket(clientHd, packet);
 }
 
-void HubReplication::SendMatchingPartyFound(ClientHandle clientHd, const In::MN_MatchingPartyFound& matchingParty, StageIndex stageIndex, const eastl::fixed_vector<UserID,16>& rowIDs, u8 myTeam)
+static const i32 MEASURED_MATCH_ACCEPT_WAIT_SEC = 15;
+
+void HubReplication::SendMatchingPartyFound(ClientHandle clientHd, const In::MN_MatchingPartyFound& matchingParty, StageIndex stageIndex, GameDefinition gameDefinition, const eastl::fixed_vector<UserID,16>& rowIDs, u8 myTeam)
 {
 	PacketWriter<Sv::SQ_MatchingPartyFound,512> packet;
 
 	packet.Write(matchingParty.sortieUID); // sortieID
 	packet.Write(stageIndex);
 	packet.Write(matchingParty.gameType);
-	packet.Write(GameDefinition::System); // gameDefinitionType
+	packet.Write(gameDefinition);
 	packet.Write(StageRule::Unfair); // stageRule
 
 	// allies
@@ -1938,7 +2000,7 @@ void HubReplication::SendMatchingPartyFound(ClientHandle clientHd, const In::MN_
 	packet.Write<u16>(0);
 
 	// NOTE: if timeToWaitInSec is 0 there is no popup to accept
-	packet.Write<i32>(15); // timeToWaitInSec
+	packet.Write<i32>(gameDefinition == GameDefinition::User ? 0 : MEASURED_MATCH_ACCEPT_WAIT_SEC);
 	packet.Write<u8>(0); // elementMain
 	packet.Write<u8>(0); // elementSub
 

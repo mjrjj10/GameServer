@@ -292,6 +292,7 @@ struct Replication
 	u8 isTrespass = 0;
 	i32 surrenderAbleTime = 0;
 	bool titanMode = false;
+	bool occupyMode = false;
 	i8 titanNextIndex = 0;
 	i32 supportKitIndex = -1;
 
@@ -391,6 +392,8 @@ struct Replication
 		i32 points = 0;
 		u8 ingameLevel = 1;
 		i64 damageDealt = 0;
+		u8 occupyCaptures = 0;
+		i32 occupyScore = 0;
 		i32 savedPieces = 0;
 		eastl::array<u8,4> monsterKills = {};
 		eastl::array<u8,4> traits[2] = {};
@@ -508,7 +511,8 @@ struct Replication
 	void RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetData, i32 packetSize);
 	u16 RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, RemoteIdx remoteDoc);
 	void RelayWeaponState(ClientHandle senderHd, ActorUID ownerUID, i32 weaponID, i32 state, u8 chargeLevel, u8 firingCombo);
-	void SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 teamKills, UserID victimID, u8 victimTeam, i32 victimDeaths, i32 victimTeamKills);
+	void SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 score, i32 teamKills, i32 teamScore, UserID victimID, u8 victimTeam, i32 victimDeaths, i32 victimTeamKills);
+	void SendOccupyScoreToAll(UserID userID, u8 team, i32 captures, i32 occupyScore, i32 score, i32 teamHeld, i32 teamScore, i32 otherHeld, bool capture);
 	void SendAssistScoreToAll(UserID userID, u8 team, i32 assists, i32 score, i32 teamScore);
 	struct DamageTaken
 	{

@@ -362,7 +362,8 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			foreach_const(it, players) if(it->team == target.team && !it->dead) allDead = false;
 			if(allDead) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_TEAM_ALL_DEAD, (u32)(target.team == 0 ? TeamType::RED : TeamType::BLUE), attacker.Main().UID, chara.UID, KillPoints());
 		}
-		replication->SendScoreToAll(attacker.userID, attacker.team, attacker.kills, teamKills, target.userID, target.team, target.deaths, victimTeamKills);
+		if(occupyMode) attacker.points += (i32)KillPoints();
+		replication->SendScoreToAll(attacker.userID, attacker.team, attacker.kills, occupyMode ? attacker.points : attacker.kills, teamKills, occupyMode ? TeamPoints(attacker.team) : teamKills, target.userID, target.team, target.deaths, victimTeamKills);
 		AddPoints(attacker, (i32)KillPoints());
 		for(i32 k = 0; k < (i32)target.recentDamage.size(); ) {
 			if(localTime > TimeAdd(target.recentDamage[k].at, TimeMsToTime(DEAD_DAMAGE_WINDOW_MS))) target.recentDamage.erase(target.recentDamage.begin() + k);
@@ -380,7 +381,8 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			it->assists++;
 			i32 teamScore = 0;
 			foreach_const(p, players) if(p->team == it->team) teamScore += p->kills;
-			replication->SendAssistScoreToAll(it->userID, it->team, it->assists, it->kills, teamScore);
+			if(occupyMode) teamScore = TeamPoints(it->team);
+			replication->SendAssistScoreToAll(it->userID, it->team, it->assists, occupyMode ? it->points : it->kills, teamScore);
 		}
 		replication->SendDeadDamageInfo(target.clientHd, attacker.index, target.recentDamage.data(), (i32)target.recentDamage.size(), (i32)TimeDiffMs(TimeDiff(firstDamageAt, localTime)));
 		target.recentDamage.clear();

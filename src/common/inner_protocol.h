@@ -103,6 +103,14 @@ struct HQ_PartyCancelMatching
 	PartyUID partyUID;
 };
 
+struct CustomTeams
+{
+	u8 count;
+	eastl::array<AccountUID,10> accounts;
+	eastl::array<u8,10> teams;
+	eastl::array<u8,2> bots;
+};
+
 struct HQ_PartyEnqueue
 {
 	enum { NET_ID = 1003 };
@@ -113,6 +121,8 @@ struct HQ_PartyEnqueue
 	MapIndex mapIndex;
 	GameType gameType;
 	u8 teamSize;
+	CustomTeams custom;
+	u8 draft;
 };
 
 PUSH_PACKED
@@ -231,6 +241,7 @@ struct MN_RoomCreated
 	u8 playerCount;
 	eastl::array<RoomUser,16> playerList;
 	StageIndex stageIndex;
+	u8 draft;
 };
 
 struct MQ_CreateGame
