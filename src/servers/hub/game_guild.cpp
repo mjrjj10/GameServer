@@ -220,6 +220,18 @@ void HubGame::GuildOnConnect(i32 userID)
 		if(me.joinedDay != day) SendGuildRewardMail(nick, MEASURED_GUILD_ROLLCALL_MAIL_SUBJECT, MEASURED_GUILD_ROLLCALL_MAIL_CONTENT, GetGameXmlContent().guildMedalItem, MEASURED_GUILD_ROLLCALL_MEDALS);
 		LOG("[client%x] Guild :: %ls roll call in %ls (+%d)", clientHd, nick.data(), guild->name.data(), points);
 	}
+	auto account = GetAccountManager().accountMap.find(playerAccountData[userID]->UID);
+	if(account != GetAccountManager().accountMap.end() && account->second->pendingGuildPoints > 0) {
+		const i32 points = account->second->pendingGuildPoints;
+		account->second->pendingGuildPoints = 0;
+		const i32 before = GuildLevel(*guild);
+		guild->point += points;
+		guild->fund += points;
+		me.contributedPoint += points;
+		GuildLevelCheck(*guild, before);
+		SendGuildPointAndFund(*guild);
+		LOG("[client%x] Guild :: %ls brings %d point(s) from games to %ls", clientHd, nick.data(), points, guild->name.data());
+	}
 	store.Save();
 	eastl::fixed_vector<WideString,64,false> nicks;
 	eastl::fixed_vector<u8,64,false> states;

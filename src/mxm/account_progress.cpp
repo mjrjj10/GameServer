@@ -138,8 +138,8 @@ void AccountGameRecordAppend(const wchar* nickname, const AccountGameRecord& rec
 	AccountPath(nickname, "reward", path, sizeof(path));
 	FILE* f = fopen(path, "ab");
 	ASSERT(f);
-	fprintf(f, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d %u %u\n", (long long)record.gold, record.exp, (u32)record.won, record.kills, record.assists, record.bestKillStreak,
-		(u32)record.firstBlood, (long long)record.damage, record.titanScore, record.stageIndex, record.gameType, record.classTypes[0], record.classTypes[1], (u32)record.draw, record.playSeconds);
+	fprintf(f, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d %u %u %d\n", (long long)record.gold, record.exp, (u32)record.won, record.kills, record.assists, record.bestKillStreak,
+		(u32)record.firstBlood, (long long)record.damage, record.titanScore, record.stageIndex, record.gameType, record.classTypes[0], record.classTypes[1], (u32)record.draw, record.playSeconds, record.guildPoints);
 	fclose(f);
 }
 
@@ -194,8 +194,8 @@ AccountReward AccountRewardTake(const wchar* nickname)
 		AccountGameRecord record;
 		long long gold = 0, damage = 0;
 		u32 won = 0, firstBlood = 0, draw = 0;
-		const i32 n = sscanf(line, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d %u %u", &gold, &record.exp, &won, &record.kills, &record.assists, &record.bestKillStreak,
-			&firstBlood, &damage, &record.titanScore, &record.stageIndex, &record.gameType, &record.classTypes[0], &record.classTypes[1], &draw, &record.playSeconds);
+		const i32 n = sscanf(line, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d %u %u %d", &gold, &record.exp, &won, &record.kills, &record.assists, &record.bestKillStreak,
+			&firstBlood, &damage, &record.titanScore, &record.stageIndex, &record.gameType, &record.classTypes[0], &record.classTypes[1], &draw, &record.playSeconds, &record.guildPoints);
 		if(n < 2) continue;
 		record.gold = (i64)gold;
 		record.won = (u8)won;

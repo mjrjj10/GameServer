@@ -718,6 +718,7 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 			ActiveMissionList list;
 			MissionBuildActive(account.nickname.data(), progress.level, (i64)time(nullptr), saved, &list);
 			foreach_const(r, reward.records) {
+				account.pendingGuildPoints += r->guildPoints;
 				if(r->stageIndex == 0) continue;
 				if(r->gameType >= (i32)GameType::PVE_NORMAL && r->gameType <= (i32)GameType::PVE_TICKET && !r->won) account.pveFailedReturn = true;
 				MissionApplyGame(*r, &list);

@@ -1198,6 +1198,7 @@ void Game::EndDefence()
 		record.gold = clear.baseRon + RewardBonusTotal(clear.bonusRon);
 		record.exp = clear.baseExp + RewardBonusTotal(clear.bonusExp);
 		record.won = world.defence.won ? 1 : 0;
+		record.guildPoints = (i32)clear.guildBase;
 		record.kills = p->pveKills;
 		record.stageIndex = clear.stage;
 		record.gameType = (i32)replication.gameType;

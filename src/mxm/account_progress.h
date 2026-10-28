@@ -57,6 +57,7 @@ struct AccountGameRecord
 	i32 gameType = 0;
 	eastl::array<i32,2> classTypes = { 0, 0 };
 	u32 playSeconds = 0;
+	i32 guildPoints = 0;
 };
 
 struct AccountReward
