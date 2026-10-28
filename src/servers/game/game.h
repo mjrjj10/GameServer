@@ -118,6 +118,7 @@ struct Game
 	void MoveToNextZone();
 	bool pveStage = false;
 	bool defenceStage = false;
+	i64 gameStartUnix = 0;
 	bool stageEnded = false;
 	eastl::fixed_vector<Replication::RewardCard,32,false> rewardCards;
 	struct RewardState { ClientHandle clientHd; i32 picks; bool finished; Time startedAt; eastl::fixed_vector<u32,8,false> slots; };

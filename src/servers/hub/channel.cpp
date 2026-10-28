@@ -36,6 +36,7 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 	const i32 packetSize = header.size - sizeof(NetHeader);
 
 static const u16 MEASURED_CQ_MASTERGEAR_RENAME = 60066;
+static const u16 MEASURED_CQ_PVP_RECORD = 60228;
 #define HANDLE_CASE(PACKET) case Cl::PACKET::NET_ID: { HandlePacket_##PACKET(clientHd, header, packetData, packetSize); } break
 
 	switch(header.netID) {
@@ -86,6 +87,8 @@ static const u16 MEASURED_CQ_MASTERGEAR_RENAME = 60066;
 		HANDLE_CASE(CQ_GetUserInfo);
 		HANDLE_CASE(CQ_ItemTrade);
 		HANDLE_CASE(CQ_GearEquip);
+		HANDLE_CASE(CQ_PvpDetailRecord);
+		case MEASURED_CQ_PVP_RECORD: HandlePvpRecord(clientHd); break;
 		HANDLE_CASE(CQ_GearUnequip);
 		HANDLE_CASE(CQ_MasterGearRepair);
 		case MEASURED_CQ_MASTERGEAR_RENAME: HandleMasterGearRename(clientHd, packetData, packetSize); break;
@@ -885,6 +888,88 @@ void HubPacketHandler::HandlePacket_CQ_BuyGift(ClientHandle clientHd, const NetH
 	const Cl::CQ_BuyGift& packet = SafeCast<Cl::CQ_BuyGift>(packetData, packetSize);
 	NT_LOG("[client%x] Client :: CQ_BuyGift (activity reward) :: tier=%u", clientHd, (u32)packet.amount_u8);
 	game->OnActivityReward(clientHd, (i32)packet.amount_u8);
+}
+
+static const i64 PVP_FILETIME_UNIX_EPOCH = 116444736000000000LL;
+static const i64 PVP_FILETIME_PER_SEC = 10000000LL;
+
+void HubPacketHandler::HandlePvpRecord(ClientHandle clientHd)
+{
+	const AccountPvpHistory history = AccountPvpHistoryLoad(game->AccountNickname(clientHd));
+	NT_LOG("[client%x] Client :: CQ_PvpRecord", clientHd);
+	PacketWriter<Sv::SA_PvpRecord,2048> packet;
+	packet.Write<u16>((u16)history.stats.size());
+	foreach_const(s, history.stats) {
+		packet.Write<u8>(s->gameType);
+		packet.Write<u8>(s->saveType);
+		packet.Write<u32>(s->win);
+		packet.Write<u32>(s->lose);
+		packet.Write<u32>(s->draw);
+		packet.Write<u32>(s->leave);
+		packet.Write<u32>(s->kill);
+		packet.Write<u32>(s->death);
+		packet.Write<u32>(s->assist);
+		packet.Write<u32>(s->score);
+		packet.Write<u32>(s->captures);
+	}
+	packet.Write<u16>(0);
+	SendPacket(clientHd, packet);
+}
+
+void HubPacketHandler::HandlePacket_CQ_PvpDetailRecord(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_PvpDetailRecord>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_PvpDetailRecord (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const Cl::CQ_PvpDetailRecord& req = SafeCast<Cl::CQ_PvpDetailRecord>(packetData, packetSize);
+	NT_LOG("[client%x] Client :: CQ_PvpDetailRecord :: gameType=%u saveType=%u", clientHd, req.gameType, (u32)req.pvpSaveType);
+	const AccountPvpHistory history = AccountPvpHistoryLoad(game->AccountNickname(clientHd));
+	eastl::fixed_vector<eastl::pair<i32,eastl::array<u32,2>>,64,false> classes;
+	auto count = [&classes](i32 cls, bool won) {
+		foreach(c, classes) if(c->first == cls) { c->second[0]++; if(won) c->second[1]++; return; }
+		if(!classes.full()) classes.push_back(eastl::make_pair(cls, eastl::array<u32,2>{{ 1u, won ? 1u : 0u }}));
+	};
+	eastl::fixed_vector<const AccountPvpRecent*,40,false> recent;
+	foreach_const(r, history.recent) {
+		if(r->gameType != (u8)req.gameType || r->saveType != req.pvpSaveType) continue;
+		recent.push_back(&*r);
+		for(i32 c : r->classes) count(c, r->result == 1);
+	}
+	u32 mostPlay = 0, mostPlayCount = 0, mostWin = 0, mostWinCount = 0;
+	foreach_const(c, classes) {
+		if(c->second[0] > mostPlayCount) { mostPlay = (u32)c->first; mostPlayCount = c->second[0]; }
+		if(c->second[1] > mostWinCount) { mostWin = (u32)c->first; mostWinCount = c->second[1]; }
+	}
+	PacketWriter<Sv::SA_PvpDetailRecord,2048> packet;
+	packet.Write<u32>(req.gameType);
+	packet.Write<u8>(req.pvpSaveType);
+	packet.Write<u32>(mostPlay);
+	packet.Write<u32>(mostPlayCount);
+	packet.Write<u32>(mostWin);
+	packet.Write<u32>(mostWinCount);
+	packet.Write<u16>((u16)recent.size());
+	for(i32 i = (i32)recent.size() - 1; i >= 0; i--) {
+		const AccountPvpRecent& r = *recent[i];
+		packet.Write<u8>(r.result);
+		packet.Write<u32>((u32)r.classes[0]);
+		packet.Write<u32>((u32)r.classes[1]);
+		packet.Write<u16>((u16)r.myScore);
+		packet.Write<u16>((u16)r.myTeamScore);
+		packet.Write<u16>((u16)r.enemyTeamScore);
+		packet.Write<u8>(r.myCount);
+		packet.Write<u8>(r.enemyCount);
+		packet.Write<u8>(r.kill);
+		packet.Write<u8>(r.death);
+		packet.Write<u8>(r.assist);
+		packet.Write<u8>(r.occupy);
+		packet.Write<u32>((u32)r.myScore);
+		packet.Write<i64>(r.beginTime * PVP_FILETIME_PER_SEC + PVP_FILETIME_UNIX_EPOCH);
+	}
+	packet.Write<u32>(0);
+	packet.Write<u32>(0);
+	packet.Write<u16>(0);
+	SendPacket(clientHd, packet);
 }
 
 void HubPacketHandler::HandlePacket_CQ_GearEquip(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

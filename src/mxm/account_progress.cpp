@@ -138,8 +138,9 @@ void AccountGameRecordAppend(const wchar* nickname, const AccountGameRecord& rec
 	AccountPath(nickname, "reward", path, sizeof(path));
 	FILE* f = fopen(path, "ab");
 	ASSERT(f);
-	fprintf(f, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d %u %u %d\n", (long long)record.gold, record.exp, (u32)record.won, record.kills, record.assists, record.bestKillStreak,
-		(u32)record.firstBlood, (long long)record.damage, record.titanScore, record.stageIndex, record.gameType, record.classTypes[0], record.classTypes[1], (u32)record.draw, record.playSeconds, record.guildPoints);
+	fprintf(f, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d %u %u %d %d %d %d %d %u %u %u %u %lld\n", (long long)record.gold, record.exp, (u32)record.won, record.kills, record.assists, record.bestKillStreak,
+		(u32)record.firstBlood, (long long)record.damage, record.titanScore, record.stageIndex, record.gameType, record.classTypes[0], record.classTypes[1], (u32)record.draw, record.playSeconds, record.guildPoints,
+		record.deaths, record.score, record.myTeamScore, record.enemyTeamScore, (u32)record.myTeamCount, (u32)record.enemyTeamCount, (u32)record.occupyCount, (u32)record.pvpSaveType, (long long)record.beginTime);
 	fclose(f);
 }
 
@@ -180,6 +181,100 @@ void AccountStageCleared(const wchar* nickname, i32 stageIndex)
 }
 
 static const char* DEFENCE_WORLD_RECORD_PATH = "accounts/defence_world.txt";
+static const i32 MEASURED_PVP_RECENT_GAMES = 10;
+static const u8 MEASURED_PVP_RESULT_WIN = 1;
+static const u8 MEASURED_PVP_RESULT_LOSE = 2;
+static const u8 MEASURED_PVP_RESULT_DRAW = 3;
+
+AccountPvpHistory AccountPvpHistoryLoad(const wchar* nickname)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	AccountPvpHistory history;
+	char path[512];
+	AccountPath(nickname, "pvp", path, sizeof(path));
+	FILE* f = fopen(path, "rb");
+	if(!f) return history;
+	char line[512];
+	while(fgets(line, sizeof(line), f)) {
+		u32 a[11] = {};
+		long long t = 0;
+		u32 b[14] = {};
+		if(sscanf(line, "S %u %u %u %u %u %u %u %u %u %u %u", &a[0], &a[1], &a[2], &a[3], &a[4], &a[5], &a[6], &a[7], &a[8], &a[9], &a[10]) >= 10 && !history.stats.full()) {
+			AccountPvpStat s;
+			s.gameType = (u8)a[0]; s.saveType = (u8)a[1]; s.win = a[2]; s.lose = a[3]; s.draw = a[4]; s.leave = a[5]; s.kill = a[6]; s.death = a[7]; s.assist = a[8]; s.score = a[9]; s.captures = a[10];
+			history.stats.push_back(s);
+		}
+		else if(sscanf(line, "R %u %u %u %u %u %u %u %u %u %u %u %u %u %u %lld", &b[0], &b[1], &b[2], &b[3], &b[4], &b[5], &b[6], &b[7], &b[8], &b[9], &b[10], &b[11], &b[12], &b[13], &t) == 15 && !history.recent.full()) {
+			AccountPvpRecent r;
+			r.gameType = (u8)b[0]; r.saveType = (u8)b[1]; r.result = (u8)b[2]; r.classes[0] = (i32)b[3]; r.classes[1] = (i32)b[4]; r.myScore = (i32)b[5]; r.myTeamScore = (i32)b[6]; r.enemyTeamScore = (i32)b[7];
+			r.myCount = (u8)b[8]; r.enemyCount = (u8)b[9]; r.kill = (u8)b[10]; r.death = (u8)b[11]; r.assist = (u8)b[12]; r.occupy = (u8)b[13]; r.beginTime = (i64)t;
+			history.recent.push_back(r);
+		}
+	}
+	fclose(f);
+	return history;
+}
+
+void AccountPvpHistorySave(const wchar* nickname, const AccountPvpHistory& history)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	_mkdir(ACCOUNT_DIR);
+	char path[512];
+	AccountPath(nickname, "pvp", path, sizeof(path));
+	FILE* f = fopen(path, "wb");
+	if(!f) return;
+	foreach_const(s, history.stats) fprintf(f, "S %u %u %u %u %u %u %u %u %u %u %u\n", (u32)s->gameType, (u32)s->saveType, s->win, s->lose, s->draw, s->leave, s->kill, s->death, s->assist, s->score, s->captures);
+	foreach_const(r, history.recent) fprintf(f, "R %u %u %u %d %d %d %d %d %u %u %u %u %u %u %lld\n", (u32)r->gameType, (u32)r->saveType, (u32)r->result, r->classes[0], r->classes[1], r->myScore, r->myTeamScore, r->enemyTeamScore,
+		(u32)r->myCount, (u32)r->enemyCount, (u32)r->kill, (u32)r->death, (u32)r->assist, (u32)r->occupy, (long long)r->beginTime);
+	fclose(f);
+}
+
+void AccountPvpHistoryAdd(AccountPvpHistory* history, const AccountGameRecord& record)
+{
+	AccountPvpStat* stat = nullptr;
+	foreach(s, history->stats) if(s->gameType == (u8)record.gameType && s->saveType == record.pvpSaveType) stat = &*s;
+	if(!stat && !history->stats.full()) {
+		AccountPvpStat s;
+		s.gameType = (u8)record.gameType;
+		s.saveType = record.pvpSaveType;
+		history->stats.push_back(s);
+		stat = &history->stats.back();
+	}
+	if(stat) {
+		if(record.won) stat->win++;
+		else if(record.draw) stat->draw++;
+		else stat->lose++;
+		stat->kill += (u32)MAX(record.kills, 0);
+		stat->death += (u32)MAX(record.deaths, 0);
+		stat->assist += (u32)MAX(record.assists, 0);
+		stat->score += (u32)MAX(record.score, 0);
+		stat->captures += record.occupyCount;
+	}
+	AccountPvpRecent r;
+	r.gameType = (u8)record.gameType;
+	r.saveType = record.pvpSaveType;
+	r.result = record.won ? MEASURED_PVP_RESULT_WIN : record.draw ? MEASURED_PVP_RESULT_DRAW : MEASURED_PVP_RESULT_LOSE;
+	r.classes[0] = record.classTypes[0];
+	r.classes[1] = record.classTypes[1];
+	r.myScore = record.score;
+	r.myTeamScore = record.myTeamScore;
+	r.enemyTeamScore = record.enemyTeamScore;
+	r.myCount = record.myTeamCount;
+	r.enemyCount = record.enemyTeamCount;
+	r.kill = (u8)MIN(record.kills, 255);
+	r.death = (u8)MIN(record.deaths, 255);
+	r.assist = (u8)MIN(record.assists, 255);
+	r.occupy = record.occupyCount;
+	r.beginTime = record.beginTime;
+	i32 same = 0;
+	foreach_const(e, history->recent) if(e->gameType == r.gameType && e->saveType == r.saveType) same++;
+	if(same >= MEASURED_PVP_RECENT_GAMES || history->recent.full()) {
+		for(auto it = history->recent.begin(); it != history->recent.end(); ++it) {
+			if(it->gameType == r.gameType && it->saveType == r.saveType) { history->recent.erase(it); break; }
+		}
+	}
+	if(!history->recent.full()) history->recent.push_back(r);
+}
 
 AccountTier AccountTierLoad(const wchar* nickname)
 {
@@ -268,8 +363,16 @@ AccountReward AccountRewardTake(const wchar* nickname)
 		AccountGameRecord record;
 		long long gold = 0, damage = 0;
 		u32 won = 0, firstBlood = 0, draw = 0;
-		const i32 n = sscanf(line, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d %u %u %d", &gold, &record.exp, &won, &record.kills, &record.assists, &record.bestKillStreak,
-			&firstBlood, &damage, &record.titanScore, &record.stageIndex, &record.gameType, &record.classTypes[0], &record.classTypes[1], &draw, &record.playSeconds, &record.guildPoints);
+		u32 myCount = 0, enemyCount = 0, occupy = 0, saveType = 0;
+		long long beginTime = 0;
+		const i32 n = sscanf(line, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d %u %u %d %d %d %d %d %u %u %u %u %lld", &gold, &record.exp, &won, &record.kills, &record.assists, &record.bestKillStreak,
+			&firstBlood, &damage, &record.titanScore, &record.stageIndex, &record.gameType, &record.classTypes[0], &record.classTypes[1], &draw, &record.playSeconds, &record.guildPoints,
+			&record.deaths, &record.score, &record.myTeamScore, &record.enemyTeamScore, &myCount, &enemyCount, &occupy, &saveType, &beginTime);
+		record.myTeamCount = (u8)myCount;
+		record.enemyTeamCount = (u8)enemyCount;
+		record.occupyCount = (u8)occupy;
+		record.pvpSaveType = (u8)saveType;
+		record.beginTime = (i64)beginTime;
 		if(n < 2) continue;
 		record.gold = (i64)gold;
 		record.won = (u8)won;

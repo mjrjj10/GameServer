@@ -303,6 +303,7 @@ void Game::Update(Time localTime_)
 					replication.SendGameStart(p->clientHd);
 				}
 				tGameStarted = localTime;
+				gameStartUnix = (i64)time(nullptr);
 				world.combatLocked = false;
 				if(!Config().DevShowcase) world.gameStartedAt = localTime;
 				world.ApplyAllPassives();
@@ -1116,6 +1117,14 @@ void Game::EndGame()
 		record.bestKillStreak = p.bestKillStreak;
 		record.firstBlood = p.firstBlood;
 		record.damage = p.damageDealt;
+		record.deaths = p.deaths;
+		record.score = world.occupyMode ? p.occupyScore : p.points > 0 ? p.points : p.kills;
+		record.myTeamScore = own;
+		record.enemyTeamScore = other;
+		foreach_const(q, list) { if(q->team == e->team) record.myTeamCount++; else record.enemyTeamCount++; }
+		record.occupyCount = p.occupyCaptures;
+		if(const GameXmlContent::MapList* mapInfo = GetGameXmlContent().FindMapListByID(replication.mapIndex)) record.pvpSaveType = mapInfo->pvpSaveType;
+		record.beginTime = gameStartUnix;
 		record.stageIndex = (i32)replication.stageIndex;
 		record.gameType = (i32)replication.gameType;
 		record.classTypes = { (i32)p.mainClass, (i32)p.subClass };

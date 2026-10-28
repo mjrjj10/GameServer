@@ -77,7 +77,27 @@ struct AccountGameRecord
 	eastl::array<i32,2> classTypes = { 0, 0 };
 	u32 playSeconds = 0;
 	i32 guildPoints = 0;
+	i32 deaths = 0;
+	i32 score = 0;
+	i32 myTeamScore = 0;
+	i32 enemyTeamScore = 0;
+	u8 myTeamCount = 0;
+	u8 enemyTeamCount = 0;
+	u8 occupyCount = 0;
+	u8 pvpSaveType = 0;
+	i64 beginTime = 0;
 };
+
+struct AccountPvpStat { u8 gameType = 0; u8 saveType = 0; u32 win = 0; u32 lose = 0; u32 draw = 0; u32 leave = 0; u32 kill = 0; u32 death = 0; u32 assist = 0; u32 score = 0; u32 captures = 0; };
+struct AccountPvpRecent { u8 gameType = 0; u8 saveType = 0; u8 result = 0; i32 classes[2] = { 0, 0 }; i32 myScore = 0; i32 myTeamScore = 0; i32 enemyTeamScore = 0; u8 myCount = 0; u8 enemyCount = 0; u8 kill = 0; u8 death = 0; u8 assist = 0; u8 occupy = 0; i64 beginTime = 0; };
+struct AccountPvpHistory
+{
+	eastl::fixed_vector<AccountPvpStat,16,false> stats;
+	eastl::fixed_vector<AccountPvpRecent,40,false> recent;
+};
+AccountPvpHistory AccountPvpHistoryLoad(const wchar* nickname);
+void AccountPvpHistorySave(const wchar* nickname, const AccountPvpHistory& history);
+void AccountPvpHistoryAdd(AccountPvpHistory* history, const struct AccountGameRecord& record);
 
 struct AccountReward
 {

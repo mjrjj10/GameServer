@@ -713,6 +713,7 @@ struct GameXmlContent
 		MapType mapType;
 		GameSubModeType gameSubModeType;
 		eastl::fixed_string<char, 256> levelFile;
+		u8 pvpSaveType = 0;
 	};
 
 	struct Song

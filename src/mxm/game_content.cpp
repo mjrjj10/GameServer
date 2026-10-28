@@ -787,6 +787,10 @@ bool GameXmlContent::LoadMapList()
 			// training room doesn't have a gamesubmode, so this is OK
 		}
 
+		static const char* MEASURED_PVP_SAVE_TYPES[] = { "PVP_SAVE_TYPE_INVALID", "PVP_SAVE_TYPE_NORMAL", "PVP_SAVE_TYPE_GOT", "PVP_SAVE_TYPE_OCCUPY" };
+		if(const char* save = pMapElt->Attribute("_PVPSaveType")) {
+			for(u8 t = 0; t < (u8)ARRAY_COUNT(MEASURED_PVP_SAVE_TYPES); t++) if(EA::StdC::Strcmp(save, MEASURED_PVP_SAVE_TYPES[t]) == 0) mapList.pvpSaveType = t;
+		}
 		maplists.push_back(mapList);
 		pMapElt = pMapElt->NextSiblingElement();
 	} while (pMapElt);

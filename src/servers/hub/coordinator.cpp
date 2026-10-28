@@ -719,6 +719,11 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 			MissionBuildActive(account.nickname.data(), progress.level, (i64)time(nullptr), saved, &list);
 			foreach_const(r, reward.records) {
 				account.pendingGuildPoints += r->guildPoints;
+				if(r->gameType >= (i32)GameType::PVP_NORMAL && r->gameType <= (i32)GameType::PVP_FAKE_AI && r->pvpSaveType != 0) {
+					AccountPvpHistory history = AccountPvpHistoryLoad(account.nickname.data());
+					AccountPvpHistoryAdd(&history, *r);
+					AccountPvpHistorySave(account.nickname.data(), history);
+				}
 				if(r->gameType == (i32)GameType::PVP_RANK) {
 					static const i32 MEASURED_RANK_WIN_POINTS = 40;
 					static const i32 MEASURED_RANK_LOSE_POINTS = 28;
