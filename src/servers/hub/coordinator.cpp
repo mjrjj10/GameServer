@@ -739,27 +739,7 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 			foreach_const(ri, rewardItems) {
 				const GameXmlContent::ItemInfo* info = GetGameXmlContent().FindItemInfo(ri->first);
 				if(!info || ri->second <= 0) continue;
-				i32 left = ri->second;
-				foreach(it, inventory.items) {
-					if(left <= 0) break;
-					if(it->docIndex != ri->first || it->count >= info->maxStack) continue;
-					const i32 add = MIN(left, info->maxStack - it->count);
-					it->count += add;
-					left -= add;
-				}
-				while(left > 0 && !inventory.items.full()) {
-					AccountItem item;
-					item.uid = inventory.nextUid++;
-					item.slot = MEASURED_INVENTORY_FIRST_SLOT;
-					for(bool taken = true; taken; ) {
-						taken = false;
-						foreach_const(it, inventory.items) if(it->invenType == item.invenType && it->slot == item.slot) { taken = true; item.slot++; break; }
-					}
-					item.docIndex = ri->first;
-					item.count = MIN(left, info->maxStack);
-					left -= item.count;
-					inventory.items.push_back(item);
-				}
+				AccountInventoryAdd(&inventory, ri->first, ri->second, info->maxStack, nullptr);
 				LOG("[client%x] Account :: %ls receives reward item %d x%d", clientHd, account.nickname.data(), ri->first, ri->second);
 			}
 			AccountInventorySave(account.nickname.data(), inventory);

@@ -5,6 +5,7 @@
 #include <common/protocol.h>
 #include <common/packet_serialize.h>
 #include <common/stat.h>
+#include <mxm/account_progress.h>
 #include <EASTL/array.h>
 #include <EASTL/fixed_vector.h>
 #include <EASTL/fixed_set.h>
@@ -319,6 +320,7 @@ struct Replication
 	void SendRewardRequestFinish(ClientHandle clientHd);
 	void SendRewardStageEnd(ClientHandle clientHd, const RewardCard* cards, i32 count);
 	void SendWarnPveGameEnd(ClientHandle clientHd, u32 remainMs);
+	void SendStageRank(ClientHandle clientHd, u32 rank, u32 timeScoreRank);
 	void SendUserLifeInfo(ClientHandle clientHd, i32 players);
 	void SendPrepareHandover(ClientHandle clientHd);
 	void ResetClientForAreaMove(ClientHandle clientHd);
@@ -334,6 +336,11 @@ struct Replication
 	void SendClientLevelEvent(ClientHandle clientHd, i32 eventID, ActorUID caller = ActorUID::INVALID);
 	void SendClientLevelEventToAll(i32 eventID, ActorUID caller = ActorUID::INVALID);
 	void SendCreateGroundItemToAll(u32 itemUID, i32 itemIndex, const vec3& pos);
+	void SendCreatePrivateGroundItem(ClientHandle clientHd, ActorUID ownerUID, u32 itemUID, bool ron, i32 itemIndex, i32 count, const vec3& pos);
+	void SendGroundItemTaken(ClientHandle clientHd, ActorUID takerUID, u32 itemUID, u32 itemISN);
+	void SendMoney(ClientHandle clientHd, i64 gold, u32 reason);
+	void SendItemMerge(ClientHandle clientHd, u32 itemUID, i32 count);
+	void SendItemUpdate(ClientHandle clientHd, const AccountItem& item, u32 reason);
 	void SendGroundItemTaken(ClientHandle clientHd, ActorUID takerUID, u32 itemUID);
 	void SendPublicGroundItemTaken(ClientHandle takerHd, ActorUID takerUID, u32 itemUID);
 	void SendDestroyGroundItemToAll(u32 itemUID);

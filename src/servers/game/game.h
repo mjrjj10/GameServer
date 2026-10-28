@@ -128,6 +128,12 @@ struct Game
 	void AutoPickRewards(ClientHandle clientHd);
 	void PlacePlayersAtSpawn();
 	bool AllHumansDead() const;
+	u8 StageGrade(const World::Player& player) const;
+	struct PveLoot { i32 playerIndex = -1; i64 gold = 0; i64 picked = 0; AccountInventory inventory; };
+	eastl::fixed_vector<PveLoot,MAX_PLAYERS,false> pveLoot;
+	PveLoot& LootFor(const World::Player& player);
+	i64 PickedGold(const World::Player& player) const;
+	Time tNextStageRank = Time::ZERO;
 	void OnTitanIncarnate(ClientHandle clientHd, i32 formDoc);
 	eastl::fixed_vector<u32,MAX_PLAYERS,false> trainingBots;
 	void OnPlayerReturnToChannel(ClientHandle clientHd);

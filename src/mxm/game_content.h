@@ -577,10 +577,14 @@ struct GameXmlContent
 
 	struct DropGroup
 	{
-		struct Entry { i32 item = 0; i32 minCount = 1; i32 maxCount = 1; f32 rate = 100; };
+		enum class Kind: u8 { ITEM, RON, GROUP };
+		struct Entry { i32 item = 0; i32 minCount = 1; i32 maxCount = 1; f32 rate = 100; Kind kind = Kind::ITEM; };
 		bool piece = false;
-		eastl::fixed_vector<Entry,8,false> entries;
+		eastl::fixed_vector<Entry,32,false> entries;
 	};
+
+	struct DropRoll { i32 item = 0; i32 count = 0; bool ron = false; };
+	typedef eastl::fixed_vector<DropRoll,64,false> DropRollList;
 
 	static const u8 ALL_DIFFICULTIES = 0xff;
 
@@ -829,6 +833,7 @@ struct GameXmlContent
 		i32 clearCount = 0;
 		i32 moneyReward = 0;
 		eastl::fixed_vector<i32,8,false> viewRewards;
+		eastl::fixed_vector<eastl::pair<u8,i32>,32,false> commonDrop;
 		SkillID stageSkill = SkillID::INVALID;
 		eastl::fixed_vector<SkillID,8,false> stageSkillCandidates;
 	};
@@ -1092,6 +1097,12 @@ struct GameXmlContent
 	eastl::hash_map<i32, eastl::fixed_vector<StatValue,4,false>> monsterGrowth;
 	eastl::hash_map<i32, i32> monsterDrop;
 	i32 FindMonsterDrop(i32 creatureID) const { auto f = monsterDrop.find(creatureID); return f == monsterDrop.end() ? 0 : f->second; }
+	eastl::hash_map<i32, u8> monsterRank;
+	eastl::fixed_vector<eastl::fixed_string<char,32,false>,32,false> rankNames;
+	u8 RankID(const char* name);
+	u8 FindMonsterRank(i32 creatureID) const { auto f = monsterRank.find(creatureID); return f == monsterRank.end() ? NO_RANK : f->second; }
+	static const u8 NO_RANK = 0xff;
+	bool LoadMonsterRanks();
 	eastl::hash_map<i32, eastl::fixed_vector<i32,4,false>> monsterDieSpawn;
 	eastl::hash_map<i32, f32> monsterLifeTime;
 	const eastl::fixed_vector<i32,4,false>* FindMonsterDieSpawn(i32 creatureID) const { auto f = monsterDieSpawn.find(creatureID); return f == monsterDieSpawn.end() ? nullptr : &f->second; }
@@ -1302,6 +1313,7 @@ struct GameXmlContent
 	i32 GetStageScoreLimit(i32 stageID) const { auto f = stageScoreLimit.find(stageID); return f == stageScoreLimit.end() ? 0 : f->second; }
 	const GroundItemInfo* FindGroundItem(i32 id) const { auto f = groundItemMap.find(id); return f == groundItemMap.end() ? nullptr : &f->second; }
 	const DropGroup* FindDropGroup(i32 id) const { auto f = dropGroupMap.find(id); return f == dropGroupMap.end() ? nullptr : &f->second; }
+	void RollDrop(i32 dropIndex, DropRollList* out, i32 depth = 0) const;
 	const SummonInfo* FindSummon(i32 creatureID) const { auto f = summonMap.find(creatureID); return f == summonMap.end() ? nullptr : &f->second; }
 	Element GetCreatureElement(i32 creatureID) const { auto f = creatureElement.find(creatureID); return f == creatureElement.end() ? Element::NONE : f->second; }
 	i32 FindSkillHitEventRemote(i32 skillID) const { auto f = skillHitEventRemote.find(skillID); return f == skillHitEventRemote.end() ? 0 : f->second; }

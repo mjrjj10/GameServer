@@ -1644,6 +1644,15 @@ bool GameXmlContent::LoadStageMaps()
 				}
 			}
 		}
+		if(XMLElement* pDrop = pStage->FirstChildElement("_COMMON_DROP")) {
+			static const char* RANK_PREFIX = "CREATURE_RANK_DETAIL_";
+			const size_t prefixLen = EA::StdC::Strlen(RANK_PREFIX);
+			for(XMLElement* d = pDrop->FirstChildElement("_DROPINDEX"); d && !stage.commonDrop.full(); d = d->NextSiblingElement("_DROPINDEX")) {
+				const char* rank = d->Attribute("_CreatureRankDetail");
+				if(!rank || EA::StdC::Strncmp(rank, RANK_PREFIX, prefixLen) != 0) continue;
+				stage.commonDrop.push_back(eastl::make_pair(RankID(rank + prefixLen), d->IntAttribute("_DropItemIndex")));
+			}
+		}
 		if(XMLElement* pView = pStage->FirstChildElement("_VIEW_REWARD")) {
 			for(XMLElement* v = pView->FirstChildElement("_VIEWINDEX"); v && !stage.viewRewards.full(); v = v->NextSiblingElement("_VIEWINDEX")) stage.viewRewards.push_back(v->IntAttribute("_ViewItemIndex"));
 		}
@@ -2675,6 +2684,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadGroundItems();
+	if(!r) return false;
+
+	r = LoadMonsterRanks();
 	if(!r) return false;
 
 	r = LoadChildSkills();
@@ -3839,6 +3851,62 @@ void GameXmlContent::LoadItemInfos(XMLDocument& doc)
 	}
 }
 
+static const i32 MAX_DROP_DEPTH = 8;
+
+u8 GameXmlContent::RankID(const char* name)
+{
+	for(i32 i = 0; i < (i32)rankNames.size(); i++) if(rankNames[i] == name) return (u8)i;
+	if(rankNames.full()) return NO_RANK;
+	rankNames.push_back(name);
+	return (u8)(rankNames.size() - 1);
+}
+
+bool GameXmlContent::LoadMonsterRanks()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/MonsterRanks.xml", doc)) return false;
+	for(XMLElement* m = doc.FirstChildElement()->FirstChildElement("M"); m; m = m->NextSiblingElement("M")) {
+		const char* rank = m->Attribute("rank");
+		if(!rank) continue;
+		const i32 id = m->IntAttribute("ID");
+		monsterRank[id] = RankID(rank);
+		if(const i32 drop = m->IntAttribute("drop")) monsterDrop.insert(eastl::make_pair(id, drop));
+	}
+	LOG("Loaded %d monster ranks (%d rank names)", (i32)monsterRank.size(), (i32)rankNames.size());
+	return true;
+}
+
+void GameXmlContent::RollDrop(i32 dropIndex, DropRollList* out, i32 depth) const
+{
+	const DropGroup* group = FindDropGroup(dropIndex);
+	if(!group || depth > MAX_DROP_DEPTH) return;
+	const DropGroup::Entry* picked = nullptr;
+	if(group->piece) {
+		const f32 roll = (f32)(RandUint() % 10000) / 100.0f;
+		f32 cumulative = 0;
+		foreach_const(e, group->entries) {
+			cumulative += e->rate;
+			if(roll < cumulative) { picked = &*e; break; }
+		}
+		if(!picked) return;
+	}
+	foreach_const(e, group->entries) {
+		if(picked && &*e != picked) continue;
+		const i32 count = e->minCount + (e->maxCount > e->minCount ? (i32)(RandUint() % (u32)(e->maxCount - e->minCount + 1)) : 0);
+		if(count <= 0) continue;
+		if(e->kind == DropGroup::Kind::GROUP) {
+			for(i32 k = 0; k < count; k++) RollDrop(e->item, out, depth + 1);
+			continue;
+		}
+		if(out->full()) return;
+		DropRoll r;
+		r.item = e->kind == DropGroup::Kind::RON ? 0 : e->item;
+		r.count = count;
+		r.ron = e->kind == DropGroup::Kind::RON;
+		out->push_back(r);
+	}
+}
+
 bool GameXmlContent::LoadGroundItems()
 {
 	XMLDocument items;
@@ -3885,13 +3953,17 @@ bool GameXmlContent::LoadGroundItems()
 		group.piece = dropType && EA::StdC::Strcmp(dropType, "DROP_PIECE") == 0;
 		for(XMLElement* e = list->FirstChildElement("_DROPITEMINFO"); e && !group.entries.full(); e = e->NextSiblingElement("_DROPITEMINFO")) {
 			const char* dataType = e->Attribute("_DataType");
-			if(!dataType || EA::StdC::Strcmp(dataType, "ItemIndex") != 0) continue;
+			if(!dataType) continue;
 			DropGroup::Entry entry;
+			if(EA::StdC::Strcmp(dataType, "ItemIndex") == 0) entry.kind = DropGroup::Kind::ITEM;
+			else if(EA::StdC::Strcmp(dataType, "Ron") == 0) entry.kind = DropGroup::Kind::RON;
+			else if(EA::StdC::Strcmp(dataType, "DropIndex") == 0) entry.kind = DropGroup::Kind::GROUP;
+			else continue;
 			entry.item = e->IntAttribute("_DataKey");
 			entry.minCount = e->IntAttribute("_Min", 1);
 			entry.maxCount = e->IntAttribute("_Max", 1);
 			entry.rate = e->FloatAttribute("_DropRate", 100.0f);
-			if(groundItemMap.find(entry.item) != groundItemMap.end()) group.entries.push_back(entry);
+			group.entries.push_back(entry);
 		}
 		if(!group.entries.empty()) dropGroupMap[pInfo->IntAttribute("ID")] = group;
 	}

@@ -24,8 +24,13 @@ static const i32 HYP_REWARD_CARDS_PER_VIEW_ITEM = 3;
 static const i32 HYP_REWARD_EXP_MIN_PERCENT = 25;
 static const i32 HYP_REWARD_EXP_STEP_PERCENT = 7;
 static const i32 HYP_REWARD_EXP_MAX_PERCENT = 60;
-static const i32 HYP_RANK_4_MAX_DEATHS = 1;
-static const i32 HYP_RANK_3_MAX_DEATHS = 3;
+static const u8 MEASURED_STAGE_GRADE_NO_DEATH = 3;
+static const u32 MEASURED_MONEY_REASON_PICKUP = 23;
+static const u32 MEASURED_ITEM_UPDATE_REASON_PICKUP = 101;
+static const u8 MEASURED_STAGE_GRADE_DEATH = 4;
+static const u32 MEASURED_STAGE_GRADE_SCALE = 100;
+static const u32 MEASURED_TIME_SCORE_RANK = 1;
+static const f64 MEASURED_STAGE_RANK_PERIOD_MS = 1000.0;
 static const u32 HYP_PVE_BASE_EXP = 750;
 static const i32 HYP_ATTACK_SCORE_PER_KILL = 3;
 static const i32 HYP_DEFENSE_SCORE_PER_DEATH = 33;
@@ -68,6 +73,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 			world.noRespawn = true;
 			world.stageClearMonster = stage->clearMonster;
 			world.stageClearCount = stage->clearCount;
+			world.stageCommonDrop = stage->commonDrop;
 			foreach_const(m, stage->maps) if(!zoneMaps.full()) zoneMaps.push_back(*m);
 			if(stage->bossMap != MapIndex(0) && !zoneMaps.full()) zoneMaps.push_back(stage->bossMap);
 			LOG("Stage :: %d zone(s), difficulty bit %d", (i32)zoneMaps.size(), (i32)world.difficultyBit);
@@ -241,6 +247,13 @@ void Game::Update(Time localTime_)
 				if(TimeDurationMs(r->startedAt, localTime) >= (f64)MEASURED_REWARD_WAIT_MS) AutoPickRewards(r->clientHd);
 			}
 			if(pveStage && !gameEnded && tGameStarted != Time::ZERO && AllHumansDead()) EndStage(false);
+			if(pveStage && !gameEnded && tGameStarted != Time::ZERO && localTime >= tNextStageRank) {
+				tNextStageRank = TimeAdd(localTime, TimeMsToTime(MEASURED_STAGE_RANK_PERIOD_MS));
+				foreach_const(p, world.players) {
+					if(p->clientHd == ClientHandle::INVALID || p->removed) continue;
+					replication.SendStageRank(p->clientHd, StageGrade(*p) * MEASURED_STAGE_GRADE_SCALE, MEASURED_TIME_SCORE_RANK);
+				}
+			}
 			if(!gameEnded && tGameStarted != Time::ZERO && world.winnerTeam < 0 && replication.titanMode) {
 				const i32 scoreLimit = GetGameXmlContent().GetStageScoreLimit((i32)replication.stageIndex);
 				for(i32 team = 0; team < 2 && scoreLimit > 0; team++) {
@@ -504,6 +517,11 @@ void Game::MoveToNextZone()
 	LoadMap();
 	PlacePlayersAtSpawn();
 	zoneLoading = true;
+}
+
+u8 Game::StageGrade(const World::Player& player) const
+{
+	return player.deaths == 0 ? MEASURED_STAGE_GRADE_NO_DEATH : MEASURED_STAGE_GRADE_DEATH;
 }
 
 bool Game::AllHumansDead() const
@@ -958,6 +976,7 @@ void Game::EndStage(bool cleared)
 			if(p->clientHd == ClientHandle::INVALID || p->removed) continue;
 			replication.SendWarnPveGameEnd(p->clientHd, MEASURED_PVE_FAIL_RETURN_MS);
 			AccountGameRecord record;
+			record.gold = PickedGold(*p);
 			record.kills = p->pveKills;
 			record.stageIndex = (i32)replication.stageIndex;
 			record.gameType = (i32)replication.gameType;
@@ -981,7 +1000,7 @@ void Game::EndStage(bool cleared)
 		clear.kills = p->pveKills;
 		clear.deaths = p->deaths;
 		clear.playTimeMs = playMs;
-		clear.rank = p->deaths <= HYP_RANK_4_MAX_DEATHS ? 4 : p->deaths <= HYP_RANK_3_MAX_DEATHS ? 3 : 2;
+		clear.rank = StageGrade(*p);
 		clear.baseRon = (u32)stage->moneyReward;
 		clear.baseExp = HYP_PVE_BASE_EXP;
 		clear.attackScore = (u32)MIN(p->pveKills * HYP_ATTACK_SCORE_PER_KILL, 100);
@@ -995,7 +1014,7 @@ void Game::EndStage(bool cleared)
 		replication.SendClearedStage(p->clientHd, clear.stage);
 		AccountStageCleared(p->name.data(), clear.stage);
 		AccountGameRecord record;
-		record.gold = clear.baseRon;
+		record.gold = clear.baseRon + PickedGold(*p);
 		record.exp = clear.baseExp;
 		record.won = 1;
 		record.kills = p->pveKills;
@@ -1087,7 +1106,51 @@ void Game::OnPlayerTakeGroundItem(ClientHandle clientHd, u32 itemUID)
 	auto found = playerMap.find(clientHd);
 	if(found == playerMap.end()) return;
 	World::Player& player = world.GetPlayer(found->second->playerIndex);
-	if(!world.TakeGroundItem(player, itemUID)) LOG("GroundItem :: %ls take 0x%08x refused", player.name.data(), itemUID);
+	World::GroundItem taken;
+	if(!world.TakeGroundItem(player, itemUID, &taken)) {
+		LOG("GroundItem :: %ls take 0x%08x refused", player.name.data(), itemUID);
+		return;
+	}
+	if(taken.owner < 0) return;
+	PveLoot& loot = LootFor(player);
+	const ActorUID takerUID = player.Main().UID;
+	if(taken.ron) {
+		loot.picked += taken.count;
+		replication.SendMoney(clientHd, loot.gold + loot.picked, MEASURED_MONEY_REASON_PICKUP);
+		replication.SendGroundItemTaken(clientHd, takerUID, itemUID, 0);
+		return;
+	}
+	u32 itemISN = 0;
+	if(const GameXmlContent::ItemInfo* info = GetGameXmlContent().FindItemInfo(taken.itemIndex)) {
+		AccountItemList touched;
+		AccountInventoryAdd(&loot.inventory, taken.itemIndex, taken.count, info->maxStack, &touched);
+		foreach_const(t, touched) {
+			replication.SendItemMerge(clientHd, t->uid, t->count);
+			replication.SendItemUpdate(clientHd, *t, MEASURED_ITEM_UPDATE_REASON_PICKUP);
+			itemISN = t->uid;
+		}
+		AccountRewardItemAppend(player.name.data(), taken.itemIndex, taken.count);
+	}
+	else WARN("GroundItem :: unknown item %d picked by %ls", taken.itemIndex, player.name.data());
+	replication.SendGroundItemTaken(clientHd, takerUID, itemUID, itemISN);
+}
+
+Game::PveLoot& Game::LootFor(const World::Player& player)
+{
+	foreach(l, pveLoot) if(l->playerIndex == (i32)player.index) return *l;
+	ASSERT(!pveLoot.full());
+	pveLoot.push_back();
+	PveLoot& loot = pveLoot.back();
+	loot.playerIndex = (i32)player.index;
+	loot.gold = AccountProgressLoad(player.name.data()).gold;
+	loot.inventory = AccountInventoryLoad(player.name.data());
+	return loot;
+}
+
+i64 Game::PickedGold(const World::Player& player) const
+{
+	foreach_const(l, pveLoot) if(l->playerIndex == (i32)player.index) return l->picked;
+	return 0;
 }
 
 void Game::OnPlayerSkillUpgrade(ClientHandle clientHd, i32 slot)
@@ -1377,6 +1440,29 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 		if(EA::StdC::Strcmp(msg, L"portal") == 0) {
 			world.portalRequested = true;
 			SendDbgMsg(clientHd, L"Portal requested");
+			return true;
+		}
+
+		i32 dropIndex = 0;
+		if(EA::StdC::Sscanf(msg, L"drop %d", &dropIndex) == 1 && world.GetPlayer(p.playerIndex).body) {
+			const World::Player& playerActor = world.GetPlayer(p.playerIndex);
+			world.SpawnPrivateDropGroup(playerActor, dropIndex, playerActor.body->GetWorldPos());
+			SendDbgMsg(clientHd, LFMT(L"Drop %d rolled", dropIndex));
+			return true;
+		}
+
+		f32 killRadius = 0;
+		if(EA::StdC::Sscanf(msg, L"killnear %f", &killRadius) == 1 && world.GetPlayer(p.playerIndex).body) {
+			World::Player& playerActor = world.GetPlayer(p.playerIndex);
+			const vec2 at = vec2(playerActor.body->GetWorldPos());
+			i32 killed = 0;
+			foreach(npc, world.actorNpcList) {
+				if(npc->hp <= 0 || npc->removeAt != Time::ZERO || npc->ownerUID != ActorUID::INVALID || npc->faction != Faction::MONSTER) continue;
+				if(glm::length(vec2(npc->pos) - at) > killRadius) continue;
+				world.MonsterDie(*npc, playerActor.Main().UID, CreatureIndex(100000000 + (i32)playerActor.Main().classType));
+				killed++;
+			}
+			SendDbgMsg(clientHd, LFMT(L"Killed %d monster(s) within %.0f", killed, killRadius));
 			return true;
 		}
 

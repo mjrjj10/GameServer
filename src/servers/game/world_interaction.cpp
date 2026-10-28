@@ -4,6 +4,7 @@
 #include <mxm/game_content.h>
 #include <EASTL/algorithm.h>
 
+static const f64 RON_ITEM_LIFETIME_SEC = 120.0;
 static const f32 TELEPORT_SPREAD = 80.0f;
 static const i32 INTERACTION_NOT_OCCUPIED = -1;
 static const u32 PLAYER_FACTION_BASE = 3;
@@ -344,7 +345,8 @@ void World::OnMonsterDeath(ActorNpc& npc, ActorUID killerUID)
 			foreach_const(o, n->outputs) FireLevelEvent(*o, killerIndex, n->id);
 		}
 	}
-	if(const i32 drop = GetGameXmlContent().FindMonsterDrop((i32)npc.docID)) SpawnDropGroupAt(drop, npc.pos, -1);
+	if(!stageCommonDrop.empty()) SpawnPrivateDrops(npc);
+	else if(const i32 drop = GetGameXmlContent().FindMonsterDrop((i32)npc.docID)) SpawnDropGroupAt(drop, npc.pos, -1);
 	static const u32 coreTag = StatusTypeKey("Core");
 	if(npc.monsterAi && npc.monsterAi->tagKey == coreTag && winnerTeam < 0 && (npc.faction == Faction::RED || npc.faction == Faction::BLUE)) {
 		winnerTeam = npc.faction == Faction::RED ? 1 : 0;
@@ -700,13 +702,46 @@ void World::SpawnGroundItems(i32 dropIndex, i32 areaID, i32 tagID)
 
 void World::SpawnDropGroupAt(i32 dropIndex, const vec3& pos, i32 tagID)
 {
-	const GameXmlContent::DropGroup* group = GetGameXmlContent().FindDropGroup(dropIndex);
-	if(!group) return;
-	foreach_const(e, group->entries) {
-		if(group->piece && (f32)(RandUint() % 10000) / 100.0f >= e->rate) continue;
-		const i32 count = e->minCount + (e->maxCount > e->minCount ? (i32)(RandUint() % (u32)(e->maxCount - e->minCount + 1)) : 0);
-		for(i32 k = 0; k < count; k++) SpawnGroundItemAt(e->item, pos, tagID);
+	GameXmlContent::DropRollList rolls;
+	GetGameXmlContent().RollDrop(dropIndex, &rolls);
+	foreach_const(r, rolls) {
+		if(r->ron) continue;
+		for(i32 k = 0; k < r->count; k++) SpawnGroundItemAt(r->item, pos, tagID);
 	}
+}
+
+void World::SpawnPrivateDrops(const ActorNpc& npc)
+{
+	const GameXmlContent& content = GetGameXmlContent();
+	const u8 rank = content.FindMonsterRank((i32)npc.docID);
+	i32 dropIndex = 0;
+	foreach_const(d, stageCommonDrop) if(d->first == rank) { dropIndex = d->second; break; }
+	if(dropIndex == 0) dropIndex = content.FindMonsterDrop((i32)npc.docID);
+	if(dropIndex == 0) return;
+	foreach_const(p, players) {
+		if(p->clientHd == ClientHandle::INVALID || p->removed) continue;
+		SpawnPrivateDropGroup(*p, dropIndex, npc.pos);
+	}
+}
+
+void World::SpawnPrivateDropGroup(const Player& owner, i32 dropIndex, const vec3& pos)
+{
+	GameXmlContent::DropRollList rolls;
+	GetGameXmlContent().RollDrop(dropIndex, &rolls);
+	foreach_const(r, rolls) {
+		if(groundItems.full()) return;
+		GroundItem item;
+		item.uid = nextGroundItemUID++;
+		item.itemIndex = r->item;
+		item.pos = pos;
+		item.count = r->count;
+		item.owner = (i32)owner.index;
+		item.ron = r->ron;
+		item.expireAt = TimeAdd(localTime, TimeMsToTime(RON_ITEM_LIFETIME_SEC * 1000.0));
+		groundItems.push_back(item);
+		replication->SendCreatePrivateGroundItem(owner.clientHd, owner.Main().UID, item.uid, item.ron, item.itemIndex, item.count, item.pos);
+	}
+	if(!rolls.empty()) LOG("GroundItem :: drop %d gives %d item(s) to %ls", dropIndex, (i32)rolls.size(), owner.name.data());
 }
 
 void World::SpawnGroundItemAt(i32 itemIndex, const vec3& pos, i32 tagID)
@@ -761,12 +796,18 @@ static f32 ItemStatMax(const World::Player& player, u8 type)
 	return MasterStat(cls, type);
 }
 
-bool World::TakeGroundItem(Player& player, u32 itemUID)
+bool World::TakeGroundItem(Player& player, u32 itemUID, GroundItem* taken)
 {
 	auto found = eastl::find_if(groundItems.begin(), groundItems.end(), [itemUID](const GroundItem& g) { return g.uid == itemUID; });
 	if(found == groundItems.end() || player.dead) return false;
+	if(found->owner >= 0 && found->owner != (i32)player.index) return false;
 	const GroundItem item = *found;
 	groundItems.erase(found);
+	if(taken) *taken = item;
+	if(item.owner >= 0) {
+		LOG("GroundItem :: %ls takes private drop %d x%d%s", player.name.data(), item.itemIndex, item.count, item.ron ? " (ron)" : "");
+		return true;
+	}
 	const GameXmlContent::GroundItemInfo* info = GetGameXmlContent().FindGroundItem(item.itemIndex);
 	if(info) {
 		auto apply = [&](u8 type, f32 amount) {

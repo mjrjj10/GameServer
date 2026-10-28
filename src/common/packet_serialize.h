@@ -3229,6 +3229,8 @@ DEFAULT_SERIALIZE(Sv::SA_RewardSelectSlot);
 DEFAULT_SERIALIZE(Sv::SA_RewardRequestFinish);
 DEFAULT_SERIALIZE(Sv::SN_WarnPveGameend);
 DEFAULT_SERIALIZE(Sv::SN_NotifyUserLifeInfo);
+DEFAULT_SERIALIZE(Sv::SN_StageRank);
+DEFAULT_SERIALIZE(Sv::SA_ItemMerge);
 DEFAULT_SERIALIZE(Sv::SQ_PrepareHandoverToChannel);
 #undef DEFAULT_SERIALIZE
 

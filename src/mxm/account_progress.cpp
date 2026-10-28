@@ -386,6 +386,33 @@ AccountInventory AccountInventoryLoad(const wchar* nickname)
 	return inventory;
 }
 
+void AccountInventoryAdd(AccountInventory* inventory, i32 docIndex, i32 count, i32 maxStack, AccountItemList* touched)
+{
+	i32 left = count;
+	foreach(it, inventory->items) {
+		if(left <= 0) break;
+		if(it->docIndex != docIndex || it->count >= maxStack) continue;
+		const i32 add = MIN(left, maxStack - it->count);
+		it->count += add;
+		left -= add;
+		if(touched && !touched->full()) touched->push_back(*it);
+	}
+	while(left > 0 && !inventory->items.full()) {
+		AccountItem item;
+		item.uid = inventory->nextUid++;
+		item.slot = MEASURED_INVENTORY_FIRST_SLOT;
+		for(bool taken = true; taken; ) {
+			taken = false;
+			foreach_const(it, inventory->items) if(it->invenType == item.invenType && it->slot == item.slot) { taken = true; item.slot++; break; }
+		}
+		item.docIndex = docIndex;
+		item.count = MIN(left, maxStack);
+		left -= item.count;
+		inventory->items.push_back(item);
+		if(touched && !touched->full()) touched->push_back(item);
+	}
+}
+
 void AccountInventorySave(const wchar* nickname, const AccountInventory& inventory)
 {
 	std::lock_guard<std::mutex> lock(g_accountFileMutex);

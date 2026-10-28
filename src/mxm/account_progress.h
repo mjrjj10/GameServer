@@ -34,6 +34,9 @@ struct AccountInventory
 
 AccountInventory AccountInventoryLoad(const wchar* nickname);
 void AccountInventorySave(const wchar* nickname, const AccountInventory& inventory);
+static const i32 MEASURED_INVENTORY_FIRST_SLOT = 200;
+typedef eastl::fixed_vector<AccountItem,8,false> AccountItemList;
+void AccountInventoryAdd(AccountInventory* inventory, i32 docIndex, i32 count, i32 maxStack, AccountItemList* touched);
 
 struct AccountGameRecord
 {

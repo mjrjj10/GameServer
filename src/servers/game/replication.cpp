@@ -153,6 +153,9 @@ void Replication::OnPlayerConnect(ClientHandle clientHd, u32 playerIndex)
 
 static const u8 MEASURED_REWARD_NEXT_ACTION = 1;
 static const i32 MEASURED_PVE_REMAIN_LIFE = -1;
+static const u32 MEASURED_DROP_TYPE_ITEM = 0;
+static const u32 MEASURED_DROP_TYPE_RON = 1;
+static const u8 MEASURED_PRIVATE_DROP_POSITION_TYPE = 2;
 
 void Replication::SendStageClearResult(ClientHandle clientHd, const StageClear& clear, const StageMember* members, i32 memberCount)
 {
@@ -279,6 +282,14 @@ void Replication::SendUserLifeInfo(ClientHandle clientHd, i32 players)
 	lifeInfo.maxLifeCount = 0;
 	lifeInfo.remainLifeCount = MEASURED_PVE_REMAIN_LIFE;
 	SendPacket(clientHd, lifeInfo);
+}
+
+void Replication::SendStageRank(ClientHandle clientHd, u32 rank, u32 timeScoreRank)
+{
+	Sv::SN_StageRank stageRank;
+	stageRank.rank = rank;
+	stageRank.timeScoreRank = timeScoreRank;
+	SendPacket(clientHd, stageRank);
 }
 
 void Replication::SendWarnPveGameEnd(ClientHandle clientHd, u32 remainMs)
@@ -478,12 +489,71 @@ void Replication::SendCreateGroundItemToAll(u32 itemUID, i32 itemIndex, const ve
 	}
 }
 
+void Replication::SendCreatePrivateGroundItem(ClientHandle clientHd, ActorUID ownerUID, u32 itemUID, bool ron, i32 itemIndex, i32 count, const vec3& pos)
+{
+	PacketWriter<Sv::SN_CreateGroundItem,64> packet;
+	packet.Write<u8>(0);
+	packet.Write<float3>(v2f(pos));
+	packet.Write<float3>(v2f(pos));
+	packet.Write<u32>(itemUID);
+	packet.Write<u32>(ron ? MEASURED_DROP_TYPE_RON : MEASURED_DROP_TYPE_ITEM);
+	packet.Write<i32>(ron ? -1 : itemIndex);
+	packet.Write<i32>(count);
+	packet.Write<LocalActorID>(GetLocalActorID(clientHd, ownerUID));
+	packet.Write<i32>(0);
+	packet.Write<i32>(-1);
+	packet.Write<u8>(1);
+	packet.Write<u8>(MEASURED_PRIVATE_DROP_POSITION_TYPE);
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendMoney(ClientHandle clientHd, i64 gold, u32 reason)
+{
+	Sv::SN_Money money;
+	money.nMoney = gold;
+	money.nReason = reason;
+	SendPacket(clientHd, money);
+}
+
+void Replication::SendItemMerge(ClientHandle clientHd, u32 itemUID, i32 count)
+{
+	Sv::SA_ItemMerge merge;
+	merge.nEquipKey = 0;
+	merge.nCount = 0;
+	merge.nEquipKey2 = itemUID;
+	merge.nCount2 = (u32)count;
+	merge.nErrorType = 0;
+	SendPacket(clientHd, merge);
+}
+
+void Replication::SendItemUpdate(ClientHandle clientHd, const AccountItem& item, u32 reason)
+{
+	PacketWriter<Sv::SN_ItemUpdate,64> packet;
+	packet.Write<u16>(1);
+	packet.Write<u32>(item.uid);
+	packet.Write<u8>(item.invenType);
+	packet.Write<i32>(item.slot);
+	packet.Write<i32>(item.docIndex);
+	packet.Write<i32>(item.count);
+	packet.Write<i32>(-1);
+	packet.Write<u8>(0);
+	packet.Write<i64>(0);
+	packet.Write<u16>(0);
+	packet.Write<u32>(reason);
+	SendPacket(clientHd, packet);
+}
+
 void Replication::SendGroundItemTaken(ClientHandle clientHd, ActorUID takerUID, u32 itemUID)
+{
+	SendGroundItemTaken(clientHd, takerUID, itemUID, 0);
+}
+
+void Replication::SendGroundItemTaken(ClientHandle clientHd, ActorUID takerUID, u32 itemUID, u32 itemISN)
 {
 	Sv::SA_GetGroundItem answer;
 	answer.playerID = (u32)GetLocalActorID(clientHd, takerUID);
 	answer.itemID = itemUID;
-	answer.itemISN = 0;
+	answer.itemISN = itemISN;
 	answer.nErrorType = 0;
 	SendPacket(clientHd, answer);
 	SendPacket(clientHd, answer);

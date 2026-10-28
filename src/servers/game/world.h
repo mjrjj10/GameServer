@@ -1048,6 +1048,9 @@ public:
 	void SpawnGroundItems(i32 dropIndex, i32 areaID, i32 tagID);
 	void SpawnDropGroupAt(i32 dropIndex, const vec3& pos, i32 tagID);
 	void SpawnGroundItemAt(i32 itemIndex, const vec3& pos, i32 tagID);
+	void SpawnPrivateDrops(const ActorNpc& npc);
+	void SpawnPrivateDropGroup(const Player& owner, i32 dropIndex, const vec3& pos);
+	eastl::fixed_vector<eastl::pair<u8,i32>,32,false> stageCommonDrop;
 	eastl::array<i32,2> teamTitanPieces = {{ 0, 0 }};
 	eastl::array<Time,2> teamTitanReadyAt = {{ Time::ZERO, Time::ZERO }};
 	void UpdateBotTitanVotes();
@@ -1082,9 +1085,9 @@ public:
 	bool titanSaveAreasBuilt = false;
 	bool BotObjective(const Player& bot, vec2* goal);
 	void SummonGiant(i32 team);
-	bool TakeGroundItem(Player& player, u32 itemUID);
-	struct GroundItem { u32 uid; i32 itemIndex; vec3 pos; i32 tagID; Time expireAt; };
-	eastl::fixed_vector<GroundItem,64,false> groundItems;
+	struct GroundItem { u32 uid = 0; i32 itemIndex = 0; vec3 pos = vec3(0); i32 tagID = -1; Time expireAt = Time::ZERO; i32 count = 1; i32 owner = -1; bool ron = false; };
+	bool TakeGroundItem(Player& player, u32 itemUID, GroundItem* taken = nullptr);
+	eastl::fixed_vector<GroundItem,256,false> groundItems;
 	struct LevelEventTimer { i32 node; Time at; i32 playerIndex; i32 fromNode; };
 	struct MonsterCall { i32 node; Time at; i32 remaining; i32 playerIndex; };
 	eastl::fixed_vector<MonsterCall,128,false> monsterCalls;
