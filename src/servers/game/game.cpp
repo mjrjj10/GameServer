@@ -779,12 +779,83 @@ static const u8 MEASURED_TRAINING_EVENT_REMOVE_AI = 6;
 static const u8 MEASURED_TRAINING_EVENT_RESET_SKILLS = 0;
 static const i32 HYP_TRAINING_BOT_SUB_OFFSET = 3;
 static const wchar* MEASURED_TRAINING_BOT_NAME = L"BOT_NAME_02";
+static const i32 MEASURED_MASTER_CREATURE_BASE = 100000000;
+static const u8 MEASURED_MASTER_GEAR_SETS = 11;
+
+static WeaponIndex DefaultMasterWeapon(const GameXmlContent::Master& master)
+{
+	if(!master.fairPvpWeaponIDs.empty()) return master.fairPvpWeaponIDs[0];
+	if(!master.defaultWeaponIDs.empty()) return master.defaultWeaponIDs[0];
+	return master.weaponIDs.size() > 1 ? master.weaponIDs[1] : master.weaponIDs[0];
+}
+
+static bool MasterHasSkill(const GameXmlContent::Master& master, SkillID skill)
+{
+	foreach_const(s, master.skillIDs) if(*s == skill) return true;
+	return false;
+}
+
+static bool MasterHasSkin(const GameXmlContent::Master& master, SkinIndex skin)
+{
+	foreach_const(s, master.skinIDs) if(*s == skin) return true;
+	return skin == SkinIndex::DEFAULT;
+}
+
+void Game::ChangeTrainingLoadout(ClientHandle clientHd, const Cl::CN_UNKNOWN_60296::SlotPairData& slots)
+{
+	auto pl = playerMap.find(clientHd);
+	if(pl == playerMap.end()) return;
+	World::Player& player = world.GetPlayer(pl->second->playerIndex);
+	const GameXmlContent& xml = GetGameXmlContent();
+	const u32 slotClass[2] = { slots.field0, slots.field6 };
+	const u32 slotSkills[2][2] = { { slots.field1, slots.field2 }, { slots.field8, slots.field9 } };
+	const u32 slotSkin[2] = { slots.field3, slots.field7 };
+	const u8 slotGearNo[2] = { slots.field5, slots.field11 };
+	World::PlayerDescription desc;
+	desc.userID = player.userID;
+	desc.clientHd = player.clientHd;
+	desc.name = player.name;
+	desc.guildTag = player.guildTag;
+	desc.team = player.team;
+	desc.stageSkills = player.stageSkills;
+	for(int mi = 0; mi < 2; mi++) {
+		const ClassType cls = (ClassType)((i32)slotClass[mi] - MEASURED_MASTER_CREATURE_BASE);
+		auto found = xml.masterClassTypeMap.find(cls);
+		if(found == xml.masterClassTypeMap.end() || found->second->weaponIDs.empty() || found->second->skillIDs.size() < 2) {
+			WARN("Training :: loadout with unknown master %u", slotClass[mi]);
+			return;
+		}
+		const GameXmlContent::Master& master = *found->second;
+		desc.masters[mi] = cls;
+		const SkinIndex skin = (SkinIndex)slotSkin[mi];
+		desc.skins[mi] = MasterHasSkin(master, skin) ? skin : SkinIndex::DEFAULT;
+		for(int si = 0; si < 2; si++) {
+			const SkillID skill = (SkillID)slotSkills[mi][si];
+			desc.skills[mi * 2 + si] = MasterHasSkill(master, skill) ? skill : master.skillIDs[si];
+		}
+		desc.weapons[mi] = DefaultMasterWeapon(master);
+		desc.weaponGrades[mi] = 0;
+		desc.masterGearNo[mi] = slotGearNo[mi] >= 1 && slotGearNo[mi] <= MEASURED_MASTER_GEAR_SETS ? slotGearNo[mi] : 1;
+		desc.characterType[mi] = 1;
+		desc.colliderSize[mi] = { (u16)master.character.getColliderRadius(), (u16)master.character.getColliderHeight() };
+	}
+	if(desc.masters[0] == desc.masters[1]) {
+		WARN("Training :: loadout with the same master twice (%d)", (i32)desc.masters[0]);
+		return;
+	}
+	world.ReplacePlayerMasters(player, desc);
+	replication.PlayerRegisterMasterActor(clientHd, player.characters[0]->UID, player.mainClass);
+	replication.PlayerRegisterMasterActor(clientHd, player.characters[1]->UID, player.subClass);
+}
 
 void Game::OnMasterTrainingEvent(ClientHandle clientHd, const u8* data, i32 size)
 {
 	const u8 eventType = data[0];
 	replication.SendMasterTrainingEvent(clientHd, eventType, 0, 0, 0, 0);
-	if(eventType == MEASURED_TRAINING_EVENT_LOADOUT) replication.SendMasterTrainingEvent(clientHd, eventType, 0, 1, 1, 1);
+	if(eventType == MEASURED_TRAINING_EVENT_LOADOUT && size >= (i32)sizeof(Cl::CN_UNKNOWN_60296)) {
+		ChangeTrainingLoadout(clientHd, ((const Cl::CN_UNKNOWN_60296*)data)->slot_pair_data);
+		replication.SendMasterTrainingEvent(clientHd, eventType, 0, 1, 1, 1);
+	}
 	if(eventType == MEASURED_TRAINING_EVENT_CREATE_AI && size >= 9) {
 		const i32 choice = *(const i32*)(data + 5);
 		const auto* classes = GetGameXmlContent().FindStageBots(replication.stageIndex);
@@ -842,9 +913,7 @@ void Game::SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team)
 		desc.skins[mi] = SkinIndex::DEFAULT;
 		desc.skills[mi * 2] = master.skillIDs[0];
 		desc.skills[mi * 2 + 1] = master.skillIDs[1];
-		if(!master.fairPvpWeaponIDs.empty()) desc.weapons[mi] = master.fairPvpWeaponIDs[0];
-		else if(!master.defaultWeaponIDs.empty()) desc.weapons[mi] = master.defaultWeaponIDs[0];
-		else desc.weapons[mi] = master.weaponIDs.size() > 1 ? master.weaponIDs[1] : master.weaponIDs[0];
+		desc.weapons[mi] = DefaultMasterWeapon(master);
 		desc.weaponGrades[mi] = 0;
 		desc.masterGearNo[mi] = 1;
 		desc.characterType[mi] = 1;

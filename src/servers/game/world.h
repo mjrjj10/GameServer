@@ -780,6 +780,8 @@ struct World
 	void Replicate();
 
 	Player& CreatePlayer(const PlayerDescription& desc, const vec3& pos, const RotationHumanoid& rot);
+	void CreatePlayerMasters(Player& player);
+	void ReplacePlayerMasters(Player& player, const PlayerDescription& desc);
 	ActorNpc& SpawnNpcActor(CreatureIndex docID, i32 localID);
 	ActorDynamic& SpawnDynamic(CreatureIndex docID, i32 localID);
 

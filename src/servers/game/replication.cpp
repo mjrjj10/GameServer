@@ -616,6 +616,10 @@ void Replication::SendChatWhisperToClient(ClientHandle destClientHd, const wchar
 	SendPacket(destClientHd, packet);
 }
 
+static const i32 PROFILE_WEAPON_TYPES = 3;
+static const i32 MEASURED_TRAINING_BENCH_CHARACTER_TYPE = 5;
+static const i32 PROFILE_WEAPON_STRIDE = 4;
+
 void Replication::SendAccountDataPvp(ClientHandle clientHd)
 {
 	// SN_Money
@@ -636,6 +640,8 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 
 	const GameXmlContent::Master& masterMain = content.GetMaster(player->mainClass);
 	const GameXmlContent::Master& masterSub = content.GetMaster(player->subClass);
+	const GameXmlContent::StageMaps* stage = content.FindStageMaps(stageIndex);
+	const bool fullRoster = stage && stage->gameMode == GameModeType::GAME_MODE_MASTER_TRAINING;
 
 	// SN_AccountInfo
 	{
@@ -667,9 +673,9 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 		ASSERT(actorMain);
 		ASSERT(actorSub);
 
-		PacketWriter<Sv::SN_ProfileCharacters> packet;
+		PacketWriter<Sv::SN_ProfileCharacters,4096> packet;
 
-		packet.Write<u16>(2);
+		packet.Write<u16>(fullRoster ? (u16)content.masters.size() : (u16)2);
 
 		{
 			Sv::SN_ProfileCharacters::Character chara;
@@ -705,14 +711,34 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 			packet.Write(chara);
 		}
 
+		if(fullRoster) {
+			foreach_const(m, content.masters) {
+				if(m->classType == player->mainClass || m->classType == player->subClass) continue;
+				Sv::SN_ProfileCharacters::Character chara;
+				chara.characterID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (i32)m->classType);
+				chara.creatureIndex = m->ID;
+				chara.skillSlot1 = m->skillIDs[0];
+				chara.skillSlot2 = m->skillIDs[1];
+				chara.classType = m->classType;
+				chara.x = actorMain->pos.x;
+				chara.y = actorMain->pos.y;
+				chara.z = actorMain->pos.z;
+				chara.characterType = MEASURED_TRAINING_BENCH_CHARACTER_TYPE;
+				chara.skinIndex = SkinIndex::DEFAULT;
+				chara.weaponIndex = m->defaultWeaponIDs.empty() ? m->weaponIDs[0] : m->defaultWeaponIDs[0];
+				chara.masterGearNo = 1;
+				packet.Write(chara);
+			}
+		}
+
 		SendPacket(clientHd, packet);
 	}
 
 	// SN_ProfileWeapons
 	{
-		PacketWriter<Sv::SN_ProfileWeapons,4096> packet;
+		PacketWriter<Sv::SN_ProfileWeapons,8192> packet;
 
-		packet.Write<u16>(2);
+		packet.Write<u16>(fullRoster ? (u16)(2 + (content.masters.size() - 2) * PROFILE_WEAPON_TYPES) : (u16)2);
 
 		Sv::SN_ProfileWeapons::Weapon weap;
 		weap.characterID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (i32)player->mainClass);
@@ -731,6 +757,22 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 		weap.isActivated = 1;
 		packet.Write(weap);
 
+		if(fullRoster) {
+			foreach_const(m, content.masters) {
+				if(m->classType == player->mainClass || m->classType == player->subClass) continue;
+				weap.characterID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (i32)m->classType);
+				for(int wi = 0; wi < PROFILE_WEAPON_TYPES; wi++) {
+					const u32 at = (u32)(1 + wi * PROFILE_WEAPON_STRIDE);
+					weap.weaponType = wi + 1;
+					weap.weaponIndex = at < m->weaponIDs.size() ? m->weaponIDs[at] : m->weaponIDs[0];
+					weap.grade = 0;
+					weap.isUnlocked = wi == 0;
+					weap.isActivated = wi == 0;
+					packet.Write(weap);
+				}
+			}
+		}
+
 		SendPacket(clientHd, packet);
 	}
 
@@ -746,11 +788,15 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 
 	// SN_ProfileSkills
 	{
-		PacketWriter<Sv::SN_ProfileSkills,4096> packet;
+		PacketWriter<Sv::SN_ProfileSkills,16384> packet;
 
 		packet.Write<u8>(1); // packetNum
 
-		const i32 skillCount = masterMain.skillIDs.size() + masterSub.skillIDs.size();
+		i32 skillCount = masterMain.skillIDs.size() + masterSub.skillIDs.size();
+		if(fullRoster) {
+			skillCount = 0;
+			foreach_const(m, content.masters) skillCount += (i32)m->skillIDs.size();
+		}
 		packet.Write<u16>((u16)skillCount);
 
 		auto writeSkills = [&](const GameXmlContent::Master& master) {
@@ -764,8 +810,13 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 				packet.Write<u16>(0);
 			}
 		};
-		writeSkills(masterMain);
-		writeSkills(masterSub);
+		if(fullRoster) {
+			foreach_const(m, content.masters) writeSkills(*m);
+		}
+		else {
+			writeSkills(masterMain);
+			writeSkills(masterSub);
+		}
 
 		SendPacket(clientHd, packet);
 	}

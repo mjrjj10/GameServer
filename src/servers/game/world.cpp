@@ -467,6 +467,12 @@ World::Player& World::CreatePlayer(const PlayerDescription& desc, const vec3& po
 	player.input.jump = 0;
 	player.input.action = ActionStateID::INVALID;
 
+	CreatePlayerMasters(player);
+	return player;
+}
+
+void World::CreatePlayerMasters(Player& player)
+{
 	const ActorUID mainUID = NewActorUID();
 	const ActorUID subUID = NewActorUID();
 
@@ -502,10 +508,48 @@ World::Player& World::CreatePlayer(const PlayerDescription& desc, const vec3& po
 	sub.hp = sub.hpMax;
 	ASSERT(main.hpMax > 0 && sub.hpMax > 0);
 	sub.seed = (i32)RandUint();
+}
 
-
-
-	return player;
+void World::ReplacePlayerMasters(Player& player, const PlayerDescription& desc)
+{
+	ToggleOff(player);
+	const u32 index = player.index;
+	for(auto it = activeStatuses.begin(); it != activeStatuses.end();) {
+		if(it->targetIndex != index) { ++it; continue; }
+		if(it->info && it->info->auraStatus != 0) EndAura(index, *it->info);
+		it = activeStatuses.erase_unsorted(it);
+	}
+	foreach_const(c, player.characters) {
+		actorMasterMap.erase((*c)->UID);
+		actorMasterList.erase(*c);
+	}
+	PhysicsDynamicBody* body = player.body;
+	const vec3 spawnPos = player.spawnPos;
+	const Player::Input input = player.input;
+	const u8 level = player.level;
+	const u32 experience = player.experience;
+	const i32 ingameLevel = player.ingameLevel;
+	const i32 ingameExp = player.ingameExp;
+	const i32 skillPoints = player.skillPoints + player.skillPointsSpent;
+	const bool devGod = player.devGod;
+	const bool devVision = player.devVision;
+	player.~Player();
+	new(&player) Player(index, desc);
+	player.body = body;
+	player.spawnPos = spawnPos;
+	player.input = input;
+	player.input.action = ActionStateID::INVALID;
+	player.level = level;
+	player.experience = experience;
+	player.ingameLevel = ingameLevel;
+	player.ingameExp = ingameExp;
+	player.skillPoints = skillPoints;
+	player.devGod = devGod;
+	player.devVision = devVision;
+	CreatePlayerMasters(player);
+	if(player.clientHd != ClientHandle::INVALID) replication->SendSkillPoints(player.clientHd, player.userID, player.skillPoints);
+	ApplyPassives(player);
+	LOG("Loadout :: %ls masters=(%d, %d) skills=(%d, %d, %d, %d)", player.name.data(), (i32)player.mainClass, (i32)player.subClass, (i32)player.skills[0], (i32)player.skills[1], (i32)player.skills[2], (i32)player.skills[3]);
 }
 
 World::ActorNpc& World::SpawnNpcActor(CreatureIndex docID, i32 localID)
