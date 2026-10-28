@@ -3643,7 +3643,7 @@ void Replication::SendActorMasterSpawn(ClientHandle clientHd, const ActorMaster&
 			packet.Write<i32>(actor.wanderDist);
 			packet.Write<i32>(actor.tagID);
 
-			packet.Write<i32>(PlayerTeamType(parent.team)); // faction
+			packet.Write<i32>(PlayerTeamType(parent.team));
 			packet.Write<ClassType>(actor.classType); // classType
 			packet.Write<SkinIndex>(actor.skinIndex); // skinIndex
 			packet.Write<i32>(actor.seed);
