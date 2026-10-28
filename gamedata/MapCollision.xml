@@ -14870,4 +14870,425 @@
     <_Collider _Mesh="PVP_GOT_ENV_Boss_01/PVP_GOT_ENV_Boss_01_Aim" x="47200.47" y="6759.74" z="0" angx="0" angy="0" angz="0" scale="1" />
     <_Collider _Mesh="PVP_GOT_ENV_Boss_01/PVP_GOT_ENV_Boss_01_Guardrailmob" x="47200.47" y="6759.74" z="0" angx="0" angy="0" angz="0" scale="1" />
   </_Map>
+  <_Map _Index="160000098">
+    <_File _Path="collision/PVP_Fence_SideFloorB01_01.physx_static" />
+    <_File _Path="collision/VTS_Floor_ElectricLineB_01.physx_static" />
+    <_File _Path="collision/PVP_Floor_CenterDeviceB_Va_01.physx_static" />
+    <_File _Path="collision/PVP_Floor_CenterDeviceB_Va_02.physx_static" />
+    <_File _Path="collision/LCR_Util_BigTransA.physx_static" />
+    <_File _Path="collision/PVP_Fence_CenterFenB01_01.physx_static" />
+    <_File _Path="collision/PVP_Fence_CenterFenA01_01.physx_static" />
+    <_File _Path="collision/PVP_Floor_CenterTopC01_01.physx_static" />
+    <_File _Path="collision/PVP_DeathMatch_bush_Env.physx_static" />
+    <_File _Path="collision/LCR_SP_A_A06_01.physx_static" />
+    <_File _Path="collision/LCR_Box_A_A07.physx_static" />
+    <_File _Path="collision/LCR_Fence_A_A15.physx_static" />
+    <_File _Path="collision/CLG_Lamp_LightA_01.physx_static" />
+    <_File _Path="collision/LCR_VH_A_A03.physx_static" />
+    <_File _Path="collision/LCR_VH_A_A06.physx_static" />
+    <_File _Path="collision/LCR_Fence_A_A14.physx_static" />
+    <_File _Path="collision/CRS_Tree01_NTrC01.physx_static" />
+    <_Collider _Mesh="PVP_Fence_SideFloorB01_01/PVP_Fence_SideFloorB01_01_Collision" x="9909.15" y="6204.44" z="897.57" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="VTS_Floor_ElectricLineB_01/VTS_Floor_ElectricLineB_01_Collision" x="10050.31" y="6217.44" z="995.68" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="PVP_Floor_CenterDeviceB_Va_01/PVP_Floor_CenterDeviceB_02_collision" x="9875.31" y="6216.44" z="484.68" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="PVP_Floor_CenterDeviceB_Va_02/PVP_Floor_CenterDeviceB_Va_02_collision" x="10511.9" y="3190.73" z="1015.1" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Util_BigTransA/LCR_Util_BigTransA_Collision" x="2029.27" y="4994.64" z="480" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenB01_01/PVP_Fence_CenterFenB01_01_Collision" x="7236.55" y="8003.56" z="518.9" angx="0" angy="0" angz="-2.879793" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenB01_01/PVP_Fence_CenterFenB01_01" x="7236.55" y="8003.56" z="518.9" angx="0" angy="0" angz="-2.879793" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenA01_01/PVP_Fence_CenterFenA01_01_Collision" x="5263.68" y="6607.43" z="512" angx="0" angy="0" angz="1.832596" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenA01_01/PVP_Fence_CenterFenA01_01" x="5263.68" y="6607.43" z="512" angx="0" angy="0" angz="1.832596" scale="1" />
+    <_Collider _Mesh="LCR_Util_BigTransA/LCR_Util_BigTransA_Collision" x="2029.24" y="6668.51" z="479.69" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenB01_01/PVP_Fence_CenterFenB01_01_Collision" x="5670.15" y="4013.98" z="518.9" angx="0" angy="0" angz="0.2617995" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenB01_01/PVP_Fence_CenterFenB01_01" x="5670.15" y="4013.98" z="518.9" angx="0" angy="0" angz="0.2617995" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenA01_01/PVP_Fence_CenterFenA01_01_Collision" x="6205.54" y="5422.05" z="511.58" angx="0" angy="0" angz="0.2617995" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenA01_01/PVP_Fence_CenterFenA01_01" x="6205.54" y="5422.05" z="511.58" angx="0" angy="0" angz="0.2617995" scale="1" />
+    <_Collider _Mesh="PVP_Floor_CenterTopC01_01/PVP_Floor_CenterTopC01_01_Collision" x="6470.52" y="5994.66" z="328.27" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_DeathMatch_bush_Env/PVP_DeathMatch_bush_GuardrailMob" x="0" y="0" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_DeathMatch_bush_Env/PVP_DeathMatch_bush_sidewall_GuardrailMob" x="0" y="0" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_DeathMatch_bush_Env/PVP_DeathMatch_bush_Aim" x="0" y="0" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Floor_CenterDeviceB_Va_01/PVP_Floor_CenterDeviceB_02_collision" x="3131.64" y="5779.44" z="484.55" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="3874.15" y="4179.54" z="469.89" angx="-0.08935093" angy="-0.07086037" angz="-2.239964" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A07/LCR_Box_A_A07_Collision" x="7708.78" y="8724.33" z="620.49" angx="0.2485331" angy="-0.5881761" angz="1.32366" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenA01_01/PVP_Fence_CenterFenA01_01_Collision" x="7642.96" y="5410.65" z="518.77" angx="0" angy="0" angz="-1.308997" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenA01_01/PVP_Fence_CenterFenA01_01" x="7642.96" y="5410.65" z="518.77" angx="0" angy="0" angz="-1.308997" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A07/LCR_Box_A_A07_Collision" x="7402.33" y="8871.74" z="506.49" angx="0" angy="0" angz="2.673144" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="9085" y="7827" z="470" angx="0.08935093" angy="0.07086037" angz="0.9016283" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="5926.94" y="9007.22" z="476.35" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/CLG_Lamp_LightA_01_Collision" x="2614.76" y="7051.71" z="906.25" angx="0" angy="0" angz="-0.7854096" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/MODEL_ROOT" x="2614.76" y="7051.71" z="906.25" angx="0" angy="0" angz="-0.7854096" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/MODEL_ROOT" x="2614.76" y="7051.71" z="906.25" angx="0" angy="0" angz="-0.7854096" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="5207.08" y="9032.91" z="476.35" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="5178.15" y="9007.22" z="476.35" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A07/LCR_Box_A_A07_Collision" x="4349.63" y="8187.79" z="706.62" angx="-1.448635" angy="0.6967354" angz="-3.132518" scale="1" />
+    <_Collider _Mesh="PVP_Floor_CenterDeviceB_Va_02/PVP_Floor_CenterDeviceB_Va_02_collision" x="11367.31" y="9051.95" z="168.98" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="5862.57" y="8792.78" z="504" angx="0" angy="0" angz="-0.2370123" scale="1" />
+    <_Collider _Mesh="PVP_Floor_CenterDeviceB_Va_01/PVP_Floor_CenterDeviceB_02_collision" x="1867.64" y="8782.44" z="484.55" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="PVP_Floor_CenterDeviceB_Va_02/PVP_Floor_CenterDeviceB_Va_02_collision" x="1639.64" y="2943.44" z="168.87" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/CLG_Lamp_LightA_01_Collision" x="3811.48" y="7669.09" z="519.28" angx="0" angy="0" angz="-0.7854096" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/MODEL_ROOT" x="3811.48" y="7669.09" z="519.28" angx="0" angy="0" angz="-0.7854096" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/MODEL_ROOT" x="3811.48" y="7669.09" z="519.28" angx="0" angy="0" angz="-0.7854096" scale="1" />
+    <_Collider _Mesh="LCR_VH_A_A03/LCR_VH_A_A03_Collision" x="8299.85" y="8809.15" z="493.72" angx="-0.379097" angy="-0.2015855" angz="2.675936" scale="1.07" />
+    <_Collider _Mesh="LCR_VH_A_A03/LCR_VH_A_A03_Collision" x="8701.32" y="8285.4" z="689.54" angx="2.315872" angy="-0.6440265" angz="-0.505617" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="6671.54" y="9013.97" z="476.35" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_VH_A_A06/LCR_VH_A_A06_Collision01" x="6521.87" y="9073.31" z="395.21" angx="0.4515218" angy="0.1289798" angz="-1.190303" scale="1" />
+    <_Collider _Mesh="LCR_VH_A_A06/LCR_VH_A_A06_Collision01" x="6521.87" y="9073.31" z="395.21" angx="0.4515218" angy="0.1289798" angz="-1.190303" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/CLG_Lamp_LightA_01_Collision" x="9148.16" y="4337.54" z="519.28" angx="0" angy="0" angz="2.356183" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/MODEL_ROOT" x="9148.16" y="4337.54" z="519.28" angx="0" angy="0" angz="2.356183" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/MODEL_ROOT" x="9148.16" y="4337.54" z="519.28" angx="0" angy="0" angz="2.356183" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="7079.75" y="9013.97" z="476.35" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A14/LCR_Fence_A_A14_Collision" x="7450.93" y="9015.79" z="483.32" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="4043" y="7808" z="452" angx="0.1773156" angy="0.03438299" angz="-1.355429" scale="1" />
+    <_Collider _Mesh="LCR_Util_BigTransA/LCR_Util_BigTransA_Collision" x="10945.08" y="5337.73" z="479.98" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="8986.33" y="8760.05" z="476.35" angx="0" angy="0" angz="0.6167942" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="8970.44" y="8763.62" z="476" angx="0" angy="0" angz="1.433276" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="9309.02" y="7740.5" z="476.35" angx="0" angy="0" angz="0.6167942" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="6388.4" y="8847.45" z="504" angx="0" angy="0" angz="0.2342194" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="6929.67" y="8806.67" z="452" angx="-0.1326336" angy="0.1226967" angz="2.717993" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="9086.67" y="7989.06" z="476.35" angx="0" angy="0" angz="0.7854096" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="7096.16" y="3213.54" z="503.89" angx="0" angy="0" angz="2.904581" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="8602.22" y="8163.07" z="452" angx="0.02495491" angy="-0.1787217" angz="0.2652907" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="3794.45" y="7393.49" z="503.65" angx="0" angy="0" angz="-0.7787645" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="8089.05" y="8415.83" z="504" angx="0" angy="0" angz="0.5384243" scale="1" />
+    <_Collider _Mesh="PVP_Floor_CenterDeviceB_Va_01/PVP_Floor_CenterDeviceB_02_collision" x="11139.05" y="3213.23" z="484.68" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="PVP_Floor_CenterDeviceB_Va_01/PVP_Floor_CenterDeviceB_02_collision" x="9875.01" y="3213.23" z="484.68" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="7781.16" y="2999.54" z="475.89" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="7752.16" y="2973.54" z="475.89" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="7032.16" y="2999.54" z="475.89" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_VH_A_A06/LCR_VH_A_A06_Collision01" x="7505.38" y="2592.03" z="454" angx="0" angy="0" angz="2.37715" scale="1" />
+    <_Collider _Mesh="LCR_VH_A_A06/LCR_VH_A_A06_Collision01" x="7505.38" y="2592.03" z="454" angx="0" angy="0" angz="2.37715" scale="1" />
+    <_Collider _Mesh="LCR_VH_A_A03/LCR_VH_A_A03_Collision" x="4650.15" y="3198.54" z="512.89" angx="0.379097" angy="0.2015855" angz="-0.4656565" scale="1.07" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/CLG_Lamp_LightA_01_Collision" x="10392.31" y="4943.44" z="898.17" angx="0" angy="0" angz="2.356183" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/MODEL_ROOT" x="10392.31" y="4943.44" z="898.17" angx="0" angy="0" angz="2.356183" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/MODEL_ROOT" x="10392.31" y="4943.44" z="898.17" angx="0" angy="0" angz="2.356183" scale="1" />
+    <_Collider _Mesh="CRS_Tree01_NTrC01/Collision01" x="7018.9" y="2405.57" z="391.54" angx="-0.3094537" angy="-0.8271115" angz="1.818806" scale="0.8" />
+    <_Collider _Mesh="CRS_Tree01_NTrC01/Collision01" x="8676.07" y="2646.05" z="358.93" angx="-0.7722998" angy="0.450644" angz="-2.88311" scale="0.8" />
+    <_Collider _Mesh="CRS_Tree01_NTrC01/Collision01" x="5916.79" y="9482.87" z="391.47" angx="0.3094537" angy="0.8271115" angz="-1.322787" scale="0.8" />
+    <_Collider _Mesh="CRS_Tree01_NTrC01/Collision01" x="4259.62" y="9242.39" z="358.86" angx="0.7722998" angy="-0.450644" angz="0.2584829" scale="0.8" />
+    <_Collider _Mesh="LCR_VH_A_A03/LCR_VH_A_A03_Collision" x="4258.15" y="3721.54" z="689.89" angx="-2.315872" angy="0.6440265" angz="2.635976" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="6287.16" y="2992.54" z="475.89" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="5879.16" y="2992.54" z="475.89" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="5143.15" y="2992.54" z="475.89" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A14/LCR_Fence_A_A14_Collision" x="5508.16" y="2990.54" z="482.89" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/CLG_Lamp_LightA_01_Collision" x="3865.15" y="3906.54" z="519.28" angx="0" angy="0" angz="-2.356183" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/MODEL_ROOT" x="3865.15" y="3906.54" z="519.28" angx="0" angy="0" angz="-2.356183" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/MODEL_ROOT" x="3865.15" y="3906.54" z="519.28" angx="0" angy="0" angz="-2.356183" scale="1" />
+    <_Collider _Mesh="LCR_Util_BigTransA/LCR_Util_BigTransA_Collision" x="10945.08" y="7011.73" z="479.98" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="8916.16" y="4198.54" z="451.89" angx="-0.1773156" angy="-0.03438299" angz="1.786164" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="3650.15" y="4266.54" z="475.89" angx="0" angy="0" angz="-2.524799" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="6571.16" y="3159.54" z="503.89" angx="0" angy="0" angz="-2.907373" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="6032.33" y="3187.88" z="451.89" angx="0.1326336" angy="-0.1226967" angz="-0.4236003" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="5341.56" y="3281.12" z="504" angx="0" angy="0" angz="-3.00861" scale="1" />
+    <_Collider _Mesh="PVP_Floor_CenterDeviceB_Va_02/PVP_Floor_CenterDeviceB_Va_02_collision" x="2494.64" y="8804.44" z="1014.79" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="3872.15" y="4017.54" z="475.89" angx="0" angy="0" angz="-2.356183" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="3887.15" y="3978.54" z="475.89" angx="0" angy="0" angz="-1.708317" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A15/LCR_Fence_A_A15_Collision" x="3612.15" y="4275.54" z="475.89" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="4355.82" y="3847.72" z="451.89" angx="-0.02495491" angy="0.1787217" angz="-2.876302" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="9158.94" y="4618.58" z="503.89" angx="0" angy="0" angz="2.362828" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="4866.99" y="3584.21" z="503.89" angx="0" angy="0" angz="-2.603168" scale="1" />
+    <_Collider _Mesh="PVP_Floor_CenterDeviceB_Va_01/PVP_Floor_CenterDeviceB_02_collision" x="3131.64" y="8782.44" z="484.55" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="VTS_Floor_ElectricLineB_01/VTS_Floor_ElectricLineB_01_Collision" x="2952.72" y="5779.91" z="995.68" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="PVP_Fence_SideFloorB01_01/PVP_Fence_SideFloorB01_01_Collision" x="3093.71" y="5792.91" z="897.68" angx="0" angy="0" angz="3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A07/LCR_Box_A_A07_Collision" x="5113" y="8632" z="506" angx="0" angy="0" angz="1.511288" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A07/LCR_Box_A_A07_Collision" x="5354" y="8868" z="620" angx="0.6319826" angy="-0.03281219" angz="0.2267135" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A07/LCR_Box_A_A07_Collision" x="3883.02" y="8362.03" z="609" angx="-1.570796" angy="-0.3195698" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A07/LCR_Box_A_A07_Collision" x="4255.73" y="8494.42" z="490.62" angx="0.135077" angy="0.3286455" angz="-2.208191" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A07/LCR_Box_A_A07_Collision" x="8633.26" y="3781.53" z="707" angx="1.412681" angy="-0.9349728" angz="0.05811226" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A07/LCR_Box_A_A07_Collision" x="8612.08" y="3516.37" z="491" angx="-0.210829" angy="-0.2871067" angz="1.182275" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A07/LCR_Box_A_A07_Collision" x="9025" y="3599.4" z="609" angx="1.570796" angy="0.07906342" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A07/LCR_Box_A_A07_Collision" x="8016.19" y="3375.39" z="506" angx="0" angy="0" angz="-1.377422" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A07/LCR_Box_A_A07_Collision" x="7690" y="3228" z="620" angx="-0.6204603" angy="0.1324705" angz="-2.776808" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenA01_01/PVP_Fence_CenterFenA01_01_Collision" x="6700.96" y="6595.65" z="518.77" angx="0" angy="0" angz="-2.879793" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenA01_01/PVP_Fence_CenterFenA01_01" x="6700.96" y="6595.65" z="518.77" angx="0" angy="0" angz="-2.879793" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/CLG_Lamp_LightA_01_Collision" x="9084.31" y="8089.53" z="519" angx="0" angy="0" angz="0.7854096" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/MODEL_ROOT" x="9084.31" y="8089.53" z="519" angx="0" angy="0" angz="0.7854096" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightA_01/MODEL_ROOT" x="9084.31" y="8089.53" z="519" angx="0" angy="0" angz="0.7854096" scale="1" />
+  </_Map>
+  <_Map _Index="160000100">
+    <_File _Path="collision/LCR_Fence_FenceB_02.physx_static" />
+    <_File _Path="collision/LCR_Fence_FenceB_01.physx_static" />
+    <_File _Path="collision/COH_Deco_ContainerA_02.physx_static" />
+    <_File _Path="collision/LCR_Floor_RoadBlockA_02.physx_static" />
+    <_File _Path="collision/LCR_Floor_RoadBlockA_03.physx_static" />
+    <_File _Path="collision/CLG_Lamp_LightB.physx_static" />
+    <_File _Path="collision/PVP_Fence_SideFloorD01_01.physx_static" />
+    <_File _Path="collision/PVP_Fence_CenterFenH01_01.physx_static" />
+    <_File _Path="collision/DST_Deco_SandBag_A06.physx_static" />
+    <_File _Path="collision/DST_Deco_SandBag_A02.physx_static" />
+    <_File _Path="collision/DST_Deco_SandBag_A01.physx_static" />
+    <_File _Path="collision/PVP_Fence_CenterFenA01_01.physx_static" />
+    <_File _Path="collision/DST_Deco_SandBag_A03.physx_static" />
+    <_File _Path="collision/LCR_Wall_BrickA_Set08.physx_static" />
+    <_File _Path="collision/LCR_Floor_RoadBlockA_01.physx_static" />
+    <_File _Path="collision/LCR_Wall_BrickA_Set02.physx_static" />
+    <_File _Path="collision/PVP_Fence_CenterFenH02_01.physx_static" />
+    <_File _Path="collision/LCR_Wall_BrickA_Set04.physx_static" />
+    <_File _Path="collision/LCR_Wall_BrickA_Set06.physx_static" />
+    <_File _Path="collision/LCR_Box_A_A07.physx_static" />
+    <_File _Path="collision/LCR_Sign_LacBankA_01.physx_static" />
+    <_File _Path="collision/LCR_Floor_ConcreteA_01.physx_static" />
+    <_File _Path="collision/LCR_Wall_BrickA_Set01.physx_static" />
+    <_File _Path="collision/LCR_Stair_BasicA_01.physx_static" />
+    <_File _Path="collision/LCR_Wall_BrickA_Set09.physx_static" />
+    <_File _Path="collision/PVP_Fence_SideFloorC01_01.physx_static" />
+    <_File _Path="collision/LCR_Wall_BrickA_Set05.physx_static" />
+    <_File _Path="collision/LCR_Wall_BrickA_Set10.physx_static" />
+    <_File _Path="collision/LCR_Fence_A_A03.physx_static" />
+    <_File _Path="collision/LCR_Sign_BigB.physx_static" />
+    <_File _Path="collision/COH_Deco_ContainerA_01.physx_static" />
+    <_File _Path="collision/LCR_Floor_RoadBlockC_Va_01_01.physx_static" />
+    <_File _Path="collision/LCR_Floor_RoadBlockC_Va_01_02.physx_static" />
+    <_File _Path="collision/PVP_Fence_CenterFenD01_01.physx_static" />
+    <_File _Path="collision/PVP_Fence_CenterFenF01_02.physx_static" />
+    <_File _Path="collision/PVP_Fence_CenterFenG01_02.physx_static" />
+    <_File _Path="collision/PVP_Fence_CenterFenB01_01.physx_static" />
+    <_File _Path="collision/PVP_Fence_CenterFenF01_01.physx_static" />
+    <_File _Path="collision/PVP_Fence_CenterFenG01_01.physx_static" />
+    <_File _Path="collision/PVP_Fence_CenterFenD02_01.physx_static" />
+    <_File _Path="collision/LCR_Box_A_A03.physx_static" />
+    <_File _Path="collision/LCR_SP_A_A06_01.physx_static" />
+    <_File _Path="collision/CLG_VH_DropShip_Box.physx_static" />
+    <_File _Path="collision/PVP_DeathMatch_Portal_Env.physx_static" />
+    <_File _Path="collision/LCR_Fence_A_A04.physx_static" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="7262.78" y="6588.23" z="301.34" angx="0" angy="0" angz="1.570796" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_01/LCR_Fence_FenceB_01_Collision" x="2699.55" y="2280.15" z="302.19" angx="0" angy="0" angz="0.0006980382" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_01/LCR_Fence_FenceB_01_Collision" x="7019" y="2280" z="302" angx="0" angy="0" angz="-3.141593" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_01/LCR_Fence_FenceB_01_Collision" x="5512" y="2159.84" z="302" angx="0" angy="0" angz="-1.570796" scale="0.7" />
+    <_Collider _Mesh="COH_Deco_ContainerA_02/COH_Deco_ContainerA_02_Collision" x="5599.97" y="787" z="589" angx="0" angy="0" angz="0" scale="1.05" />
+    <_Collider _Mesh="LCR_Fence_FenceB_01/LCR_Fence_FenceB_01_Collision" x="4470" y="2157.48" z="302" angx="0" angy="0" angz="-1.570796" scale="0.7" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_02/LCR_Floor_RoadBlockA_02_Collision" x="6917" y="3858" z="5" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_03/LCR_Floor_RoadBlockA_03_Collision" x="7073" y="4867" z="12" angx="0.002094115" angy="0.003839725" angz="-2.079031" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_03/LCR_Floor_RoadBlockA_03_Collision" x="6551.67" y="4468.4" z="5" angx="0" angy="0" angz="1.980959" scale="1" />
+    <_Collider _Mesh="CLG_Lamp_LightB/CLG_Lamp_LightB_Collision" x="2657.23" y="6682.79" z="-1" angx="0" angy="0" angz="-0.7854096" scale="0.8" />
+    <_Collider _Mesh="CLG_Lamp_LightB/MODEL_ROOT#W#E" x="2657.23" y="6682.79" z="-1" angx="0" angy="0" angz="-0.7854096" scale="0.8" />
+    <_Collider _Mesh="CLG_Lamp_LightB/MODEL_ROOT#W#E" x="2657.23" y="6682.79" z="-1" angx="0" angy="0" angz="-0.7854096" scale="0.8" />
+    <_Collider _Mesh="PVP_Fence_SideFloorD01_01/PVP_Fence_SideFloorD01_01_Collision" x="5000" y="8092.99" z="706.36" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenH01_01/PVP_Fence_CenterFenH01_01_Collision" x="5446.24" y="5830.38" z="-0.04" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenH01_01/MODEL_ROOT" x="5446.24" y="5830.38" z="-0.04" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="DST_Deco_SandBag_A06/DST_Deco_SandBag_A06_Collision" x="5104" y="2145.21" z="-48.86" angx="0" angy="0" angz="-2.776284" scale="1.7" />
+    <_Collider _Mesh="DST_Deco_SandBag_A02/DST_Deco_SandBag_A02_Collision" x="2578.72" y="4399.65" z="3" angx="0" angy="0" angz="-1.440432" scale="1.7" />
+    <_Collider _Mesh="DST_Deco_SandBag_A01/DST_Deco_SandBag_A01_Collision" x="6842.08" y="4683.05" z="2" angx="0" angy="0" angz="0" scale="1.4" />
+    <_Collider _Mesh="PVP_Fence_CenterFenH01_01/PVP_Fence_CenterFenH01_01_Collision" x="4535.24" y="3299.62" z="-0.03" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenH01_01/MODEL_ROOT" x="4535.24" y="3299.62" z="-0.03" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenA01_01/PVP_Fence_CenterFenA01_01_Collision" x="2367.93" y="5619.71" z="-12" angx="0" angy="0" angz="1.250695" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenA01_01/PVP_Fence_CenterFenA01_01" x="2367.93" y="5619.71" z="-12" angx="0" angy="0" angz="1.250695" scale="1" />
+    <_Collider _Mesh="DST_Deco_SandBag_A03/DST_Deco_SandBag_A03_Collision" x="4907.33" y="4510.86" z="-170" angx="0" angy="0" angz="2.897599" scale="1.6" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="2837.85" y="2317.42" z="-120.9" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="DST_Deco_SandBag_A02/DST_Deco_SandBag_A02_Collision" x="4999.64" y="4536.54" z="7.04" angx="0" angy="0" angz="-0.02565295" scale="1.6" />
+    <_Collider _Mesh="DST_Deco_SandBag_A02/DST_Deco_SandBag_A02_Collision" x="5335" y="2188" z="-175.14" angx="0" angy="0" angz="-0.02565295" scale="1.6" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_03/LCR_Floor_RoadBlockA_03_Collision" x="2756.12" y="4200" z="5" angx="0" angy="0" angz="-0.01361175" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_03/LCR_Floor_RoadBlockA_03_Collision" x="6651" y="4658" z="5" angx="0" angy="0.02391101" angz="-2.574721" scale="1" />
+    <_Collider _Mesh="DST_Deco_SandBag_A02/DST_Deco_SandBag_A02_Collision" x="4637" y="6954.2" z="-175" angx="0" angy="0" angz="-3.136532" scale="1.6" />
+    <_Collider _Mesh="LCR_Fence_FenceB_01/LCR_Fence_FenceB_01_Collision" x="5511.81" y="6974.88" z="302" angx="0" angy="0" angz="1.570796" scale="0.7" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_01/LCR_Floor_RoadBlockA_01_Collision" x="2207" y="270" z="2" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="DST_Deco_SandBag_A03/DST_Deco_SandBag_A03_Collision" x="5092.67" y="4564.39" z="-170" angx="0" angy="0" angz="2.900915" scale="1.6" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_01/LCR_Floor_RoadBlockA_01_Collision" x="2207" y="1260" z="2" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Fence_FenceB_01/LCR_Fence_FenceB_01_Collision" x="7027" y="6845" z="302" angx="0" angy="0" angz="-3.141593" scale="0.7" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set02/LCR_Wall_BrickA_Set02_Collision" x="2148.41" y="6845" z="-51" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenH02_01/PVP_Fence_CenterFenH02_01_Collision" x="7005.17" y="4606" z="0" angx="0" angy="0" angz="-1.428738" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenH02_01/MODEL_ROOT" x="7005.17" y="4606" z="0" angx="0" angy="0" angz="-1.428738" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set04/LCR_Wall_BrickA_Set04_Collision" x="2567.34" y="6845" z="-51" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set02/LCR_Wall_BrickA_Set02_Collision" x="6826.78" y="6845" z="-50.66" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set06/LCR_Wall_BrickA_Set06_Collision" x="3580" y="2280" z="-50.94" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A07/LCR_Box_A_A07_Collision" x="2275.89" y="3055.69" z="103.66" angx="-0.546452" angy="0.3368485" angz="-2.461951" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set02/LCR_Wall_BrickA_Set02_Collision" x="3991.99" y="2279.96" z="-51.21" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="DST_Deco_SandBag_A03/DST_Deco_SandBag_A03_Collision" x="6572.93" y="4695.33" z="-103" angx="0" angy="0" angz="0.3834603" scale="1.4" />
+    <_Collider _Mesh="LCR_Sign_LacBankA_01/Collision01" x="5088.93" y="8555.22" z="709" angx="0" angy="0" angz="-3.13723" scale="1" />
+    <_Collider _Mesh="LCR_Floor_ConcreteA_01/LCR_Floor_ConcreteA_01_Collision" x="5000" y="3050" z="2" angx="0" angy="0" angz="0" scale="1.01" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set01/LCR_Wall_BrickA_Set01_Collision" x="7262.78" y="4565" z="-105.85" angx="0" angy="0" angz="-1.570796" scale="0.9" />
+    <_Collider _Mesh="DST_Deco_SandBag_A02/DST_Deco_SandBag_A02_Collision" x="3757" y="3976" z="3" angx="0" angy="0" angz="-0.501429" scale="1.4" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set01/LCR_Wall_BrickA_Set01_Collision" x="5510" y="1920" z="35" angx="0" angy="0" angz="-1.570796" scale="0.9" />
+    <_Collider _Mesh="LCR_Stair_BasicA_01/LCR_Stair_BasicA_01_Collision" x="6832.5" y="8229.78" z="81.58" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set04/LCR_Wall_BrickA_Set04_Collision" x="7262.78" y="6674" z="-50.94" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set09/LCR_Wall_BrickA_Set09_Collision" x="5580.33" y="2246.84" z="-10.11" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Floor_ConcreteA_01/LCR_Floor_ConcreteA_01_Collision" x="5000" y="4565" z="2" angx="0" angy="0" angz="-3.141593" scale="1.01" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set04/LCR_Wall_BrickA_Set04_Collision" x="7262.78" y="6514" z="-50.94" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="COH_Deco_ContainerA_02/COH_Deco_ContainerA_02_Collision" x="5591" y="8359.21" z="363.75" angx="0" angy="0" angz="0" scale="1.05" />
+    <_Collider _Mesh="PVP_Fence_SideFloorC01_01/PVP_Fence_SideFloorC01_01_Collision" x="5000" y="7404.9" z="737.27" angx="-0.5235909" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Floor_ConcreteA_01/LCR_Floor_ConcreteA_01_Collision" x="3485" y="6080" z="2" angx="0" angy="0" angz="0" scale="1.01" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="3504.5" y="2317.52" z="-120.79" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set02/LCR_Wall_BrickA_Set02_Collision" x="7262.78" y="6095" z="-50.94" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set06/LCR_Wall_BrickA_Set06_Collision" x="7262.78" y="5714" z="-50.94" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="6830.54" y="6812" z="-121" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="4171.15" y="2317.62" z="-120.68" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set04/LCR_Wall_BrickA_Set04_Collision" x="7262.78" y="5562.13" z="-50.94" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set04/LCR_Wall_BrickA_Set04_Collision" x="7262.78" y="5403" z="-50.94" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set02/LCR_Wall_BrickA_Set02_Collision" x="7262.78" y="4985.3" z="-50.94" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set04/LCR_Wall_BrickA_Set04_Collision" x="7262.78" y="4396" z="-50.94" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="6006.04" y="2318" z="-121" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="6834.04" y="2318" z="-121" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set09/LCR_Wall_BrickA_Set09_Collision" x="6408.38" y="2317.9" z="-121.11" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenH02_01/PVP_Fence_CenterFenH02_01_Collision" x="5446.17" y="3299.62" z="-0.04" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenH02_01/MODEL_ROOT" x="5446.17" y="3299.62" z="-0.04" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set04/LCR_Wall_BrickA_Set04_Collision" x="7262.78" y="4235" z="-50.94" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set02/LCR_Wall_BrickA_Set02_Collision" x="7262.78" y="3816" z="-50.94" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="4168.06" y="6812" z="-121" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set06/LCR_Wall_BrickA_Set06_Collision" x="7262.78" y="3416" z="-50.94" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set04/LCR_Wall_BrickA_Set04_Collision" x="7262.78" y="3285" z="-50.94" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set04/LCR_Wall_BrickA_Set04_Collision" x="7262.78" y="3124" z="-50.94" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set05/LCR_Wall_BrickA_Set05_Collision" x="5237" y="7014.89" z="-0.21" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set02/LCR_Wall_BrickA_Set02_Collision" x="7262.78" y="2705" z="-50.94" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set01/LCR_Wall_BrickA_Set01_Collision" x="4490" y="7205" z="35" angx="0" angy="0" angz="1.570796" scale="0.9" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="6002.54" y="6812" z="-121" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set10/LCR_Wall_BrickA_Set10_Collision" x="5559.46" y="2234.38" z="-51.22" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set09/LCR_Wall_BrickA_Set09_Collision" x="6428.54" y="6812" z="-121" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set01/LCR_Wall_BrickA_Set01_Collision" x="2740" y="6845" z="-105.66" angx="0" angy="0" angz="1.570796" scale="0.9" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set05/LCR_Wall_BrickA_Set05_Collision" x="5255.94" y="2113.93" z="0" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set05/LCR_Wall_BrickA_Set05_Collision" x="4755.99" y="2113.93" z="0.06" angx="0" angy="0" angz="3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A03/LCR_Fence_A_A03_Collision" x="2682.38" y="2379.69" z="-2.34" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="DST_Deco_SandBag_A03/DST_Deco_SandBag_A03_Collision" x="2596.06" y="4123.76" z="1" angx="0" angy="0" angz="1.871173" scale="1.7" />
+    <_Collider _Mesh="LCR_Sign_BigB/LCR_Sign_BigB_Collision" x="5847" y="1666" z="463" angx="2.094387" angy="1.570796" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Fence_FenceB_01/LCR_Fence_FenceB_01_Collision" x="2957.69" y="6844.96" z="302.22" angx="0" angy="0" angz="0" scale="0.7" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set02/LCR_Wall_BrickA_Set02_Collision" x="5991.78" y="6845" z="-50.66" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set05/LCR_Wall_BrickA_Set05_Collision" x="4737" y="7014.89" z="-0.21" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set10/LCR_Wall_BrickA_Set10_Collision" x="5558.78" y="6891" z="-50.66" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set02/LCR_Wall_BrickA_Set02_Collision" x="3991.99" y="6845" z="-50.94" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set06/LCR_Wall_BrickA_Set06_Collision" x="3580" y="6845" z="-50.94" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set01/LCR_Wall_BrickA_Set01_Collision" x="5510" y="7205" z="35" angx="0" angy="0" angz="1.570796" scale="0.9" />
+    <_Collider _Mesh="COH_Deco_ContainerA_02/COH_Deco_ContainerA_02_Collision" x="4417" y="786.51" z="588.78" angx="0" angy="0" angz="0" scale="1.05" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set04/LCR_Wall_BrickA_Set04_Collision" x="5512.78" y="7041" z="-50.66" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set02/LCR_Wall_BrickA_Set02_Collision" x="3156.4" y="6845" z="-50.94" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="COH_Deco_ContainerA_01/COH_Deco_ContainerA_01_Collision" x="3978.87" y="1383.21" z="602.73" angx="0" angy="0" angz="-0.3232434" scale="1.05" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set02/LCR_Wall_BrickA_Set02_Collision" x="6826.78" y="2280" z="-50.94" angx="0" angy="0" angz="3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set06/LCR_Wall_BrickA_Set06_Collision" x="6402.78" y="2280" z="-50.94" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set02/LCR_Wall_BrickA_Set02_Collision" x="5991.78" y="2280" z="-50.94" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set01/LCR_Wall_BrickA_Set01_Collision" x="4490" y="1920" z="35" angx="0" angy="0" angz="-1.570796" scale="0.9" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set01/LCR_Wall_BrickA_Set01_Collision" x="7260" y="2280" z="-105.66" angx="0" angy="0" angz="-1.570796" scale="0.9" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set10/LCR_Wall_BrickA_Set10_Collision" x="4424.31" y="6890.62" z="-51.22" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set10/LCR_Wall_BrickA_Set10_Collision" x="4424.31" y="2234.23" z="-51.49" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="DST_Deco_SandBag_A06/DST_Deco_SandBag_A06_Collision" x="6800.31" y="4451.46" z="2" angx="0" angy="0" angz="3.071962" scale="1.4" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set04/LCR_Wall_BrickA_Set04_Collision" x="4469.97" y="7041.08" z="-50.94" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="DST_Deco_SandBag_A02/DST_Deco_SandBag_A02_Collision" x="7080" y="4403" z="3" angx="0" angy="0" angz="0.1624794" scale="1.4" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockC_Va_01_01/LCR_Floor_RoadBlockC_Va_01_01_Collision" x="6656" y="6366.31" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockC_Va_01_01/LCR_Floor_RoadBlockC_Va_01_01_Collision" x="6656" y="4873.42" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_02/LCR_Floor_RoadBlockA_02_Collision" x="6167" y="6520" z="5.5" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_02/LCR_Floor_RoadBlockA_02_Collision" x="6917" y="4858" z="5" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_02/LCR_Floor_RoadBlockA_02_Collision" x="6917" y="2858" z="5" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockC_Va_01_01/LCR_Floor_RoadBlockC_Va_01_01_Collision" x="6655" y="3350" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockC_Va_01_02/LCR_Floor_RoadBlockC_Va_01_02_Collision" x="6139" y="6770" z="0" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_02/LCR_Floor_RoadBlockA_02_Collision" x="6917" y="6858" z="5" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_02/LCR_Floor_RoadBlockA_02_Collision" x="6917" y="5858" z="5" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockC_Va_01_02/LCR_Floor_RoadBlockC_Va_01_02_Collision" x="6139" y="2353" z="-6.05" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_02/LCR_Floor_RoadBlockA_02_Collision" x="6167" y="2608" z="5" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set04/LCR_Wall_BrickA_Set04_Collision" x="5513.8" y="2083.92" z="-50.94" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Floor_ConcreteA_01/LCR_Floor_ConcreteA_01_Collision" x="5000" y="6080" z="2" angx="0" angy="0" angz="0" scale="1.01" />
+    <_Collider _Mesh="LCR_Floor_ConcreteA_01/LCR_Floor_ConcreteA_01_Collision" x="3485" y="4565" z="2" angx="0" angy="0" angz="0" scale="1.01" />
+    <_Collider _Mesh="LCR_Floor_ConcreteA_01/LCR_Floor_ConcreteA_01_Collision" x="3485" y="3050" z="2" angx="0" angy="0" angz="0" scale="1.01" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="7262.78" y="5198.14" z="302.06" angx="0" angy="0" angz="1.570796" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="7262.78" y="3943.07" z="302.06" angx="0" angy="0" angz="1.570796" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="7262.78" y="6242.23" z="302.34" angx="0" angy="0" angz="1.570796" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="7262.78" y="5901.23" z="302.34" angx="0" angy="0" angz="1.570796" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="7262.78" y="5548.23" z="302.34" angx="0" angy="0" angz="1.570796" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="7262.78" y="2548.07" z="302.06" angx="0" angy="0" angz="1.570796" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="3599.05" y="2280" z="302.06" angx="0" angy="0" angz="3.141593" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="3246.05" y="2280" z="302.06" angx="0" angy="0" angz="3.141593" scale="0.7" />
+    <_Collider _Mesh="LCR_Floor_ConcreteA_01/LCR_Floor_ConcreteA_01_Collision" x="6515" y="6080" z="2" angx="0" angy="0" angz="-3.141593" scale="1.01" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="4302.05" y="2280" z="302.06" angx="0" angy="0" angz="3.141593" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="5681.3" y="2280" z="302" angx="0" angy="0" angz="0" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="6035.3" y="2280" z="302" angx="0" angy="0" angz="0" scale="0.7" />
+    <_Collider _Mesh="LCR_Floor_ConcreteA_01/LCR_Floor_ConcreteA_01_Collision" x="6515" y="4565" z="2" angx="0" angy="0" angz="0" scale="1.01" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="6384.3" y="2280" z="302" angx="0" angy="0" angz="0" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="6733.71" y="2280" z="302" angx="0" angy="0" angz="0" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="3598.8" y="6845" z="302.06" angx="0" angy="0" angz="-3.141593" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="3249.79" y="6845" z="302.06" angx="0" angy="0" angz="-3.141593" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="4298.25" y="6845" z="302.06" angx="0" angy="0" angz="-3.141593" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="3948.45" y="6845" z="302.06" angx="0" angy="0" angz="-3.141593" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="6739.79" y="6845" z="302" angx="0" angy="0" angz="0" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="6386.79" y="6845" z="302" angx="0" angy="0" angz="0" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="6037.79" y="6845" z="302" angx="0" angy="0" angz="0" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="5683.79" y="6845" z="302" angx="0" angy="0" angz="0" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="2454.41" y="6845" z="302" angx="0" angy="0" angz="3.141593" scale="0.7" />
+    <_Collider _Mesh="COH_Deco_ContainerA_01/COH_Deco_ContainerA_01_Collision" x="2895.77" y="702.76" z="603" angx="0" angy="0" angz="-1.101301" scale="1.05" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="2105.41" y="6845" z="302" angx="0" angy="0" angz="3.141593" scale="0.7" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set01/LCR_Wall_BrickA_Set01_Collision" x="7262.78" y="6845" z="-105.66" angx="0" angy="0" angz="1.570796" scale="0.9" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set09/LCR_Wall_BrickA_Set09_Collision" x="7227.99" y="6732" z="-121.4" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="7211.77" y="6331" z="-121.4" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="7211.77" y="5664" z="-121.4" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="7211.77" y="4997" z="-121.4" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set09/LCR_Wall_BrickA_Set09_Collision" x="7211.77" y="4454" z="-121.4" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="7211.77" y="4052" z="-121.4" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="7211.77" y="3385" z="-121.4" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="7211.77" y="2719" z="-121.4" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set04/LCR_Wall_BrickA_Set04_Collision" x="4470" y="2083.77" z="-51.21" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set02/LCR_Wall_BrickA_Set02_Collision" x="3156.4" y="2280" z="-50.94" angx="0" angy="0" angz="3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set06/LCR_Wall_BrickA_Set06_Collision" x="6402.78" y="6845" z="-50.66" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Floor_ConcreteA_01/LCR_Floor_ConcreteA_01_Collision" x="6515" y="3050" z="2" angx="0" angy="0" angz="0" scale="1.01" />
+    <_Collider _Mesh="LCR_Sign_BigB/LCR_Sign_BigB_Collision" x="4153" y="7465.63" z="463.27" angx="1.047206" angy="-1.570796" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenD01_01/PVP_Fence_CenterFenD01_01_Collision" x="3711.05" y="3996.87" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenD01_01/MODEL_ROOT" x="3711.05" y="3996.87" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenF01_02/PVP_Fence_CenterFenF01_02_Collision" x="3722.59" y="5802.75" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenF01_02/MODEL_ROOT" x="3722.59" y="5802.75" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Fence_SideFloorC01_01/PVP_Fence_SideFloorC01_01_Collision" x="5000" y="7060.62" z="391.44" angx="-1.047206" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Fence_SideFloorC01_01/PVP_Fence_SideFloorC01_01_Collision" x="5000" y="1725" z="737" angx="0.5235909" angy="0.0001745329" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="PVP_Fence_SideFloorC01_01/PVP_Fence_SideFloorC01_01_Collision" x="5000" y="2070" z="391" angx="1.047206" angy="0" angz="-3.141418" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenG01_02/PVP_Fence_CenterFenG01_02_Collision" x="6329.77" y="5823.94" z="2" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenG01_02/MODEL_ROOT" x="6329.77" y="5823.94" z="2" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenH02_01/PVP_Fence_CenterFenH02_01_Collision" x="4535.24" y="5830.38" z="-0.04" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenH02_01/MODEL_ROOT" x="4535.24" y="5830.38" z="-0.04" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenB01_01/PVP_Fence_CenterFenB01_01_Collision" x="6487.07" y="4550" z="2" angx="0" angy="0" angz="0.0776581" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenB01_01/PVP_Fence_CenterFenB01_01" x="6487.07" y="4550" z="2" angx="0" angy="0" angz="0.0776581" scale="1" />
+    <_Collider _Mesh="COH_Deco_ContainerA_02/COH_Deco_ContainerA_02_Collision" x="5600" y="736.87" z="350.8" angx="0" angy="0" angz="0" scale="1.05" />
+    <_Collider _Mesh="PVP_Fence_CenterFenF01_01/PVP_Fence_CenterFenF01_01_Collision" x="3722.59" y="3327.25" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenF01_01/MODEL_ROOT" x="3722.59" y="3327.25" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_03/LCR_Floor_RoadBlockA_03_Collision" x="6621" y="4097" z="5" angx="0" angy="0.01064651" angz="3.140371" scale="1" />
+    <_Collider _Mesh="LCR_Sign_LacBankA_01/Collision01" x="4844.57" y="566.38" z="709" angx="0" angy="0" angz="0.004362738" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenG01_01/PVP_Fence_CenterFenG01_01_Collision" x="6329.77" y="3306.06" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenG01_01/MODEL_ROOT" x="6329.77" y="3306.06" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Fence_FenceB_01/LCR_Fence_FenceB_01_Collision" x="4469.97" y="6967.26" z="302" angx="0" angy="0" angz="1.570796" scale="0.7" />
+    <_Collider _Mesh="PVP_Fence_CenterFenD02_01/PVP_Fence_CenterFenD02_01_Collision" x="3711.05" y="5133.13" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Fence_CenterFenD02_01/MODEL_ROOT" x="3711.05" y="5133.13" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="3948.05" y="2280" z="302.06" angx="0" angy="0" angz="3.141593" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_01/LCR_Fence_FenceB_01_Collision" x="2948.87" y="2280" z="302" angx="0" angy="0" angz="0.0006980382" scale="0.7" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_01/LCR_Floor_RoadBlockA_01_Collision" x="2207.38" y="5251.69" z="1.65" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="PVP_Fence_SideFloorD01_01/PVP_Fence_SideFloorD01_01_Collision" x="5001" y="1037" z="706" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_01/LCR_Floor_RoadBlockA_01_Collision" x="2207.38" y="3251.69" z="1.65" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_01/LCR_Floor_RoadBlockA_01_Collision" x="2207.38" y="2251.69" z="1.65" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_01/LCR_Floor_RoadBlockA_01_Collision" x="2207.38" y="6251.69" z="1.65" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="DST_Deco_SandBag_A06/DST_Deco_SandBag_A06_Collision" x="4803.62" y="6991.2" z="-49" angx="0" angy="0" angz="0.3960263" scale="1.7" />
+    <_Collider _Mesh="DST_Deco_SandBag_A02/DST_Deco_SandBag_A02_Collision" x="3757" y="5151.41" z="3" angx="0" angy="0" angz="0.501429" scale="1.4" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockC_Va_01_01/LCR_Floor_RoadBlockC_Va_01_01_Collision" x="2722.38" y="6251.7" z="1.66" angx="0" angy="0" angz="3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockC_Va_01_01/LCR_Floor_RoadBlockC_Va_01_01_Collision" x="2722.38" y="5251.69" z="1.66" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockC_Va_01_01/LCR_Floor_RoadBlockC_Va_01_01_Collision" x="2722.38" y="4251.69" z="1.66" angx="0" angy="0" angz="3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockC_Va_01_01/LCR_Floor_RoadBlockC_Va_01_01_Collision" x="2722.38" y="3251.69" z="1.66" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockC_Va_01_01/LCR_Floor_RoadBlockC_Va_01_01_Collision" x="2722.38" y="2251.69" z="1.66" angx="0" angy="0" angz="3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A03/LCR_Box_A_A03a_Collision01" x="2585.82" y="3643.69" z="-8.34" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A03/LCR_Box_A_A03b_Collision01" x="2585.82" y="3643.69" z="-8.34" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_SP_A_A06_01/LCR_SP_A_A06_Collision" x="2531.38" y="6144.69" z="15.66" angx="0" angy="0" angz="1.274434" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set04/LCR_Wall_BrickA_Set04_Collision" x="2713.68" y="2280.14" z="-50.85" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A03/LCR_Box_A_A03a_Collision01" x="2279.16" y="6702.69" z="-8.34" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Box_A_A03/LCR_Box_A_A03b_Collision01" x="2279.16" y="6702.69" z="-8.34" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="CLG_VH_DropShip_Box/CLG_VH_DropShip_Box_Collision" x="1938.38" y="5931.69" z="8.66" angx="0" angy="0" angz="0.9482412" scale="0.81" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_01/LCR_Floor_RoadBlockA_01_Collision" x="2207.38" y="4251.69" z="1.65" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set04/LCR_Wall_BrickA_Set04_Collision" x="2552.82" y="2280.21" z="-50.76" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set01/LCR_Wall_BrickA_Set01_Collision" x="2433.93" y="2277.68" z="-107.91" angx="0" angy="0" angz="-1.570796" scale="0.9" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="2834.76" y="6811.8" z="-120.78" angx="0" angy="0" angz="-3.141593" scale="1" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="2168.11" y="6811.7" z="-120.67" angx="0" angy="0" angz="3.141593" scale="1" />
+    <_Collider _Mesh="PVP_DeathMatch_Portal_Env/PVP_DeathMatch_Portal_GuardrailMob" x="0" y="0" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_DeathMatch_Portal_Env/PVP_DeathMatch_Portal_sidewall_GuardrailMob" x="0" y="0" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_DeathMatch_Portal_Env/PVP_DeathMatch_Portal_Aim" x="0" y="0" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="DST_Deco_SandBag_A06/DST_Deco_SandBag_A06_Collision" x="2405.14" y="4149.6" z="2" angx="0" angy="0" angz="1.440083" scale="1.7" />
+    <_Collider _Mesh="DST_Deco_SandBag_A02/DST_Deco_SandBag_A02_Collision" x="2574" y="4724.83" z="-47" angx="0" angy="0" angz="1.469578" scale="1.7" />
+    <_Collider _Mesh="LCR_Floor_RoadBlockA_03/LCR_Floor_RoadBlockA_03_Collision" x="6594" y="5561" z="5" angx="0" angy="0.009599311" angz="3.138626" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A04/LCR_Fence_A_A04_Collision" x="2698.38" y="2643.69" z="37.66" angx="0" angy="0" angz="1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A03/LCR_Fence_A_A03_Collision" x="2682.38" y="3471.69" z="-2.34" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A03/LCR_Fence_A_A03_Collision" x="2682.38" y="3280.69" z="-2.34" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="COH_Deco_ContainerA_02/COH_Deco_ContainerA_02_Collision" x="5591.39" y="8342.79" z="589" angx="0" angy="0" angz="0" scale="1.05" />
+    <_Collider _Mesh="LCR_Fence_A_A03/LCR_Fence_A_A03_Collision" x="2694.38" y="3983.69" z="-2.34" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A03/LCR_Fence_A_A03_Collision" x="2684.38" y="4487.69" z="-2.34" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A04/LCR_Fence_A_A04_Collision" x="2674.38" y="4236.69" z="37.66" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="COH_Deco_ContainerA_02/COH_Deco_ContainerA_02_Collision" x="4417" y="8342.79" z="589" angx="0" angy="0" angz="0" scale="1.05" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="7262.78" y="2899.07" z="302.06" angx="0" angy="0" angz="1.570796" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_A_A03/LCR_Fence_A_A03_Collision" x="2697.38" y="6261.69" z="-2.34" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A03/LCR_Fence_A_A03_Collision" x="2682.38" y="5733.69" z="-2.34" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="7262.78" y="3602.07" z="302.06" angx="0" angy="0" angz="1.570796" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_A_A03/LCR_Fence_A_A03_Collision" x="2682.38" y="5207.69" z="-2.34" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A03/LCR_Fence_A_A03_Collision" x="2682.38" y="5004.69" z="-2.34" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Fence_A_A03/LCR_Fence_A_A03_Collision" x="2697.38" y="6786.69" z="-2.34" angx="0" angy="0" angz="-1.570796" scale="1" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="7262.78" y="3249.07" z="302.06" angx="0" angy="0" angz="1.570796" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="7262.78" y="4847.96" z="302.06" angx="0" angy="0" angz="1.570796" scale="0.7" />
+    <_Collider _Mesh="LCR_Fence_FenceB_02/LCR_Fence_FenceB_02_Collision" x="7262.78" y="4289.07" z="301.06" angx="0" angy="0" angz="1.570796" scale="0.7" />
+    <_Collider _Mesh="CLG_Lamp_LightB/CLG_Lamp_LightB_Collision" x="2539.71" y="2435.74" z="-1" angx="0" angy="0" angz="-2.356183" scale="0.8" />
+    <_Collider _Mesh="CLG_Lamp_LightB/MODEL_ROOT#W#E" x="2539.71" y="2435.74" z="-1" angx="0" angy="0" angz="-2.356183" scale="0.8" />
+    <_Collider _Mesh="CLG_Lamp_LightB/MODEL_ROOT#W#E" x="2539.71" y="2435.74" z="-1" angx="0" angy="0" angz="-2.356183" scale="0.8" />
+    <_Collider _Mesh="LCR_Wall_BrickA_Set08/LCR_Wall_BrickA_Set08_Collision" x="3501.41" y="6811.9" z="-120.89" angx="0" angy="0" angz="3.141593" scale="1" />
+  </_Map>
 </MAP_COLLISION>

@@ -670,7 +670,7 @@ bool HubGame::SetPartyStage(Party& party, StageIndex stage)
 	AreaIndex areaID = AreaIndex(0);
 	MapIndex mapID = MapIndex(0);
 	const GameXmlContent& content = GetGameXmlContent();
-	if(!content.FindEntryStageArea((i32)party.entry, stage, &areaID) || !content.FindStageMap(stage, &mapID)) return false;
+	if(!content.FindEntryStageArea((i32)party.entry, stage, &areaID) || !content.PickStageMap(stage, party.gameType == GameType::PVP_AI, &mapID)) return false;
 	party.areaIndex = areaID;
 	party.stageIndex = stage;
 	party.mapIndex = mapID;
@@ -1450,7 +1450,7 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 	StageIndex stageID = StageIndex(0);
 	MapIndex mapID = MapIndex(0);
 	ASSERT(GetGameXmlContent().FindQueueAreaStage((i32)party.entry, &areaID, &stageID));
-	ASSERT(GetGameXmlContent().FindStageMap(stageID, &mapID));
+	ASSERT(GetGameXmlContent().PickStageMap(stageID, party.gameType == GameType::PVP_AI, &mapID));
 	party.areaIndex = areaID;
 	party.stageIndex = stageID;
 	party.mapIndex = mapID;

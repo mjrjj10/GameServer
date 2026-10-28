@@ -165,6 +165,9 @@ struct World
 		i32 pveKills = 0;
 		eastl::fixed_vector<i32,16,true> hitByDocs;
 		eastl::fixed_vector<i32,16,true> npcStatuses;
+		Time campTeleportAt = Time::ZERO;
+		i32 campStartArea = 0;
+		i32 campDestArea = 0;
 		bool removed = false;
 		i32 ingameLevel = 1;
 		i32 ingameExp = 0;
@@ -1207,6 +1210,7 @@ public:
 	void UpdateSkillPoints();
 	void SpawnCreatureFromRemote(const RemoteInst& parent, i32 creature, const vec3& pos);
 	f32 WeaponHitDamage(const Player& player, const Remote* remote) const;
+	f32 AugmentedWeaponAttack(WeaponIndex weapon) const;
 	void PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& center, f32 range, i32 skipDebuffIndex, ActorUID sourceUID = ActorUID::INVALID);
 	void EndAura(u32 casterIndex, const StatusInfo& aura);
 private:

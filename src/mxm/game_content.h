@@ -673,7 +673,7 @@ struct GameXmlContent
 
 	struct LevelEventNode
 	{
-		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM, BOUND_TRIGGER, STATUS_CHANGE, ACTIVATE_TRIGGER, ON_HIT_TRIGGER, ACTION_CHANGE, CLIENT_EVENT, CALL_MONSTER, DESPAWN_ENTITY, PASS_THROUGH, TIME_RECORD_START, DEAD_COUNT, HP_TRIGGER, OR_CONDITION, GAME_END_TRIGGER, SAFE_ZONE, TEAM_CONDITION, ADD_GOT_PIECE, SAVE_GOT_PIECE, AI_TRIGGER, INVOKE_AI_TRIGGER, NOTIFY_RESPAWN, ACTIVE_INTERACTION, INTERACTION_TRIGGER, ADD_CAST_TIME, TELEPORT_TO, RANDOM_CONDITION, PORTAL, KILL_TARGET, ACTIVE_AREA_TRIGGER, INVOKE_DIALOG, DIALOG_TRIGGER, SET_ACTIVATION, AND_CONDITION, START_PHASE, END_PHASE };
+		enum Kind: u8 { OTHER = 0, LEVEL_START, TAKE_ITEM, DELAY, CALL_SFX, CALL_ITEM, BOUND_TRIGGER, STATUS_CHANGE, ACTIVATE_TRIGGER, ON_HIT_TRIGGER, ACTION_CHANGE, CLIENT_EVENT, CALL_MONSTER, DESPAWN_ENTITY, PASS_THROUGH, TIME_RECORD_START, DEAD_COUNT, HP_TRIGGER, OR_CONDITION, GAME_END_TRIGGER, SAFE_ZONE, TEAM_CONDITION, ADD_GOT_PIECE, SAVE_GOT_PIECE, AI_TRIGGER, INVOKE_AI_TRIGGER, NOTIFY_RESPAWN, ACTIVE_INTERACTION, INTERACTION_TRIGGER, ADD_CAST_TIME, TELEPORT_TO, RANDOM_CONDITION, PORTAL, KILL_TARGET, ACTIVE_AREA_TRIGGER, INVOKE_DIALOG, DIALOG_TRIGGER, SET_ACTIVATION, AND_CONDITION, START_PHASE, END_PHASE, CAMP_GUARD };
 		enum ApplyType: u8 { APPLY_MY_CHAR = 0, APPLY_LOCAL_ID, APPLY_OTHER };
 		i32 id = 0;
 		Kind kind = OTHER;
@@ -912,6 +912,8 @@ struct GameXmlContent
 		bool titan = false;
 		GameModeType gameMode = GameModeType::GAME_MODE_INVALID;
 		eastl::fixed_vector<MapIndex,8,false> maps;
+		eastl::fixed_vector<i32,8,false> mapRates;
+		eastl::fixed_vector<MapIndex,8,false> aiIgnoredMaps;
 		MapIndex bossMap = MapIndex(0);
 		u8 difficultyBit = ALL_DIFFICULTIES;
 		i32 clearMonster = 0;
@@ -1045,6 +1047,7 @@ struct GameXmlContent
 	bool FindQueueAreaStage(i32 entryID, AreaIndex* outAreaIndex, StageIndex* outStageIndex) const;
 	bool FindEntryStageArea(i32 entryID, StageIndex stage, AreaIndex* outAreaIndex) const;
 	bool FindStageMap(StageIndex stageID, MapIndex* outMapIndex) const;
+	bool PickStageMap(StageIndex stageID, bool aiMode, MapIndex* outMapIndex) const;
 	const StageMaps* FindStageMaps(StageIndex stageID) const;
 	bool HasEntrySystem(i32 entryID) const;
 	struct StageEntryStage { StageIndex stage; eastl::fixed_vector<u8,4,false> gameTypes; };

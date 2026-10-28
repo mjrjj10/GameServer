@@ -662,10 +662,22 @@ bool World::WeaponIsMelee(const Player& p) const
 	return WeaponReach(*remote, wf) <= WEAPON_MELEE_MAX_RANGE;
 }
 
+f32 World::AugmentedWeaponAttack(WeaponIndex weapon) const
+{
+	static const i32 MEASURED_PLAYER_WEAPON_BASE = 131100000;
+	static const i32 MEASURED_PLAYER_WEAPON_END = 131200000;
+	const f32 full = GetGameXmlContent().GetWeaponAttack((i32)weapon);
+	const i32 doc = (i32)weapon;
+	if(doc < MEASURED_PLAYER_WEAPON_BASE || doc >= MEASURED_PLAYER_WEAPON_END || doc % 10 <= 1) return full;
+	const f32 base = GetGameXmlContent().GetWeaponAttack(doc - doc % 10 + 1);
+	if(base <= 0) return full;
+	return base + (full - base) * (f32)GetGameXmlContent().GearPowerPercent(replication->gameType) / 100.0f;
+}
+
 f32 World::WeaponHitDamage(const Player& player, const Remote* remote) const
 {
 	const WeaponIndex weapon = ActiveWeapon(player);
-	const f32 attack = GetGameXmlContent().GetWeaponAttack((i32)weapon) + StatBonus(player, STAT_ATTACK);
+	const f32 attack = AugmentedWeaponAttack(weapon) + StatBonus(player, STAT_ATTACK);
 	ASSERT(attack > 0);
 	const f32 mult = remote && remote->attackMultiplier > 0 ? remote->attackMultiplier : 1.0f;
 	if(remote && remote->skillIndex != 0 && remote->attackMultiplier > 0) return PlayerSkillDamage(player, SkillID(remote->skillIndex)) * mult;

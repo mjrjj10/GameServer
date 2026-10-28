@@ -1690,6 +1690,13 @@ bool GameXmlContent::LoadStageMaps()
 		if(XMLElement* pView = pStage->FirstChildElement("_VIEW_REWARD")) {
 			for(XMLElement* v = pView->FirstChildElement("_VIEWINDEX"); v && !stage.viewRewards.full(); v = v->NextSiblingElement("_VIEWINDEX")) stage.viewRewards.push_back(v->IntAttribute("_ViewItemIndex"));
 		}
+		if(XMLElement* pPvp = pStage->FirstChildElement("_PVP")) {
+			XMLElement* pAi = pPvp->FirstChildElement("_MODE") ? pPvp->FirstChildElement("_MODE")->FirstChildElement("_AI") : nullptr;
+			XMLElement* pDefault = pAi ? pAi->FirstChildElement("_Default") : nullptr;
+			for(XMLElement* pIgnore = pDefault ? pDefault->FirstChildElement("_IgnoreMapIndex") : nullptr; pIgnore && !stage.aiIgnoredMaps.full(); pIgnore = pIgnore->NextSiblingElement("_IgnoreMapIndex")) {
+				stage.aiIgnoredMaps.push_back(MapIndex(pIgnore->IntAttribute("DATA")));
+			}
+		}
 		XMLElement* pWorldMap = pStage->FirstChildElement("_WORLD_STAGE_MAP");
 		if(!pWorldMap) continue;
 		for(XMLElement* pGroup = pWorldMap->FirstChildElement("_WORLD_STAGE_MAP_GROUP");
@@ -1701,7 +1708,10 @@ bool GameXmlContent::LoadStageMaps()
 				pMap = pMap->NextSiblingElement("_WORLD_STAGE_MAPINFO")) {
 				i32 mapID = 0;
 				if(pMap->QueryIntAttribute("_Index", &mapID) != XML_SUCCESS) continue;
-				if(mapID != 0 && stage.maps.size() < stage.maps.capacity()) stage.maps.push_back(MapIndex(mapID));
+				if(mapID != 0 && stage.maps.size() < stage.maps.capacity()) {
+					stage.maps.push_back(MapIndex(mapID));
+					stage.mapRates.push_back(pMap->IntAttribute("_Rate", 1));
+				}
 			}
 		}
 		if(!stage.maps.empty() && stageMaps.size() < stageMaps.capacity()) stageMaps.push_back(stage);
@@ -1709,6 +1719,33 @@ bool GameXmlContent::LoadStageMaps()
 
 	LOG("Loaded %d stage maps", (i32)stageMaps.size());
 	return true;
+}
+
+bool GameXmlContent::PickStageMap(StageIndex stageID, bool aiMode, MapIndex* outMapIndex) const
+{
+	for(auto& stage : stageMaps) {
+		if(stage.ID != stageID) continue;
+		eastl::fixed_vector<eastl::pair<MapIndex,i32>,8,false> usable;
+		i32 total = 0;
+		for(i32 i = 0; i < (i32)stage.maps.size(); i++) {
+			const MapIndex m = stage.maps[i];
+			bool ignored = false;
+			if(aiMode) foreach_const(ig, stage.aiIgnoredMaps) if(*ig == m) ignored = true;
+			if(ignored || (stage.gameMode != GameModeType::GAME_MODE_STAGE && stage.gameMode != GameModeType::GAME_MODE_DEFENCE && !FindPvpMap(m))) continue;
+			const i32 rate = MAX(i < (i32)stage.mapRates.size() ? stage.mapRates[i] : 1, 1);
+			usable.push_back(eastl::make_pair(m, rate));
+			total += rate;
+		}
+		if(usable.empty()) return FindStageMap(stageID, outMapIndex);
+		i32 roll = (i32)(RandUint() % (u32)total);
+		foreach_const(u, usable) {
+			if(roll < u->second) { *outMapIndex = u->first; return true; }
+			roll -= u->second;
+		}
+		*outMapIndex = usable.back().first;
+		return true;
+	}
+	return false;
 }
 
 bool GameXmlContent::FindStageMap(StageIndex stageID, MapIndex* outMapIndex) const
@@ -4352,6 +4389,14 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(XMLElement* e = pNode->FirstChildElement("_AITriggerData")) { node.kind = LevelEventNode::AI_TRIGGER; node.aiIndex = e->IntAttribute("_INDEX"); }
 		else if(XMLElement* e = pNode->FirstChildElement("_InvokeAITriggerInfo")) { node.kind = LevelEventNode::INVOKE_AI_TRIGGER; node.aiIndex = e->IntAttribute("_INDEX"); }
 		else if(XMLElement* e = pNode->FirstChildElement("_ActiveInteractionInfo")) { node.kind = LevelEventNode::ACTIVE_INTERACTION; node.localID = e->IntAttribute("_LocalID"); node.active = e->IntAttribute("_Active") == 1; }
+		else if(XMLElement* e = pNode->FirstChildElement("_TeleportFromStartingPointInfo")) {
+			node.kind = LevelEventNode::CAMP_GUARD;
+			node.localID = e->IntAttribute("_StartingAreaID");
+			node.areaID = e->IntAttribute("_AreaID");
+			node.delay = e->FloatAttribute("_WarningMessageDelayTime");
+			node.callDelay = e->FloatAttribute("_TeleportDelayTime");
+			node.apply = e->IntAttribute("_bApply") == 1;
+		}
 		else if(XMLElement* e = pNode->FirstChildElement("_TeleportToInfo")) {
 			node.kind = LevelEventNode::TELEPORT_TO;
 			node.areaID = e->IntAttribute("_AreaID");

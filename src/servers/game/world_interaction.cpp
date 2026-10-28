@@ -622,6 +622,17 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 		} break;
 		case GameXmlContent::LevelEventNode::INVOKE_AI_TRIGGER: FireAITrigger(node->aiIndex, playerIndex); break;
 		case GameXmlContent::LevelEventNode::INTERACTION_TRIGGER: return;
+		case GameXmlContent::LevelEventNode::CAMP_GUARD: {
+			if(playerIndex < 0) break;
+			Player& p = players[playerIndex];
+			if(node->apply) {
+				p.campStartArea = node->localID;
+				p.campDestArea = node->areaID;
+				p.campTeleportAt = TimeAdd(localTime, TimeMsToTime((node->delay + node->callDelay) * 1000.0));
+				LOG("LevelEvent :: %ls back in starting area %d, moved to area %d in %.0f s", p.name.data(), node->localID, node->areaID, node->delay + node->callDelay);
+			}
+			else if(p.campStartArea == node->localID) p.campTeleportAt = Time::ZERO;
+		} break;
 		case GameXmlContent::LevelEventNode::TELEPORT_TO: {
 			const GameXmlContent::Map::Area* area = map->FindArea(node->areaID);
 			if(!area) break;
@@ -1169,6 +1180,18 @@ void World::UpdateBoundTriggers()
 {
 	if(!levelEventsStarted || Config().DevShowcase) return;
 	const GameXmlContent::Map& levelMap = *map;
+	auto areaContains = [](const GameXmlContent::Map::Area& area, const vec3& pos) {
+		return area.type == AREA_TYPE_CIRCLE ? glm::length(vec2(pos) - vec2(area.pos)) <= area.size.z : fabsf(pos.x - area.pos.x) <= area.size.z && fabsf(pos.y - area.pos.y) <= area.size.y;
+	};
+	foreach(p, players) {
+		if(p->campTeleportAt == Time::ZERO || localTime < p->campTeleportAt) continue;
+		p->campTeleportAt = Time::ZERO;
+		const GameXmlContent::Map::Area* start = levelMap.FindArea(p->campStartArea);
+		const GameXmlContent::Map::Area* dest = levelMap.FindArea(p->campDestArea);
+		if(!start || !dest || p->dead || !p->body || !areaContains(*start, p->body->GetWorldPos())) continue;
+		WarpPlayer(*p, dest->pos + vec3(0, 0, LEVEL_TELEPORT_LIFT), dest->rot.z);
+		LOG("LevelEvent :: %ls moved out of starting area %d to area %d", p->name.data(), p->campStartArea, p->campDestArea);
+	}
 	foreach_const(n, levelMap.levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::BOUND_TRIGGER || !LevelTriggerActive(*n)) continue;
 		const GameXmlContent::Map::Area* area = levelMap.FindArea(n->areaID);
