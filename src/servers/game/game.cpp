@@ -939,6 +939,7 @@ void Game::EndGame()
 		record.stageIndex = (i32)replication.stageIndex;
 		record.gameType = (i32)replication.gameType;
 		record.classTypes = { (i32)p.mainClass, (i32)p.subClass };
+		record.playSeconds = tGameStarted != Time::ZERO ? (u32)TimeDiffSec(TimeDiff(tGameStarted, localTime)) : 0;
 		AccountGameRecordAppend(e->name, record);
 		LOG("Game :: %ls reward %u gold %u exp (%u min, %s)", e->name, e->gold, e->exp, minutes, won ? "win" : (own == other ? "draw" : "loss"));
 	}
@@ -981,6 +982,7 @@ void Game::EndStage(bool cleared)
 			record.stageIndex = (i32)replication.stageIndex;
 			record.gameType = (i32)replication.gameType;
 			record.classTypes = { (i32)p->mainClass, (i32)p->subClass };
+			record.playSeconds = tGameStarted != Time::ZERO ? (u32)TimeDiffSec(TimeDiff(tGameStarted, localTime)) : 0;
 			AccountGameRecordAppend(p->name.data(), record);
 		}
 		return;
@@ -1021,6 +1023,7 @@ void Game::EndStage(bool cleared)
 		record.stageIndex = clear.stage;
 		record.gameType = (i32)replication.gameType;
 		record.classTypes = { (i32)p->mainClass, (i32)p->subClass };
+		record.playSeconds = playMs / 1000;
 		AccountGameRecordAppend(p->name.data(), record);
 		if(!rewardStates.full()) rewardStates.push_back({ p->clientHd, 0, false, Time::ZERO, {} });
 		LOG("Stage :: %ls cleared stage %d (%d kills, %d deaths, rank %d)", p->name.data(), clear.stage, clear.kills, clear.deaths, (i32)clear.rank);

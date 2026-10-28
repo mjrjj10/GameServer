@@ -28,4 +28,5 @@ void MissionApplyGame(const AccountGameRecord& record, ActiveMissionList* list);
 void MissionStore(const ActiveMissionList& list, AccountMissions* saved);
 ActiveMission* MissionFind(ActiveMissionList* list, i32 missionID);
 bool MissionChangeDaily(const wchar* nickname, u16 level, i64 nowUtc, i32 step, AccountMissions* saved, ActiveMission* changed);
+void ActivityRefresh(AccountProgress* progress, i64 nowUtc);
 bool ProgressGainExp(AccountProgress* progress, u32 exp);

@@ -242,6 +242,7 @@ struct HubReplication
 	void SendStartGame(ClientHandle clientHd, u32 result);
 	void SendItemTradeResult(ClientHandle clientHd, u32 result, i64 gold, const struct AccountItem* items, i32 count);
 	void SendItemAcquisition(ClientHandle clientHd, u32 reason, const struct AccountItem& item, i32 amount);
+	void SendActivityReward(ClientHandle clientHd, u32 result, u8 rewardedState);
 	void SendPraise(ClientHandle clientHd, const wchar* nickname, u32 count);
 	void SetPlayerAsInGame(ClientHandle clientHd);
 	void SendCharacterInfo(ClientHandle clientHd, ActorUID actorUID, CreatureIndex docID, ClassType classType, i32 health, i32 healthMax);

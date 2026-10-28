@@ -1357,6 +1357,22 @@ bool GameXmlContent::LoadMissions()
 		rewards.push_back(info);
 	}
 
+	if(XMLElement* pActivity = pRewardRoot->FirstChildElement("_ActivityPointInfo")) {
+		activityMaxPoint = pActivity->IntAttribute("_MaxPoint", 0);
+		for(XMLElement* pRatio = pActivity->FirstChildElement("_PointRatioInfo"); pRatio; pRatio = pRatio->NextSiblingElement("_PointRatioInfo")) {
+			const i32 tier = pRatio->IntAttribute("DATAKEY", 0);
+			if(tier <= 0 || tier > (i32)activityTiers.capacity()) continue;
+			if((i32)activityTiers.size() < tier) activityTiers.resize(tier);
+			activityTiers[tier - 1].ratio = pRatio->FloatAttribute("DATA", 0);
+		}
+		for(XMLElement* pTier = pActivity->FirstChildElement("_RewardInfo"); pTier; pTier = pTier->NextSiblingElement("_RewardInfo")) {
+			const i32 tier = pTier->IntAttribute("DATAKEY", 0);
+			if(tier <= 0 || tier > (i32)activityTiers.size()) continue;
+			activityTiers[tier - 1].item = pTier->IntAttribute("_ItemIndex", 0);
+			activityTiers[tier - 1].amount = pTier->IntAttribute("_Amount", 0);
+		}
+	}
+
 	XMLDocument docPrice;
 	if(!LoadXMLFile(L"/Design/GAMEINFO/ServicePrice.xml", docPrice)) return false;
 	XMLElement* pPrice = docPrice.FirstChildElement()->FirstChildElement("ST_SERVICEPRICE");

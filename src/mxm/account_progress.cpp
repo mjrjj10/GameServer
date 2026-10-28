@@ -107,6 +107,7 @@ AccountProgress AccountProgressLoad(const wchar* nickname)
 		else if(sscanf(line, "Honors=%u", &v32) == 1) progress.honors = v32;
 		else if(sscanf(line, "CCoin=%lld", &v64) == 1) progress.ccoin = (i64)v64;
 		else if(sscanf(line, "InventoryLines=%d %d %d", &progress.inventoryLines[0], &progress.inventoryLines[1], &progress.inventoryLines[2]) == 3) {}
+		else if(sscanf(line, "Activity=%d %u %lld", &progress.activityPoint, &v32, &v64) == 3) { progress.activityRewarded = (u8)v32; progress.activityPeriod = (i64)v64; }
 	}
 	fclose(f);
 	return progress;
@@ -122,8 +123,8 @@ void AccountProgressSave(const wchar* nickname, const AccountProgress& progress)
 	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
 	FILE* f = fopen(tmp, "wb");
 	ASSERT(f);
-	fprintf(f, "Level=%u\nExp=%u\nGold=%lld\nWins=%u\nDraws=%u\nLosses=%u\nHonors=%u\nCCoin=%lld\nInventoryLines=%d %d %d\n", (u32)progress.level, progress.levelExp, (long long)progress.gold, progress.wins, progress.draws, progress.losses, progress.honors, (long long)progress.ccoin,
-		progress.inventoryLines[0], progress.inventoryLines[1], progress.inventoryLines[2]);
+	fprintf(f, "Level=%u\nExp=%u\nGold=%lld\nWins=%u\nDraws=%u\nLosses=%u\nHonors=%u\nCCoin=%lld\nInventoryLines=%d %d %d\nActivity=%d %u %lld\n", (u32)progress.level, progress.levelExp, (long long)progress.gold, progress.wins, progress.draws, progress.losses, progress.honors, (long long)progress.ccoin,
+		progress.inventoryLines[0], progress.inventoryLines[1], progress.inventoryLines[2], progress.activityPoint, (u32)progress.activityRewarded, (long long)progress.activityPeriod);
 	fclose(f);
 	remove(path);
 	rename(tmp, path);
@@ -137,8 +138,8 @@ void AccountGameRecordAppend(const wchar* nickname, const AccountGameRecord& rec
 	AccountPath(nickname, "reward", path, sizeof(path));
 	FILE* f = fopen(path, "ab");
 	ASSERT(f);
-	fprintf(f, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d %u\n", (long long)record.gold, record.exp, (u32)record.won, record.kills, record.assists, record.bestKillStreak,
-		(u32)record.firstBlood, (long long)record.damage, record.titanScore, record.stageIndex, record.gameType, record.classTypes[0], record.classTypes[1], (u32)record.draw);
+	fprintf(f, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d %u %u\n", (long long)record.gold, record.exp, (u32)record.won, record.kills, record.assists, record.bestKillStreak,
+		(u32)record.firstBlood, (long long)record.damage, record.titanScore, record.stageIndex, record.gameType, record.classTypes[0], record.classTypes[1], (u32)record.draw, record.playSeconds);
 	fclose(f);
 }
 
@@ -178,6 +179,8 @@ void AccountStageCleared(const wchar* nickname, i32 stageIndex)
 	AccountStagesSave(nickname, stages);
 }
 
+static const u32 HYP_ACTIVITY_MAX_SECONDS_PER_GAME = 1800;
+
 AccountReward AccountRewardTake(const wchar* nickname)
 {
 	std::lock_guard<std::mutex> lock(g_accountFileMutex);
@@ -191,8 +194,8 @@ AccountReward AccountRewardTake(const wchar* nickname)
 		AccountGameRecord record;
 		long long gold = 0, damage = 0;
 		u32 won = 0, firstBlood = 0, draw = 0;
-		const i32 n = sscanf(line, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d %u", &gold, &record.exp, &won, &record.kills, &record.assists, &record.bestKillStreak,
-			&firstBlood, &damage, &record.titanScore, &record.stageIndex, &record.gameType, &record.classTypes[0], &record.classTypes[1], &draw);
+		const i32 n = sscanf(line, "%lld %u %u %d %d %d %u %lld %d %d %d %d %d %u %u", &gold, &record.exp, &won, &record.kills, &record.assists, &record.bestKillStreak,
+			&firstBlood, &damage, &record.titanScore, &record.stageIndex, &record.gameType, &record.classTypes[0], &record.classTypes[1], &draw, &record.playSeconds);
 		if(n < 2) continue;
 		record.gold = (i64)gold;
 		record.won = (u8)won;
@@ -202,6 +205,7 @@ AccountReward AccountRewardTake(const wchar* nickname)
 		reward.gold += record.gold;
 		reward.exp += record.exp;
 		reward.games++;
+		reward.playSeconds += MIN(record.playSeconds, HYP_ACTIVITY_MAX_SECONDS_PER_GAME);
 		if(n >= 13 && !reward.records.full()) reward.records.push_back(record);
 	}
 	fclose(f);

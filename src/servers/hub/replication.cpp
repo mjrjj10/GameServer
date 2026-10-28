@@ -367,6 +367,14 @@ void HubReplication::SendItemUpdate(ClientHandle clientHd, const AccountItem& it
 	SendPacket(clientHd, packet);
 }
 
+void HubReplication::SendActivityReward(ClientHandle clientHd, u32 result, u8 rewardedState)
+{
+	Sv::SA_ActivityReward answer;
+	answer.result = result;
+	answer.activityRewardedState = rewardedState;
+	SendPacket(clientHd, answer);
+}
+
 void HubReplication::SendItemAcquisition(ClientHandle clientHd, u32 reason, const AccountItem& item, i32 amount)
 {
 	PacketWriter<Sv::SN_ItemAcquisition> packet;
@@ -785,8 +793,10 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 		};
 
 		packet.WriteVec(&grade, 1);
-		packet.Write<i32>(0); // activityPoint
-		packet.Write<u8>(0); // activityRewaredState
+		AccountProgress activity = AccountProgressLoad(account.nickname.data());
+		ActivityRefresh(&activity, (i64)time(nullptr));
+		packet.Write<i32>(activity.activityPoint);
+		packet.Write<u8>(activity.activityRewarded);
 
 		SendPacket(clientHd, packet);
 	}

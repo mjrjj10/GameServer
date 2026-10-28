@@ -472,6 +472,30 @@ void HubGame::OnSaveSettings(ClientHandle clientHd, u8 settingType, const u8* da
 	LOG("[client%x] HubGame :: %ls saves settings %u (%d bytes)", clientHd, playerAccountData[userID]->nickname.data(), (u32)settingType, size);
 }
 
+void HubGame::OnActivityReward(ClientHandle clientHd, i32 tier)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	const wchar* nickname = playerAccountData[userID]->nickname.data();
+	const GameXmlContent& content = GetGameXmlContent();
+	AccountProgress progress = AccountProgressLoad(nickname);
+	ActivityRefresh(&progress, (i64)time(nullptr));
+	const u8 bit = tier >= 1 && tier <= 8 ? (u8)(1 << (tier - 1)) : 0;
+	const bool valid = bit != 0 && tier <= (i32)content.activityTiers.size() && !(progress.activityRewarded & bit);
+	const GameXmlContent::ActivityTier* data = valid ? &content.activityTiers[tier - 1] : nullptr;
+	if(!data || progress.activityPoint < (i32)(data->ratio * (f32)content.activityMaxPoint + 0.5f)) {
+		WARN("[client%x] HubGame :: activity reward %d refused (%d points, state %u)", clientHd, tier, progress.activityPoint, (u32)progress.activityRewarded);
+		replication.SendActivityReward(clientHd, HYP_ACTIVITY_REWARD_REFUSED, progress.activityRewarded);
+		return;
+	}
+	const i32 amount = tier <= (i32)ARRAY_COUNT(MEASURED_ACTIVITY_REWARD_AMOUNTS) ? MEASURED_ACTIVITY_REWARD_AMOUNTS[tier - 1] : data->amount;
+	GrantItem(userID, data->item, amount, MEASURED_ITEM_UPDATE_REASON_ACTIVITY, MEASURED_ITEM_ACQUISITION_REASON_ACTIVITY);
+	progress.activityRewarded |= bit;
+	AccountProgressSave(nickname, progress);
+	replication.SendActivityReward(clientHd, 0, progress.activityRewarded);
+	LOG("[client%x] HubGame :: %ls claims activity reward %d (%d x item %d)", clientHd, nickname, tier, amount, data->item);
+}
+
 void HubGame::OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count)
 {
 	const i32 userID = plidMap->Get(clientHd);

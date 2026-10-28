@@ -72,6 +72,7 @@ private:
 	void HandlePacket_CN_SortieRoomConfirm(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_GetUserInfo(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_ItemTrade(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
+	void HandlePacket_CQ_BuyGift(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_SaveSettings(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_PveRanking(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_RequestSummaryInfoEach(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);

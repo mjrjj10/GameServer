@@ -731,6 +731,8 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 		if(ProgressGainExp(&progress, reward.exp)) LOG("[client%x] Account :: %ls reaches level %u", clientHd, account.nickname.data(), (u32)progress.level);
 		LOG("[client%x] Account :: %ls rewards of %d game(s): %lld gold, %u exp -> level %u (%u exp), %lld gold", clientHd, account.nickname.data(), reward.games, reward.gold, reward.exp, (u32)progress.level, progress.levelExp, progress.gold);
 	}
+	ActivityRefresh(&progress, (i64)time(nullptr));
+	if(reward.playSeconds > 0) progress.activityPoint = MIN(progress.activityPoint + (i32)reward.playSeconds, GetGameXmlContent().activityMaxPoint);
 	AccountProgressSave(account.nickname.data(), progress);
 	{
 		const auto rewardItems = AccountRewardItemsTake(account.nickname.data());

@@ -83,6 +83,7 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CN_SortieRoomConfirm);
 		HANDLE_CASE(CQ_GetUserInfo);
 		HANDLE_CASE(CQ_ItemTrade);
+		HANDLE_CASE(CQ_BuyGift);
 		HANDLE_CASE(CQ_PveRanking);
 		HANDLE_CASE(CQ_SaveSettings);
 		HANDLE_CASE(CQ_RequestSummaryInfoEach);
@@ -805,6 +806,17 @@ void HubPacketHandler::HandlePacket_CQ_RestartVote(ClientHandle clientHd, const 
 	NT_LOG("[client%x] Client :: CQ_RestartVote :: size=%d", clientHd, packetSize);
 	replication->SendStartGame(clientHd, 0);
 	game->OnEnqueueGame(clientHd);
+}
+
+void HubPacketHandler::HandlePacket_CQ_BuyGift(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_BuyGift>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_BuyGift (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const Cl::CQ_BuyGift& packet = SafeCast<Cl::CQ_BuyGift>(packetData, packetSize);
+	NT_LOG("[client%x] Client :: CQ_BuyGift (activity reward) :: tier=%u", clientHd, (u32)packet.amount_u8);
+	game->OnActivityReward(clientHd, (i32)packet.amount_u8);
 }
 
 void HubPacketHandler::HandlePacket_CQ_ItemTrade(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

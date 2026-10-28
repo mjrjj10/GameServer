@@ -15,6 +15,9 @@ struct AccountProgress
 	u32 honors = 0;
 	i64 ccoin = 0;
 	eastl::array<i32,3> inventoryLines = { 4, 4, 4 };
+	i32 activityPoint = 0;
+	u8 activityRewarded = 0;
+	i64 activityPeriod = 0;
 };
 
 struct AccountItem
@@ -53,6 +56,7 @@ struct AccountGameRecord
 	i32 stageIndex = 0;
 	i32 gameType = 0;
 	eastl::array<i32,2> classTypes = { 0, 0 };
+	u32 playSeconds = 0;
 };
 
 struct AccountReward
@@ -60,6 +64,7 @@ struct AccountReward
 	i64 gold = 0;
 	u32 exp = 0;
 	i32 games = 0;
+	u32 playSeconds = 0;
 	eastl::fixed_vector<AccountGameRecord,16,true> records;
 };
 

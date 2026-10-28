@@ -225,3 +225,12 @@ bool ProgressGainExp(AccountProgress* progress, u32 exp)
 	}
 	return levelUp;
 }
+
+void ActivityRefresh(AccountProgress* progress, i64 nowUtc)
+{
+	const i64 period = ComputeMissionCalendar(nowUtc).dailyResetUtc;
+	if(progress->activityPeriod == period) return;
+	progress->activityPeriod = period;
+	progress->activityPoint = 0;
+	progress->activityRewarded = 0;
+}
