@@ -1614,6 +1614,10 @@ bool GameXmlContent::LoadStageMaps()
 		}
 		if(XMLElement* pSuccess = pStage->FirstChildElement("_SUCCESS_CONDITION_LIST")) {
 			for(XMLElement* pSet = pSuccess->FirstChildElement("_MCASESET"); pSet; pSet = pSet->NextSiblingElement("_MCASESET")) {
+				for(XMLElement* pTrig = pSet->FirstChildElement("_MTRIGGER"); pTrig; pTrig = pTrig->NextSiblingElement("_MTRIGGER")) {
+					const char* type = pTrig->Attribute("_Type");
+					if(type && EA::StdC::Strcmp(type, "E_TRIGGER_TYPE_MONEY_ADD") == 0) stage.moneyReward = pTrig->IntAttribute("_Value");
+				}
 				for(XMLElement* pCond = pSet->FirstChildElement("_MCONDITION"); pCond; pCond = pCond->NextSiblingElement("_MCONDITION")) {
 					const char* type = pCond->Attribute("_Type");
 					if(!type || EA::StdC::Strcmp(type, "E_CONDITION_TYPE_MONSTER_KILL") != 0) continue;
@@ -1621,6 +1625,9 @@ bool GameXmlContent::LoadStageMaps()
 					stage.clearCount = pCond->IntAttribute("_Value", 1);
 				}
 			}
+		}
+		if(XMLElement* pView = pStage->FirstChildElement("_VIEW_REWARD")) {
+			for(XMLElement* v = pView->FirstChildElement("_VIEWINDEX"); v && !stage.viewRewards.full(); v = v->NextSiblingElement("_VIEWINDEX")) stage.viewRewards.push_back(v->IntAttribute("_ViewItemIndex"));
 		}
 		XMLElement* pWorldMap = pStage->FirstChildElement("_WORLD_STAGE_MAP");
 		if(!pWorldMap) continue;

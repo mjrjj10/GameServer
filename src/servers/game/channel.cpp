@@ -96,6 +96,19 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 			const LocalActorID local = buff.Read<LocalActorID>();
 			game->OnTraitReset(clientHd, replication->GetWorldActorUID(clientHd, local));
 		} break;
+		case Cl::CN_RewardStageReady::NET_ID: {
+			NT_LOG("[client%x] Client :: CN_RewardStageReady", clientHd);
+			game->OnRewardStageReady(clientHd);
+		} break;
+		case Cl::CQ_RewardSelectSlot::NET_ID: {
+			if(packetSize < 4) break;
+			NT_LOG("[client%x] Client :: CQ_RewardSelectSlot :: slot=%u", clientHd, *(const u32*)packetData);
+			game->OnRewardSelectSlot(clientHd, *(const u32*)packetData);
+		} break;
+		case Cl::CQ_RewardRequestFinish::NET_ID: {
+			NT_LOG("[client%x] Client :: CQ_RewardRequestFinish", clientHd);
+			game->OnRewardRequestFinish(clientHd);
+		} break;
 		case Cl::CN_UNKNOWN_60260::NET_ID: {
 			NT_LOG("[client%x] Client :: titan incarnate size=%d", clientHd, packetSize);
 			if(packetSize < 8) break;

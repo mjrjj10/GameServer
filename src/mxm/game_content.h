@@ -825,6 +825,8 @@ struct GameXmlContent
 		u8 difficultyBit = ALL_DIFFICULTIES;
 		i32 clearMonster = 0;
 		i32 clearCount = 0;
+		i32 moneyReward = 0;
+		eastl::fixed_vector<i32,8,false> viewRewards;
 		SkillID stageSkill = SkillID::INVALID;
 		eastl::fixed_vector<SkillID,8,false> stageSkillCandidates;
 	};

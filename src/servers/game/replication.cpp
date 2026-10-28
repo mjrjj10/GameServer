@@ -151,6 +151,127 @@ void Replication::OnPlayerConnect(ClientHandle clientHd, u32 playerIndex)
 	clientHandle[playerIndex] = clientHd;
 }
 
+static const u8 MEASURED_REWARD_NEXT_ACTION = 1;
+
+void Replication::SendStageClearResult(ClientHandle clientHd, const StageClear& clear, const StageMember* members, i32 memberCount)
+{
+	PacketWriter<Sv::SN_StageClearResult,1024> packet;
+	packet.Write<LocalActorID>(clear.player);
+	packet.Write<u16>((u16)memberCount);
+	for(i32 i = 0; i < memberCount; i++) {
+		packet.Write<u32>((u32)members[i].mainClass);
+		packet.Write<u32>((u32)members[i].subClass);
+		packet.WriteStringObj(members[i].name);
+	}
+	packet.Write<u8>(0);
+	packet.Write<i32>(clear.stage);
+	packet.Write<i32>(clear.kills);
+	packet.Write<i32>(clear.deaths);
+	packet.Write<u32>(clear.playTimeMs);
+	packet.Write<u8>(clear.rank);
+	packet.Write<u32>(0);
+	packet.Write<u32>(clear.baseRon);
+	packet.Write<u16>(0);
+	packet.Write<u32>(clear.baseExp);
+	packet.Write<u16>(0);
+	packet.Write<u32>(clear.attackScore);
+	packet.Write<u32>(clear.defenseScore);
+	packet.Write<u32>(clear.timeScore);
+	packet.Write<u32>(0);
+	packet.Write<u32>(clear.totalScore);
+	packet.Write<u32>(0);
+	packet.Write<u8>(clear.technicGrade);
+	packet.Write<u32>(0);
+	packet.Write<u32>(0);
+	packet.Write<u8>(1);
+	packet.Write<u16>(0);
+	packet.Write<u16>(0);
+	packet.Write<u16>(0);
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendExpGain(ClientHandle clientHd, u32 exp)
+{
+	PacketWriter<Sv::SN_ExpGain,16> packet;
+	packet.Write<u32>(exp);
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendClearedStage(ClientHandle clientHd, i32 stage)
+{
+	PacketWriter<Sv::SN_LoadClearedStages,16> packet;
+	packet.Write<u16>(1);
+	packet.Write<i32>(stage);
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendRewardItemList(ClientHandle clientHd, const RewardCard* cards, i32 count)
+{
+	PacketWriter<Sv::SN_RewardItemList,1024> packet;
+	packet.Write<u16>((u16)count);
+	for(i32 i = 0; i < count; i++) {
+		packet.Write<u32>(cards[i].type);
+		packet.Write<i32>(cards[i].index);
+		packet.Write<u32>(cards[i].amount);
+	}
+	packet.Write<u32>(0);
+	packet.Write<u8>(0);
+	packet.Write<u8>(0);
+	packet.Write<u8>(0);
+	packet.Write<u16>(0);
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendRewardStageStart(ClientHandle clientHd, u32 waitMs, u8 slotCount)
+{
+	PacketWriter<Sv::SN_RewardStageStartNp,16> packet;
+	packet.Write<u32>(waitMs);
+	packet.Write<u8>(MEASURED_REWARD_NEXT_ACTION);
+	packet.Write<u8>(slotCount);
+	packet.Write<u32>(0);
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendRewardSelectSlot(ClientHandle clientHd, u32 result, u32 slot, const RewardCard& card)
+{
+	PacketWriter<Sv::SA_RewardSelectSlot,32> packet;
+	packet.Write<u32>(result);
+	packet.Write<u32>(slot);
+	packet.Write<u32>(card.type);
+	packet.Write<i32>(card.index);
+	packet.Write<u32>(card.amount);
+	packet.Write<u8>(0);
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendRewardRequestFinish(ClientHandle clientHd)
+{
+	PacketWriter<Sv::SA_RewardRequestFinish,8> packet;
+	packet.Write<u32>(0);
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendRewardStageEnd(ClientHandle clientHd, const RewardCard* cards, i32 count)
+{
+	PacketWriter<Sv::SN_RewardStageEnd,1024> packet;
+	packet.Write<u16>((u16)count);
+	for(i32 i = 0; i < count; i++) {
+		packet.Write<u32>(cards[i].type);
+		packet.Write<i32>(cards[i].index);
+		packet.Write<u32>(cards[i].amount);
+	}
+	packet.Write<u16>(0);
+	packet.Write<u32>(0);
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendWarnPveGameEnd(ClientHandle clientHd, u32 remainMs)
+{
+	PacketWriter<Sv::SN_WarnPveGameend,8> packet;
+	packet.Write<u32>(remainMs);
+	SendPacket(clientHd, packet);
+}
+
 void Replication::SendGameAreaMove(ClientHandle clientHd, MapIndex map)
 {
 	Sv::SN_GameAreaMove packet;

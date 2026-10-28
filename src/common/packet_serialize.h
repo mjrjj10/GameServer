@@ -3222,6 +3222,12 @@ DEFAULT_SERIALIZE(Sv::SA_RequestSummaryInfoEach);
 DEFAULT_SERIALIZE(Sv::SA_StartGame);
 DEFAULT_SERIALIZE(Sv::SA_MasterTrainingEvent);
 DEFAULT_SERIALIZE(Sv::SN_GameAreaMove);
+DEFAULT_SERIALIZE(Sv::SN_StageClearResult);
+DEFAULT_SERIALIZE(Sv::SN_RewardItemList);
+DEFAULT_SERIALIZE(Sv::SN_RewardStageStartNp);
+DEFAULT_SERIALIZE(Sv::SA_RewardSelectSlot);
+DEFAULT_SERIALIZE(Sv::SA_RewardRequestFinish);
+DEFAULT_SERIALIZE(Sv::SN_WarnPveGameend);
 #undef DEFAULT_SERIALIZE
 
 template<>

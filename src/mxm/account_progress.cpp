@@ -142,6 +142,42 @@ void AccountGameRecordAppend(const wchar* nickname, const AccountGameRecord& rec
 	fclose(f);
 }
 
+void AccountRewardItemAppend(const wchar* nickname, i32 docIndex, i32 count)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	_mkdir(ACCOUNT_DIR);
+	char path[512];
+	AccountPath(nickname, "rewarditems", path, sizeof(path));
+	FILE* f = fopen(path, "ab");
+	ASSERT(f);
+	fprintf(f, "%d %d\n", docIndex, count);
+	fclose(f);
+}
+
+eastl::fixed_vector<eastl::pair<i32,i32>,64,true> AccountRewardItemsTake(const wchar* nickname)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	eastl::fixed_vector<eastl::pair<i32,i32>,64,true> items;
+	char path[512];
+	AccountPath(nickname, "rewarditems", path, sizeof(path));
+	FILE* f = fopen(path, "rb");
+	if(!f) return items;
+	i32 doc = 0, count = 0;
+	while(fscanf(f, "%d %d", &doc, &count) == 2) items.push_back(eastl::make_pair(doc, count));
+	fclose(f);
+	remove(path);
+	return items;
+}
+
+void AccountStageCleared(const wchar* nickname, i32 stageIndex)
+{
+	AccountStages stages = AccountStagesLoad(nickname);
+	foreach_const(s, stages.cleared) if(*s == stageIndex) return;
+	if(stages.cleared.full()) return;
+	stages.cleared.push_back(stageIndex);
+	AccountStagesSave(nickname, stages);
+}
+
 AccountReward AccountRewardTake(const wchar* nickname)
 {
 	std::lock_guard<std::mutex> lock(g_accountFileMutex);

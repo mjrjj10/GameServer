@@ -112,5 +112,8 @@ AccountProgress AccountProgressLoad(const wchar* nickname);
 void AccountProgressSave(const wchar* nickname, const AccountProgress& progress);
 void AccountGameRecordAppend(const wchar* nickname, const AccountGameRecord& record);
 AccountReward AccountRewardTake(const wchar* nickname);
+void AccountRewardItemAppend(const wchar* nickname, i32 docIndex, i32 count);
+eastl::fixed_vector<eastl::pair<i32,i32>,64,true> AccountRewardItemsTake(const wchar* nickname);
+void AccountStageCleared(const wchar* nickname, i32 stageIndex);
 AccountMissions AccountMissionsLoad(const wchar* nickname);
 void AccountMissionsSave(const wchar* nickname, const AccountMissions& missions);

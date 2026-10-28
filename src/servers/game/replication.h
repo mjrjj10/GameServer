@@ -307,6 +307,18 @@ struct Replication
 	void OnPlayerConnect(ClientHandle clientHd, u32 playerIndex);
 	void SendLoadPvpMap(ClientHandle clientHd, MapIndex stageIndex);
 	void SendGameAreaMove(ClientHandle clientHd, MapIndex map);
+	struct StageMember { ClassType mainClass; ClassType subClass; const wchar* name; };
+	struct StageClear { LocalActorID player; i32 stage; i32 kills; i32 deaths; u32 playTimeMs; u8 rank; u32 baseRon; u32 baseExp; u32 attackScore; u32 defenseScore; u32 timeScore; u32 totalScore; u8 technicGrade; };
+	struct RewardCard { u32 type; i32 index; u32 amount; };
+	void SendStageClearResult(ClientHandle clientHd, const StageClear& clear, const StageMember* members, i32 memberCount);
+	void SendExpGain(ClientHandle clientHd, u32 exp);
+	void SendClearedStage(ClientHandle clientHd, i32 stage);
+	void SendRewardItemList(ClientHandle clientHd, const RewardCard* cards, i32 count);
+	void SendRewardStageStart(ClientHandle clientHd, u32 waitMs, u8 slotCount);
+	void SendRewardSelectSlot(ClientHandle clientHd, u32 result, u32 slot, const RewardCard& card);
+	void SendRewardRequestFinish(ClientHandle clientHd);
+	void SendRewardStageEnd(ClientHandle clientHd, const RewardCard* cards, i32 count);
+	void SendWarnPveGameEnd(ClientHandle clientHd, u32 remainMs);
 	void ResetClientForAreaMove(ClientHandle clientHd);
 	void SendMasterTrainingEvent(ClientHandle clientHd, u8 eventType, u32 ret, u32 entityID, u32 param1, u32 param2);
 	void SetPlayerAsInGame(ClientHandle clientHd);

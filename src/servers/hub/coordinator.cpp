@@ -5,9 +5,11 @@
 #include <mxm/account_progress.h>
 #include "mission_progress.h"
 #include "guild_store.h"
+#include "town_rules.h"
 #include <time.h>
 #include <zlib.h>
 #include <EAStdC/EAString.h>
+
 #include <EAStdC/EASprintf.h>
 
 #include "coordinator.h"
@@ -714,7 +716,9 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 			ActiveMissionList list;
 			MissionBuildActive(account.nickname.data(), progress.level, (i64)time(nullptr), saved, &list);
 			foreach_const(r, reward.records) {
+				if(r->stageIndex == 0) continue;
 				MissionApplyGame(*r, &list);
+				if(r->gameType >= (i32)GameType::PVE_NORMAL && r->gameType <= (i32)GameType::PVE_TICKET) continue;
 				if(r->won) progress.wins++;
 				else if(r->draw) progress.draws++;
 				else progress.losses++;
@@ -727,6 +731,39 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 		LOG("[client%x] Account :: %ls rewards of %d game(s): %lld gold, %u exp -> level %u (%u exp), %lld gold", clientHd, account.nickname.data(), reward.games, reward.gold, reward.exp, (u32)progress.level, progress.levelExp, progress.gold);
 	}
 	AccountProgressSave(account.nickname.data(), progress);
+	{
+		const auto rewardItems = AccountRewardItemsTake(account.nickname.data());
+		if(!rewardItems.empty()) {
+			AccountInventory inventory = AccountInventoryLoad(account.nickname.data());
+			foreach_const(ri, rewardItems) {
+				const GameXmlContent::ItemInfo* info = GetGameXmlContent().FindItemInfo(ri->first);
+				if(!info || ri->second <= 0) continue;
+				i32 left = ri->second;
+				foreach(it, inventory.items) {
+					if(left <= 0) break;
+					if(it->docIndex != ri->first || it->count >= info->maxStack) continue;
+					const i32 add = MIN(left, info->maxStack - it->count);
+					it->count += add;
+					left -= add;
+				}
+				while(left > 0 && !inventory.items.full()) {
+					AccountItem item;
+					item.uid = inventory.nextUid++;
+					item.slot = MEASURED_INVENTORY_FIRST_SLOT;
+					for(bool taken = true; taken; ) {
+						taken = false;
+						foreach_const(it, inventory.items) if(it->invenType == item.invenType && it->slot == item.slot) { taken = true; item.slot++; break; }
+					}
+					item.docIndex = ri->first;
+					item.count = MIN(left, info->maxStack);
+					left -= item.count;
+					inventory.items.push_back(item);
+				}
+				LOG("[client%x] Account :: %ls receives reward item %d x%d", clientHd, account.nickname.data(), ri->first, ri->second);
+			}
+			AccountInventorySave(account.nickname.data(), inventory);
+		}
+	}
 	account.level = progress.level;
 	account.levelExp = progress.levelExp;
 	account.gold = progress.gold;

@@ -11,6 +11,25 @@
 
 static const f32 STAGE_TIME_LIMIT_FALLBACK_SEC = 300.0f;
 static const f64 RETURN_TO_LOBBY_DELAY_SEC = 20.0;
+static const u32 MEASURED_PVE_FAIL_RETURN_MS = 15000;
+static const f64 PVE_REWARD_TIMEOUT_SEC = 60.0;
+static const u32 MEASURED_REWARD_WAIT_MS = 30000;
+static const u8 MEASURED_REWARD_SLOT_COUNT = 4;
+static const i32 MEASURED_REWARD_PICKS = 5;
+static const i32 MEASURED_REWARD_CARD_COUNT = 25;
+static const u32 MEASURED_REWARD_TYPE_ITEM = 2;
+static const u32 MEASURED_REWARD_TYPE_EXP = 4;
+static const u8 MEASURED_TECHNIC_GRADE = 2;
+static const i32 HYP_REWARD_CARDS_PER_VIEW_ITEM = 3;
+static const i32 HYP_REWARD_EXP_MIN_PERCENT = 25;
+static const i32 HYP_REWARD_EXP_STEP_PERCENT = 7;
+static const i32 HYP_REWARD_EXP_MAX_PERCENT = 60;
+static const i32 HYP_RANK_4_MAX_DEATHS = 1;
+static const i32 HYP_RANK_3_MAX_DEATHS = 3;
+static const u32 HYP_PVE_BASE_EXP = 750;
+static const i32 HYP_ATTACK_SCORE_PER_KILL = 3;
+static const i32 HYP_DEFENSE_SCORE_PER_DEATH = 33;
+static const u32 HYP_TIME_SCORE = 70;
 static const u16 HUB_LISTEN_PORT = 11900;
 
 const CreatureIndex CI_DOOR = CreatureIndex(110040546);
@@ -45,6 +64,9 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 		if(pve) world.difficultyBit = stage->difficultyBit;
 		if(pve) world.monsterStatScale = GetGameXmlContent().DifficultyMonsterStat(stage->difficultyBit);
 		if(stage->gameMode == GameModeType::GAME_MODE_STAGE) {
+			pveStage = true;
+			world.stageClearMonster = stage->clearMonster;
+			world.stageClearCount = stage->clearCount;
 			foreach_const(m, stage->maps) if(!zoneMaps.full()) zoneMaps.push_back(*m);
 			if(stage->bossMap != MapIndex(0) && !zoneMaps.full()) zoneMaps.push_back(stage->bossMap);
 			LOG("Stage :: %d zone(s), difficulty bit %d", (i32)zoneMaps.size(), (i32)world.difficultyBit);
@@ -212,6 +234,7 @@ void Game::Update(Time localTime_)
 
 		case Phase::Game: {
 			if(world.portalRequested && !gameEnded) MoveToNextZone();
+			if(pveStage && world.stageCleared && !gameEnded) EndStage(true);
 			if(!gameEnded && tGameStarted != Time::ZERO && world.winnerTeam < 0 && replication.titanMode) {
 				const i32 scoreLimit = GetGameXmlContent().GetStageScoreLimit((i32)replication.stageIndex);
 				for(i32 team = 0; team < 2 && scoreLimit > 0; team++) {
@@ -226,9 +249,13 @@ void Game::Update(Time localTime_)
 				f32 limit = GetGameXmlContent().GetStageTimeLimit((i32)replication.stageIndex);
 				if(limit <= 0) limit = STAGE_TIME_LIMIT_FALLBACK_SEC;
 				if(Config().DevGameTimeSec > 0) limit = (f32)Config().DevGameTimeSec;
-				if(TimeDiffSec(TimeDiff(tGameStarted, localTime)) >= limit) EndGame();
+				if(TimeDiffSec(TimeDiff(tGameStarted, localTime)) >= limit) {
+					if(pveStage) EndStage(false);
+					else EndGame();
+				}
 			}
-			if(gameEnded && !sentBackToLobby && TimeDiffSec(TimeDiff(tGameEnded, localTime)) >= RETURN_TO_LOBBY_DELAY_SEC) {
+			const f64 lobbyDelay = pveStage && !world.stageCleared ? (f64)MEASURED_PVE_FAIL_RETURN_MS / 1000.0 : pveStage ? PVE_REWARD_TIMEOUT_SEC : RETURN_TO_LOBBY_DELAY_SEC;
+			if(gameEnded && !sentBackToLobby && TimeDiffSec(TimeDiff(tGameEnded, localTime)) >= lobbyDelay) {
 				sentBackToLobby = true;
 				foreach_const(p, playerList) {
 					if(p->clientHd != ClientHandle::INVALID) OnPlayerReturnToChannel(p->clientHd);
@@ -885,6 +912,114 @@ void Game::EndGame()
 	replication.SendGameEnd(list.data(), (i32)list.size(), red, blue, (u32)(TimeDiffSec(TimeDiff(tGameStarted, localTime)) * 1000.0), world.winnerTeam, titanEnd ? &got : nullptr);
 }
 
+void Game::BuildRewardCards(const GameXmlContent::StageMaps& stage)
+{
+	rewardCards.clear();
+	foreach_const(v, stage.viewRewards) {
+		for(i32 i = 0; i < HYP_REWARD_CARDS_PER_VIEW_ITEM && !rewardCards.full(); i++) rewardCards.push_back({ MEASURED_REWARD_TYPE_ITEM, *v, 1 });
+	}
+	for(i32 i = 0; (i32)rewardCards.size() < MEASURED_REWARD_CARD_COUNT; i++) {
+		const i32 percent = HYP_REWARD_EXP_MIN_PERCENT + (i * HYP_REWARD_EXP_STEP_PERCENT) % (HYP_REWARD_EXP_MAX_PERCENT - HYP_REWARD_EXP_MIN_PERCENT);
+		rewardCards.push_back({ MEASURED_REWARD_TYPE_EXP, -1, MAX(HYP_PVE_BASE_EXP * (u32)percent / 100, 1u) });
+	}
+	for(i32 i = (i32)rewardCards.size() - 1; i > 0; i--) eastl::swap(rewardCards[i], rewardCards[RandUint() % (u32)(i + 1)]);
+}
+
+void Game::EndStage(bool cleared)
+{
+	gameEnded = true;
+	stageEnded = true;
+	tGameEnded = localTime;
+	world.frozen = true;
+	const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(replication.stageIndex);
+	if(!cleared || !stage) {
+		LOG("Stage :: failed");
+		foreach_const(p, playerList) if(p->clientHd != ClientHandle::INVALID) replication.SendWarnPveGameEnd(p->clientHd, MEASURED_PVE_FAIL_RETURN_MS);
+		return;
+	}
+	BuildRewardCards(*stage);
+	eastl::fixed_vector<Replication::StageMember,MAX_PLAYERS,false> members;
+	foreach_const(p, world.players) {
+		if(p->clientHd == ClientHandle::INVALID || p->removed) continue;
+		members.push_back({ p->mainClass, p->subClass, p->name.data() });
+	}
+	const u32 playMs = (u32)(TimeDiffSec(TimeDiff(tGameStarted, localTime)) * 1000.0);
+	foreach_const(p, world.players) {
+		if(p->clientHd == ClientHandle::INVALID || p->removed) continue;
+		Replication::StageClear clear;
+		clear.player = replication.GetLocalActorID(p->clientHd, p->Main().UID);
+		clear.stage = (i32)replication.stageIndex;
+		clear.kills = p->pveKills;
+		clear.deaths = p->deaths;
+		clear.playTimeMs = playMs;
+		clear.rank = p->deaths <= HYP_RANK_4_MAX_DEATHS ? 4 : p->deaths <= HYP_RANK_3_MAX_DEATHS ? 3 : 2;
+		clear.baseRon = (u32)stage->moneyReward;
+		clear.baseExp = HYP_PVE_BASE_EXP;
+		clear.attackScore = (u32)MIN(p->pveKills * HYP_ATTACK_SCORE_PER_KILL, 100);
+		clear.defenseScore = (u32)MAX(100 - p->deaths * HYP_DEFENSE_SCORE_PER_DEATH, 0);
+		clear.timeScore = HYP_TIME_SCORE;
+		clear.totalScore = (clear.attackScore + clear.defenseScore + clear.timeScore) / 3;
+		clear.technicGrade = MEASURED_TECHNIC_GRADE;
+		replication.SendExpGain(p->clientHd, clear.baseExp);
+		replication.SendStageClearResult(p->clientHd, clear, members.data(), (i32)members.size());
+		replication.SendRewardItemList(p->clientHd, rewardCards.data(), (i32)rewardCards.size());
+		replication.SendClearedStage(p->clientHd, clear.stage);
+		AccountStageCleared(p->name.data(), clear.stage);
+		AccountGameRecord record;
+		record.gold = clear.baseRon;
+		record.exp = clear.baseExp;
+		record.won = 1;
+		record.kills = p->pveKills;
+		record.stageIndex = clear.stage;
+		record.gameType = (i32)replication.gameType;
+		record.classTypes = { (i32)p->mainClass, (i32)p->subClass };
+		AccountGameRecordAppend(p->name.data(), record);
+		if(!rewardStates.full()) rewardStates.push_back({ p->clientHd, 0, false });
+		LOG("Stage :: %ls cleared stage %d (%d kills, %d deaths, rank %d)", p->name.data(), clear.stage, clear.kills, clear.deaths, (i32)clear.rank);
+	}
+}
+
+void Game::OnRewardStageReady(ClientHandle clientHd)
+{
+	if(!stageEnded || rewardCards.empty()) return;
+	replication.SendRewardStageStart(clientHd, MEASURED_REWARD_WAIT_MS, MEASURED_REWARD_SLOT_COUNT);
+}
+
+void Game::OnRewardSelectSlot(ClientHandle clientHd, u32 slot)
+{
+	foreach(r, rewardStates) {
+		if(r->clientHd != clientHd || r->finished) continue;
+		if(slot >= rewardCards.size() || r->picks >= MEASURED_REWARD_PICKS) return;
+		r->picks++;
+		const Replication::RewardCard& card = rewardCards[slot];
+		replication.SendRewardSelectSlot(clientHd, 0, slot, card);
+		auto pl = playerMap.find(clientHd);
+		if(pl == playerMap.end()) return;
+		const wchar* name = world.GetPlayer(pl->second->playerIndex).name.data();
+		if(card.type == MEASURED_REWARD_TYPE_EXP) {
+			AccountGameRecord record;
+			record.exp = card.amount;
+			record.gameType = (i32)replication.gameType;
+			AccountGameRecordAppend(name, record);
+		}
+		else AccountRewardItemAppend(name, card.index, (i32)card.amount);
+		LOG("Stage :: %ls picks reward slot %u (type %u, item %d x%u)", name, slot, card.type, card.index, card.amount);
+		return;
+	}
+}
+
+void Game::OnRewardRequestFinish(ClientHandle clientHd)
+{
+	foreach(r, rewardStates) {
+		if(r->clientHd != clientHd || r->finished) continue;
+		r->finished = true;
+		replication.SendRewardRequestFinish(clientHd);
+		replication.SendRewardStageEnd(clientHd, rewardCards.data(), (i32)rewardCards.size());
+		OnPlayerReturnToChannel(clientHd);
+		return;
+	}
+}
+
 void Game::OnPlayerReturnToChannel(ClientHandle clientHd)
 {
 	auto found = playerMap.find(clientHd);
@@ -1180,6 +1315,18 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			world.TeleportPlayer(playerActor, to, playerActor.input.rot.bodyYaw);
 			replication.SendTeleportRequest(clientHd, playerActor.Main().UID, to);
 			SendDbgMsg(clientHd, LFMT(L"Teleported to (%g, %g, %g)", to.x, to.y, to.z));
+			return true;
+		}
+
+		if(EA::StdC::Strcmp(msg, L"clear") == 0) {
+			world.stageCleared = true;
+			SendDbgMsg(clientHd, L"Stage cleared");
+			return true;
+		}
+
+		if(EA::StdC::Strcmp(msg, L"portal") == 0) {
+			world.portalRequested = true;
+			SendDbgMsg(clientHd, L"Portal requested");
 			return true;
 		}
 

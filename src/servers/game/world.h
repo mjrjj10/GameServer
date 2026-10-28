@@ -146,6 +146,7 @@ struct World
 		eastl::fixed_map<u32,GameXmlContent::CostLevel,12,false> castMods;
 		i32 skillPoints = 1;
 		i32 skillPointsSpent = 0;
+		i32 pveKills = 0;
 		bool removed = false;
 		i32 ingameLevel = 1;
 		i32 ingameExp = 0;
@@ -1095,6 +1096,10 @@ public:
 	u8 difficultyBit = GameXmlContent::ALL_DIFFICULTIES;
 	bool portalRequested = false;
 	f32 monsterStatScale = 1.0f;
+	i32 stageClearMonster = 0;
+	i32 stageClearCount = 0;
+	i32 stageClearKills = 0;
+	bool stageCleared = false;
 	bool NodeInDifficulty(const GameXmlContent::LevelEventNode& node) const { return difficultyBit == GameXmlContent::ALL_DIFFICULTIES || (node.difficultyMask & difficultyBit) != 0; }
 	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; };
 	void ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool remove);

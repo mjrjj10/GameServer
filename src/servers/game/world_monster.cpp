@@ -109,6 +109,13 @@ void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDo
 	const f32 destroy = npc.monsterAi ? npc.monsterAi->destroy : 0.0f;
 	npc.removeAt = TimeAdd(localTime, TimeMsToTime(MAX(destroy, 1.0f) * 1000.0));
 	LOG("Monster :: creature=%d (local %d) dies at (%.0f, %.0f) t=%.1f killer=%d", (i32)npc.docID, npc.localID, npc.pos.x, npc.pos.y, GameTimeSec(), (i32)killerDoc);
+	if(ActorMaster* killer = killerUID != ActorUID::INVALID ? FindMasterActor(killerUID) : nullptr) {
+		if(killer->parent) killer->parent->pveKills++;
+	}
+	if(stageClearMonster != 0 && (i32)npc.docID == stageClearMonster && ++stageClearKills >= MAX(stageClearCount, 1)) {
+		stageCleared = true;
+		LOG("Stage :: clear monster %d killed", stageClearMonster);
+	}
 	if(npc.monsterAi && npc.monsterAi->teamBuff != 0) {
 		foreach(p, players) if((Faction)p->team == npc.faction) ConsumeStatus(p->index, npc.monsterAi->teamBuff);
 	}

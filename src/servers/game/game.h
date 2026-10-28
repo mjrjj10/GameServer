@@ -115,6 +115,16 @@ struct Game
 	i32 zoneIndex = 0;
 	bool zoneLoading = false;
 	void MoveToNextZone();
+	bool pveStage = false;
+	bool stageEnded = false;
+	eastl::fixed_vector<Replication::RewardCard,32,false> rewardCards;
+	struct RewardState { ClientHandle clientHd; i32 picks; bool finished; };
+	eastl::fixed_vector<RewardState,MAX_PLAYERS,false> rewardStates;
+	void EndStage(bool cleared);
+	void BuildRewardCards(const GameXmlContent::StageMaps& stage);
+	void OnRewardStageReady(ClientHandle clientHd);
+	void OnRewardSelectSlot(ClientHandle clientHd, u32 slot);
+	void OnRewardRequestFinish(ClientHandle clientHd);
 	void PlacePlayersAtSpawn();
 	void OnTitanIncarnate(ClientHandle clientHd, i32 formDoc);
 	eastl::fixed_vector<u32,MAX_PLAYERS,false> trainingBots;
