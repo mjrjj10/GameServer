@@ -83,6 +83,9 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CN_SortieRoomConfirm);
 		HANDLE_CASE(CQ_GetUserInfo);
 		HANDLE_CASE(CQ_ItemTrade);
+		HANDLE_CASE(CQ_PveRanking);
+		HANDLE_CASE(CQ_RequestSummaryInfoEach);
+		HANDLE_CASE(CQ_RestartVote);
 		HANDLE_CASE(CQ_MailShowList);
 		HANDLE_CASE(CQ_MailRead);
 		HANDLE_CASE(CQ_RequestMissionReward);
@@ -753,6 +756,37 @@ void HubPacketHandler::HandlePacket_CN_SortieRoomConfirm(ClientHandle clientHd, 
 	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CN_SortieRoomConfirm>(packetData, packetSize));
 
 	game->OnSortieRoomConfirm(clientHd, packet.confirm);
+}
+
+void HubPacketHandler::HandlePacket_CQ_PveRanking(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(packetSize != 4) {
+		WARN("[client%x] WARNING: invalid CQ_PveRanking (size=%d)", clientHd, packetSize);
+		return;
+	}
+	ConstBuffer buff(packetData, packetSize);
+	const u32 stage = buff.Read<u32>();
+	NT_LOG("[client%x] Client :: CQ_PveRanking :: stage=%u", clientHd, stage);
+	replication->SendPveRanking(clientHd, stage);
+}
+
+void HubPacketHandler::HandlePacket_CQ_RequestSummaryInfoEach(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(packetSize != 4) {
+		WARN("[client%x] WARNING: invalid CQ_RequestSummaryInfoEach (size=%d)", clientHd, packetSize);
+		return;
+	}
+	ConstBuffer buff(packetData, packetSize);
+	const u32 summary = buff.Read<u32>();
+	NT_LOG("[client%x] Client :: CQ_RequestSummaryInfoEach :: summary=%u", clientHd, summary);
+	replication->SendSummaryInfoEach(clientHd, summary);
+}
+
+void HubPacketHandler::HandlePacket_CQ_RestartVote(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	NT_LOG("[client%x] Client :: CQ_RestartVote :: size=%d", clientHd, packetSize);
+	replication->SendStartGame(clientHd, 0);
+	game->OnEnqueueGame(clientHd);
 }
 
 void HubPacketHandler::HandlePacket_CQ_ItemTrade(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

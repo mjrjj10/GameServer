@@ -1779,6 +1779,31 @@ void HubReplication::SendPartyEnqueue(ClientHandle clientHd, StageIndex stageInd
 	SendPacket(clientHd, matching);
 }
 
+static const i32 MEASURED_EMPTY_PVE_RANKING_BYTES = 19;
+
+void HubReplication::SendPveRanking(ClientHandle clientHd, u32 stage)
+{
+	PacketWriter<Sv::SA_MyPveRanking,64> packet;
+	packet.Write<u32>(stage);
+	for(i32 i = 0; i < MEASURED_EMPTY_PVE_RANKING_BYTES; i++) packet.Write<u8>(0);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendSummaryInfoEach(ClientHandle clientHd, u32 summary)
+{
+	PacketWriter<Sv::SA_RequestSummaryInfoEach,16> packet;
+	packet.Write<u32>(summary);
+	packet.Write<u16>(0);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendStartGame(ClientHandle clientHd, u32 result)
+{
+	Sv::SA_StartGame packet;
+	packet.retval = result;
+	SendPacket(clientHd, packet);
+}
+
 void HubReplication::SendItemTradeResult(ClientHandle clientHd, u32 result, i64 gold, const AccountItem* items, i32 count)
 {
 	PacketWriter<Sv::SA_ItemTrade,256> packet;
