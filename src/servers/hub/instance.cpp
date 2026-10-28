@@ -444,7 +444,7 @@ void RoomInstance::SendPickPhaseStart(const User& user)
 		foreach_const(m, allowedMastersSet) {
 			packet.Write(CreatureIndex(100000000 + (i32)*m));
 			packet.Write<u16>(1);
-			packet.Write<i32>(0);
+			packet.Write<u32>(ProhibitedFor(user.team, *m) ? MEASURED_BAN_SLOT_STATE : 0);
 		}
 		SendPacket(user.clientHd, packet);
 	}
@@ -500,7 +500,8 @@ void RoomInstance::StartBanRound()
 		foreach_const(m, allowedMastersSet) {
 			packet.Write(CreatureIndex(100000000 + (i32)*m));
 			packet.Write<u16>(1);
-			packet.Write<u32>(bannedMasters.count(*m) ? MEASURED_BAN_SLOT_STATE : 0);
+			const bool own = eastl::find(teamBans[user.team].begin(), teamBans[user.team].end(), *m) != teamBans[user.team].end();
+			packet.Write<u32>(own ? MEASURED_BAN_SLOT_STATE : 0);
 		}
 		SendPacket(user.clientHd, packet);
 	}
@@ -510,12 +511,12 @@ void RoomInstance::StartBanRound()
 bool RoomInstance::BanMaster(i32 team, ClassType classType)
 {
 	if(team != Team::RED && team != Team::BLUE) return false;
-	if(bannedThisRound[team] || !allowedMastersSet.count(classType) || bannedMasters.count(classType)) return false;
+	if(bannedThisRound[team] || !allowedMastersSet.count(classType) || eastl::find(teamBans[team].begin(), teamBans[team].end(), classType) != teamBans[team].end()) return false;
 	bannedThisRound[team] = true;
-	bannedMasters.insert(classType);
 	teamBans[team].push_back(classType);
 	const CreatureIndex creature = CreatureIndex(100000000 + (i32)classType);
 	foreach_const(cu, connectedUsers) {
+		if((*cu)->team != team) continue;
 		Sv::SN_SortieMasterBan ban;
 		ban.teamType = (u32)(team == Team::RED ? TeamType::RED : TeamType::BLUE);
 		ban.creatureIndex = (u32)creature;
@@ -540,7 +541,7 @@ void RoomInstance::UpdateBans()
 		const bool botTurn = !leader || (leader->isBot && elapsed >= HYP_BOT_BAN_DELAY_SEC);
 		if(!botTurn && elapsed < MEASURED_BAN_TIME_SEC) continue;
 		eastl::fixed_vector<ClassType,100,false> pool;
-		foreach_const(m, allowedMastersSet) if(!bannedMasters.count(*m)) pool.push_back(*m);
+		foreach_const(m, allowedMastersSet) if(eastl::find(teamBans[team].begin(), teamBans[team].end(), *m) == teamBans[team].end()) pool.push_back(*m);
 		if(pool.empty()) { bannedThisRound[team] = true; continue; }
 		BanMaster(team, pool[RandUint() % pool.size()]);
 	}
@@ -561,12 +562,11 @@ void RoomInstance::UpdateBans()
 		StartBanRound();
 		return;
 	}
-	foreach_const(b, bannedMasters) allowedMastersSet.erase(*b);
 	phase = Phase::Picking;
 	startTime = localTime;
 	PickBotMasters();
 	foreach_const(cu, connectedUsers) SendPickPhaseStart(**cu);
-	LOG("[Room] bans done (%d), picking starts", (i32)bannedMasters.size());
+	LOG("[Room] bans done (%d / %d), picking starts", (i32)teamBans[Team::RED].size(), (i32)teamBans[Team::BLUE].size());
 }
 
 void RoomInstance::Update(Time localTime_)
@@ -1089,9 +1089,16 @@ static void PickMeasuredLoadout(const GameXmlContent::Master& master, ClassType 
 	}
 }
 
+bool RoomInstance::ProhibitedFor(i32 team, ClassType classType) const
+{
+	if(team != Team::RED && team != Team::BLUE) return false;
+	const auto& bans = teamBans[team == Team::RED ? Team::BLUE : Team::RED];
+	return eastl::find(bans.begin(), bans.end(), classType) != bans.end();
+}
+
 bool RoomInstance::TryPickMaster(User* user, ClassType classType)
 {
-	if(bannedMasters.count(classType)) return false;
+	if(ProhibitedFor(user->team, classType)) return false;
 	if(teamMasterPickCount[user->team][(i32)classType] < 2) {
 		const GameXmlContent& content = GetGameXmlContent();
 		const GameXmlContent::Master& master = *content.masterClassTypeMap.at(classType);

@@ -138,7 +138,6 @@ struct RoomInstance
 	Time banRoundStart = Time::ZERO;
 	eastl::array<eastl::fixed_vector<ClassType,8,false>,2> teamBans;
 	eastl::array<bool,2> bannedThisRound = {{ false, false }};
-	eastl::fixed_set<ClassType,100,false> bannedMasters;
 
 	eastl::array<u8,4> matchServerIp = {0};
 	u16 matchServerPort = 0x0;
@@ -155,6 +154,7 @@ struct RoomInstance
 	void SendPickPhaseStart(const struct User& user);
 	void StartBanRound();
 	void PickBotMasters();
+	bool ProhibitedFor(i32 team, ClassType classType) const;
 	void UpdateBans();
 	bool BanMaster(i32 team, ClassType classType);
 	const struct User* TeamLeader(i32 team) const;
