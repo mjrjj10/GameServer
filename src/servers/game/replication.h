@@ -555,6 +555,9 @@ struct Replication
 	LocalActorID GetLocalActorID(ClientHandle clientHd, ActorUID actorUID) const; // Can return INVALID
 	ActorUID GetWorldActorUID(ClientHandle clientHd, LocalActorID localActorID) const; // Can return INVALID
 
+	template<typename Packet, u32 CAPACITY>
+	inline void SendWriter(ClientHandle clientHd, const PacketWriter<Packet,CAPACITY>& writer) { SendPacket(clientHd, writer); }
+
 private:
 	void UpdatePlayersLocalState();
 	void FrameDifference();

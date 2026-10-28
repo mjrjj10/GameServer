@@ -1,4 +1,6 @@
 #include "account_progress.h"
+#include "achievements.h"
+#include "summary.h"
 #include <stdio.h>
 #include <string.h>
 #include <direct.h>
@@ -705,3 +707,95 @@ void AccountInventorySave(const wchar* nickname, const AccountInventory& invento
 	remove(path);
 	rename(tmp, path);
 }
+
+AccountAchievements AccountAchievementsLoad(const wchar* nickname)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	AccountAchievements acc;
+	char path[512];
+	AccountPath(nickname, "achieve", path, sizeof(path));
+	FILE* f = fopen(path, "rb");
+	if(!f) return acc;
+	char line[512];
+	while(fgets(line, sizeof(line), f)) {
+		if(line[0] == 'A') {
+			AccountAchieveState st;
+			long long progress = 0, date = 0;
+			u32 cleared = 0;
+			i32 n = 0, used = 0;
+			if(sscanf(line, "A %d %lld %u %lld %d%n", &st.index, &progress, &cleared, &date, &n, &used) < 5) continue;
+			st.progress = progress;
+			st.cleared = (u8)cleared;
+			st.date = date;
+			const char* c = line + used;
+			for(i32 i = 0; i < n && !st.achieved.full(); i++) {
+				i32 v = 0, u = 0;
+				if(sscanf(c, " %d%n", &v, &u) != 1) break;
+				st.achieved.push_back(v);
+				c += u;
+			}
+			acc.states.push_back(st);
+		}
+		else if(line[0] == 'T') {
+			i32 t = 0;
+			if(sscanf(line, "T %d", &t) == 1) acc.titles.push_back(t);
+		}
+		else if(line[0] == 'D') sscanf(line, "D %d %d", &acc.displayTitle, &acc.statTitle);
+	}
+	fclose(f);
+	return acc;
+}
+
+void AccountAchievementsSave(const wchar* nickname, const AccountAchievements& acc)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	_mkdir(ACCOUNT_DIR);
+	char path[512];
+	AccountPath(nickname, "achieve", path, sizeof(path));
+	FILE* f = fopen(path, "wb");
+	if(!f) return;
+	fprintf(f, "D %d %d\n", acc.displayTitle, acc.statTitle);
+	foreach_const(t, acc.titles) fprintf(f, "T %d\n", *t);
+	foreach_const(s, acc.states) {
+		fprintf(f, "A %d %lld %u %lld %d", s->index, (long long)s->progress, (u32)s->cleared, (long long)s->date, (i32)s->achieved.size());
+		foreach_const(a, s->achieved) fprintf(f, " %d", *a);
+		fprintf(f, "\n");
+	}
+	fclose(f);
+}
+
+AccountSummaries AccountSummariesLoad(const wchar* nickname)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	AccountSummaries s;
+	char path[512];
+	AccountPath(nickname, "summary", path, sizeof(path));
+	FILE* f = fopen(path, "rb");
+	if(!f) return s;
+	char line[128];
+	while(fgets(line, sizeof(line), f)) {
+		AccountSummaryEntry e;
+		u32 type = 0, received = 0;
+		long long date = 0;
+		if(sscanf(line, "%d %d %u %d %u %lld", &e.summary, &e.stage, &type, &e.data, &received, &date) != 6) continue;
+		e.type = (u8)type;
+		e.received = (u8)received;
+		e.date = date;
+		s.entries.push_back(e);
+	}
+	fclose(f);
+	return s;
+}
+
+void AccountSummariesSave(const wchar* nickname, const AccountSummaries& s)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	_mkdir(ACCOUNT_DIR);
+	char path[512];
+	AccountPath(nickname, "summary", path, sizeof(path));
+	FILE* f = fopen(path, "wb");
+	if(!f) return;
+	foreach_const(e, s.entries) fprintf(f, "%d %d %u %d %u %lld\n", e->summary, e->stage, (u32)e->type, e->data, (u32)e->received, (long long)e->date);
+	fclose(f);
+}
+

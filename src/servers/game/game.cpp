@@ -1,3 +1,5 @@
+#include <mxm/achievements.h>
+#include <mxm/summary.h>
 #include "game.h"
 
 #include <EAStdC/EAString.h>
@@ -63,6 +65,88 @@ static u32 RewardBonusTotal(const Replication::RewardBonusList& list)
 	u32 total = 0;
 	foreach_const(b, list) total += b->amount;
 	return total;
+}
+
+static i32 KillsOf(const eastl::vector<eastl::pair<i32,f32>>& kills, i32 doc)
+{
+	i32 n = 0;
+	foreach_const(k, kills) if(k->first == doc) n++;
+	return n;
+}
+
+static i32 BestKillsInWindow(const eastl::vector<eastl::pair<i32,f32>>& kills, const GameXmlContent::SummaryChallengeInfo& c, i32 doc)
+{
+	eastl::fixed_vector<f32,256,true> times;
+	foreach_const(k, kills) {
+		bool target = false;
+		foreach_const(t, c.targets) if(t->first == k->first && (doc == 0 || t->first == doc)) target = true;
+		if(target) times.push_back(k->second);
+	}
+	const f32 window = c.timeSec > 0 ? c.timeSec : 1e9f;
+	i32 best = 0;
+	i32 start = 0;
+	for(i32 i = 0; i < (i32)times.size(); i++) {
+		while(times[i] - times[start] > window) start++;
+		best = MAX(best, i - start + 1);
+	}
+	return best;
+}
+
+static bool KillWindowReached(const eastl::vector<eastl::pair<i32,f32>>& kills, const GameXmlContent::SummaryChallengeInfo& c)
+{
+	if(c.totalCount > 0) return BestKillsInWindow(kills, c, 0) >= c.totalCount;
+	foreach_const(t, c.targets) if(BestKillsInWindow(kills, c, t->first) < MAX(t->second, 1)) return false;
+	return !c.targets.empty();
+}
+
+static void AppendSummaryEvents(World& world, const World::Player& p, i32 stage, bool noDeath, u8 rank)
+{
+	const eastl::vector<eastl::pair<i32,f32>>& kills = world.stageKills;
+	const wchar* name = p.name.data();
+	typedef GameXmlContent::SummaryChallenge Challenge;
+	const GameXmlContent& content = GetGameXmlContent();
+	i32 difficulty = -1;
+	const GameXmlContent::Summary* summary = content.FindStageSummary(stage, &difficulty);
+	if(!summary) return;
+	static const u8 MEASURED_SUMMARY_TYPE_CLEAR_RANK = 1;
+	world.SummaryLive(p, summary->index, stage, MEASURED_SUMMARY_TYPE_CLEAR_RANK, rank);
+	static const u8 HYP_RANK_NEEDS_NO_DEATH = 3;
+	foreach_const(c, summary->challenges) {
+		if(c->difficulty >= 0 && c->difficulty != difficulty) continue;
+		bool done = false;
+		switch(c->type) {
+			case Challenge::NODIE: done = noDeath; break;
+			case Challenge::RANK_OVER: done = c->rank > HYP_RANK_NEEDS_NO_DEATH || noDeath; break;
+			case Challenge::NOHITBYBOSS: {
+				done = true;
+				foreach_const(t, c->targets) foreach_const(d, p.hitByDocs) if(*d == t->first) done = false;
+			} break;
+			case Challenge::KILL_IN_TIME: done = KillWindowReached(kills, *c); break;
+			case Challenge::KILL_GREATER_EQUAL: done = KillWindowReached(kills, *c); break;
+			case Challenge::NOKILL: {
+				done = true;
+				foreach_const(t, c->targets) if(KillsOf(kills, t->first) > 0) done = false;
+			} break;
+			case Challenge::KILL_LESS: {
+				done = true;
+				foreach_const(t, c->targets) if(KillsOf(kills, t->first) >= MAX(t->second, c->totalCount)) done = false;
+			} break;
+			case Challenge::STATUSINDEX: {
+				done = true;
+				foreach_const(s, p.npcStatuses) if(*s == c->status) done = false;
+			} break;
+			case Challenge::STATUSTYPE: {
+				done = true;
+				foreach_const(s, p.npcStatuses) {
+					const StatusInfo* info = content.FindStatus(*s);
+					if(info && (i32)info->type == c->status) done = false;
+				}
+			} break;
+			default: break;
+		}
+		if(done) world.SummaryLive(p, summary->index, stage, (u8)SummaryEntryType::CHALLENGE, c->index);
+		LOG("Summary :: %ls stage %d challenge %d (%d) %s", name, stage, c->index, (i32)c->type, done ? "done" : "missed");
+	}
 }
 
 static void ComputeRewardBonuses(GameType type, StageIndex stage, u32 baseRon, u32 baseExp, const eastl::array<u16,2>& guildBoost, Replication::RewardBonusList* bonusRon, Replication::RewardBonusList* bonusExp)
@@ -1142,6 +1226,7 @@ void Game::EndGame()
 		record.playSeconds = tGameStarted != Time::ZERO ? (u32)TimeDiffSec(TimeDiff(tGameStarted, localTime)) : 0;
 		record.guildPoints = (i32)(e->guildBase + e->guildBonus);
 		AccountGameRecordAppend(e->name, record);
+		world.FinishProgress(p, record);
 		LOG("Game :: %ls reward %u gold %u exp (+%u / +%u bonus, %u min, %s)", e->name, e->gold, e->exp, RewardBonusTotal(e->bonusRon), RewardBonusTotal(e->bonusExp), minutes, won ? "win" : (own == other ? "draw" : "loss"));
 	}
 	Replication::EndGot got;
@@ -1185,6 +1270,7 @@ void Game::EndStage(bool cleared)
 			record.classTypes = { (i32)p->mainClass, (i32)p->subClass };
 			record.playSeconds = tGameStarted != Time::ZERO ? (u32)TimeDiffSec(TimeDiff(tGameStarted, localTime)) : 0;
 			AccountGameRecordAppend(p->name.data(), record);
+			world.FinishProgress(*p, record);
 		}
 		return;
 	}
@@ -1227,6 +1313,8 @@ void Game::EndStage(bool cleared)
 		record.classTypes = { (i32)p->mainClass, (i32)p->subClass };
 		record.playSeconds = playMs / 1000;
 		AccountGameRecordAppend(p->name.data(), record);
+		AppendSummaryEvents(world, *p, clear.stage, p->deaths == 0, clear.rank);
+		world.FinishProgress(*p, record);
 		if(!rewardStates.full()) rewardStates.push_back({ p->clientHd, 0, false, Time::ZERO, {} });
 		LOG("Stage :: %ls cleared stage %d (%d kills, %d deaths, rank %d)", p->name.data(), clear.stage, clear.kills, clear.deaths, (i32)clear.rank);
 	}
@@ -1277,6 +1365,7 @@ void Game::EndDefence()
 		record.classTypes = { (i32)p->mainClass, (i32)p->subClass };
 		record.playSeconds = tGameStarted != Time::ZERO ? (u32)TimeDiffSec(TimeDiff(tGameStarted, localTime)) : 0;
 		AccountGameRecordAppend(p->name.data(), record);
+		world.FinishProgress(*p, record);
 		LOG("Defence :: %ls ends at phase %d (%s), %u gold %u exp", p->name.data(), cleared, world.defence.won ? "won" : "failed", (u32)record.gold, record.exp);
 	}
 }

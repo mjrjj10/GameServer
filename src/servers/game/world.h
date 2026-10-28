@@ -4,6 +4,8 @@
 #include <common/vector_math.h>
 #include <mxm/core.h>
 #include <mxm/game_content.h>
+#include <mxm/achievements.h>
+#include <mxm/summary.h>
 
 #include <EASTL/array.h>
 #include <EASTL/fixed_list.h>
@@ -43,6 +45,8 @@ struct World
 	struct ActorMaster;
 
 	typedef ListItT<ActorMaster> ActorMasterHandle;
+
+	eastl::vector<eastl::pair<i32,f32>> stageKills;
 
 	struct PlayerDescription
 	{
@@ -156,6 +160,8 @@ struct World
 		i32 skillPoints = 1;
 		i32 skillPointsSpent = 0;
 		i32 pveKills = 0;
+		eastl::fixed_vector<i32,16,true> hitByDocs;
+		eastl::fixed_vector<i32,16,true> npcStatuses;
 		bool removed = false;
 		i32 ingameLevel = 1;
 		i32 ingameExp = 0;
@@ -539,6 +545,9 @@ struct World
 	const GameXmlContent::Map* map = nullptr;
 
 	eastl::fixed_vector<Player,10,false> players;
+	eastl::array<AccountAchievements,10> achieve;
+	eastl::array<AccountSummaries,10> summaries;
+	eastl::array<u8,10> progressLoaded = {};
 	eastl::fixed_list<ActorMaster,512,true> actorMasterList;
 	eastl::fixed_list<ActorNpc,512,true> actorNpcList;
 	eastl::fixed_list<ActorDynamic,512,true> actorDynamicList;
@@ -821,6 +830,11 @@ struct World
 	void WeaponLifesteal(Player& attacker, i32 damage);
 	void DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, i32 remote, i32 status, u32 remoteID = 0);
 	void MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDoc);
+	bool LoadProgress(const Player& player);
+	void AchieveLive(const Player& player, const AchieveEvent& ev);
+	void SummaryLive(const Player& player, i32 summary, i32 stage, u8 type, i32 data);
+	void SaveProgress(const Player& player);
+	void FinishProgress(const Player& player, const struct AccountGameRecord& record);
 	struct MonsterHit { ActorUID attacker; ActorUID target; Time at; const GameXmlContent::MonsterAttack* attack; u32 remoteID; bool ally; };
 	u32 nextMonsterRemoteID = 0;
 	struct DeathHit { ActorUID helper; Time at; const GameXmlContent::DeathRemote* remote; u32 remoteID; };

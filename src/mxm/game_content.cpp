@@ -2783,6 +2783,12 @@ bool GameXmlContent::Load()
 	r = LoadServicePrice();
 	if(!r) return false;
 
+	r = LoadAchievements();
+	if(!r) return false;
+
+	r = LoadSummaries();
+	if(!r) return false;
+
 
 	r = LoadGuildData();
 	if(!r) return false;

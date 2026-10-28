@@ -66,6 +66,8 @@ struct HubReplication
 		i32 additionnalOverHeatGaugeRatio;
 		u8 playerStateInTown;
 		u16 level = 1;
+		i32 displayTitle = -1;
+		i32 statTitle = -1;
 		u32 levelExp = 0;
 		eastl::fixed_vector<u8,16> matchingGameModes;
 
@@ -239,6 +241,8 @@ struct HubReplication
 	void SendItemUpdate(ClientHandle clientHd, const struct AccountItem& item, u32 reason);
 	void SendItemsUpdate(ClientHandle clientHd, const struct AccountItem* items, i32 count, u32 reason);
 	void SendFriendStateChangeResult(ClientHandle clientHd, u32 result);
+	void SendAchievements(ClientHandle clientHd, const struct AccountAchievements& acc);
+	void SendTitleSelect(ClientHandle clientHd, u32 result, ActorUID actorUID, i32 displayTitle, i32 statTitle);
 	void SendQuickRunArena(ClientHandle clientHd, const StageIndex* stages, i32 count, GameType gameType, GameDefinition gameDefinition);
 	void SendProfileMasterGears(ClientHandle clientHd, const wchar* nickname);
 	void SendGearEquip(ClientHandle clientHd, u32 result, u8 pageNo, u32 itemUID, u32 slot);
@@ -279,8 +283,8 @@ struct HubReplication
 
 	void SendCalendar(ClientHandle clientHd);
 	void SendCalendarSchedule(ClientHandle clientHd);
-	void SendProfileCharactersWeapons(ClientHandle clientHd);
-	void SendProfileSkillsSkins(ClientHandle clientHd);
+	void SendProfileCharactersWeapons(ClientHandle clientHd, const Account* account = nullptr);
+	void SendProfileSkillsSkins(ClientHandle clientHd, const Account* account = nullptr);
 	void SendAreaPopularity(ClientHandle clientHd, AreaIndex areaID);
 	void SendPartyCreateSucess(ClientHandle clientHd, UserID ownerUserID, StageType stageType);
 

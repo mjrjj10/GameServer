@@ -1,3 +1,4 @@
+#include <mxm/achievements.h>
 #include "game.h"
 #include "coordinator.h" // account data
 #include "instance.h"
@@ -146,6 +147,7 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 	playerMap[userID] = --playerList.end();
 
 	replication.SendAccountDataLobby(clientHd, *accountData);
+	SendSummaries(clientHd, accountData->nickname.data());
 
 	replication.OnPlayerConnect(clientHd);
 	replication.SetPlayerAccount(clientHd, accountData);
@@ -336,6 +338,11 @@ void HubGame::OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID cha
 	actor.clientHd = clientHd; // TODO: this is not useful right now
 	actor.level = account->level;
 	actor.levelExp = account->levelExp;
+	{
+		const AccountAchievements titles = AccountAchievementsLoad(account->nickname.data());
+		actor.displayTitle = titles.displayTitle;
+		actor.statTitle = titles.statTitle;
+	}
 	playerActorUID[userID] = actor.UID;
 
 	replication.SendPlayerSetLeaderMaster(clientHd, playerActorUID[userID], classType, skinIndex);

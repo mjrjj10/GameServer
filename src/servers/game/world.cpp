@@ -704,6 +704,14 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	}
 
 	if(!followUp && !CheckAndPayCast(player, skillID, castPos, targets)) return;
+	if(!followUp) {
+		AchieveEvent ev;
+		ev.sub = GameXmlContent::AchieveSub::COMMON_USE_SKILL;
+		ev.object = (i32)skillID;
+		ev.stage = (i32)replication->stageIndex;
+		ev.gameType = (i32)replication->gameType;
+		AchieveLive(player, ev);
+	}
 	if(!followUp) DropPendingActions(player);
 	BreakHide(player);
 

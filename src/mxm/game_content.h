@@ -584,6 +584,65 @@ struct GameXmlContent
 	eastl::fixed_vector<PriceCost,8,false> pveSkillUpgradeCost;
 	eastl::fixed_vector<PriceCost,24,false> masterGearAddCost;
 	bool LoadServicePrice();
+	enum class AchieveSub: u8 {
+		NONE, PVE_KILL_MONSTER_TOTAL, PVE_SUFFER_FROM_TARGET, PVE_STAGE_CLEAR, PVE_STAGE_CLEAR_WITH_FRIENDS, PVE_DEATH_TOTAL, PVE_KILL_IN_CERTAIN_TIME,
+		PVE_SURVIVAL, PVE_INTERACTION, PVE_BRING_COMRADE_COUNT, PVP_PLAY, PVP_WIN_TOTAL, PVP_LOSE_TOTAL, PVP_DRAW_TOTAL, PVP_DEATH_TOTAL,
+		PVP_KILL_STREAK, PVP_KILL_STREAK_TOTAL, PVP_KDA, PVP_OCCUPY_ALL_CORES, PVP_SPORTS_AWARDED, COMMON_USE_SKILL, COMMON_SKILL_UPGRADE_COUNT,
+		COMMON_MASTER_SORTIE, COMMON_MASTER_UNLOCK, COMMON_MASTER_TOTAL, COMMON_WEAPON_UPGRADE_COUNT, COMMON_ITEM, COMMON_MULTI, COMMON_LEVEL,
+		COMMON_FRIEND, COMMON_ACHIEVEMENT_POINT, COMMON_ATTEND_ROLL_CALL, COMMON_FREE_CCOIN_ASSETS, COMMON_RON_ASSETS, COMMON_SALES,
+		COMMON_TRADE_COUNT, COMMON_TITLE_COUNT, COMMON_MISSION_ACHIEVE_COUNT, COMMON_JOIN_GUILD, COMMON_CREATE_GUILD, COUNT
+	};
+	struct Achievement
+	{
+		i32 index = 0;
+		u8 group = 0;
+		AchieveSub sub = AchieveSub::NONE;
+		i32 point = 0;
+		i32 gainTitle = 0;
+		i64 count = 0;
+		i64 value = 0;
+		f32 fvalue = 0;
+		i32 section = -1;
+		i32 gameType = -1;
+		i32 classType = -1;
+		eastl::fixed_vector<i32,16,false> objects;
+	};
+	eastl::vector<Achievement> achievements;
+	eastl::hash_map<i32,i32> achievementPos;
+	eastl::array<eastl::vector<i32>,(i32)AchieveSub::COUNT> achievementsBySub;
+	eastl::hash_map<i32,eastl::fixed_vector<i32,4,true>> achievementParents;
+	eastl::vector<eastl::vector<i32>> sections;
+	eastl::hash_map<size_t,i32> sectionByName;
+	bool LoadAchievements();
+	struct SummaryReward { u8 type = 0; i32 amount = 0; i32 item = 0; };
+	enum class SummaryChallenge: u8 { NONE, NODIE, STATUSTYPE, NOHITBYBOSS, KILL_IN_TIME, RANK_OVER, NOKILL, KILL_GREATER_EQUAL, STATUSINDEX, KILL_LESS };
+	struct SummaryChallengeInfo
+	{
+		i32 index = 0;
+		SummaryChallenge type = SummaryChallenge::NONE;
+		i32 difficulty = -1;
+		u8 rank = 0;
+		i32 status = 0;
+		f32 timeSec = 0;
+		i32 totalCount = 0;
+		eastl::fixed_vector<eastl::pair<i32,i32>,8,false> targets;
+		SummaryReward reward;
+	};
+	struct Summary
+	{
+		i32 index = 0;
+		i32 stage = 0;
+		eastl::fixed_vector<eastl::pair<i32,SummaryReward>,16,false> rares;
+		eastl::fixed_vector<SummaryChallengeInfo,16,false> challenges;
+		eastl::fixed_vector<SummaryReward,8,false> progress;
+	};
+	eastl::vector<Summary> summaries;
+	eastl::hash_map<i32,eastl::pair<i32,i32>> stageSummary;
+	bool LoadSummaries();
+	const Summary* FindSummary(i32 index) const { foreach_const(s, summaries) if(s->index == index) return &*s; return nullptr; }
+	const Summary* FindStageSummary(i32 stage, i32* difficulty) const;
+	bool SectionContains(i32 section, i32 stage) const;
+	const Achievement* FindAchievement(i32 index) const { auto f = achievementPos.find(index); return f == achievementPos.end() ? nullptr : &achievements[f->second]; }
 	i32 WeaponIndexFor(const Master& master, u32 type, u32 grade) const;
 	const GearItem* FindGearItem(i32 doc) const { auto f = gearItems.find(doc); return f == gearItems.end() ? nullptr : &f->second; }
 

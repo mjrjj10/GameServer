@@ -10,6 +10,8 @@
 
 static const u16 MEASURED_CQ_MASTERGEAR_RENAME = 60066;
 static const u16 MEASURED_CQ_PVP_RECORD = 60228;
+static const u16 MEASURED_CQ_SUMMARY_REWARD = 60046;
+static const u16 MEASURED_CQ_TITLE_SELECT = 60056;
 
 bool HubPacketHandler::Init(HubGame* game_)
 {
@@ -101,6 +103,8 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CQ_PveRanking);
 		HANDLE_CASE(CQ_SaveSettings);
 		HANDLE_CASE(CQ_RequestSummaryInfoEach);
+		case MEASURED_CQ_SUMMARY_REWARD: HandleSummaryReward(clientHd, packetData, packetSize); break;
+		case MEASURED_CQ_TITLE_SELECT: HandleTitleSelect(clientHd, packetData, packetSize); break;
 		HANDLE_CASE(CQ_RestartVote);
 		HANDLE_CASE(CQ_PartySwapTeam);
 		HANDLE_CASE(CQ_PartyAddBot);
@@ -838,6 +842,33 @@ void HubPacketHandler::HandlePacket_CQ_PveRanking(ClientHandle clientHd, const N
 	replication->SendPveRanking(clientHd, stage);
 }
 
+void HubPacketHandler::HandleTitleSelect(ClientHandle clientHd, const u8* packetData, const i32 packetSize)
+{
+	if(packetSize != 8) {
+		WARN("[client%x] WARNING: invalid title select (size=%d)", clientHd, packetSize);
+		return;
+	}
+	ConstBuffer buff(packetData, packetSize);
+	const i32 displayTitle = buff.Read<i32>();
+	const i32 statTitle = buff.Read<i32>();
+	NT_LOG("[client%x] Client :: title select :: display=%d stat=%d", clientHd, displayTitle, statTitle);
+	game->OnTitleSelect(clientHd, displayTitle, statTitle);
+}
+
+void HubPacketHandler::HandleSummaryReward(ClientHandle clientHd, const u8* packetData, const i32 packetSize)
+{
+	if(packetSize != 12) {
+		WARN("[client%x] WARNING: invalid summary reward request (size=%d)", clientHd, packetSize);
+		return;
+	}
+	ConstBuffer buff(packetData, packetSize);
+	const i32 summary = buff.Read<i32>();
+	const u32 type = buff.Read<u32>();
+	const i32 data = buff.Read<i32>();
+	NT_LOG("[client%x] Client :: summary reward :: summary=%d type=%u data=%d", clientHd, summary, type, data);
+	game->OnSummaryReward(clientHd, summary, (u8)type, data);
+}
+
 void HubPacketHandler::HandlePacket_CQ_RequestSummaryInfoEach(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
 {
 	if(packetSize != 4) {
@@ -847,7 +878,7 @@ void HubPacketHandler::HandlePacket_CQ_RequestSummaryInfoEach(ClientHandle clien
 	ConstBuffer buff(packetData, packetSize);
 	const u32 summary = buff.Read<u32>();
 	NT_LOG("[client%x] Client :: CQ_RequestSummaryInfoEach :: summary=%u", clientHd, summary);
-	replication->SendSummaryInfoEach(clientHd, summary);
+	game->OnSummaryInfoEach(clientHd, (i32)summary);
 }
 
 void HubPacketHandler::HandlePacket_CQ_PartySwapTeam(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

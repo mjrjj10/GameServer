@@ -16,6 +16,7 @@
 #include "character_base_data.h"
 #include <mxm/account_progress.h>
 #include "arsenal.h"
+#include "achieve_send.h"
 
 static const i32 MEASURED_JUKEBOX_HOT_TRACKS[] = { 7770015, 7770005, 7770002 };
 
@@ -176,80 +177,11 @@ void HubReplication::SendLoadLobby(ClientHandle clientHd, MapIndex stageIndex, b
 		SendPacket(clientHd, gameGvt);
 	}
 
-	// SN_SummaryInfoAll
+
 	{
-		PacketWriter<Sv::SN_SummaryInfoAll> packet;
-
-		packet.Write<u16>(0);
-
-		SendPacket(clientHd, packet);
-	}
-
-	// SN_AvailableSummaryRewardCountList
-	{
-		PacketWriter<Sv::SN_AvailableSummaryRewardCountList> packet;
-
-		packet.Write<u16>(8);
-
-		const i32 rewardCount[8] = {
-			220004100,
-			2,
-			220002200,
-			3,
-			220005100,
-			3,
-			220003300,
-			2
-		};
-
-		packet.WriteRaw(rewardCount, sizeof(rewardCount));
-
-		SendPacket(clientHd, packet);
-	}
-
-
-	// SN_SummaryInfoLatest
-	{
-		PacketWriter<Sv::SN_SummaryInfoLatest> packet;
-
-		packet.Write<u16>(10);
-
-		const Sv::SN_SummaryInfoLatest::Info infoList[10] = {
-			{ 220002200, StageIndex(200002201), 3, 220002201, 0, (i64)0xa6605c00 },
-			{ 220002200, StageIndex(200002201), 3, 220002204, 0, (i64)0xa6605c00 },
-			{ 220002200, StageIndex(200002201), 3, 220002205, 0, (i64)0xa6605c00 },
-			{ 220005100, StageIndex(200005101), 3, 220005101, 0, (i64)0x6a2bfc00 },
-			{ 220005100, StageIndex(200005101), 3, 220005102, 0, (i64)0x6a2bfc00 },
-			{ 220005100, StageIndex(200005101), 3, 220005105, 0, (i64)0x6a2bfc00 },
-			{ 220003300, StageIndex(200003301), 3, 220003301, 0, (i64)0xe0c7fa00 },
-			{ 220003300, StageIndex(200003301), 3, 220003305, 0, (i64)0xe0c7fa00 },
-			{ 220004100, StageIndex(200004101), 3, 220004101, 0, (i64)0x9eea8400 },
-			{ 220004100, StageIndex(200004101), 3, 220004105, 0, (i64)0x9eea8400 },
-		};
-
-		packet.WriteRaw(infoList, sizeof(infoList));
-
-		SendPacket(clientHd, packet);
-	}
-
-	// SN_AchieveInfo
-	{
-		PacketWriter<Sv::SN_AchieveInfo> packet;
-
-		packet.Write<u8>(1); // packetNum
-		packet.Write<i32>(800); // achievementScore
-		packet.Write<u16>(0); // achList_count
-
-		SendPacket(clientHd, packet);
-	}
-
-	// SN_AchieveLatest
-	{
-		PacketWriter<Sv::SN_AchieveLatest> packet;
-
-		packet.Write<u16>(0); // achList_count
-
-		SendPacket(clientHd, packet);
+		const Account* owner = playerAccount[plidMap->Get(clientHd)];
+		const AccountAchievements acc = owner ? AccountAchievementsLoad(owner->nickname.data()) : AccountAchievements();
+		SendAchievements(clientHd, acc);
 	}
 
 	if(joinCity) SendJoinCity(clientHd);
@@ -553,6 +485,26 @@ void HubReplication::SendChatMessageToAll(const wchar* senderName, i32 chatType,
 	}
 }
 
+void HubReplication::SendTitleSelect(ClientHandle clientHd, u32 result, ActorUID actorUID, i32 displayTitle, i32 statTitle)
+{
+	PacketWriter<Sv::SA_TitleSelect,16> answer;
+	answer.Write<u32>(result);
+	answer.Write<i32>(displayTitle);
+	answer.Write<i32>(statTitle);
+	SendPacket(clientHd, answer);
+	if(result != 0) return;
+	for(int clientID = 0; clientID < MAX_CLIENTS; clientID++) {
+		if(playerState[clientID] != PlayerState::IN_GAME) continue;
+		const LocalActorID local = GetLocalActorID(playerClientHd[clientID], actorUID);
+		if(local == LocalActorID::INVALID) continue;
+		PacketWriter<Sv::SN_PlayerTitleSelect,16> notify;
+		notify.Write<LocalActorID>(local);
+		notify.Write<i32>(displayTitle);
+		notify.Write<i32>(statTitle);
+		SendPacket(playerClientHd[clientID], notify);
+	}
+}
+
 void HubReplication::SendChatMessageToClient(ClientHandle toClientHd, const wchar* senderName, i32 chatType, const wchar* msg, i32 msgLen)
 {
 	const i32 clientID = plidMap->Get(toClientHd);
@@ -592,10 +544,10 @@ void HubReplication::SendChatWhisperToClient(ClientHandle destClientHd, const wc
 	SendPacket(destClientHd, packet);
 }
 
-void HubReplication::SendProfileCharactersWeapons(ClientHandle clientHd)
+void HubReplication::SendProfileCharactersWeapons(ClientHandle clientHd, const Account* account)
 {
 	const GameXmlContent& content = GetGameXmlContent();
-	const Account* owner = playerAccount[plidMap->Get(clientHd)];
+	const Account* owner = account ? account : playerAccount[plidMap->Get(clientHd)];
 	const AccountArsenal arsenal = owner ? AccountArsenalLoad(owner->nickname.data()) : AccountArsenal();
 	// SN_ProfileCharacters
 	{
@@ -658,10 +610,47 @@ void HubReplication::SendProfileCharactersWeapons(ClientHandle clientHd)
 
 }
 
-void HubReplication::SendProfileSkillsSkins(ClientHandle clientHd)
+void HubReplication::SendAchievements(ClientHandle clientHd, const AccountAchievements& acc)
+{
+	static const i32 MEASURED_ACHIEVE_INFO_PER_PACKET = 301;
+	const i32 score = acc.Score();
+	const i32 total = (i32)acc.states.size();
+	u8 packetNum = 1;
+	i32 start = 0;
+	do {
+		const i32 n = MIN(total - start, MEASURED_ACHIEVE_INFO_PER_PACKET);
+		PacketWriter<Sv::SN_AchieveInfo,16384> packet;
+		packet.Write<u8>(packetNum++);
+		packet.Write<i32>(score);
+		packet.Write<u16>((u16)n);
+		for(i32 i = start; i < start + n; i++) WriteAchieveState(packet, acc.states[i]);
+		SendPacket(clientHd, packet);
+		start += n;
+	} while(start < total);
+
+	static const i32 MEASURED_ACHIEVE_LATEST = 10;
+	eastl::fixed_vector<const AccountAchieveState*,MEASURED_ACHIEVE_LATEST,false> latest;
+	foreach_const(s, acc.states) {
+		if(!s->cleared) continue;
+		if(latest.full()) {
+			auto oldest = latest.begin();
+			foreach(l, latest) if((*l)->date < (*oldest)->date) oldest = l;
+			if((*oldest)->date >= s->date) continue;
+			*oldest = &*s;
+		}
+		else latest.push_back(&*s);
+	}
+	eastl::sort(latest.begin(), latest.end(), [](const AccountAchieveState* a, const AccountAchieveState* b) { return a->date > b->date; });
+	PacketWriter<Sv::SN_AchieveLatest,1024> packet;
+	packet.Write<u16>((u16)latest.size());
+	foreach_const(l, latest) WriteAchieveState(packet, **l);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendProfileSkillsSkins(ClientHandle clientHd, const Account* account)
 {
 	const GameXmlContent& content = GetGameXmlContent();
-	const Account* owner = playerAccount[plidMap->Get(clientHd)];
+	const Account* owner = account ? account : playerAccount[plidMap->Get(clientHd)];
 	const AccountArsenal arsenal = owner ? AccountArsenalLoad(owner->nickname.data()) : AccountArsenal();
 	// SN_ProfileSkills
 	{
@@ -692,13 +681,11 @@ void HubReplication::SendProfileSkillsSkins(ClientHandle clientHd)
 		SendPacket(clientHd, packet);
 	}
 
-	// SN_ProfileTitles
 	{
-		PacketWriter<Sv::SN_ProfileTitles> packet;
-
-		packet.Write<u16>(1); // titles_count
-		packet.Write<i32>(320080004); // titles[0]
-
+		const AccountAchievements acc = owner ? AccountAchievementsLoad(owner->nickname.data()) : AccountAchievements();
+		PacketWriter<Sv::SN_ProfileTitles,2048> packet;
+		packet.Write<u16>((u16)acc.titles.size());
+		foreach_const(t, acc.titles) packet.Write<i32>(*t);
 		SendPacket(clientHd, packet);
 	}
 
@@ -805,7 +792,7 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 
 	const GameXmlContent& content = GetGameXmlContent();
 
-	SendProfileCharactersWeapons(clientHd);
+	SendProfileCharactersWeapons(clientHd, &account);
 
 	GuildStore& guildStore = GetGuildStore();
 	std::lock_guard<std::recursive_mutex> guildLock(guildStore.mutex);
@@ -839,7 +826,7 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 		SendPacket(clientHd, packet);
 	}
 
-	SendProfileSkillsSkins(clientHd);
+	SendProfileSkillsSkins(clientHd, &account);
 
 	// SN_AccountInfo
 	{
@@ -850,13 +837,9 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 		packet.Write<i32>(progress.inventoryLines[0]);
 		packet.Write<i32>(progress.inventoryLines[1]);
 		packet.Write<i32>(progress.inventoryLines[2]);
-#if 0
-		packet.Write<i32>(320080005);
-		packet.Write<i32>(320080005);
-#else
-		packet.Write<i32>(-1);
-		packet.Write<i32>(-1);
-#endif
+		const AccountAchievements achievements = AccountAchievementsLoad(account.nickname.data());
+		packet.Write<i32>(achievements.displayTitle);
+		packet.Write<i32>(achievements.statTitle);
 		packet.Write<i32>(1); // warehouseLineCount
 		packet.Write<i32>(-1); // tutorialState
 		packet.Write<i32>(3600); // masterGearDurability
@@ -932,20 +915,6 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 		SendPacket(clientHd, packet);
 	}
 
-	// SN_AchieveUpdate
-	{
-		PacketWriter<Sv::SN_AchieveUpdate> packet;
-
-		packet.Write<i32>(800); // achievementScore
-		packet.Write<i32>(300190005); // index
-		packet.Write<i32>(1); // type
-		packet.Write<u8>(0); // isCleared
-		packet.Write<u16>(0); // achievedList_count
-		packet.Write<i64>(6); // progressInt64
-		packet.Write<i64>(6); // date
-
-		SendPacket(clientHd, packet);
-	}
 
 	MailRegisterAccount(account.nickname.data());
 	SendMailUnreadNotice(clientHd, account.nickname.data());
@@ -2483,13 +2452,8 @@ void HubReplication::SendActorPlayerSpawn(ClientHandle clientHd, const ActorPlay
 		packet.Write<LocalActorID>(localActorID); // playerID
 		packet.WriteStringObj(actor.name.data()); // name
 		packet.Write<ClassType>(actor.classType); // class_
-#if 0
-		packet.Write<i32>(320080005); // displayTitleIDX
-		packet.Write<i32>(320080005); // statTitleIDX
-#else // disable titles
-		packet.Write<i32>(-1); // displayTitleIDX
-		packet.Write<i32>(-1); // statTitleIDX
-#endif
+		packet.Write<i32>(actor.displayTitle);
+		packet.Write<i32>(actor.statTitle);
 		packet.Write<u8>(0); // badgeType
 		packet.Write<u8>(0); // badgeTierLevel
 		packet.WriteStringObj(actor.guildTag.data()); // guildTag

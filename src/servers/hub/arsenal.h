@@ -4,6 +4,7 @@
 #include <mxm/account_progress.h>
 #include <mxm/game_content.h>
 #include "item_writer.h"
+#include <mxm/achievements.h>
 
 struct Account;
 
@@ -32,6 +33,7 @@ struct ArsenalResult
 	u32 itemReason = 0;
 	bool unlockedOnEquip = false;
 	u32 skillSlot = 0;
+	AchieveEvent achieve;
 	eastl::fixed_vector<AccountItem,16,false> items;
 };
 

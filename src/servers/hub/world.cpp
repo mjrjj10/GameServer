@@ -96,6 +96,8 @@ void WorldHub::Update(Time localTime_)
 		rfl.guildTag = actor.guildTag;
 		rfl.level = actor.level;
 		rfl.levelExp = actor.levelExp;
+		rfl.displayTitle = actor.displayTitle;
+		rfl.statTitle = actor.statTitle;
 
 		replication->FramePushPlayerActor(rfl);
 	}
@@ -185,6 +187,8 @@ WorldHub::ActorPlayer& WorldHub::SpawnPlayerSubActor(i32 clientID, ActorUID pare
 	actor.guildTag = parent->guildTag;
 	actor.level = parent->level;
 	actor.levelExp = parent->levelExp;
+	actor.displayTitle = parent->displayTitle;
+	actor.statTitle = parent->statTitle;
 
 	actorPlayerMap.emplace(actorUID, --actorPlayerList.end());
 	return actor;

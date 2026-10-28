@@ -77,6 +77,8 @@ private:
 	void HandlePacket_CQ_GearEquip(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_PvpDetailRecord(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePvpRecord(ClientHandle clientHd);
+	void HandleSummaryReward(ClientHandle clientHd, const u8* packetData, const i32 packetSize);
+	void HandleTitleSelect(ClientHandle clientHd, const u8* packetData, const i32 packetSize);
 	void HandleArsenal(ClientHandle clientHd, u16 netID, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_QuickRunArena(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_UNKNOWN_60118(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);

@@ -2,6 +2,7 @@
 #include "arsenal.h"
 #include "account.h"
 #include "game.h"
+#include "achieve_send.h"
 
 static const i32 MEASURED_MONEY_REASON_WEAPON_UNLOCK = 44;
 static const i32 MEASURED_MONEY_REASON_SKILL_UNLOCK = 4;
@@ -179,6 +180,9 @@ static void WeaponUpgrade(Account& account, const GameXmlContent::Master& master
 	r->weaponIndex = next;
 	r->grade = (i32)grade + 1;
 	r->result = ARSENAL_RESULT_OK;
+	r->achieve.sub = GameXmlContent::AchieveSub::COMMON_WEAPON_UPGRADE_COUNT;
+	r->achieve.object = next;
+	r->achieve.classType = cls;
 	LOG("Arsenal :: %ls upgrades weapon type %u of class %d to grade %u (%d)", account.nickname.data(), r->type, cls, grade + 1, next);
 }
 
@@ -244,6 +248,10 @@ static void SkillUpgradeStage(Account& account, const GameXmlContent::Master& ma
 	AccountArsenalSave(account.nickname.data(), arsenal);
 	r->grade = level + 1;
 	r->result = ARSENAL_RESULT_OK;
+	r->achieve.sub = GameXmlContent::AchieveSub::COMMON_SKILL_UPGRADE_COUNT;
+	r->achieve.object = r->skill;
+	r->achieve.value = level + 1;
+	r->achieve.absolute = true;
 	LOG("Arsenal :: %ls upgrades stage skill %d to level %d (%d)", account.nickname.data(), r->skill, level + 1, costs[level].amount);
 }
 
@@ -292,5 +300,7 @@ void HubGame::OnArsenal(ClientHandle clientHd, u16 netID, const u8* packetData, 
 	if(!account) return;
 	ArsenalResult r;
 	if(!ArsenalHandle(*account, netID, packetData, packetSize, &r)) return;
-	ArsenalSend(r, [&](const auto& writer) { replication.SendWriter(clientHd, writer); });
+	auto send = [&](const auto& writer) { replication.SendWriter(clientHd, writer); };
+	ArsenalSend(r, send);
+	if(r.achieve.sub != GameXmlContent::AchieveSub::NONE) AchieveRaise(account->nickname.data(), r.achieve, send);
 }

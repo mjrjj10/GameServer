@@ -97,6 +97,66 @@ void World::ApplyDeathHit(const DeathHit& hit)
 	LOG("Monster :: creature=%d death remote %d (%s, radius %.0f, damage %d)", (i32)helper->docID, d.remote, d.ally ? "allies" : "enemies", d.radius, damage);
 }
 
+bool World::LoadProgress(const Player& player)
+{
+	if(player.clientHd == ClientHandle::INVALID || player.index >= achieve.size()) return false;
+	if(!progressLoaded[player.index]) {
+		achieve[player.index] = AccountAchievementsLoad(player.name.data());
+		summaries[player.index] = AccountSummariesLoad(player.name.data());
+		progressLoaded[player.index] = 1;
+	}
+	return true;
+}
+
+void World::AchieveLive(const Player& player, const AchieveEvent& ev)
+{
+	if(!LoadProgress(player)) return;
+	AchieveChanges changes;
+	AchieveApply(achieve[player.index], ev, &changes);
+	if(changes.indices.empty() && changes.titles.empty()) return;
+	progressLoaded[player.index] = 2;
+	AchieveSendChanges(achieve[player.index], changes, [&](const auto& writer) { replication->SendWriter(player.clientHd, writer); });
+}
+
+void World::SummaryLive(const Player& player, i32 summary, i32 stage, u8 type, i32 data)
+{
+	if(!LoadProgress(player)) return;
+	AccountSummaries& s = summaries[player.index];
+	if(!s.Add(summary, stage, type, data, AchieveNow())) return;
+	progressLoaded[player.index] = 2;
+	const AccountSummaryEntry& e = s.entries.back();
+	PacketWriter<Sv::SN_SummaryUpdate,64> packet;
+	packet.Write<i32>(e.summary);
+	packet.Write<i32>(e.stage);
+	packet.Write<i32>((i32)e.type);
+	packet.Write<i32>(e.data);
+	packet.Write<u8>(e.received);
+	packet.Write<i64>(e.date);
+	replication->SendWriter(player.clientHd, packet);
+	LOG("Summary :: %ls stage %d type %u data %d", player.name.data(), stage, (u32)type, data);
+}
+
+void World::FinishProgress(const Player& player, const AccountGameRecord& record)
+{
+	if(LoadProgress(player)) {
+		AchieveChanges changes;
+		AchieveApplyRecord(achieve[player.index], record, &changes);
+		if(!changes.indices.empty() || !changes.titles.empty()) {
+			progressLoaded[player.index] = 2;
+			AchieveSendChanges(achieve[player.index], changes, [&](const auto& writer) { replication->SendWriter(player.clientHd, writer); });
+		}
+	}
+	SaveProgress(player);
+}
+
+void World::SaveProgress(const Player& player)
+{
+	if(player.index >= achieve.size() || progressLoaded[player.index] != 2) return;
+	AccountAchievementsSave(player.name.data(), achieve[player.index]);
+	AccountSummariesSave(player.name.data(), summaries[player.index]);
+	progressLoaded[player.index] = 1;
+}
+
 void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDoc)
 {
 	if(npc.removeAt != Time::ZERO) return;
@@ -111,8 +171,24 @@ void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDo
 	npc.removeAt = TimeAdd(localTime, TimeMsToTime(MAX(destroy, 1.0f) * 1000.0));
 	LOG("Monster :: creature=%d (local %d) dies at (%.0f, %.0f) t=%.1f killer=%d", (i32)npc.docID, npc.localID, npc.pos.x, npc.pos.y, GameTimeSec(), (i32)killerDoc);
 	if(ActorMaster* killer = killerUID != ActorUID::INVALID ? FindMasterActor(killerUID) : nullptr) {
-		if(killer->parent) killer->parent->pveKills++;
+		if(killer->parent) {
+			killer->parent->pveKills++;
+			if(replication->pveTeams) {
+				AchieveEvent ev;
+				ev.sub = GameXmlContent::AchieveSub::PVE_KILL_MONSTER_TOTAL;
+				ev.stage = (i32)replication->stageIndex;
+				ev.gameType = (i32)replication->gameType;
+				AchieveLive(*killer->parent, ev);
+			}
+		}
 	}
+	if(const GameXmlContent::Summary* summary = GetGameXmlContent().FindStageSummary((i32)replication->stageIndex, nullptr)) {
+		foreach_const(r, summary->rares) {
+			if(r->first != (i32)npc.docID) continue;
+			foreach_const(p, players) SummaryLive(*p, summary->index, (i32)replication->stageIndex, (u8)SummaryEntryType::RARE_MONSTER, r->first);
+		}
+	}
+	stageKills.push_back(eastl::make_pair((i32)npc.docID, (f32)GameTimeSec()));
 	DefenceMonsterDied(npc);
 	if(stageClearMonster != 0 && (i32)npc.docID == stageClearMonster && ++stageClearKills >= MAX(stageClearCount, 1)) {
 		stageCleared = true;

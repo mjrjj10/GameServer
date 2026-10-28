@@ -10,6 +10,7 @@
 #include "guild_store.h"
 #include <mxm/account_progress.h>
 #include "arsenal.h"
+#include "achieve_send.h"
 
 static const u32 GEAR_SELECT_OK = 0;
 
@@ -1062,7 +1063,9 @@ void RoomInstance::OnClientPacket(ClientHandle clientHd, const NetHeader& header
 			if(found == GetAccountManager().accountMap.end()) break;
 			ArsenalResult r;
 			if(!ArsenalHandle(*found->second, header.netID, packetData, packetSize, &r)) break;
-			ArsenalSend(r, [&](const auto& writer) { SendPacket(clientHd, writer); });
+			auto send = [&](const auto& writer) { SendPacket(clientHd, writer); };
+			ArsenalSend(r, send);
+			if(r.achieve.sub != GameXmlContent::AchieveSub::NONE) AchieveRaise(user->name.data(), r.achieve, send);
 			if(r.result != 0 || r.answer == MEASURED_CQ_SKILL_UNLOCK) break;
 			const AccountArsenal arsenal = AccountArsenalLoad(user->name.data());
 			for(int mi = 0; mi < 2; mi++) {

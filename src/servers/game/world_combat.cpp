@@ -498,6 +498,11 @@ void World::ApplyStatusFromNpc(const ActorNpc& caster, Player& target, i32 statu
 	statusCasterOverride = caster.UID;
 	statusForceCenterSet = true;
 	statusForceCenter = caster.pos;
+	{
+		bool known = false;
+		foreach_const(s, target.npcStatuses) if(*s == statusID) known = true;
+		if(!known) target.npcStatuses.push_back(statusID);
+	}
 	ApplyStatus(target, target, statusID, 0, durationOverride);
 	statusCasterOverride = prevCaster;
 	statusForceCenterSet = prevCenterSet;
@@ -509,6 +514,11 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	if(frozen || target.dead || target.untargetable || damage <= 0) return;
 	if(HasStatusType(target, StatusType::GODMODE) || HasStatusType(target, StatusType::BURROW)) return;
 	MarkInBattle(target);
+	{
+		bool known = false;
+		foreach_const(d, target.hitByDocs) if(*d == (i32)attacker.docID) known = true;
+		if(!known) target.hitByDocs.push_back((i32)attacker.docID);
+	}
 	const f32 def = (MasterStat(target.Main().classType, STAT_DEFENCE) + StatBonus(target, STAT_DEFENCE)) * MAX(1.0f + StatusModMulSum(target, StatusMod::DEFENCE) / 100.0f, 0.0f);
 	damage = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(def, 0.0f)) + 0.5f), 1);
 	foreach(it, activeStatuses) {
