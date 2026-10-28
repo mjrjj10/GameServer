@@ -3216,6 +3216,7 @@ DEFAULT_SERIALIZE(Sv::SN_MatchingPartyConfirm);
 DEFAULT_SERIALIZE(Cl::CQ_GetUserInfo);
 DEFAULT_SERIALIZE(Sv::SA_MasterUnpick);
 DEFAULT_SERIALIZE(Sv::SN_MasterUnpick);
+DEFAULT_SERIALIZE(Sv::SA_ItemTrade);
 #undef DEFAULT_SERIALIZE
 
 template<>

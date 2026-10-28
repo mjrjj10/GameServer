@@ -1779,6 +1779,20 @@ void HubReplication::SendPartyEnqueue(ClientHandle clientHd, StageIndex stageInd
 	SendPacket(clientHd, matching);
 }
 
+void HubReplication::SendItemTradeResult(ClientHandle clientHd, u32 result, i64 gold, const AccountItem* items, i32 count)
+{
+	PacketWriter<Sv::SA_ItemTrade,256> packet;
+	packet.Write<u32>(result);
+	packet.Write<i64>(gold);
+	packet.Write<u16>((u16)count);
+	for(i32 i = 0; i < count; i++) {
+		packet.Write<u32>(items[i].uid);
+		packet.Write<i32>(items[i].docIndex);
+		packet.Write<u32>((u32)items[i].count);
+	}
+	SendPacket(clientHd, packet);
+}
+
 void HubReplication::SendMatchingPartyConfirm(ClientHandle clientHd, u8 row, u32 teamType, bool confirm)
 {
 	PacketWriter<Sv::SN_MatchingPartyConfirm> packet;

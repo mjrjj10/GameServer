@@ -10,6 +10,7 @@
 #include "world.h"
 #include "matchmaker_connector.h"
 #include "guild_store.h"
+#include <mxm/account_progress.h>
 
 struct HubGame
 {
@@ -107,7 +108,8 @@ struct HubGame
 	void BroadcastPlayerStateInTown(i32 userID, i8 state, const u8* modes, i32 modeCount);
 	void OnPraise(ClientHandle clientHd, const wchar* nickname, i32 nicknameLen);
 	void OnHonor(ClientHandle clientHd, const WideString& nickname);
-	bool GrantItem(i32 userID, i32 docIndex, i32 amount, u32 updateReason, u32 acquisitionReason);
+	bool GrantItem(i32 userID, i32 docIndex, i32 amount, u32 updateReason, u32 acquisitionReason, eastl::fixed_vector<AccountItem,8,false>* granted = nullptr);
+	void OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count);
 	void OnInventoryExpand(ClientHandle clientHd, i32 tab);
 	void OnShopBuyItem(ClientHandle clientHd, u32 goodsID, i32 quantity, i32 itemIndex, i32 itemCount, bool npShop);
 	void OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID characterID, SkinIndex skinIndex);

@@ -378,7 +378,7 @@ void HubGame::OnReturnToCity(ClientHandle clientHd)
 	replication.SendReturnToCity(clientHd);
 }
 
-bool HubGame::GrantItem(i32 userID, i32 docIndex, i32 amount, u32 updateReason, u32 acquisitionReason)
+bool HubGame::GrantItem(i32 userID, i32 docIndex, i32 amount, u32 updateReason, u32 acquisitionReason, eastl::fixed_vector<AccountItem,8,false>* granted)
 {
 	ASSERT(playerAccountData[userID]);
 	const GameXmlContent::ItemInfo* info = GetGameXmlContent().FindItemInfo(docIndex);
@@ -395,6 +395,7 @@ bool HubGame::GrantItem(i32 userID, i32 docIndex, i32 amount, u32 updateReason, 
 		left -= add;
 		replication.SendItemUpdate(clientHd, *it, updateReason);
 		replication.SendItemAcquisition(clientHd, acquisitionReason, *it, add);
+		if(granted && !granted->full()) { AccountItem g = *it; g.count = add; granted->push_back(g); }
 	}
 	while(left > 0) {
 		if(inventory.items.full()) break;
@@ -411,6 +412,7 @@ bool HubGame::GrantItem(i32 userID, i32 docIndex, i32 amount, u32 updateReason, 
 		inventory.items.push_back(item);
 		replication.SendItemUpdate(clientHd, item, updateReason);
 		replication.SendItemAcquisition(clientHd, acquisitionReason, item, item.count);
+		if(granted && !granted->full()) granted->push_back(item);
 	}
 	AccountInventorySave(nickname, inventory);
 	LOG("[client%x] HubGame :: %ls receives %d x item %d", clientHd, nickname, amount - left, docIndex);
@@ -451,6 +453,64 @@ void HubGame::OnInventoryExpand(ClientHandle clientHd, i32 tab)
 	if(ccoin) replication.SendCCoin(clientHd, account.ccoin, MEASURED_CCOIN_REASON_SHOP);
 	else replication.SendMoney(clientHd, account.gold, MEASURED_MISSION_REWARD_MONEY_REASON);
 	replication.SendInventoryExpand(clientHd, 0, tab, progress.inventoryLines[tab]);
+}
+
+void HubGame::OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	auto found = GetAccountManager().accountMap.find(playerAccountData[userID]->UID);
+	ASSERT(found != GetAccountManager().accountMap.end());
+	Account& account = *found->second;
+	const GameXmlContent::TradeItem* trade = GetGameXmlContent().FindTradeItem(tradeID);
+	if(!trade || count <= 0 || !GetGameXmlContent().FindItemInfo(trade->buyItem)) {
+		WARN("[client%x] HubGame :: invalid trade %d x%d", clientHd, tradeID, count);
+		replication.SendItemTradeResult(clientHd, TRADE_RESULT_FAILED, 0, nullptr, 0);
+		return;
+	}
+	AccountInventory inventory = AccountInventoryLoad(account.nickname.data());
+	foreach_const(r, trade->required) {
+		i32 owned = 0;
+		foreach_const(it, inventory.items) if(it->docIndex == r->first) owned += it->count;
+		if(owned < r->second * count) {
+			replication.SendItemTradeResult(clientHd, TRADE_RESULT_FAILED, 0, nullptr, 0);
+			return;
+		}
+	}
+	AccountProgress progress = AccountProgressLoad(account.nickname.data());
+	const i64 cost = (i64)trade->costAmount * count;
+	const bool ccoin = trade->costType == 2;
+	if((ccoin ? progress.ccoin : progress.gold) < cost) {
+		replication.SendItemTradeResult(clientHd, TRADE_RESULT_FAILED, 0, nullptr, 0);
+		return;
+	}
+	foreach_const(r, trade->required) {
+		i32 left = r->second * count;
+		for(i32 i = 0; i < (i32)inventory.items.size() && left > 0; ) {
+			AccountItem& it = inventory.items[i];
+			if(it.docIndex != r->first) { i++; continue; }
+			const i32 take = MIN(left, it.count);
+			it.count -= take;
+			left -= take;
+			replication.SendItemUpdate(clientHd, it, MEASURED_ITEM_UPDATE_REASON_TRADE);
+			if(it.count <= 0) inventory.items.erase(inventory.items.begin() + i);
+			else i++;
+		}
+	}
+	AccountInventorySave(account.nickname.data(), inventory);
+	if(cost > 0) {
+		if(ccoin) progress.ccoin -= cost;
+		else progress.gold -= cost;
+		AccountProgressSave(account.nickname.data(), progress);
+		account.gold = progress.gold;
+		account.ccoin = progress.ccoin;
+		if(ccoin) replication.SendCCoin(clientHd, account.ccoin, MEASURED_CCOIN_REASON_SHOP);
+		else replication.SendMoney(clientHd, account.gold, MEASURED_MISSION_REWARD_MONEY_REASON);
+	}
+	eastl::fixed_vector<AccountItem,8,false> granted;
+	GrantItem(userID, trade->buyItem, count, MEASURED_ITEM_UPDATE_REASON_TRADE, MEASURED_ITEM_ACQUISITION_REASON_TRADE, &granted);
+	LOG("[client%x] HubGame :: %ls trades %d x%d into item %d", clientHd, account.nickname.data(), tradeID, count, trade->buyItem);
+	replication.SendItemTradeResult(clientHd, 0, cost, granted.data(), (i32)granted.size());
 }
 
 void HubGame::OnShopBuyItem(ClientHandle clientHd, u32 goodsID, i32 quantity, i32 itemIndex, i32 itemCount, bool npShop)

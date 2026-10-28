@@ -873,6 +873,10 @@ struct GameXmlContent
 	struct ServiceCost { u8 buyType = 0; i32 amount = 0; };
 	eastl::fixed_vector<ServiceCost,32,false> inventoryExpandCosts;
 	const ItemInfo* FindItemInfo(i32 ID) const;
+	struct TradeItem { i32 ID = 0; eastl::fixed_vector<eastl::pair<i32,i32>,4,false> required; i32 buyItem = 0; u8 costType = 0; i32 costAmount = 0; };
+	eastl::hash_map<i32,TradeItem> tradeItems;
+	const TradeItem* FindTradeItem(i32 ID) const { auto f = tradeItems.find(ID); return f == tradeItems.end() ? nullptr : &f->second; }
+	bool LoadTradeItems();
 	void LoadItemInfos(tinyxml2::XMLDocument& doc);
 
 	eastl::fixed_vector<Mission,256,false> missions;

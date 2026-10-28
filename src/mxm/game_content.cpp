@@ -2594,6 +2594,9 @@ bool GameXmlContent::Load()
 	r = LoadSummonBaseStats();
 	if(!r) return false;
 
+	r = LoadTradeItems();
+	if(!r) return false;
+
 	r = LoadGroundItems();
 	if(!r) return false;
 
@@ -3535,6 +3538,30 @@ bool GameXmlContent::LoadDeathRemotes()
 		count++;
 	}
 	LOG("Loaded %d death remotes", count);
+	return true;
+}
+
+bool GameXmlContent::LoadTradeItems()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/client/TRADEITEM.xml", doc)) return true;
+	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+		XMLElement* pTrade = pInfo->FirstChildElement("TRADEITEM");
+		if(!pTrade) continue;
+		TradeItem trade;
+		trade.ID = pInfo->IntAttribute("ID");
+		for(XMLElement* pReq = pTrade->FirstChildElement("_REQUIRED"); pReq && !trade.required.full(); pReq = pReq->NextSiblingElement("_REQUIRED")) {
+			trade.required.push_back(eastl::make_pair(pReq->IntAttribute("_ItemIndex"), pReq->IntAttribute("_Amount")));
+		}
+		if(XMLElement* pBuy = pTrade->FirstChildElement("_BUY")) trade.buyItem = pBuy->IntAttribute("_DataKey");
+		if(XMLElement* pCost = pTrade->FirstChildElement("_COST")) {
+			const char* type = pCost->Attribute("_Type");
+			trade.costType = type && EA::StdC::Strcmp(type, "BUY_TYPE_CCOIN") == 0 ? 2 : 1;
+			trade.costAmount = pCost->IntAttribute("_Amount");
+		}
+		tradeItems[trade.ID] = trade;
+	}
+	LOG("Loaded %d trade items", (i32)tradeItems.size());
 	return true;
 }
 

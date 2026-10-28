@@ -236,6 +236,7 @@ struct HubReplication
 	void SendInventoryExpand(ClientHandle clientHd, u32 result, i32 tab, i32 lineCount);
 	void SendShopBuyResult(ClientHandle clientHd, bool npShop, u32 result, u32 goodsID, u32 quantity, i32 itemIndex);
 	void SendItemUpdate(ClientHandle clientHd, const struct AccountItem& item, u32 reason);
+	void SendItemTradeResult(ClientHandle clientHd, u32 result, i64 gold, const struct AccountItem* items, i32 count);
 	void SendItemAcquisition(ClientHandle clientHd, u32 reason, const struct AccountItem& item, i32 amount);
 	void SendPraise(ClientHandle clientHd, const wchar* nickname, u32 count);
 	void SetPlayerAsInGame(ClientHandle clientHd);
