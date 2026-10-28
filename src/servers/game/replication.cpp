@@ -1388,14 +1388,14 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 			for(int m = 0; m < 2; m++) {
 				const bool main = m == 0;
 				scoreGot.Write<u32>((u32)p.masters[m]);
-				scoreGot.Write<u32>(playTimeMs / 2);
-				scoreGot.Write<u8>((u8)(main ? p.kills : 0));
+				scoreGot.Write<u32>(p.masterScores[m].playMs);
+				scoreGot.Write<u8>((u8)p.masterScores[m].kills);
 				scoreGot.Write<u8>((u8)(main ? p.bestKillStreak : 0));
 				scoreGot.Write<u8>(0);
-				scoreGot.Write<u8>((u8)(main ? p.deaths : 0));
-				scoreGot.Write<u8>((u8)(main ? p.assists : 0));
-				scoreGot.Write<u32>((u32)(main ? p.damageDealt : 0));
-				for(int d = 0; d < 9; d++) scoreGot.Write<u32>(main ? p.damageStats[d] : 0);
+				scoreGot.Write<u8>((u8)p.masterScores[m].deaths);
+				scoreGot.Write<u8>((u8)p.masterScores[m].assists);
+				scoreGot.Write<u32>((u32)p.masterScores[m].damageDealt);
+				for(int d = 0; d < 9; d++) scoreGot.Write<u32>(p.masterScores[m].damageStats[d]);
 				scoreGot.Write<u8>(main ? p.monsterKills[0] : 0);
 				scoreGot.Write<u8>(main ? p.monsterKills[1] : 0);
 				scoreGot.Write<u8>(main ? p.statueCaptures : 0);
@@ -1427,13 +1427,13 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 			for(int m = 0; m < 2; m++) {
 				const bool main = m == 0;
 				scoreOccupy.Write<u32>((u32)p.masters[m]);
-				scoreOccupy.Write<u32>(playTimeMs / 2);
-				scoreOccupy.Write<u8>((u8)(main ? p.kills : 0));
+				scoreOccupy.Write<u32>(p.masterScores[m].playMs);
+				scoreOccupy.Write<u8>((u8)p.masterScores[m].kills);
 				scoreOccupy.Write<u8>((u8)(main ? p.bestKillStreak : 0));
 				scoreOccupy.Write<u8>(0);
-				scoreOccupy.Write<u8>((u8)(main ? p.deaths : 0));
-				scoreOccupy.Write<u8>((u8)(main ? p.assists : 0));
-				scoreOccupy.Write<u32>((u32)(main ? p.damageDealt : 0));
+				scoreOccupy.Write<u8>((u8)p.masterScores[m].deaths);
+				scoreOccupy.Write<u8>((u8)p.masterScores[m].assists);
+				scoreOccupy.Write<u32>((u32)p.masterScores[m].damageDealt);
 				for(int d = 0; d < 7; d++) scoreOccupy.Write<u32>(0);
 				scoreOccupy.Write<u8>(main ? p.occupyCaptures : 0);
 				scoreOccupy.Write<u16>((u16)(main ? p.occupyScore : 0));
@@ -1458,11 +1458,11 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 		score.Write<u16>(2);
 		for(int m = 0; m < 2; m++) {
 			score.Write<u32>((u32)p.masters[m]);
-			score.Write<u32>(playTimeMs / 2);
-			score.Write<u8>((u8)(m == 0 ? p.kills : 0));
+			score.Write<u32>(p.masterScores[m].playMs);
+			score.Write<u8>((u8)p.masterScores[m].kills);
 			score.Write<u8>(0);
 			score.Write<u8>(0);
-			score.Write<u8>((u8)(m == 0 ? p.deaths : 0));
+			score.Write<u8>((u8)p.masterScores[m].deaths);
 			score.Write<u8>(0);
 			for(int d = 0; d < 8; d++) score.Write<u32>(0);
 		}
@@ -1487,7 +1487,12 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 		res.Write<u16>((u16)players[i].bonusExp.size());
 		foreach_const(b, players[i].bonusExp) { res.Write<u32>(b->type); res.Write<u32>(b->amount); }
 		res.Write<u16>(0);
-		for(int z = 0; z < 15; z++) res.Write<u8>(0);
+		res.Write<u32>(players[i].guildBase);
+		res.Write<u32>(players[i].guildBonus);
+		res.Write<u8>(players[i].guildMembers);
+		res.Write<u16>(players[i].guildBoost[0]);
+		res.Write<u16>(players[i].guildBoost[1]);
+		res.Write<u16>(0);
 		for(int z = 0; z < 12; z++) res.Write<u8>(0);
 		res.Write<u8>(0);
 		res.Write<u8>(0);

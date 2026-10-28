@@ -12,7 +12,7 @@ static const i32 SKILL_SLOT_ENUM_FIRST = 2;
 static const f32 OBSTRUCT_LOW_HEIGHT = 30.0f;
 static const i32 SKILL_SLOT_ENUM_UG = 6;
 
-static void ComputeGearBonus(World::ActorMaster& chara, const eastl::fixed_vector<i32,6,false>& docs, WeaponIndex weapon)
+static void ComputeGearBonus(World::ActorMaster& chara, const eastl::fixed_vector<i32,6,false>& docs, WeaponIndex weapon, i32 powerPercent)
 {
 	chara.gearBonus.clear();
 	auto add = [&chara](u8 type, f32 value) {
@@ -24,9 +24,9 @@ static void ComputeGearBonus(World::ActorMaster& chara, const eastl::fixed_vecto
 		if(!gear) continue;
 		foreach_const(m, gear->statMul) {
 			const f32 base = m->type == STAT_ATTACK ? GetGameXmlContent().GetWeaponAttack((i32)weapon) : MasterStat(chara.classType, m->type);
-			add(m->type, base * m->value / 100.0f);
+			add(m->type, base * m->value / 100.0f * (f32)powerPercent / 100.0f);
 		}
-		foreach_const(a, gear->statAdd) add(a->type, a->value);
+		foreach_const(a, gear->statAdd) add(a->type, a->value * (f32)powerPercent / 100.0f);
 	}
 }
 
@@ -147,6 +147,7 @@ void World::Update(Time localTime_)
 		if(p.input.tag) {
 			p.input.tag = 0;
 			if(p.casting.skillID != SkillID::INVALID) CancelCast(p, "tag");
+			AccumulateMasterScore(p);
 			p.mainCharaID ^= 1;
 			eastl::swap(p.mana, p.benchMana);
 			eastl::swap(p.stamina, p.benchStamina);
@@ -513,7 +514,7 @@ void World::CreatePlayerMasters(Player& player)
 	main.parent = &player;
 	main.classType = player.mainClass;
 	main.skinIndex = player.mainSkin;
-	ComputeGearBonus(main, player.gearDocs[0], player.mainWeapon);
+	ComputeGearBonus(main, player.gearDocs[0], player.mainWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType));
 	main.hpMax = (i32)(MasterStat(main.classType, STAT_HEALTH) + main.GearBonus(STAT_HEALTH));
 	main.hp = main.hpMax;
 	main.seed = (i32)RandUint();
@@ -524,7 +525,7 @@ void World::CreatePlayerMasters(Player& player)
 	sub.parent = &player;
 	sub.classType = player.subClass;
 	sub.skinIndex = player.subSkin;
-	ComputeGearBonus(sub, player.gearDocs[1], player.subWeapon);
+	ComputeGearBonus(sub, player.gearDocs[1], player.subWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType));
 	sub.hpMax = (i32)(MasterStat(sub.classType, STAT_HEALTH) + sub.GearBonus(STAT_HEALTH));
 	sub.hp = sub.hpMax;
 	ASSERT(main.hpMax > 0 && sub.hpMax > 0);
@@ -1173,4 +1174,27 @@ void World::ExecuteSkillProgram(SkillProgram& prog)
 		RunSkillProgramCommand(prog, caster, i, dir);
 	}
 	if(!pending) prog.Finish();
+}
+
+void World::AccumulateMasterScore(Player& player)
+{
+	Player::MasterScore& score = player.masterScores[player.mainCharaID];
+	Player::MasterScore& snap = player.scoreSnapshot;
+	score.kills += player.kills - snap.kills;
+	score.deaths += player.deaths - snap.deaths;
+	score.assists += player.assists - snap.assists;
+	score.damageDealt += player.damageDealt - snap.damageDealt;
+	for(i32 d = 0; d < (i32)player.damageStats.size(); d++) {
+		const bool peak = d == END_DMG_MAX_DEALT || d == END_DMG_MAX_TAKEN;
+		if(peak) { if(player.damageStats[d] > snap.damageStats[d]) score.damageStats[d] = MAX(score.damageStats[d], player.damageStats[d]); }
+		else score.damageStats[d] += player.damageStats[d] - snap.damageStats[d];
+	}
+	const Time from = player.scoreSnapshotAt != Time::ZERO ? player.scoreSnapshotAt : gameStartedAt;
+	if(from != Time::ZERO && localTime > from) score.activeSec += TimeDiffSec(TimeDiff(from, localTime));
+	snap.kills = player.kills;
+	snap.deaths = player.deaths;
+	snap.assists = player.assists;
+	snap.damageDealt = player.damageDealt;
+	snap.damageStats = player.damageStats;
+	player.scoreSnapshotAt = localTime;
 }

@@ -573,6 +573,9 @@ struct GameXmlContent
 		eastl::fixed_vector<StatValue,4,false> statAdd;
 	};
 	eastl::hash_map<i32, GearItem> gearItems;
+	eastl::array<i32,(i32)GameType::MAX> gearPowerPercent;
+	i32 GearPowerPercent(GameType type) const { return type > GameType::INVALID && type < GameType::MAX ? gearPowerPercent[(i32)type] : 100; }
+	bool LoadServiceRule();
 	const GearItem* FindGearItem(i32 doc) const { auto f = gearItems.find(doc); return f == gearItems.end() ? nullptr : &f->second; }
 
 	struct GroundItemInfo
@@ -954,6 +957,9 @@ struct GameXmlContent
 	i32 guildDonationUnit = 100;
 	i32 guildFundExchangeRate = 100;
 	i32 guildRollcallPoint = 50;
+	enum GuildBonusKind: u8 { GUILD_BONUS_ARENA = 0, GUILD_BONUS_STAGE, GUILD_BONUS_DEFENCE, GUILD_BONUS_COUNT };
+	eastl::array<eastl::array<i32,6>,GUILD_BONUS_COUNT> guildMemberBonus = {};
+	i32 GuildMemberBonus(GuildBonusKind kind, i32 members) const { return members >= 1 && members <= 5 ? guildMemberBonus[kind][members] : 0; }
 	i32 guildActivityCapWeekend = 250;
 	i32 guildTagChangeCost = 0;
 	i32 guildMedalItem = 0;

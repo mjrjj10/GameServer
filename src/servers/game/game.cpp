@@ -14,7 +14,19 @@ static const f64 RETURN_TO_LOBBY_DELAY_SEC = 20.0;
 static const u32 MEASURED_PVE_FAIL_RETURN_MS = 15000;
 static const u32 MEASURED_DEFENCE_RETURN_MS = 280;
 static const i32 MEASURED_DEFENCE_RESPAWN_MS = 12000;
-static const u8 HYP_DEFENCE_GUILD_MEMBERS = 1;
+struct PvpGuildPointRule { i32 teamSize; u32 win; u32 lose; };
+static const PvpGuildPointRule MEASURED_PVP_GUILD_POINTS[] = { { 3, 10, 5 }, { 4, 10, 4 }, { 5, 50, 20 } };
+
+static u8 GuildMembersInTeam(World& world, const World::Player& player)
+{
+	if(player.guildTag.empty()) return 0;
+	u8 members = 0;
+	for(u32 i = 0; i < world.PlayerCount(); i++) {
+		const World::Player& other = world.GetPlayer(i);
+		if(other.team == player.team && other.clientHd != ClientHandle::INVALID && other.guildTag == player.guildTag) members++;
+	}
+	return members;
+}
 static const f64 PVE_REWARD_TIMEOUT_SEC = 60.0;
 static const u32 MEASURED_REWARD_WAIT_MS = 30000;
 static const u8 MEASURED_REWARD_SLOT_COUNT = 4;
@@ -1035,6 +1047,7 @@ void Game::EndGame()
 	i32 red = 0, blue = 0;
 	for(u32 i = 0; i < world.PlayerCount(); i++) {
 		World::Player& p = world.GetPlayer(i);
+		world.AccumulateMasterScore(p);
 		Replication::EndPlayer e;
 		e.playerIndex = i;
 		e.userID = p.userID;
@@ -1057,8 +1070,17 @@ void Game::EndGame()
 		e.statueCaptures = p.statueCaptures;
 		e.visionCaptures = p.visionCaptures;
 		e.monsterKills = p.monsterKills;
-		e.traits[0] = p.Main().traits;
-		e.traits[1] = p.Sub().traits;
+		e.traits[0] = p.characters[0]->traits;
+		e.traits[1] = p.characters[1]->traits;
+		for(int m = 0; m < 2; m++) {
+			const World::Player::MasterScore& s = p.masterScores[m];
+			e.masterScores[m].kills = s.kills;
+			e.masterScores[m].deaths = s.deaths;
+			e.masterScores[m].assists = s.assists;
+			e.masterScores[m].damageDealt = s.damageDealt;
+			e.masterScores[m].damageStats = s.damageStats;
+			e.masterScores[m].playMs = (u32)(s.activeSec * 1000.0);
+		}
 		list.push_back(e);
 		const i32 score = (world.map && world.map->ingameLevels) || world.occupyMode ? p.points : p.kills;
 		if(p.team == 0) red += score; else blue += score;
@@ -1078,6 +1100,12 @@ void Game::EndGame()
 		e->exp = minutes * (won ? rule.winExpPerMin : rule.loseExpPerMin);
 		ComputeRewardBonuses(replication.gameType, replication.stageIndex, e->gold, e->exp, guildBoost[e->playerIndex], &e->bonusRon, &e->bonusExp);
 		const World::Player& p = world.GetPlayer(e->playerIndex);
+		e->guildMembers = GuildMembersInTeam(world, p);
+		if(e->guildMembers > 0 && (world.winnerTeam >= 0 || own != other)) {
+			for(const PvpGuildPointRule& g : MEASURED_PVP_GUILD_POINTS) if(stage && g.teamSize == stage->joinMemberMax) e->guildBase = won ? g.win : g.lose;
+			e->guildBonus = e->guildBase * (u32)GetGameXmlContent().GuildMemberBonus(GameXmlContent::GUILD_BONUS_ARENA, e->guildMembers) / 100;
+			e->guildBoost = guildBoost[e->playerIndex];
+		}
 		AccountGameRecord record;
 		record.gold = e->gold + RewardBonusTotal(e->bonusRon);
 		record.exp = e->exp + RewardBonusTotal(e->bonusExp);
@@ -1092,6 +1120,7 @@ void Game::EndGame()
 		record.gameType = (i32)replication.gameType;
 		record.classTypes = { (i32)p.mainClass, (i32)p.subClass };
 		record.playSeconds = tGameStarted != Time::ZERO ? (u32)TimeDiffSec(TimeDiff(tGameStarted, localTime)) : 0;
+		record.guildPoints = (i32)(e->guildBase + e->guildBonus);
 		AccountGameRecordAppend(e->name, record);
 		LOG("Game :: %ls reward %u gold %u exp (+%u / +%u bonus, %u min, %s)", e->name, e->gold, e->exp, RewardBonusTotal(e->bonusRon), RewardBonusTotal(e->bonusExp), minutes, won ? "win" : (own == other ? "draw" : "loss"));
 	}
@@ -1207,9 +1236,9 @@ void Game::EndDefence()
 		clear.baseExp = phase ? phase->exp : 0;
 		ComputeRewardBonuses(replication.gameType, replication.stageIndex, clear.baseRon, clear.baseExp, guildBoost[p->index], &clear.bonusRon, &clear.bonusExp);
 		if(phase) foreach_const(it, phase->items) if(!clear.items.full()) clear.items.push_back({ MEASURED_REWARD_TYPE_ITEM, it->first, (u32)it->second });
-		clear.guildBase = phase ? phase->guildPoint : 0;
-		clear.guildBonus = 0;
-		clear.guildMembers = HYP_DEFENCE_GUILD_MEMBERS;
+		clear.guildMembers = GuildMembersInTeam(world, *p);
+		clear.guildBase = phase && clear.guildMembers > 0 ? phase->guildPoint : 0;
+		clear.guildBonus = clear.guildBase * (u32)GetGameXmlContent().GuildMemberBonus(GameXmlContent::GUILD_BONUS_DEFENCE, clear.guildMembers) / 100;
 		clear.boostGold = guildBoost[p->index][0];
 		clear.boostExp = guildBoost[p->index][1];
 		replication.SendExpGain(p->clientHd, clear.baseExp + RewardBonusTotal(clear.bonusExp));
@@ -1221,7 +1250,7 @@ void Game::EndDefence()
 		record.gold = clear.baseRon + RewardBonusTotal(clear.bonusRon);
 		record.exp = clear.baseExp + RewardBonusTotal(clear.bonusExp);
 		record.won = world.defence.won ? 1 : 0;
-		record.guildPoints = (i32)clear.guildBase;
+		record.guildPoints = (i32)(clear.guildBase + clear.guildBonus);
 		record.kills = p->pveKills;
 		record.stageIndex = clear.stage;
 		record.gameType = (i32)replication.gameType;

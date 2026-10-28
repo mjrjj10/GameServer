@@ -408,6 +408,12 @@ struct Replication
 		eastl::array<u8,4> monsterKills = {};
 		eastl::array<u8,4> traits[2] = {};
 		eastl::array<u32,9> damageStats = {};
+		struct MasterScore { i32 kills = 0; i32 deaths = 0; i32 assists = 0; i64 damageDealt = 0; eastl::array<u32,9> damageStats = {}; u32 playMs = 0; };
+		u32 guildBase = 0;
+		u32 guildBonus = 0;
+		u8 guildMembers = 0;
+		eastl::array<u16,2> guildBoost = {};
+		eastl::array<MasterScore,2> masterScores;
 		u8 statueCaptures = 0;
 		u8 visionCaptures = 0;
 	};

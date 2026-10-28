@@ -3,6 +3,7 @@
 #include "coordinator.h"
 #include <common/packet_validator.h>
 #include <mxm/game_content.h>
+#include <mxm/account_progress.h>
 #include "game.h"
 #include "town_rules.h"
 
@@ -219,14 +220,27 @@ void HubPacketHandler::HandlePacket_CQ_TierRecord(ClientHandle clientHd, const N
 
 	// SA_TierRecord
 	{
+		static const u8 MEASURED_TIER_SEASON = 1;
+		static const u8 MEASURED_TIER_STAGE_TYPE = 2;
+		static const u16 MEASURED_TIER_SECTOR = 11;
+		static const u8 HYP_TIER_SECTOR_RANKING = 3;
+		const AccountTier tier = AccountTierLoad(game->AccountNickname(clientHd));
 		PacketWriter<Sv::SA_TierRecord> packet;
-
-		packet.Write<u8>(1); // seasonId
-		packet.Write<i32>(0); // allTierWin
-		packet.Write<i32>(0); // allTierDraw
-		packet.Write<i32>(0); // allTierLose
-		packet.Write<i32>(0); // allTierLeave
-		packet.Write<u16>(0); // stageRecordList_count
+		packet.Write<u8>(MEASURED_TIER_SEASON);
+		packet.Write<i32>(tier.win);
+		packet.Write<i32>(tier.draw);
+		packet.Write<i32>(tier.lose);
+		packet.Write<i32>(tier.leave);
+		packet.Write<u16>(1);
+		packet.Write<u8>(MEASURED_TIER_STAGE_TYPE);
+		packet.Write<u8>((u8)tier.tierType);
+		packet.Write<u16>((u16)tier.points);
+		packet.Write<u16>(MEASURED_TIER_SECTOR);
+		packet.Write<u8>(HYP_TIER_SECTOR_RANKING);
+		packet.Write<i32>(tier.win);
+		packet.Write<i32>(tier.draw);
+		packet.Write<i32>(tier.lose);
+		packet.Write<i32>(tier.leave);
 
 		SendPacket(clientHd, packet);
 	}

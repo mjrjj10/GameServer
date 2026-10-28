@@ -118,6 +118,7 @@ struct HubGame
 	bool GrantItem(i32 userID, i32 docIndex, i32 amount, u32 updateReason, u32 acquisitionReason, eastl::fixed_vector<AccountItem,8,false>* granted = nullptr);
 	void OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count);
 	struct Account* GearAccount(ClientHandle clientHd);
+	const wchar* AccountNickname(ClientHandle clientHd);
 	void OnGearEquip(ClientHandle clientHd, u8 pageNo, u32 itemUID, u32 slot);
 	void OnGearUnequip(ClientHandle clientHd, u8 pageNo, u32 slot);
 	void OnMasterGearSelect(ClientHandle clientHd, u32 characterID, u8 pageNo);

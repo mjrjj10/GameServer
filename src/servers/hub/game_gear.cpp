@@ -15,6 +15,12 @@ Account* HubGame::GearAccount(ClientHandle clientHd)
 	return found == GetAccountManager().accountMap.end() ? nullptr : &*found->second;
 }
 
+const wchar* HubGame::AccountNickname(ClientHandle clientHd)
+{
+	Account* account = GearAccount(clientHd);
+	return account ? account->nickname.data() : L"";
+}
+
 static AccountItem* FindItem(AccountInventory& inventory, u32 uid)
 {
 	foreach(it, inventory.items) if(it->uid == uid) return &*it;

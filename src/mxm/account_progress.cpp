@@ -181,6 +181,31 @@ void AccountStageCleared(const wchar* nickname, i32 stageIndex)
 
 static const char* DEFENCE_WORLD_RECORD_PATH = "accounts/defence_world.txt";
 
+AccountTier AccountTierLoad(const wchar* nickname)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	AccountTier tier;
+	char path[512];
+	AccountPath(nickname, "tier", path, sizeof(path));
+	FILE* f = fopen(path, "rb");
+	if(!f) return tier;
+	if(fscanf(f, "%d %d %d %d %d %d", &tier.tierType, &tier.points, &tier.win, &tier.draw, &tier.lose, &tier.leave) != 6) tier = AccountTier();
+	fclose(f);
+	return tier;
+}
+
+void AccountTierSave(const wchar* nickname, const AccountTier& tier)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	_mkdir(ACCOUNT_DIR);
+	char path[512];
+	AccountPath(nickname, "tier", path, sizeof(path));
+	FILE* f = fopen(path, "wb");
+	if(!f) return;
+	fprintf(f, "%d %d %d %d %d %d\n", tier.tierType, tier.points, tier.win, tier.draw, tier.lose, tier.leave);
+	fclose(f);
+}
+
 static bool DefenceRecordBetter(const DefenceRecord& a, const DefenceRecord& b)
 {
 	return a.step > b.step || (a.step == b.step && a.step > 0 && a.timeMs < b.timeMs);

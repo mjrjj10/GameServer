@@ -1750,6 +1750,25 @@ bool GameXmlContent::LoadBotCreatures()
 	return true;
 }
 
+bool GameXmlContent::LoadServiceRule()
+{
+	static const struct { const char* name; GameType type; } GAME_TYPES[] = {
+		{ "PVE_NORMAL", GameType::PVE_NORMAL }, { "PVE_RANDOM", GameType::PVE_RANDOM }, { "PVE_TICKET", GameType::PVE_TICKET },
+		{ "PVP_NORMAL", GameType::PVP_NORMAL }, { "PVP_RANK", GameType::PVP_RANK }, { "PVP_AI", GameType::PVP_AI },
+		{ "PVP_NORMAL_FFA", GameType::PVP_NORMAL_FFA }, { "PVP_GUILD", GameType::PVP_GUILD }, { "PVP_FAKE_AI", GameType::PVP_FAKE_AI },
+	};
+	gearPowerPercent.fill(100);
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/client/ServiceRule.xml", doc)) return true;
+	XMLElement* rule = doc.FirstChildElement() ? doc.FirstChildElement()->FirstChildElement("ST_SERVICERULE") : nullptr;
+	XMLElement* gear = rule ? rule->FirstChildElement("_MasterGearInfo") : nullptr;
+	for(XMLElement* p = gear ? gear->FirstChildElement("_PvPGearPowerPercent") : nullptr; p; p = p->NextSiblingElement("_PvPGearPowerPercent")) {
+		const char* type = p->Attribute("_GameType");
+		for(const auto& t : GAME_TYPES) if(type && EA::StdC::Strcmp(type, t.name) == 0) gearPowerPercent[(i32)t.type] = p->IntAttribute("DATA", 100);
+	}
+	return true;
+}
+
 bool GameXmlContent::LoadDefencePhases()
 {
 	XMLDocument doc;
@@ -1837,6 +1856,15 @@ bool GameXmlContent::LoadGuildData()
 		guildFundExchangeRate = MAX(1, pDonation->IntAttribute("_ExchangeRateForOneFund", guildFundExchangeRate));
 	}
 	if(XMLElement* pReward = pInfo->FirstChildElement("_GuildPointReward")) guildRollcallPoint = pReward->IntAttribute("_RollcallPoint", guildRollcallPoint);
+	if(XMLElement* pBonus = pInfo->FirstChildElement("_GuildMemberBonus")) {
+		static const char* KINDS[GUILD_BONUS_COUNT] = { "_Arena", "_Stage", "_Defence" };
+		for(i32 k = 0; k < GUILD_BONUS_COUNT; k++) {
+			for(XMLElement* e = pBonus->FirstChildElement(KINDS[k]); e; e = e->NextSiblingElement(KINDS[k])) {
+				const i32 members = e->IntAttribute("DATAKEY");
+				if(members >= 1 && members <= 5) guildMemberBonus[k][members] = e->IntAttribute("DATA");
+			}
+		}
+	}
 
 	for(XMLElement* pLvl = pInfo->FirstChildElement("_GuildLevel");
 		pLvl;
@@ -2692,6 +2720,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadDefencePhases();
+	if(!r) return false;
+
+	r = LoadServiceRule();
 	if(!r) return false;
 
 

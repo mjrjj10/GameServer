@@ -135,6 +135,10 @@ struct World
 		u8 fogSeenBy = 3;
 		eastl::array<Time,2> fogRevealUntil = {{ Time::ZERO, Time::ZERO }};
 		eastl::array<u32,9> damageStats = {};
+		struct MasterScore { i32 kills = 0; i32 deaths = 0; i32 assists = 0; i64 damageDealt = 0; eastl::array<u32,9> damageStats = {}; f64 activeSec = 0; };
+		eastl::array<MasterScore,2> masterScores;
+		MasterScore scoreSnapshot;
+		Time scoreSnapshotAt = Time::ZERO;
 		u8 statueCaptures = 0;
 		u8 occupyCaptures = 0;
 		i32 occupyScore = 0;
@@ -1054,6 +1058,7 @@ public:
 	void ApplyLevelStats(Player& player);
 	u32 KillPoints() const;
 	void AddPoints(Player& player, i32 points);
+	void AccumulateMasterScore(Player& player);
 	void AddTeamPoints(i32 team, i32 points);
 	i32 TeamPoints(i32 team) const;
 	void OnTeamPointsChanged(i32 team, i32 before, i32 after);

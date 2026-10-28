@@ -719,6 +719,16 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 			MissionBuildActive(account.nickname.data(), progress.level, (i64)time(nullptr), saved, &list);
 			foreach_const(r, reward.records) {
 				account.pendingGuildPoints += r->guildPoints;
+				if(r->gameType == (i32)GameType::PVP_RANK) {
+					static const i32 MEASURED_RANK_WIN_POINTS = 40;
+					static const i32 MEASURED_RANK_LOSE_POINTS = 28;
+					AccountTier tier = AccountTierLoad(account.nickname.data());
+					if(r->won) { tier.win++; tier.points += MEASURED_RANK_WIN_POINTS; }
+					else if(r->draw) tier.draw++;
+					else { tier.lose++; tier.points = MAX(tier.points - MEASURED_RANK_LOSE_POINTS, 0); }
+					AccountTierSave(account.nickname.data(), tier);
+					LOG("[client%x] Account :: %ls ranked %s, %d points", clientHd, account.nickname.data(), r->won ? "win" : r->draw ? "draw" : "loss", tier.points);
+				}
 				if(r->stageIndex == 0) continue;
 				if(r->gameType >= (i32)GameType::PVE_NORMAL && r->gameType <= (i32)GameType::PVE_TICKET && !r->won) account.pveFailedReturn = true;
 				MissionApplyGame(*r, &list);
