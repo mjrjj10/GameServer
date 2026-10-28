@@ -3854,6 +3854,19 @@ void GameXmlContent::LoadItemInfos(XMLDocument& doc)
 static const i32 MAX_DROP_DEPTH = 8;
 static const i32 NORMAL_DIFFICULTY_INDEX = 1;
 
+i32 GameXmlContent::GearKey(const char* gearType, const char* rank)
+{
+	static const char* GEAR_TYPES[] = { "GEAR_TYPE_ATT", "GEAR_TYPE_DEF", "GEAR_TYPE_UTIL" };
+	static const char* ITEM_RANKS[] = { "ITEM_RANK_NORMAL", "ITEM_RANK_RARE", "ITEM_RANK_UNIQUE", "ITEM_RANK_HEROIC", "ITEM_RANK_LEGENDARY" };
+	if(!gearType || !rank) return -1;
+	i32 typeIndex = -1;
+	i32 rankIndex = -1;
+	for(i32 i = 0; i < (i32)ARRAY_COUNT(GEAR_TYPES); i++) if(EA::StdC::Strcmp(gearType, GEAR_TYPES[i]) == 0) typeIndex = i;
+	for(i32 i = 0; i < (i32)ARRAY_COUNT(ITEM_RANKS); i++) if(EA::StdC::Strcmp(rank, ITEM_RANKS[i]) == 0) rankIndex = i;
+	if(typeIndex < 0 || rankIndex < 0) return -1;
+	return typeIndex * (i32)ARRAY_COUNT(ITEM_RANKS) + rankIndex;
+}
+
 u8 GameXmlContent::RankID(const char* name)
 {
 	for(i32 i = 0; i < (i32)rankNames.size(); i++) if(rankNames[i] == name) return (u8)i;
@@ -3899,9 +3912,15 @@ void GameXmlContent::RollDrop(i32 dropIndex, DropRollList* out, i32 depth) const
 			for(i32 k = 0; k < count; k++) RollDrop(e->item, out, depth + 1);
 			continue;
 		}
+		i32 item = e->kind == DropGroup::Kind::RON ? 0 : e->item;
+		if(e->kind == DropGroup::Kind::GEAR) {
+			auto docs = gearDocs.find(e->item);
+			if(docs == gearDocs.end() || docs->second.empty()) continue;
+			item = docs->second[RandUint() % (u32)docs->second.size()];
+		}
 		if(out->full()) return;
 		DropRoll r;
-		r.item = e->kind == DropGroup::Kind::RON ? 0 : e->item;
+		r.item = item;
 		r.count = count;
 		r.ron = e->kind == DropGroup::Kind::RON;
 		out->push_back(r);
@@ -3920,6 +3939,13 @@ bool GameXmlContent::LoadGroundItems()
 		LoadItemInfos(extra);
 	}
 	for(XMLElement* pInfo = items.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+		XMLElement* gear = pInfo->FirstChildElement("GearComData");
+		XMLElement* itemData = pInfo->FirstChildElement("ItemComData");
+		if(gear && itemData) {
+			const i32 key = GearKey(gear->Attribute("_Type"), itemData->Attribute("_Rank"));
+			if(key >= 0) gearDocs[key].push_back(pInfo->IntAttribute("ID"));
+			continue;
+		}
 		XMLElement* etc = pInfo->FirstChildElement("EtcItemComData");
 		const char* etcType = etc ? etc->Attribute("_Type") : nullptr;
 		if(!etcType || EA::StdC::Strcmp(etcType, "ETC_TYPE_FOOD") != 0) continue;
@@ -3959,8 +3985,10 @@ bool GameXmlContent::LoadGroundItems()
 			if(EA::StdC::Strcmp(dataType, "ItemIndex") == 0) entry.kind = DropGroup::Kind::ITEM;
 			else if(EA::StdC::Strcmp(dataType, "Ron") == 0) entry.kind = DropGroup::Kind::RON;
 			else if(EA::StdC::Strcmp(dataType, "DropIndex") == 0) entry.kind = DropGroup::Kind::GROUP;
+			else if(EA::StdC::Strcmp(dataType, "GearComData") == 0) entry.kind = DropGroup::Kind::GEAR;
 			else continue;
-			entry.item = e->IntAttribute("_DataKey");
+			entry.item = entry.kind == DropGroup::Kind::GEAR ? GearKey(e->Attribute("_DataKey"), e->Attribute("_RankMin")) : e->IntAttribute("_DataKey");
+			if(entry.item < 0) continue;
 			entry.minCount = e->IntAttribute("_Min", 1);
 			entry.maxCount = e->IntAttribute("_Max", 1);
 			entry.rate = e->FloatAttribute("_DropRate", 100.0f);

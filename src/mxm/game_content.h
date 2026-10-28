@@ -577,7 +577,7 @@ struct GameXmlContent
 
 	struct DropGroup
 	{
-		enum class Kind: u8 { ITEM, RON, GROUP };
+		enum class Kind: u8 { ITEM, RON, GROUP, GEAR };
 		struct Entry { i32 item = 0; i32 minCount = 1; i32 maxCount = 1; f32 rate = 100; Kind kind = Kind::ITEM; };
 		bool piece = false;
 		eastl::fixed_vector<Entry,32,false> entries;
@@ -1316,6 +1316,8 @@ struct GameXmlContent
 	const GroundItemInfo* FindGroundItem(i32 id) const { auto f = groundItemMap.find(id); return f == groundItemMap.end() ? nullptr : &f->second; }
 	const DropGroup* FindDropGroup(i32 id) const { auto f = dropGroupMap.find(id); return f == dropGroupMap.end() ? nullptr : &f->second; }
 	void RollDrop(i32 dropIndex, DropRollList* out, i32 depth = 0) const;
+	eastl::hash_map<i32, eastl::fixed_vector<i32,64,true>> gearDocs;
+	static i32 GearKey(const char* gearType, const char* rank);
 	const SummonInfo* FindSummon(i32 creatureID) const { auto f = summonMap.find(creatureID); return f == summonMap.end() ? nullptr : &f->second; }
 	Element GetCreatureElement(i32 creatureID) const { auto f = creatureElement.find(creatureID); return f == creatureElement.end() ? Element::NONE : f->second; }
 	i32 FindSkillHitEventRemote(i32 skillID) const { auto f = skillHitEventRemote.find(skillID); return f == skillHitEventRemote.end() ? 0 : f->second; }
