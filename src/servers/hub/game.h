@@ -154,6 +154,7 @@ struct HubGame
 	void OnPartyRemoveBot(ClientHandle clientHd, u32 userId);
 	void OnStartGame(ClientHandle clientHd);
 	void OnStayAsTeam(ClientHandle clientHd, bool join);
+	void OnGiftFriends(ClientHandle clientHd);
 	SortieRoster* FindResultRoster(i32 userID, SortieMember** member);
 	void UpdateStayAsTeam();
 	void OnRegame(ClientHandle clientHd);

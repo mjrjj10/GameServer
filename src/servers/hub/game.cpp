@@ -967,6 +967,21 @@ HubGame::SortieRoster* HubGame::FindResultRoster(i32 userID, SortieMember** memb
 	return nullptr;
 }
 
+void HubGame::OnGiftFriends(ClientHandle clientHd)
+{
+	static const u16 GIFT_MIN_LEVEL = 20;
+	const i32 userID = plidMap->Get(clientHd);
+	if(!playerAccountData[userID]) return;
+	const AccountFriends friends = AccountFriendsLoad(playerAccountData[userID]->nickname.data());
+	eastl::fixed_vector<const WideString*,64,false> eligible;
+	foreach_const(f, friends.friends) if(AccountProgressLoad(f->data()).level >= GIFT_MIN_LEVEL && !eligible.full()) eligible.push_back(&*f);
+	PacketWriter<Sv::SA_GiftFriendsAvailable,4096> answer;
+	answer.Write<u32>(0);
+	answer.Write<u16>((u16)eligible.size());
+	foreach_const(f, eligible) answer.WriteStringObj((*f)->data());
+	replication.SendWriter(clientHd, answer);
+}
+
 void HubGame::OnStayAsTeam(ClientHandle clientHd, bool join)
 {
 	static const u32 HYP_STAY_REFUSED = 1;

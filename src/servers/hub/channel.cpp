@@ -15,6 +15,7 @@ static const u16 MEASURED_CQ_TITLE_SELECT = 60056;
 static const u16 MEASURED_CQ_MASTERGEAR_ADD = 60068;
 static const u16 MEASURED_CQ_SELECT_SUPPORT_KIT = 60057;
 static const u16 MEASURED_CQ_REGAME = 60093;
+static const u16 MEASURED_CQ_GIFT_FRIENDS = 60293;
 static const u16 MEASURED_CQ_STAY_JOIN = 60095;
 static const u16 MEASURED_CQ_STAY_LEAVE = 60096;
 static const u16 MEASURED_CQ_SERVER_UTC_TIME = 60131;
@@ -147,6 +148,10 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		case MEASURED_CQ_STAY_LEAVE: {
 			NT_LOG("[client%x] Client :: stay as a team :: %s", clientHd, header.netID == MEASURED_CQ_STAY_JOIN ? "join" : "leave");
 			game->OnStayAsTeam(clientHd, header.netID == MEASURED_CQ_STAY_JOIN);
+		} break;
+		case MEASURED_CQ_GIFT_FRIENDS: {
+			NT_LOG("[client%x] Client :: gift friends", clientHd);
+			game->OnGiftFriends(clientHd);
 		} break;
 		case MEASURED_CQ_REGAME: {
 			NT_LOG("[client%x] Client :: regame :: size=%d", clientHd, packetSize);
