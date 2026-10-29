@@ -739,13 +739,8 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 		packet.Write<i32>(4); // inventoryLineCountTab0
 		packet.Write<i32>(4); // inventoryLineCountTab1
 		packet.Write<i32>(4); // inventoryLineCountTab2
-#if 0
-		packet.Write<i32>(320080005); // displayTitlteIndex
-		packet.Write<i32>(320080005); // statTitleIndex
-#else // disable title
-		packet.Write<i32>(-1); // displayTitlteIndex
-		packet.Write<i32>(-1); // statTitleIndex
-#endif
+		packet.Write<i32>(player->displayTitle);
+		packet.Write<i32>(player->statTitle);
 		packet.Write<i32>(MEASURED_WAREHOUSE_LINES);
 		packet.Write<i32>(-1); // tutorialState
 		packet.Write<i32>(3600); // masterGearDurability
@@ -1441,6 +1436,24 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 		}
 	}
 
+	static const u32 MEASURED_PRAISE_INFO_DURATION_MS = 45000;
+	PacketWriter<Sv::SN_PraiseInfo,2048> praiseInfo;
+	if(got) {
+		praiseInfo.Write<u32>(MEASURED_PRAISE_INFO_DURATION_MS);
+		praiseInfo.Write<u16>((u16)got->praises.size());
+		foreach_const(pr, got->praises) {
+			praiseInfo.Write<u32>((u32)pr->userID);
+			praiseInfo.WriteStringObj(pr->name, (i32)EA::StdC::Strlen(pr->name));
+			praiseInfo.Write<TeamType>(pr->team == 0 ? TeamType::RED : TeamType::BLUE);
+			praiseInfo.Write<CreatureIndex>(pr->activeMaster);
+			praiseInfo.Write<CreatureIndex>(pr->inactiveMaster);
+			praiseInfo.Write<u32>((u32)pr->type);
+			praiseInfo.Write<u32>(pr->value);
+			praiseInfo.Write<u32>((u32)pr->relation);
+			praiseInfo.Write<u32>(pr->relationValue);
+		}
+	}
+
 	PacketWriter<Sv::SN_PvpResultScoreOccupy,8192> scoreOccupy;
 	if(occupyMode) {
 		scoreOccupy.Write<u16>(2);
@@ -1500,6 +1513,8 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 		}
 	}
 
+	static const u32 MEASURED_REWARD_ITEM_TYPE_ITEM = 2;
+	static const u8 MEASURED_TIER_GAME_RESULT_UNRANKED = 6;
 	for(i32 i = 0; i < count; i++) {
 		const ClientHandle clientHd = players[i].clientHd;
 		if(clientHd == ClientHandle::INVALID) continue;
@@ -1518,7 +1533,12 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 		res.Write<u32>(players[i].exp);
 		res.Write<u16>((u16)players[i].bonusExp.size());
 		foreach_const(b, players[i].bonusExp) { res.Write<u32>(b->type); res.Write<u32>(b->amount); }
-		res.Write<u16>(0);
+		res.Write<u16>(players[i].medals > 0 ? 1 : 0);
+		if(players[i].medals > 0) {
+			res.Write<u32>(MEASURED_REWARD_ITEM_TYPE_ITEM);
+			res.Write<u32>((u32)GetGameXmlContent().pvpMedalItem);
+			res.Write<u32>(players[i].medals);
+		}
 		res.Write<u32>(players[i].guildBase);
 		res.Write<u32>(players[i].guildBonus);
 		res.Write<u8>(players[i].guildMembers);
@@ -1526,14 +1546,17 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 		res.Write<u16>(players[i].guildBoost[1]);
 		res.Write<u16>(0);
 		for(int z = 0; z < 12; z++) res.Write<u8>(0);
-		res.Write<u8>(0);
-		res.Write<u8>(0);
-		res.Write<u16>(0);
+		res.Write<u8>(MEASURED_TIER_GAME_RESULT_UNRANKED);
+		res.Write<u8>(players[i].tierType);
+		res.Write<u16>(players[i].tierPoints);
 		res.Write<u16>(0);
 		res.Write<u16>(0);
 		res.Write<u16>(0);
 		SendPacket(clientHd, res);
-		if(got) SendPacket(clientHd, scoreGot);
+		if(got) {
+			SendPacket(clientHd, scoreGot);
+			if(!got->praises.empty()) SendPacket(clientHd, praiseInfo);
+		}
 		else if(occupyMode) SendPacket(clientHd, scoreOccupy);
 		else SendPacket(clientHd, score);
 	}
@@ -3761,13 +3784,8 @@ void Replication::SendActorMasterSpawn(ClientHandle clientHd, const ActorMaster&
 		packet.Write<LocalActorID>(localActorID); // playerID
 		packet.WriteStringObj(parent.name.data()); // name
 		packet.Write<ClassType>(actor.classType); // class_
-#if 0
-		packet.Write<i32>(320080005); // displayTitleIDX
-		packet.Write<i32>(320080005); // statTitleIDX
-#else // disable titles
-		packet.Write<i32>(-1); // displayTitleIDX
-		packet.Write<i32>(-1); // statTitleIDX
-#endif
+		packet.Write<i32>(parent.displayTitle);
+		packet.Write<i32>(parent.statTitle);
 		packet.Write<u8>(parent.badgeType);
 		packet.Write<u8>(parent.badgeTier);
 		packet.WriteStringObj(parent.guildTag.data()); // guildTag

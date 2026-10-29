@@ -263,6 +263,9 @@ struct StatusInfo
 	f32 heightRatio = 0;
 	f32 lyingTime = 0;
 	f32 dotDamage = 0;
+	f32 dotMul = 0;
+	f32 healMul = 0;
+	f32 shieldMul = 0;
 	bool attachToCaster = false;
 	f32 drainMultiplier = 0;
 	i32 skillIndex = 0;
@@ -541,6 +544,51 @@ struct WeaponHeatInfo
 	f32 autoRegenDelay = 0;
 	f32 overheatDuration = 0;
 	f32 overheatResetGauge = 0;
+};
+
+enum class PraiseType: u8
+{
+	INVALID = 0,
+	KILL_ASSIST,
+	KILL,
+	DAMAGE_PC,
+	MAX_CONTINUOUS_KILL,
+	MAX_CONTINUOUS_KILL_TRANSFORM,
+	REFLECTION_KILL,
+	DOT_KILL,
+	HEAL_OTHERS,
+	HEAL_SELF,
+	NEVER_DIE,
+	TOTAL_SCORE,
+	DAMAGE_CORE,
+	DEFEAT_APPLY_COUNT,
+	KILL_TOWER,
+	OCCUPY_SIGHT,
+	SAVE_PIECE,
+	KILL_BOSS,
+	STEAL_BOSS,
+	KILL_TANIANKING,
+	KILL_TRANSFORMCH,
+	KILL_TRANSFORMREADYCH,
+	COUNT
+};
+
+enum class PraiseRelationType: u8
+{
+	INVALID = 0,
+	KILL_ASSIST,
+	KILL_ASSIST_RATIO,
+	DAMAGE_PC,
+	DAMAGE_PC_RATIO,
+	REFLECTION_COUNT,
+	HEAL_OTHERS_PER_SECOND,
+	HEAL_SELF_PER_SECOND,
+	SCORE_RATIO,
+	DAMAGE_CORE_RATIO,
+	DEFEAT_APPLY_COUNT,
+	DAMAGE_TOWER,
+	SAVE_PIECE_RATIO,
+	COUNT
 };
 
 struct GameXmlContent
@@ -1064,6 +1112,8 @@ struct GameXmlContent
 	i32 guildActivityCapWeekend = 250;
 	i32 guildTagChangeCost = 0;
 	i32 guildMedalItem = 0;
+	static const i32 MEASURED_PVP_MEDAL_ITEM = 138000391;
+	i32 pvpMedalItem = MEASURED_PVP_MEDAL_ITEM;
 	i32 guildMembershipCapacity = 0;
 	const GuildSkillInfo* FindGuildSkill(u8 type) const { foreach_const(s, guildSkills) if(s->type == type) return &*s; return nullptr; }
 	i32 GuildSkillValueByType(u8 type, i32 level) const { const GuildSkillInfo* s = FindGuildSkill(type); if(!s) return 0; foreach_const(l, s->levels) if(l->level == level) return l->value; return 0; }
@@ -1104,6 +1154,17 @@ struct GameXmlContent
 	};
 	eastl::vector<DefencePhase> defencePhases;
 	bool LoadDefencePhases();
+
+	struct PvpPraise
+	{
+		GameModeType gameMode = GameModeType::GAME_MODE_INVALID;
+		i32 priority = 0;
+		PraiseType type = PraiseType::INVALID;
+		PraiseRelationType relation = PraiseRelationType::INVALID;
+		f32 minValue = 0;
+	};
+	eastl::fixed_vector<PvpPraise,32,false> pvpPraises;
+	bool LoadPvpPraises();
 	const eastl::fixed_vector<ClassType,16,false>* FindStageBots(StageIndex stage) const { auto f = stageBotClasses.find((i32)stage); return f == stageBotClasses.end() ? nullptr : &f->second; }
 
 	eastl::vector<FileBuffer> collisionFiles;
@@ -1575,6 +1636,7 @@ private:
 	bool LoadStatusData();
 	bool LoadSkillTooltips();
 	bool LoadStatusStatMods();
+	bool LoadBalanceMultipliers();
 	bool LoadSkillCosts();
 	bool LoadSkillUpgrades();
 	bool LoadCharacterElements();

@@ -69,6 +69,7 @@ struct World
 		eastl::array<eastl::fixed_vector<i32,6,false>,2> gearDocs;
 		eastl::fixed_vector<eastl::pair<i32,u8>,12,false> stageSkillLevels;
 		i32 statTitle = -1;
+		i32 displayTitle = -1;
 		u8 badgeType = 0;
 		u8 badgeTier = 0;
 		i32 supportKit = -1;
@@ -115,6 +116,7 @@ struct World
 		const u8 mainMasterGearNo;
 		const eastl::array<eastl::fixed_vector<i32,6,false>,2> gearDocs;
 		const i32 statTitle;
+		const i32 displayTitle;
 		const u8 badgeType;
 		const u8 badgeTier;
 		const u8 subMasterGearNo;
@@ -192,6 +194,14 @@ struct World
 		vec2 interactFrom = vec2(0);
 		u32 occupyStreak = 0;
 		eastl::array<u8,4> monsterKills = {};
+		u32 healOthers = 0;
+		u32 healSelf = 0;
+		i64 coreDamage = 0;
+		i32 ccApplied = 0;
+		i32 dotKills = 0;
+		i32 transformKills = 0;
+		i32 titanKillStreak = 0;
+		i32 bestTitanKillStreak = 0;
 		i32 titanForm = -1;
 		Time titanUntil = Time::ZERO;
 		Time titanModeAt = Time::ZERO;
@@ -386,6 +396,7 @@ struct World
 			subCharacterType(desc.characterType[1]),
 			gearDocs(desc.gearDocs),
 			statTitle(desc.statTitle),
+			displayTitle(desc.displayTitle),
 			badgeType(desc.badgeType),
 			badgeTier(desc.badgeTier)
 		{
@@ -735,6 +746,7 @@ struct World
 		bool dotDone = false;
 		i32 overlap;
 		f32 shieldHP;
+		f32 skillPower = 0;
 		Time nextHealTick;
 		i32 healTicksDone;
 		Time nextAuraPulse = Time::ZERO;
@@ -905,6 +917,7 @@ struct World
 	vec3 remoteSendFrom = vec3(0);
 	bool remoteSendFromSet = false;
 	i32 damageStatusID = 0;
+	bool damagePreMitigated = false;
 	static const i32 PENETRATION_UNLIMITED = 0x7fffffff;
 	struct RemoteActivation { u32 remoteID; ClientHandle skipHd; ActorUID targetUID; u32 penetration; vec3 pos; };
 	RemoteActivation remoteActivation = { 0, ClientHandle::INVALID, ActorUID::INVALID, 0, vec3(0) };
@@ -1021,6 +1034,9 @@ public:
 	void DropPendingActions(Player& player);
 	const GameXmlContent::SkillUpgrade* LatestUpgradeWith(const Player& player, i32 skillID, bool (*has)(const GameXmlContent::SkillUpgrade&)) const;
 	f32 PlayerSkillDamage(const Player& player, SkillID skillID) const;
+	f32 PlayerSkillPower(const Player& player) const;
+	f32 DefenceMultiplier(const Player& attacker, const Player& target, bool skillHit) const;
+	i32 StatusDotTickDamage(const Player& caster, const Player& target, const ActiveStatus& st) const;
 	f32 PlayerSkillConsumeMP(const Player& player, i32 skillID) const;
 	f32 PlayerSkillConsume(const Player& player, i32 skillID, i32 index) const;
 	const GameXmlContent::CostLevel* UpgradeCastMods(Player& player, SkillID skillID, const GameXmlContent::CostLevel* costLevel);
@@ -1106,6 +1122,7 @@ public:
 	u32 KillPoints() const;
 	void AddPoints(Player& player, i32 points);
 	void AccumulateMasterScore(Player& player);
+	void BuildPraises(GameModeType mode, u32 playTimeMs, eastl::fixed_vector<Replication::EndPraise,10,false>* out);
 	void AddTeamPoints(i32 team, i32 points);
 	i32 TeamPoints(i32 team) const;
 	void OnTeamPointsChanged(i32 team, i32 before, i32 after);

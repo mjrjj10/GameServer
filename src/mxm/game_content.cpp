@@ -1650,6 +1650,18 @@ bool GameXmlContent::FindQueueAreaStage(i32 entryID, AreaIndex* outAreaIndex, St
 	return false;
 }
 
+static GameModeType GameModeFromString(const char* name)
+{
+	static const char* GAME_MODE_NAMES[] = {
+		"GAME_MODE_STAGE", "GAME_MODE_DEFENCE", "GAME_MODE_DEATH_MATCH", "GAME_MODE_GOT", "GAME_MODE_OCCUPY",
+		"GAME_MODE_SPORTS", "GAME_MODE_TEST", "GAME_MODE_MASTER_TRAINING", "GAME_MODE_RANDOM_ARENA",
+	};
+	for(i32 m = 0; m < (i32)ARRAY_COUNT(GAME_MODE_NAMES); m++) {
+		if(name && EA::StdC::Strcmp(name, GAME_MODE_NAMES[m]) == 0) return (GameModeType)m;
+	}
+	return GameModeType::GAME_MODE_INVALID;
+}
+
 bool GameXmlContent::LoadStageMaps()
 {
 	XMLDocument doc;
@@ -1667,13 +1679,7 @@ bool GameXmlContent::LoadStageMaps()
 		pStage->QueryIntAttribute("_JoinMemberMax", &stage.joinMemberMax);
 		const char* gameMode = pStage->Attribute("_GameModeType");
 		stage.titan = gameMode && EA::StdC::Strcmp(gameMode, "GAME_MODE_GOT") == 0;
-		static const char* GAME_MODE_NAMES[] = {
-			"GAME_MODE_STAGE", "GAME_MODE_DEFENCE", "GAME_MODE_DEATH_MATCH", "GAME_MODE_GOT", "GAME_MODE_OCCUPY",
-			"GAME_MODE_SPORTS", "GAME_MODE_TEST", "GAME_MODE_MASTER_TRAINING", "GAME_MODE_RANDOM_ARENA",
-		};
-		for(i32 m = 0; m < (i32)ARRAY_COUNT(GAME_MODE_NAMES); m++) {
-			if(gameMode && EA::StdC::Strcmp(gameMode, GAME_MODE_NAMES[m]) == 0) stage.gameMode = (GameModeType)m;
-		}
+		stage.gameMode = GameModeFromString(gameMode);
 		i32 stageSkill = 0;
 		if(pStage->QueryIntAttribute("_StageSkillIndex", &stageSkill) == XML_SUCCESS && stageSkill != 0) stage.stageSkill = SkillID(stageSkill);
 		for(XMLElement* pC = pStage->FirstChildElement("_StageSkillCandidateList"); pC; pC = pC->NextSiblingElement("_StageSkillCandidateList")) {
@@ -1936,6 +1942,48 @@ bool GameXmlContent::LoadDefencePhases()
 		defencePhases.push_back(phase);
 	}
 	LOG("Loaded %d defence phases", (i32)defencePhases.size());
+	return true;
+}
+
+bool GameXmlContent::LoadPvpPraises()
+{
+	static const char* PRAISE_TYPE_NAMES[] = {
+		"PRAISE_TYPE_INVALID", "PRAISE_TYPE_KILL_ASSIST", "PRAISE_TYPE_KILL", "PRAISE_TYPE_DAMAGE_PC", "PRAISE_TYPE_MAX_CONTINUOUS_KILL",
+		"PRAISE_TYPE_MAX_CONTINUOUS_KILL_TRANSFORM", "PRAISE_TYPE_REFLECTION_KILL", "PRAISE_TYPE_DOT_KILL", "PRAISE_TYPE_HEAL_OTHERS",
+		"PRAISE_TYPE_HEAL_SELF", "PRAISE_TYPE_NEVER_DIE", "PRAISE_TYPE_TOTAL_SCORE", "PRAISE_TYPE_DAMAGE_CORE", "PRAISE_TYPE_DEFEAT_APPLY_COUNT",
+		"PRAISE_TYPE_KILL_TOWER", "PRAISE_TYPE_OCCUPY_SIGHT", "PRAISE_TYPE_SAVE_PIECE", "PRAISE_TYPE_KILL_BOSS", "PRAISE_TYPE_STEAL_BOSS",
+		"PRAISE_TYPE_KILL_TANIANKING", "PRAISE_TYPE_KILL_TRANSFORMCH", "PRAISE_TYPE_KILL_TRANSFORMREADYCH",
+	};
+	static const char* PRAISE_RELATION_NAMES[] = {
+		"PRAISE_RELATION_TYPE_INVALID", "PRAISE_RELATION_TYPE_KILL_ASSIST", "PRAISE_RELATION_TYPE_KILL_ASSIST_RATIO", "PRAISE_RELATION_TYPE_DAMAGE_PC",
+		"PRAISE_RELATION_TYPE_DAMAGE_PC_RATIO", "PRAISE_RELATION_TYPE_REFLECTION_COUNT", "PRAISE_RELATION_TYPE_HEAL_OTHERS_PER_SECOND",
+		"PRAISE_RELATION_TYPE_HEAL_SELF_PER_SECOND", "PRAISE_RELATION_TYPE_SCORE_RATIO", "PRAISE_RELATION_TYPE_DAMAGE_CORE_RATIO",
+		"PRAISE_RELATION_TYPE_DEFEAT_APPLY_COUNT", "PRAISE_RELATION_TYPE_DAMAGE_TOWER", "PRAISE_RELATION_TYPE_SAVE_PIECE_RATIO",
+	};
+	static_assert(ARRAY_COUNT(PRAISE_TYPE_NAMES) == (size_t)PraiseType::COUNT, "praise type names");
+	static_assert(ARRAY_COUNT(PRAISE_RELATION_NAMES) == (size_t)PraiseRelationType::COUNT, "praise relation names");
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/client/PvpPraise.xml", doc)) return true;
+	XMLElement* pInfo = doc.FirstChildElement() ? doc.FirstChildElement()->FirstChildElement("INFO") : nullptr;
+	XMLElement* pTable = pInfo ? pInfo->FirstChildElement("ST_PVP_PRAISE_TABLE") : nullptr;
+	for(XMLElement* p = pTable ? pTable->FirstChildElement("_PVP_PRAISE_INFO") : nullptr; p && !pvpPraises.full(); p = p->NextSiblingElement("_PVP_PRAISE_INFO")) {
+		PvpPraise praise;
+		praise.gameMode = GameModeFromString(p->Attribute("gameModeType"));
+		praise.priority = p->IntAttribute("priority");
+		praise.minValue = p->FloatAttribute("minValue");
+		const char* type = p->Attribute("praiseType");
+		const char* relation = p->Attribute("relationType");
+		for(i32 t = 0; t < (i32)ARRAY_COUNT(PRAISE_TYPE_NAMES); t++) if(type && EA::StdC::Strcmp(type, PRAISE_TYPE_NAMES[t]) == 0) praise.type = (PraiseType)t;
+		for(i32 r = 0; r < (i32)ARRAY_COUNT(PRAISE_RELATION_NAMES); r++) if(relation && EA::StdC::Strcmp(relation, PRAISE_RELATION_NAMES[r]) == 0) praise.relation = (PraiseRelationType)r;
+		if(praise.type == PraiseType::INVALID) {
+			WARN("PvpPraise :: unknown praise type '%s'", type ? type : "");
+			continue;
+		}
+		auto at = pvpPraises.begin();
+		while(at != pvpPraises.end() && at->priority <= praise.priority) ++at;
+		pvpPraises.insert(at, praise);
+	}
+	LOG("Loaded %d pvp praises", (i32)pvpPraises.size());
 	return true;
 }
 
@@ -2867,6 +2915,9 @@ bool GameXmlContent::Load()
 	r = LoadDefencePhases();
 	if(!r) return false;
 
+	r = LoadPvpPraises();
+	if(!r) return false;
+
 	r = LoadServiceRule();
 	if(!r) return false;
 
@@ -2899,6 +2950,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadStatusStatMods();
+	if(!r) return false;
+
+	r = LoadBalanceMultipliers();
 	if(!r) return false;
 
 	r = LoadSkillCosts();
@@ -3563,6 +3617,38 @@ bool GameXmlContent::LoadStatusStatMods()
 		count++;
 	}
 	LOG("Loaded %d measured status stat mods", count);
+	return true;
+}
+
+bool GameXmlContent::LoadBalanceMultipliers()
+{
+	static const i32 BALANCE_INDEX_SKILL_OFFSET = 8000000;
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/client/BALANCE_MULTIPLIER.xml", doc)) return false;
+	struct Multipliers { f32 dot = 0; f32 heal = 0; f32 shield = 0; };
+	eastl::hash_map<i32, Multipliers> balance;
+	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+		XMLElement* pBalance = pInfo->FirstChildElement("ST_BALANCE_MULTIPLIER");
+		if(!pBalance) continue;
+		Multipliers m;
+		pBalance->QueryFloatAttribute("_DotMultiplier", &m.dot);
+		pBalance->QueryFloatAttribute("_HealMultiplier", &m.heal);
+		pBalance->QueryFloatAttribute("_ShieldMultiplier", &m.shield);
+		balance[pBalance->IntAttribute("_Index")] = m;
+	}
+	i32 count = 0;
+	foreach(it, statusMap) {
+		StatusInfo& st = it->second;
+		if(st.skillIndex == 0) continue;
+		auto found = balance.find(st.skillIndex + BALANCE_INDEX_SKILL_OFFSET);
+		if(found == balance.end()) found = balance.find(st.skillIndex / 10 * 10 + BALANCE_INDEX_SKILL_OFFSET);
+		if(found == balance.end()) continue;
+		st.dotMul = found->second.dot;
+		st.healMul = found->second.heal;
+		st.shieldMul = found->second.shield;
+		if(st.dotMul > 0 || st.healMul > 0 || st.shieldMul > 0) count++;
+	}
+	LOG("Loaded %d balance multipliers, %d statuses scale with skill power", (i32)balance.size(), count);
 	return true;
 }
 

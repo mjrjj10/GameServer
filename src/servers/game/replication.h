@@ -70,6 +70,8 @@ struct Replication
 		i32 supportKit = -1;
 		u8 badgeType = 0;
 		u8 badgeTier = 0;
+		i32 displayTitle = -1;
+		i32 statTitle = -1;
 		WeaponIndex mainWeapon;
 		WeaponIndex subWeapon;
 		i32 mainWeaponGrade;
@@ -402,6 +404,9 @@ struct Replication
 		u32 exp = 0;
 		RewardBonusList bonusRon;
 		RewardBonusList bonusExp;
+		u32 medals = 0;
+		u8 tierType = 0;
+		u16 tierPoints = 0;
 		i32 assists = 0;
 		i32 bestKillStreak = 0;
 		i32 points = 0;
@@ -422,9 +427,22 @@ struct Replication
 		u8 statueCaptures = 0;
 		u8 visionCaptures = 0;
 	};
+	struct EndPraise
+	{
+		UserID userID;
+		const wchar* name;
+		u8 team;
+		CreatureIndex activeMaster;
+		CreatureIndex inactiveMaster;
+		u8 type;
+		u32 value;
+		u8 relation;
+		u32 relationValue;
+	};
 	struct EndGot
 	{
 		eastl::fixed_vector<i32,32,false> summons[2];
+		eastl::fixed_vector<EndPraise,10,false> praises;
 	};
 	void SendGameEnd(const EndPlayer* players, i32 count, i32 redScore, i32 blueScore, u32 playTimeMs, i32 winnerTeam = -1, const EndGot* got = nullptr);
 	void SendGaugeToAll(UserID userID, u8 updateType, bool overheated, f32 overheatTime, u16 gauge, u16 maxGauge);

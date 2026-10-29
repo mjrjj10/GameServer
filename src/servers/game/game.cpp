@@ -275,6 +275,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 			if(!desc.stageSkillLevels.empty()) LOG("Arsenal :: %ls stage skill upgrades %d", desc.name.data(), (i32)desc.stageSkillLevels.size());
 			const AccountAchievements achievements = AccountAchievementsLoad(desc.name.data());
 			desc.statTitle = achievements.statTitle;
+			desc.displayTitle = achievements.displayTitle;
 			desc.badgeType = achievements.badge;
 			desc.badgeTier = achievements.badge == MEASURED_BADGE_ACHIEVEMENT ? xml.AchievementTier(achievements.Score()) : 0;
 			const i32 kit = AccountArsenalLoad(desc.name.data()).supportKit;
@@ -740,15 +741,26 @@ void Game::UpdateAutoStage()
 	if(runaway) LOG("AutoStage :: zone %d runaway spawns (%d kills)", zoneIndex, autoStageZoneKills);
 	else if(localTime < tAutoStageWait) return;
 	if(!runaway && world.map && killer->body) {
+		const vec2 here = vec2(killer->body->GetWorldPos());
+		const GameXmlContent::LevelEventNode* nearest = nullptr;
+		const GameXmlContent::Map::Area* nearestArea = nullptr;
+		f32 nearestDist = 0.0f;
 		foreach_const(n, world.map->levelEvents) {
 			if(n->kind != GameXmlContent::LevelEventNode::BOUND_TRIGGER || !n->enter || !world.LevelTriggerActive(*n)) continue;
 			if(eastl::find(autoStageVisited.begin(), autoStageVisited.end(), n->id) != autoStageVisited.end()) continue;
 			const GameXmlContent::Map::Area* area = world.map->FindArea(n->areaID);
 			if(!area) continue;
-			autoStageVisited.push_back(n->id);
-			world.WarpPlayer(*killer, area->pos, killer->input.rot.bodyYaw);
+			const f32 dist = glm::length(vec2(area->pos) - here);
+			if(nearest && dist >= nearestDist) continue;
+			nearest = &*n;
+			nearestArea = area;
+			nearestDist = dist;
+		}
+		if(nearest) {
+			autoStageVisited.push_back(nearest->id);
+			world.WarpPlayer(*killer, nearestArea->pos, killer->input.rot.bodyYaw);
 			tAutoStageWait = TimeAdd(localTime, TimeMsToTime(AUTO_STAGE_TELEPORT_WAIT_MS));
-			LOG("AutoStage :: zone %d teleports to trigger area %d (node %d)", zoneIndex, n->areaID, n->id);
+			LOG("AutoStage :: zone %d teleports to trigger area %d (node %d, %.0f away)", zoneIndex, nearest->areaID, nearest->id, nearestDist);
 			return;
 		}
 	}
@@ -811,17 +823,14 @@ Game::StageScore Game::ComputeStageScore(const World::Player& player, f64 playSe
 	static const u32 MEASURED_TOTAL_MIN_S = 90;
 	static const u32 HYP_TOTAL_MIN_A = 60;
 	static const u32 HYP_TOTAL_MIN_B = 50;
-	static const f64 HYP_TIME_PAR_SEC = 240.0;
-	static const f64 HYP_TIME_PAR_SEC_HIGH = 450.0;
-	static const f64 HYP_TIME_SCORE_PER_SEC = 0.16;
-	static const f64 HYP_TIME_SCORE_MIN = 20.0;
-	static const u8 DIFFICULTY_BITS_EXTREME_HELL = 8 | 16;
-	const bool high = world.difficultyBit != GameXmlContent::ALL_DIFFICULTIES && (world.difficultyBit & DIFFICULTY_BITS_EXTREME_HELL) != 0;
-	const f64 over = MAX(playSec - (high ? HYP_TIME_PAR_SEC_HIGH : HYP_TIME_PAR_SEC), 0.0);
+	static const f64 HYP_TIME_PAR_SEC_BY_DIFFICULTY[] = { 210.0, 210.0, 270.0, 600.0, 600.0 };
+	static const f64 MEASURED_TIME_SCORE_PER_OVER_RATIO = 134.0;
+	f64 par = HYP_TIME_PAR_SEC_BY_DIFFICULTY[1];
+	for(i32 d = 0; d < (i32)ARRAY_COUNT(HYP_TIME_PAR_SEC_BY_DIFFICULTY); d++) if(world.difficultyBit == (u8)(1 << d)) par = HYP_TIME_PAR_SEC_BY_DIFFICULTY[d];
 	StageScore s;
 	s.attack = (u32)MIN(player.pveKills * HYP_ATTACK_SCORE_PER_KILL, MEASURED_ATTACK_SCORE_MAX);
 	s.defense = (u32)MAX(100 - player.deaths * HYP_DEFENSE_SCORE_PER_DEATH, 0);
-	s.time = (u32)MAX(100.0 - over * HYP_TIME_SCORE_PER_SEC, HYP_TIME_SCORE_MIN);
+	s.time = (u32)MIN(MAX(100.0 - MEASURED_TIME_SCORE_PER_OVER_RATIO * (playSec / par - 1.0), 0.0), 100.0);
 	s.total = (u32)(s.attack * MEASURED_WEIGHT_ATTACK + s.defense * MEASURED_WEIGHT_DEFENSE + s.time * MEASURED_WEIGHT_TIME + 0.5f);
 	static const i32 HYP_TECHNIC_GOOD_COMBO = 30;
 	static const i32 HYP_TECHNIC_GREAT_COMBO = 60;
@@ -1359,6 +1368,14 @@ void Game::EndGame()
 		const bool won = world.winnerTeam >= 0 ? e->team == world.winnerTeam : own > other;
 		e->gold = minutes * (won ? rule.winGoldPerMin : rule.loseGoldPerMin);
 		e->exp = minutes * (won ? rule.winExpPerMin : rule.loseExpPerMin);
+		static const f32 HYP_MEDALS_PER_MIN_WIN = 1.0f;
+		static const f32 HYP_MEDALS_PER_MIN_LOSE = 0.75f;
+		e->medals = (u32)(minutes * (won ? HYP_MEDALS_PER_MIN_WIN : HYP_MEDALS_PER_MIN_LOSE));
+		if(replication.titanMode) {
+			const AccountTier tier = AccountTierLoad(e->name);
+			e->tierType = (u8)tier.tierType;
+			e->tierPoints = (u16)MAX(tier.points, 0);
+		}
 		ComputeRewardBonuses(replication.gameType, replication.stageIndex, e->gold, e->exp, guildBoost[e->playerIndex], &e->bonusRon, &e->bonusExp);
 		const World::Player& p = world.GetPlayer(e->playerIndex);
 		e->guildMembers = GuildMembersInTeam(world, p);
@@ -1391,6 +1408,7 @@ void Game::EndGame()
 		record.playSeconds = tGameStarted != Time::ZERO ? (u32)TimeDiffSec(TimeDiff(tGameStarted, localTime)) : 0;
 		record.guildPoints = (i32)(e->guildBase + e->guildBonus);
 		AccountGameRecordAppend(e->name, record);
+		if(e->medals > 0 && GetGameXmlContent().pvpMedalItem > 0) AccountRewardItemAppend(e->name, GetGameXmlContent().pvpMedalItem, (i32)e->medals);
 		world.FinishProgress(p, record);
 		LOG("Game :: %ls reward %u gold %u exp (+%u / +%u bonus, %u min, %s)", e->name, e->gold, e->exp, RewardBonusTotal(e->bonusRon), RewardBonusTotal(e->bonusExp), minutes, won ? "win" : (own == other ? "draw" : "loss"));
 	}
@@ -1398,6 +1416,7 @@ void Game::EndGame()
 	const bool titanEnd = replication.titanMode;
 	if(titanEnd) {
 		for(i32 team = 0; team < 2; team++) foreach_const(s, world.giantSummons[team]) got.summons[team].push_back(*s);
+		world.BuildPraises(stage ? stage->gameMode : GameModeType::GAME_MODE_GOT, (u32)(playSec * 1000.0), &got.praises);
 	}
 	replication.SendGameEnd(list.data(), (i32)list.size(), red, blue, (u32)(TimeDiffSec(TimeDiff(tGameStarted, localTime)) * 1000.0), world.winnerTeam, titanEnd ? &got : nullptr);
 }

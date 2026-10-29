@@ -61,7 +61,8 @@ void HubGame::OnTitleSelect(ClientHandle clientHd, i32 displayTitle, i32 statTit
 	AccountAchievements acc = AccountAchievementsLoad(nick);
 	auto valid = [&](i32 t) { return t <= 0 || acc.HasTitle(t); };
 	const ActorUID actorUID = playerActorUID[userID];
-	if(!valid(displayTitle) || !valid(statTitle)) {
+	const bool statTitleHasStats = statTitle <= 0 || GetGameXmlContent().FindTitleStats(statTitle) != nullptr;
+	if(!valid(displayTitle) || !valid(statTitle) || !statTitleHasStats) {
 		replication.SendTitleSelect(clientHd, MEASURED_ERROR_TITLE_SELECT_FAIL, actorUID, acc.displayTitle, acc.statTitle);
 		return;
 	}

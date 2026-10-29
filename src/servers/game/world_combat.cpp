@@ -71,6 +71,23 @@ static f32 ElementMultiplier(const World::Player& attacker, const World::Player&
 	return 1.0f;
 }
 
+f32 World::DefenceMultiplier(const Player& attacker, const Player& target, bool skillHit) const
+{
+	const f32 def = (MasterStat(target.Main().classType, STAT_DEFENCE) + StatBonus(target, STAT_DEFENCE)) * MAX(1.0f + StatusModMulSum(target, StatusMod::DEFENCE) / 100.0f, 0.0f);
+	const i32 penStat = skillHit ? STAT_SKILL_PENETRATION : STAT_DEFENCE_PENETRATION;
+	const f32 pen = MIN(MAX(MasterStat(attacker.Main().classType, penStat) + StatBonus(attacker, (u8)penStat), 0.0f), PENETRATION_CAP) / 100.0f;
+	f32 mul = DEFENCE_SCALE / (DEFENCE_SCALE + MAX(def * (1.0f - pen), 0.0f));
+	if(skillHit) mul *= 1.0f - MIN(MAX(MasterStat(target.Main().classType, STAT_SKILLDAMAGE_REDUCE_RATIO) + StatBonus(target, STAT_SKILLDAMAGE_REDUCE_RATIO), 0.0f), SKILLDAMAGE_REDUCE_CAP) / 100.0f;
+	return mul;
+}
+
+i32 World::StatusDotTickDamage(const Player& caster, const Player& target, const ActiveStatus& st) const
+{
+	f32 perStack = st.info->dotDamage + st.skillPower * st.info->dotMul;
+	if(caster.index != target.index) perStack *= DefenceMultiplier(caster, target, true) * ElementMultiplier(caster, target, true);
+	return MAX((i32)perStack, perStack > 0 ? 1 : 0) * st.overlap;
+}
+
 void World::PassiveOnWeaponHit(Player& attacker)
 {
 	if(attacker.dead || localTime < attacker.hitRecoverReadyAt) return;
@@ -89,7 +106,10 @@ void World::HealPlayer(Player& healer, Player& target, i32 amount)
 {
 	if(target.dead || amount <= 0) return;
 	ActorMaster& chara = target.Main();
-	healer.damageStats[END_DMG_HEAL] += (u32)MIN(amount, chara.hpMax - chara.hp);
+	const u32 healed = (u32)MIN(amount, chara.hpMax - chara.hp);
+	healer.damageStats[END_DMG_HEAL] += healed;
+	if(healer.index == target.index) healer.healSelf += healed;
+	else healer.healOthers += healed;
 	chara.hp = MIN(chara.hp + amount, chara.hpMax);
 	LOG("Heal :: %ls -> %ls amount=%d hp=%d/%d", healer.name.data(), target.name.data(), amount, chara.hp, chara.hpMax);
 	if(healer.index != target.index && healer.Main().classType == ClassType::ELECTRO && FindPassiveOfType(healer, StatusType::ELECTRO)) ApplyStatus(healer, healer, STATUS_ELECTRO_PASSIVE_BUFF_MPREGEN);
@@ -128,6 +148,8 @@ void World::CounterAttack(Player& attacker, Player& target, bool weaponHit)
 
 void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 damage, const Projectile* proj, u32 remoteID, RemoteIdx remoteDoc, vec2 remoteDir)
 {
+	const bool preMitigated = damagePreMitigated;
+	damagePreMitigated = false;
 	if(frozen || target.dead || target.untargetable) return;
 	if(attacker.index != target.index) {
 		attacker.lastHitTargetIndex = (i32)target.index;
@@ -166,14 +188,9 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		}
 	}
 
-	if(attacker.index != target.index) {
+	if(attacker.index != target.index && !preMitigated) {
 		const bool skillHit = !proj && skillID != SkillID::INVALID;
-		const f32 def = (MasterStat(target.Main().classType, STAT_DEFENCE) + StatBonus(target, STAT_DEFENCE)) * MAX(1.0f + StatusModMulSum(target, StatusMod::DEFENCE) / 100.0f, 0.0f);
-		const i32 penStat = skillHit ? STAT_SKILL_PENETRATION : STAT_DEFENCE_PENETRATION;
-		const f32 pen = MIN(MAX(MasterStat(attacker.Main().classType, penStat) + StatBonus(attacker, (u8)penStat), 0.0f), PENETRATION_CAP) / 100.0f;
-		f32 mul = DEFENCE_SCALE / (DEFENCE_SCALE + MAX(def * (1.0f - pen), 0.0f));
-		if(skillHit) mul *= 1.0f - MIN(MAX(MasterStat(target.Main().classType, STAT_SKILLDAMAGE_REDUCE_RATIO) + StatBonus(target, STAT_SKILLDAMAGE_REDUCE_RATIO), 0.0f), SKILLDAMAGE_REDUCE_CAP) / 100.0f;
-		damage = MAX((i32)(damage * mul + 0.5f), damage > 0 ? 1 : 0);
+		damage = MAX((i32)(damage * DefenceMultiplier(attacker, target, skillHit) + 0.5f), damage > 0 ? 1 : 0);
 	}
 
 	u32 damageType = PACKET_DAMAGE_TYPE_NORMAL;
@@ -322,6 +339,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		target.deaths++;
 		GrantSkillPoint(target);
 		DropTitanPieces(target);
+		const bool targetWasTitan = target.titanForm >= 0;
 		RevertTitan(target);
 		target.occupyStreak = 0;
 		i32 teamKills = 0;
@@ -350,6 +368,12 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			attacker.lastKillAt = localTime;
 			attacker.killStreak++;
 			attacker.bestKillStreak = MAX(attacker.bestKillStreak, attacker.killStreak);
+			if(attacker.titanForm >= 0) {
+				attacker.titanKillStreak++;
+				attacker.bestTitanKillStreak = MAX(attacker.bestTitanKillStreak, attacker.titanKillStreak);
+			}
+			if(targetWasTitan) attacker.transformKills++;
+			if(damageStatusID != 0) attacker.dotKills++;
 			if(attacker.multiKill >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_MULTI_KILL, (u32)attacker.multiKill, attacker.Main().UID, chara.UID, KillPoints());
 			if(attacker.killStreak >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_KILL_STREAK, (u32)attacker.killStreak, attacker.Main().UID, chara.UID, KillPoints());
 			if(target.killStreak >= 2) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_SHUTDOWN, 0, attacker.Main().UID, chara.UID, KillPoints());
@@ -357,6 +381,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		}
 		if(!specialAnnounced) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_PLAIN_KILL, 0, attacker.Main().UID, chara.UID, KillPoints());
 		target.killStreak = 0;
+		target.titanKillStreak = 0;
 		replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_KILL, 0, attacker.Main().UID, chara.UID, KillPoints());
 		if(attacker.team != target.team) {
 			bool allDead = true;
@@ -416,7 +441,9 @@ void World::WeaponLifesteal(Player& attacker, i32 damage)
 	const f32 ratio = StatusRegenBonus(attacker, StatusMod::LIFESTEAL, false);
 	ActorMaster& chara = attacker.Main();
 	if(ratio <= 0 || damage <= 0 || attacker.dead || chara.hp <= 0 || chara.hp >= chara.hpMax) return;
+	const i32 hpBefore = chara.hp;
 	chara.hp = MIN(chara.hp + MAX((i32)(damage * ratio / 100.0f), 1), chara.hpMax);
+	attacker.healSelf += (u32)(chara.hp - hpBefore);
 	replication->SendStatToAll(chara.UID, (i32)StatType::STAT_TYPE_HEALTH, (f32)chara.hp, (f32)chara.hpMax);
 }
 
@@ -435,6 +462,8 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	npc.hp = MAX(npc.hp - AbsorbNpcShield(npc, dealt), 0);
 	if(npc.monsterWeakUntil != Time::ZERO && localTime < npc.monsterWeakUntil) npc.monsterWeakHit = true;
 	if(IsStructure(npc)) attacker.damageStats[END_DMG_BUILDING_DEALT] += (u32)(hpBefore - npc.hp);
+	static const u32 coreTag = StatusTypeKey("Core");
+	if(npc.monsterAi && npc.monsterAi->tagKey == coreTag) attacker.coreDamage += hpBefore - npc.hp;
 	if(skillID == SkillID::INVALID && remoteHit) WeaponLifesteal(attacker, hpBefore - npc.hp);
 	if(npc.faction == Faction::RED || npc.faction == Faction::BLUE) {
 		RevealToTeam(attacker, (i32)npc.faction);

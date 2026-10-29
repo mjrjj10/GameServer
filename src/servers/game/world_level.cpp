@@ -496,6 +496,7 @@ void World::RevertTitan(Player& player)
 	player.titanForm = -1;
 	player.titanUntil = Time::ZERO;
 	player.titanModeAt = Time::ZERO;
+	player.titanKillStreak = 0;
 	RefreshMasterHealth(player, chara);
 	chara.hp = player.dead ? 0 : MIN(MAX(player.titanSavedHp, 1), chara.hpMax);
 	const auto& master = GetGameXmlContent().GetMaster(chara.classType);
@@ -569,4 +570,122 @@ void World::UpdateIngameLevels()
 	const GameXmlContent::IngameLevelInfo& info = GetGameXmlContent().ingameLevel;
 	nextPassiveExpAt = TimeAdd(nextPassiveExpAt, TimeMsToTime(info.passivePeriod * 1000.0));
 	foreach(p, players) GrantIngameExp(*p, info.passiveExp, ActorUID::INVALID);
+}
+
+struct PraiseTeamTotals
+{
+	i64 kills = 0;
+	i64 damage = 0;
+	i64 points = 0;
+	i64 core = 0;
+	i64 pieces = 0;
+};
+
+static i64 PraiseValue(const World::Player& p, PraiseType type)
+{
+	switch(type) {
+		case PraiseType::KILL_ASSIST: return p.kills + p.assists;
+		case PraiseType::KILL: return p.kills;
+		case PraiseType::DAMAGE_PC: return p.damageDealt;
+		case PraiseType::MAX_CONTINUOUS_KILL: return p.bestKillStreak;
+		case PraiseType::MAX_CONTINUOUS_KILL_TRANSFORM: return p.bestTitanKillStreak;
+		case PraiseType::DOT_KILL: return p.dotKills;
+		case PraiseType::HEAL_OTHERS: return p.healOthers;
+		case PraiseType::HEAL_SELF: return p.healSelf;
+		case PraiseType::NEVER_DIE: return p.deaths;
+		case PraiseType::TOTAL_SCORE: return p.points;
+		case PraiseType::DAMAGE_CORE: return p.coreDamage;
+		case PraiseType::DEFEAT_APPLY_COUNT: return p.ccApplied;
+		case PraiseType::KILL_TOWER: return p.monsterKills[World::END_KILL_TOWER];
+		case PraiseType::OCCUPY_SIGHT: return p.visionCaptures;
+		case PraiseType::SAVE_PIECE: return p.savedPieces;
+		case PraiseType::KILL_BOSS: return p.monsterKills[World::END_KILL_BOSS];
+		case PraiseType::KILL_TRANSFORMCH: return p.transformKills;
+		default: return -1;
+	}
+}
+
+static u32 PraisePercent(i64 part, i64 total)
+{
+	return total > 0 && part > 0 ? (u32)(part * 100 / total) : 0;
+}
+
+static u32 PraiseRelationValue(const World::Player& p, PraiseRelationType relation, const PraiseTeamTotals& team, u32 playTimeMs)
+{
+	static const i64 MEASURED_PRAISE_RATE_PERIOD_MS = 60000;
+	switch(relation) {
+		case PraiseRelationType::KILL_ASSIST: return (u32)(p.kills + p.assists);
+		case PraiseRelationType::KILL_ASSIST_RATIO: return PraisePercent(p.kills + p.assists, team.kills);
+		case PraiseRelationType::DAMAGE_PC: return (u32)p.damageDealt;
+		case PraiseRelationType::DAMAGE_PC_RATIO: return PraisePercent(p.damageDealt, team.damage);
+		case PraiseRelationType::HEAL_OTHERS_PER_SECOND: return playTimeMs > 0 ? (u32)((i64)p.healOthers * MEASURED_PRAISE_RATE_PERIOD_MS / playTimeMs) : 0;
+		case PraiseRelationType::HEAL_SELF_PER_SECOND: return playTimeMs > 0 ? (u32)((i64)p.healSelf * MEASURED_PRAISE_RATE_PERIOD_MS / playTimeMs) : 0;
+		case PraiseRelationType::SCORE_RATIO: return PraisePercent(p.points, team.points);
+		case PraiseRelationType::DAMAGE_CORE_RATIO: return PraisePercent(p.coreDamage, team.core);
+		case PraiseRelationType::DEFEAT_APPLY_COUNT: return (u32)p.ccApplied;
+		case PraiseRelationType::DAMAGE_TOWER: return p.damageStats[END_DMG_BUILDING_DEALT];
+		case PraiseRelationType::SAVE_PIECE_RATIO: return PraisePercent(p.savedPieces, team.pieces);
+		default: return 0;
+	}
+}
+
+void World::BuildPraises(GameModeType mode, u32 playTimeMs, eastl::fixed_vector<Replication::EndPraise,10,false>* out)
+{
+	static const i32 HYP_PRAISE_MAX_ENTRIES = 5;
+	const auto& rules = GetGameXmlContent().pvpPraises;
+	eastl::array<PraiseTeamTotals,2> teams;
+	foreach_const(p, players) {
+		PraiseTeamTotals& t = teams[p->team & 1];
+		t.kills += p->kills;
+		t.damage += p->damageDealt;
+		t.points += p->points;
+		t.core += p->coreDamage;
+		t.pieces += p->savedPieces;
+	}
+	u32 praisedMask = 0;
+	struct Candidate { u32 index; Replication::EndPraise praise; };
+	eastl::fixed_vector<Candidate,32,false> candidates;
+	for(u32 r = 0; r < (u32)rules.size() && (i32)out->size() < HYP_PRAISE_MAX_ENTRIES && !out->full(); ) {
+		const i32 priority = rules[r].priority;
+		candidates.clear();
+		for(; r < (u32)rules.size() && rules[r].priority == priority; r++) {
+			const GameXmlContent::PvpPraise& rule = rules[r];
+			if(rule.gameMode != mode) continue;
+			const bool fewest = rule.type == PraiseType::NEVER_DIE;
+			i32 best = -1;
+			i64 bestValue = 0;
+			u32 bestRelation = 0;
+			for(u32 i = 0; i < (u32)players.size(); i++) {
+				const Player& p = players[i];
+				const i64 value = PraiseValue(p, rule.type);
+				if(value < 0) break;
+				const u32 relation = PraiseRelationValue(p, rule.relation, teams[p.team & 1], playTimeMs);
+				const bool better = best < 0 || (fewest ? value < bestValue : value > bestValue) || (value == bestValue && relation > bestRelation);
+				if(!better) continue;
+				best = (i32)i;
+				bestValue = value;
+				bestRelation = relation;
+			}
+			if(best < 0 || (praisedMask & (1u << best)) != 0) continue;
+			if(fewest ? (f32)bestValue > rule.minValue : (f32)bestValue < rule.minValue) continue;
+			const Player& p = players[best];
+			Candidate c;
+			c.index = (u32)best;
+			c.praise.userID = p.userID;
+			c.praise.name = p.name.data();
+			c.praise.team = p.team;
+			c.praise.activeMaster = CreatureIndex(100000000 + (i32)p.Main().classType);
+			c.praise.inactiveMaster = CreatureIndex(100000000 + (i32)p.Sub().classType);
+			c.praise.type = (u8)rule.type;
+			c.praise.value = (u32)bestValue;
+			c.praise.relation = (u8)rule.relation;
+			c.praise.relationValue = bestRelation;
+			if(!candidates.full()) candidates.push_back(c);
+		}
+		if(candidates.empty()) continue;
+		const Candidate& pick = candidates[RandUint() % (u32)candidates.size()];
+		praisedMask |= 1u << pick.index;
+		out->push_back(pick.praise);
+		LOG("Praise :: %ls type %d value %u relation %d %u (priority %d, %d candidates)", pick.praise.name, (i32)pick.praise.type, pick.praise.value, (i32)pick.praise.relation, pick.praise.relationValue, priority, (i32)candidates.size());
+	}
 }

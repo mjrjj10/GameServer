@@ -698,6 +698,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			if(until > it->until) it->until = until;
 			const bool stacked = info && it->overlap < info->maxOverlap;
 			if(stacked) it->overlap++;
+			it->skillPower = PlayerSkillPower(caster);
 			if(info && info->dotDamage > 0 && info->intervalSec <= 0) it->dotDone = false;
 			LOG("Status :: %ls -> %ls status=%d refreshed overlap=%d", caster.name.data(), target.name.data(), statusID, it->overlap);
 			const vec3 pos = target.body->GetWorldPos();
@@ -737,12 +738,13 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	st.nextHealTick = localTime;
 	st.healTicksDone = 0;
 	st.shieldHP = 0;
+	st.skillPower = PlayerSkillPower(caster);
 	if(info && (info->type == StatusType::SHIELD || info->type == StatusType::SHIELDBOMB)) {
 		f32 dataShield = 0;
 		foreach_const(m, info->mods) {
 			if(m->stat == StatusMod::SHIELD_DEFENCE && !m->mul) dataShield += m->value;
 		}
-		st.shieldHP = dataShield > 0 ? dataShield : MAX(power, 100.0f) * (info->paramRatio > 0 ? info->paramRatio : 1.0f);
+		st.shieldHP = dataShield > 0 ? (f32)(i32)(dataShield + st.skillPower * info->shieldMul) : MAX(power, 100.0f) * (info->paramRatio > 0 ? info->paramRatio : 1.0f);
 	}
 	st.shieldHits = info ? info->shieldCount : 0;
 	if(st.shieldHits > 0) st.shieldHP = 0;
@@ -754,6 +756,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	}
 
 	if(info && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT)) {
+		if(caster.team != target.team) caster.ccApplied++;
 		Time ccEnd = st.until;
 		if(info->type == StatusType::AIRBORNE || info->type == StatusType::FLY || info->type == StatusType::KNOCKDOWN) {
 			const auto& content = GetGameXmlContent();
@@ -975,16 +978,20 @@ void World::UpdateStatuses()
 		Player& target = players[it->targetIndex];
 		if(it->info && it->info->dotDamage > 0 && it->info->intervalSec <= 0 && !it->dotDone && !target.dead) {
 			it->dotDone = true;
+			const i32 dot = StatusDotTickDamage(players[it->casterIndex], target, *it);
 			damageStatusID = it->statusID;
-			DamagePlayer(players[it->casterIndex], target, SkillID::INVALID, (i32)(it->info->dotDamage * it->overlap));
+			damagePreMitigated = true;
+			DamagePlayer(players[it->casterIndex], target, SkillID::INVALID, dot);
 			damageStatusID = 0;
 		}
 		if(it->info && it->info->dotDamage > 0 && it->info->intervalSec > 0) {
 			while(localTime >= it->nextTick && it->nextTick <= it->until && !target.dead) {
 				it->nextTick = TimeAdd(it->nextTick, TimeMsToTime(it->info->intervalSec * 1000.0));
 				const i32 hpBefore = target.Main().hp;
+				const i32 dot = StatusDotTickDamage(players[it->casterIndex], target, *it);
 				damageStatusID = it->statusID;
-				DamagePlayer(players[it->casterIndex], target, SkillID::INVALID, (i32)(it->info->dotDamage * it->overlap));
+				damagePreMitigated = true;
+				DamagePlayer(players[it->casterIndex], target, SkillID::INVALID, dot);
 				damageStatusID = 0;
 				Player& drainer = players[it->casterIndex];
 				const i32 drained = hpBefore - target.Main().hp;
@@ -1005,7 +1012,7 @@ void World::UpdateStatuses()
 				if(it->healTicksDone >= (i32)ticks || localTime < it->nextHealTick) continue;
 				it->nextHealTick = TimeAdd(localTime, TimeMsToTime(interval * 1000.0));
 				it->healTicksDone++;
-				const i32 amount = (i32)(m->mul ? target.Main().hpMax * m->value / 100.0f : m->value);
+				const i32 amount = (i32)(m->mul ? target.Main().hpMax * m->value / 100.0f : m->value + it->skillPower * it->info->healMul);
 				HealPlayer(players[it->casterIndex], target, amount * it->overlap);
 			}
 		}
