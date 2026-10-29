@@ -123,7 +123,7 @@ struct Game
 	i64 gameStartUnix = 0;
 	bool stageEnded = false;
 	eastl::fixed_vector<Replication::RewardCard,32,false> rewardCards;
-	struct RewardState { ClientHandle clientHd; i32 picks; bool finished; Time startedAt; eastl::fixed_vector<u32,8,false> slots; };
+	struct RewardState { ClientHandle clientHd; i32 picks; bool finished; Time startedAt; eastl::fixed_vector<u32,8,false> slots; i32 bought = 0; };
 	eastl::fixed_vector<RewardState,MAX_PLAYERS,false> rewardStates;
 	void EndStage(bool cleared);
 	void EndDefence();
@@ -131,6 +131,7 @@ struct Game
 	void OnRewardStageReady(ClientHandle clientHd);
 	void OnRewardSelectSlot(ClientHandle clientHd, u32 slot);
 	void OnRewardRequestFinish(ClientHandle clientHd);
+	void OnRewardBuyChance(ClientHandle clientHd);
 	void AutoPickRewards(ClientHandle clientHd);
 	void PlacePlayersAtSpawn();
 	bool AllHumansDead() const;

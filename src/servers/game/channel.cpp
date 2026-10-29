@@ -131,6 +131,11 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 			NT_LOG("[client%x] Client :: equip skill in game :: chara=%u skill=%d slot=%u", clientHd, (u32)chara, (i32)skill, slot);
 			game->OnTrainingEquipSkill(clientHd, chara, skill, slot);
 		} break;
+		case Cl::CN_UNKNOWN_60216::NET_ID:
+		case Cl::CN_UNKNOWN_60291::NET_ID: {
+			NT_LOG("[client%x] Client :: reward buy chance :: size=%d", clientHd, packetSize);
+			game->OnRewardBuyChance(clientHd);
+		} break;
 		case Cl::CN_UNKNOWN_60233::NET_ID: {
 			if(packetSize != 24) break;
 			ConstBuffer buff(packetData, packetSize);

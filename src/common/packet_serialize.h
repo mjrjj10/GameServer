@@ -3291,6 +3291,7 @@ DEFAULT_SERIALIZE(Sv::SN_PveLastgameRanking);
 DEFAULT_SERIALIZE(Sv::SN_RegameData);
 DEFAULT_SERIALIZE(Sv::SN_RegameAvailable);
 DEFAULT_SERIALIZE(Sv::SA_RestartGame);
+DEFAULT_SERIALIZE(Sv::SA_RewardBuyChance);
 DEFAULT_SERIALIZE(Sv::SA_TierStageRecord);
 DEFAULT_SERIALIZE(Sv::SN_PartyInviteRecommend);
 DEFAULT_SERIALIZE(Sv::SA_PartyInviteRecommendResponse);

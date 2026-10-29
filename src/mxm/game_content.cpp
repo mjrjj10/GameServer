@@ -1836,10 +1836,33 @@ bool GameXmlContent::LoadServicePrice()
 		if((i32)pveSkillUpgradeCost.size() < level) pveSkillUpgradeCost.resize(level);
 		pveSkillUpgradeCost[level - 1] = readCost(e);
 	}
+	static const char* DIFFICULTY_NAMES[] = { "WORLD_STAGE_DIFFICULT_EASY", "WORLD_STAGE_DIFFICULT_NORMAL", "WORLD_STAGE_DIFFICULT_HARD", "WORLD_STAGE_DIFFICULT_EXTREME", "WORLD_STAGE_DIFFICULT_HELL" };
+	for(XMLElement* e = price->FirstChildElement("_RewardBuyChanceCostSteps"); e; e = e->NextSiblingElement("_RewardBuyChanceCostSteps")) {
+		const char* key = e->Attribute("DATAKEY");
+		const char* data = e->Attribute("DATA");
+		for(i32 d = 0; d < (i32)ARRAY_COUNT(DIFFICULTY_NAMES) && key && data; d++) {
+			if(EA::StdC::Strcmp(key, DIFFICULTY_NAMES[d]) != 0) continue;
+			i32 value = 0, read = 0;
+			while(*data && !rewardBuyChanceSteps[d].full() && EA::StdC::Sscanf(data, "%d%n", &value, &read) == 1) {
+				rewardBuyChanceSteps[d].push_back(value);
+				data += read;
+				if(*data == ',') data++;
+			}
+		}
+	}
 	if(XMLElement* gear = price->FirstChildElement("_MasterGearCostInfo")) {
 		for(XMLElement* e = gear->FirstChildElement("_AddCost"); e && !masterGearAddCost.full(); e = e->NextSiblingElement("_AddCost")) masterGearAddCost.push_back(readCost(e));
 	}
 	return true;
+}
+
+i32 GameXmlContent::RewardBuyChanceCost(u8 difficultyBit, i32 bought) const
+{
+	for(i32 d = 0; d < (i32)rewardBuyChanceSteps.size(); d++) {
+		if(difficultyBit != (u8)(1 << d)) continue;
+		return bought >= 0 && bought < (i32)rewardBuyChanceSteps[d].size() ? rewardBuyChanceSteps[d][bought] : -1;
+	}
+	return -1;
 }
 
 bool GameXmlContent::LoadServiceRule()

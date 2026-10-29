@@ -583,6 +583,8 @@ struct GameXmlContent
 	eastl::array<PriceCost,4> skillUnlockCost = {};
 	eastl::fixed_vector<PriceCost,8,false> pveSkillUpgradeCost;
 	eastl::fixed_vector<PriceCost,24,false> masterGearAddCost;
+	eastl::array<eastl::fixed_vector<i32,4,false>,5> rewardBuyChanceSteps;
+	i32 RewardBuyChanceCost(u8 difficultyBit, i32 bought) const;
 	bool LoadServicePrice();
 	enum class AchieveSub: u8 {
 		NONE, PVE_KILL_MONSTER_TOTAL, PVE_SUFFER_FROM_TARGET, PVE_STAGE_CLEAR, PVE_STAGE_CLEAR_WITH_FRIENDS, PVE_DEATH_TOTAL, PVE_KILL_IN_CERTAIN_TIME,

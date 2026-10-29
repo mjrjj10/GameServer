@@ -1462,7 +1462,7 @@ void Game::OnRewardSelectSlot(ClientHandle clientHd, u32 slot)
 {
 	foreach(r, rewardStates) {
 		if(r->clientHd != clientHd || r->finished) continue;
-		if(slot >= rewardCards.size() || r->picks >= MEASURED_REWARD_PICKS) return;
+		if(slot >= rewardCards.size() || r->picks >= MEASURED_REWARD_PICKS + r->bought) return;
 		if(eastl::find(r->slots.begin(), r->slots.end(), slot) != r->slots.end()) return;
 		if(!r->slots.full()) r->slots.push_back(slot);
 		r->picks++;
@@ -1479,6 +1479,45 @@ void Game::OnRewardSelectSlot(ClientHandle clientHd, u32 slot)
 		}
 		else AccountRewardItemAppend(name, card.index, (i32)card.amount);
 		LOG("Stage :: %ls picks reward slot %u (type %u, item %d x%u)", name, slot, card.type, card.index, card.amount);
+		return;
+	}
+}
+
+void Game::OnRewardBuyChance(ClientHandle clientHd)
+{
+	static const u32 MEASURED_CCOIN_REASON_PURCHASE = 46;
+	static const u32 HYP_BUY_CHANCE_FAILED = 1;
+	static const u8 MEASURED_NEXT_ACTION_BUY_CHANCE = 1;
+	auto pl = playerMap.find(clientHd);
+	if(pl == playerMap.end()) return;
+	const wchar* name = world.GetPlayer(pl->second->playerIndex).name.data();
+	foreach(r, rewardStates) {
+		if(r->clientHd != clientHd || r->finished) continue;
+		const i32 cost = GetGameXmlContent().RewardBuyChanceCost(world.difficultyBit, r->bought);
+		AccountProgress progress = AccountProgressLoad(name);
+		PacketWriter<Sv::SA_RewardBuyChance,16> answer;
+		if(cost < 0 || progress.ccoin < cost || (i32)rewardCards.size() <= MEASURED_REWARD_PICKS + r->bought) {
+			answer.Write<u32>(HYP_BUY_CHANCE_FAILED);
+			answer.Write<u32>((u32)(MEASURED_REWARD_SLOT_COUNT + r->bought));
+			answer.Write<u8>(cost < 0 ? 0 : MEASURED_NEXT_ACTION_BUY_CHANCE);
+			answer.Write<u32>((u32)MAX(cost, 0));
+			replication.SendWriter(clientHd, answer);
+			return;
+		}
+		progress.ccoin -= cost;
+		AccountProgressSave(name, progress);
+		r->bought++;
+		PacketWriter<Sv::SN_CCoin,16> coin;
+		coin.Write<i64>(progress.ccoin);
+		coin.Write<u32>(MEASURED_CCOIN_REASON_PURCHASE);
+		replication.SendWriter(clientHd, coin);
+		const i32 next = GetGameXmlContent().RewardBuyChanceCost(world.difficultyBit, r->bought);
+		answer.Write<u32>(0);
+		answer.Write<u32>((u32)(MEASURED_REWARD_SLOT_COUNT + r->bought));
+		answer.Write<u8>(next < 0 ? 0 : MEASURED_NEXT_ACTION_BUY_CHANCE);
+		answer.Write<u32>((u32)MAX(next, 0));
+		replication.SendWriter(clientHd, answer);
+		LOG("Stage :: %ls buys a reward pick for %d C-Coin (%d bought)", name, cost, r->bought);
 		return;
 	}
 }
