@@ -255,6 +255,16 @@ void InstancePool::Lane::Update()
 		room->Update(localTime);
 		Logger::gameTag = 0;
 	}
+
+	for(auto room = instancePvpList.begin(); room != instancePvpList.end();) {
+		bool linked = false;
+		foreach_const(c, this->clientList) if(c->sortieUID == room->sortieUID) { linked = true; break; }
+		if(linked || !room->game.Finished()) { ++room; continue; }
+		LOG("[Lane_%d] Destroyed game (sortieUID=%llu)", laneIndex, room->sortieUID);
+		room->game.Cleanup();
+		instancePvpMap.erase(room->sortieUID);
+		room = instancePvpList.erase(room);
+	}
 }
 
 void InstancePool::Lane::Cleanup()

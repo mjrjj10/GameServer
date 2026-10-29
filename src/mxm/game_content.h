@@ -691,6 +691,7 @@ struct GameXmlContent
 		bool enter = false;
 		bool active = false;
 		f32 retrigger = 0;
+		i32 maxTriggers = 0;
 		i32 statusIndex = 0;
 		i32 localID = 0;
 		i32 hitCount = 0;
@@ -907,6 +908,7 @@ struct GameXmlContent
 	{
 		AreaIndex ID;
 		eastl::fixed_vector<StageIndex,16,false> stages;
+		eastl::fixed_vector<StageIndex,64,false> allStages;
 	};
 
 	struct StageMaps

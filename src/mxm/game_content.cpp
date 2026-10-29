@@ -1534,7 +1534,10 @@ bool GameXmlContent::LoadEntrySystems()
 			static const char* STAGE_INDEX_ATTRIBUTES[] = { "_NormalStageIndex", "_EasyStageIndex", "_HardStageIndex", "_ExtremeStageIndex", "_HellStageIndex" };
 			i32 stageID = 0;
 			for(const char* attribute : STAGE_INDEX_ATTRIBUTES) {
-				if(pStage->QueryIntAttribute(attribute, &stageID) == XML_SUCCESS && stageID != 0) break;
+				i32 difficultyStage = 0;
+				if(pStage->QueryIntAttribute(attribute, &difficultyStage) != XML_SUCCESS || difficultyStage == 0) continue;
+				if(!area.allStages.full()) area.allStages.push_back(StageIndex(difficultyStage));
+				if(stageID == 0) stageID = difficultyStage;
 			}
 			if(stageID != 0 && area.stages.size() < area.stages.capacity()) area.stages.push_back(StageIndex(stageID));
 		}
@@ -1590,7 +1593,7 @@ bool GameXmlContent::FindEntryStageArea(i32 entryID, StageIndex stage, AreaIndex
 			foreach_const(areaID, areas) {
 				foreach_const(area, areaStages) {
 					if(area->ID != *areaID) continue;
-					if(eastl::find(area->stages.begin(), area->stages.end(), stage) == area->stages.end()) continue;
+					if(eastl::find(area->allStages.begin(), area->allStages.end(), stage) == area->allStages.end()) continue;
 					*outAreaIndex = area->ID;
 					return true;
 				}
@@ -4380,7 +4383,7 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(pNode->FirstChildElement("_CallSFXInfo")) node.kind = LevelEventNode::CALL_SFX;
 		else if(XMLElement* e = pNode->FirstChildElement("_InitCoolTime")) { node.kind = LevelEventNode::CLIENT_EVENT; node.initTagCool = e->IntAttribute("_CharacterTag") != 0; }
 		else if(XMLElement* e = pNode->FirstChildElement("_CallItemInfo")) { node.kind = LevelEventNode::CALL_ITEM; node.dropIndex = e->IntAttribute("_Index"); node.areaID = e->IntAttribute("_SpawnAreaID"); node.tagID = e->IntAttribute("_TagID", -1); }
-		else if(XMLElement* e = pNode->FirstChildElement("_BoundTriggerData")) { node.kind = LevelEventNode::BOUND_TRIGGER; node.areaID = e->IntAttribute("_AreaID"); node.enter = e->IntAttribute("_IsEnter") == 1; node.active = e->IntAttribute("_Active") == 1; node.retrigger = e->FloatAttribute("_RetriggerDelay"); const char* trigger = e->Attribute("_TrigerType"); node.ownTeamOnly = trigger && EA::StdC::Strcmp(trigger, "TRIGER_MEMBERSHIP_OWN") == 0; }
+		else if(XMLElement* e = pNode->FirstChildElement("_BoundTriggerData")) { node.kind = LevelEventNode::BOUND_TRIGGER; node.areaID = e->IntAttribute("_AreaID"); node.enter = e->IntAttribute("_IsEnter") == 1; node.active = e->IntAttribute("_Active") == 1; node.retrigger = e->FloatAttribute("_RetriggerDelay"); node.maxTriggers = e->IntAttribute("_MaxTriggerCount"); const char* trigger = e->Attribute("_TrigerType"); node.ownTeamOnly = trigger && EA::StdC::Strcmp(trigger, "TRIGER_MEMBERSHIP_OWN") == 0; }
 		else if(XMLElement* e = pNode->FirstChildElement("_StatusChangeInfo")) {
 			node.kind = LevelEventNode::STATUS_CHANGE;
 			const char* applyType = e->Attribute("_ApplyType");

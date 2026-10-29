@@ -532,6 +532,7 @@ void World::CreatePlayerMasters(Player& player)
 	main.skinIndex = player.mainSkin;
 	ComputeGearBonus(main, player.gearDocs[0], player.mainWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType));
 	AddTitleBonus(main, player.statTitle, player.mainWeapon);
+	if(!player.gearDocs[0].empty()) LOG("Gear :: %ls power %d%% attack +%.1f skill power +%.1f health +%.1f defence +%.1f", player.name.data(), GetGameXmlContent().GearPowerPercent(replication->gameType), main.GearBonus(STAT_ATTACK), main.GearBonus(STAT_SKILLPOWER), main.GearBonus(STAT_HEALTH), main.GearBonus((u8)StatType::STAT_TYPE_DEFENCE));
 	main.hpMax = (i32)(MasterStat(main.classType, STAT_HEALTH) + main.GearBonus(STAT_HEALTH));
 	main.hp = main.hpMax;
 	main.seed = (i32)RandUint();
@@ -1125,6 +1126,8 @@ void World::ClearMapContent()
 	npcStatuses.clear();
 	mapInteractions.clear();
 	deadCounts.clear();
+	deadCountsDone.clear();
+	boundTriggerFires.clear();
 	hpTriggersFired.clear();
 	andInputsFired.clear();
 	levelEventsStarted = false;

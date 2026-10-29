@@ -1109,6 +1109,7 @@ public:
 	void GrantMonsterKillPoints(const ActorNpc& npc, ActorUID killerUID);
 	Time nextPassiveExpAt = Time::ZERO;
 	eastl::hash_map<i32,i32> deadCounts;
+	eastl::hash_map<i32,i32> deadCountsDone;
 	eastl::fixed_vector<i32,32,true> hpTriggersFired;
 	i32 winnerTeam = -1;
 	struct TeamVote { bool active = false; u32 type = 0; i32 requestor = -1; Time endAt = Time::ZERO; Time cooldownUntil = Time::ZERO; f32 periodMs = 0; eastl::array<i8,10> choices; };
@@ -1179,6 +1180,7 @@ public:
 	eastl::fixed_vector<MonsterCall,128,false> monsterCalls;
 	struct BoundTriggerState { i32 node; u32 playerIndex; bool inside; Time last; };
 	eastl::fixed_vector<BoundTriggerState,128,true> boundTriggerStates;
+	eastl::hash_map<i32,i32> boundTriggerFires;
 	eastl::fixed_vector<eastl::pair<u32,bool>,16,true> levelTriggerOverrides;
 	eastl::fixed_vector<LevelEventTimer,128,false> levelEventTimers;
 	u32 nextGroundItemUID = 0xC0000400;

@@ -214,6 +214,13 @@ i32 World::AreaOwnerTeam(const GameXmlContent::Map::Area& area) const
 
 void World::SetLevelTriggerActive(u32 nameKey, bool active)
 {
+	if(active && map) {
+		for(i32 slot = 0; slot < (i32)map->levelEvents.size(); slot++) {
+			if(map->levelEvents[slot].nameKey != nameKey) continue;
+			deadCountsDone.erase(slot);
+			boundTriggerFires.erase(slot);
+		}
+	}
 	foreach(t, levelTriggerOverrides) {
 		if(t->first != nameKey) continue;
 		t->second = active;
@@ -347,9 +354,12 @@ void World::OnMonsterDeath(ActorNpc& npc, ActorUID killerUID)
 		foreach_const(n, map->levelEvents) {
 			if(n->kind != GameXmlContent::LevelEventNode::DEAD_COUNT || n->tagID != npc.tagID || !LevelTriggerActive(*n)) continue;
 			if(n->team != Faction::INVALID && n->team != Faction::MONSTER && n->team != killerTeam) continue;
-			i32& count = deadCounts[n->id];
+			const i32 slot = (i32)(n - map->levelEvents.begin());
+			if(deadCountsDone.find(slot) != deadCountsDone.end()) continue;
+			i32& count = deadCounts[slot];
 			if(++count < n->count) continue;
 			count = 0;
+			deadCountsDone[slot] = 1;
 			LOG("LevelEvent :: dead count of tag %d reached (node %d)", npc.tagID, n->id);
 			foreach_const(o, n->outputs) FireLevelEvent(*o, killerIndex, n->id);
 		}
@@ -1199,6 +1209,7 @@ void World::UpdateBoundTriggers()
 		const i32 ownerTeam = n->ownTeamOnly ? AreaOwnerTeam(*area) : -1;
 		const i32 slot = (i32)(n - levelMap.levelEvents.begin());
 		foreach(p, players) {
+			if(n->maxTriggers > 0 && boundTriggerFires[slot] >= n->maxTriggers) break;
 			if(p->dead || !p->body) continue;
 			if(ownerTeam >= 0 && (i32)p->team != ownerTeam) continue;
 			const vec3 pos = p->body->GetWorldPos();
@@ -1216,6 +1227,7 @@ void World::UpdateBoundTriggers()
 			if(state->last != Time::ZERO && TimeDiffSec(TimeDiff(state->last, localTime)) < n->retrigger) continue;
 			state->last = localTime;
 			LOG("LevelEvent :: %ls %s area %d (node %d)", p->name.data(), inside ? "enters" : "leaves", n->areaID, n->id);
+			if(n->maxTriggers > 0) boundTriggerFires[slot]++;
 			foreach_const(o, n->outputs) FireLevelEvent(*o, (i32)p->index, n->id);
 		}
 	}

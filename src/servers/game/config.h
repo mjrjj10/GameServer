@@ -20,6 +20,7 @@ struct CConfigGame
 	i32 DevGxTest = 0;
 	i32 DevMirror = 0;
 	i32 DevNoFireNode = 0;
+	i32 DevAutoStage = 0;
 	i32 HostIP[4] = { 0, 0, 0, 0 };
 	i32 TraceNetwork = false;
 	i32 BotSyncCadence = 0;

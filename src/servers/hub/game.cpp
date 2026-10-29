@@ -339,7 +339,8 @@ void HubGame::OnPlayerChatWhisper(ClientHandle clientHd, const wchar* destNick, 
 void HubGame::OnPlayerEnterCity(ClientHandle clientHd)
 {
 	const i32 userID = plidMap->Get(clientHd);
-	if((Config().DevShowcase || Config().DevAutoQueue) && playerAccountData[userID] && playerMap[userID]->partyUID == PartyUID::INVALID) {
+	if(Config().DevStageSweep > 0 && playerAccountData[userID] && playerMap[userID]->partyUID == PartyUID::INVALID) StartNextSweepStage(clientHd);
+	else if((Config().DevShowcase || Config().DevAutoQueue) && playerAccountData[userID] && playerMap[userID]->partyUID == PartyUID::INVALID) {
 		LOG("[client%x] HubGame :: showcase, auto dispatch", clientHd);
 		OnCreateParty(clientHd, EntrySystemID::ARENA_3v3, StageType::PVP_GAME);
 	}
@@ -351,6 +352,28 @@ void HubGame::OnPlayerEnterCity(ClientHandle clientHd)
 	}
 	LOG("[client%x] HubGame :: entered the city without a leader character, spawning the last one", clientHd);
 	OnPlayerSetLeaderCharacter(clientHd, characterID, skin);
+}
+
+void HubGame::StartNextSweepStage(ClientHandle clientHd)
+{
+	static const StageType MEASURED_PVE_STAGE_TYPE = StageType(1);
+	const i32 userID = plidMap->Get(clientHd);
+	const i32 wanted = Config().DevStageSweep - 1 + stageSweepDone;
+	i32 index = 0;
+	foreach_const(e, GetGameXmlContent().stageEntries) {
+		foreach_const(a, e->areas) {
+			foreach_const(s, a->stages) {
+				if(index++ != wanted) continue;
+				stageSweepDone++;
+				LOG("[client%x] StageSweep :: #%d stage %d", clientHd, wanted + 1, (i32)s->stage);
+				OnCreateParty(clientHd, (EntrySystemID)e->ID, MEASURED_PVE_STAGE_TYPE);
+				pendingPartyGameType[userID] = GameType::PVE_NORMAL;
+				pendingPartyStageIndex[userID] = s->stage;
+				return;
+			}
+		}
+	}
+	LOG("[client%x] StageSweep :: done after %d stage(s)", clientHd, stageSweepDone);
 }
 
 void HubGame::OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID characterID, SkinIndex skinIndex)
@@ -1687,7 +1710,7 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 	party.areaIndex = areaID;
 	party.stageIndex = stageID;
 	party.mapIndex = mapID;
-	if(pendingPartyStageIndex[userID] != StageIndex(0)) SetPartyStage(party, pendingPartyStageIndex[userID]);
+	if(pendingPartyStageIndex[userID] != StageIndex(0) && !SetPartyStage(party, pendingPartyStageIndex[userID])) WARN("[client%x] WARNING: stage %d not available for entry %d", clientHd, (i32)pendingPartyStageIndex[userID], (i32)party.entry);
 	if(party.gameDefinition == GameDefinition::User) PartyPlaceMember(party, &party.memberList.front());
 
 	replication.SendPartyCreateSucess(clientHd, UserID(1), party.stageType);

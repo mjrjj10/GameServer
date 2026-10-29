@@ -10,6 +10,7 @@ bool CConfigGame::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "DevForcedMap=%d", &DevForcedMap) == 1) return true;
 	if(EA::StdC::Sscanf(line, "ShotLeadMs=%d", &ShotLeadMs) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevGameTimeSec=%d", &DevGameTimeSec) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevAutoStage=%d", &DevAutoStage) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcase=%d", &DevShowcase) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcaseCount=%d", &DevShowcaseCount) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcaseSteps=%d", &DevShowcaseSteps) == 1) return true;
@@ -124,6 +125,7 @@ void CConfigGame::Print() const
 	LOG("	DevForcedMap=%d", DevForcedMap);
 	LOG("	ShotLeadMs=%d", ShotLeadMs);
 	LOG("	DevGameTimeSec=%d", DevGameTimeSec);
+	LOG("	DevAutoStage=%d", DevAutoStage);
 	LOG("	HostIP=%d.%d.%d.%d", HostIP[0], HostIP[1], HostIP[2], HostIP[3]);
 	LOG("	TraceNetwork=%d", TraceNetwork);
 	LOG("	WindowWidth=%d", WindowWidth);

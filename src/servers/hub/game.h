@@ -116,6 +116,8 @@ struct HubGame
 	void OnPlayerChatMessage(ClientHandle clientHd, i32 chatType, const wchar* msg, i32 msglen);
 	void OnPlayerChatWhisper(ClientHandle clientHd, const wchar* destNick, const wchar* msg);
 	void OnPlayerEnterCity(ClientHandle clientHd);
+	void StartNextSweepStage(ClientHandle clientHd);
+	i32 stageSweepDone = 0;
 	void OnReturnToCity(ClientHandle clientHd);
 	void BroadcastPlayerStateInTown(i32 userID, i8 state, const u8* modes, i32 modeCount);
 	void OnPraise(ClientHandle clientHd, const wchar* nickname, i32 nicknameLen);

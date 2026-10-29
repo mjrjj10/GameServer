@@ -71,6 +71,7 @@ struct Game
 	bool gameEnded = false;
 	Time tGameEnded = Time::ZERO;
 	bool sentBackToLobby = false;
+	bool Finished() const { return gameEnded && sentBackToLobby; }
 	void EndGame();
 	f64 LevelStartLeadMs() const;
 	Time localTime;
@@ -118,6 +119,12 @@ struct Game
 	i32 zoneIndex = 0;
 	bool zoneLoading = false;
 	void MoveToNextZone();
+	void UpdateAutoStage();
+	Time tAutoStageNext = Time::ZERO;
+	Time tAutoStageWait = Time::ZERO;
+	eastl::fixed_vector<i32,64,true> autoStageVisited;
+	i32 autoStageZone = -1;
+	i32 autoStageZoneKills = 0;
 	bool pveStage = false;
 	bool defenceStage = false;
 	i64 gameStartUnix = 0;
