@@ -990,6 +990,32 @@ static bool MasterHasSkin(const GameXmlContent::Master& master, SkinIndex skin)
 	return skin == SkinIndex::DEFAULT;
 }
 
+void Game::OnTrainingEquipSkill(ClientHandle clientHd, LocalActorID chara, SkillID skill, u32 slot)
+{
+	auto pl = playerMap.find(clientHd);
+	const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(replication.stageIndex);
+	if(pl == playerMap.end() || !stage || stage->gameMode != GameModeType::GAME_MODE_MASTER_TRAINING || slot > 1) return;
+	World::Player& player = world.GetPlayer(pl->second->playerIndex);
+	for(u32 mi = 0; mi < 2; mi++) {
+		if(replication.GetLocalActorID(clientHd, player.characters[mi]->UID) != chara) continue;
+		const GameXmlContent::Master& master = GetGameXmlContent().GetMaster(player.characters[mi]->classType);
+		if(!MasterHasSkill(master, skill)) return;
+		world.ResetSkillPoints(player);
+		SkillID& target = player.skills[mi * 2 + slot];
+		SkillID& other = player.skills[mi * 2 + (slot ^ 1)];
+		if(other == skill) other = target;
+		target = skill;
+		PacketWriter<Sv::SA_SkillSelect,32> answer;
+		answer.Write<LocalActorID>(chara);
+		answer.Write<u32>(0);
+		answer.Write<SkillID>(skill);
+		answer.Write<u32>(slot);
+		replication.SendWriter(clientHd, answer);
+		LOG("Training :: %ls equips skill %d in slot %u of master %u", player.name.data(), (i32)skill, slot, mi);
+		return;
+	}
+}
+
 void Game::ChangeTrainingLoadout(ClientHandle clientHd, const Cl::CN_UNKNOWN_60296::SlotPairData& slots)
 {
 	auto pl = playerMap.find(clientHd);

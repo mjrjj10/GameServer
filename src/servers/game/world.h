@@ -102,7 +102,7 @@ struct World
 		const SkinIndex subSkin;
 
 		const eastl::array<ColliderSize,2> colliderSize;
-		const eastl::array<SkillID,4> skills;
+		eastl::array<SkillID,4> skills;
 		const eastl::array<SkillID,2> stageSkills;
 		const WeaponIndex mainWeapon;
 		const WeaponIndex subWeapon;

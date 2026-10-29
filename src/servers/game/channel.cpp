@@ -122,6 +122,15 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 			if(packetSize < 8) break;
 			game->OnTitanIncarnate(clientHd, *(const i32*)(packetData + 4));
 		} break;
+		case Cl::CQ_RoomEquipSkill::NET_ID: {
+			if(packetSize < 12) break;
+			ConstBuffer buff(packetData, packetSize);
+			const LocalActorID chara = buff.Read<LocalActorID>();
+			const SkillID skill = buff.Read<SkillID>();
+			const u32 slot = buff.Read<u32>();
+			NT_LOG("[client%x] Client :: equip skill in game :: chara=%u skill=%d slot=%u", clientHd, (u32)chara, (i32)skill, slot);
+			game->OnTrainingEquipSkill(clientHd, chara, skill, slot);
+		} break;
 		case Cl::CN_UNKNOWN_60296::NET_ID: {
 			char hex[128] = {0};
 			for(i32 i = 0; i < packetSize && i < 60; i++) snprintf(hex + i * 2, 3, "%02x", packetData[i]);
