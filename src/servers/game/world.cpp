@@ -331,6 +331,7 @@ void World::Replicate()
 		rep.subSkin = player.subSkin;
 		rep.skills = player.skills;
 		rep.stageSkills = player.stageSkills;
+		rep.supportKit = player.supportKit;
 		rep.mainWeapon = player.mainWeapon;
 		rep.subWeapon = player.subWeapon;
 		rep.mainWeaponGrade = player.mainWeaponGrade;

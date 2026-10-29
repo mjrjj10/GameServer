@@ -970,6 +970,15 @@ struct GameXmlContent
 		u32 gold = 0;
 	};
 
+	struct SupportKit
+	{
+		i32 hpPercent = 0;
+		f32 coolTime = 0;
+		i32 coolTimeID = 0;
+		eastl::fixed_vector<i32,4,false> statuses;
+	};
+	eastl::hash_map<i32,SupportKit> supportKits;
+	const SupportKit* FindSupportKit(i32 doc) const { auto f = supportKits.find(doc); return f == supportKits.end() ? nullptr : &f->second; }
 	struct ItemInfo
 	{
 		i32 ID = 0;

@@ -552,6 +552,7 @@ AccountArsenal AccountArsenalLoad(const wchar* nickname)
 		}
 		else if(sscanf(line, "S %d %d", &cls, &a) == 2 && !arsenal.skills.full()) arsenal.skills.push_back(eastl::make_pair(cls, a));
 		else if(sscanf(line, "E %d %d", &cls, &a) == 2) arsenal.SetEquipped(cls, (u8)a);
+		else if(sscanf(line, "P %d", &a) == 1) arsenal.supportKit = a;
 		else if(sscanf(line, "U %d %d", &cls, &a) == 2) arsenal.SetSkillLevel(cls, a);
 		else if(sscanf(line, "K %d %d %d", &cls, &a, &b) == 3) { if(AccountArsenal::SkillLoadout* l = arsenal.Loadout(cls)) { l->skills[0] = a; l->skills[1] = b; } }
 	}
@@ -570,6 +571,7 @@ void AccountArsenalSave(const wchar* nickname, const AccountArsenal& arsenal)
 	foreach_const(w, arsenal.weapons) fprintf(f, "W %d %u %u %u\n", w->classType, (u32)w->type, (u32)w->grade, (u32)w->unlocked);
 	foreach_const(s, arsenal.skills) fprintf(f, "S %d %d\n", s->first, s->second);
 	foreach_const(e, arsenal.equipped) fprintf(f, "E %d %d\n", e->first, e->second);
+	fprintf(f, "P %d\n", arsenal.supportKit);
 	foreach_const(u, arsenal.skillLevels) fprintf(f, "U %d %d\n", u->first, u->second);
 	foreach_const(l, arsenal.loadouts) fprintf(f, "K %d %d %d\n", l->classType, l->skills[0], l->skills[1]);
 	fclose(f);

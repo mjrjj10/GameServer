@@ -545,6 +545,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 		LOG("Damage :: creature %d -> %ls damage=%d hp=%d/%d", (i32)attacker.docID, target.name.data(), damage, chara.hp, chara.hpMax);
 		PassiveOnDamaged(target);
 		if(status > 0) ApplyStatusFromNpc(attacker, target, status);
+		CheckSupportKit(target);
 		return;
 	}
 	target.dead = true;

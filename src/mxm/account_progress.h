@@ -61,6 +61,7 @@ struct AccountArsenal
 	Weapon* FindWeapon(i32 classType, u8 type) { foreach(w, weapons) if(w->classType == classType && w->type == type) return &*w; return nullptr; }
 	const Weapon* FindWeapon(i32 classType, u8 type) const { foreach_const(w, weapons) if(w->classType == classType && w->type == type) return &*w; return nullptr; }
 	eastl::fixed_vector<eastl::pair<i32,i32>,64,false> equipped;
+	i32 supportKit = -1;
 	struct SkillLoadout { i32 classType = 0; eastl::array<i32,2> skills = {}; };
 	eastl::fixed_vector<eastl::pair<i32,i32>,192,false> skillLevels;
 	i32 SkillLevel(i32 skill) const { foreach_const(s, skillLevels) if(s->first == skill) return s->second; return 0; }

@@ -67,6 +67,7 @@ struct Replication
 		SkinIndex subSkin;
 		eastl::array<SkillID,4> skills;
 		eastl::array<SkillID,2> stageSkills;
+		i32 supportKit = -1;
 		WeaponIndex mainWeapon;
 		WeaponIndex subWeapon;
 		i32 mainWeaponGrade;
@@ -366,6 +367,8 @@ struct Replication
 
 	void SendPvpLoadingComplete(ClientHandle clientHd);
 	void SendGameReady(ClientHandle clientHd, i32 waitTime, i32 elapsed, UserID userId);
+	void SendActivatedSupportKit(ClientHandle clientHd, LocalActorID chara, i32 kit, i32 coolTimeID, f32 coolTime);
+	void SendKitConsumed(ClientHandle clientHd, u32 uid, u8 invenType, i32 slot, i32 doc, i32 count);
 	void SendSkillPoints(ClientHandle clientHd, UserID userId, i32 points);
 	void SendSkillUpgradeResult(ClientHandle clientHd, i32 result, ActorUID mainUID, SkillID mainSkill, Slice<const i32> mainProps, ActorUID subUID, SkillID subSkill, Slice<const i32> subProps);
 	void SendPlayerSkillUpdateToAll(ActorUID charaUID, SkillID skill, bool active, Slice<const i32> props);

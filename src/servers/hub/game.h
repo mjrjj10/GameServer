@@ -123,6 +123,7 @@ struct HubGame
 	void OnFriendStateChange(ClientHandle clientHd, u32 state);
 	void OnQuickRunArena(ClientHandle clientHd);
 	void OnArsenal(ClientHandle clientHd, u16 netID, const u8* packetData, i32 packetSize);
+	void OnSelectSupportKit(ClientHandle clientHd, u8 etcType, i32 doc);
 	void SendSummaries(ClientHandle clientHd, const wchar* nickname);
 	void OnTitleSelect(ClientHandle clientHd, i32 displayTitle, i32 statTitle);
 	void OnSummaryInfoEach(ClientHandle clientHd, i32 summary);

@@ -1550,6 +1550,24 @@ bool HubGame::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i3
 			return true;
 		}
 
+		i32 moneyAmount = 0;
+		const bool ccoinCmd = EA::StdC::Sscanf(msg, L"ccoin %d", &moneyAmount) == 1;
+		const bool goldCmd = !ccoinCmd && EA::StdC::Sscanf(msg, L"gold %d", &moneyAmount) == 1;
+		if(ccoinCmd || goldCmd) {
+			Account* account = GearAccount(clientHd);
+			if(!account) return true;
+			AccountProgress progress = AccountProgressLoad(account->nickname.data());
+			if(ccoinCmd) progress.ccoin = MAX(progress.ccoin + moneyAmount, (i64)0);
+			else progress.gold = MAX(progress.gold + moneyAmount, (i64)0);
+			AccountProgressSave(account->nickname.data(), progress);
+			account->gold = progress.gold;
+			account->ccoin = progress.ccoin;
+			if(ccoinCmd) replication.SendCCoin(clientHd, progress.ccoin, 0);
+			else replication.SendMoney(clientHd, progress.gold, 0);
+			SendDbgMsg(clientHd, LFMT(L"%s %d: %lld", ccoinCmd ? L"ccoin" : L"gold", moneyAmount, ccoinCmd ? progress.ccoin : progress.gold));
+			return true;
+		}
+
 		if(EA::StdC::Strncmp(msg, L"lego", 4) == 0) {
 			WorldHub::ActorCore* playerActor = world.FindPlayerActor(playerActorUID[userID]);
 			ASSERT(playerActor);

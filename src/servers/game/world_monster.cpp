@@ -98,6 +98,29 @@ void World::ApplyDeathHit(const DeathHit& hit)
 	LOG("Monster :: creature=%d death remote %d (%s, radius %.0f, damage %d)", (i32)helper->docID, d.remote, d.ally ? "allies" : "enemies", d.radius, damage);
 }
 
+void World::CheckSupportKit(Player& player)
+{
+	if(player.supportKit <= 0 || player.supportKitCount <= 0 || player.dead || player.clientHd == ClientHandle::INVALID) return;
+	if(player.supportKitReadyAt != Time::ZERO && localTime < player.supportKitReadyAt) return;
+	const GameXmlContent::SupportKit* kit = GetGameXmlContent().FindSupportKit(player.supportKit);
+	ActorMaster& chara = player.Main();
+	if(!kit || chara.hp <= 0 || chara.hp * 100 >= chara.hpMax * kit->hpPercent) return;
+	foreach_const(s, kit->statuses) ApplyStatus(player, player, *s);
+	player.supportKitReadyAt = TimeAdd(localTime, TimeMsToTime(kit->coolTime * 1000.0));
+	player.supportKitCount--;
+	replication->SendActivatedSupportKit(player.clientHd, replication->GetLocalActorID(player.clientHd, chara.UID), player.supportKit, kit->coolTimeID, kit->coolTime);
+	AccountInventory inventory = AccountInventoryLoad(player.name.data());
+	for(auto it = inventory.items.begin(); it != inventory.items.end(); ++it) {
+		if(it->docIndex != player.supportKit || it->count <= 0) continue;
+		it->count--;
+		replication->SendKitConsumed(player.clientHd, it->uid, it->invenType, it->slot, it->docIndex, it->count);
+		if(it->count <= 0) inventory.items.erase(it);
+		break;
+	}
+	AccountInventorySave(player.name.data(), inventory);
+	LOG("SupportKit :: %ls kit %d at %d/%d hp (%d left)", player.name.data(), player.supportKit, chara.hp, chara.hpMax, player.supportKitCount);
+}
+
 bool World::LoadProgress(const Player& player)
 {
 	if(player.clientHd == ClientHandle::INVALID || player.index >= achieve.size()) return false;

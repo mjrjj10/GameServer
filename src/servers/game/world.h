@@ -69,6 +69,8 @@ struct World
 		eastl::array<eastl::fixed_vector<i32,6,false>,2> gearDocs;
 		eastl::fixed_vector<eastl::pair<i32,u8>,12,false> stageSkillLevels;
 		i32 statTitle = -1;
+		i32 supportKit = -1;
+		i32 supportKitCount = 0;
 	};
 
 	struct Player
@@ -166,6 +168,9 @@ struct World
 		eastl::fixed_vector<i32,16,true> hitByDocs;
 		eastl::fixed_vector<i32,16,true> npcStatuses;
 		Time campTeleportAt = Time::ZERO;
+		i32 supportKit = -1;
+		i32 supportKitCount = 0;
+		Time supportKitReadyAt = Time::ZERO;
 		i32 campStartArea = 0;
 		i32 campDestArea = 0;
 		bool removed = false;
@@ -375,6 +380,8 @@ struct World
 			gearDocs(desc.gearDocs),
 			statTitle(desc.statTitle)
 		{
+			supportKit = desc.supportKit;
+			supportKitCount = desc.supportKitCount;
 			foreach_const(s, desc.stageSkillLevels) skillLevels[s->first] = s->second;
 		}
 
@@ -839,6 +846,7 @@ struct World
 	void WeaponLifesteal(Player& attacker, i32 damage);
 	void DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, i32 remote, i32 status, u32 remoteID = 0);
 	void MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDoc);
+	void CheckSupportKit(Player& player);
 	bool LoadProgress(const Player& player);
 	void AchieveLive(const Player& player, const AchieveEvent& ev);
 	void SummaryLive(const Player& player, i32 summary, i32 stage, u8 type, i32 data);

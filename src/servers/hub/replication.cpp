@@ -874,8 +874,13 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 	// SN_AccountEquipmentList
 	{
 		PacketWriter<Sv::SN_AccountEquipmentList> packet;
-
-		packet.Write<i32>(-1);
+		const i32 kit = AccountArsenalLoad(account.nickname.data()).supportKit;
+		bool owned = false;
+		if(kit > 0) {
+			const AccountInventory inventory = AccountInventoryLoad(account.nickname.data());
+			foreach_const(it, inventory.items) if(it->docIndex == kit && it->count > 0) owned = true;
+		}
+		packet.Write<i32>(owned ? kit : -1);
 
 		SendPacket(clientHd, packet);
 	}

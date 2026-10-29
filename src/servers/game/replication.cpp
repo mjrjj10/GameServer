@@ -918,7 +918,7 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 	// SN_AccountEquipmentList
 	{
 		PacketWriter<Sv::SN_AccountEquipmentList,4096> packet;
-		packet.Write<i32>(supportKitIndex);
+		packet.Write<i32>(player->supportKit);
 		SendPacket(clientHd, packet);
 	}
 
@@ -992,7 +992,7 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 			packet.Write<SkillID>(p.skills[3]);
 			packet.Write<SkillID>(p.stageSkills[0]);
 			packet.Write<SkillID>(p.stageSkills[1]);
-			packet.Write<i32>(supportKitIndex);
+			packet.Write<i32>(p.supportKit);
 			packet.Write<u8>(p.clientHd == ClientHandle::INVALID);
 		}
 
@@ -1084,6 +1084,34 @@ void Replication::SendGameReady(ClientHandle clientHd, i32 waitTime, i32 elapsed
 
 	notify.skillPoint = 1;
 	SendPacket(clientHd, notify);
+}
+
+void Replication::SendActivatedSupportKit(ClientHandle clientHd, LocalActorID chara, i32 kit, i32 coolTimeID, f32 coolTime)
+{
+	PacketWriter<Sv::SN_ActivatedSupportkit,32> packet;
+	packet.Write<LocalActorID>(chara);
+	packet.Write<i32>(kit);
+	packet.Write<i32>(coolTimeID);
+	packet.Write<f32>(coolTime);
+	SendPacket(clientHd, packet);
+}
+
+void Replication::SendKitConsumed(ClientHandle clientHd, u32 uid, u8 invenType, i32 slot, i32 doc, i32 count)
+{
+	static const u32 MEASURED_ITEM_UPDATE_REASON_SUPPORT_KIT = 202;
+	PacketWriter<Sv::SN_ItemUpdate,64> packet;
+	packet.Write<u16>(1);
+	packet.Write<u32>(uid);
+	packet.Write<u8>(count > 0 ? invenType : 0);
+	packet.Write<i32>(count > 0 ? slot : 0);
+	packet.Write<i32>(count > 0 ? doc : 0);
+	packet.Write<i32>(count > 0 ? count : 0);
+	packet.Write<i32>(count > 0 ? -1 : 0);
+	packet.Write<u8>(0);
+	packet.Write<i64>(0);
+	packet.Write<u16>(0);
+	packet.Write<u32>(MEASURED_ITEM_UPDATE_REASON_SUPPORT_KIT);
+	SendPacket(clientHd, packet);
 }
 
 void Replication::SendSkillPoints(ClientHandle clientHd, UserID userId, i32 points)

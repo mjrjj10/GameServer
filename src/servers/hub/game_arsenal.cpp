@@ -294,6 +294,31 @@ bool ArsenalHandle(Account& account, u16 netID, const u8* packetData, i32 packet
 	return true;
 }
 
+void HubGame::OnSelectSupportKit(ClientHandle clientHd, u8 etcType, i32 doc)
+{
+	static const u32 HYP_SELECT_KIT_FAILED = 1;
+	Account* account = GearAccount(clientHd);
+	if(!account) return;
+	bool owned = doc <= 0;
+	if(!owned && GetGameXmlContent().FindSupportKit(doc)) {
+		const AccountInventory inventory = AccountInventoryLoad(account->nickname.data());
+		foreach_const(it, inventory.items) if(it->docIndex == doc && it->count > 0) owned = true;
+	}
+	PacketWriter<Sv::SA_SelectAccountEquipment,16> answer;
+	answer.Write<u32>(owned ? 0 : HYP_SELECT_KIT_FAILED);
+	answer.Write<u8>(etcType);
+	answer.Write<i32>(doc);
+	replication.SendWriter(clientHd, answer);
+	if(!owned) return;
+	AccountArsenal arsenal = AccountArsenalLoad(account->nickname.data());
+	arsenal.supportKit = doc > 0 ? doc : -1;
+	AccountArsenalSave(account->nickname.data(), arsenal);
+	PacketWriter<Sv::SN_AccountEquipmentList,16> list;
+	list.Write<i32>(arsenal.supportKit);
+	replication.SendWriter(clientHd, list);
+	LOG("[client%x] Arsenal :: %ls support kit %d", clientHd, account->nickname.data(), arsenal.supportKit);
+}
+
 void HubGame::OnArsenal(ClientHandle clientHd, u16 netID, const u8* packetData, i32 packetSize)
 {
 	Account* account = GearAccount(clientHd);
