@@ -5,6 +5,7 @@
 #include <string.h>
 #include <direct.h>
 #include <mutex>
+#include "safe_file.h"
 
 static const char* ACCOUNT_DIR = "accounts";
 static std::mutex g_accountFileMutex;
@@ -43,12 +44,10 @@ void AccountSettingsSave(const wchar* nickname, u8 settingType, const u8* data, 
 	char tmp[520];
 	AccountPath(nickname, ext, path, sizeof(path));
 	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
-	FILE* f = fopen(tmp, "wb");
+	FILE* f = SafeFileOpen(path, tmp, sizeof(tmp));
 	ASSERT(f);
 	fwrite(data, 1, size, f);
-	fclose(f);
-	remove(path);
-	rename(tmp, path);
+	SafeFileCommit(f, tmp, path);
 }
 
 static const i32 NEW_ACCOUNT_CLEARED_STAGES[] = { 200003200, 200007101, 200008000 };
@@ -80,12 +79,10 @@ void AccountStagesSave(const wchar* nickname, const AccountStages& stages)
 	char tmp[520];
 	AccountPath(nickname, "stages", path, sizeof(path));
 	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
-	FILE* f = fopen(tmp, "wb");
+	FILE* f = SafeFileOpen(path, tmp, sizeof(tmp));
 	ASSERT(f);
 	foreach_const(s, stages.cleared) fprintf(f, "%d\n", *s);
-	fclose(f);
-	remove(path);
-	rename(tmp, path);
+	SafeFileCommit(f, tmp, path);
 }
 
 AccountProgress AccountProgressLoad(const wchar* nickname)
@@ -123,13 +120,11 @@ void AccountProgressSave(const wchar* nickname, const AccountProgress& progress)
 	char tmp[520];
 	AccountPath(nickname, "txt", path, sizeof(path));
 	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
-	FILE* f = fopen(tmp, "wb");
+	FILE* f = SafeFileOpen(path, tmp, sizeof(tmp));
 	ASSERT(f);
 	fprintf(f, "Level=%u\nExp=%u\nGold=%lld\nWins=%u\nDraws=%u\nLosses=%u\nHonors=%u\nCCoin=%lld\nInventoryLines=%d %d %d\nActivity=%d %u %lld\n", (u32)progress.level, progress.levelExp, (long long)progress.gold, progress.wins, progress.draws, progress.losses, progress.honors, (long long)progress.ccoin,
 		progress.inventoryLines[0], progress.inventoryLines[1], progress.inventoryLines[2], progress.activityPoint, (u32)progress.activityRewarded, (long long)progress.activityPeriod);
-	fclose(f);
-	remove(path);
-	rename(tmp, path);
+	SafeFileCommit(f, tmp, path);
 }
 
 void AccountGameRecordAppend(const wchar* nickname, const AccountGameRecord& record)
@@ -223,12 +218,13 @@ void AccountPvpHistorySave(const wchar* nickname, const AccountPvpHistory& histo
 	_mkdir(ACCOUNT_DIR);
 	char path[512];
 	AccountPath(nickname, "pvp", path, sizeof(path));
-	FILE* f = fopen(path, "wb");
+	char tmpPath[520];
+	FILE* f = SafeFileOpen(path, tmpPath, sizeof(tmpPath));
 	if(!f) return;
 	foreach_const(s, history.stats) fprintf(f, "S %u %u %u %u %u %u %u %u %u %u %u\n", (u32)s->gameType, (u32)s->saveType, s->win, s->lose, s->draw, s->leave, s->kill, s->death, s->assist, s->score, s->captures);
 	foreach_const(r, history.recent) fprintf(f, "R %u %u %u %d %d %d %d %d %u %u %u %u %u %u %lld\n", (u32)r->gameType, (u32)r->saveType, (u32)r->result, r->classes[0], r->classes[1], r->myScore, r->myTeamScore, r->enemyTeamScore,
 		(u32)r->myCount, (u32)r->enemyCount, (u32)r->kill, (u32)r->death, (u32)r->assist, (u32)r->occupy, (long long)r->beginTime);
-	fclose(f);
+	SafeFileCommit(f, tmpPath, path);
 }
 
 void AccountPvpHistoryAdd(AccountPvpHistory* history, const AccountGameRecord& record)
@@ -297,10 +293,11 @@ void AccountTierSave(const wchar* nickname, const AccountTier& tier)
 	_mkdir(ACCOUNT_DIR);
 	char path[512];
 	AccountPath(nickname, "tier", path, sizeof(path));
-	FILE* f = fopen(path, "wb");
+	char tmpPath[520];
+	FILE* f = SafeFileOpen(path, tmpPath, sizeof(tmpPath));
 	if(!f) return;
 	fprintf(f, "%d %d %d %d %d %d\n", tier.tierType, tier.points, tier.win, tier.draw, tier.lose, tier.leave);
-	fclose(f);
+	SafeFileCommit(f, tmpPath, path);
 }
 
 static bool DefenceRecordBetter(const DefenceRecord& a, const DefenceRecord& b)
@@ -321,10 +318,11 @@ static DefenceRecord DefenceRecordRead(const char* path)
 static void DefenceRecordWrite(const char* path, const DefenceRecord& record)
 {
 	_mkdir(ACCOUNT_DIR);
-	FILE* f = fopen(path, "wb");
+	char tmpPath[520];
+	FILE* f = SafeFileOpen(path, tmpPath, sizeof(tmpPath));
 	if(!f) return;
 	fprintf(f, "%d %u\n", record.step, record.timeMs);
-	fclose(f);
+	SafeFileCommit(f, tmpPath, path);
 }
 
 DefenceRecord AccountDefenceRecordLoad(const wchar* nickname)
@@ -436,13 +434,11 @@ void AccountMissionsSave(const wchar* nickname, const AccountMissions& missions)
 	char tmp[520];
 	AccountPath(nickname, "missions", path, sizeof(path));
 	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
-	FILE* f = fopen(tmp, "wb");
+	FILE* f = SafeFileOpen(path, tmp, sizeof(tmp));
 	ASSERT(f);
 	foreach_const(s, missions.states) fprintf(f, "M %d %lld %lld %u\n", s->ID, (long long)s->period, (long long)s->progress, (u32)s->rewarded);
 	foreach_const(c, missions.dailyChanges) fprintf(f, "C %d %lld %d %u\n", c->step, (long long)c->period, c->missionID, (u32)c->changedCount);
-	fclose(f);
-	remove(path);
-	rename(tmp, path);
+	SafeFileCommit(f, tmp, path);
 }
 
 bool AccountExists(const wchar* nickname)
@@ -502,7 +498,7 @@ void AccountFriendsSave(const wchar* nickname, const AccountFriends& friends)
 	char tmp[520];
 	AccountPath(nickname, "friends", path, sizeof(path));
 	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
-	FILE* f = fopen(tmp, "wb");
+	FILE* f = SafeFileOpen(path, tmp, sizeof(tmp));
 	ASSERT(f);
 	foreach_const(n, friends.friends) {
 		fputs("F ", f);
@@ -529,9 +525,7 @@ void AccountFriendsSave(const wchar* nickname, const AccountFriends& friends)
 		WriteHexName(f, friends.statusMessage);
 		fputc('\n', f);
 	}
-	fclose(f);
-	remove(path);
-	rename(tmp, path);
+	SafeFileCommit(f, tmp, path);
 }
 
 AccountArsenal AccountArsenalLoad(const wchar* nickname)
@@ -566,7 +560,8 @@ void AccountArsenalSave(const wchar* nickname, const AccountArsenal& arsenal)
 	_mkdir(ACCOUNT_DIR);
 	char path[512];
 	AccountPath(nickname, "arsenal", path, sizeof(path));
-	FILE* f = fopen(path, "wb");
+	char tmpPath[520];
+	FILE* f = SafeFileOpen(path, tmpPath, sizeof(tmpPath));
 	if(!f) return;
 	foreach_const(w, arsenal.weapons) fprintf(f, "W %d %u %u %u\n", w->classType, (u32)w->type, (u32)w->grade, (u32)w->unlocked);
 	foreach_const(s, arsenal.skills) fprintf(f, "S %d %d\n", s->first, s->second);
@@ -574,7 +569,7 @@ void AccountArsenalSave(const wchar* nickname, const AccountArsenal& arsenal)
 	fprintf(f, "P %d\n", arsenal.supportKit);
 	foreach_const(u, arsenal.skillLevels) fprintf(f, "U %d %d\n", u->first, u->second);
 	foreach_const(l, arsenal.loadouts) fprintf(f, "K %d %d %d\n", l->classType, l->skills[0], l->skills[1]);
-	fclose(f);
+	SafeFileCommit(f, tmpPath, path);
 }
 
 AccountGears AccountGearsLoad(const wchar* nickname)
@@ -612,7 +607,8 @@ void AccountGearsSave(const wchar* nickname, const AccountGears& gears)
 	_mkdir(ACCOUNT_DIR);
 	char path[512];
 	AccountPath(nickname, "gears", path, sizeof(path));
-	FILE* f = fopen(path, "wb");
+	char tmpPath[520];
+	FILE* f = SafeFileOpen(path, tmpPath, sizeof(tmpPath));
 	ASSERT(f);
 	foreach_const(p, gears.pages) {
 		fprintf(f, "P ");
@@ -622,7 +618,7 @@ void AccountGearsSave(const wchar* nickname, const AccountGears& gears)
 		fprintf(f, "\n");
 	}
 	foreach_const(s, gears.selected) fprintf(f, "S %d %d\n", s->first, (i32)s->second);
-	fclose(f);
+	SafeFileCommit(f, tmpPath, path);
 }
 
 AccountInventory AccountInventoryLoad(const wchar* nickname)
@@ -701,13 +697,11 @@ void AccountInventorySave(const wchar* nickname, const AccountInventory& invento
 	char tmp[520];
 	AccountPath(nickname, "items", path, sizeof(path));
 	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
-	FILE* f = fopen(tmp, "wb");
+	FILE* f = SafeFileOpen(path, tmp, sizeof(tmp));
 	ASSERT(f);
 	fprintf(f, "N %u\n", inventory.nextUid);
 	foreach_const(it, inventory.items) fprintf(f, "I %u %u %d %d %d\n", it->uid, (u32)it->invenType, it->slot, it->docIndex, it->count);
-	fclose(f);
-	remove(path);
-	rename(tmp, path);
+	SafeFileCommit(f, tmp, path);
 }
 
 AccountAchievements AccountAchievementsLoad(const wchar* nickname)
@@ -758,7 +752,8 @@ void AccountAchievementsSave(const wchar* nickname, const AccountAchievements& a
 	_mkdir(ACCOUNT_DIR);
 	char path[512];
 	AccountPath(nickname, "achieve", path, sizeof(path));
-	FILE* f = fopen(path, "wb");
+	char tmpPath[520];
+	FILE* f = SafeFileOpen(path, tmpPath, sizeof(tmpPath));
 	if(!f) return;
 	fprintf(f, "D %d %d\n", acc.displayTitle, acc.statTitle);
 	fprintf(f, "B %u\n", (u32)acc.badge);
@@ -768,7 +763,7 @@ void AccountAchievementsSave(const wchar* nickname, const AccountAchievements& a
 		foreach_const(a, s->achieved) fprintf(f, " %d", *a);
 		fprintf(f, "\n");
 	}
-	fclose(f);
+	SafeFileCommit(f, tmpPath, path);
 }
 
 AccountSummaries AccountSummariesLoad(const wchar* nickname)
@@ -800,9 +795,10 @@ void AccountSummariesSave(const wchar* nickname, const AccountSummaries& s)
 	_mkdir(ACCOUNT_DIR);
 	char path[512];
 	AccountPath(nickname, "summary", path, sizeof(path));
-	FILE* f = fopen(path, "wb");
+	char tmpPath[520];
+	FILE* f = SafeFileOpen(path, tmpPath, sizeof(tmpPath));
 	if(!f) return;
 	foreach_const(e, s.entries) fprintf(f, "%d %d %u %d %u %lld\n", e->summary, e->stage, (u32)e->type, e->data, (u32)e->received, (long long)e->date);
-	fclose(f);
+	SafeFileCommit(f, tmpPath, path);
 }
 

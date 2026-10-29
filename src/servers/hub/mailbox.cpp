@@ -1,4 +1,5 @@
 #include "mailbox.h"
+#include <mxm/safe_file.h>
 #include <mutex>
 #include <time.h>
 #include <stdio.h>
@@ -72,9 +73,7 @@ static void SaveMails()
 		foreach_const(it, m->items) fprintf(f, " %d %d", it->index, it->count);
 		fputc('\n', f);
 	}
-	fclose(f);
-	remove(MAIL_PATH);
-	rename(MAIL_TMP_PATH, MAIL_PATH);
+	SafeFileCommit(f, MAIL_TMP_PATH, MAIL_PATH);
 }
 
 static void LoadMails()

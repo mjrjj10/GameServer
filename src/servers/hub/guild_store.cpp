@@ -1,4 +1,5 @@
 #include "guild_store.h"
+#include <mxm/safe_file.h>
 #include <stdio.h>
 #include <direct.h>
 
@@ -185,9 +186,7 @@ void GuildStore::Save()
 			fputc('\n', f);
 		}
 	}
-	fclose(f);
-	remove(GUILD_PATH);
-	rename(GUILD_TMP_PATH, GUILD_PATH);
+	SafeFileCommit(f, GUILD_TMP_PATH, GUILD_PATH);
 }
 
 GuildRecord* GuildStore::FindByMember(const WideString& nickname)

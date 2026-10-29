@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <direct.h>
 #include <mutex>
+#include "safe_file.h"
 
 static const char* PVE_RANKING_DIR = "accounts";
 static const i32 PVE_RANKING_KEEP = 200;
@@ -98,7 +99,8 @@ void PveRankingSubmit(const PveRankingEntry& entry)
 	_mkdir(PVE_RANKING_DIR);
 	char path[256];
 	RankingPath(entry.stage, path, sizeof(path));
-	FILE* f = fopen(path, "wb");
+	char tmpPath[520];
+	FILE* f = SafeFileOpen(path, tmpPath, sizeof(tmpPath));
 	if(!f) return;
 	foreach_const(e, ranking) {
 		fprintf(f, "%u %u %u %u %d", e->totalScore, e->playMs, e->deaths, (u32)e->clearRank, (i32)e->members.size());
@@ -109,7 +111,7 @@ void PveRankingSubmit(const PveRankingEntry& entry)
 		}
 		fprintf(f, "\n");
 	}
-	fclose(f);
+	SafeFileCommit(f, tmpPath, path);
 }
 
 eastl::vector<PveRankingEntry> PveRankingLoad(i32 stage)
@@ -132,10 +134,11 @@ void PveRankingSetLastGame(const wchar* nickname, i32 stage)
 	HexNick(nickname, hex, sizeof(hex));
 	char path[512];
 	snprintf(path, sizeof(path), "%s/%s.lastpve", PVE_RANKING_DIR, hex);
-	FILE* f = fopen(path, "wb");
+	char tmpPath[520];
+	FILE* f = SafeFileOpen(path, tmpPath, sizeof(tmpPath));
 	if(!f) return;
 	fprintf(f, "%d\n", stage);
-	fclose(f);
+	SafeFileCommit(f, tmpPath, path);
 }
 
 i32 PveRankingTakeLastGame(const wchar* nickname)
