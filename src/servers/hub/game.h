@@ -90,8 +90,10 @@ struct HubGame
 	eastl::array<u8,MAX_PLAYERS> pendingPartySelectMaster;
 	eastl::array<StageIndex,MAX_PLAYERS> pendingPartyStageIndex;
 	eastl::array<bool,MAX_PLAYERS> pendingRegame = {};
-	struct SortieMember { AccountUID accountUID; u8 row; u32 teamType; bool bot; };
-	struct SortieRoster { SortieUID sortieUID; eastl::fixed_vector<SortieMember,16,false> members; };
+	struct SortieMember { AccountUID accountUID; u8 row; u32 teamType; bool bot; WideString nick; u8 team = 0; bool stayJoined = false; };
+	struct SortieRoster { SortieUID sortieUID; eastl::fixed_vector<SortieMember,16,false> members; EntrySystemID entry; StageType stageType; StageIndex stage; GameType gameType; GameDefinition gameDefinition; Time stayEndAt = Time::ZERO; bool stayDone = false; };
+	struct StayInvite { WideString leader; WideString invitee; };
+	eastl::fixed_vector<StayInvite,16,false> stayInvites;
 	eastl::fixed_vector<SortieRoster,MAX_PLAYERS,false> sortieRosters;
 	void BroadcastSortieConfirm(const SortieRoster& roster, u8 row, u32 teamType, bool confirm);
 
@@ -151,6 +153,9 @@ struct HubGame
 	void OnPartyAddBot(ClientHandle clientHd);
 	void OnPartyRemoveBot(ClientHandle clientHd, u32 userId);
 	void OnStartGame(ClientHandle clientHd);
+	void OnStayAsTeam(ClientHandle clientHd, bool join);
+	SortieRoster* FindResultRoster(i32 userID, SortieMember** member);
+	void UpdateStayAsTeam();
 	void OnRegame(ClientHandle clientHd);
 	i32 PartyTeamCapacity(const Party& party, u32 team) const;
 	bool PartyPlaceMember(Party& party, Party::Member* member) const;

@@ -232,7 +232,7 @@ struct HubReplication
 	void SendSelfExp(ClientHandle clientHd);
 	void SendLoadLobby(ClientHandle clientHd, MapIndex stageIndex, bool joinCity);
 	void SendJoinCity(ClientHandle clientHd);
-	void SendResultScreenStart(ClientHandle clientHd);
+	void SendResultScreenStart(ClientHandle clientHd, u32 stayVoteMs);
 	void SendUserReturnToCity(ClientHandle clientHd, const wchar* nickname);
 	void SendReturnToCity(ClientHandle clientHd);
 	void SendPraiseResult(ClientHandle clientHd, u32 errorType);

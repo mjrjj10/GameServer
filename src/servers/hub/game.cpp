@@ -40,6 +40,7 @@ void HubGame::Update(Time localTime_)
 	ProfileFunction();
 
 	localTime = localTime_;
+	UpdateStayAsTeam();
 	world.Update(localTime);
 	replication.FrameEnd();
 }
@@ -223,7 +224,14 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 			LOG("[client%x] HubGame :: back from game %llu, result screen", clientHd, (u64)resultSortieUID);
 			playerMap[userID]->resultSortieUID = resultSortieUID;
 			replication.SendLoadLobby(clientHd, MapIndex::LOBBY_NORMAL, false);
-			replication.SendResultScreenStart(clientHd);
+			u32 stayVoteMs = MEASURED_RESTART_VOTE_SHORT_MS;
+			foreach(r, sortieRosters) {
+				if(r->sortieUID != resultSortieUID) continue;
+				const GameXmlContent::StageMaps* maps = GetGameXmlContent().FindStageMaps(r->stage);
+				if(maps && maps->gameMode == GameModeType::GAME_MODE_GOT) stayVoteMs = MEASURED_RESTART_VOTE_MS;
+				if(r->stayEndAt == Time::ZERO) r->stayEndAt = TimeAdd(localTime, TimeMsToTime(stayVoteMs));
+			}
+			replication.SendResultScreenStart(clientHd, stayVoteMs);
 		}
 	}
 }
@@ -435,6 +443,10 @@ void HubGame::OnReturnToCity(ClientHandle clientHd)
 	ASSERT(playerAccountData[userID]);
 	const WideString& nickname = playerAccountData[userID]->nickname;
 	const SortieUID resultSortieUID = playerMap[userID]->resultSortieUID;
+	playerMap[userID]->resultSortieUID = SortieUID::INVALID;
+	SortieMember* stayMember = nullptr;
+	playerMap[userID]->resultSortieUID = resultSortieUID;
+	if(FindResultRoster(userID, &stayMember) && stayMember) stayMember->stayJoined = false;
 	playerMap[userID]->resultSortieUID = SortieUID::INVALID;
 	replication.SendUserReturnToCity(clientHd, nickname.data());
 	if(resultSortieUID != SortieUID::INVALID) {
@@ -939,6 +951,88 @@ void HubGame::OnRegame(ClientHandle clientHd)
 	pendingPartyStageIndex[userID] = regame.stage;
 	pendingRegame[userID] = true;
 	LOG("[client%x] HubGame :: regame stage %d", clientHd, (i32)regame.stage);
+}
+
+HubGame::SortieRoster* HubGame::FindResultRoster(i32 userID, SortieMember** member)
+{
+	*member = nullptr;
+	if(!playerAccountData[userID] || playerMap[userID] == playerList.end()) return nullptr;
+	const SortieUID sortieUID = playerMap[userID]->resultSortieUID;
+	if(sortieUID == SortieUID::INVALID) return nullptr;
+	foreach(r, sortieRosters) {
+		if(r->sortieUID != sortieUID) continue;
+		foreach(m, r->members) if(!m->bot && m->nick == playerAccountData[userID]->nickname) *member = &*m;
+		return &*r;
+	}
+	return nullptr;
+}
+
+void HubGame::OnStayAsTeam(ClientHandle clientHd, bool join)
+{
+	static const u32 HYP_STAY_REFUSED = 1;
+	const i32 userID = plidMap->Get(clientHd);
+	SortieMember* member = nullptr;
+	SortieRoster* roster = FindResultRoster(userID, &member);
+	const bool ok = roster && member && !roster->stayDone;
+	if(join) {
+		PacketWriter<Sv::SA_RestartPvpEntryJoin,8> answer;
+		answer.Write<u32>(ok ? 0 : HYP_STAY_REFUSED);
+		replication.SendWriter(clientHd, answer);
+	}
+	else {
+		PacketWriter<Sv::SA_RestartPvpEntryLeave,8> answer;
+		answer.Write<u32>(ok ? 0 : HYP_STAY_REFUSED);
+		replication.SendWriter(clientHd, answer);
+	}
+	if(!ok) return;
+	member->stayJoined = join;
+	foreach_const(m, roster->members) {
+		if(m->bot || m->team != member->team) continue;
+		const i32 mateID = FindUserByNickname(m->nick);
+		if(mateID < 0 || playerMap[mateID] == playerList.end() || playerMap[mateID]->resultSortieUID != roster->sortieUID) continue;
+		PacketWriter<Sv::SN_RestartPvpEntryUpdate,128> update;
+		update.WriteStringObj(member->nick.data());
+		update.Write<u8>(join ? 1 : 0);
+		replication.SendWriter(playerMap[mateID]->clientHd, update);
+	}
+	LOG("[client%x] HubGame :: %ls %s the team for sortie %llu", clientHd, member->nick.data(), join ? "stays in" : "leaves", (u64)roster->sortieUID);
+}
+
+void HubGame::UpdateStayAsTeam()
+{
+	foreach(r, sortieRosters) {
+		if(r->stayDone || r->stayEndAt == Time::ZERO || localTime < r->stayEndAt) continue;
+		r->stayDone = true;
+		for(u8 team = 0; team < 2; team++) {
+			eastl::fixed_vector<i32,8,false> stayers;
+			foreach_const(m, r->members) {
+				if(m->bot || !m->stayJoined || m->team != team || stayers.full()) continue;
+				const i32 id = FindUserByNickname(m->nick);
+				if(id >= 0 && playerMap[id] != playerList.end() && playerMap[id]->resultSortieUID == r->sortieUID) stayers.push_back(id);
+			}
+			if(stayers.empty()) continue;
+			foreach_const(id, stayers) {
+				const ClientHandle hd = playerMap[*id]->clientHd;
+				PacketWriter<Sv::SN_RestartPvpGameInfo,16> info;
+				info.Write<StageIndex>(r->stage);
+				info.Write<u8>((u8)r->gameType);
+				info.Write<u8>((u8)r->gameDefinition);
+				replication.SendWriter(hd, info);
+				PacketWriter<Sv::SN_RestartPvpEntryFinish,8> finish;
+				replication.SendWriter(hd, finish);
+			}
+			const i32 leader = stayers.front();
+			const ClientHandle leaderHd = playerMap[leader]->clientHd;
+			for(i32 i = 1; i < (i32)stayers.size() && !stayInvites.full(); i++) stayInvites.push_back({ playerAccountData[leader]->nickname, playerAccountData[stayers[i]]->nickname });
+			if(!FindPlayerParty(leader)) {
+				OnCreateParty(leaderHd, r->entry, r->stageType);
+				pendingPartyGameType[leader] = r->gameType;
+				pendingPartyDefinition[leader] = r->gameDefinition;
+				pendingPartyStageIndex[leader] = r->stage;
+			}
+			LOG("HubGame :: %d player(s) stay as a team after sortie %llu", (i32)stayers.size(), (u64)r->sortieUID);
+		}
+	}
 }
 
 void HubGame::OnPartyModify(ClientHandle clientHd, StageIndex stage, GameType gameType, GameDefinition gameDefinition, u8 selectMasterType)
@@ -1584,6 +1678,11 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 	replication.SendPartyCreateSucess(clientHd, UserID(1), party.stageType);
 	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_IN_CREATION);
 	if(Config().DevShowcase || Config().DevAutoQueue || pendingRegame[userID]) OnEnqueueGame(clientHd);
+	for(auto s = stayInvites.begin(); s != stayInvites.end();) {
+		if(s->leader != playerAccountData[userID]->nickname) { ++s; continue; }
+		OnPartyInvite(clientHd, s->invitee.data(), (i32)s->invitee.size());
+		s = stayInvites.erase(s);
+	}
 	pendingRegame[userID] = false;
 }
 
@@ -1621,10 +1720,18 @@ void HubGame::MmOnMatchFound(const In::MN_MatchingPartyFound& matchingParty)
 		sortieRosters.push_back();
 		roster = &sortieRosters.back();
 		roster->sortieUID = matchingParty.sortieUID;
+		roster->entry = party.entry;
+		roster->stageType = party.stageType;
+		roster->stage = party.stageIndex;
+		roster->gameType = matchingParty.gameType;
+		roster->gameDefinition = party.gameDefinition;
 		const bool pve = matchingParty.gameType == GameType::PVE_NORMAL || matchingParty.gameType == GameType::PVE_RANDOM || matchingParty.gameType == GameType::PVE_TICKET;
 		for(i32 i = 0; i < matchingParty.playerCount && !roster->members.full(); i++) {
 			const auto& p = matchingParty.playerList[i];
 			roster->members.push_back({ p.accountUID, (u8)rowIDs[i], pve || p.team > 1 ? 0u : (u32)TeamType::RED + p.team, p.isBot != 0 });
+			roster->members.back().team = p.team;
+			auto h = accountClientHandleMap.find(p.accountUID);
+			if(h != accountClientHandleMap.end() && playerAccountData[plidMap->Get(h->second)]) roster->members.back().nick = playerAccountData[plidMap->Get(h->second)]->nickname;
 		}
 	}
 	foreach_const(m, party.memberList) {

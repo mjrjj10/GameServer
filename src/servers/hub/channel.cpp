@@ -15,6 +15,8 @@ static const u16 MEASURED_CQ_TITLE_SELECT = 60056;
 static const u16 MEASURED_CQ_MASTERGEAR_ADD = 60068;
 static const u16 MEASURED_CQ_SELECT_SUPPORT_KIT = 60057;
 static const u16 MEASURED_CQ_REGAME = 60093;
+static const u16 MEASURED_CQ_STAY_JOIN = 60095;
+static const u16 MEASURED_CQ_STAY_LEAVE = 60096;
 static const u16 MEASURED_CQ_SERVER_UTC_TIME = 60131;
 
 bool HubPacketHandler::Init(HubGame* game_)
@@ -140,6 +142,11 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 			PacketWriter<Sv::SN_ServerUtcTime,16> answer;
 			answer.Write<i64>(FILETIME_UNIX_EPOCH + (i64)time(nullptr) * FILETIME_PER_SEC);
 			game->replication.SendWriter(clientHd, answer);
+		} break;
+		case MEASURED_CQ_STAY_JOIN:
+		case MEASURED_CQ_STAY_LEAVE: {
+			NT_LOG("[client%x] Client :: stay as a team :: %s", clientHd, header.netID == MEASURED_CQ_STAY_JOIN ? "join" : "leave");
+			game->OnStayAsTeam(clientHd, header.netID == MEASURED_CQ_STAY_JOIN);
 		} break;
 		case MEASURED_CQ_REGAME: {
 			NT_LOG("[client%x] Client :: regame :: size=%d", clientHd, packetSize);

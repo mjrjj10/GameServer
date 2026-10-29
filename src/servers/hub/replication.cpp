@@ -205,7 +205,7 @@ void HubReplication::SendJoinCity(ClientHandle clientHd)
 	SendPacketData<Sv::SQ_CityLobbyJoinCity>(clientHd, 0, nullptr);
 }
 
-void HubReplication::SendResultScreenStart(ClientHandle clientHd)
+void HubReplication::SendResultScreenStart(ClientHandle clientHd, u32 stayVoteMs)
 {
 	Sv::SN_EnterChannel channel;
 	channel.chID = MEASURED_RESULT_CHANNEL_ID;
@@ -222,7 +222,7 @@ void HubReplication::SendResultScreenStart(ClientHandle clientHd)
 	SendPacket(clientHd, praise);
 
 	Sv::SN_RestartPvpEntryStart restart;
-	restart.voteTimeMS = MEASURED_RESTART_VOTE_MS;
+	restart.voteTimeMS = stayVoteMs;
 	SendPacket(clientHd, restart);
 }
 
