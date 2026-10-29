@@ -1122,6 +1122,8 @@ void World::ClearMapContent()
 	deathHits.clear();
 	boundTriggerStates.clear();
 	levelTriggerOverrides.clear();
+	levelGroupOverrides.clear();
+	switchSteps.clear();
 	levelEventTimers.clear();
 	npcStatuses.clear();
 	mapInteractions.clear();

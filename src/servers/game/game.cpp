@@ -721,6 +721,9 @@ void Game::UpdateAutoStage()
 	i32 killed = 0;
 	foreach(npc, world.actorNpcList) {
 		if(npc->hp <= 0 || npc->removeAt != Time::ZERO || npc->ownerUID != ActorUID::INVALID || npc->faction != Faction::MONSTER) continue;
+		const i32 hpBefore = npc->hp;
+		npc->hp = 0;
+		world.OnMonsterDamaged(*npc, hpBefore);
 		world.MonsterDie(*npc, killer->Main().UID, CreatureIndex(100000000 + (i32)killer->Main().classType));
 		killed++;
 	}

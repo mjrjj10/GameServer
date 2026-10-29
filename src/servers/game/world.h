@@ -1041,11 +1041,15 @@ public:
 	eastl::hash_map<i32,eastl::fixed_vector<i32,8,false>> andInputsFired;
 	void CallMonsters(const GameXmlContent::LevelEventNode& node, i32 playerIndex);
 	void FireRandomCondition(const GameXmlContent::LevelEventNode& node, i32 playerIndex);
+	void FireSwitchCondition(const GameXmlContent::LevelEventNode& node, i32 playerIndex);
+	void FireRandomChoice(const GameXmlContent::LevelEventNode& node, i32 playerIndex);
 	void FireDialogTrigger(i32 dialogID, i32 playerIndex);
 	ActorNpc& SpawnMonster(CreatureIndex docID, i32 localID, const vec3& pos, const vec3& rot, Faction faction, i32 tagID);
 	void InitMonsterStats(ActorNpc& npc);
 	void DespawnEntities(i32 localID, i32 tagID);
 	void SetLevelTriggerActive(u32 nameKey, bool active);
+	void SetLevelGroupActive(u32 groupKey, bool active);
+	i32 LevelNodeOverride(const GameXmlContent::LevelEventNode& node) const;
 	i32 AreaOwnerTeam(const GameXmlContent::Map::Area& area) const;
 	void ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply);
 	f32 NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info);
@@ -1124,6 +1128,7 @@ public:
 	void UpdateTitans();
 	void TitanOnCast(Player& player, SkillID skill);
 	void UpdateBoundTriggers();
+	void UpdateCreatureEnterTrigger(const GameXmlContent::LevelEventNode& node, i32 slot, const GameXmlContent::Map::Area& area);
 	void OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos);
 	bool LevelTriggerActive(const GameXmlContent::LevelEventNode& node) const;
 	void SpawnGroundItems(i32 dropIndex, i32 areaID, i32 tagID);
@@ -1182,9 +1187,12 @@ public:
 	eastl::fixed_vector<BoundTriggerState,128,true> boundTriggerStates;
 	eastl::hash_map<i32,i32> boundTriggerFires;
 	eastl::fixed_vector<eastl::pair<u32,bool>,16,true> levelTriggerOverrides;
+	eastl::fixed_vector<eastl::pair<u32,bool>,16,true> levelGroupOverrides;
+	eastl::hash_map<i32,i32> switchSteps;
 	eastl::fixed_vector<LevelEventTimer,128,false> levelEventTimers;
 	u32 nextGroundItemUID = 0xC0000400;
 	bool levelEventsStarted = false;
+	i32 levelPassDepth = 0;
 	bool hostileMonsters = false;
 	u8 difficultyBit = GameXmlContent::ALL_DIFFICULTIES;
 	bool portalRequested = false;

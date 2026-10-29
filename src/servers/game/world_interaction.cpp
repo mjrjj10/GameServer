@@ -229,6 +229,39 @@ void World::SetLevelTriggerActive(u32 nameKey, bool active)
 	levelTriggerOverrides.push_back(eastl::make_pair(nameKey, active));
 }
 
+void World::SetLevelGroupActive(u32 groupKey, bool active)
+{
+	if(!map || groupKey == 0) return;
+	i32 members = 0;
+	for(i32 slot = 0; slot < (i32)map->levelEvents.size(); slot++) {
+		const GameXmlContent::LevelEventNode& n = map->levelEvents[slot];
+		if(n.groupKey != groupKey) continue;
+		members++;
+		if(active) {
+			deadCountsDone.erase(slot);
+			boundTriggerFires.erase(slot);
+		}
+		for(i32 i = 0; i < (i32)levelTriggerOverrides.size(); ) {
+			if(levelTriggerOverrides[i].first == n.nameKey) levelTriggerOverrides.erase(levelTriggerOverrides.begin() + i);
+			else i++;
+		}
+	}
+	LOG("LevelEvent :: group %u (%d nodes) %s", groupKey, members, active ? "activated" : "deactivated");
+	foreach(g, levelGroupOverrides) {
+		if(g->first != groupKey) continue;
+		g->second = active;
+		return;
+	}
+	levelGroupOverrides.push_back(eastl::make_pair(groupKey, active));
+}
+
+i32 World::LevelNodeOverride(const GameXmlContent::LevelEventNode& node) const
+{
+	foreach_const(t, levelTriggerOverrides) if(t->first == node.nameKey) return t->second ? 1 : 0;
+	if(node.groupKey != 0) foreach_const(g, levelGroupOverrides) if(g->first == node.groupKey) return g->second ? 1 : 0;
+	return -1;
+}
+
 void World::ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply)
 {
 	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
@@ -520,6 +553,34 @@ void World::FireRandomCondition(const GameXmlContent::LevelEventNode& node, i32 
 	LOG("LevelEvent :: random node %d picks branch %d", node.id, chosen);
 }
 
+void World::FireSwitchCondition(const GameXmlContent::LevelEventNode& node, i32 playerIndex)
+{
+	if(node.count <= 0) return;
+	i32& step = switchSteps[node.id];
+	if(step >= node.count) {
+		if(!node.apply) return;
+		step = 0;
+	}
+	const i32 index = step++;
+	LOG("LevelEvent :: switch node %d step %d", node.id, index);
+	foreach_const(e, node.randomEvents) {
+		if(e->branch != index) continue;
+		if(const GameXmlContent::LevelEventNode* target = map->FindLevelEventByName(e->nameKey)) FireLevelEvent(target->id, playerIndex, node.id);
+	}
+}
+
+void World::FireRandomChoice(const GameXmlContent::LevelEventNode& node, i32 playerIndex)
+{
+	eastl::fixed_vector<i32,32,true> pool(node.outputs.begin(), node.outputs.end());
+	const i32 picks = MIN(node.count, (i32)pool.size());
+	LOG("LevelEvent :: random choice node %d picks %d of %d", node.id, picks, (i32)pool.size());
+	for(i32 i = 0; i < picks; i++) {
+		const i32 j = i + (i32)(RandUint() % (u32)(pool.size() - i));
+		eastl::swap(pool[i], pool[j]);
+	}
+	for(i32 i = 0; i < picks; i++) FireLevelEvent(pool[i], playerIndex, node.id);
+}
+
 void World::FireDialogTrigger(i32 dialogID, i32 playerIndex)
 {
 	foreach_const(n, map->levelEvents) {
@@ -552,16 +613,48 @@ void World::FireAITrigger(i32 index, i32 playerIndex)
 bool World::NodeDeactivated(const GameXmlContent::LevelEventNode& node) const
 {
 	if(node.kind == GameXmlContent::LevelEventNode::BOUND_TRIGGER || node.kind == GameXmlContent::LevelEventNode::OR_CONDITION) return false;
-	foreach_const(t, levelTriggerOverrides) if(t->first == node.nameKey) return !t->second;
-	return false;
+	return LevelNodeOverride(node) == 0;
+}
+
+static const i32 LEVEL_PASS_DEPTH_MAX = 32;
+
+static bool LevelEventSource(GameXmlContent::LevelEventNode::Kind kind)
+{
+	switch(kind) {
+		case GameXmlContent::LevelEventNode::LEVEL_START:
+		case GameXmlContent::LevelEventNode::TAKE_ITEM:
+		case GameXmlContent::LevelEventNode::BOUND_TRIGGER:
+		case GameXmlContent::LevelEventNode::ON_HIT_TRIGGER:
+		case GameXmlContent::LevelEventNode::DEAD_COUNT:
+		case GameXmlContent::LevelEventNode::HP_TRIGGER:
+		case GameXmlContent::LevelEventNode::GAME_END_TRIGGER:
+		case GameXmlContent::LevelEventNode::AI_TRIGGER:
+		case GameXmlContent::LevelEventNode::INTERACTION_TRIGGER:
+		case GameXmlContent::LevelEventNode::DIALOG_TRIGGER:
+		case GameXmlContent::LevelEventNode::START_PHASE:
+		case GameXmlContent::LevelEventNode::END_PHASE:
+		case GameXmlContent::LevelEventNode::CREATURE_ENTER:
+			return true;
+		default: return false;
+	}
 }
 
 void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 {
 	const GameXmlContent::LevelEventNode* node = map->FindLevelEvent(nodeID);
-	if(!node || !NodeInDifficulty(*node) || NodeDeactivated(*node)) return;
+	if(!node || NodeDeactivated(*node)) return;
+	if(!NodeInDifficulty(*node)) {
+		if(LevelEventSource(node->kind) || levelPassDepth >= LEVEL_PASS_DEPTH_MAX) return;
+		levelPassDepth++;
+		foreach_const(o, node->outputs) FireLevelEvent(*o, playerIndex, node->id);
+		levelPassDepth--;
+		return;
+	}
 	if(fromNode >= 0 && difficultyBit != GameXmlContent::ALL_DIFFICULTIES) {
-		foreach_const(in, node->inputs) if(in->first == fromNode && !(in->second & difficultyBit)) return;
+		const GameXmlContent::LevelEventNode* from = map->FindLevelEvent(fromNode);
+		if(!from || NodeInDifficulty(*from)) {
+			foreach_const(in, node->inputs) if(in->first == fromNode && !(in->second & difficultyBit)) return;
+		}
 	}
 	switch(node->kind) {
 		case GameXmlContent::LevelEventNode::SET_ACTIVATION: SetLevelTriggerActive(node->targetKey, node->active); break;
@@ -716,6 +809,13 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 		case GameXmlContent::LevelEventNode::DESPAWN_ENTITY: DespawnEntities(node->localID, node->tagID); break;
 		case GameXmlContent::LevelEventNode::PASS_THROUGH: break;
 		case GameXmlContent::LevelEventNode::ACTIVATE_TRIGGER: SetLevelTriggerActive(node->targetKey, node->active); break;
+		case GameXmlContent::LevelEventNode::ACTIVE_EVENTS: SetLevelGroupActive(node->targetKey, node->active); break;
+		case GameXmlContent::LevelEventNode::SWITCH_CONDITION: FireSwitchCondition(*node, playerIndex); return;
+		case GameXmlContent::LevelEventNode::RANDOM_CHOICE: FireRandomChoice(*node, playerIndex); return;
+		case GameXmlContent::LevelEventNode::CREATURE_ENTER: return;
+		case GameXmlContent::LevelEventNode::AI_PAUSE: LOG("LevelEvent :: AI pause %d not supported, passing through (node %d)", node->apply ? 1 : 0, node->id); break;
+		case GameXmlContent::LevelEventNode::EXECUTE_LUA: LOG("LevelEvent :: Lua script not supported, passing through (node %d, target %d, area %d)", node->id, node->localID, node->areaID); break;
+		case GameXmlContent::LevelEventNode::PVP_TAKE_SCORE: LOG("LevelEvent :: team %d takes %d score not supported, passing through (node %d)", (i32)node->team, node->count, node->id); break;
 		default: return;
 	}
 	foreach_const(o, node->outputs) FireLevelEvent(*o, playerIndex, node->id);
@@ -915,8 +1015,8 @@ void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle s
 bool World::LevelTriggerActive(const GameXmlContent::LevelEventNode& node) const
 {
 	if(!NodeInDifficulty(node)) return false;
-	foreach_const(t, levelTriggerOverrides) if(t->first == node.nameKey) return t->second;
-	return node.active;
+	const i32 overridden = LevelNodeOverride(node);
+	return overridden < 0 ? node.active : overridden == 1;
 }
 
 static const u32 INTERACTION_ALL_TEAMS = 0xffffffff;
@@ -1186,26 +1286,65 @@ void World::UpdateMapInteractions()
 	}
 }
 
+static const f32 HYP_AREA_MIN_HALF_EXTENT = 100.0f;
+
+static bool AreaContains(const GameXmlContent::Map::Area& area, const vec3& pos)
+{
+	const vec2 d = vec2(pos) - vec2(area.pos);
+	if(area.type == AREA_TYPE_CIRCLE) return glm::length(d) <= area.size.z;
+	const f32 c = cosf(area.rot.z);
+	const f32 s = sinf(area.rot.z);
+	return fabsf(d.x * c + d.y * s) <= MAX(area.size.z, HYP_AREA_MIN_HALF_EXTENT) && fabsf(d.y * c - d.x * s) <= MAX(area.size.y, HYP_AREA_MIN_HALF_EXTENT);
+}
+
+static const u32 CREATURE_TRIGGER_STATE = 0xffffffff;
+
+void World::UpdateCreatureEnterTrigger(const GameXmlContent::LevelEventNode& node, i32 slot, const GameXmlContent::Map::Area& area)
+{
+	if(node.maxTriggers > 0 && boundTriggerFires[slot] >= node.maxTriggers) return;
+	bool inside = false;
+	foreach_const(npc, actorNpcList) {
+		if(npc->tagID != node.tagID || npc->hp <= 0 || npc->removeAt != Time::ZERO || !AreaContains(area, npc->pos)) continue;
+		inside = true;
+		break;
+	}
+	BoundTriggerState* state = nullptr;
+	foreach(s, boundTriggerStates) if(s->node == slot && s->playerIndex == CREATURE_TRIGGER_STATE) state = &*s;
+	if(!state) {
+		boundTriggerStates.push_back({ slot, CREATURE_TRIGGER_STATE, false, Time::ZERO });
+		state = &boundTriggerStates.back();
+	}
+	if(state->inside == inside) return;
+	state->inside = inside;
+	if(!inside) return;
+	if(state->last != Time::ZERO && TimeDiffSec(TimeDiff(state->last, localTime)) < node.retrigger) return;
+	state->last = localTime;
+	if(node.maxTriggers > 0) boundTriggerFires[slot]++;
+	LOG("LevelEvent :: creature tag %d enters area %d (node %d)", node.tagID, node.areaID, node.id);
+	foreach_const(o, node.outputs) FireLevelEvent(*o, -1, node.id);
+}
+
 void World::UpdateBoundTriggers()
 {
 	if(!levelEventsStarted || Config().DevShowcase) return;
 	const GameXmlContent::Map& levelMap = *map;
-	auto areaContains = [](const GameXmlContent::Map::Area& area, const vec3& pos) {
-		return area.type == AREA_TYPE_CIRCLE ? glm::length(vec2(pos) - vec2(area.pos)) <= area.size.z : fabsf(pos.x - area.pos.x) <= area.size.z && fabsf(pos.y - area.pos.y) <= area.size.y;
-	};
 	foreach(p, players) {
 		if(p->campTeleportAt == Time::ZERO || localTime < p->campTeleportAt) continue;
 		p->campTeleportAt = Time::ZERO;
 		const GameXmlContent::Map::Area* start = levelMap.FindArea(p->campStartArea);
 		const GameXmlContent::Map::Area* dest = levelMap.FindArea(p->campDestArea);
-		if(!start || !dest || p->dead || !p->body || !areaContains(*start, p->body->GetWorldPos())) continue;
+		if(!start || !dest || p->dead || !p->body || !AreaContains(*start, p->body->GetWorldPos())) continue;
 		WarpPlayer(*p, dest->pos + vec3(0, 0, LEVEL_TELEPORT_LIFT), dest->rot.z);
 		LOG("LevelEvent :: %ls moved out of starting area %d to area %d", p->name.data(), p->campStartArea, p->campDestArea);
 	}
 	foreach_const(n, levelMap.levelEvents) {
-		if(n->kind != GameXmlContent::LevelEventNode::BOUND_TRIGGER || !LevelTriggerActive(*n)) continue;
+		if((n->kind != GameXmlContent::LevelEventNode::BOUND_TRIGGER && n->kind != GameXmlContent::LevelEventNode::CREATURE_ENTER) || !LevelTriggerActive(*n)) continue;
 		const GameXmlContent::Map::Area* area = levelMap.FindArea(n->areaID);
 		if(!area) continue;
+		if(n->kind == GameXmlContent::LevelEventNode::CREATURE_ENTER) {
+			UpdateCreatureEnterTrigger(*n, (i32)(n - levelMap.levelEvents.begin()), *area);
+			continue;
+		}
 		const i32 ownerTeam = n->ownTeamOnly ? AreaOwnerTeam(*area) : -1;
 		const i32 slot = (i32)(n - levelMap.levelEvents.begin());
 		foreach(p, players) {
@@ -1213,7 +1352,7 @@ void World::UpdateBoundTriggers()
 			if(p->dead || !p->body) continue;
 			if(ownerTeam >= 0 && (i32)p->team != ownerTeam) continue;
 			const vec3 pos = p->body->GetWorldPos();
-			const bool inside = area->type == AREA_TYPE_CIRCLE ? glm::length(vec2(pos) - vec2(area->pos)) <= area->size.z : fabsf(pos.x - area->pos.x) <= area->size.z && fabsf(pos.y - area->pos.y) <= area->size.y;
+			const bool inside = AreaContains(*area, pos);
 			BoundTriggerState* state = nullptr;
 			foreach(s, boundTriggerStates) if(s->node == slot && s->playerIndex == p->index) state = &*s;
 			if(!state) {

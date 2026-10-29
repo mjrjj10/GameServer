@@ -4364,6 +4364,14 @@ static XMLElement* FirstChildOf(XMLElement* parent, const char* a, const char* b
 	return e ? e : parent->FirstChildElement(b);
 }
 
+static bool HasLevelEventInfo(XMLElement* node)
+{
+	for(XMLElement* e = node->FirstChildElement(); e; e = e->NextSiblingElement()) {
+		if(EA::StdC::Strcmp(e->Name(), "_InputLink") != 0 && EA::StdC::Strcmp(e->Name(), "_OutputLink") != 0 && EA::StdC::Strcmp(e->Name(), "_LevelEventData") != 0) return true;
+	}
+	return false;
+}
+
 bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 {
 	XMLDocument doc;
@@ -4375,15 +4383,16 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		node.id = pNode->IntAttribute("_ConvertedEventDataID");
 		node.nameKey = StatusTypeKey(pNode->Attribute("_EventDataID"));
 		node.difficultyMask = (u8)pNode->IntAttribute("_StageDifficultyMask", ALL_DIFFICULTIES);
+		if(const char* group = pNode->Attribute("_GroupTag")) node.groupKey = *group ? StatusTypeKey(group) : 0;
 		for(XMLElement* in = pNode->FirstChildElement("_InputLink"); in && !node.inputs.full(); in = in->NextSiblingElement("_InputLink")) node.inputs.push_back(eastl::make_pair(in->IntAttribute("_ConvertedEventDataID"), (u8)in->IntAttribute("_StageDifficultyMask", ALL_DIFFICULTIES)));
-		for(XMLElement* out = pNode->FirstChildElement("_OutputLink"); out && !node.outputs.full(); out = out->NextSiblingElement("_OutputLink")) node.outputs.push_back(out->IntAttribute("_ConvertedEventDataID"));
+		for(XMLElement* out = pNode->FirstChildElement("_OutputLink"); out; out = out->NextSiblingElement("_OutputLink")) node.outputs.push_back(out->IntAttribute("_ConvertedEventDataID"));
 		if(pNode->FirstChildElement("_LevelStartTriggerData")) node.kind = LevelEventNode::LEVEL_START;
 		else if(XMLElement* e = pNode->FirstChildElement("_TakeItemTriggerData")) { node.kind = LevelEventNode::TAKE_ITEM; node.tagID = e->IntAttribute("_TagID", -1); }
 		else if(XMLElement* e = pNode->FirstChildElement("_DelaySeqInfo")) { node.kind = LevelEventNode::DELAY; node.delay = e->FloatAttribute("_DelayTime"); node.variance = e->FloatAttribute("_RandomDelayTimeVariance"); }
 		else if(pNode->FirstChildElement("_CallSFXInfo")) node.kind = LevelEventNode::CALL_SFX;
 		else if(XMLElement* e = pNode->FirstChildElement("_InitCoolTime")) { node.kind = LevelEventNode::CLIENT_EVENT; node.initTagCool = e->IntAttribute("_CharacterTag") != 0; }
 		else if(XMLElement* e = pNode->FirstChildElement("_CallItemInfo")) { node.kind = LevelEventNode::CALL_ITEM; node.dropIndex = e->IntAttribute("_Index"); node.areaID = e->IntAttribute("_SpawnAreaID"); node.tagID = e->IntAttribute("_TagID", -1); }
-		else if(XMLElement* e = pNode->FirstChildElement("_BoundTriggerData")) { node.kind = LevelEventNode::BOUND_TRIGGER; node.areaID = e->IntAttribute("_AreaID"); node.enter = e->IntAttribute("_IsEnter") == 1; node.active = e->IntAttribute("_Active") == 1; node.retrigger = e->FloatAttribute("_RetriggerDelay"); node.maxTriggers = e->IntAttribute("_MaxTriggerCount"); const char* trigger = e->Attribute("_TrigerType"); node.ownTeamOnly = trigger && EA::StdC::Strcmp(trigger, "TRIGER_MEMBERSHIP_OWN") == 0; }
+		else if(XMLElement* e = FirstChildOf(pNode, "_BoundTriggerData", "_PlayerBoundTriggerData")) { node.kind = LevelEventNode::BOUND_TRIGGER; node.areaID = e->IntAttribute("_AreaID"); node.enter = e->IntAttribute("_IsEnter") == 1; node.active = e->IntAttribute("_Active") == 1; node.retrigger = e->FloatAttribute("_RetriggerDelay"); node.maxTriggers = e->IntAttribute("_MaxTriggerCount"); const char* trigger = e->Attribute("_TrigerType"); node.ownTeamOnly = trigger && EA::StdC::Strcmp(trigger, "TRIGER_MEMBERSHIP_OWN") == 0; }
 		else if(XMLElement* e = pNode->FirstChildElement("_StatusChangeInfo")) {
 			node.kind = LevelEventNode::STATUS_CHANGE;
 			const char* applyType = e->Attribute("_ApplyType");
@@ -4463,7 +4472,7 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 			node.kind = LevelEventNode::RANDOM_CONDITION;
 			u8 branch = 0;
 			for(XMLElement* b = e->FirstChildElement("_RandomNodeList"); b; b = b->NextSiblingElement("_RandomNodeList"), branch++) {
-				for(XMLElement* ev = b->FirstChildElement("_EvtList"); ev && !node.randomEvents.full(); ev = ev->NextSiblingElement("_EvtList")) {
+				for(XMLElement* ev = b->FirstChildElement("_EvtList"); ev; ev = ev->NextSiblingElement("_EvtList")) {
 					node.randomEvents.push_back({ branch, (u16)b->IntAttribute("_Probability"), StatusTypeKey(ev->Attribute("_EvtID")) });
 				}
 			}
@@ -4482,8 +4491,52 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(pNode->FirstChildElement("_EventPartyConditionInfo") || pNode->FirstChildElement("_EventBehaviorInfo") || pNode->FirstChildElement("_CallRemoteInfo")) node.kind = LevelEventNode::PASS_THROUGH;
 		else if(pNode->FirstChildElement("_UpdateObjectivePointInfo") || pNode->FirstChildElement("_ShowProgressMessageInfo") || pNode->FirstChildElement("_CameraWallInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
 		else if(pNode->FirstChildElement("_PrintMessageInfo") || pNode->FirstChildElement("_BGMEventInfo") || pNode->FirstChildElement("_ChangeCameraInfo") || pNode->FirstChildElement("_SetNameTagVisibillityInfo") || pNode->FirstChildElement("_InputLockInfo") || pNode->FirstChildElement("_ClientDrivenActionChangeInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
+		else if(pNode->FirstChildElement("_PingBroadcastInfo") || pNode->FirstChildElement("_MaterialSetChange") || pNode->FirstChildElement("_EffectLightSwitch")) node.kind = LevelEventNode::CLIENT_EVENT;
+		else if(XMLElement* e = pNode->FirstChildElement("_ActiveEvents")) {
+			node.kind = LevelEventNode::ACTIVE_EVENTS;
+			const char* group = e->Attribute("_InvokeGroupTag");
+			node.targetKey = group && *group ? StatusTypeKey(group) : 0;
+			node.active = e->IntAttribute("_Active") == 1;
+		}
+		else if(XMLElement* e = pNode->FirstChildElement("_CreatureEnterTriggerData")) {
+			node.kind = LevelEventNode::CREATURE_ENTER;
+			node.areaID = e->IntAttribute("_AreaID");
+			node.tagID = e->IntAttribute("_TagID", -1);
+			node.enter = true;
+			node.active = e->IntAttribute("_Active", 1) == 1;
+			node.retrigger = e->FloatAttribute("_RetriggerDelay");
+			node.maxTriggers = e->IntAttribute("_MaxTriggerCount");
+		}
+		else if(XMLElement* e = pNode->FirstChildElement("_SwitchConditionInfo")) {
+			node.kind = LevelEventNode::SWITCH_CONDITION;
+			node.apply = e->IntAttribute("_Loop") == 1;
+			node.count = 0;
+			for(XMLElement* b = e->FirstChildElement("_SwitchNodeList"); b; b = b->NextSiblingElement("_SwitchNodeList")) {
+				const i32 index = b->IntAttribute("_SwitchIdx", -1);
+				if(index < 0 || index > 0xff) continue;
+				node.randomEvents.push_back({ (u8)index, 0, StatusTypeKey(b->Attribute("_EventDataID")) });
+				node.count = MAX(node.count, index + 1);
+			}
+		}
+		else if(XMLElement* e = pNode->FirstChildElement("_RandomChoiceConditionInfo")) { node.kind = LevelEventNode::RANDOM_CHOICE; node.count = MAX(e->IntAttribute("_ChoiceCount", 1), 0); }
+		else if(XMLElement* e = pNode->FirstChildElement("_AiPauseInfo")) { node.kind = LevelEventNode::AI_PAUSE; node.apply = e->IntAttribute("bApply") == 1; }
+		else if(XMLElement* e = pNode->FirstChildElement("_ExecuteLuaFileInfo")) { node.kind = LevelEventNode::EXECUTE_LUA; node.localID = e->IntAttribute("_TargetID"); node.areaID = e->IntAttribute("_TargetAreaID"); }
+		else if(XMLElement* e = pNode->FirstChildElement("_PVPTakeScoreInfo")) { node.kind = LevelEventNode::PVP_TAKE_SCORE; node.count = e->IntAttribute("_Point"); if(const char* team = e->Attribute("_TakeSocreTeam")) node.team = StringToFaction(team); }
+		else if(!HasLevelEventInfo(pNode)) node.kind = LevelEventNode::PASS_THROUGH;
+		if(node.kind == LevelEventNode::OTHER) WARN("LevelEvent :: %ls node %d has an unsupported type", levelDir, node.id);
 		map->levelEvents.push_back(node);
 	}
+	i32 restored = 0;
+	foreach_const(n, map->levelEvents) {
+		foreach_const(in, n->inputs) {
+			foreach(src, map->levelEvents) {
+				if(src->id != in->first || eastl::find(src->outputs.begin(), src->outputs.end(), n->id) != src->outputs.end()) continue;
+				src->outputs.push_back(n->id);
+				restored++;
+			}
+		}
+	}
+	if(restored > 0) LOG("LevelEvent :: %d output link(s) restored from input links", restored);
 	eastl::vector<i32> pending;
 	foreach_const(n, map->levelEvents) if(n->kind == LevelEventNode::DIALOG_TRIGGER) pending.push_back(n->id);
 	while(!pending.empty()) {
