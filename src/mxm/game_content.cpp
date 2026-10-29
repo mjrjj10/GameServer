@@ -1865,6 +1865,13 @@ i32 GameXmlContent::RewardBuyChanceCost(u8 difficultyBit, i32 bought) const
 	return -1;
 }
 
+u8 GameXmlContent::AchievementTier(i32 score) const
+{
+	u8 tier = 0;
+	foreach_const(t, achievementTierPoints) if(score >= t->second && t->first > tier) tier = t->first;
+	return tier;
+}
+
 bool GameXmlContent::LoadServiceRule()
 {
 	static const struct { const char* name; GameType type; } GAME_TYPES[] = {
@@ -1877,6 +1884,7 @@ bool GameXmlContent::LoadServiceRule()
 	if(!LoadXMLFile(L"/client/ServiceRule.xml", doc)) return true;
 	XMLElement* rule = doc.FirstChildElement() ? doc.FirstChildElement()->FirstChildElement("ST_SERVICERULE") : nullptr;
 	XMLElement* gear = rule ? rule->FirstChildElement("_MasterGearInfo") : nullptr;
+	for(XMLElement* p = rule ? rule->FirstChildElement("_AchievementTierPoint") : nullptr; p && !achievementTierPoints.full(); p = p->NextSiblingElement("_AchievementTierPoint")) achievementTierPoints.push_back({ (u8)p->IntAttribute("_Tier"), p->IntAttribute("_MinPoint") });
 	for(XMLElement* p = gear ? gear->FirstChildElement("_PvPGearPowerPercent") : nullptr; p; p = p->NextSiblingElement("_PvPGearPowerPercent")) {
 		const char* type = p->Attribute("_GameType");
 		for(const auto& t : GAME_TYPES) if(type && EA::StdC::Strcmp(type, t.name) == 0) gearPowerPercent[(i32)t.type] = p->IntAttribute("DATA", 100);

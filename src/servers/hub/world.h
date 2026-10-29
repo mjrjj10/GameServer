@@ -52,6 +52,8 @@ struct WorldHub
 		u16 level = 1;
 		u32 levelExp = 0;
 		i32 displayTitle = -1;
+		u8 badgeType = 0;
+		u8 badgeTier = 0;
 		i32 statTitle = -1;
 
 		explicit ActorPlayer(ActorUID UID_, ActorUID parentActorUID_):

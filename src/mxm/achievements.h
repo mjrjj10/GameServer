@@ -13,12 +13,16 @@ struct AccountAchieveState
 	eastl::fixed_vector<i32,16,false> achieved;
 };
 
+static const u8 MEASURED_BADGE_ACHIEVEMENT = 1;
+static const i32 MEASURED_WAREHOUSE_LINES = 9;
+
 struct AccountAchievements
 {
 	eastl::vector<AccountAchieveState> states;
 	eastl::vector<i32> titles;
 	i32 displayTitle = -1;
 	i32 statTitle = -1;
+	u8 badge = MEASURED_BADGE_ACHIEVEMENT;
 
 	AccountAchieveState* Find(i32 index);
 	const AccountAchieveState* Find(i32 index) const;

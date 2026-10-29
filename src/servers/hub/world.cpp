@@ -97,6 +97,8 @@ void WorldHub::Update(Time localTime_)
 		rfl.level = actor.level;
 		rfl.levelExp = actor.levelExp;
 		rfl.displayTitle = actor.displayTitle;
+		rfl.badgeType = actor.badgeType;
+		rfl.badgeTier = actor.badgeTier;
 		rfl.statTitle = actor.statTitle;
 
 		replication->FramePushPlayerActor(rfl);
@@ -188,6 +190,8 @@ WorldHub::ActorPlayer& WorldHub::SpawnPlayerSubActor(i32 clientID, ActorUID pare
 	actor.level = parent->level;
 	actor.levelExp = parent->levelExp;
 	actor.displayTitle = parent->displayTitle;
+	actor.badgeType = parent->badgeType;
+	actor.badgeTier = parent->badgeTier;
 	actor.statTitle = parent->statTitle;
 
 	actorPlayerMap.emplace(actorUID, --actorPlayerList.end());

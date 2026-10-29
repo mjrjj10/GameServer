@@ -68,6 +68,8 @@ struct Replication
 		eastl::array<SkillID,4> skills;
 		eastl::array<SkillID,2> stageSkills;
 		i32 supportKit = -1;
+		u8 badgeType = 0;
+		u8 badgeTier = 0;
 		WeaponIndex mainWeapon;
 		WeaponIndex subWeapon;
 		i32 mainWeaponGrade;

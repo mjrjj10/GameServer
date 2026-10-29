@@ -129,6 +129,7 @@ struct HubGame
 	void OnSelectSupportKit(ClientHandle clientHd, u8 etcType, i32 doc);
 	void SendSummaries(ClientHandle clientHd, const wchar* nickname);
 	void OnTitleSelect(ClientHandle clientHd, i32 displayTitle, i32 statTitle);
+	void OnSelectBadge(ClientHandle clientHd, u8 badgeType);
 	void OnSummaryInfoEach(ClientHandle clientHd, i32 summary);
 	void OnSummaryReward(ClientHandle clientHd, i32 summary, u8 type, i32 data);
 	void OnGearEquip(ClientHandle clientHd, u8 pageNo, u32 itemUID, u32 slot);

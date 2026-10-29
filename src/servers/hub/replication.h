@@ -67,6 +67,8 @@ struct HubReplication
 		u8 playerStateInTown;
 		u16 level = 1;
 		i32 displayTitle = -1;
+		u8 badgeType = 0;
+		u8 badgeTier = 0;
 		i32 statTitle = -1;
 		u32 levelExp = 0;
 		eastl::fixed_vector<u8,16> matchingGameModes;

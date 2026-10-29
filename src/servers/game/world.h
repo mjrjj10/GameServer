@@ -69,6 +69,8 @@ struct World
 		eastl::array<eastl::fixed_vector<i32,6,false>,2> gearDocs;
 		eastl::fixed_vector<eastl::pair<i32,u8>,12,false> stageSkillLevels;
 		i32 statTitle = -1;
+		u8 badgeType = 0;
+		u8 badgeTier = 0;
 		i32 supportKit = -1;
 		i32 supportKitCount = 0;
 	};
@@ -113,6 +115,8 @@ struct World
 		const u8 mainMasterGearNo;
 		const eastl::array<eastl::fixed_vector<i32,6,false>,2> gearDocs;
 		const i32 statTitle;
+		const u8 badgeType;
+		const u8 badgeTier;
 		const u8 subMasterGearNo;
 		const i32 mainCharacterType;
 		const i32 subCharacterType;
@@ -378,7 +382,9 @@ struct World
 			mainCharacterType(desc.characterType[0]),
 			subCharacterType(desc.characterType[1]),
 			gearDocs(desc.gearDocs),
-			statTitle(desc.statTitle)
+			statTitle(desc.statTitle),
+			badgeType(desc.badgeType),
+			badgeTier(desc.badgeTier)
 		{
 			supportKit = desc.supportKit;
 			supportKitCount = desc.supportKitCount;

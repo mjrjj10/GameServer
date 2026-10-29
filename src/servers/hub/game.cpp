@@ -393,6 +393,8 @@ void HubGame::OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID cha
 	{
 		const AccountAchievements titles = AccountAchievementsLoad(account->nickname.data());
 		actor.displayTitle = titles.displayTitle;
+		actor.badgeType = titles.badge;
+		actor.badgeTier = titles.badge == MEASURED_BADGE_ACHIEVEMENT ? GetGameXmlContent().AchievementTier(titles.Score()) : 0;
 		actor.statTitle = titles.statTitle;
 	}
 	playerActorUID[userID] = actor.UID;

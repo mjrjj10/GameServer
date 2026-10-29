@@ -743,6 +743,10 @@ AccountAchievements AccountAchievementsLoad(const wchar* nickname)
 			if(sscanf(line, "T %d", &t) == 1) acc.titles.push_back(t);
 		}
 		else if(line[0] == 'D') sscanf(line, "D %d %d", &acc.displayTitle, &acc.statTitle);
+		else if(line[0] == 'B') {
+			u32 b = 1;
+			if(sscanf(line, "B %u", &b) == 1) acc.badge = (u8)b;
+		}
 	}
 	fclose(f);
 	return acc;
@@ -757,6 +761,7 @@ void AccountAchievementsSave(const wchar* nickname, const AccountAchievements& a
 	FILE* f = fopen(path, "wb");
 	if(!f) return;
 	fprintf(f, "D %d %d\n", acc.displayTitle, acc.statTitle);
+	fprintf(f, "B %u\n", (u32)acc.badge);
 	foreach_const(t, acc.titles) fprintf(f, "T %d\n", *t);
 	foreach_const(s, acc.states) {
 		fprintf(f, "A %d %lld %u %lld %d", s->index, (long long)s->progress, (u32)s->cleared, (long long)s->date, (i32)s->achieved.size());

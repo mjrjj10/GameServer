@@ -1,5 +1,6 @@
 #include "replication.h"
 #include <mxm/item_writer.h>
+#include <mxm/achievements.h>
 
 #include <common/protocol.h>
 #include <EASTL/algorithm.h>
@@ -744,10 +745,10 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 		packet.Write<i32>(-1); // displayTitlteIndex
 		packet.Write<i32>(-1); // statTitleIndex
 #endif
-		packet.Write<i32>(1); // warehouseLineCount
+		packet.Write<i32>(MEASURED_WAREHOUSE_LINES);
 		packet.Write<i32>(-1); // tutorialState
 		packet.Write<i32>(3600); // masterGearDurability
-		packet.Write<u8>(0); // badgeType
+		packet.Write<u8>(player->badgeType);
 
 		SendPacket(clientHd, packet);
 	}
@@ -3764,8 +3765,8 @@ void Replication::SendActorMasterSpawn(ClientHandle clientHd, const ActorMaster&
 		packet.Write<i32>(-1); // displayTitleIDX
 		packet.Write<i32>(-1); // statTitleIDX
 #endif
-		packet.Write<u8>(0); // badgeType
-		packet.Write<u8>(0); // badgeTierLevel
+		packet.Write<u8>(parent.badgeType);
+		packet.Write<u8>(parent.badgeTier);
 		packet.WriteStringObj(parent.guildTag.data()); // guildTag
 		packet.Write<u8>(0); // vipLevel
 		packet.Write<u8>(0); // staffType

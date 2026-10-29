@@ -270,7 +270,10 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 				}
 			}
 			if(!desc.stageSkillLevels.empty()) LOG("Arsenal :: %ls stage skill upgrades %d", desc.name.data(), (i32)desc.stageSkillLevels.size());
-			desc.statTitle = AccountAchievementsLoad(desc.name.data()).statTitle;
+			const AccountAchievements achievements = AccountAchievementsLoad(desc.name.data());
+			desc.statTitle = achievements.statTitle;
+			desc.badgeType = achievements.badge;
+			desc.badgeTier = achievements.badge == MEASURED_BADGE_ACHIEVEMENT ? xml.AchievementTier(achievements.Score()) : 0;
 			const i32 kit = AccountArsenalLoad(desc.name.data()).supportKit;
 			if(kit > 0 && xml.FindSupportKit(kit) && xml.FindSupportKit(kit)->hpPercent > 0) {
 				const AccountInventory inventory = AccountInventoryLoad(desc.name.data());

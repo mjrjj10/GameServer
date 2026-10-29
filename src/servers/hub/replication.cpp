@@ -841,10 +841,10 @@ void HubReplication::SendAccountDataLobby(ClientHandle clientHd, const Account& 
 		const AccountAchievements achievements = AccountAchievementsLoad(account.nickname.data());
 		packet.Write<i32>(achievements.displayTitle);
 		packet.Write<i32>(achievements.statTitle);
-		packet.Write<i32>(1); // warehouseLineCount
+		packet.Write<i32>(MEASURED_WAREHOUSE_LINES);
 		packet.Write<i32>(-1); // tutorialState
 		packet.Write<i32>(3600); // masterGearDurability
-		packet.Write<u8>(0); // badgeType
+		packet.Write<u8>(achievements.badge);
 
 		SendPacket(clientHd, packet);
 	}
@@ -2505,8 +2505,8 @@ void HubReplication::SendActorPlayerSpawn(ClientHandle clientHd, const ActorPlay
 		packet.Write<ClassType>(actor.classType); // class_
 		packet.Write<i32>(actor.displayTitle);
 		packet.Write<i32>(actor.statTitle);
-		packet.Write<u8>(0); // badgeType
-		packet.Write<u8>(0); // badgeTierLevel
+		packet.Write<u8>(actor.badgeType);
+		packet.Write<u8>(actor.badgeTier);
 		packet.WriteStringObj(actor.guildTag.data()); // guildTag
 		packet.Write<u8>(0); // vipLevel
 		packet.Write<u8>(0); // staffType

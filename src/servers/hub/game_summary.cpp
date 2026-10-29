@@ -34,6 +34,24 @@ static const GameXmlContent::SummaryReward* RewardOf(const GameXmlContent::Summa
 	return nullptr;
 }
 
+void HubGame::OnSelectBadge(ClientHandle clientHd, u8 badgeType)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	const wchar* nick = AccountNickname(clientHd);
+	if(!nick) return;
+	AccountAchievements acc = AccountAchievementsLoad(nick);
+	acc.badge = badgeType;
+	AccountAchievementsSave(nick, acc);
+	if(WorldHub::ActorPlayer* actor = world.FindPlayerActor(playerActorUID[userID])) {
+		actor->badgeType = badgeType;
+		actor->badgeTier = badgeType == MEASURED_BADGE_ACHIEVEMENT ? GetGameXmlContent().AchievementTier(acc.Score()) : 0;
+	}
+	PacketWriter<Sv::SA_SelectBadge,8> answer;
+	answer.Write<u8>(badgeType);
+	replication.SendWriter(clientHd, answer);
+	LOG("[client%x] Badge :: %ls selects badge %u", clientHd, nick, (u32)badgeType);
+}
+
 void HubGame::OnTitleSelect(ClientHandle clientHd, i32 displayTitle, i32 statTitle)
 {
 	static const u32 MEASURED_ERROR_TITLE_SELECT_FAIL = 103;

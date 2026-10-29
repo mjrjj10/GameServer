@@ -129,6 +129,11 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 			NT_LOG("[client%x] Client :: CQ_PartyInviteRecommendResponse :: %ls accept=%d", clientHd, invitee.data(), (i32)accept);
 			game->OnPartyInviteRecommendResponse(clientHd, invitee, accept);
 		} break;
+		case Cl::CQ_SelectBadge::NET_ID: {
+			if(packetSize != 1) break;
+			NT_LOG("[client%x] Client :: CQ_SelectBadge :: %u", clientHd, (u32)packetData[0]);
+			game->OnSelectBadge(clientHd, packetData[0]);
+		} break;
 		case MEASURED_CQ_SERVER_UTC_TIME: {
 			static const i64 FILETIME_UNIX_EPOCH = 116444736000000000LL;
 			static const i64 FILETIME_PER_SEC = 10000000LL;
