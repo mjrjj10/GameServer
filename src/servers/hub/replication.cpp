@@ -1982,20 +1982,37 @@ void HubReplication::SendPveRanking(ClientHandle clientHd, u32 stage)
 void HubReplication::SendPveLastGameRanking(ClientHandle clientHd, const wchar* nickname)
 {
 	static const i32 MEASURED_LASTGAME_TOP = 5;
-	const i32 stage = PveRankingTakeLastGame(nickname);
-	if(stage == 0) return;
+	static const u8 MEASURED_DEFENCE_RANKING_PACKET_NUM = 0xff;
+	const i32 last = PveRankingTakeLastGame(nickname);
+	if(last == 0) return;
+	const bool defence = last < 0;
+	const i32 stage = defence ? -last : last;
 	const eastl::vector<PveRankingEntry> ranking = PveRankingLoad(stage);
 	const i32 best = PveRankingFindBest(ranking, nickname);
-	PacketWriter<Sv::SN_PveLastgameRanking,4096> packet;
-	packet.Write<i32>(stage);
-	packet.Write<u8>(0);
 	const i32 top = MIN((i32)ranking.size(), MEASURED_LASTGAME_TOP);
 	const bool extra = best >= top;
-	packet.Write<u16>((u16)(top + (extra ? 1 : 0)));
-	for(i32 i = 0; i < top; i++) WritePveRankingEntry(packet, ranking[i], (u32)i + 1);
-	if(extra) WritePveRankingEntry(packet, ranking[best], (u32)best + 1);
-	packet.Write<i32>(best + 1);
-	SendPacket(clientHd, packet);
+	auto writeAll = [&](auto& packet) {
+		packet.template Write<i32>(stage);
+		packet.template Write<u8>(defence ? MEASURED_DEFENCE_RANKING_PACKET_NUM : 0);
+		packet.template Write<u16>((u16)(top + (extra ? 1 : 0)));
+		auto entry = [&](const PveRankingEntry& e, u32 position) {
+			if(defence) WriteDefenceRankingEntry(packet, e, position);
+			else WritePveRankingEntry(packet, e, position);
+		};
+		for(i32 i = 0; i < top; i++) entry(ranking[i], (u32)i + 1);
+		if(extra) entry(ranking[best], (u32)best + 1);
+		packet.template Write<i32>(best + 1);
+	};
+	if(defence) {
+		PacketWriter<Sv::SN_DefenceLastgameRanking,4096> packet;
+		writeAll(packet);
+		SendPacket(clientHd, packet);
+	}
+	else {
+		PacketWriter<Sv::SN_PveLastgameRanking,4096> packet;
+		writeAll(packet);
+		SendPacket(clientHd, packet);
+	}
 }
 
 void HubReplication::SendSummaryInfoEach(ClientHandle clientHd, u32 summary)

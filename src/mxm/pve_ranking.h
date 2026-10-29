@@ -42,3 +42,17 @@ void WritePveRankingEntry(Writer& packet, const PveRankingEntry& e, u32 position
 		packet.WriteStringObj(m->nick.data());
 	}
 }
+
+template<typename Writer>
+void WriteDefenceRankingEntry(Writer& packet, const PveRankingEntry& e, u32 position)
+{
+	packet.template Write<u32>(position);
+	packet.template Write<u32>(e.totalScore);
+	packet.template Write<u32>(e.playMs);
+	packet.template Write<u16>((u16)e.members.size());
+	foreach_const(m, e.members) {
+		packet.template Write<i32>(m->mainClass);
+		packet.template Write<i32>(m->subClass);
+		packet.WriteStringObj(m->nick.data());
+	}
+}

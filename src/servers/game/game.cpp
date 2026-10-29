@@ -1376,6 +1376,10 @@ void Game::EndDefence()
 		if(p->clientHd == ClientHandle::INVALID || p->removed) continue;
 		members.push_back({ p->mainClass, p->subClass, p->name.data() });
 	}
+	PveRankingEntry ranking;
+	ranking.stage = (i32)replication.stageIndex;
+	ranking.totalScore = (u32)MAX(cleared, 0);
+	ranking.playMs = world.defence.clearMs;
 	foreach_const(p, world.players) {
 		if(p->clientHd == ClientHandle::INVALID || p->removed) continue;
 		Replication::DefenceClear clear;
@@ -1410,7 +1414,10 @@ void Game::EndDefence()
 		AccountGameRecordAppend(p->name.data(), record);
 		world.FinishProgress(*p, record);
 		LOG("Defence :: %ls ends at phase %d (%s), %u gold %u exp", p->name.data(), cleared, world.defence.won ? "won" : "failed", (u32)record.gold, record.exp);
+		if(!ranking.members.full()) ranking.members.push_back({ (i32)p->mainClass, (i32)p->subClass, p->name });
+		PveRankingSetLastGame(p->name.data(), -(i32)replication.stageIndex);
 	}
+	if(cleared > 0 && !ranking.members.empty()) PveRankingSubmit(ranking);
 }
 
 void Game::OnRewardStageReady(ClientHandle clientHd)
