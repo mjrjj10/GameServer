@@ -38,6 +38,7 @@ void GamePacketHandler::OnClientsDisconnected(const ClientHandle* clientList, co
 {
 	for(int i = 0; i < count; i++) {
 		const ClientHandle clientHd = clientList[i];
+		if(plidMap.TryGet(clientHd) == -1) continue;
 		game->OnPlayerDisconnect(clientHd);
 		plidMap.Pop(clientHd);
 	}

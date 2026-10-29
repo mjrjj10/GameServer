@@ -110,7 +110,13 @@ void InstancePool::Lane::Update()
 	}
 
 	foreach_const(tr, disconnectedList) {
-		auto client = clientMap.at(*tr);
+		auto found = clientMap.find(*tr);
+		if(found == clientMap.end()) {
+			LOCK_MUTEX(mutexClientDisconnectQueue);
+			clientDisconnectQueue.push_back(*tr);
+			continue;
+		}
+		auto client = found->second;
 
 		switch(client->instanceType) {
 			case InstanceType::PVP_3V3: {
@@ -423,6 +429,7 @@ void Coordinator::Update()
 
 	// clear client data
 	foreach_const(cl, clientDisconnectedList) {
+		if(instancePool.IsClientInsideAnInstance(*cl)) instancePool.QueuePopPlayers(&*cl, 1);
 		const i32 clientID = plidMap.Get(*cl);
 		plidMap.Pop(*cl);
 		clientHandle[clientID] = ClientHandle::INVALID;

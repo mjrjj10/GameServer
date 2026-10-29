@@ -3195,7 +3195,9 @@ void Replication::SendReviveToAll(UserID userID, ActorUID activeUID, ActorUID in
 
 void Replication::OnPlayerDisconnect(ClientHandle clientHd)
 {
-	const i32 clientID = playerMap.at(clientHd);
+	auto found = playerMap.find(clientHd);
+	if(found == playerMap.end()) return;
+	const i32 clientID = found->second;
 	playerState[clientID].cur = PlayerState::DISCONNECTED;
 	clientHandle[clientID] = ClientHandle::INVALID;
 }

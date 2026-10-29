@@ -812,7 +812,7 @@ void Game::PlacePlayersAtSpawn()
 
 void Game::OnPlayerDisconnect(ClientHandle clientHd)
 {
-	Player& player = *playerMap.at(clientHd);
+	if(playerMap.find(clientHd) == playerMap.end()) return;
 
 	// TODO: KILL MASTERS
 	replication.OnPlayerDisconnect(clientHd);
