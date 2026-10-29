@@ -13,7 +13,7 @@ static const char* SUMMARY_DIFFICULTIES[] = {
 	"WORLD_STAGE_DIFFICULT_EASY", "WORLD_STAGE_DIFFICULT_NORMAL", "WORLD_STAGE_DIFFICULT_HARD", "WORLD_STAGE_DIFFICULT_EXTREME", "WORLD_STAGE_DIFFICULT_HELL",
 };
 static const char* SUMMARY_STAGE_ATTRIBUTES[] = { "_EasyStageIndex", "_NormalStageIndex", "_HardStageIndex", "_ExtremeStageIndex", "_HellStageIndex" };
-static const char* SUMMARY_RANKS[] = { "", "E_CLEAR_RANK_TYPE_S", "E_CLEAR_RANK_TYPE_A", "E_CLEAR_RANK_TYPE_B", "E_CLEAR_RANK_TYPE_C", "E_CLEAR_RANK_TYPE_D" };
+static const char* SUMMARY_RANKS[] = { "", "E_CLEAR_RANK_TYPE_SSS", "E_CLEAR_RANK_TYPE_SS", "E_CLEAR_RANK_TYPE_S", "E_CLEAR_RANK_TYPE_A", "E_CLEAR_RANK_TYPE_B", "E_CLEAR_RANK_TYPE_C" };
 
 static i32 IndexOf(const char* value, const char* const* names, i32 count)
 {

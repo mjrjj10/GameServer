@@ -1321,6 +1321,11 @@ static const MissionSubTypeName MISSION_SUBTYPE_NAMES[] = {
 	{ "MISSION_SUBTYPE_PVP_GIVE_DAMAGE_TOTAL", GameXmlContent::Mission::SubType::PVP_DAMAGE },
 	{ "MISSION_SUBTYPE_PVP_TITAN_SCORE", GameXmlContent::Mission::SubType::PVP_TITAN_SCORE },
 	{ "MISSION_SUBTYPE_PVP_TITAN_SCORE_TOTAL", GameXmlContent::Mission::SubType::PVP_TITAN_SCORE_TOTAL },
+	{ "MISSION_SUBTYPE_PVE_MISSION_RANK", GameXmlContent::Mission::SubType::PVE_MISSION_RANK },
+	{ "MISSION_SUBTYPE_PVE_STAGE_CLEAR_NO_DIE", GameXmlContent::Mission::SubType::PVE_STAGE_CLEAR_NO_DIE },
+	{ "MISSION_SUBTYPE_PVE_KILL_TOTAL", GameXmlContent::Mission::SubType::PVE_KILL_TOTAL },
+	{ "MISSION_SUBTYPE_PVE_RANDOM_STAGE_CLEAR", GameXmlContent::Mission::SubType::PVE_RANDOM_STAGE_CLEAR },
+	{ "MISSION_SUBTYPE_PVE_STAGE_CLEAR_WITH_COMRADE", GameXmlContent::Mission::SubType::PVE_STAGE_CLEAR_WITH_COMRADE },
 };
 
 static const char* GAME_TYPE_NAMES[] = {
@@ -1401,6 +1406,9 @@ bool GameXmlContent::LoadMissions()
 		cost.amount = pCost->IntAttribute("_Amount", 0);
 	}
 
+	LoadSections();
+	constexpr eastl::hash<const char*> hashSection;
+	static const char* DIFFICULTY_NAMES[] = { "EASY", "NORMAL", "HARD", "EXTREME", "HELL" };
 	XMLDocument doc;
 	if(!LoadXMLFile(L"/Design/DOCUMENT/MISSION.xml", doc)) return false;
 	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
@@ -1431,6 +1439,17 @@ bool GameXmlContent::LoadMissions()
 			if(section && EA::StdC::Strcmp(section, "AREA_ALL") == 0) mission.section = Mission::Section::ALL;
 			else if(section && EA::StdC::Strcmp(section, "AREA_PVP_ALL") == 0) mission.section = Mission::Section::PVP_ALL;
 			else if(section && EA::StdC::Strcmp(section, "AREA_PVP_TITAN") == 0) mission.section = Mission::Section::PVP_TITAN;
+			else if(section) {
+				auto found = sectionByName.find(hashSection(section));
+				if(found != sectionByName.end()) {
+					mission.section = Mission::Section::STAGES;
+					mission.sectionIndex = found->second;
+				}
+			}
+			mission.rank = ClearRankFromName(pData->Attribute("_Rank"));
+			if(const char* difficulty = pData->Attribute("_Difficulty")) {
+				for(u8 d = 0; d < ARRAY_COUNT(DIFFICULTY_NAMES); d++) if(EA::StdC::Strcmp(difficulty, DIFFICULTY_NAMES[d]) == 0) mission.minDifficultyBit = (u8)(1 << d);
+			}
 			const char* gameType = pData->Attribute("_GameType");
 			for(i32 t = 0; t < (i32)ARRAY_COUNT(GAME_TYPE_NAMES); t++) {
 				if(gameType && EA::StdC::Strcmp(gameType, GAME_TYPE_NAMES[t]) == 0) mission.gameType = (GameType)t;

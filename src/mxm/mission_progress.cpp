@@ -120,6 +120,12 @@ static bool SectionMatches(const Mission& mission, const AccountGameRecord& reco
 			const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(StageIndex(record.stageIndex));
 			return pvp && stage && stage->titan;
 		}
+		case Mission::Section::STAGES: {
+			if(!GetGameXmlContent().SectionContains(mission.sectionIndex, record.stageIndex)) return false;
+			if(mission.minDifficultyBit == 0) return true;
+			const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(StageIndex(record.stageIndex));
+			return stage && stage->difficultyBit != GameXmlContent::ALL_DIFFICULTIES && stage->difficultyBit >= mission.minDifficultyBit;
+		}
 		default: return false;
 	}
 }
@@ -182,6 +188,11 @@ void MissionApplyGame(const AccountGameRecord& record, ActiveMissionList* listPt
 			} break;
 			case Mission::SubType::PVP_TITAN_SCORE: if(record.titanScore >= m.value) a->progress++; break;
 			case Mission::SubType::PVP_TITAN_SCORE_TOTAL: a->progress = MAX(a->progress, (i64)record.titanScore); break;
+			case Mission::SubType::PVE_MISSION_RANK: if(record.won && record.clearRank != 0 && (m.rank == 0 || record.clearRank <= m.rank)) a->progress++; break;
+			case Mission::SubType::PVE_STAGE_CLEAR_NO_DIE: if(record.won && record.deaths == 0) a->progress++; break;
+			case Mission::SubType::PVE_KILL_TOTAL: a->progress += record.stageKills; break;
+			case Mission::SubType::PVE_RANDOM_STAGE_CLEAR: if(record.won && record.gameType == (i32)GameType::PVE_RANDOM) a->progress++; break;
+			case Mission::SubType::PVE_STAGE_CLEAR_WITH_COMRADE: if(record.won && record.partySize >= 2) a->progress++; break;
 			default: break;
 		}
 	}

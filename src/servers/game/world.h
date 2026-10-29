@@ -169,6 +169,9 @@ struct World
 		i32 skillPoints = 1;
 		i32 skillPointsSpent = 0;
 		i32 pveKills = 0;
+		i32 stageHitCombo = 0;
+		i32 bestHitCombo = 0;
+		Time lastComboHit = Time::ZERO;
 		eastl::fixed_vector<i32,16,true> hitByDocs;
 		eastl::fixed_vector<i32,16,true> npcStatuses;
 		Time campTeleportAt = Time::ZERO;

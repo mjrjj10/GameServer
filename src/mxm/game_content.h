@@ -609,6 +609,7 @@ struct GameXmlContent
 		i32 section = -1;
 		i32 gameType = -1;
 		i32 classType = -1;
+		u8 rank = 0;
 		eastl::fixed_vector<i32,16,false> objects;
 	};
 	eastl::vector<Achievement> achievements;
@@ -617,6 +618,8 @@ struct GameXmlContent
 	eastl::hash_map<i32,eastl::fixed_vector<i32,4,true>> achievementParents;
 	eastl::vector<eastl::vector<i32>> sections;
 	eastl::hash_map<size_t,i32> sectionByName;
+	bool LoadSections();
+	static u8 ClearRankFromName(const char* name);
 	bool LoadAchievements();
 	struct TitleStat { u8 type = 0; f32 value = 0; bool mul = false; };
 	eastl::hash_map<i32,eastl::fixed_vector<TitleStat,4,false>> titleStats;
@@ -951,8 +954,13 @@ struct GameXmlContent
 			PVP_DAMAGE,
 			PVP_TITAN_SCORE,
 			PVP_TITAN_SCORE_TOTAL,
+			PVE_MISSION_RANK,
+			PVE_STAGE_CLEAR_NO_DIE,
+			PVE_KILL_TOTAL,
+			PVE_RANDOM_STAGE_CLEAR,
+			PVE_STAGE_CLEAR_WITH_COMRADE,
 		};
-		enum class Section: u8 { OTHER, ALL, PVP_ALL, PVP_TITAN };
+		enum class Section: u8 { OTHER, ALL, PVP_ALL, PVP_TITAN, STAGES };
 		enum class RewardType: u8 { NONE, GOLD, EXP, CCOIN, ITEM, GUILDFUND };
 		i32 ID;
 		Category category;
@@ -969,6 +977,9 @@ struct GameXmlContent
 		RewardType rewardType = RewardType::NONE;
 		i64 rewardAmount = 0;
 		i32 rewardItem = 0;
+		i32 sectionIndex = -1;
+		u8 rank = 0;
+		u8 minDifficultyBit = 0;
 	};
 
 	struct ExpLevel

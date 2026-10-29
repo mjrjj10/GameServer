@@ -1290,11 +1290,12 @@ static const f32 HYP_AREA_MIN_HALF_EXTENT = 100.0f;
 
 static bool AreaContains(const GameXmlContent::Map::Area& area, const vec3& pos)
 {
+	static const f32 AREA_SIZE_TO_HALF_EXTENT = 0.5f;
 	const vec2 d = vec2(pos) - vec2(area.pos);
-	if(area.type == AREA_TYPE_CIRCLE) return glm::length(d) <= area.size.z;
+	if(area.type == AREA_TYPE_CIRCLE) return glm::length(d) <= MAX(area.size.z * AREA_SIZE_TO_HALF_EXTENT, HYP_AREA_MIN_HALF_EXTENT);
 	const f32 c = cosf(area.rot.z);
 	const f32 s = sinf(area.rot.z);
-	return fabsf(d.x * c + d.y * s) <= MAX(area.size.z, HYP_AREA_MIN_HALF_EXTENT) && fabsf(d.y * c - d.x * s) <= MAX(area.size.y, HYP_AREA_MIN_HALF_EXTENT);
+	return fabsf(d.x * c + d.y * s) <= MAX(area.size.z * AREA_SIZE_TO_HALF_EXTENT, HYP_AREA_MIN_HALF_EXTENT) && fabsf(d.y * c - d.x * s) <= MAX(area.size.y * AREA_SIZE_TO_HALF_EXTENT, HYP_AREA_MIN_HALF_EXTENT);
 }
 
 static const u32 CREATURE_TRIGGER_STATE = 0xffffffff;

@@ -38,9 +38,18 @@ bool GameXmlContent::SectionContains(i32 section, i32 stage) const
 	return false;
 }
 
-bool GameXmlContent::LoadAchievements()
+u8 GameXmlContent::ClearRankFromName(const char* name)
+{
+	static const char* CLEAR_RANK_NAMES[] = { "", "E_CLEAR_RANK_TYPE_SSS", "E_CLEAR_RANK_TYPE_SS", "E_CLEAR_RANK_TYPE_S", "E_CLEAR_RANK_TYPE_A", "E_CLEAR_RANK_TYPE_B", "E_CLEAR_RANK_TYPE_C" };
+	if(!name) return 0;
+	for(u8 i = 1; i < ARRAY_COUNT(CLEAR_RANK_NAMES); i++) if(EA::StdC::Strcmp(name, CLEAR_RANK_NAMES[i]) == 0) return i;
+	return 0;
+}
+
+bool GameXmlContent::LoadSections()
 {
 	constexpr eastl::hash<const char*> hashName;
+	if(!sections.empty()) return true;
 	XMLDocument docSection;
 	if(LoadXMLFile(L"/Design/GAMEINFO/SECTION.xml", docSection, true)) {
 		XMLElement* root = docSection.FirstChildElement() ? docSection.FirstChildElement()->FirstChildElement("ST_SECTION_INFO") : nullptr;
@@ -53,7 +62,13 @@ bool GameXmlContent::LoadAchievements()
 			sections.push_back(areas);
 		}
 	}
+	return true;
+}
 
+bool GameXmlContent::LoadAchievements()
+{
+	constexpr eastl::hash<const char*> hashName;
+	LoadSections();
 	XMLDocument doc;
 	if(!LoadXMLFile(L"/Design/DOCUMENT/ACHIEVEMENT.xml", doc, true)) return true;
 	for(XMLElement* info = doc.FirstChildElement()->FirstChildElement("INFO"); info; info = info->NextSiblingElement("INFO")) {
@@ -71,6 +86,7 @@ bool GameXmlContent::LoadAchievements()
 			a.count = d->Int64Attribute("_count", 1);
 			a.value = d->Int64Attribute("_value", 0);
 			a.fvalue = d->FloatAttribute("_fvalue", 0);
+			a.rank = ClearRankFromName(d->Attribute("_Rank"));
 			if(const char* key = d->Attribute("_SectionKey")) {
 				auto f = sectionByName.find(hashName(key));
 				if(f != sectionByName.end()) a.section = f->second;
@@ -195,6 +211,7 @@ static bool Matches(const GameXmlContent::Achievement& a, const AchieveEvent& ev
 	if(a.section >= 0 && ev.stage == 0 && a.sub != AchieveSub::COMMON_USE_SKILL) return false;
 	if(a.value > 0 && ev.value < a.value) return false;
 	if(a.fvalue > 0 && ev.fvalue < a.fvalue) return false;
+	if(a.rank != 0 && (ev.rank == 0 || ev.rank > a.rank)) return false;
 	if(a.objects.size() == 1 && a.sub != AchieveSub::COMMON_MULTI && ev.object != a.objects[0]) return false;
 	if(a.objects.size() > 1) {
 		bool found = false;
@@ -306,7 +323,11 @@ void AchieveApplyRecord(AccountAchievements& acc, const AccountGameRecord& r, Ac
 		apply(kda);
 	}
 	if(pve) {
-		if(r.won) apply(Event(AchieveSub::PVE_STAGE_CLEAR, 1));
+		if(r.won) {
+			AchieveEvent clear = Event(AchieveSub::PVE_STAGE_CLEAR, 1);
+			clear.rank = r.clearRank;
+			apply(clear);
+		}
 		if(r.deaths > 0) apply(Event(AchieveSub::PVE_DEATH_TOTAL, r.deaths));
 	}
 }

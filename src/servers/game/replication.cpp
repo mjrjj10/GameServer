@@ -298,6 +298,7 @@ void Replication::SendClearedStage(ClientHandle clientHd, i32 stage)
 
 void Replication::SendRewardItemList(ClientHandle clientHd, const RewardCard* cards, i32 count)
 {
+	static const u8 MEASURED_REWARD_VIP_SLOT_COUNT = 1;
 	PacketWriter<Sv::SN_RewardItemList,1024> packet;
 	packet.Write<u16>((u16)count);
 	for(i32 i = 0; i < count; i++) {
@@ -306,7 +307,7 @@ void Replication::SendRewardItemList(ClientHandle clientHd, const RewardCard* ca
 		packet.Write<u32>(cards[i].amount);
 	}
 	packet.Write<u32>(0);
-	packet.Write<u8>(0);
+	packet.Write<u8>(MEASURED_REWARD_VIP_SLOT_COUNT);
 	packet.Write<u8>(0);
 	packet.Write<u8>(0);
 	packet.Write<u16>(0);

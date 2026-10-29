@@ -44,6 +44,7 @@ struct AchieveEvent
 	i64 amount = 1;
 	i64 value = 0;
 	f32 fvalue = 0;
+	u8 rank = 0;
 	bool absolute = false;
 };
 

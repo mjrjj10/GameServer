@@ -32,20 +32,25 @@ static u8 GuildMembersInTeam(World& world, const World::Player& player)
 }
 static const f64 PVE_REWARD_TIMEOUT_SEC = 60.0;
 static const u32 MEASURED_REWARD_WAIT_MS = 30000;
-static const u8 MEASURED_REWARD_SLOT_COUNT = 4;
-static const i32 MEASURED_REWARD_PICKS = 5;
+static const u8 MEASURED_REWARD_VIP_SLOTS = 1;
 static const i32 MEASURED_REWARD_CARD_COUNT = 25;
 static const u32 MEASURED_REWARD_TYPE_ITEM = 2;
 static const u32 MEASURED_REWARD_TYPE_EXP = 4;
-static const u8 MEASURED_TECHNIC_GRADE = 2;
+static const u8 HYP_TECHNIC_NORMAL = 0;
+static const u8 HYP_TECHNIC_GOOD = 1;
+static const u8 HYP_TECHNIC_GREAT = 2;
 static const i32 HYP_REWARD_CARDS_PER_VIEW_ITEM = 3;
 static const i32 HYP_REWARD_EXP_MIN_PERCENT = 25;
 static const i32 HYP_REWARD_EXP_STEP_PERCENT = 7;
 static const i32 HYP_REWARD_EXP_MAX_PERCENT = 60;
-static const u8 MEASURED_STAGE_GRADE_NO_DEATH = 3;
+static const u8 MEASURED_STAGE_GRADE_SSS = 1;
+static const u8 MEASURED_STAGE_GRADE_SS = 2;
+static const u8 MEASURED_STAGE_GRADE_S = 3;
 static const u32 MEASURED_MONEY_REASON_PICKUP = 23;
 static const u32 MEASURED_ITEM_UPDATE_REASON_PICKUP = 101;
-static const u8 MEASURED_STAGE_GRADE_DEATH = 4;
+static const u8 MEASURED_STAGE_GRADE_A = 4;
+static const u8 MEASURED_STAGE_GRADE_B = 5;
+static const u8 MEASURED_STAGE_GRADE_C = 6;
 static const u32 MEASURED_STAGE_GRADE_SCALE = 100;
 static const u32 MEASURED_TIME_SCORE_RANK = 1;
 static const f64 MEASURED_STAGE_RANK_PERIOD_MS = 1000.0;
@@ -111,13 +116,12 @@ static void AppendSummaryEvents(World& world, const World::Player& p, i32 stage,
 	if(!summary) return;
 	static const u8 MEASURED_SUMMARY_TYPE_CLEAR_RANK = 1;
 	world.SummaryLive(p, summary->index, stage, MEASURED_SUMMARY_TYPE_CLEAR_RANK, rank);
-	static const u8 HYP_RANK_NEEDS_NO_DEATH = 3;
 	foreach_const(c, summary->challenges) {
 		if(c->difficulty >= 0 && c->difficulty != difficulty) continue;
 		bool done = false;
 		switch(c->type) {
 			case Challenge::NODIE: done = noDeath; break;
-			case Challenge::RANK_OVER: done = c->rank > HYP_RANK_NEEDS_NO_DEATH || noDeath; break;
+			case Challenge::RANK_OVER: done = c->rank != 0 && rank <= c->rank; break;
 			case Challenge::NOHITBYBOSS: {
 				done = true;
 				foreach_const(t, c->targets) foreach_const(d, p.hitByDocs) if(*d == t->first) done = false;
@@ -163,7 +167,6 @@ static void ComputeRewardBonuses(GameType type, StageIndex stage, u32 baseRon, u
 }
 static const i32 HYP_ATTACK_SCORE_PER_KILL = 3;
 static const i32 HYP_DEFENSE_SCORE_PER_DEATH = 33;
-static const u32 HYP_TIME_SCORE = 70;
 static const u16 HUB_LISTEN_PORT = 11900;
 
 const CreatureIndex CI_DOOR = CreatureIndex(110040546);
@@ -426,7 +429,7 @@ void Game::Update(Time localTime_)
 			if(pveStage && world.stageCleared && !gameEnded) EndStage(true);
 			if(defenceStage && !gameEnded && (world.defence.won || world.defence.failed)) EndDefence();
 			foreach(r, rewardStates) {
-				if(r->finished || r->startedAt == Time::ZERO || r->picks >= MEASURED_REWARD_SLOT_COUNT) continue;
+				if(r->finished || r->startedAt == Time::ZERO || r->picks >= r->slotCount) continue;
 				if(TimeDurationMs(r->startedAt, localTime) >= (f64)MEASURED_REWARD_WAIT_MS) AutoPickRewards(r->clientHd);
 			}
 			if(pveStage && !gameEnded && tGameStarted != Time::ZERO && AllHumansDead()) EndStage(false);
@@ -434,7 +437,7 @@ void Game::Update(Time localTime_)
 				tNextStageRank = TimeAdd(localTime, TimeMsToTime(MEASURED_STAGE_RANK_PERIOD_MS));
 				foreach_const(p, world.players) {
 					if(p->clientHd == ClientHandle::INVALID || p->removed) continue;
-					replication.SendStageRank(p->clientHd, StageGrade(*p) * MEASURED_STAGE_GRADE_SCALE, MEASURED_TIME_SCORE_RANK);
+					replication.SendStageRank(p->clientHd, ComputeStageScore(*p, TimeDiffSec(TimeDiff(tGameStarted, localTime))).grade * MEASURED_STAGE_GRADE_SCALE, MEASURED_TIME_SCORE_RANK);
 				}
 			}
 			if(!gameEnded && tGameStarted != Time::ZERO && world.winnerTeam < 0 && (replication.titanMode || world.occupyMode)) {
@@ -783,9 +786,51 @@ void Game::MoveToNextZone()
 	zoneLoading = true;
 }
 
-u8 Game::StageGrade(const World::Player& player) const
+static u8 RewardSlotsForGrade(u8 grade)
 {
-	return player.deaths == 0 ? MEASURED_STAGE_GRADE_NO_DEATH : MEASURED_STAGE_GRADE_DEATH;
+	static const u8 MEASURED_SLOTS_SSS = 6;
+	static const u8 HYP_SLOTS_SS = 5;
+	static const u8 MEASURED_SLOTS_S = 5;
+	static const u8 MEASURED_SLOTS_A = 4;
+	static const u8 HYP_SLOTS_B = 3;
+	static const u8 MEASURED_SLOTS_C = 3;
+	if(grade == MEASURED_STAGE_GRADE_SSS) return MEASURED_SLOTS_SSS;
+	if(grade == MEASURED_STAGE_GRADE_SS) return HYP_SLOTS_SS;
+	if(grade == MEASURED_STAGE_GRADE_S) return MEASURED_SLOTS_S;
+	if(grade == MEASURED_STAGE_GRADE_A) return MEASURED_SLOTS_A;
+	if(grade == MEASURED_STAGE_GRADE_B) return HYP_SLOTS_B;
+	return MEASURED_SLOTS_C;
+}
+
+Game::StageScore Game::ComputeStageScore(const World::Player& player, f64 playSec) const
+{
+	static const f32 MEASURED_WEIGHT_ATTACK = 0.25f;
+	static const f32 MEASURED_WEIGHT_DEFENSE = 0.30f;
+	static const f32 MEASURED_WEIGHT_TIME = 0.45f;
+	static const i32 MEASURED_ATTACK_SCORE_MAX = 99;
+	static const u32 MEASURED_TOTAL_MIN_S = 90;
+	static const u32 HYP_TOTAL_MIN_A = 60;
+	static const u32 HYP_TOTAL_MIN_B = 50;
+	static const f64 HYP_TIME_PAR_SEC = 240.0;
+	static const f64 HYP_TIME_PAR_SEC_HIGH = 450.0;
+	static const f64 HYP_TIME_SCORE_PER_SEC = 0.16;
+	static const f64 HYP_TIME_SCORE_MIN = 20.0;
+	static const u8 DIFFICULTY_BITS_EXTREME_HELL = 8 | 16;
+	const bool high = world.difficultyBit != GameXmlContent::ALL_DIFFICULTIES && (world.difficultyBit & DIFFICULTY_BITS_EXTREME_HELL) != 0;
+	const f64 over = MAX(playSec - (high ? HYP_TIME_PAR_SEC_HIGH : HYP_TIME_PAR_SEC), 0.0);
+	StageScore s;
+	s.attack = (u32)MIN(player.pveKills * HYP_ATTACK_SCORE_PER_KILL, MEASURED_ATTACK_SCORE_MAX);
+	s.defense = (u32)MAX(100 - player.deaths * HYP_DEFENSE_SCORE_PER_DEATH, 0);
+	s.time = (u32)MAX(100.0 - over * HYP_TIME_SCORE_PER_SEC, HYP_TIME_SCORE_MIN);
+	s.total = (u32)(s.attack * MEASURED_WEIGHT_ATTACK + s.defense * MEASURED_WEIGHT_DEFENSE + s.time * MEASURED_WEIGHT_TIME + 0.5f);
+	static const i32 HYP_TECHNIC_GOOD_COMBO = 30;
+	static const i32 HYP_TECHNIC_GREAT_COMBO = 60;
+	static const u32 MEASURED_TOTAL_MIN_SSS = 98;
+	static const u32 HYP_TOTAL_MIN_SS = 95;
+	s.technic = player.bestHitCombo >= HYP_TECHNIC_GREAT_COMBO ? HYP_TECHNIC_GREAT : player.bestHitCombo >= HYP_TECHNIC_GOOD_COMBO ? HYP_TECHNIC_GOOD : HYP_TECHNIC_NORMAL;
+	s.grade = s.total >= MEASURED_TOTAL_MIN_S ? MEASURED_STAGE_GRADE_S : s.total >= HYP_TOTAL_MIN_A ? MEASURED_STAGE_GRADE_A : s.total >= HYP_TOTAL_MIN_B ? MEASURED_STAGE_GRADE_B : MEASURED_STAGE_GRADE_C;
+	if(s.grade == MEASURED_STAGE_GRADE_S && s.technic == HYP_TECHNIC_GREAT) s.grade = s.total >= MEASURED_TOTAL_MIN_SSS ? MEASURED_STAGE_GRADE_SSS : s.total >= HYP_TOTAL_MIN_SS ? MEASURED_STAGE_GRADE_SS : MEASURED_STAGE_GRADE_S;
+	return s;
 }
 
 bool Game::AllHumansDead() const
@@ -1412,14 +1457,15 @@ void Game::EndStage(bool cleared)
 		clear.kills = p->pveKills;
 		clear.deaths = p->deaths;
 		clear.playTimeMs = playMs;
-		clear.rank = StageGrade(*p);
+		const StageScore score = ComputeStageScore(*p, (f64)playMs / 1000.0);
+		clear.rank = score.grade;
 		clear.baseRon = (u32)stage->moneyReward;
 		clear.baseExp = MEASURED_PVE_BASE_EXP;
-		clear.attackScore = (u32)MIN(p->pveKills * HYP_ATTACK_SCORE_PER_KILL, 100);
-		clear.defenseScore = (u32)MAX(100 - p->deaths * HYP_DEFENSE_SCORE_PER_DEATH, 0);
-		clear.timeScore = HYP_TIME_SCORE;
-		clear.totalScore = (clear.attackScore + clear.defenseScore + clear.timeScore) / 3;
-		clear.technicGrade = MEASURED_TECHNIC_GRADE;
+		clear.attackScore = score.attack;
+		clear.defenseScore = score.defense;
+		clear.timeScore = score.time;
+		clear.totalScore = score.total;
+		clear.technicGrade = score.technic;
 		ComputeRewardBonuses(replication.gameType, replication.stageIndex, clear.baseRon, clear.baseExp, guildBoost[p->index], &clear.bonusRon, &clear.bonusExp);
 		replication.SendExpGain(p->clientHd, clear.baseExp + RewardBonusTotal(clear.bonusExp));
 		replication.SendStageClearResult(p->clientHd, clear, members.data(), (i32)members.size());
@@ -1435,11 +1481,18 @@ void Game::EndStage(bool cleared)
 		record.gameType = (i32)replication.gameType;
 		record.classTypes = { (i32)p->mainClass, (i32)p->subClass };
 		record.playSeconds = playMs / 1000;
+		record.deaths = p->deaths;
+		record.clearRank = clear.rank;
+		record.stageKills = p->pveKills;
+		record.partySize = (i32)members.size();
 		AccountGameRecordAppend(p->name.data(), record);
 		AppendSummaryEvents(world, *p, clear.stage, p->deaths == 0, clear.rank);
 		world.FinishProgress(*p, record);
-		if(!rewardStates.full()) rewardStates.push_back({ p->clientHd, 0, false, Time::ZERO, {} });
-		LOG("Stage :: %ls cleared stage %d (%d kills, %d deaths, rank %d)", p->name.data(), clear.stage, clear.kills, clear.deaths, (i32)clear.rank);
+		if(!rewardStates.full()) {
+			rewardStates.push_back({ p->clientHd, 0, false, Time::ZERO, {} });
+			rewardStates.back().slotCount = RewardSlotsForGrade(score.grade);
+		}
+		LOG("Stage :: %ls cleared stage %d (%d kills, %d deaths, rank %d, scores %u/%u/%u total %u, best combo %d technic %d, %d reward slots)", p->name.data(), clear.stage, clear.kills, clear.deaths, (i32)clear.rank, score.attack, score.defense, score.time, score.total, p->bestHitCombo, (i32)score.technic, (i32)RewardSlotsForGrade(score.grade));
 		ranking.totalScore = MAX(ranking.totalScore, clear.totalScore);
 		ranking.deaths += (u32)p->deaths;
 		ranking.clearRank = clear.rank;
@@ -1509,15 +1562,18 @@ void Game::EndDefence()
 void Game::OnRewardStageReady(ClientHandle clientHd)
 {
 	if(!stageEnded || rewardCards.empty()) return;
-	replication.SendRewardStageStart(clientHd, MEASURED_REWARD_WAIT_MS, MEASURED_REWARD_SLOT_COUNT);
-	foreach(r, rewardStates) if(r->clientHd == clientHd && r->startedAt == Time::ZERO) r->startedAt = localTime;
+	foreach(r, rewardStates) {
+		if(r->clientHd != clientHd) continue;
+		replication.SendRewardStageStart(clientHd, MEASURED_REWARD_WAIT_MS, r->slotCount);
+		if(r->startedAt == Time::ZERO) r->startedAt = localTime;
+	}
 }
 
 void Game::AutoPickRewards(ClientHandle clientHd)
 {
 	foreach(r, rewardStates) {
 		if(r->clientHd != clientHd || r->finished) continue;
-		for(u32 tries = 0; r->picks < MEASURED_REWARD_SLOT_COUNT && tries < rewardCards.size() * 4; tries++) {
+		for(u32 tries = 0; r->picks < r->slotCount && tries < rewardCards.size() * 4; tries++) {
 			const u32 slot = RandUint() % (u32)rewardCards.size();
 			if(eastl::find(r->slots.begin(), r->slots.end(), slot) != r->slots.end()) continue;
 			OnRewardSelectSlot(clientHd, slot);
@@ -1530,7 +1586,7 @@ void Game::OnRewardSelectSlot(ClientHandle clientHd, u32 slot)
 {
 	foreach(r, rewardStates) {
 		if(r->clientHd != clientHd || r->finished) continue;
-		if(slot >= rewardCards.size() || r->picks >= MEASURED_REWARD_PICKS + r->bought) return;
+		if(slot >= rewardCards.size() || r->picks >= r->slotCount + MEASURED_REWARD_VIP_SLOTS + r->bought) return;
 		if(eastl::find(r->slots.begin(), r->slots.end(), slot) != r->slots.end()) return;
 		if(!r->slots.full()) r->slots.push_back(slot);
 		r->picks++;
@@ -1564,9 +1620,9 @@ void Game::OnRewardBuyChance(ClientHandle clientHd)
 		const i32 cost = GetGameXmlContent().RewardBuyChanceCost(world.difficultyBit, r->bought);
 		AccountProgress progress = AccountProgressLoad(name);
 		PacketWriter<Sv::SA_RewardBuyChance,16> answer;
-		if(cost < 0 || progress.ccoin < cost || (i32)rewardCards.size() <= MEASURED_REWARD_PICKS + r->bought) {
+		if(cost < 0 || progress.ccoin < cost || (i32)rewardCards.size() <= r->slotCount + MEASURED_REWARD_VIP_SLOTS + r->bought) {
 			answer.Write<u32>(HYP_BUY_CHANCE_FAILED);
-			answer.Write<u32>((u32)(MEASURED_REWARD_SLOT_COUNT + r->bought));
+			answer.Write<u32>((u32)(r->slotCount + r->bought));
 			answer.Write<u8>(cost < 0 ? 0 : MEASURED_NEXT_ACTION_BUY_CHANCE);
 			answer.Write<u32>((u32)MAX(cost, 0));
 			replication.SendWriter(clientHd, answer);
@@ -1581,7 +1637,7 @@ void Game::OnRewardBuyChance(ClientHandle clientHd)
 		replication.SendWriter(clientHd, coin);
 		const i32 next = GetGameXmlContent().RewardBuyChanceCost(world.difficultyBit, r->bought);
 		answer.Write<u32>(0);
-		answer.Write<u32>((u32)(MEASURED_REWARD_SLOT_COUNT + r->bought));
+		answer.Write<u32>((u32)(r->slotCount + r->bought));
 		answer.Write<u8>(next < 0 ? 0 : MEASURED_NEXT_ACTION_BUY_CHANCE);
 		answer.Write<u32>((u32)MAX(next, 0));
 		replication.SendWriter(clientHd, answer);

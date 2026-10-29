@@ -130,7 +130,8 @@ struct Game
 	i64 gameStartUnix = 0;
 	bool stageEnded = false;
 	eastl::fixed_vector<Replication::RewardCard,32,false> rewardCards;
-	struct RewardState { ClientHandle clientHd; i32 picks; bool finished; Time startedAt; eastl::fixed_vector<u32,8,false> slots; i32 bought = 0; };
+	struct RewardState { ClientHandle clientHd; i32 picks; bool finished; Time startedAt; eastl::fixed_vector<u32,8,false> slots; i32 bought = 0; u8 slotCount = 0; };
+	struct StageScore { u32 attack; u32 defense; u32 time; u32 total; u8 grade; u8 technic; };
 	eastl::fixed_vector<RewardState,MAX_PLAYERS,false> rewardStates;
 	void EndStage(bool cleared);
 	void EndDefence();
@@ -142,7 +143,7 @@ struct Game
 	void AutoPickRewards(ClientHandle clientHd);
 	void PlacePlayersAtSpawn();
 	bool AllHumansDead() const;
-	u8 StageGrade(const World::Player& player) const;
+	StageScore ComputeStageScore(const World::Player& player, f64 playSec) const;
 	struct PveLoot { i32 playerIndex = -1; i64 gold = 0; i64 picked = 0; AccountInventory inventory; };
 	eastl::fixed_vector<PveLoot,MAX_PLAYERS,false> pveLoot;
 	PveLoot& LootFor(const World::Player& player);

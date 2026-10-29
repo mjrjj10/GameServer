@@ -101,6 +101,9 @@ struct AccountGameRecord
 	u32 playSeconds = 0;
 	i32 guildPoints = 0;
 	i32 deaths = 0;
+	u8 clearRank = 0;
+	i32 stageKills = 0;
+	i32 partySize = 0;
 	i32 score = 0;
 	i32 myTeamScore = 0;
 	i32 enemyTeamScore = 0;
