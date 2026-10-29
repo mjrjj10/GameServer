@@ -1,4 +1,5 @@
 #include "replication.h"
+#include <mxm/item_writer.h>
 
 #include <common/protocol.h>
 #include <EASTL/algorithm.h>
@@ -863,10 +864,11 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 
 	// SN_ProfileItems
 	{
-		PacketWriter<Sv::SN_ProfileItems,4096> packet;
-
-		packet.Write<u8>(1); // packetNum
-		packet.Write<u16>(0); // items_count
+		PacketWriter<Sv::SN_ProfileItems,8192> packet;
+		const AccountInventory inventory = AccountInventoryLoad(player->name.data());
+		packet.Write<u8>(1);
+		packet.Write<u16>((u16)inventory.items.size());
+		foreach_const(it, inventory.items) WriteInventoryItem(packet, *it);
 
 		SendPacket(clientHd, packet);
 	}

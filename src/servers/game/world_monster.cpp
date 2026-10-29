@@ -104,7 +104,7 @@ void World::CheckSupportKit(Player& player)
 	if(player.supportKitReadyAt != Time::ZERO && localTime < player.supportKitReadyAt) return;
 	const GameXmlContent::SupportKit* kit = GetGameXmlContent().FindSupportKit(player.supportKit);
 	ActorMaster& chara = player.Main();
-	if(!kit || chara.hp <= 0 || chara.hp * 100 >= chara.hpMax * kit->hpPercent) return;
+	if(!kit || kit->hpPercent <= 0 || chara.hp <= 0 || chara.hp * 100 >= chara.hpMax * kit->hpPercent) return;
 	foreach_const(s, kit->statuses) ApplyStatus(player, player, *s);
 	player.supportKitReadyAt = TimeAdd(localTime, TimeMsToTime(kit->coolTime * 1000.0));
 	player.supportKitCount--;

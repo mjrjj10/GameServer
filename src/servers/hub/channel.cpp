@@ -15,6 +15,7 @@ static const u16 MEASURED_CQ_TITLE_SELECT = 60056;
 static const u16 MEASURED_CQ_MASTERGEAR_ADD = 60068;
 static const u16 MEASURED_CQ_SELECT_SUPPORT_KIT = 60057;
 static const u16 MEASURED_CQ_REGAME = 60093;
+static const u16 MEASURED_CQ_SERVER_UTC_TIME = 60131;
 
 bool HubPacketHandler::Init(HubGame* game_)
 {
@@ -108,6 +109,33 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CQ_RequestSummaryInfoEach);
 		case MEASURED_CQ_SUMMARY_REWARD: HandleSummaryReward(clientHd, packetData, packetSize); break;
 		case MEASURED_CQ_TITLE_SELECT: HandleTitleSelect(clientHd, packetData, packetSize); break;
+		case Cl::CN_SceneEnter::NET_ID: {
+			static const u8 MEASURED_UNRANKED_TIER_STAGE_RECORD[] = { 0x01, 0x02, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+			static const u8 MEASURED_SCENE_STAGE_RECORDS = 2;
+			NT_LOG("[client%x] Client :: CN_SceneEnter :: size=%d", clientHd, packetSize);
+			if(packetSize != 2 || packetData[1] != MEASURED_SCENE_STAGE_RECORDS) break;
+			PacketWriter<Sv::SA_TierStageRecord,64> answer;
+			for(u8 b : MEASURED_UNRANKED_TIER_STAGE_RECORD) answer.Write<u8>(b);
+			game->replication.SendWriter(clientHd, answer);
+		} break;
+		case Cl::CQ_PartyInviteRecommendResponse::NET_ID: {
+			if(packetSize < 3) break;
+			ConstBuffer buff(packetData, packetSize);
+			const u16 len = buff.Read<u16>();
+			if(packetSize != 2 + len * 2 + 1) break;
+			WideString invitee;
+			invitee.assign((const wchar*)buff.ReadRaw(len * 2), len);
+			const bool accept = buff.Read<u8>() != 0;
+			NT_LOG("[client%x] Client :: CQ_PartyInviteRecommendResponse :: %ls accept=%d", clientHd, invitee.data(), (i32)accept);
+			game->OnPartyInviteRecommendResponse(clientHd, invitee, accept);
+		} break;
+		case MEASURED_CQ_SERVER_UTC_TIME: {
+			static const i64 FILETIME_UNIX_EPOCH = 116444736000000000LL;
+			static const i64 FILETIME_PER_SEC = 10000000LL;
+			PacketWriter<Sv::SN_ServerUtcTime,16> answer;
+			answer.Write<i64>(FILETIME_UNIX_EPOCH + (i64)time(nullptr) * FILETIME_PER_SEC);
+			game->replication.SendWriter(clientHd, answer);
+		} break;
 		case MEASURED_CQ_REGAME: {
 			NT_LOG("[client%x] Client :: regame :: size=%d", clientHd, packetSize);
 			game->OnRegame(clientHd);

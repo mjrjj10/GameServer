@@ -997,7 +997,23 @@ void HubGame::OnPartyInvite(ClientHandle clientHd, const wchar* nickname, i32 ni
 	WideString target;
 	target.assign(nickname, nicknameLen);
 	Party* party = FindPlayerParty(userID);
-	if(!party || party->memberList.front().accountUID != playerAccountData[userID]->UID) {
+	if(party && party->memberList.front().accountUID != playerAccountData[userID]->UID) {
+		auto leader = accountClientHandleMap.find(party->memberList.front().accountUID);
+		if(leader == accountClientHandleMap.end()) {
+			replication.SendPartyInviteResult(clientHd, MEASURED_PARTY_INVITE_NOT_OWNER, target.data());
+			return;
+		}
+		foreach(r, party->recommends) if(r->invitee == target) { party->recommends.erase(r); break; }
+		if(party->recommends.full()) party->recommends.erase(party->recommends.begin());
+		party->recommends.push_back({ target, playerAccountData[userID]->UID });
+		PacketWriter<Sv::SN_PartyInviteRecommend,256> packet;
+		packet.WriteStringObj(playerAccountData[userID]->nickname.data());
+		packet.WriteStringObj(target.data());
+		replication.SendWriter(leader->second, packet);
+		LOG("[client%x] HubGame :: %ls recommends %ls to the party leader", clientHd, playerAccountData[userID]->nickname.data(), target.data());
+		return;
+	}
+	if(!party) {
 		replication.SendPartyInviteResult(clientHd, MEASURED_PARTY_INVITE_NOT_OWNER, target.data());
 		return;
 	}
@@ -1024,6 +1040,30 @@ void HubGame::OnPartyInvite(ClientHandle clientHd, const wchar* nickname, i32 ni
 	}
 	LOG("[client%x] HubGame :: %ls invites %ls to party %u", clientHd, playerAccountData[userID]->nickname.data(), target.data(), (u32)party->UID);
 	replication.SendPartyInvite(playerMap[targetID]->clientHd, playerAccountData[userID]->nickname.data(), party->stageIndex, party->gameType, party->gameDefinition, (i32)party->UID);
+}
+
+void HubGame::OnPartyInviteRecommendResponse(ClientHandle clientHd, const WideString& invitee, bool accept)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	Party* party = FindPlayerParty(userID);
+	PacketWriter<Sv::SA_PartyInviteRecommendResponse,128> answer;
+	answer.Write<u32>(0);
+	answer.WriteStringObj(invitee.data());
+	replication.SendWriter(clientHd, answer);
+	if(!party) return;
+	foreach(r, party->recommends) {
+		if(r->invitee != invitee) continue;
+		auto by = accountClientHandleMap.find(r->by);
+		if(by != accountClientHandleMap.end()) {
+			PacketWriter<Sv::SN_PartyInviteRecommendResponse,128> notice;
+			notice.WriteStringObj(invitee.data());
+			notice.Write<u8>(accept ? 1 : 0);
+			replication.SendWriter(by->second, notice);
+		}
+		party->recommends.erase(r);
+		break;
+	}
+	if(accept) OnPartyInvite(clientHd, invitee.data(), (i32)invitee.size());
 }
 
 void HubGame::OnPartyInviteAccept(ClientHandle clientHd, i32 partyID)
@@ -1605,6 +1645,25 @@ void HubGame::MmOnMatchFound(const In::MN_MatchingPartyFound& matchingParty)
 		regameData.Write<u32>(ownerRow);
 		regameData.Write<AreaIndex>(pveGame ? party.areaIndex : AreaIndex(0));
 		replication.SendWriter(clientHd, regameData);
+		{
+			static const u8 MEASURED_ETC_TYPE_SUPPORTKIT = 6;
+			const AccountInventory inventory = AccountInventoryLoad(playerAccountData[userID]->nickname.data());
+			eastl::fixed_vector<eastl::pair<i32,i32>,16,false> kits;
+			foreach_const(it, inventory.items) {
+				if(it->count <= 0 || !GetGameXmlContent().FindSupportKit(it->docIndex)) continue;
+				bool merged = false;
+				foreach(k, kits) if(k->first == it->docIndex) { k->second += it->count; merged = true; }
+				if(!merged && !kits.full()) kits.push_back({ it->docIndex, it->count });
+			}
+			PacketWriter<Sv::SN_AvailableAccountEquipmentList,256> list;
+			list.Write<u16>((u16)kits.size());
+			foreach_const(k, kits) {
+				list.Write<u8>(MEASURED_ETC_TYPE_SUPPORTKIT);
+				list.Write<i32>(k->first);
+				list.Write<u16>((u16)MIN(k->second, 0xffff));
+			}
+			replication.SendWriter(clientHd, list);
+		}
 		if(pveGame) RegamePut({ playerAccountData[userID]->nickname.data(), matchingParty.gameType, party.stageIndex, party.entry, party.stageType, party.gameDefinition, party.selectMasterType, false });
 		else RegameErase(playerAccountData[userID]->nickname.data());
 		foreach_const(b, roster->members) if(b->bot) replication.SendMatchingPartyConfirm(clientHd, b->row, b->teamType, true);

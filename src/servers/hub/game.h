@@ -58,6 +58,8 @@ struct HubGame
 
 		eastl::fixed_vector<Member,12> memberList;
 		eastl::fixed_vector<AccountUID,8> invites;
+		struct Recommend { WideString invitee; AccountUID by; };
+		eastl::fixed_vector<Recommend,8,false> recommends;
 
 		Party(PartyUID UID_): UID(UID_) {}
 	};
@@ -156,6 +158,7 @@ struct HubGame
 
 	bool SetPartyStage(Party& party, StageIndex stage);
 	void OnPartyInvite(ClientHandle clientHd, const wchar* nickname, i32 nicknameLen);
+	void OnPartyInviteRecommendResponse(ClientHandle clientHd, const WideString& invitee, bool accept);
 	void OnPartyInviteAccept(ClientHandle clientHd, i32 partyID);
 	void OnPartyBreakUp(ClientHandle clientHd);
 	void OnPartyLeave(ClientHandle clientHd);

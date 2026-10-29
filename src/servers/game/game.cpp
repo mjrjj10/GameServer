@@ -272,7 +272,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 			if(!desc.stageSkillLevels.empty()) LOG("Arsenal :: %ls stage skill upgrades %d", desc.name.data(), (i32)desc.stageSkillLevels.size());
 			desc.statTitle = AccountAchievementsLoad(desc.name.data()).statTitle;
 			const i32 kit = AccountArsenalLoad(desc.name.data()).supportKit;
-			if(kit > 0 && xml.FindSupportKit(kit)) {
+			if(kit > 0 && xml.FindSupportKit(kit) && xml.FindSupportKit(kit)->hpPercent > 0) {
 				const AccountInventory inventory = AccountInventoryLoad(desc.name.data());
 				foreach_const(it, inventory.items) if(it->docIndex == kit) desc.supportKitCount += it->count;
 				if(desc.supportKitCount > 0) desc.supportKit = kit;

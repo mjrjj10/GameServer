@@ -3,7 +3,7 @@
 #include <common/protocol.h>
 #include <mxm/account_progress.h>
 #include <mxm/game_content.h>
-#include "item_writer.h"
+#include <mxm/item_writer.h>
 #include <mxm/achievements.h>
 
 struct Account;

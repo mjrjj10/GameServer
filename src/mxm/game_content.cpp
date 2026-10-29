@@ -4241,9 +4241,9 @@ bool GameXmlContent::LoadGroundItems()
 			XMLElement* kit = pInfo->FirstChildElement("SupportKitItemComData");
 			XMLElement* common = pInfo->FirstChildElement("ItemComData");
 			const char* type = kit ? kit->Attribute("_Type") : nullptr;
-			if(!kit || !common || !type || EA::StdC::Strcmp(type, "HP") != 0) continue;
+			if(!kit || !common || !type) continue;
 			SupportKit k;
-			k.hpPercent = kit->IntAttribute("_Value");
+			if(EA::StdC::Strcmp(type, "HP") == 0) k.hpPercent = kit->IntAttribute("_Value");
 			k.coolTime = common->FloatAttribute("_CoolTime");
 			k.coolTimeID = common->IntAttribute("_CoolTimeID");
 			for(XMLElement* st = kit->FirstChildElement("_STATUS"); st && !k.statuses.full(); st = st->NextSiblingElement("_STATUS")) k.statuses.push_back(st->IntAttribute("DATA"));
