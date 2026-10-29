@@ -1,5 +1,6 @@
 #include <mxm/achievements.h>
 #include "game.h"
+#include <mutex>
 #include "coordinator.h" // account data
 #include "instance.h"
 #include <mxm/game_content.h>
@@ -137,6 +138,47 @@ bool HubGame::LoadMap()
 	return true;
 }
 
+struct Regame { WideString nick; GameType gameType; StageIndex stage; EntrySystemID entry; StageType stageType; GameDefinition gameDefinition; u8 selectMasterType; bool announced; };
+static eastl::fixed_vector<Regame,64,false> g_regames;
+static std::mutex g_regameMutex;
+
+static void RegamePut(const Regame& regame)
+{
+	std::lock_guard<std::mutex> lock(g_regameMutex);
+	foreach(r, g_regames) if(r->nick == regame.nick) { g_regames.erase(r); break; }
+	if(g_regames.full()) g_regames.erase(g_regames.begin());
+	g_regames.push_back(regame);
+}
+
+static void RegameErase(const wchar* nick)
+{
+	std::lock_guard<std::mutex> lock(g_regameMutex);
+	foreach(r, g_regames) if(r->nick.compare(nick) == 0) { g_regames.erase(r); break; }
+}
+
+static bool RegameAnnounce(const wchar* nick, Regame& out)
+{
+	std::lock_guard<std::mutex> lock(g_regameMutex);
+	foreach(r, g_regames) {
+		if(r->nick.compare(nick) != 0 || r->announced) continue;
+		r->announced = true;
+		out = *r;
+		return true;
+	}
+	return false;
+}
+
+static bool RegameFind(const wchar* nick, Regame& out)
+{
+	std::lock_guard<std::mutex> lock(g_regameMutex);
+	foreach_const(r, g_regames) {
+		if(r->nick.compare(nick) != 0) continue;
+		out = *r;
+		return true;
+	}
+	return false;
+}
+
 void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 {
 	const i32 userID = plidMap->Get(clientHd);
@@ -149,6 +191,15 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 	replication.SendAccountDataLobby(clientHd, *accountData);
 	SendSummaries(clientHd, accountData->nickname.data());
 	replication.SendPveLastGameRanking(clientHd, accountData->nickname.data());
+	Regame regame;
+	if(RegameAnnounce(accountData->nickname.data(), regame)) {
+		PacketWriter<Sv::SN_RegameAvailable,16> packet;
+		packet.Write<GameType>(regame.gameType);
+		packet.Write<StageIndex>(regame.stage);
+		packet.Write<u8>(1);
+		packet.Write<u8>(0);
+		replication.SendWriter(clientHd, packet);
+	}
 
 	replication.OnPlayerConnect(clientHd);
 	replication.SetPlayerAccount(clientHd, accountData);
@@ -859,6 +910,35 @@ void HubGame::OnStartGame(ClientHandle clientHd)
 	LOG("[client%x] HubGame :: custom party %u starts (%u player(s), %u + %u bot(s))", clientHd, (u32)party->UID, (u32)custom.count, (u32)custom.bots[0], (u32)custom.bots[1]);
 }
 
+void HubGame::OnRegame(ClientHandle clientHd)
+{
+	static const u32 HYP_REGAME_REFUSED = 1;
+	const i32 userID = plidMap->Get(clientHd);
+	Regame regame;
+	if(!playerAccountData[userID] || !RegameFind(playerAccountData[userID]->nickname.data(), regame) || !GetGameXmlContent().HasEntrySystem((i32)regame.entry)) {
+		PacketWriter<Sv::SA_RestartGame,8> answer;
+		answer.Write<u32>(HYP_REGAME_REFUSED);
+		replication.SendWriter(clientHd, answer);
+		return;
+	}
+	PacketWriter<Sv::SA_RestartGame,8> answer;
+	answer.Write<u32>(0);
+	replication.SendWriter(clientHd, answer);
+	Party* party = FindPlayerParty(userID);
+	if(party && party->memberList.front().accountUID == playerAccountData[userID]->UID) {
+		party->gameType = regame.gameType;
+		if(SetPartyStage(*party, regame.stage)) OnEnqueueGame(clientHd);
+		return;
+	}
+	OnCreateParty(clientHd, regame.entry, regame.stageType);
+	pendingPartyGameType[userID] = regame.gameType;
+	pendingPartyDefinition[userID] = regame.gameDefinition;
+	pendingPartySelectMaster[userID] = regame.selectMasterType;
+	pendingPartyStageIndex[userID] = regame.stage;
+	pendingRegame[userID] = true;
+	LOG("[client%x] HubGame :: regame stage %d", clientHd, (i32)regame.stage);
+}
+
 void HubGame::OnPartyModify(ClientHandle clientHd, StageIndex stage, GameType gameType, GameDefinition gameDefinition, u8 selectMasterType)
 {
 	const i32 userID = plidMap->Get(clientHd);
@@ -1461,7 +1541,8 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 
 	replication.SendPartyCreateSucess(clientHd, UserID(1), party.stageType);
 	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_IN_CREATION);
-	if(Config().DevShowcase || Config().DevAutoQueue) OnEnqueueGame(clientHd);
+	if(Config().DevShowcase || Config().DevAutoQueue || pendingRegame[userID]) OnEnqueueGame(clientHd);
+	pendingRegame[userID] = false;
 }
 
 void HubGame::MmOnPartyEnqueued(PartyUID partyUID)
@@ -1517,6 +1598,15 @@ void HubGame::MmOnMatchFound(const In::MN_MatchingPartyFound& matchingParty)
 			if(matchingParty.playerList[i].accountUID == m->accountUID) myTeam = matchingParty.playerList[i].team;
 		}
 		replication.SendMatchingPartyFound(clientHd, matchingParty, party.stageIndex, party.gameDefinition, rowIDs, myTeam);
+		u32 ownerRow = 1;
+		for(i32 i = 0; i < matchingParty.playerCount && !party.memberList.empty(); i++) if(matchingParty.playerList[i].accountUID == party.memberList[0].accountUID) ownerRow = (u32)rowIDs[i];
+		const bool pveGame = matchingParty.gameType == GameType::PVE_NORMAL || matchingParty.gameType == GameType::PVE_RANDOM || matchingParty.gameType == GameType::PVE_TICKET;
+		PacketWriter<Sv::SN_RegameData,16> regameData;
+		regameData.Write<u32>(ownerRow);
+		regameData.Write<AreaIndex>(pveGame ? party.areaIndex : AreaIndex(0));
+		replication.SendWriter(clientHd, regameData);
+		if(pveGame) RegamePut({ playerAccountData[userID]->nickname.data(), matchingParty.gameType, party.stageIndex, party.entry, party.stageType, party.gameDefinition, party.selectMasterType, false });
+		else RegameErase(playerAccountData[userID]->nickname.data());
 		foreach_const(b, roster->members) if(b->bot) replication.SendMatchingPartyConfirm(clientHd, b->row, b->teamType, true);
 		BroadcastPlayerStateInTown(userID, 0, nullptr, 0);
 		BroadcastFriendState(userID, MEASURED_FRIEND_STATE_IN_SORTIE);

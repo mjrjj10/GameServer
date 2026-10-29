@@ -87,6 +87,7 @@ struct HubGame
 	eastl::array<GameDefinition,MAX_PLAYERS> pendingPartyDefinition;
 	eastl::array<u8,MAX_PLAYERS> pendingPartySelectMaster;
 	eastl::array<StageIndex,MAX_PLAYERS> pendingPartyStageIndex;
+	eastl::array<bool,MAX_PLAYERS> pendingRegame = {};
 	struct SortieMember { AccountUID accountUID; u8 row; u32 teamType; bool bot; };
 	struct SortieRoster { SortieUID sortieUID; eastl::fixed_vector<SortieMember,16,false> members; };
 	eastl::fixed_vector<SortieRoster,MAX_PLAYERS,false> sortieRosters;
@@ -147,6 +148,7 @@ struct HubGame
 	void OnPartyAddBot(ClientHandle clientHd);
 	void OnPartyRemoveBot(ClientHandle clientHd, u32 userId);
 	void OnStartGame(ClientHandle clientHd);
+	void OnRegame(ClientHandle clientHd);
 	i32 PartyTeamCapacity(const Party& party, u32 team) const;
 	bool PartyPlaceMember(Party& party, Party::Member* member) const;
 	const wchar* PartyMemberName(const Party::Member& member) const;

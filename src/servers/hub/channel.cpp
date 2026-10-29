@@ -14,6 +14,7 @@ static const u16 MEASURED_CQ_SUMMARY_REWARD = 60046;
 static const u16 MEASURED_CQ_TITLE_SELECT = 60056;
 static const u16 MEASURED_CQ_MASTERGEAR_ADD = 60068;
 static const u16 MEASURED_CQ_SELECT_SUPPORT_KIT = 60057;
+static const u16 MEASURED_CQ_REGAME = 60093;
 
 bool HubPacketHandler::Init(HubGame* game_)
 {
@@ -107,6 +108,10 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CQ_RequestSummaryInfoEach);
 		case MEASURED_CQ_SUMMARY_REWARD: HandleSummaryReward(clientHd, packetData, packetSize); break;
 		case MEASURED_CQ_TITLE_SELECT: HandleTitleSelect(clientHd, packetData, packetSize); break;
+		case MEASURED_CQ_REGAME: {
+			NT_LOG("[client%x] Client :: regame :: size=%d", clientHd, packetSize);
+			game->OnRegame(clientHd);
+		} break;
 		case MEASURED_CQ_SELECT_SUPPORT_KIT: {
 			if(packetSize != 5) break;
 			ConstBuffer buff(packetData, packetSize);

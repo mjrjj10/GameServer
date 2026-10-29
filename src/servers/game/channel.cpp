@@ -131,6 +131,16 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 			NT_LOG("[client%x] Client :: equip skill in game :: chara=%u skill=%d slot=%u", clientHd, (u32)chara, (i32)skill, slot);
 			game->OnTrainingEquipSkill(clientHd, chara, skill, slot);
 		} break;
+		case Cl::CN_UNKNOWN_60233::NET_ID: {
+			if(packetSize != 24) break;
+			ConstBuffer buff(packetData, packetSize);
+			const LocalActorID chara = buff.Read<LocalActorID>();
+			const float3 pos = buff.Read<float3>();
+			const LocalActorID target = buff.Read<LocalActorID>();
+			const u32 ping = buff.Read<u32>();
+			NT_LOG("[client%x] Client :: game ping :: chara=%u target=%u type=%u", clientHd, (u32)chara, (u32)target, ping);
+			game->OnGamePing(clientHd, chara, pos, target, ping);
+		} break;
 		case Cl::CN_UNKNOWN_60296::NET_ID: {
 			char hex[128] = {0};
 			for(i32 i = 0; i < packetSize && i < 60; i++) snprintf(hex + i * 2, 3, "%02x", packetData[i]);

@@ -112,6 +112,7 @@ struct Game
 	void OnMasterTrainingEvent(ClientHandle clientHd, const u8* data, i32 size);
 	void ChangeTrainingLoadout(ClientHandle clientHd, const Cl::CN_UNKNOWN_60296::SlotPairData& slots);
 	void OnTrainingEquipSkill(ClientHandle clientHd, LocalActorID chara, SkillID skill, u32 slot);
+	void OnGamePing(ClientHandle clientHd, LocalActorID chara, const float3& pos, LocalActorID target, u32 ping);
 	void SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team);
 	eastl::fixed_vector<MapIndex,8,false> zoneMaps;
 	i32 zoneIndex = 0;

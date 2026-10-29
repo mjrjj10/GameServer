@@ -997,6 +997,24 @@ static bool MasterHasSkin(const GameXmlContent::Master& master, SkinIndex skin)
 	return skin == SkinIndex::DEFAULT;
 }
 
+void Game::OnGamePing(ClientHandle clientHd, LocalActorID chara, const float3& pos, LocalActorID target, u32 ping)
+{
+	auto pl = playerMap.find(clientHd);
+	if(pl == playerMap.end()) return;
+	const World::Player& sender = world.GetPlayer(pl->second->playerIndex);
+	const ActorUID charaUID = replication.GetWorldActorUID(clientHd, chara);
+	const ActorUID targetUID = target == LocalActorID::INVALID ? ActorUID::INVALID : replication.GetWorldActorUID(clientHd, target);
+	foreach_const(p, world.players) {
+		if(p->clientHd == ClientHandle::INVALID || p->removed || p->team != sender.team) continue;
+		PacketWriter<Sv::SN_BroadcastGamePingData,32> packet;
+		packet.Write<LocalActorID>(charaUID == ActorUID::INVALID ? LocalActorID::INVALID : replication.GetLocalActorID(p->clientHd, charaUID));
+		packet.Write<float3>(pos);
+		packet.Write<LocalActorID>(targetUID == ActorUID::INVALID ? LocalActorID::INVALID : replication.GetLocalActorID(p->clientHd, targetUID));
+		packet.Write<u32>(ping);
+		replication.SendWriter(p->clientHd, packet);
+	}
+}
+
 void Game::OnTrainingEquipSkill(ClientHandle clientHd, LocalActorID chara, SkillID skill, u32 slot)
 {
 	auto pl = playerMap.find(clientHd);
