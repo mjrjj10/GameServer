@@ -1,5 +1,6 @@
 #include <mxm/achievements.h>
 #include <mxm/summary.h>
+#include <mxm/pve_ranking.h>
 #include "game.h"
 
 #include <EAStdC/EAString.h>
@@ -1314,6 +1315,9 @@ void Game::EndStage(bool cleared)
 		members.push_back({ p->mainClass, p->subClass, p->name.data() });
 	}
 	const u32 playMs = (u32)(TimeDiffSec(TimeDiff(tGameStarted, localTime)) * 1000.0);
+	PveRankingEntry ranking;
+	ranking.stage = (i32)replication.stageIndex;
+	ranking.playMs = playMs;
 	foreach_const(p, world.players) {
 		if(p->clientHd == ClientHandle::INVALID || p->removed) continue;
 		Replication::StageClear clear;
@@ -1350,7 +1354,13 @@ void Game::EndStage(bool cleared)
 		world.FinishProgress(*p, record);
 		if(!rewardStates.full()) rewardStates.push_back({ p->clientHd, 0, false, Time::ZERO, {} });
 		LOG("Stage :: %ls cleared stage %d (%d kills, %d deaths, rank %d)", p->name.data(), clear.stage, clear.kills, clear.deaths, (i32)clear.rank);
+		ranking.totalScore = MAX(ranking.totalScore, clear.totalScore);
+		ranking.deaths += (u32)p->deaths;
+		ranking.clearRank = clear.rank;
+		if(!ranking.members.full()) ranking.members.push_back({ (i32)p->mainClass, (i32)p->subClass, p->name });
+		PveRankingSetLastGame(p->name.data(), clear.stage);
 	}
+	if(!ranking.members.empty()) PveRankingSubmit(ranking);
 }
 
 void Game::EndDefence()

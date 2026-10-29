@@ -148,6 +148,7 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 
 	replication.SendAccountDataLobby(clientHd, *accountData);
 	SendSummaries(clientHd, accountData->nickname.data());
+	replication.SendPveLastGameRanking(clientHd, accountData->nickname.data());
 
 	replication.OnPlayerConnect(clientHd);
 	replication.SetPlayerAccount(clientHd, accountData);

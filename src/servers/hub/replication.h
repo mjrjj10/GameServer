@@ -242,6 +242,7 @@ struct HubReplication
 	void SendItemsUpdate(ClientHandle clientHd, const struct AccountItem* items, i32 count, u32 reason);
 	void SendFriendStateChangeResult(ClientHandle clientHd, u32 result);
 	void SendAchievements(ClientHandle clientHd, const struct AccountAchievements& acc);
+	void SendPveLastGameRanking(ClientHandle clientHd, const wchar* nickname);
 	void SendTitleSelect(ClientHandle clientHd, u32 result, ActorUID actorUID, i32 displayTitle, i32 statTitle);
 	void SendQuickRunArena(ClientHandle clientHd, const StageIndex* stages, i32 count, GameType gameType, GameDefinition gameDefinition);
 	void SendProfileMasterGears(ClientHandle clientHd, const wchar* nickname);

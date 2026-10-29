@@ -3287,6 +3287,7 @@ DEFAULT_SERIALIZE(Sv::SN_MissionUpdate);
 DEFAULT_SERIALIZE(Sv::SN_RecommendedfriendList);
 DEFAULT_SERIALIZE(Sv::SA_SearchGuild);
 DEFAULT_SERIALIZE(Sv::SN_ActiveIngameEventList);
+DEFAULT_SERIALIZE(Sv::SN_PveLastgameRanking);
 DEFAULT_SERIALIZE(Sv::SN_ActivatedSupportkit);
 DEFAULT_SERIALIZE(Sv::SA_SelectAccountEquipment);
 DEFAULT_SERIALIZE(Sv::SA_TitleSelect);

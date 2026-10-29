@@ -16,6 +16,7 @@
 #include "character_base_data.h"
 #include <mxm/account_progress.h>
 #include "arsenal.h"
+#include <mxm/pve_ranking.h>
 #include "achieve_send.h"
 
 static const i32 MEASURED_JUKEBOX_HOT_TRACKS[] = { 7770015, 7770005, 7770002 };
@@ -1963,9 +1964,37 @@ static const i32 MEASURED_EMPTY_PVE_RANKING_BYTES = 19;
 
 void HubReplication::SendPveRanking(ClientHandle clientHd, u32 stage)
 {
-	PacketWriter<Sv::SA_MyPveRanking,64> packet;
+	const Account* owner = playerAccount[plidMap->Get(clientHd)];
+	const eastl::vector<PveRankingEntry> ranking = PveRankingLoad((i32)stage);
+	const i32 best = owner ? PveRankingFindBest(ranking, owner->nickname.data()) : -1;
+	PacketWriter<Sv::SA_MyPveRanking,512> packet;
 	packet.Write<u32>(stage);
-	for(i32 i = 0; i < MEASURED_EMPTY_PVE_RANKING_BYTES; i++) packet.Write<u8>(0);
+	if(best < 0) {
+		for(i32 i = 0; i < MEASURED_EMPTY_PVE_RANKING_BYTES; i++) packet.Write<u8>(0);
+	}
+	else {
+		WritePveRankingEntry(packet, ranking[best], (u32)best + 1);
+		packet.Write<u8>(ranking[best].clearRank);
+	}
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendPveLastGameRanking(ClientHandle clientHd, const wchar* nickname)
+{
+	static const i32 MEASURED_LASTGAME_TOP = 5;
+	const i32 stage = PveRankingTakeLastGame(nickname);
+	if(stage == 0) return;
+	const eastl::vector<PveRankingEntry> ranking = PveRankingLoad(stage);
+	const i32 best = PveRankingFindBest(ranking, nickname);
+	PacketWriter<Sv::SN_PveLastgameRanking,4096> packet;
+	packet.Write<i32>(stage);
+	packet.Write<u8>(0);
+	const i32 top = MIN((i32)ranking.size(), MEASURED_LASTGAME_TOP);
+	const bool extra = best >= top;
+	packet.Write<u16>((u16)(top + (extra ? 1 : 0)));
+	for(i32 i = 0; i < top; i++) WritePveRankingEntry(packet, ranking[i], (u32)i + 1);
+	if(extra) WritePveRankingEntry(packet, ranking[best], (u32)best + 1);
+	packet.Write<i32>(best + 1);
 	SendPacket(clientHd, packet);
 }
 
