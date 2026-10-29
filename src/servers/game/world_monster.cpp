@@ -100,7 +100,7 @@ void World::ApplyDeathHit(const DeathHit& hit)
 
 void World::CheckSupportKit(Player& player)
 {
-	if(player.supportKit <= 0 || player.supportKitCount <= 0 || player.dead || player.clientHd == ClientHandle::INVALID) return;
+	if(!replication->pveTeams || player.supportKit <= 0 || player.supportKitCount <= 0 || player.dead || player.clientHd == ClientHandle::INVALID) return;
 	if(player.supportKitReadyAt != Time::ZERO && localTime < player.supportKitReadyAt) return;
 	const GameXmlContent::SupportKit* kit = GetGameXmlContent().FindSupportKit(player.supportKit);
 	ActorMaster& chara = player.Main();
