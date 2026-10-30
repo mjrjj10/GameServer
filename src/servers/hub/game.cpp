@@ -525,33 +525,35 @@ void HubGame::OnInventoryExpand(ClientHandle clientHd, i32 tab)
 	auto found = GetAccountManager().accountMap.find(playerAccountData[userID]->UID);
 	ASSERT(found != GetAccountManager().accountMap.end());
 	Account& account = *found->second;
-	if(tab < 0 || tab > 2) {
+	static const i32 MEASURED_INVENTORY_FIRST_TAB = 1;
+	const i32 line = tab - MEASURED_INVENTORY_FIRST_TAB;
+	if(line < 0 || line > 2) {
 		WARN("[client%x] HubGame :: invalid inventory tab %d", clientHd, tab);
 		return;
 	}
 	AccountProgress progress = AccountProgressLoad(account.nickname.data());
 	const auto& costs = GetGameXmlContent().inventoryExpandCosts;
-	const i32 step = progress.inventoryLines[tab] - MEASURED_INVENTORY_BASE_LINES;
+	const i32 step = progress.inventoryLines[line] - MEASURED_INVENTORY_BASE_LINES;
 	if(step < 0 || step >= (i32)costs.size()) {
-		replication.SendInventoryExpand(clientHd, MEASURED_INVENTORY_EXPAND_ALREADY_FULL, tab, progress.inventoryLines[tab]);
+		replication.SendInventoryExpand(clientHd, MEASURED_INVENTORY_EXPAND_ALREADY_FULL, tab, progress.inventoryLines[line]);
 		return;
 	}
 	const GameXmlContent::ServiceCost& cost = costs[step];
 	const bool ccoin = cost.buyType == 2;
 	if((ccoin ? progress.ccoin : progress.gold) < cost.amount) {
-		replication.SendInventoryExpand(clientHd, ccoin ? MEASURED_INVENTORY_EXPAND_NOT_ENOUGH_C_COIN : MEASURED_INVENTORY_EXPAND_NOT_ENOUGH_RON, tab, progress.inventoryLines[tab]);
+		replication.SendInventoryExpand(clientHd, ccoin ? MEASURED_INVENTORY_EXPAND_NOT_ENOUGH_C_COIN : MEASURED_INVENTORY_EXPAND_NOT_ENOUGH_RON, tab, progress.inventoryLines[line]);
 		return;
 	}
 	if(ccoin) progress.ccoin -= cost.amount;
 	else progress.gold -= cost.amount;
-	progress.inventoryLines[tab]++;
+	progress.inventoryLines[line]++;
 	AccountProgressSave(account.nickname.data(), progress);
 	account.gold = progress.gold;
 	account.ccoin = progress.ccoin;
-	LOG("[client%x] HubGame :: %ls expands inventory tab %d to %d lines for %d %s", clientHd, account.nickname.data(), tab, progress.inventoryLines[tab], cost.amount, ccoin ? "ccoin" : "gold");
+	LOG("[client%x] HubGame :: %ls expands inventory tab %d to %d lines for %d %s", clientHd, account.nickname.data(), tab, progress.inventoryLines[line], cost.amount, ccoin ? "ccoin" : "gold");
 	if(ccoin) replication.SendCCoin(clientHd, account.ccoin, MEASURED_CCOIN_REASON_SHOP);
 	else replication.SendMoney(clientHd, account.gold, MEASURED_MISSION_REWARD_MONEY_REASON);
-	replication.SendInventoryExpand(clientHd, 0, tab, progress.inventoryLines[tab]);
+	replication.SendInventoryExpand(clientHd, 0, tab, progress.inventoryLines[line]);
 }
 
 static const u8 MEASURED_SETTING_TYPE_COUNT = 3;
