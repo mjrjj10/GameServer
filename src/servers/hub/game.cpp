@@ -591,7 +591,7 @@ void HubGame::OnActivityReward(ClientHandle clientHd, i32 tier)
 	LOG("[client%x] HubGame :: %ls claims activity reward %d (%d x item %d)", clientHd, nickname, tier, amount, data->item);
 }
 
-void HubGame::OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count)
+void HubGame::OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count, bool craft, u8 craftType)
 {
 	const i32 userID = plidMap->Get(clientHd);
 	ASSERT(playerAccountData[userID]);
@@ -599,9 +599,14 @@ void HubGame::OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count)
 	ASSERT(found != GetAccountManager().accountMap.end());
 	Account& account = *found->second;
 	const GameXmlContent::TradeItem* trade = GetGameXmlContent().FindTradeItem(tradeID);
-	if(!trade || count <= 0 || !GetGameXmlContent().FindItemInfo(trade->buyItem)) {
+	auto fail = [&]() {
+		if(craft) replication.SendItemCraftResult(clientHd, craftType, TRADE_RESULT_FAILED, nullptr, 0);
+		else replication.SendItemTradeResult(clientHd, TRADE_RESULT_FAILED, 0, nullptr, 0);
+	};
+	const bool valid = trade && count > 0 && (trade->buyDrop ? GetGameXmlContent().FindDropGroup(trade->buyItem) != nullptr : GetGameXmlContent().FindItemInfo(trade->buyItem) != nullptr);
+	if(!valid) {
 		WARN("[client%x] HubGame :: invalid trade %d x%d", clientHd, tradeID, count);
-		replication.SendItemTradeResult(clientHd, TRADE_RESULT_FAILED, 0, nullptr, 0);
+		fail();
 		return;
 	}
 	AccountInventory inventory = AccountInventoryLoad(account.nickname.data());
@@ -609,7 +614,7 @@ void HubGame::OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count)
 		i32 owned = 0;
 		foreach_const(it, inventory.items) if(it->docIndex == r->first) owned += it->count;
 		if(owned < r->second * count) {
-			replication.SendItemTradeResult(clientHd, TRADE_RESULT_FAILED, 0, nullptr, 0);
+			fail();
 			return;
 		}
 	}
@@ -617,7 +622,7 @@ void HubGame::OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count)
 	const i64 cost = (i64)trade->costAmount * count;
 	const bool ccoin = trade->costType == 2;
 	if((ccoin ? progress.ccoin : progress.gold) < cost) {
-		replication.SendItemTradeResult(clientHd, TRADE_RESULT_FAILED, 0, nullptr, 0);
+		fail();
 		return;
 	}
 	foreach_const(r, trade->required) {
@@ -644,9 +649,17 @@ void HubGame::OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count)
 		else replication.SendMoney(clientHd, account.gold, MEASURED_MISSION_REWARD_MONEY_REASON);
 	}
 	eastl::fixed_vector<AccountItem,8,false> granted;
-	GrantItem(userID, trade->buyItem, count, MEASURED_ITEM_UPDATE_REASON_TRADE, MEASURED_ITEM_ACQUISITION_REASON_TRADE, &granted);
-	LOG("[client%x] HubGame :: %ls trades %d x%d into item %d", clientHd, account.nickname.data(), tradeID, count, trade->buyItem);
-	replication.SendItemTradeResult(clientHd, 0, 0, granted.data(), (i32)granted.size());
+	if(trade->buyDrop) {
+		for(i32 n = 0; n < count; n++) {
+			GameXmlContent::DropRollList rolls;
+			GetGameXmlContent().RollDrop(trade->buyItem, &rolls);
+			foreach_const(r, rolls) if(!r->ron) GrantItem(userID, r->item, r->count, MEASURED_ITEM_UPDATE_REASON_TRADE, MEASURED_ITEM_ACQUISITION_REASON_TRADE, &granted);
+		}
+	}
+	else GrantItem(userID, trade->buyItem, count, MEASURED_ITEM_UPDATE_REASON_TRADE, MEASURED_ITEM_ACQUISITION_REASON_TRADE, &granted);
+	LOG("[client%x] HubGame :: %ls trades %d x%d into %s %d (%d stack(s))", clientHd, account.nickname.data(), tradeID, count, trade->buyDrop ? "drop" : "item", trade->buyItem, (i32)granted.size());
+	if(craft) replication.SendItemCraftResult(clientHd, craftType, 0, granted.data(), (i32)granted.size());
+	else replication.SendItemTradeResult(clientHd, 0, 0, granted.data(), (i32)granted.size());
 }
 
 void HubGame::OnItemUse(ClientHandle clientHd, u32 itemUID)

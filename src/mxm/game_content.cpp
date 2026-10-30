@@ -4033,7 +4033,11 @@ bool GameXmlContent::LoadTradeItems()
 		for(XMLElement* pReq = pTrade->FirstChildElement("_REQUIRED"); pReq && !trade.required.full(); pReq = pReq->NextSiblingElement("_REQUIRED")) {
 			trade.required.push_back(eastl::make_pair(pReq->IntAttribute("_ItemIndex"), pReq->IntAttribute("_Amount")));
 		}
-		if(XMLElement* pBuy = pTrade->FirstChildElement("_BUY")) trade.buyItem = pBuy->IntAttribute("_DataKey");
+		if(XMLElement* pBuy = pTrade->FirstChildElement("_BUY")) {
+			trade.buyItem = pBuy->IntAttribute("_DataKey");
+			const char* dataType = pBuy->Attribute("_DataType");
+			trade.buyDrop = dataType && EA::StdC::Strcmp(dataType, "DropIndex") == 0;
+		}
 		if(XMLElement* pCost = pTrade->FirstChildElement("_COST")) {
 			const char* type = pCost->Attribute("_Type");
 			trade.costType = type && EA::StdC::Strcmp(type, "BUY_TYPE_CCOIN") == 0 ? 2 : 1;

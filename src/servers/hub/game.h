@@ -123,7 +123,7 @@ struct HubGame
 	void OnPraise(ClientHandle clientHd, const wchar* nickname, i32 nicknameLen);
 	void OnHonor(ClientHandle clientHd, const WideString& nickname);
 	bool GrantItem(i32 userID, i32 docIndex, i32 amount, u32 updateReason, u32 acquisitionReason, eastl::fixed_vector<AccountItem,8,false>* granted = nullptr);
-	void OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count);
+	void OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count, bool craft = false, u8 craftType = 0);
 	void OnItemUse(ClientHandle clientHd, u32 itemUID);
 	void OnGoldShopBuyItem(ClientHandle clientHd, i32 itemIndex);
 	struct Account* GearAccount(ClientHandle clientHd);

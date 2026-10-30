@@ -262,6 +262,20 @@ void HubReplication::SendShopBuyResult(ClientHandle clientHd, bool npShop, u32 r
 	SendPacket(clientHd, packet);
 }
 
+void HubReplication::SendItemCraftResult(ClientHandle clientHd, u8 craftType, u32 result, const AccountItem* items, i32 count)
+{
+	PacketWriter<Sv::SA_ItemCraft,512> packet;
+	packet.Write<u8>(craftType);
+	packet.Write<u32>(result);
+	packet.Write<u16>((u16)count);
+	for(i32 i = 0; i < count; i++) {
+		packet.Write<u32>(items[i].uid);
+		packet.Write<i32>(items[i].docIndex);
+		packet.Write<u32>((u32)items[i].count);
+	}
+	SendPacket(clientHd, packet);
+}
+
 void HubReplication::SendGoldShopBuyResult(ClientHandle clientHd, u32 result, i32 itemIndex)
 {
 	Sv::SA_BuyShopItem packet;
