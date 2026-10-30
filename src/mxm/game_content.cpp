@@ -4198,6 +4198,7 @@ void GameXmlContent::LoadItemInfos(XMLDocument& doc)
 		XMLElement* etc = pInfo->FirstChildElement("EtcItemComData");
 		const char* etcType = etc ? etc->Attribute("_Type") : nullptr;
 		if(etcType && EA::StdC::Strcmp(etcType, "ETC_TYPE_INGREDIENT") == 0) item.firstSlot = MEASURED_MATERIAL_FIRST_SLOT;
+		if(etcType && EA::StdC::Strcmp(etcType, "ETC_TYPE_BOX") == 0) item.boxDrop = etc->IntAttribute("_DropIndex");
 		const char* buyType = common->Attribute("_BuyType");
 		if(buyType && EA::StdC::Strcmp(buyType, "BUY_TYPE_GOLD") == 0) item.buyType = 1;
 		else if(buyType && EA::StdC::Strcmp(buyType, "BUY_TYPE_CCOIN") == 0) item.buyType = 2;

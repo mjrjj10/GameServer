@@ -97,6 +97,7 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CN_SortieRoomConfirm);
 		HANDLE_CASE(CQ_GetUserInfo);
 		HANDLE_CASE(CQ_ItemTrade);
+		HANDLE_CASE(CQ_ItemUse);
 		HANDLE_CASE(CQ_GearEquip);
 		HANDLE_CASE(CQ_PvpDetailRecord);
 		HANDLE_CASE(CQ_UNKNOWN_60118);
@@ -1153,6 +1154,17 @@ void HubPacketHandler::HandlePacket_CQ_ItemTrade(ClientHandle clientHd, const Ne
 	const Cl::CQ_ItemTrade& packet = SafeCast<Cl::CQ_ItemTrade>(packetData, packetSize);
 	NT_LOG("[client%x] Client :: CQ_ItemTrade :: trader=%u trade=%u count=%u", clientHd, packet.unkContextId, packet.itemDocId, (u32)packet.count);
 	game->OnItemTrade(clientHd, (i32)packet.itemDocId, (i32)packet.count);
+}
+
+void HubPacketHandler::HandlePacket_CQ_ItemUse(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_ItemUse>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_ItemUse (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const Cl::CQ_ItemUse& packet = SafeCast<Cl::CQ_ItemUse>(packetData, packetSize);
+	NT_LOG("[client%x] Client :: CQ_ItemUse :: item=%u", clientHd, (u32)packet.itemInstanceUID);
+	game->OnItemUse(clientHd, (u32)packet.itemInstanceUID);
 }
 
 void HubPacketHandler::HandlePacket_CQ_GetUserInfo(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

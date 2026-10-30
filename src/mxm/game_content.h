@@ -1054,6 +1054,7 @@ struct GameXmlContent
 		u8 buyType = 0;
 		i32 buyValue = 0;
 		i32 sellValue = 0;
+		i32 boxDrop = 0;
 	};
 	eastl::hash_map<i32,ItemInfo> itemInfoMap;
 	struct ServiceCost { u8 buyType = 0; i32 amount = 0; };

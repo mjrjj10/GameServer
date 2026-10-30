@@ -256,6 +256,7 @@ struct HubReplication
 	void SendSummaryInfoEach(ClientHandle clientHd, u32 summary);
 	void SendStartGame(ClientHandle clientHd, u32 result);
 	void SendItemTradeResult(ClientHandle clientHd, u32 result, i64 gold, const struct AccountItem* items, i32 count);
+	void SendItemUseResult(ClientHandle clientHd, u32 result, i32 usedDoc, i64 gold, const struct AccountItem* items, i32 count);
 	void SendItemAcquisition(ClientHandle clientHd, u32 reason, const struct AccountItem& item, i32 amount);
 	void SendActivityReward(ClientHandle clientHd, u32 result, u8 rewardedState);
 	void SendPraise(ClientHandle clientHd, const wchar* nickname, u32 count);

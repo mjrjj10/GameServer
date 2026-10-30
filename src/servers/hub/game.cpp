@@ -647,6 +647,48 @@ void HubGame::OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count)
 	replication.SendItemTradeResult(clientHd, 0, cost, granted.data(), (i32)granted.size());
 }
 
+void HubGame::OnItemUse(ClientHandle clientHd, u32 itemUID)
+{
+	static const u32 HYP_ITEM_USE_FAILED = 1;
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	auto found = GetAccountManager().accountMap.find(playerAccountData[userID]->UID);
+	ASSERT(found != GetAccountManager().accountMap.end());
+	Account& account = *found->second;
+	AccountInventory inventory = AccountInventoryLoad(account.nickname.data());
+	i32 index = -1;
+	for(i32 i = 0; i < (i32)inventory.items.size(); i++) if(inventory.items[i].uid == itemUID && inventory.items[i].count > 0) index = i;
+	const GameXmlContent::ItemInfo* info = index >= 0 ? GetGameXmlContent().FindItemInfo(inventory.items[index].docIndex) : nullptr;
+	if(!info || info->boxDrop == 0 || !GetGameXmlContent().FindDropGroup(info->boxDrop)) {
+		WARN("[client%x] HubGame :: %ls cannot use item uid %u (doc %d)", clientHd, account.nickname.data(), itemUID, index >= 0 ? inventory.items[index].docIndex : 0);
+		replication.SendItemUseResult(clientHd, HYP_ITEM_USE_FAILED, index >= 0 ? inventory.items[index].docIndex : 0, 0, nullptr, 0);
+		return;
+	}
+	const i32 usedDoc = inventory.items[index].docIndex;
+	AccountItem& used = inventory.items[index];
+	used.count--;
+	replication.SendItemUpdate(clientHd, used, MEASURED_ITEM_UPDATE_REASON_TRADE);
+	if(used.count <= 0) inventory.items.erase(inventory.items.begin() + index);
+	AccountInventorySave(account.nickname.data(), inventory);
+	GameXmlContent::DropRollList rolls;
+	GetGameXmlContent().RollDrop(info->boxDrop, &rolls);
+	i64 gold = 0;
+	eastl::fixed_vector<AccountItem,8,false> granted;
+	foreach_const(r, rolls) {
+		if(r->ron) { gold += r->count; continue; }
+		GrantItem(userID, r->item, r->count, MEASURED_ITEM_UPDATE_REASON_TRADE, MEASURED_ITEM_ACQUISITION_REASON_TRADE, &granted);
+	}
+	if(gold > 0) {
+		AccountProgress progress = AccountProgressLoad(account.nickname.data());
+		progress.gold += gold;
+		AccountProgressSave(account.nickname.data(), progress);
+		account.gold = progress.gold;
+		replication.SendMoney(clientHd, account.gold, MEASURED_MISSION_REWARD_MONEY_REASON);
+	}
+	LOG("[client%x] HubGame :: %ls opens box %d (drop %d): %d item stack(s), %lld gold", clientHd, account.nickname.data(), usedDoc, info->boxDrop, (i32)granted.size(), gold);
+	replication.SendItemUseResult(clientHd, 0, usedDoc, gold, granted.data(), (i32)granted.size());
+}
+
 void HubGame::OnShopBuyItem(ClientHandle clientHd, u32 goodsID, i32 quantity, i32 itemIndex, i32 itemCount, bool npShop)
 {
 	const i32 userID = plidMap->Get(clientHd);
