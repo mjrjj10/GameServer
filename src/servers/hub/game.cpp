@@ -646,7 +646,7 @@ void HubGame::OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count)
 	eastl::fixed_vector<AccountItem,8,false> granted;
 	GrantItem(userID, trade->buyItem, count, MEASURED_ITEM_UPDATE_REASON_TRADE, MEASURED_ITEM_ACQUISITION_REASON_TRADE, &granted);
 	LOG("[client%x] HubGame :: %ls trades %d x%d into item %d", clientHd, account.nickname.data(), tradeID, count, trade->buyItem);
-	replication.SendItemTradeResult(clientHd, 0, cost, granted.data(), (i32)granted.size());
+	replication.SendItemTradeResult(clientHd, 0, 0, granted.data(), (i32)granted.size());
 }
 
 void HubGame::OnItemUse(ClientHandle clientHd, u32 itemUID)
