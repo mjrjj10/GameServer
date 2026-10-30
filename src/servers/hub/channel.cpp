@@ -75,6 +75,7 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CQ_Honor);
 		HANDLE_CASE(CQ_NpBuyCshopItem);
 		HANDLE_CASE(CQ_BuyCShopItem);
+		HANDLE_CASE(CQ_BuyShopItem);
 		HANDLE_CASE(CQ_InventoryExpand);
 		HANDLE_CASE(CA_SetGameGvt);
 		HANDLE_CASE(CA_CityLobbyJoinCity);
@@ -526,6 +527,17 @@ void HubPacketHandler::HandlePacket_CQ_BuyCShopItem(ClientHandle clientHd, const
 	const i32 count = buff.Read<i32>();
 	NT_LOG("[client%x] Client :: CQ_BuyCShopItem :: item=%d count=%d", clientHd, itemIndex, count);
 	game->OnShopBuyItem(clientHd, (u32)itemIndex, count, itemIndex, 1, false);
+}
+
+void HubPacketHandler::HandlePacket_CQ_BuyShopItem(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_BuyShopItem>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_BuyShopItem (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const Cl::CQ_BuyShopItem& packet = SafeCast<Cl::CQ_BuyShopItem>(packetData, packetSize);
+	LOG("[client%x] Client :: CQ_BuyShopItem :: player=%u item=%u op=%u", clientHd, packet.playerId, packet.itemId, packet.opFlag);
+	game->OnGoldShopBuyItem(clientHd, (i32)packet.itemId);
 }
 
 void HubPacketHandler::HandlePacket_CQ_NpBuyCshopItem(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

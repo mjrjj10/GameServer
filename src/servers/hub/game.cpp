@@ -691,6 +691,33 @@ void HubGame::OnItemUse(ClientHandle clientHd, u32 itemUID)
 	replication.SendItemUseResult(clientHd, 0, usedDoc, gold, granted.data(), (i32)granted.size());
 }
 
+void HubGame::OnGoldShopBuyItem(ClientHandle clientHd, i32 itemIndex)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	auto found = GetAccountManager().accountMap.find(playerAccountData[userID]->UID);
+	ASSERT(found != GetAccountManager().accountMap.end());
+	Account& account = *found->second;
+	const GameXmlContent::ItemInfo* info = GetGameXmlContent().FindItemInfo(itemIndex);
+	if(!info || info->buyValue <= 0 || info->buyType == 2) {
+		WARN("[client%x] HubGame :: invalid gold shop purchase item=%d", clientHd, itemIndex);
+		replication.SendGoldShopBuyResult(clientHd, MEASURED_SHOP_INVALID_DATA, itemIndex);
+		return;
+	}
+	AccountProgress progress = AccountProgressLoad(account.nickname.data());
+	if(progress.gold < info->buyValue) {
+		replication.SendGoldShopBuyResult(clientHd, MEASURED_SHOP_NOT_ENOUGH_GOLD, itemIndex);
+		return;
+	}
+	progress.gold -= info->buyValue;
+	AccountProgressSave(account.nickname.data(), progress);
+	account.gold = progress.gold;
+	LOG("[client%x] HubGame :: %ls buys item %d for %d gold", clientHd, account.nickname.data(), itemIndex, info->buyValue);
+	replication.SendMoney(clientHd, account.gold, MEASURED_MISSION_REWARD_MONEY_REASON);
+	GrantItem(userID, itemIndex, 1, MEASURED_ITEM_UPDATE_REASON_SHOP, MEASURED_ITEM_ACQUISITION_REASON_SHOP);
+	replication.SendGoldShopBuyResult(clientHd, 0, itemIndex);
+}
+
 void HubGame::OnShopBuyItem(ClientHandle clientHd, u32 goodsID, i32 quantity, i32 itemIndex, i32 itemCount, bool npShop)
 {
 	const i32 userID = plidMap->Get(clientHd);

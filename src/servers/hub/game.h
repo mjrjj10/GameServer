@@ -125,6 +125,7 @@ struct HubGame
 	bool GrantItem(i32 userID, i32 docIndex, i32 amount, u32 updateReason, u32 acquisitionReason, eastl::fixed_vector<AccountItem,8,false>* granted = nullptr);
 	void OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count);
 	void OnItemUse(ClientHandle clientHd, u32 itemUID);
+	void OnGoldShopBuyItem(ClientHandle clientHd, i32 itemIndex);
 	struct Account* GearAccount(ClientHandle clientHd);
 	const wchar* AccountNickname(ClientHandle clientHd);
 	eastl::array<u32,MAX_PLAYERS> chosenFriendState = {};

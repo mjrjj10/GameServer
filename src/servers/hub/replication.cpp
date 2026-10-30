@@ -262,6 +262,14 @@ void HubReplication::SendShopBuyResult(ClientHandle clientHd, bool npShop, u32 r
 	SendPacket(clientHd, packet);
 }
 
+void HubReplication::SendGoldShopBuyResult(ClientHandle clientHd, u32 result, i32 itemIndex)
+{
+	Sv::SA_BuyShopItem packet;
+	packet.Result = result;
+	packet.m_IDX = (u32)itemIndex;
+	SendPacket(clientHd, packet);
+}
+
 void HubReplication::SendInventoryExpand(ClientHandle clientHd, u32 result, i32 tab, i32 lineCount)
 {
 	Sv::SA_InventoryExpand packet;
