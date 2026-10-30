@@ -551,6 +551,8 @@ struct World
 		vec3 rot;
 		PxRigidStatic* collider = nullptr;
 		eastl::fixed_vector<Time,16,false> hits;
+		i32 destroyHits = 0;
+		bool destroyed = false;
 
 		explicit ActorDynamic(ActorUID UID_): UID(UID_) {}
 	};
@@ -1063,6 +1065,7 @@ public:
 	void FireSwitchCondition(const GameXmlContent::LevelEventNode& node, i32 playerIndex);
 	void FireRandomChoice(const GameXmlContent::LevelEventNode& node, i32 playerIndex);
 	void FireDialogTrigger(i32 dialogID, i32 playerIndex);
+	f32 DialogChainSec(i32 nodeID, eastl::fixed_vector<i32,64,true>& visited) const;
 	ActorNpc& SpawnMonster(CreatureIndex docID, i32 localID, const vec3& pos, const vec3& rot, Faction faction, i32 tagID);
 	void InitMonsterStats(ActorNpc& npc);
 	void DespawnEntities(i32 localID, i32 tagID);
@@ -1079,6 +1082,8 @@ public:
 	void UpdateNpcVictory(ActorNpc& npc);
 	bool NpcHasStatusType(const ActorNpc& npc, StatusType type) const;
 	void OnMonsterDeath(ActorNpc& npc, ActorUID killerUID);
+	void CountTagDeath(i32 tagID, Faction killerTeam, i32 killerIndex);
+	void DestroyDynamic(ActorDynamic& dynamic, i32 killerIndex);
 	void OnMonsterDamaged(ActorNpc& npc, i32 hpBefore);
 	void FireGameEndTriggers(i32 winnerTeam);
 	struct DefenceState
@@ -1201,15 +1206,17 @@ public:
 	bool TakeGroundItem(Player& player, u32 itemUID, GroundItem* taken = nullptr);
 	eastl::fixed_vector<GroundItem,256,false> groundItems;
 	struct LevelEventTimer { i32 node; Time at; i32 playerIndex; i32 fromNode; };
+	struct DialogEnd { Time at; i32 playerIndex; };
+	eastl::fixed_vector<DialogEnd,8,true> dialogEnds;
 	struct MonsterCall { i32 node; Time at; i32 remaining; i32 playerIndex; };
-	eastl::fixed_vector<MonsterCall,128,false> monsterCalls;
+	eastl::fixed_vector<MonsterCall,128,true> monsterCalls;
 	struct BoundTriggerState { i32 node; u32 playerIndex; bool inside; Time last; };
 	eastl::fixed_vector<BoundTriggerState,128,true> boundTriggerStates;
 	eastl::hash_map<i32,i32> boundTriggerFires;
 	eastl::fixed_vector<eastl::pair<u32,bool>,16,true> levelTriggerOverrides;
 	eastl::fixed_vector<eastl::pair<u32,bool>,16,true> levelGroupOverrides;
 	eastl::hash_map<i32,i32> switchSteps;
-	eastl::fixed_vector<LevelEventTimer,128,false> levelEventTimers;
+	eastl::fixed_vector<LevelEventTimer,128,true> levelEventTimers;
 	u32 nextGroundItemUID = 0xC0000400;
 	bool levelEventsStarted = false;
 	i32 levelPassDepth = 0;

@@ -125,6 +125,7 @@ struct Game
 	eastl::fixed_vector<i32,64,true> autoStageVisited;
 	i32 autoStageZone = -1;
 	i32 autoStageZoneKills = 0;
+	i32 autoStagePendingWaits = 0;
 	bool pveStage = false;
 	bool defenceStage = false;
 	i64 gameStartUnix = 0;

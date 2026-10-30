@@ -1760,6 +1760,7 @@ bool GameXmlContent::PickStageMap(StageIndex stageID, bool aiMode, MapIndex* out
 			bool ignored = false;
 			if(aiMode) foreach_const(ig, stage.aiIgnoredMaps) if(*ig == m) ignored = true;
 			if(ignored || (stage.gameMode != GameModeType::GAME_MODE_STAGE && stage.gameMode != GameModeType::GAME_MODE_DEFENCE && !FindPvpMap(m))) continue;
+			if(stage.gameMode == GameModeType::GAME_MODE_STAGE) { *outMapIndex = m; return true; }
 			const i32 rate = MAX(i < (i32)stage.mapRates.size() ? stage.mapRates[i] : 1, 1);
 			usable.push_back(eastl::make_pair(m, rate));
 			total += rate;
@@ -4539,7 +4540,7 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 			node.active = e->IntAttribute("_Active", 1) == 1;
 			if(const char* team = e->Attribute("_Team")) node.team = StringToFaction(team);
 		}
-		else if(XMLElement* e = pNode->FirstChildElement("_HPTriggerData")) { node.kind = LevelEventNode::HP_TRIGGER; node.tagID = e->IntAttribute("_TagID", -1); node.hpPercent = e->FloatAttribute("_HP"); node.active = true; }
+		else if(XMLElement* e = pNode->FirstChildElement("_HPTriggerData")) { node.kind = LevelEventNode::HP_TRIGGER; node.tagID = e->IntAttribute("_TagID", -1); node.localID = e->IntAttribute("_LocalID"); node.hpPercent = e->FloatAttribute("_HP"); node.active = true; }
 		else if(XMLElement* e = pNode->FirstChildElement("_EventOrConditionInfo")) { node.kind = LevelEventNode::OR_CONDITION; node.resetAfter = e->IntAttribute("_ResetAfterEvent") == 1; node.active = true; }
 		else if(XMLElement* e = pNode->FirstChildElement("_GameEndTriggerData")) { node.kind = LevelEventNode::GAME_END_TRIGGER; if(const char* team = e->Attribute("_Team")) node.team = StringToFaction(team); }
 		else if(pNode->FirstChildElement("_TimeRecordStartTriggerData")) node.kind = LevelEventNode::TIME_RECORD_START;
@@ -4595,7 +4596,7 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(XMLElement* e = pNode->FirstChildElement("_DialogTriggerData")) { node.kind = LevelEventNode::DIALOG_TRIGGER; node.aiIndex = e->IntAttribute("_ID"); }
 		else if(pNode->FirstChildElement("_EventPartyConditionInfo") || pNode->FirstChildElement("_EventBehaviorInfo") || pNode->FirstChildElement("_CallRemoteInfo")) node.kind = LevelEventNode::PASS_THROUGH;
 		else if(pNode->FirstChildElement("_UpdateObjectivePointInfo") || pNode->FirstChildElement("_ShowProgressMessageInfo") || pNode->FirstChildElement("_CameraWallInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
-		else if(pNode->FirstChildElement("_PrintMessageInfo") || pNode->FirstChildElement("_BGMEventInfo") || pNode->FirstChildElement("_ChangeCameraInfo") || pNode->FirstChildElement("_SetNameTagVisibillityInfo") || pNode->FirstChildElement("_InputLockInfo") || pNode->FirstChildElement("_ClientDrivenActionChangeInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
+		else if(pNode->FirstChildElement("_PrintMessageInfo") || pNode->FirstChildElement("_BGMEventInfo") || pNode->FirstChildElement("_ChangeCameraInfo") || pNode->FirstChildElement("_SetNameTagVisibillityInfo") || pNode->FirstChildElement("_InputLockInfo") || pNode->FirstChildElement("_ClientDrivenActionChangeInfo")) { node.kind = LevelEventNode::CLIENT_EVENT; node.dialogLine = pNode->FirstChildElement("_PrintMessageInfo") != nullptr; }
 		else if(pNode->FirstChildElement("_PingBroadcastInfo") || pNode->FirstChildElement("_MaterialSetChange") || pNode->FirstChildElement("_EffectLightSwitch")) node.kind = LevelEventNode::CLIENT_EVENT;
 		else if(XMLElement* e = pNode->FirstChildElement("_ActiveEvents")) {
 			node.kind = LevelEventNode::ACTIVE_EVENTS;
@@ -4634,11 +4635,16 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 	i32 restored = 0;
 	foreach_const(n, map->levelEvents) {
 		foreach_const(in, n->inputs) {
+			LevelEventNode* target = nullptr;
+			bool linked = false;
 			foreach(src, map->levelEvents) {
-				if(src->id != in->first || eastl::find(src->outputs.begin(), src->outputs.end(), n->id) != src->outputs.end()) continue;
-				src->outputs.push_back(n->id);
-				restored++;
+				if(src->id != in->first) continue;
+				if(eastl::find(src->outputs.begin(), src->outputs.end(), n->id) != src->outputs.end()) { linked = true; break; }
+				if(!target || (!(target->difficultyMask & in->second) && (src->difficultyMask & in->second))) target = &*src;
 			}
+			if(linked || !target) continue;
+			target->outputs.push_back(n->id);
+			restored++;
 		}
 	}
 	if(restored > 0) LOG("LevelEvent :: %d output link(s) restored from input links", restored);
@@ -5045,6 +5051,11 @@ bool GameXmlContent::LoadInteractionReceivers()
 		i32 interaction = 0;
 		XMLElement* pEntity = pInfo->FirstChildElement("EntityComData");
 		if(pEntity && pInfo->QueryAttribute("ID", &id) == XML_SUCCESS) pEntity->QueryAttribute("_DensityCount", &dynamicDensity[id]);
+		if(XMLElement* pDyn = pInfo->FirstChildElement("DynamicComData")) {
+			const char* dynType = pDyn->Attribute("_Type");
+			XMLElement* pBalance = pDyn->FirstChildElement("_RankDetailBalanceData");
+			if(id && dynType && EA::StdC::Strcmp(dynType, "DYNAMIC_TYPE_DESTROY") == 0 && pBalance && pBalance->IntAttribute("_BaseHitCount") > 0) dynamicDestroyHits[id] = pBalance->IntAttribute("_BaseHitCount");
+		}
 		if(XMLElement* pStats = pInfo->FirstChildElement("StatsComData")) {
 			if(const i32 baseDrop = pStats->IntAttribute("_DropIndex")) {
 				static const char* DIFFICULTY_TAGS[] = { "_EASY", nullptr, "_HARD", "_EXTREME", "_HELL" };

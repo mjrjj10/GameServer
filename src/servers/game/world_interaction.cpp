@@ -371,6 +371,35 @@ bool World::NpcHasStatusType(const ActorNpc& npc, StatusType type) const
 	return false;
 }
 
+void World::CountTagDeath(i32 tagID, Faction killerTeam, i32 killerIndex)
+{
+	if(tagID < 0) return;
+	foreach_const(n, map->levelEvents) {
+		if(n->kind != GameXmlContent::LevelEventNode::DEAD_COUNT || n->tagID != tagID || !LevelTriggerActive(*n)) continue;
+		if(n->team != Faction::INVALID && n->team != Faction::MONSTER && n->team != killerTeam) continue;
+		const i32 slot = (i32)(n - map->levelEvents.begin());
+		if(deadCountsDone.find(slot) != deadCountsDone.end()) continue;
+		i32& count = deadCounts[slot];
+		if(++count < n->count) continue;
+		count = 0;
+		deadCountsDone[slot] = 1;
+		LOG("LevelEvent :: dead count of tag %d reached (node %d)", tagID, n->id);
+		foreach_const(o, n->outputs) FireLevelEvent(*o, killerIndex, n->id);
+	}
+}
+
+void World::DestroyDynamic(ActorDynamic& dynamic, i32 killerIndex)
+{
+	static const u32 DYNAMIC_DEAD_NO_KILLER_DOC = 0;
+	if(dynamic.destroyed) return;
+	dynamic.destroyed = true;
+	replication->SendStatToAll(dynamic.UID, (i32)StatType::STAT_TYPE_HEALTH, 0, 1);
+	replication->SendNpcDeadAckToAll(dynamic.UID, ActorUID::INVALID, DYNAMIC_DEAD_NO_KILLER_DOC);
+	LOG("LevelEvent :: dynamic %d (doc %d, tag %d) destroyed after %d hits", dynamic.localID, (i32)dynamic.docID, dynamic.tagID, dynamic.destroyHits);
+	const Faction killerTeam = killerIndex >= 0 ? (Faction)players[killerIndex].team : Faction::INVALID;
+	CountTagDeath(dynamic.tagID, killerTeam, killerIndex);
+}
+
 void World::OnMonsterDeath(ActorNpc& npc, ActorUID killerUID)
 {
 	Faction killerTeam = Faction::INVALID;
@@ -383,20 +412,7 @@ void World::OnMonsterDeath(ActorNpc& npc, ActorUID killerUID)
 		auto killer = actorNpcMap.find(killerUID);
 		if(killer != actorNpcMap.end()) killerTeam = killer->second->faction;
 	}
-	if(npc.tagID >= 0) {
-		foreach_const(n, map->levelEvents) {
-			if(n->kind != GameXmlContent::LevelEventNode::DEAD_COUNT || n->tagID != npc.tagID || !LevelTriggerActive(*n)) continue;
-			if(n->team != Faction::INVALID && n->team != Faction::MONSTER && n->team != killerTeam) continue;
-			const i32 slot = (i32)(n - map->levelEvents.begin());
-			if(deadCountsDone.find(slot) != deadCountsDone.end()) continue;
-			i32& count = deadCounts[slot];
-			if(++count < n->count) continue;
-			count = 0;
-			deadCountsDone[slot] = 1;
-			LOG("LevelEvent :: dead count of tag %d reached (node %d)", npc.tagID, n->id);
-			foreach_const(o, n->outputs) FireLevelEvent(*o, killerIndex, n->id);
-		}
-	}
+	CountTagDeath(npc.tagID, killerTeam, killerIndex);
 	if(!stageCommonDrop.empty()) SpawnPrivateDrops(npc);
 	else if(const i32 drop = GetGameXmlContent().FindMonsterDrop((i32)npc.docID)) SpawnDropGroupAt(drop, npc.pos, -1);
 	static const u32 coreTag = StatusTypeKey("Core");
@@ -423,14 +439,17 @@ void World::OnMonsterDamaged(ActorNpc& npc, i32 hpBefore)
 			npc.hpBuffLevel++;
 		}
 	}
-	if(npc.tagID < 0 || npc.hpMax <= 0) return;
+	if(npc.hpMax <= 0) return;
 	foreach_const(n, map->levelEvents) {
-		if(n->kind != GameXmlContent::LevelEventNode::HP_TRIGGER || n->tagID != npc.tagID) continue;
+		if(n->kind != GameXmlContent::LevelEventNode::HP_TRIGGER) continue;
+		if(n->tagID >= 0 ? n->tagID != npc.tagID : (n->localID == 0 || n->localID != npc.localID)) continue;
+		if(!LevelTriggerActive(*n)) continue;
 		const f32 threshold = npc.hpMax * n->hpPercent / 100.0f;
 		if((f32)hpBefore <= threshold || (f32)npc.hp > threshold) continue;
-		if(eastl::find(hpTriggersFired.begin(), hpTriggersFired.end(), n->id) != hpTriggersFired.end()) continue;
-		hpTriggersFired.push_back(n->id);
-		LOG("LevelEvent :: tag %d below %.0f%% hp (node %d)", npc.tagID, n->hpPercent, n->id);
+		const i32 slot = (i32)(n - map->levelEvents.begin());
+		if(eastl::find(hpTriggersFired.begin(), hpTriggersFired.end(), slot) != hpTriggersFired.end()) continue;
+		hpTriggersFired.push_back(slot);
+		LOG("LevelEvent :: tag %d local %d below %.0f%% hp (node %d)", npc.tagID, npc.localID, n->hpPercent, n->id);
 		foreach_const(o, n->outputs) FireLevelEvent(*o, -1, n->id);
 	}
 }
@@ -581,11 +600,39 @@ void World::FireRandomChoice(const GameXmlContent::LevelEventNode& node, i32 pla
 	for(i32 i = 0; i < picks; i++) FireLevelEvent(pool[i], playerIndex, node.id);
 }
 
+static const u32 LEVEL_EVENT_QUEUE_CAP = 4096;
+static const i32 DIALOG_END_AI_TRIGGER = 9999;
+static const f32 DIALOG_AUTO_SKIP_SEC = 4.0f;
+static const f32 DIALOG_END_MARGIN_SEC = 1.0f;
+
+f32 World::DialogChainSec(i32 nodeID, eastl::fixed_vector<i32,64,true>& visited) const
+{
+	if(eastl::find(visited.begin(), visited.end(), nodeID) != visited.end()) return 0.0f;
+	visited.push_back(nodeID);
+	const GameXmlContent::LevelEventNode* node = map->FindLevelEvent(nodeID);
+	if(!node) return 0.0f;
+	f32 self = 0.0f;
+	if(node->kind == GameXmlContent::LevelEventNode::DELAY) self = node->delay;
+	else if(node->dialogLine) self = DIALOG_AUTO_SKIP_SEC;
+	else if(node->kind != GameXmlContent::LevelEventNode::CLIENT_EVENT) return 0.0f;
+	f32 longest = 0.0f;
+	foreach_const(o, node->outputs) longest = MAX(longest, DialogChainSec(*o, visited));
+	return self + longest;
+}
+
 void World::FireDialogTrigger(i32 dialogID, i32 playerIndex)
 {
+	bool endTrigger = false;
+	foreach_const(n, map->levelEvents) if(n->kind == GameXmlContent::LevelEventNode::AI_TRIGGER && n->aiIndex == DIALOG_END_AI_TRIGGER && NodeInDifficulty(*n)) endTrigger = true;
 	foreach_const(n, map->levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::DIALOG_TRIGGER || n->aiIndex != dialogID || !NodeInDifficulty(*n)) continue;
 		foreach_const(o, n->outputs) FireLevelEvent(*o, playerIndex, n->id);
+		if(!endTrigger || dialogEnds.full()) continue;
+		eastl::fixed_vector<i32,64,true> visited;
+		f32 sec = 0.0f;
+		foreach_const(o, n->outputs) sec = MAX(sec, DialogChainSec(*o, visited));
+		dialogEnds.push_back({ TimeAdd(localTime, TimeMsToTime((sec + DIALOG_END_MARGIN_SEC) * 1000.0)), playerIndex });
+		LOG("LevelEvent :: dialog %d (node %d) ends in %.1f s", dialogID, n->id, sec + DIALOG_END_MARGIN_SEC);
 	}
 }
 
@@ -694,7 +741,8 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 			const f32 jitter = node->variance > 0 ? ((f32)(RandUint() % 2001) / 1000.0f - 1.0f) * node->variance : 0.0f;
 			const Time at = TimeAdd(localTime, TimeMsToTime(MAX(node->delay + jitter, 0.0f) * 1000.0));
 			foreach_const(o, node->outputs) {
-				if(!levelEventTimers.full()) levelEventTimers.push_back({ *o, at, playerIndex, node->id });
+				if(levelEventTimers.size() < LEVEL_EVENT_QUEUE_CAP) levelEventTimers.push_back({ *o, at, playerIndex, node->id });
+				else LOG("LevelEvent :: timer queue full, node %d dropped", *o);
 			}
 			return;
 		}
@@ -804,7 +852,7 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 		case GameXmlContent::LevelEventNode::CALL_MONSTER: {
 			if(difficultyBit != GameXmlContent::ALL_DIFFICULTIES && !(node->stageLevelBit & difficultyBit)) break;
 			const f32 jitter = node->variance > 0 ? ((f32)(RandUint() % 2001) / 1000.0f - 1.0f) * node->variance : 0.0f;
-			if(!monsterCalls.full()) monsterCalls.push_back({ node->id, TimeAdd(localTime, TimeMsToTime(MAX(node->callDelay + jitter, 0.0f) * 1000.0)), node->callCount, playerIndex });
+			if(monsterCalls.size() < LEVEL_EVENT_QUEUE_CAP) monsterCalls.push_back({ node->id, TimeAdd(localTime, TimeMsToTime(MAX(node->callDelay + jitter, 0.0f) * 1000.0)), node->callCount, playerIndex });
 		} break;
 		case GameXmlContent::LevelEventNode::DESPAWN_ENTITY: DespawnEntities(node->localID, node->tagID); break;
 		case GameXmlContent::LevelEventNode::PASS_THROUGH: break;
@@ -993,7 +1041,14 @@ void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle s
 	foreach(d, actorDynamicList) {
 		if(d->collider && (const void*)d->collider == (const void*)actor) { hit = &*d; break; }
 	}
-	if(!hit) return;
+	if(!hit || hit->destroyed) return;
+	const auto& destroyHits = GetGameXmlContent().dynamicDestroyHits;
+	const auto destroyable = destroyHits.find((i32)hit->docID);
+	if(destroyable != destroyHits.end() && ++hit->destroyHits >= destroyable->second) {
+		i32 killerIndex = -1;
+		foreach_const(p, players) if(p->clientHd == seedOwnerHd && seedOwnerHd != ClientHandle::INVALID) killerIndex = (i32)p->index;
+		DestroyDynamic(*hit, killerIndex);
+	}
 	if(remoteID != 0) {
 		const auto& densities = GetGameXmlContent().dynamicDensity;
 		const auto density = densities.find((i32)hit->docID);
@@ -1382,6 +1437,12 @@ void World::UpdateLevelEvents()
 		const i32 fromNode = levelEventTimers[i].fromNode;
 		levelEventTimers.erase(levelEventTimers.begin() + i);
 		FireLevelEvent(node, playerIndex, fromNode);
+	}
+	for(i32 i = 0; i < (i32)dialogEnds.size(); ) {
+		if(localTime < dialogEnds[i].at) { i++; continue; }
+		const i32 playerIndex = dialogEnds[i].playerIndex;
+		dialogEnds.erase(dialogEnds.begin() + i);
+		FireAITrigger(DIALOG_END_AI_TRIGGER, playerIndex);
 	}
 	for(i32 i = 0; i < (i32)monsterCalls.size(); ) {
 		MonsterCall& call = monsterCalls[i];

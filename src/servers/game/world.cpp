@@ -491,6 +491,7 @@ World::Player& World::CreatePlayer(const PlayerDescription& desc, const vec3& po
 	players.emplace_back(players.size(), desc);
 
 	Player& player = players.back();
+	player.devGod = Config().DevAutoStage != 0;
 	player.mainCharaID = 0;
 	player.level = 1;
 	player.experience = 0;
@@ -1127,6 +1128,7 @@ void World::ClearMapContent()
 	levelGroupOverrides.clear();
 	switchSteps.clear();
 	levelEventTimers.clear();
+	dialogEnds.clear();
 	npcStatuses.clear();
 	mapInteractions.clear();
 	deadCounts.clear();

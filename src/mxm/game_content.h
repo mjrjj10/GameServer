@@ -742,6 +742,7 @@ struct GameXmlContent
 		u32 groupKey = 0;
 		bool enter = false;
 		bool active = false;
+		bool dialogLine = false;
 		f32 retrigger = 0;
 		i32 maxTriggers = 0;
 		i32 statusIndex = 0;
@@ -1505,6 +1506,7 @@ struct GameXmlContent
 	i32 FindDynamicDrop(i32 doc, u8 difficultyBit) const;
 	eastl::hash_map<i32, InteractionInfo> interactions;
 	eastl::hash_map<i32, i32> dynamicDensity;
+	eastl::hash_map<i32, i32> dynamicDestroyHits;
 	const InteractionInfo* FindInteraction(i32 id) const { auto f = interactions.find(id); return f == interactions.end() ? nullptr : &f->second; }
 	f32 GetAniSeqTime(const char* className, i32 seqID) const { auto f = aniSeqTime.find(AniKey(className, seqID)); return f == aniSeqTime.end() ? 0 : f->second; }
 	struct MoveCurve

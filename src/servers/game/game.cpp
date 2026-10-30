@@ -425,7 +425,10 @@ void Game::Update(Time localTime_)
 		} break;
 
 		case Phase::Game: {
-			if(Config().DevAutoStage && pveStage && !gameEnded && tGameStarted != Time::ZERO) UpdateAutoStage();
+			if(Config().DevAutoStage && pveStage && !gameEnded) {
+				foreach(p, world.players) if(p->clientHd != ClientHandle::INVALID && !p->removed) p->devGod = true;
+				if(tGameStarted != Time::ZERO) UpdateAutoStage();
+			}
 			if(world.portalRequested && !gameEnded) MoveToNextZone();
 			if(pveStage && world.stageCleared && !gameEnded) EndStage(true);
 			if(defenceStage && !gameEnded && (world.defence.won || world.defence.failed)) EndDefence();
@@ -712,6 +715,7 @@ void Game::UpdateAutoStage()
 	if(autoStageZone != zoneIndex) {
 		autoStageZone = zoneIndex;
 		autoStageZoneKills = 0;
+		autoStagePendingWaits = 0;
 		autoStageVisited.clear();
 		tAutoStageWait = TimeAdd(localTime, TimeMsToTime(AUTO_STAGE_STUCK_MS));
 	}
@@ -731,16 +735,25 @@ void Game::UpdateAutoStage()
 		world.MonsterDie(*npc, killer->Main().UID, CreatureIndex(100000000 + (i32)killer->Main().classType));
 		killed++;
 	}
+	const auto& destroyHits = GetGameXmlContent().dynamicDestroyHits;
+	foreach(d, world.actorDynamicList) {
+		if(d->tagID < 0 || d->destroyed || destroyHits.find((i32)d->docID) == destroyHits.end()) continue;
+		world.DestroyDynamic(*d, (i32)killer->index);
+		killed++;
+	}
 	autoStageZoneKills += killed;
+	static const i32 AUTO_STAGE_WAVE_KILLS = 3;
 	if(killed > 0 && autoStageZoneKills < AUTO_STAGE_RUNAWAY_KILLS) {
-		tAutoStageWait = TimeAdd(localTime, TimeMsToTime(AUTO_STAGE_STUCK_MS));
 		LOG("AutoStage :: zone %d killed %d monster(s)", zoneIndex, killed);
-		return;
+		if(killed >= AUTO_STAGE_WAVE_KILLS) {
+			tAutoStageWait = TimeAdd(localTime, TimeMsToTime(AUTO_STAGE_STUCK_MS));
+			return;
+		}
 	}
 	const bool runaway = autoStageZoneKills >= AUTO_STAGE_RUNAWAY_KILLS;
 	if(runaway) LOG("AutoStage :: zone %d runaway spawns (%d kills)", zoneIndex, autoStageZoneKills);
 	else if(localTime < tAutoStageWait) return;
-	if(!runaway && world.map && killer->body) {
+	if(world.map && killer->body) {
 		const vec2 here = vec2(killer->body->GetWorldPos());
 		const GameXmlContent::LevelEventNode* nearest = nullptr;
 		const GameXmlContent::Map::Area* nearestArea = nullptr;
@@ -764,8 +777,14 @@ void Game::UpdateAutoStage()
 			return;
 		}
 	}
-	autoStageZoneKills = 0;
+	static const i32 AUTO_STAGE_MAX_PENDING_WAITS = 6;
 	tAutoStageWait = TimeAdd(localTime, TimeMsToTime(AUTO_STAGE_STUCK_MS));
+	if(!runaway && (!world.levelEventTimers.empty() || !world.monsterCalls.empty()) && autoStagePendingWaits < AUTO_STAGE_MAX_PENDING_WAITS) {
+		autoStagePendingWaits++;
+		LOG("AutoStage :: zone %d waits for %d timer(s) and %d call(s)", zoneIndex, (i32)world.levelEventTimers.size(), (i32)world.monsterCalls.size());
+		return;
+	}
+	autoStageZoneKills = 0;
 	if(zoneIndex + 1 < (i32)zoneMaps.size()) {
 		LOG("AutoStage :: zone %d done, forcing the portal", zoneIndex);
 		world.portalRequested = true;
