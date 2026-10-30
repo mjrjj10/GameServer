@@ -1507,6 +1507,9 @@ struct GameXmlContent
 	eastl::hash_map<i32, InteractionInfo> interactions;
 	eastl::hash_map<i32, i32> dynamicDensity;
 	eastl::hash_map<i32, i32> dynamicDestroyHits;
+	struct LevelAITriggerSource { eastl::fixed_string<wchar,128,true> level; i32 node; u8 mask; i32 aiIndex; f32 delay; };
+	eastl::vector<LevelAITriggerSource> levelAITriggerSources;
+	bool levelAITriggerSourcesLoaded = false;
 	const InteractionInfo* FindInteraction(i32 id) const { auto f = interactions.find(id); return f == interactions.end() ? nullptr : &f->second; }
 	f32 GetAniSeqTime(const char* className, i32 seqID) const { auto f = aniSeqTime.find(AniKey(className, seqID)); return f == aniSeqTime.end() ? 0 : f->second; }
 	struct MoveCurve
@@ -1652,6 +1655,7 @@ private:
 	bool LoadSummonBaseStats();
 	bool LoadGroundItems();
 	bool LoadLevelEvents(Map* map, const wchar* levelDir);
+	void AddLevelAITriggerSources(Map* map, const wchar* levelDir);
 	bool LoadChildSkills();
 	bool LoadWeaponFiring();
 	bool LoadSkillTargeting();

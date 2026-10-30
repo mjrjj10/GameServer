@@ -4659,8 +4659,62 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 			foreach_const(o, n->outputs) pending.push_back(*o);
 		}
 	}
+	AddLevelAITriggerSources(map, levelDir);
 	LOG("Loaded %d level event nodes", (i32)map->levelEvents.size());
 	return true;
+}
+
+void GameXmlContent::AddLevelAITriggerSources(Map* map, const wchar* levelDir)
+{
+	if(!levelAITriggerSourcesLoaded) {
+		levelAITriggerSourcesLoaded = true;
+		XMLDocument doc;
+		if(LoadXMLFile(L"/LevelAITriggers.xml", doc, true) && doc.FirstChildElement()) {
+			for(XMLElement* e = doc.FirstChildElement()->FirstChildElement("Source"); e; e = e->NextSiblingElement("Source")) {
+				const char* level = e->Attribute("Level");
+				if(!level) continue;
+				LevelAITriggerSource src;
+				for(const char* c = level; *c; c++) src.level.push_back((wchar)*c);
+				src.node = e->IntAttribute("Node");
+				src.mask = (u8)e->IntAttribute("Mask", ALL_DIFFICULTIES);
+				src.aiIndex = e->IntAttribute("AITrigger");
+				src.delay = e->FloatAttribute("Delay");
+				levelAITriggerSources.push_back(src);
+			}
+		}
+	}
+	foreach_const(src, levelAITriggerSources) {
+		if(EA::StdC::Stricmp(src->level.c_str(), levelDir) != 0) continue;
+		i32 nextID = 0;
+		foreach_const(n, map->levelEvents) nextID = MAX(nextID, n->id + 1);
+		LevelEventNode invoke;
+		invoke.id = nextID;
+		invoke.kind = LevelEventNode::INVOKE_AI_TRIGGER;
+		invoke.aiIndex = src->aiIndex;
+		invoke.difficultyMask = src->mask;
+		i32 entry = invoke.id;
+		if(src->delay > 0.0f) {
+			LevelEventNode delay;
+			delay.id = nextID + 1;
+			delay.kind = LevelEventNode::DELAY;
+			delay.delay = src->delay;
+			delay.difficultyMask = src->mask;
+			delay.inputs.push_back(eastl::make_pair(src->node, src->mask));
+			delay.outputs.push_back(invoke.id);
+			invoke.inputs.push_back(eastl::make_pair(delay.id, src->mask));
+			entry = delay.id;
+			map->levelEvents.push_back(delay);
+		}
+		else invoke.inputs.push_back(eastl::make_pair(src->node, src->mask));
+		i32 linked = 0;
+		foreach(n, map->levelEvents) {
+			if(n->id != src->node || !(n->difficultyMask & src->mask)) continue;
+			n->outputs.push_back(entry);
+			linked++;
+		}
+		map->levelEvents.push_back(invoke);
+		LOG("LevelEvent :: AI trigger %d sourced from node %d (%d cop%s, mask %d, delay %.1f s)", src->aiIndex, src->node, linked, linked == 1 ? "y" : "ies", (i32)src->mask, src->delay);
+	}
 }
 
 bool GameXmlContent::LoadSummonBaseStats()
