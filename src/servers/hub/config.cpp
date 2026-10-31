@@ -28,6 +28,7 @@ bool CConfigHub::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "DevQuickConnect=%d", &DevQuickConnect) == 1) return true;
 	if(EA::StdC::Sscanf(line, "TraceNetwork=%d", &TraceNetwork) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcase=%d", &DevShowcase) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevAutoQueueStage=%d", &DevAutoQueueStage) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevAutoQueue=%d", &DevAutoQueue) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevPickMasters=%d,%d", &DevPickMasters[0], &DevPickMasters[1]) == 2) return true;
 	if(EA::StdC::Sscanf(line, "DevStageSweep=%d", &DevStageSweep) == 1) return true;

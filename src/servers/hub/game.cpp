@@ -341,8 +341,9 @@ void HubGame::OnPlayerEnterCity(ClientHandle clientHd)
 	const i32 userID = plidMap->Get(clientHd);
 	if(Config().DevStageSweep > 0 && playerAccountData[userID] && playerMap[userID]->partyUID == PartyUID::INVALID) StartNextSweepStage(clientHd);
 	else if((Config().DevShowcase || Config().DevAutoQueue) && playerAccountData[userID] && playerMap[userID]->partyUID == PartyUID::INVALID) {
-		LOG("[client%x] HubGame :: showcase, auto dispatch", clientHd);
+		LOG("[client%x] HubGame :: showcase, auto dispatch (stage %d)", clientHd, Config().DevAutoQueueStage);
 		OnCreateParty(clientHd, EntrySystemID::ARENA_3v3, StageType::PVP_GAME);
+		if(Config().DevAutoQueueStage > 0) pendingPartyStageIndex[userID] = StageIndex(Config().DevAutoQueueStage);
 	}
 	if(playerActorUID[userID] != ActorUID::INVALID || !playerAccountData[userID]) return;
 	LocalActorID characterID = LocalActorID((u32)LocalActorID::FIRST_SELF_MASTER + (u32)DEFAULT_LEADER_CLASS);
