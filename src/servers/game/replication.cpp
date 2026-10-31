@@ -53,6 +53,7 @@ void Replication::PlayerLocalInfo::Reset()
 	localActorIDMap.clear();
 	actorUIDSet.clear();
 	hiddenActors.clear();
+	shownMain.clear();
 	nextPlayerLocalActorID = LocalActorID::FIRST_OTHER_PLAYER;
 	nextNpcLocalActorID = LocalActorID::FIRST_NPC;
 	nextMonsterLocalActorID = LocalActorID::INVALID;
@@ -1325,6 +1326,8 @@ void Replication::SendPlayerTag(ClientHandle clientHd, ActorUID mainActorUID, Ac
 	ASSERT(tag.subID != LocalActorID::INVALID);
 
 	SendPacket(clientHd, tag);
+	auto found = playerMap.find(clientHd);
+	if(found != playerMap.end()) playerLocalInfo[found->second].shownMain[MIN(mainActorUID, subActorUID)] = mainActorUID;
 }
 
 void Replication::SendPlayerJump(ClientHandle clientHd, ActorUID mainActorUID, f32 rotate, f32 moveDirX, f32 moveDirY)
@@ -2796,6 +2799,12 @@ void Replication::SendLeaveActor(ClientHandle clientHd, ActorUID actorUID)
 	if(found != playerMap.end()) playerLocalInfo[found->second].hiddenActors.insert(actorUID);
 }
 
+void Replication::MarkHidden(ClientHandle clientHd, ActorUID actorUID)
+{
+	auto found = playerMap.find(clientHd);
+	if(found != playerMap.end()) playerLocalInfo[found->second].hiddenActors.insert(actorUID);
+}
+
 void Replication::SendEnterActor(ClientHandle clientHd, ActorUID actorUID, ClassType classType, const vec3& pos, f32 bodyYaw, f32 upperYaw, const vec3& moveTo, bool battle, f32 speed, ActionStateID action, i32 hp, i32 hpMax)
 {
 	const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
@@ -3303,6 +3312,8 @@ void Replication::SendRevive(ClientHandle clientHd, UserID userID, ActorUID acti
 	revive.inactiveID = (u32)GetLocalActorID(clientHd, inactiveUID);
 	revive.position = v2f(pos);
 	SendPacket(clientHd, revive);
+	auto found = playerMap.find(clientHd);
+	if(found != playerMap.end()) playerLocalInfo[found->second].shownMain[MIN(activeUID, inactiveUID)] = activeUID;
 }
 
 void Replication::OnPlayerDisconnect(ClientHandle clientHd)
@@ -3502,6 +3513,8 @@ void Replication::FrameDifference()
 			for(int pi = 0; pi < MAX_PLAYERS; pi++) {
 				if(playerState[pi].cur < PlayerState::IN_GAME) continue;
 				const ClientHandle clientHd = clientHandle[pi];
+				auto shown = playerLocalInfo[pi].shownMain.find(MIN(upMainUID, upSubUID));
+				if(shown != playerLocalInfo[pi].shownMain.end() && shown->second == upMainUID) continue;
 
 				tag.mainID = GetLocalActorID(clientHd, upMainUID);
 				tag.subID = GetLocalActorID(clientHd, upSubUID);
@@ -3509,6 +3522,7 @@ void Replication::FrameDifference()
 				ASSERT(tag.subID != LocalActorID::INVALID);
 
 				SendPacket(clientHd, tag);
+				playerLocalInfo[pi].shownMain[MIN(upMainUID, upSubUID)] = upMainUID;
 
 				// Retail behavior (Titan Ruins capture): remote viewers receive ONLY the
 				// SN_GamePlayerTag swap announcement - both masters already exist client-side.

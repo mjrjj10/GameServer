@@ -256,6 +256,7 @@ struct Replication
 		LocalActorID nextNpcLocalActorID;
 		LocalActorID nextMonsterLocalActorID;
 		eastl::fixed_set<ActorUID,256> hiddenActors;
+		eastl::fixed_map<ActorUID,ActorUID,32> shownMain;
 
 		void Reset();
 	};
@@ -467,6 +468,7 @@ struct Replication
 	void SendToggleSkill(ActorUID casterUID, ClientHandle casterHd, SkillID skillID, bool on, ActionStateID action);
 	void SendHideDetect(ClientHandle clientHd, ActorUID detectorUID, ActorUID targetUID, u8 flag);
 	void SendLeaveActor(ClientHandle clientHd, ActorUID actorUID);
+	void MarkHidden(ClientHandle clientHd, ActorUID actorUID);
 	void SendEnterActor(ClientHandle clientHd, ActorUID actorUID, ClassType classType, const vec3& pos, f32 bodyYaw, f32 upperYaw, const vec3& moveTo, bool battle, f32 speed, ActionStateID action, i32 hp, i32 hpMax);
 	void SendChangeSkillSlot(ClientHandle clientHd, ActorUID actorUID, i32 slot, SkillID skill, i32 resetCooltimeID);
 	void SendTeleportRequest(ClientHandle clientHd, ActorUID actorUID, const vec3& pos);

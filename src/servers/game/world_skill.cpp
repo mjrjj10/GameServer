@@ -216,21 +216,29 @@ void World::UpdateUltimateGauges(f32 delta)
 	}
 }
 
-bool World::SkillCostAffordable(const Player& player, i32 skillID, f32 mp) const
+static const u32 ERROR_TYPE_REQ_MANA = 5;
+static const u32 ERROR_TYPE_REQ_ULTIMATE = 8;
+static const u32 ERROR_TYPE_REQ_STAMINA = 10;
+static const u32 ERROR_TYPE_SKILL_NOT_ENOUGH_RESOURCE = 562;
+static const u32 RESOURCE_ERRORS[3] = { 7, 6, ERROR_TYPE_SKILL_NOT_ENOUGH_RESOURCE };
+
+u32 World::SkillCostError(const Player& player, i32 skillID, f32 mp) const
 {
 	const f32 ug = PlayerSkillConsume(player, skillID, 4);
 	const f32 st = GetGameXmlContent().GetSkillConsumeStamina(skillID);
 	const f32 hpCost = PlayerSkillConsume(player, skillID, 3);
-	if((mp > 0 && player.mana >= 0 && player.mana < mp) || (ug > 0 && player.ultGauge >= 0 && player.ultGauge < ug)) return false;
-	if((st > 0 && player.stamina >= 0 && player.stamina < st) || (hpCost > 0 && player.Main().hp <= hpCost)) return false;
+	if(mp > 0 && player.mana >= 0 && player.mana < mp) return ERROR_TYPE_REQ_MANA;
+	if(ug > 0 && player.ultGauge >= 0 && player.ultGauge < ug) return ERROR_TYPE_REQ_ULTIMATE;
+	if(st > 0 && player.stamina >= 0 && player.stamina < st) return ERROR_TYPE_REQ_STAMINA;
+	if(hpCost > 0 && player.Main().hp <= hpCost) return ERROR_TYPE_SKILL_NOT_ENOUGH_RESOURCE;
 	for(int r = 0; r < 3; r++) {
 		const f32 cost = PlayerSkillConsume(player, skillID, r);
-		if(cost > 0 && player.res[r] >= 0 && player.res[r] < cost) return false;
+		if(cost > 0 && player.res[r] >= 0 && player.res[r] < cost) return RESOURCE_ERRORS[r];
 	}
-	return true;
+	return 0;
 }
 
-bool World::PlayerPaySkillCost(Player& player, i32 skillID)
+u32 World::PlayerPaySkillCost(Player& player, i32 skillID)
 {
 	const auto& content = GetGameXmlContent();
 	f32 mp = PlayerSkillConsumeMP(player, skillID);
@@ -250,17 +258,18 @@ bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 	const f32 st = content.GetSkillConsumeStamina(skillID);
 	const f32 resCost[3] = { PlayerSkillConsume(player, skillID, 0), PlayerSkillConsume(player, skillID, 1), PlayerSkillConsume(player, skillID, 2) };
 	const f32 hpCost = PlayerSkillConsume(player, skillID, 3);
-	if(mp <= 0 && ug <= 0 && st <= 0 && resCost[0] <= 0 && resCost[1] <= 0 && resCost[2] <= 0 && hpCost <= 0) return true;
-	if(player.clientHd == ClientHandle::INVALID && (Config().DevShowcase || Config().DevMirror)) return true;
+	if(mp <= 0 && ug <= 0 && st <= 0 && resCost[0] <= 0 && resCost[1] <= 0 && resCost[2] <= 0 && hpCost <= 0) return 0;
+	if(player.clientHd == ClientHandle::INVALID && (Config().DevShowcase || Config().DevMirror)) return 0;
 
-	const bool ok = SkillCostAffordable(player, skillID, mp);
+	const u32 error = SkillCostError(player, skillID, mp);
+	const bool ok = error == 0;
 	if(resCost[0] > 0 || resCost[1] > 0 || resCost[2] > 0 || hpCost > 0) {
 		LOG("Cost :: %ls skill=%d energy=%.0f/%.0f rage=%.0f/%.0f charges=%.0f/%.1f hp=%.0f", player.name.data(), skillID,
 			resCost[0], player.res[0], resCost[1], player.res[1], resCost[2], player.res[2], hpCost);
 	}
 	LOG("Cost :: %ls skill=%d mp=%.0f/%.0f ug=%.0f/%.0f stamina=%.0f/%.0f %s", player.name.data(), skillID,
 		mp, player.mana, ug, player.ultGauge, st, player.stamina, ok ? "paid" : "REFUSED");
-	if(!ok) return false;
+	if(!ok) return error;
 
 	if(mp > 0 && player.mana >= 0) { player.mana -= mp; player.manaDirty = true; }
 	if(ug > 0 && player.ultGauge >= 0) { player.ultGauge -= ug; player.ultDirty = true; }
@@ -273,7 +282,7 @@ bool World::PlayerPaySkillCost(Player& player, i32 skillID)
 		chara.hp = MAX(chara.hp - (i32)hpCost, 1);
 		replication->SendHpToAll(chara.UID, chara.hp, chara.hpMax);
 	}
-	return true;
+	return 0;
 }
 
 void World::RunStanceOut(Player& player, i8 oldStance)
@@ -428,8 +437,12 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	if(remove) return;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
 	if(NpcDefeatReaction(npc, info) < 0) return;
-	const f32 duration = info && info->durationSec > 0 ? info->durationSec : 0.0f;
-	replication->SendAddStatusToAll(statusID, npc.UID, caster.Main().UID, duration, npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false, false);
+	vec3 pushTo;
+	f32 pushNominal = -1.0f;
+	f32 pushSec = 0;
+	const bool push = StartNpcPush(npc, info, statusForceCenterSet ? statusForceCenter : caster.body->GetWorldPos(), &pushTo, &pushNominal, &pushSec);
+	const f32 duration = info && info->durationSec > 0 ? info->durationSec : (push ? pushSec : 0.0f);
+	replication->SendAddStatusToAll(statusID, npc.UID, caster.Main().UID, duration, npc.pos, pushTo, pushSec, 1, 1.0f, pushNominal, push, false);
 	if(npcStatuses.full()) return;
 	NpcStatus ns;
 	ns.npcUID = npc.UID;
@@ -1231,7 +1244,7 @@ void World::UpdateFog()
 		if(!p->body || p->dead || p->hiddenUID != ActorUID::INVALID) continue;
 		const ActorUID main = p->Main().UID;
 		if(p->hiddenFrom != 0 && p->fogHiddenUID != ActorUID::INVALID && p->fogHiddenUID != main) {
-			foreach(viewer, players) if(viewer->clientHd != ClientHandle::INVALID && (p->hiddenFrom & (1u << viewer->index))) replication->SendLeaveActor(viewer->clientHd, main);
+			foreach(viewer, players) if(viewer->clientHd != ClientHandle::INVALID && (p->hiddenFrom & (1u << viewer->index))) replication->MarkHidden(viewer->clientHd, main);
 			p->fogHiddenUID = main;
 		}
 		const bool sees[2] = { p->team == 0 || TeamSees(0, *p), p->team == 1 || TeamSees(1, *p) };
@@ -1247,19 +1260,32 @@ void World::UpdateFog()
 			}
 			else if(sees[viewer->team] && hidden) {
 				const ActorMaster& chara = p->Main();
-				const ActorUID known = p->fogHiddenUID != ActorUID::INVALID && p->fogHiddenUID != main && FindMasterActor(p->fogHiddenUID) ? p->fogHiddenUID : main;
-				const ActorMaster& shown = known != main ? *FindMasterActor(known) : chara;
-				const f32 baseSpeed = const_cast<CharacterModel&>(content.GetMaster(shown.classType).character).getMoveSpeed();
+				const f32 baseSpeed = const_cast<CharacterModel&>(content.GetMaster(chara.classType).character).getMoveSpeed();
 				const f32 speed = baseSpeed * (p->battleStage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (p->battleStage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f));
-				replication->SendEnterActor(viewer->clientHd, known, shown.classType, p->body->GetWorldPos(), p->input.rot.bodyYaw, p->input.rot.upperYaw, p->input.moveTo, p->battleStage > 0, speed, shown.actionState != ActionStateID::INVALID ? shown.actionState : ActionStateID::NONE_BEHAVIORSTATE, shown.hp, shown.hpMax);
-				const ActorMaster& bench = known == main ? p->Sub() : chara;
+				replication->SendEnterActor(viewer->clientHd, main, chara.classType, p->body->GetWorldPos(), p->input.rot.bodyYaw, p->input.rot.upperYaw, p->input.moveTo, p->battleStage > 0, speed, chara.actionState != ActionStateID::INVALID ? chara.actionState : ActionStateID::NONE_BEHAVIORSTATE, chara.hp, chara.hpMax);
+				const ActorMaster& bench = p->Sub();
 				replication->SendHp(viewer->clientHd, bench.UID, bench.hp, bench.hpMax);
-				if(p->tagMissedBy & bit) replication->SendPlayerTag(viewer->clientHd, main, p->Sub().UID);
-				p->tagMissedBy &= ~bit;
+				LOG("Fog :: %ls back for %ls (actor %u, action %d)", p->name.data(), viewer->name.data(), (u32)replication->GetLocalActorID(viewer->clientHd, main), (i32)chara.actionState);
 				replication->SendPlayerSyncTeleport(viewer->clientHd, main, p->body->GetWorldPos());
 				p->hiddenFrom &= ~bit;
 			}
 		}
+	}
+}
+
+void World::ShowTagToEnemies(Player& p)
+{
+	if(!p.body) return;
+	const ActorMaster& chara = p.Main();
+	const ActorUID oldUID = p.Sub().UID;
+	const f32 baseSpeed = const_cast<CharacterModel&>(GetGameXmlContent().GetMaster(chara.classType).character).getMoveSpeed();
+	const f32 speed = baseSpeed * (p.battleStage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (p.battleStage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f));
+	foreach_const(viewer, players) {
+		if(viewer->clientHd == ClientHandle::INVALID || viewer->team == p.team || (p.hiddenFrom & (1u << viewer->index))) continue;
+		if(replication->GetLocalActorID(viewer->clientHd, chara.UID) == LocalActorID::INVALID) continue;
+		replication->SendPlayerTag(viewer->clientHd, chara.UID, oldUID);
+		replication->SendLeaveActor(viewer->clientHd, oldUID);
+		replication->SendEnterActor(viewer->clientHd, chara.UID, chara.classType, p.body->GetWorldPos(), p.input.rot.bodyYaw, p.input.rot.upperYaw, p.input.moveTo, p.battleStage > 0, speed, ActionStateID::TAG_IN_EXECUTE_BEHAVIORSTATE, chara.hp, chara.hpMax);
 	}
 }
 

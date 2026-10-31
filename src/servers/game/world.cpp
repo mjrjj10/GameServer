@@ -977,12 +977,15 @@ const GameXmlContent::CostLevel* World::PickCostLevel(const Player& player, Skil
 	return picked;
 }
 
+static const u32 ERROR_TYPE_SKILL_INVALID_STATE_BLOCK = 563;
+
 bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets)
 {
 	const auto& content = GetGameXmlContent();
 	const bool shirk = GetGameXmlContent().GetSkillConsumeStamina((i32)skillID) > 0;
 	if(IsBlocked(player, false, !shirk, shirk)) {
 		LOG("Blocked :: %ls skill=%d (input blocked by a status)", player.name.data(), (i32)skillID);
+		if(player.clientHd != ClientHandle::INVALID) replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_SKILL_INVALID_STATE_BLOCK);
 		return false;
 	}
 	if(player.clientHd == ClientHandle::INVALID) {
@@ -1008,7 +1011,10 @@ bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos
 			}
 		}
 	}
-	if(!PlayerPaySkillCost(player, (i32)skillID)) return false;
+	if(const u32 costError = PlayerPaySkillCost(player, (i32)skillID)) {
+		if(player.clientHd != ClientHandle::INVALID) replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, costError);
+		return false;
+	}
 	player.castLockUntil = TimeAdd(localTime, TimeMsToTime(CAST_LOCK_MS));
 	if((i32)skillID % 100 == ULTIMATE_SKILL_SUFFIX) player.ultCooldownUntil = TimeAdd(localTime, TimeMsToTime(SkillCoolTime(player, (i32)skillID) * 1000.0));
 	if(castCostLevel) {
@@ -1143,7 +1149,6 @@ void World::SwapMainMaster(Player& p)
 {
 	AccumulateMasterScore(p);
 	p.mainCharaID ^= 1;
-	p.tagMissedBy |= p.hiddenFrom;
 	eastl::swap(p.mana, p.benchMana);
 	eastl::swap(p.stamina, p.benchStamina);
 	eastl::swap(p.res, p.benchRes);
@@ -1152,6 +1157,7 @@ void World::SwapMainMaster(Player& p)
 	p.resDirty = true;
 	p.ultDirty = true;
 	p.regenResend = true;
+	ShowTagToEnemies(p);
 }
 
 void World::ResetMainMasterForAreaMove(Player& p)

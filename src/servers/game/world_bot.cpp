@@ -355,7 +355,7 @@ bool World::BotRetreat(Player& bot, vec2* goal)
 	if(ratio < HYP_BOT_RETREAT_HP) bot.botRetreat = true;
 	else if(ratio >= HYP_BOT_RETREAT_DONE_HP) bot.botRetreat = false;
 	if(!bot.botRetreat || bot.titanForm >= 0) return false;
-	*goal = titanSaveAreas[bot.team];
+	*goal = vec2(bot.spawnPos);
 	return true;
 }
 
@@ -554,7 +554,9 @@ bool World::Pilot(Player& p, PilotDecision* out)
 	if(!map || !map->ingameLevels || !p.body || p.dead || p.Main().classType == ClassType::NONE) return false;
 	const vec3 pos = p.body->GetWorldPos();
 	const vec2 here = vec2(pos);
-	f32 best = HYP_PILOT_ENGAGE_RANGE;
+	vec2 goal = here;
+	const bool retreat = BotRetreat(p, &goal);
+	f32 best = retreat ? 0.0f : HYP_PILOT_ENGAGE_RANGE;
 	foreach_const(e, players) {
 		if(e->dead || e->untargetable || e->team == p.team || !e->body || e->Main().classType == ClassType::NONE || !(e->fogSeenBy & (1u << p.team))) continue;
 		if(BotDangerAt(p, vec2(e->body->GetWorldPos()), nullptr, nullptr)) continue;
@@ -583,8 +585,7 @@ bool World::Pilot(Player& p, PilotDecision* out)
 			out->doc = (i32)npc->docID;
 		}
 	}
-	vec2 goal = here;
-	if(!BotRetreat(p, &goal) && !BotObjective(p, &goal) && !BotLaneGoal(p, &goal)) goal = here;
+	if(!retreat && !BotObjective(p, &goal) && !BotLaneGoal(p, &goal)) goal = here;
 	goal = BotNavStep(p, goal);
 	vec2 tower;
 	f32 towerRange = 0;

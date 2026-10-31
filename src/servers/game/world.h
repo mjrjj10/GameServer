@@ -332,7 +332,6 @@ struct World
 		Time battleActionAt = Time::ZERO;
 		u8 battleStage = 0;
 		u32 hiddenFrom = 0;
-		u32 tagMissedBy = 0;
 		ActorUID hiddenUID = ActorUID::INVALID;
 		eastl::fixed_vector<ActorUID,4,false> hideDetectors;
 		ActorUID hideDetectedUID = ActorUID::INVALID;
@@ -675,6 +674,7 @@ struct World
 		f32 homingTime = 0;
 		f32 homingTimer = 0;
 		bool homingLockOn = false;
+		bool reflected = false;
 		i32 homingTarget = -1;
 		u32 volleyID = 0;
 		eastl::fixed_vector<u32,16,false> hitList;
@@ -886,8 +886,9 @@ struct World
 
 	Player& GetPlayer(u32 playerIndex);
 	u32 PlayerCount() const { return (u32)players.size(); }
-	bool PlayerPaySkillCost(Player& player, i32 skillID);
-	bool SkillCostAffordable(const Player& player, i32 skillID, f32 mp) const;
+	u32 PlayerPaySkillCost(Player& player, i32 skillID);
+	u32 SkillCostError(const Player& player, i32 skillID, f32 mp) const;
+	bool SkillCostAffordable(const Player& player, i32 skillID, f32 mp) const { return SkillCostError(player, skillID, mp) == 0; }
 	void UpdateWeaponHeat(Player& player);
 	void UpdateSummons();
 	void UpdateBotCombat();
@@ -1084,6 +1085,7 @@ public:
 	void RemovePlayer(Player& player);
 	void ClearMapContent();
 	void SwapMainMaster(Player& p);
+	void ShowTagToEnemies(Player& p);
 	void ResetMainMasterForAreaMove(Player& p);
 	void ResetSkillPoints(Player& player);
 	const GameXmlContent::SkillUpgrade* LatestUpgrade(const Player& player, i32 skillID, GameXmlContent::SkillUpgrade::Type type) const;
@@ -1147,6 +1149,7 @@ public:
 	i32 AreaOwnerTeam(const GameXmlContent::Map::Area& area) const;
 	void ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply);
 	f32 NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info);
+	bool StartNpcPush(ActorNpc& npc, const StatusInfo* info, const vec3& source, vec3* to, f32* nominal, f32* graphSec);
 	void ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 statusID);
 	void UpdateNpcDefeat(ActorNpc& npc);
 	void ApplyMonsterAllyStatus(ActorUID casterUID, const GameXmlContent::MonsterAttack& attack);

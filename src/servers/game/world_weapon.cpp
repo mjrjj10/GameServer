@@ -349,7 +349,7 @@ void World::UpdateProjectiles(f32 delta)
 			if(reflector) {
 				const Projectile src = *proj;
 				proj = projectileList.erase_unsorted(proj);
-				if(reflector->remote->reflectUse || IsMeasuredReflector(reflector->remote->ID)) ReflectProjectile(src, *reflector, contact);
+				if(!src.reflected && (reflector->remote->reflectUse || IsMeasuredReflector(reflector->remote->ID))) ReflectProjectile(src, *reflector, contact);
 				else LOG("Shot :: remote %d absorbed by %d", (i32)src.remoteDoc, (i32)reflector->remote->ID);
 				continue;
 			}
@@ -773,6 +773,7 @@ void World::ReflectProjectile(const Projectile& src, RemoteInst& reflector, cons
 	if(!doc) return;
 	const f32 yaw = reflector.remote->reflectBack ? atan2f(-src.dir.y, -src.dir.x) : r.input.rot.upperYaw;
 	Projectile p = src;
+	p.reflected = true;
 	p.ownerIndex = r.index;
 	p.dir = vec2(cosf(yaw), sinf(yaw));
 	p.pos = vec3(contact, src.pos.z);

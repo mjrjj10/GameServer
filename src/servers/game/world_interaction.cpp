@@ -294,6 +294,8 @@ static const f32 NPC_DEFEAT_KNOCKDOWN_SEC = 1.5f;
 static const f32 NPC_DEFEAT_FLY_SEC = 1.8f;
 static const f32 NPC_DEFEAT_SYNC_SEC = 1.0f;
 static const f32 NPC_LIE_SEC = 1.0f;
+static const f32 MEASURED_NPC_PUSH_BASE_DISTANCE = 500.0f;
+static const f32 NPC_PUSH_RAY_HEIGHT = 100.0f;
 
 static bool HypPveMonsterTakesCc(const World::ActorNpc& npc)
 {
@@ -330,6 +332,31 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 	return total;
 }
 
+bool World::StartNpcPush(ActorNpc& npc, const StatusInfo* info, const vec3& source, vec3* to, f32* nominal, f32* graphSec)
+{
+	*to = npc.pos;
+	if(!info || info->type != StatusType::PUSH) return false;
+	vec2 dir = vec2(npc.pos) - vec2(source);
+	const f32 len = glm::length(dir);
+	dir = len > 1.0f ? dir / len : vec2(cosf(npc.rot.z), sinf(npc.rot.z));
+	const f32 signedDist = MEASURED_NPC_PUSH_BASE_DISTANCE * (info->distanceRatio != 0 ? info->distanceRatio : 1.0f);
+	if(signedDist < 0) dir = -dir;
+	f32 dist = fabsf(signedDist);
+	*nominal = dist;
+	*graphSec = NPC_DEFEAT_PUSH_SEC * (info->timeRatio > 0 ? info->timeRatio : 1.0f);
+	const f32 radius = npc.monsterAi ? npc.monsterAi->radius : 0.0f;
+	f32 wall = 0;
+	const vec3 rayFrom = vec3(vec2(npc.pos), npc.pos.z + NPC_PUSH_RAY_HEIGHT);
+	if(dist > 1.0f && physics.RaycastStatic(rayFrom, rayFrom + vec3(dir * (dist + radius), 0), &wall)) dist = MAX(wall - radius, 0.0f);
+	*to = vec3(vec2(npc.pos) + dir * dist, npc.pos.z);
+	npc.dashFrom = vec2(npc.pos);
+	npc.dashDir = dir;
+	npc.dashDist = dist;
+	npc.dashStart = localTime;
+	npc.dashEnd = TimeAdd(localTime, TimeMsToTime(*graphSec * 1000.0));
+	return true;
+}
+
 void World::UpdateNpcDefeat(ActorNpc& npc)
 {
 	if(npc.defeatLieAt != Time::ZERO && localTime >= npc.defeatLieAt) {
@@ -349,13 +376,17 @@ void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 s
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
 	const f32 hold = NpcDefeatReaction(npc, info);
 	if(hold < 0) return;
-	const f32 duration = info && info->durationSec > 0 ? info->durationSec : hold;
+	vec3 pushTo;
+	f32 pushNominal = -1.0f;
+	f32 pushSec = 0;
+	const bool push = StartNpcPush(npc, info, caster.pos, &pushTo, &pushNominal, &pushSec);
+	const f32 duration = info && info->durationSec > 0 ? info->durationSec : (push ? pushSec : hold);
 	if(duration <= 0) return;
 	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
 		if(npcStatuses[i].npcUID == npc.UID && npcStatuses[i].statusID == statusID) npcStatuses.erase(npcStatuses.begin() + i);
 		else i++;
 	}
-	replication->SendAddStatusToAll(statusID, npc.UID, caster.UID, duration, npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false, false);
+	replication->SendAddStatusToAll(statusID, npc.UID, caster.UID, duration, npc.pos, pushTo, pushSec, 1, 1.0f, pushNominal, push, false);
 	if(npcStatuses.full()) return;
 	NpcStatus ns;
 	ns.npcUID = npc.UID;
