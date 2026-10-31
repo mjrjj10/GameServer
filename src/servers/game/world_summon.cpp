@@ -176,13 +176,15 @@ void World::ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos)
 	}
 	foreach(st, activeStatuses) {
 		if(st->casterIndex != owner.index || !st->info || st->info->type != StatusType::TARGET || localTime >= st->until) continue;
+		static const f32 HYP_CARRY_ARRIVE_EARLY_SEC = 0.1f;
 		Player& carried = players[st->targetIndex];
 		const Time drop = TimeAdd(localTime, TimeMsToTime(travel * 1000.0));
+		const f32 flight = MAX(travel - HYP_CARRY_ARRIVE_EARLY_SEC, 0.05f);
 		carried.carryReleaseAt = drop;
 		if(carried.clientHd == ClientHandle::INVALID && !carried.dead) {
 			carried.pushTarget = vec3(vec2(pos), carried.body->GetWorldPos().z);
-			carried.pushUntil = drop;
-			carried.pushSpeed = glm::length(vec2(pos) - vec2(carried.body->GetWorldPos())) / MAX(travel, 0.05f);
+			carried.pushUntil = TimeAdd(localTime, TimeMsToTime(flight * 1000.0));
+			carried.pushSpeed = glm::length(vec2(pos) - vec2(carried.body->GetWorldPos())) / flight;
 			if(drop > carried.ccUntil) carried.ccUntil = drop;
 		}
 		LOG("Summon :: %ls carried to (%.0f, %.0f)", carried.name.data(), pos.x, pos.y);
@@ -628,7 +630,7 @@ void World::UpdateSummons()
 				ga.range = st->targetingRange;
 				ga.pos = pc->pos;
 				const Time statusEnd = st->durationSec > 0 ? TimeAdd(localTime, TimeMsToTime(st->durationSec * 1000.0)) : pc->until;
-				ga.until = pc->until < statusEnd ? pc->until : statusEnd;
+				ga.until = st->durationSec > 0 ? statusEnd : pc->until;
 				ga.nextPulse = localTime;
 				ga.sourceUID = pc->source;
 				groundAuras.push_back(ga);
