@@ -3229,16 +3229,18 @@ void Replication::SendReviveToAll(UserID userID, ActorUID activeUID, ActorUID in
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
-
-		const ClientHandle clientHd = clientHandle[clientID];
-
-		Sv::SN_RevivePlayerAtStartingPoint revive;
-		revive.usn = (u32)userID;
-		revive.activeID = (u32)GetLocalActorID(clientHd, activeUID);
-		revive.inactiveID = (u32)GetLocalActorID(clientHd, inactiveUID);
-		revive.position = v2f(pos);
-		SendPacket(clientHd, revive);
+		SendRevive(clientHandle[clientID], userID, activeUID, inactiveUID, pos);
 	}
+}
+
+void Replication::SendRevive(ClientHandle clientHd, UserID userID, ActorUID activeUID, ActorUID inactiveUID, const vec3& pos)
+{
+	Sv::SN_RevivePlayerAtStartingPoint revive;
+	revive.usn = (u32)userID;
+	revive.activeID = (u32)GetLocalActorID(clientHd, activeUID);
+	revive.inactiveID = (u32)GetLocalActorID(clientHd, inactiveUID);
+	revive.position = v2f(pos);
+	SendPacket(clientHd, revive);
 }
 
 void Replication::OnPlayerDisconnect(ClientHandle clientHd)

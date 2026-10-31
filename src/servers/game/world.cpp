@@ -254,7 +254,7 @@ void World::Update(Time localTime_)
 	if(!frozen) UpdateInteractions();
 	if(Config().DevShowcase) { if(!frozen) UpdateShowcase(); }
 	else {
-		if(!frozen) UpdateBotMovement();
+		if(!frozen && !combatLocked) UpdateBotMovement();
 		if(!frozen && !combatLocked) UpdateBotCombat();
 		if(!frozen && !combatLocked) UpdateBotSkills();
 	}
@@ -1222,6 +1222,7 @@ void World::RespawnPlayer(Player& player)
 
 	LOG("Respawn :: %ls", player.name.data());
 	replication->SendReviveToAll(player.userID, player.Main().UID, player.Sub().UID, player.spawnPos);
+	player.reviveMissedBy = player.hiddenFrom;
 	foreach(c, player.characters) {
 		replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax);
 	}

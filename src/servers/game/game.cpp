@@ -750,7 +750,9 @@ void Game::WriteTruth()
 		if(p->removed || !p->body) continue;
 		const vec3 pos = p->body->GetWorldPos();
 		const World::ActorMaster& m = p->Main();
-		fprintf(f, "%s[%u,\"%ls\",%.0f,%.0f,%.0f,%d,%d,%d,%d,%d]", first ? "" : ",", (u32)replication.GetLocalActorID(viewer, m.UID), p->name.data(), pos.x, pos.y, pos.z, (i32)m.actionState, m.hp, p->dead ? 1 : 0, p->clientHd != ClientHandle::INVALID ? 1 : 0, replication.HiddenFor(viewer, m.UID) ? 1 : 0);
+		ActionStateID state = m.actionState;
+		if(p->clientHd == ClientHandle::INVALID && world.localTime < p->botAttackStateUntil) state = p->botAttackState;
+		fprintf(f, "%s[%u,\"%ls\",%.0f,%.0f,%.0f,%d,%d,%d,%d,%d,%.2f]", first ? "" : ",", (u32)replication.GetLocalActorID(viewer, m.UID), p->name.data(), pos.x, pos.y, pos.z, (i32)state, m.hp, p->dead ? 1 : 0, p->clientHd != ClientHandle::INVALID ? 1 : 0, replication.HiddenFor(viewer, m.UID) ? 1 : 0, p->input.rot.bodyYaw);
 		first = false;
 	}
 	fprintf(f, "],\"n\":[");

@@ -573,6 +573,7 @@ struct Replication
 	void SendPointsToAll(UserID userID, u8 team, i32 points, i32 teamPoints);
 	void SendNpcDeadAckToAll(ActorUID npcUID, ActorUID killerUID, u32 killerDoc);
 	void SendReviveToAll(UserID userID, ActorUID activeUID, ActorUID inactiveUID, const vec3& pos);
+	void SendRevive(ClientHandle clientHd, UserID userID, ActorUID activeUID, ActorUID inactiveUID, const vec3& pos);
 
 	void OnPlayerDisconnect(ClientHandle clientHd);
 

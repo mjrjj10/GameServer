@@ -332,6 +332,7 @@ struct World
 		Time battleActionAt = Time::ZERO;
 		u8 battleStage = 0;
 		u32 hiddenFrom = 0;
+		u32 reviveMissedBy = 0;
 		ActorUID hiddenUID = ActorUID::INVALID;
 		eastl::fixed_vector<ActorUID,4,false> hideDetectors;
 		ActorUID hideDetectedUID = ActorUID::INVALID;

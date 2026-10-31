@@ -106,6 +106,7 @@ void World::HealPlayer(Player& healer, Player& target, i32 amount)
 {
 	if(target.dead || amount <= 0) return;
 	ActorMaster& chara = target.Main();
+	if(chara.hp >= chara.hpMax) return;
 	const u32 healed = (u32)MIN(amount, chara.hpMax - chara.hp);
 	healer.damageStats[END_DMG_HEAL] += healed;
 	if(healer.index == target.index) healer.healSelf += healed;
