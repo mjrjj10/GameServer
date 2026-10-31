@@ -120,6 +120,9 @@ struct Game
 	bool zoneLoading = false;
 	void MoveToNextZone();
 	void UpdateAutoStage();
+	void WriteTelemetry();
+	void WriteTrail();
+	Time tNextTelemetry = Time::ZERO;
 	Time tAutoStageNext = Time::ZERO;
 	Time tAutoStageWait = Time::ZERO;
 	eastl::fixed_vector<i32,64,true> autoStageVisited;

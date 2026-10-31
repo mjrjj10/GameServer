@@ -50,6 +50,35 @@ struct Matrix3x3
 	f32 data[9];
 };
 
+struct NodeTransform
+{
+	Vector3 translation;
+	Matrix3x3 rotation;
+	f32 scale;
+
+	inline bool IsIdentity() const
+	{
+		static const f32 identity[9] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
+		if(translation.x != 0.0f || translation.y != 0.0f || translation.z != 0.0f || scale != 1.0f) return false;
+		for(int i = 0; i < 9; i++) {
+			if(rotation.data[i] != identity[i]) return false;
+		}
+		return true;
+	}
+
+	inline Vector3 Rotate(const Vector3& v) const
+	{
+		const f32* m = rotation.data;
+		return { m[0]*v.x + m[1]*v.y + m[2]*v.z, m[3]*v.x + m[4]*v.y + m[5]*v.z, m[6]*v.x + m[7]*v.y + m[8]*v.z };
+	}
+
+	inline Vector3 Apply(const Vector3& v) const
+	{
+		const Vector3 r = Rotate({ v.x * scale, v.y * scale, v.z * scale });
+		return { r.x + translation.x, r.y + translation.y, r.z + translation.z };
+	}
+};
+
 inline PxTolerancesScale TolerancesScale()
 {
 	PxTolerancesScale s;
@@ -111,6 +140,7 @@ struct CollisionNifReader
 		};
 
 		i32 parentBlockID;
+		i32 blockID;
 		eastl::fixed_string<char,64,false> name;
 		/*
 			<option value="0" name="MESH_PRIMITIVE_TRIANGLES">Triangle primitive type.</option>
@@ -146,6 +176,31 @@ struct CollisionNifReader
 
 	eastl::fixed_vector<i32,8,true> collisionNodeList;
 
+	eastl::fixed_vector<i32,1024,true> parentList;
+	eastl::fixed_vector<NodeTransform,1024,true> transformList;
+
+	void SetTransform(i32 blockID, const Vector3& translation, const Matrix3x3& rotation, f32 scale)
+	{
+		if(blockID < 0 || blockID >= (i32)transformList.size()) return;
+		transformList[blockID] = NodeTransform{ translation, rotation, scale };
+	}
+
+	bool IsIdentityChain(i32 blockID) const
+	{
+		for(i32 b = blockID; b >= 0 && b < (i32)transformList.size(); b = parentList[b]) {
+			if(!transformList[b].IsIdentity()) return false;
+		}
+		return true;
+	}
+
+	void ToWorld(i32 blockID, Vector3* pos, Vector3* normal) const
+	{
+		for(i32 b = blockID; b >= 0 && b < (i32)transformList.size(); b = parentList[b]) {
+			*pos = transformList[b].Apply(*pos);
+			*normal = transformList[b].Rotate(*normal);
+		}
+	}
+
 	bool ReadBlock_NiNode(ConstBuffer buff, i32 blockID)
 	{
 		const i32 stringIndex = buff.Read<i32>();
@@ -180,6 +235,11 @@ struct CollisionNifReader
 		}
 
 		const u32 numEffects = buff.Read<u32>();
+
+		SetTransform(blockID, translation, rotation, scale);
+		foreach_const(it, refChildrenList) {
+			if(*it >= 0 && *it != blockID && *it < (i32)parentList.size()) parentList[*it] = blockID;
+		}
 
 		LOG("	name = '%.*s'", str.len, str.at);
 		LOG("	extraDataList(%d) = [", numExtraDataList);
@@ -227,6 +287,7 @@ struct CollisionNifReader
 
 		Mesh& mesh = meshList.push_back();
 		mesh.parentBlockID = currentNode.blockID;
+		mesh.blockID = blockID;
 		const u32 nameStrID = buff.Read<u32>();
 		const StringSlice& name = (nameStrID != 0xFFFFFFFF) ? stringList[nameStrID] : StringSlice{"_", 1};
 		mesh.name = currentNode.name;
@@ -242,6 +303,7 @@ struct CollisionNifReader
 		const Vector3 translation = buff.Read<Vector3>();
 		const Matrix3x3 rotation = buff.Read<Matrix3x3>();
 		const f32 scale = buff.Read<f32>();
+		SetTransform(blockID, translation, rotation, scale);
 
 		const u32 numProperties = buff.Read<u32>();
 		eastl::fixed_vector<i32,128,true> refPropertyList;
@@ -513,6 +575,10 @@ struct CollisionNifReader
 		const u32 numGroups = buff.Read<u32>();
 		LOG("numGroups = %u", numGroups);
 
+		const NodeTransform identity = { { 0, 0, 0 }, { { 1, 0, 0, 0, 1, 0, 0, 0, 1 } }, 1.0f };
+		parentList.assign(numBlocks, -1);
+		transformList.assign(numBlocks, identity);
+
 		for(int i = 0; i < numBlocks; i++) {
 			const u16 blockTypeIndex = blockTypeIndexList[i] & 0x7FFF;
 			const StringSlice& blockTypeStr = (blockTypeIndex < numBlockTypes) ? blockTypeStringList[blockTypeIndex] : StringSlice{"_", 1};
@@ -682,13 +748,23 @@ bool ExtractCollisionMesh(const CollisionNifReader& nif, const char* outPath)
 		ASSERT(indexBlock.size == sizeof(u16) * indexBlock.numIndices);
 		ASSERT((indexBlock.numIndices/3) * 3 == indexBlock.numIndices);
 
+		eastl::vector<Vertex> worldVertices;
+		worldVertices.resize(verticesBlock.numIndices);
+		const bool identityChain = nif.IsIdentityChain(mesh.blockID);
+		if(!identityChain) LOG("mesh '%s' baked with its node transform chain", mesh.name.data());
+		const u8* vertices = (u8*)verticesBlock.at;
+		for(int i = 0; i < verticesBlock.numIndices; i++) {
+			Vertex v = *(Vertex*)vertices;
+			vertices += vertexSize;
+			if(!identityChain) nif.ToWorld(mesh.blockID, &v.pos, &v.normal);
+			worldVertices[i] = v;
+		}
+
 		out.append(FMT("o %s\n", mesh.name.data()));
 
 		// obj file
-		const u8* vertices = (u8*)verticesBlock.at;
 		for(int i = 0; i < verticesBlock.numIndices; i++) {
-			const Vertex& v = *(Vertex*)vertices;
-			vertices += vertexSize;
+			const Vertex& v = worldVertices[i];
 
 			out.append(FMT("v %g %g %g\n", v.pos.x, v.pos.z, v.pos.y));
 			out.append(FMT("vn %g %g %g\n", -v.normal.x, -v.normal.z, -v.normal.y));
@@ -716,10 +792,8 @@ bool ExtractCollisionMesh(const CollisionNifReader& nif, const char* outPath)
 		// indexCount
 		outMesh.Append(&indexBlock.numIndices, sizeof(indexBlock.numIndices));
 
-		vertices = (u8*)verticesBlock.at;
 		for(int i = 0; i < verticesBlock.numIndices; i++) {
-			const Vertex& v = *(Vertex*)vertices;
-			vertices += vertexSize;
+			const Vertex& v = worldVertices[i];
 			Vector3 p = { v.pos.x, v.pos.y, v.pos.z };
 			outMesh.Append(&p, sizeof(p));
 			Vector3 n = { v.normal.x, v.normal.y, v.normal.z };
@@ -741,8 +815,8 @@ bool ExtractCollisionMesh(const CollisionNifReader& nif, const char* outPath)
 
 		PxTriangleMeshDesc meshDesc;
 		meshDesc.points.count = verticesBlock.numIndices;
-		meshDesc.points.stride = vertexSize;
-		meshDesc.points.data = verticesBlock.at;
+		meshDesc.points.stride = sizeof(Vertex);
+		meshDesc.points.data = worldVertices.data();
 
 		meshDesc.triangles.count = indexBlock.numIndices/3;
 		meshDesc.triangles.stride = 3*sizeof(u16);

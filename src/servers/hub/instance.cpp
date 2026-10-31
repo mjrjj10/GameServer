@@ -608,6 +608,18 @@ void RoomInstance::Update(Time localTime_)
 
 	if(phase == Phase::Banning) UpdateBans();
 
+	if(phase == Phase::Picking && !devPicked && Config().DevPickMasters[0] > 0) {
+		devPicked = true;
+		foreach(u, userList) {
+			if(u->isBot) continue;
+			TryPickMaster(u, (ClassType)Config().DevPickMasters[0]);
+			if(Config().DevPickMasters[1] > 0) TryPickMaster(u, (ClassType)Config().DevPickMasters[1]);
+			SetReady(u);
+			LOG("[Room] %ls dev picks masters %d and %d", u->name.data(), Config().DevPickMasters[0], Config().DevPickMasters[1]);
+		}
+		Replicate();
+	}
+
 	if(phase == Phase::Picking) {
 		bool allReady = true;
 		foreach_const(u, userList) {

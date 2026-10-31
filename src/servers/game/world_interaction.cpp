@@ -186,7 +186,6 @@ static const u32 STAT_REASON_ITEM = 3;
 static const u8 MONSTER_DEFENCE_STAT = 7;
 static const i32 DYNAMIC_INDEX_RANGE = 110;
 static const f32 MONSTER_STATUS_FOREVER_SEC = 1000000.0f;
-static const i32 AREA_TYPE_CIRCLE = 1;
 static const f32 BOT_ITEM_PICKUP_RADIUS = 100.0f;
 
 void World::StartLevelEvents()
@@ -296,6 +295,13 @@ static const f32 NPC_DEFEAT_FLY_SEC = 1.8f;
 static const f32 NPC_DEFEAT_SYNC_SEC = 1.0f;
 static const f32 NPC_LIE_SEC = 1.0f;
 
+static bool HypPveMonsterTakesCc(const World::ActorNpc& npc)
+{
+	const GameXmlContent& content = GetGameXmlContent();
+	const u8 rank = content.FindMonsterRank((i32)npc.docID);
+	return rank >= content.rankNames.size() || !(content.rankNames[rank] == "BOSS");
+}
+
 f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 {
 	if(!info || !npc.monsterAi) return 0.0f;
@@ -312,7 +318,7 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 		case StatusType::FREEZE: state = ActionStateID::DEFEAT_SYNC_BEHAVIORSTATE; sec = info->durationSec > 0 ? info->durationSec : NPC_DEFEAT_SYNC_SEC; break;
 		default: return 0.0f;
 	}
-	if(eastl::find(npc.monsterAi->ccTypes.begin(), npc.monsterAi->ccTypes.end(), info->type) == npc.monsterAi->ccTypes.end()) return -1.0f;
+	if(eastl::find(npc.monsterAi->ccTypes.begin(), npc.monsterAi->ccTypes.end(), info->type) == npc.monsterAi->ccTypes.end() && !(hostileMonsters && HypPveMonsterTakesCc(npc))) return -1.0f;
 	const f32 total = sec + (lie ? NPC_LIE_SEC : 0.0f);
 	npc.actionState = state;
 	replication->SendMonsterStateToAll(npc.UID, state, npc.pos, 0.0f);
@@ -699,7 +705,9 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 	}
 	if(fromNode >= 0 && difficultyBit != GameXmlContent::ALL_DIFFICULTIES) {
 		const GameXmlContent::LevelEventNode* from = map->FindLevelEvent(fromNode);
-		if(!from || NodeInDifficulty(*from)) {
+		bool fromInDifficulty = !from || NodeInDifficulty(*from);
+		if(!fromInDifficulty) foreach_const(n, map->levelEvents) if(n->id == fromNode && NodeInDifficulty(*n)) { fromInDifficulty = true; break; }
+		if(fromInDifficulty) {
 			foreach_const(in, node->inputs) if(in->first == fromNode && !(in->second & difficultyBit)) return;
 		}
 	}
@@ -1342,15 +1350,14 @@ void World::UpdateMapInteractions()
 }
 
 static const f32 HYP_AREA_MIN_HALF_EXTENT = 100.0f;
+static const f32 MEASURED_AREA_SIZE_TO_HALF_EXTENT = 1.0f;
 
 static bool AreaContains(const GameXmlContent::Map::Area& area, const vec3& pos)
 {
-	static const f32 AREA_SIZE_TO_HALF_EXTENT = 0.5f;
 	const vec2 d = vec2(pos) - vec2(area.pos);
-	if(area.type == AREA_TYPE_CIRCLE) return glm::length(d) <= MAX(area.size.z * AREA_SIZE_TO_HALF_EXTENT, HYP_AREA_MIN_HALF_EXTENT);
 	const f32 c = cosf(area.rot.z);
 	const f32 s = sinf(area.rot.z);
-	return fabsf(d.x * c + d.y * s) <= MAX(area.size.z * AREA_SIZE_TO_HALF_EXTENT, HYP_AREA_MIN_HALF_EXTENT) && fabsf(d.y * c - d.x * s) <= MAX(area.size.y * AREA_SIZE_TO_HALF_EXTENT, HYP_AREA_MIN_HALF_EXTENT);
+	return fabsf(d.x * c - d.y * s) <= MAX(area.size.z * MEASURED_AREA_SIZE_TO_HALF_EXTENT, HYP_AREA_MIN_HALF_EXTENT) && fabsf(d.x * s + d.y * c) <= MAX(area.size.y * MEASURED_AREA_SIZE_TO_HALF_EXTENT, HYP_AREA_MIN_HALF_EXTENT);
 }
 
 static const u32 CREATURE_TRIGGER_STATE = 0xffffffff;

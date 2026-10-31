@@ -187,7 +187,7 @@ void World::UpdateUltimateGauges(f32 delta)
 			SkillID ult = SkillID::INVALID;
 			foreach_const(sid, GetGameXmlContent().GetMaster(it->Main().classType).skillIDs) if((i32)*sid % 100 == ULTIMATE_SKILL_ID_SUFFIX) ult = *sid;
 			auto learned = it->skillLevels.find((i32)ult);
-			const i8 ready = (learned != it->skillLevels.end() && learned->second > 0 && localTime >= it->ultCooldownUntil && localTime >= it->castLockUntil) ? 1 : 0;
+			const i8 ready = (learned != it->skillLevels.end() && (learned->second > 0 || !ingameSkillPoints) && localTime >= it->ultCooldownUntil && localTime >= it->castLockUntil) ? 1 : 0;
 			if(ready != it->ultReadySent) {
 				it->ultReadySent = ready;
 				foreach_const(mate, players) {
@@ -1277,11 +1277,13 @@ void World::UpdateNpcFog()
 
 void World::StartSkillPoints()
 {
+	if(!ingameSkillPoints) return;
 	foreach(it, players) it->nextSkillPointAt = TimeAdd(localTime, TimeMsToTime(SKILL_POINT_INTERVAL_MS));
 }
 
 void World::GrantSkillPoint(Player& player)
 {
+	if(!ingameSkillPoints) return;
 	player.skillPoints++;
 	if(player.clientHd != ClientHandle::INVALID) replication->SendSkillPoints(player.clientHd, player.userID, player.skillPoints);
 	LOG("Upgrade :: %ls skill points %d", player.name.data(), player.skillPoints);

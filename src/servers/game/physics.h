@@ -79,6 +79,7 @@ struct PhysicsDynamicBody
 {
 	PxCapsuleController* collider = nullptr;
 	vec3 vel = vec3(0); // actual velocity
+	bool grounded = false;
 	Time lockedMoveUntil = Time::ZERO;
 
 	inline vec3 GetWorldPos() const { return tov3(collider->getFootPosition()); }
@@ -96,6 +97,7 @@ struct PhysicsScene
 	Time localTime = Time::ZERO;
     PxScene* scene = nullptr;
     PxControllerManager* controllerMngr = nullptr;
+	PxRigidStatic* groundPlane = nullptr;
 	eastl::fixed_vector<PhysicsDynamicBody,256,false> colliderList; // doesn't grow so we don't invalidate pointer
 
 	void Step();
@@ -111,6 +113,7 @@ struct PhysicsScene
 	void RemoveWall(PxRigidStatic* wall);
 	eastl::vector<PxRigidStatic*> mapStatics;
 	void ClearMapStatics();
+	void SetGroundPlaneEnabled(bool enabled);
 };
 
 struct PhysicsContext

@@ -1078,6 +1078,7 @@ void Replication::SendGameReady(ClientHandle clientHd, i32 waitTime, i32 elapsed
 	ready.readyElapsedMS = elapsed;
 	SendPacket(clientHd, ready);
 
+	if(pveTeams) return;
 	Sv::SN_NotifyIngameSkillPoint notify;
 	notify.userId = userId;
 
@@ -1808,45 +1809,30 @@ void Replication::SendReflectedShotToAll(ActorUID shooterUID, ActorUID reflector
 void Replication::SendRemoteCreate(const RemoteCreate& remote, ClientHandle exclude)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
-		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
-		const ClientHandle clientHd = clientHandle[clientID];
-		if(clientHd == exclude) continue;
+		if(playerState[clientID].cur < PlayerState::IN_GAME || clientHandle[clientID] == exclude) continue;
+		SendRemoteCreateToClient(clientID, remote);
+	}
+}
 
-		const LocalActorID parentLocal = GetLocalActorID(clientHd, remote.parentUID);
-		const LocalActorID ownerLocal = GetLocalActorID(clientHd, remote.ownerUID);
-		if(parentLocal == LocalActorID::INVALID || ownerLocal == LocalActorID::INVALID) continue;
-		if(playerLocalInfo[clientID].hiddenActors.count(remote.ownerUID) || playerLocalInfo[clientID].hiddenActors.count(remote.parentUID)) continue;
-		const LocalActorID targetLocal = remote.targetUID != ActorUID::INVALID ? GetLocalActorID(clientHd, remote.targetUID) : LocalActorID::INVALID;
+bool Replication::SendRemoteCreateTo(ClientHandle clientHd, const RemoteCreate& remote)
+{
+	auto found = playerMap.find(clientHd);
+	return found != playerMap.end() && SendRemoteCreateToClient(found->second, remote);
+}
 
-		if(remote.creator != 0) {
-			PacketWriter<Sv::SN_RemoteSyncCreateFromCreatorId,512> packet;
-			packet.Write<u32>((u32)parentLocal);
-			packet.Write<u32>((u32)ownerLocal);
-			packet.Write<u32>(remote.seed);
-			packet.Write<float3>(v2f(remote.firePos));
-			packet.Write<u16>(remote.fireRotation[0]);
-			packet.Write<u16>(remote.fireRotation[1]);
-			packet.Write<u16>(remote.fireRotation[2]);
-			packet.Write<float3>(v2f(remote.targetPos));
-			packet.Write<u16>(remote.fireObjectLen);
-			packet.WriteRaw(remote.fireObject, remote.fireObjectLen * sizeof(wchar));
-			packet.Write<u16>(remote.scale);
-			packet.Write<f32>(remote.lifeTime);
-			packet.Write<u32>(remote.hitInvalidTarget);
-			packet.Write<u16>(remote.creator);
-			packet.Write<u16>(remote.errorAngle[0]);
-			packet.Write<u16>(remote.errorAngle[1]);
-			packet.Write<u8>(remote.chargingLevel);
-			packet.Write<u8>(remote.gaugeLevel);
-			packet.Write<u16>(remote.firingCount);
-			packet.Write<u8>(remote.comboCount);
-			packet.Write<u32>((u32)targetLocal);
-			packet.Write<u8>(remote.flags);
-			SendPacket(clientHd, packet);
-			continue;
-		}
+bool Replication::SendRemoteCreateToClient(i32 clientID, const RemoteCreate& remote)
+{
+	if(clientID < 0 || clientID >= MAX_PLAYERS || playerState[clientID].cur < PlayerState::IN_GAME) return false;
+	const ClientHandle clientHd = clientHandle[clientID];
 
-		PacketWriter<Sv::SN_RemoteSyncCreateFromRemoteDoc,512> packet;
+	const LocalActorID parentLocal = GetLocalActorID(clientHd, remote.parentUID);
+	const LocalActorID ownerLocal = GetLocalActorID(clientHd, remote.ownerUID);
+	if(parentLocal == LocalActorID::INVALID || ownerLocal == LocalActorID::INVALID) return false;
+	if(playerLocalInfo[clientID].hiddenActors.count(remote.ownerUID) || playerLocalInfo[clientID].hiddenActors.count(remote.parentUID)) return false;
+	const LocalActorID targetLocal = remote.targetUID != ActorUID::INVALID ? GetLocalActorID(clientHd, remote.targetUID) : LocalActorID::INVALID;
+
+	if(remote.creator != 0) {
+		PacketWriter<Sv::SN_RemoteSyncCreateFromCreatorId,512> packet;
 		packet.Write<u32>((u32)parentLocal);
 		packet.Write<u32>((u32)ownerLocal);
 		packet.Write<u32>(remote.seed);
@@ -1860,11 +1846,38 @@ void Replication::SendRemoteCreate(const RemoteCreate& remote, ClientHandle excl
 		packet.Write<u16>(remote.scale);
 		packet.Write<f32>(remote.lifeTime);
 		packet.Write<u32>(remote.hitInvalidTarget);
-		packet.Write<u32>((u32)remote.doc);
+		packet.Write<u16>(remote.creator);
+		packet.Write<u16>(remote.errorAngle[0]);
+		packet.Write<u16>(remote.errorAngle[1]);
+		packet.Write<u8>(remote.chargingLevel);
+		packet.Write<u8>(remote.gaugeLevel);
+		packet.Write<u16>(remote.firingCount);
+		packet.Write<u8>(remote.comboCount);
 		packet.Write<u32>((u32)targetLocal);
 		packet.Write<u8>(remote.flags);
 		SendPacket(clientHd, packet);
+		return true;
 	}
+
+	PacketWriter<Sv::SN_RemoteSyncCreateFromRemoteDoc,512> packet;
+	packet.Write<u32>((u32)parentLocal);
+	packet.Write<u32>((u32)ownerLocal);
+	packet.Write<u32>(remote.seed);
+	packet.Write<float3>(v2f(remote.firePos));
+	packet.Write<u16>(remote.fireRotation[0]);
+	packet.Write<u16>(remote.fireRotation[1]);
+	packet.Write<u16>(remote.fireRotation[2]);
+	packet.Write<float3>(v2f(remote.targetPos));
+	packet.Write<u16>(remote.fireObjectLen);
+	packet.WriteRaw(remote.fireObject, remote.fireObjectLen * sizeof(wchar));
+	packet.Write<u16>(remote.scale);
+	packet.Write<f32>(remote.lifeTime);
+	packet.Write<u32>(remote.hitInvalidTarget);
+	packet.Write<u32>((u32)remote.doc);
+	packet.Write<u32>((u32)targetLocal);
+	packet.Write<u8>(remote.flags);
+	SendPacket(clientHd, packet);
+	return true;
 }
 
 u16 Replication::RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, RemoteIdx remoteDoc)
@@ -2951,6 +2964,17 @@ void Replication::SendCancelSkillToAll(ActorUID casterUID, SkillID skillID)
 		cancel.skillIndex = (u32)skillID;
 		SendPacket(clientHd, cancel);
 	}
+}
+
+void Replication::SendCastSkillRefused(ClientHandle clientHd, ActorUID casterUID, SkillID skillID, u32 ret)
+{
+	const LocalActorID localActorID = GetLocalActorID(clientHd, casterUID);
+	if(localActorID == LocalActorID::INVALID) return;
+	Sv::SA_CastSkill refuse;
+	refuse.entity = localActorID;
+	refuse.ret = ret;
+	refuse.skillIndex = skillID;
+	SendPacket(clientHd, refuse);
 }
 
 void Replication::SendInteractionCastingToAll(ActorUID casterUID, ActorUID objectUID, u32 actionState, u32 castingTimeMS)
@@ -4046,7 +4070,15 @@ void Replication::SendMasterSkillSlots(ClientHandle clientHd, const Replication:
 			packet.Write<SkillID>(master.skillIDs[i]);
 			packet.Write<u32>(0);
 			packet.Write<u8>(1);
-			packet.Write<u16>(0);
+			u8 level = 0;
+			if(pveTeams) foreach_const(l, player.skillLevels) if(l->first == (i32)master.skillIDs[i]) level = l->second;
+			const auto* ups = level > 0 ? content.FindSkillUpgrades((i32)master.skillIDs[i]) : nullptr;
+			const u16 props = ups ? (u16)MIN((size_t)level, ups->size()) : 0;
+			packet.Write<u16>(props);
+			for(u16 k = 0; k < props; k++) {
+				packet.Write<i32>((*ups)[k].propertyID);
+				packet.Write<u32>(1);
+			}
 			packet.Write<u8>(1);
 			packet.Write<u8>(1);
 		}

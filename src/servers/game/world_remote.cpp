@@ -497,6 +497,14 @@ void World::RemoteHitAlongPath(RemoteInst& inst)
 		if(glm::length(vec2(it->body->GetWorldPos()) - origin) > radius + HitRadius(*it)) continue;
 		RemoteHit(inst, *it);
 	}
+	if(!hostileMonsters) return;
+	Player& owner = players[inst.ownerIndex];
+	foreach(npc, actorNpcList) {
+		if(!NpcHittableBy(*npc, owner)) continue;
+		const f32 dist = glm::length(vec2(npc->pos) - origin);
+		if(dist > radius + NpcHitRadius(*npc)) continue;
+		RemoteDamageNpc(inst, *npc, dist);
+	}
 }
 
 void World::RemoteApplyShape(RemoteInst& inst)
@@ -531,6 +539,17 @@ void World::RemoteApplyShape(RemoteInst& inst)
 		if(along < start - HitRadius(*it) || along > start + length + HitRadius(*it)) continue;
 		if(side > halfWidth + HitRadius(*it)) continue;
 		RemoteHit(inst, *it);
+	}
+	if(!hostileMonsters) return;
+	Player& owner = players[inst.ownerIndex];
+	foreach(npc, actorNpcList) {
+		if(!NpcHittableBy(*npc, owner)) continue;
+		const f32 r = NpcHitRadius(*npc);
+		const vec2 rel = vec2(npc->pos) - vec2(inst.pos);
+		const f32 along = glm::dot(rel, inst.dir);
+		const f32 side = fabsf(glm::dot(rel, Perp(inst.dir)));
+		if(along < start - r || along > start + length + r || side > halfWidth + r) continue;
+		RemoteDamageNpc(inst, *npc, along);
 	}
 }
 
@@ -585,8 +604,7 @@ void World::RemoteHitNpcs(RemoteInst& inst)
 	Player& owner = players[inst.ownerIndex];
 	const bool sphere = remote.boundType == Remote::BoundType::E_BOUND_SPHERE || remote.angle > 0;
 	foreach(npc, actorNpcList) {
-		if(inst.npcHits.full() || !NpcHittableBy(*npc, owner)) continue;
-		if(eastl::find(inst.npcHits.begin(), inst.npcHits.end(), npc->UID) != inst.npcHits.end()) continue;
+		if(!NpcHittableBy(*npc, owner)) continue;
 		const f32 r = NpcHitRadius(*npc);
 		const vec2 rel = vec2(npc->pos) - vec2(inst.pos) - inst.dir * RemoteBoundOffset(remote);
 		const f32 dist = glm::length(rel);
@@ -600,15 +618,39 @@ void World::RemoteHitNpcs(RemoteInst& inst)
 			const f32 along = glm::dot(local, inst.dir);
 			if(along < -r || along > length + r || fabsf(glm::dot(local, Perp(inst.dir))) > remote.boundSize[0] * 0.5f + r) continue;
 		}
-		inst.npcHits.push_back(npc->UID);
+		RemoteDamageNpc(inst, *npc, dist);
+	}
+}
+
+bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
+{
+	const Remote& remote = *inst.remote;
+	const i32 base = (i32)(inst.damage * remote.attackMultiplier);
+	if(remote.damageGroup != Remote::DamageGroup::eENEMY && remote.damageGroup != Remote::DamageGroup::eALL) return false;
+	const Time until = TimeAdd(localTime, TimeMsToTime(MAX(remote.hitInvalidTime, 0.1f) * 1000.0));
+	bool recorded = false;
+	foreach(h, inst.npcHits) {
+		if(h->uid != npc.UID) continue;
+		if(localTime < h->until) return false;
+		h->until = until;
+		recorded = true;
+		break;
+	}
+	if(!recorded) inst.npcHits.push_back({ npc.UID, until });
+	if(base > 0) {
 		Replication::RemoteDamage hit;
 		hit.remoteID = inst.clientRemoteID != 0 ? inst.clientRemoteID : inst.damageRemoteID;
 		hit.remoteDoc = remote.ID;
 		hit.remotePos = inst.pos;
 		hit.dir = inst.dir;
 		hit.seedOwnerHd = inst.seedOwnerHd;
-		DamageNpc(owner, *npc, inst.skillID, (i32)(base * RemoteDistanceFalloff(remote, dist)), &hit);
+		DamageNpc(players[inst.ownerIndex], npc, inst.skillID, (i32)(base * RemoteDistanceFalloff(remote, dist)), &hit);
 	}
+	if(!hostileMonsters || npc.hp <= 0 || npc.ownerUID != ActorUID::INVALID) return true;
+	foreach_const(st, remote.statuses) {
+		if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(players[inst.ownerIndex], npc, st->statusID, false);
+	}
+	return true;
 }
 
 void World::UpdateRemotes(f32 delta)
@@ -872,6 +914,13 @@ void World::ApplyAttachedRemote(RemoteInst& inst, Player& instOwner)
 			if(!RemoteCanAffect(inst, *it, false)) continue;
 			if(glm::length(vec2(it->body->GetWorldPos()) - vec2(instOwner.body->GetWorldPos())) <= radius + HitRadius(*it)) RemoteHit(inst, *it);
 		}
+		if(hostileMonsters) {
+			foreach(npc, actorNpcList) {
+				if(!NpcHittableBy(*npc, instOwner)) continue;
+				const f32 dist = glm::length(vec2(npc->pos) - vec2(instOwner.body->GetWorldPos()));
+				if(dist <= radius + NpcHitRadius(*npc)) RemoteDamageNpc(inst, *npc, dist);
+			}
+		}
 	}
 	else if(remote.boundType != Remote::BoundType::E_BOUND_NONE && remote.damageGroup != Remote::DamageGroup::eNONE) {
 		RemoteApplyArea(inst);
@@ -981,10 +1030,28 @@ bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
 				if(inst.stopAtFirstHit && it->team != players[inst.ownerIndex].team) inst.hitsLeft = 1;
 				if(inst.penetrationLeft <= 0) break;
 			}
-			if(stopPos) {
+			bool npcStop = false;
+			vec2 npcStopPos = vec2(0);
+			if(hostileMonsters && inst.penetrationLeft > 0) {
+				Player& owner = players[inst.ownerIndex];
+				const vec2 seg = to - from;
+				const f32 segLen2 = glm::dot(seg, seg);
+				foreach(npc, actorNpcList) {
+					if(!NpcHittableBy(*npc, owner)) continue;
+					const vec2 np = vec2(npc->pos);
+					const f32 tt = segLen2 > 0 ? MIN(MAX(glm::dot(np - from, seg) / segLen2, 0.0f), 1.0f) : 0.0f;
+					if(glm::length(np - (from + seg * tt)) > halfWidth + NpcHitRadius(*npc) + PROJECTILE_HIT_TOLERANCE) continue;
+					if(!RemoteDamageNpc(inst, *npc, inst.travelled + step * tt)) continue;
+					if(!npcStop) { npcStop = true; npcStopPos = np; }
+					inst.penetrationLeft -= 1;
+					if(inst.stopAtFirstHit) inst.hitsLeft = 1;
+					if(inst.penetrationLeft <= 0) break;
+				}
+			}
+			if(stopPos || npcStop) {
 				inst.hitsLeft--;
 				if(inst.hitsLeft <= 0 || inst.penetrationLeft <= 0) {
-					inst.pos = vec3(vec2(stopPos->body->GetWorldPos()), inst.pos.z);
+					inst.pos = stopPos ? vec3(vec2(stopPos->body->GetWorldPos()), inst.pos.z) : vec3(npcStopPos, inst.pos.z);
 					destroyed = true;
 				}
 			}

@@ -211,6 +211,7 @@ void PhysicsContext::CreateScene(PhysicsScene* out)
 		// ground plane to aid with visualization (pvd)
 		PxRigidStatic* groundPlane = PxCreatePlane(*physics, PxPlane(0,0,1,0), *material);
 		scene->addActor(*groundPlane);
+		out->groundPlane = groundPlane;
 
 		out->controllerMngr = PxCreateControllerManager(*scene);
 		if(!out->controllerMngr) {
@@ -237,7 +238,8 @@ void PhysicsScene::Step()
 		PxControllerCollisionFlags collisionFlags = c->collider->move(PxVec3(disp.x, disp.y, disp.z), 0, (f32)UPDATE_RATE, filter, nullptr /* obstacles? */);
 
 		// grounded
-		if(collisionFlags & PxControllerCollisionFlag::eCOLLISION_DOWN) {
+		c->grounded = collisionFlags.isSet(PxControllerCollisionFlag::eCOLLISION_DOWN);
+		if(c->grounded) {
 			c->vel.z = 0;
 		}
 	}
@@ -278,6 +280,11 @@ PxRigidStatic* PhysicsScene::CreateStaticCollider(const char* meshName, const ve
 	return ground;
 }
 
+void PhysicsScene::SetGroundPlaneEnabled(bool enabled)
+{
+	SetStaticEnabled(groundPlane, enabled);
+}
+
 void PhysicsScene::ClearMapStatics()
 {
 	foreach(s, mapStatics) {
@@ -294,6 +301,8 @@ void PhysicsScene::SetStaticEnabled(PxRigidStatic* actor, bool enabled)
 	else scene->removeActor(*actor);
 }
 
+static const f32 HYP_CONTROLLER_STEP_OFFSET = 30.0f;
+
 PhysicsDynamicBody* PhysicsScene::CreateDynamicBody(f32 radius, f32 height, const vec3& pos)
 {
 	auto& ctx = PhysContext();
@@ -303,6 +312,7 @@ PhysicsDynamicBody* PhysicsScene::CreateDynamicBody(f32 radius, f32 height, cons
 	desc.radius = radius;
 	desc.upDirection = PxVec3(0.0f, 0.0f, 1.0f);
 	desc.material = ctx.matMapSurface;
+	if(groundPlane && !groundPlane->getScene()) desc.stepOffset = HYP_CONTROLLER_STEP_OFFSET;
 
 	PxCapsuleController* ctrl = (PxCapsuleController*)controllerMngr->createController(desc);
 	ASSERT(ctrl);

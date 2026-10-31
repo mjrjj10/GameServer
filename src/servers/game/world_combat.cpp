@@ -451,6 +451,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 {
 	if(damage <= 0 || !NpcHittableBy(npc, attacker)) return;
 	if(npc.ownerUID == ActorUID::INVALID && NpcHasStatusType(npc, StatusType::GODMODE)) return;
+	if(npc.monsterEvadeUntil != Time::ZERO && localTime < npc.monsterEvadeUntil) return;
 	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence, 0.0f)) + 0.5f), 1);
 	const i32 hpBefore = npc.hp;
 	if(npc.faction == Faction::MONSTER && npc.ownerUID == ActorUID::INVALID) {
@@ -460,7 +461,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 		attacker.bestHitCombo = MAX(attacker.bestHitCombo, attacker.stageHitCombo);
 	}
 	npc.hp = MAX(npc.hp - AbsorbNpcShield(npc, dealt), 0);
-	if(npc.monsterWeakUntil != Time::ZERO && localTime < npc.monsterWeakUntil) npc.monsterWeakHit = true;
+	if(npc.monsterWeakUntil != Time::ZERO && localTime < npc.monsterWeakUntil && localTime >= npc.monsterWeakFrom) npc.monsterWeakHit = true;
 	if(IsStructure(npc)) attacker.damageStats[END_DMG_BUILDING_DEALT] += (u32)(hpBefore - npc.hp);
 	static const u32 coreTag = StatusTypeKey("Core");
 	if(npc.monsterAi && npc.monsterAi->tagKey == coreTag) attacker.coreDamage += hpBefore - npc.hp;

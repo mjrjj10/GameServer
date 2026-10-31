@@ -304,6 +304,23 @@ void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& cente
 			ps.sourceUID = sourceUID;
 			pendingStatuses.push_back(ps);
 		}
+		if(!hostileMonsters || !child->isDebuff || bound) continue;
+		foreach(npc, actorNpcList) {
+			if(npc->hp <= 0 || npc->ownerUID != ActorUID::INVALID || !NpcHittableBy(*npc, players[casterIndex])) continue;
+			if(glm::length(vec2(npc->pos) - center) > range + NpcHitRadius(*npc)) continue;
+			bool active = false;
+			foreach_const(ns, npcStatuses) if(ns->npcUID == npc->UID && ns->statusID == *id && localTime < ns->until) active = true;
+			if(active || pendingStatuses.full()) continue;
+			PendingStatus ps;
+			ps.time = localTime;
+			ps.statusID = *id;
+			ps.casterIndex = casterIndex;
+			ps.targetUID = npc->UID;
+			ps.duration = child->durationSec;
+			ps.power = 0;
+			ps.sourceUID = sourceUID;
+			pendingStatuses.push_back(ps);
+		}
 	}
 }
 

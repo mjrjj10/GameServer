@@ -128,6 +128,7 @@ struct RoomInstance
 	eastl::array<eastl::array<u8,100>,2> teamMasterPickCount;
 
 	Time startTime = Time::ZERO;
+	bool devPicked = false;
 	Time localTime = Time::ZERO;
 	Time matchWaitTime = Time::ZERO;
 

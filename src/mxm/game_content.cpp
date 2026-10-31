@@ -852,6 +852,7 @@ bool GameXmlContent::LoadMapByID(Map* map, MapIndex index)
 		pSpawnElt->QueryAttribute("dwSpawnAnim", &spawn.spawnAnim);
 		pSpawnElt->QueryAttribute("AIWanderDistOverride", &spawn.wanderDist);
 		pSpawnElt->QueryAttribute("_TagID", &spawn.tagID);
+		spawn.difficultyMask = (u8)pSpawnElt->IntAttribute("stageDifficultyMask", 0xff);
 		const char* actionStr = nullptr;
 		if(pSpawnElt->QueryStringAttribute("strActionState", &actionStr) == XML_SUCCESS && actionStr) {
 			spawn.actionState = ActionStateFromString(actionStr);
@@ -885,6 +886,7 @@ bool GameXmlContent::LoadMapByID(Map* map, MapIndex index)
 		pSpawnElt->QueryAttribute("dwSpawnAnim", &spawn.spawnAnim);
 		pSpawnElt->QueryAttribute("AIWanderDistOverride", &spawn.wanderDist);
 		pSpawnElt->QueryAttribute("_TagID", &spawn.tagID);
+		spawn.difficultyMask = (u8)pSpawnElt->IntAttribute("stageDifficultyMask", 0xff);
 		const char* actionStr = nullptr;
 		if(pSpawnElt->QueryStringAttribute("strActionState", &actionStr) == XML_SUCCESS && actionStr) {
 			spawn.actionState = ActionStateFromString(actionStr);
@@ -894,6 +896,16 @@ bool GameXmlContent::LoadMapByID(Map* map, MapIndex index)
 		map->dynamic.push_back(spawn);
 	}
 
+
+	XMLDocument levelXml;
+	if(LoadXMLFile(LFMT(L"/%s/Level.xml", tempPathData), levelXml, true) && levelXml.FirstChildElement()) {
+		for(XMLElement* pInfo = levelXml.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+			if(XMLElement* pLevel = pInfo->FirstChildElement("_LevelData")) {
+				map->killZ = pLevel->FloatAttribute("KillZ", map->killZ);
+				break;
+			}
+		}
+	}
 
 	// Areas
 	XMLDocument areasXml;
@@ -977,6 +989,7 @@ bool GameXmlContent::LoadPvpMaps()
 		map.index = index;
 		map.ingameLevels = pMap->IntAttribute("_IngameLevel") == 1;
 		map.levelStartLead = pMap->FloatAttribute("_LevelStartLead", map.levelStartLead);
+		map.groundPlane = pMap->IntAttribute("_GroundPlane", 1) != 0;
 		if(!LoadMapByID(&map, index)) {
 			LOG("ERROR(LoadPvpMaps): map %d failed to load", (i32)index);
 			return false;
@@ -1006,6 +1019,7 @@ bool GameXmlContent::LoadPvpMaps()
 			collider.pos = vec3(pCollider->FloatAttribute("x"), pCollider->FloatAttribute("y"), pCollider->FloatAttribute("z"));
 			collider.rot = vec3(pCollider->FloatAttribute("angx"), pCollider->FloatAttribute("angy"), pCollider->FloatAttribute("angz"));
 			collider.scale = pCollider->FloatAttribute("scale", 1.0f);
+			collider.walk = pCollider->IntAttribute("_Walk", 1) != 0;
 			map.colliders.push_back(collider);
 		}
 		LOG("PvP map %d: %d creatures, %d dynamics, %d areas, %d level events, %d colliders", (i32)index, (i32)map.creatures.size(), (i32)map.dynamic.size(), (i32)map.areas.size(), (i32)map.levelEvents.size(), (i32)map.colliders.size());
@@ -1098,6 +1112,145 @@ static void ParseIdList(const char* text, List& out)
 	}
 }
 
+static void ApplyMonsterScript(GameXmlContent::MonsterAi& ai, XMLElement* pScript, i32 id)
+{
+	ai.scriptStart = pScript->FloatAttribute("start");
+	ai.scriptPeriod = pScript->FloatAttribute("period");
+	if(const char* pause = pScript->Attribute("pauseOnState")) ai.scriptPause = ActionStateFromString(pause);
+	if(pScript->Attribute("groggyChance")) ai.groggyChance = pScript->FloatAttribute("groggyChance");
+	if(pScript->Attribute("groggyTime")) ai.groggyTime = pScript->FloatAttribute("groggyTime");
+	if(const char* gs = pScript->Attribute("groggyStatus")) { ai.groggyStatuses.clear(); ParseIdList(gs, ai.groggyStatuses); }
+	for(XMLElement* pAttack = pScript->FirstChildElement("Attack"); pAttack; pAttack = pAttack->NextSiblingElement("Attack")) {
+		const char* stateName = pAttack->Attribute("state");
+		if(!stateName) continue;
+		const ActionStateID state = ActionStateFromString(stateName);
+		GameXmlContent::MonsterAttack* attack = nullptr;
+		foreach(a, ai.attacks) if(a->state == state) attack = &*a;
+		if(!attack) {
+			const char* like = pAttack->Attribute("like");
+			const ActionStateID likeState = like ? ActionStateFromString(like) : ActionStateID::INVALID;
+			const GameXmlContent::MonsterAttack* model = nullptr;
+			foreach_const(a, ai.attacks) if(a->state == likeState) model = &*a;
+			if(!model || ai.attacks.full()) {
+				LOG("WARNING(MonsterScripts): monster %d has no attack %s to copy for %s", id, like ? like : "-", stateName);
+				continue;
+			}
+			GameXmlContent::MonsterAttack copy = *model;
+			copy.state = state;
+			copy.special = true;
+			copy.share = 0;
+			copy.cooldown = 1000000.0f;
+			ai.attacks.push_back(copy);
+			attack = &ai.attacks.back();
+		}
+		if(pAttack->Attribute("anim")) attack->anim = pAttack->FloatAttribute("anim");
+		if(pAttack->Attribute("weakAt")) attack->weakAt = pAttack->FloatAttribute("weakAt");
+		if(pAttack->Attribute("weakTime")) attack->weakTime = pAttack->FloatAttribute("weakTime");
+		if(pAttack->Attribute("weakStatus")) attack->weakStatus = pAttack->IntAttribute("weakStatus");
+		if(pAttack->Attribute("evade")) attack->evade = pAttack->FloatAttribute("evade");
+		if(pAttack->Attribute("multiplier")) attack->multiplier = pAttack->FloatAttribute("multiplier");
+		if(pAttack->Attribute("radius")) attack->radius = pAttack->FloatAttribute("radius");
+		if(pAttack->Attribute("hits")) attack->hits = (u8)MAX(pAttack->IntAttribute("hits"), 1);
+		if(pAttack->Attribute("interval")) attack->interval = pAttack->FloatAttribute("interval");
+		if(pAttack->Attribute("delay")) attack->delay = pAttack->FloatAttribute("delay");
+		if(pAttack->Attribute("hitAt")) attack->hitAt = pAttack->FloatAttribute("hitAt");
+		if(pAttack->Attribute("speed")) attack->speed = pAttack->FloatAttribute("speed");
+		if(pAttack->Attribute("status")) attack->status = pAttack->IntAttribute("status");
+		if(pAttack->Attribute("selfCentered")) attack->selfCentered = pAttack->BoolAttribute("selfCentered");
+	}
+	ai.script.clear();
+	for(XMLElement* pStep = pScript->FirstChildElement("Step"); pStep && !ai.script.full(); pStep = pStep->NextSiblingElement("Step")) {
+		GameXmlContent::MonsterAi::ScriptStep step;
+		step.t = pStep->FloatAttribute("t");
+		step.hpMin = pStep->FloatAttribute("hpMin", 0.0f) / 100.0f;
+		step.hpMax = pStep->FloatAttribute("hpMax", 200.0f) / 100.0f;
+		step.aiTrigger = pStep->IntAttribute("aiTrigger", -1);
+		if(const char* pick = pStep->Attribute("pick")) step.pick = EA::StdC::Strcmp(pick, "random") == 0 ? 1 : (EA::StdC::Strcmp(pick, "alternate") == 0 ? 2 : 0);
+		const char* states = pStep->Attribute("state");
+		while(states && *states && !step.attacks.full()) {
+			eastl::fixed_string<char,64,false> name;
+			while(*states && *states != '|') name.push_back(*states++);
+			if(*states == '|') states++;
+			const ActionStateID state = ActionStateFromString(name.c_str());
+			i32 index = -1;
+			for(i32 a = 0; a < (i32)ai.attacks.size(); a++) if(ai.attacks[a].state == state) index = a;
+			if(index < 0) { LOG("WARNING(MonsterScripts): monster %d has no attack %s", id, name.c_str()); continue; }
+			step.attacks.push_back((u8)index);
+		}
+		if(!step.attacks.empty() || step.aiTrigger >= 0) ai.script.push_back(step);
+	}
+}
+
+void GameXmlContent::LoadMonsterScripts()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/MonsterScripts.xml", doc, true) || !doc.FirstChildElement()) return;
+	i32 loaded = 0;
+	for(XMLElement* pScript = doc.FirstChildElement()->FirstChildElement("Script"); pScript; pScript = pScript->NextSiblingElement("Script")) {
+		const i32 id = pScript->IntAttribute("ID");
+		auto found = monsterAi.find(id);
+		if(found == monsterAi.end()) { LOG("WARNING(MonsterScripts): no AI for monster %d", id); continue; }
+		XMLElement* source = pScript;
+		if(const i32 copyOf = pScript->IntAttribute("copyOf")) {
+			source = nullptr;
+			for(XMLElement* s = doc.FirstChildElement()->FirstChildElement("Script"); s; s = s->NextSiblingElement("Script")) if(s->IntAttribute("ID") == copyOf) source = s;
+			if(!source) { LOG("WARNING(MonsterScripts): monster %d copies missing script %d", id, copyOf); continue; }
+		}
+		ApplyMonsterScript(found->second, source, id);
+		if(found->second.scriptPeriod > 0 && !found->second.script.empty()) loaded++;
+	}
+	LOG("Loaded %d monster scripts", loaded);
+}
+
+void GameXmlContent::LoadMonsterFires()
+{
+	static const wchar* FILES[] = { L"/client/ActionBase_Monster.xml", L"/client/ActionBase_Monster_MOB_A.xml", L"/client/ActionBase_Monster_MOB_B.xml", L"/client/ActionBase_Monster_MOB_C.xml", L"/client/ActionBase_Monster_MOB_D.xml", L"/client/ActionBase_Monster_MOB_PUBLIC.xml", L"/client/ActionBase_Monster_MOB_PvP.xml" };
+	eastl::hash_map<u64, eastl::fixed_vector<MonsterFire,4,false>> fires;
+	for(i32 f = 0; f < (i32)ARRAY_COUNT(FILES); f++) {
+		XMLDocument doc;
+		if(!LoadXMLFile(FILES[f], doc, true) || !doc.FirstChildElement()) continue;
+		for(XMLElement* e = doc.FirstChildElement()->FirstChildElement("ActionBase"); e; e = e->NextSiblingElement("ActionBase")) {
+			const char* type = e->Attribute("CommandType");
+			const char* cls = e->Attribute("Class");
+			const char* state = e->Attribute("BehaviorState");
+			if(!type || !cls || !state || EA::StdC::Strcmp(type, "REMOTE") != 0 || e->IntAttribute("RemoteIndex") <= 0) continue;
+			auto& list = fires[((u64)StatusTypeKey(cls) << 32) | (u32)ActionStateFromString(state)];
+			MonsterFire fire;
+			fire.remote = e->IntAttribute("RemoteIndex");
+			const char* node = e->Attribute("NodeName");
+			for(const char* c = node ? node : "Scene Root"; *c && !fire.node.full(); c++) fire.node.push_back((wchar)*c);
+			const char* param = e->Attribute("Param1");
+			const char* times = param ? EA::StdC::Strchr(param, '|') : nullptr;
+			if(times) {
+				const char* at = times + 1;
+				while(*at && !list.full()) {
+					f32 t = 0;
+					if(EA::StdC::Sscanf(at, "%f", &t) != 1) break;
+					fire.at = t;
+					list.push_back(fire);
+					while(*at && *at != ',') at++;
+					if(*at == ',') at++;
+				}
+			}
+			else if(!list.full()) {
+				fire.at = e->FloatAttribute("Delay");
+				list.push_back(fire);
+			}
+		}
+	}
+	i32 attached = 0;
+	for(auto& ai : monsterAi) {
+		const u64 classKey = (u64)StatusTypeKey(ai.second.className.c_str()) << 32;
+		foreach(attack, ai.second.attacks) {
+			auto found = fires.find(classKey | (u32)attack->state);
+			if(found == fires.end()) continue;
+			attack->fires = found->second;
+			attached++;
+		}
+	}
+	LOG("Loaded %d monster fire states, attached to %d monster attacks", (i32)fires.size(), attached);
+}
+
 bool GameXmlContent::LoadMonsterAi()
 {
 	static const wchar* AI_FILES[] = { L"/MonsterAi.xml", L"/MonsterAiEstimated.xml" };
@@ -1152,6 +1305,8 @@ bool GameXmlContent::LoadMonsterAi()
 				ai.victoryHeal = pInfo->FloatAttribute("victoryHeal");
 			}
 			ParseIdList(pInfo->Attribute("groggyStatus"), ai.groggyStatuses);
+			ParseIdList(pInfo->Attribute("seek"), ai.seekDocs);
+			ai.seekReach = pInfo->FloatAttribute("seekReach");
 			if(const char* cc = pInfo->Attribute("cc")) {
 				const char* at = cc;
 				while(*at && !ai.ccTypes.full()) {
@@ -1204,6 +1359,12 @@ bool GameXmlContent::LoadMonsterAi()
 				attack.hpMin = pAttack->FloatAttribute("hpMin", 0.0f);
 				attack.hpMax = pAttack->FloatAttribute("hpMax", 1.0f);
 				attack.weakTime = pAttack->FloatAttribute("weakTime");
+				attack.weakAt = pAttack->FloatAttribute("weakAt");
+				attack.firstAt = pAttack->FloatAttribute("firstAt", -1.0f);
+				attack.minRange = pAttack->FloatAttribute("minRange");
+				attack.weakStatus = pAttack->IntAttribute("weakStatus");
+				attack.evade = pAttack->FloatAttribute("evade");
+				attack.selfCentered = pAttack->BoolAttribute("selfCentered");
 				attack.share = pAttack->FloatAttribute("share", 1.0f);
 				ParseIdList(pAttack->Attribute("selfStatus"), attack.selfStatuses);
 				ai.attacks.push_back(attack);
@@ -1286,6 +1447,13 @@ bool GameXmlContent::LoadMonsterStats()
 				stats.push_back({ (u8)st->IntAttribute("type"), st->FloatAttribute("value") });
 				const f32 growth = st->FloatAttribute("growth");
 				if(growth != 0 && !monsterGrowth[id].full()) monsterGrowth[id].push_back({ (u8)st->IntAttribute("type"), growth });
+			}
+			if(!estimated) continue;
+			static const StatValue MEASURED_SPAWN_STAT_DEFAULTS[] = { { 7, 113.333f }, { 9, 5.0f }, { 10, 150.0f }, { 13, 100.0f }, { 14, 100.0f }, { 15, 100.0f }, { 52, 100.0f }, { 64, 150.0f } };
+			for(const StatValue& def : MEASURED_SPAWN_STAT_DEFAULTS) {
+				bool present = false;
+				foreach_const(s, stats) if(s->type == def.type) present = true;
+				if(!present && !stats.full()) stats.push_back(def);
 			}
 		}
 	}
@@ -2655,6 +2823,19 @@ bool GameXmlContent::LoadSkillUpgrades()
 	return true;
 }
 
+static XMLElement* NextEntityInfo(XMLDocument* docs, i32 count, i32& file, XMLElement* cur)
+{
+	if(cur) {
+		if(XMLElement* next = cur->NextSiblingElement()) return next;
+		file++;
+	}
+	for(; file < count; file++) {
+		XMLElement* root = docs[file].FirstChildElement();
+		if(XMLElement* first = root ? root->FirstChildElement() : nullptr) return first;
+	}
+	return nullptr;
+}
+
 bool GameXmlContent::LoadRemoteData()
 {
 	// TODO: use these everywhere?
@@ -2666,12 +2847,15 @@ bool GameXmlContent::LoadRemoteData()
 	T V = V_DEFAULT;\
 	pComp->QueryAttribute(#V, &V)\
 
-	XMLDocument xml;
-	if(!LoadXMLFile(L"/REMOTE_PC.xml", xml)) return false;
+	static const wchar* REMOTE_FILES[] = { L"/REMOTE_PC.xml", L"/client/REMOTE_DYNAMIC.xml", L"/client/REMOTE_DYNAMIC_EXTRA.xml", L"/client/REMOTE_MOB_A.xml", L"/client/REMOTE_MOB_B.xml", L"/client/REMOTE_MOB_C.xml", L"/client/REMOTE_MOB_PUBLIC.xml" };
+	XMLDocument xmlFiles[ARRAY_COUNT(REMOTE_FILES)];
+	if(!LoadXMLFile(REMOTE_FILES[0], xmlFiles[0])) return false;
+	for(i32 f = 1; f < (i32)ARRAY_COUNT(REMOTE_FILES); f++) LoadXMLFile(REMOTE_FILES[f], xmlFiles[f], true);
+	i32 remoteFile = 0;
 
-	for(XMLElement* pEntityInfo = xml.FirstChildElement()->FirstChildElement();
+	for(XMLElement* pEntityInfo = NextEntityInfo(xmlFiles, (i32)ARRAY_COUNT(REMOTE_FILES), remoteFile, nullptr);
 		pEntityInfo;
-		pEntityInfo = pEntityInfo->NextSiblingElement()) {
+		pEntityInfo = NextEntityInfo(xmlFiles, (i32)ARRAY_COUNT(REMOTE_FILES), remoteFile, pEntityInfo)) {
 
 		Remote remote;
 
@@ -2878,7 +3062,9 @@ bool GameXmlContent::Load()
 	if (!r) return false;
 
 	r = LoadMonsterAi();
+	LoadMonsterScripts();
 	if (!r) return false;
+	LoadMonsterFires();
 
 	r = LoadTitan();
 	if (!r) return false;
@@ -2972,6 +3158,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadDeathRemotes();
+	if(!r) return false;
+
+	r = LoadDynamicTraps();
 	if(!r) return false;
 
 	r = LoadStageTimeLimits();
@@ -3979,6 +4168,94 @@ bool GameXmlContent::LoadDeathRemotes()
 		count++;
 	}
 	LOG("Loaded %d death remotes", count);
+	return true;
+}
+
+static void ParseTrapTrack(const char* text, GameXmlContent::DynamicTrapTrack& out)
+{
+	const char* at = text;
+	while(at && *at) {
+		while(*at == ' ' || *at == '\n' || *at == '\r' || *at == '\t') at++;
+		if(!*at) break;
+		f32 x = 0, y = 0, z = 0, fx = 0, fy = 1;
+		const i32 count = EA::StdC::Sscanf(at, "%f,%f,%f,%f,%f", &x, &y, &z, &fx, &fy);
+		if(count != 3 && count != 5) break;
+		out.points.push_back(vec3(x, y, z));
+		if(count == 5) out.dirs.push_back(vec2(fx, fy));
+		while(*at && *at != ' ' && *at != '\n' && *at != '\r' && *at != '\t') at++;
+	}
+	if(out.dirs.size() != out.points.size()) out.dirs.clear();
+}
+
+bool GameXmlContent::LoadDynamicTraps()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/DynamicTraps.xml", doc, true) || !doc.FirstChildElement()) return true;
+	XMLElement* pRoot = doc.FirstChildElement();
+	dynamicTrapBaseAttack = pRoot->FloatAttribute("baseAttack");
+	dynamicTrapSpread = pRoot->FloatAttribute("spread");
+	dynamicTrapStep = pRoot->FloatAttribute("step");
+	i32 stateCount = 0;
+	i32 carryCount = 0;
+	i32 remoteCount = 0;
+	i32 missing = 0;
+	for(XMLElement* pModel = pRoot->FirstChildElement("MODEL"); pModel; pModel = pModel->NextSiblingElement("MODEL")) {
+		dynamicTrapModels.push_back();
+		DynamicTrapModel& model = dynamicTrapModels.back();
+		model.kfm = pModel->Attribute("kfm") ? pModel->Attribute("kfm") : "";
+		for(XMLElement* pTrack = pModel->FirstChildElement("TRACK"); pTrack; pTrack = pTrack->NextSiblingElement("TRACK")) {
+			model.tracks.push_back();
+			ParseTrapTrack(pTrack->GetText(), model.tracks.back());
+		}
+		for(XMLElement* pState = pModel->FirstChildElement("STATE"); pState && !model.states.full(); pState = pState->NextSiblingElement("STATE")) {
+			DynamicTrapState st;
+			const char* action = pState->Attribute("action");
+			st.action = action ? ActionStateFromString(action) : ActionStateID::INVALID;
+			st.length = pState->FloatAttribute("length");
+			st.loop = pState->IntAttribute("loop") != 0;
+			bool carry = true;
+			for(XMLElement* pRemove = pState->FirstChildElement("REMOVE"); pRemove && !st.removes.full(); pRemove = pRemove->NextSiblingElement("REMOVE")) st.removes.push_back(pRemove->IntAttribute("doc"));
+			for(XMLElement* pNode = pState->FirstChildElement("NODE"); pNode && !st.nodes.full(); pNode = pNode->NextSiblingElement("NODE")) {
+				if(pNode->FirstChildElement("REMOTE")) carry = false;
+				DynamicTrapNode node;
+				for(const char* c = pNode->Attribute("name") ? pNode->Attribute("name") : "Scene Root"; *c && !node.name.full(); c++) node.name.push_back((wchar)*c);
+				node.track = pNode->IntAttribute("track", -1);
+				if(node.track >= (i32)model.tracks.size() || (node.track >= 0 && model.tracks[node.track].points.empty())) node.track = -1;
+				for(XMLElement* pRemote = pNode->FirstChildElement("REMOTE"); pRemote && !st.remotes.full(); pRemote = pRemote->NextSiblingElement("REMOTE")) {
+					DynamicTrapRemote r;
+					r.remote = FindRemote((RemoteIdx)pRemote->IntAttribute("doc"));
+					if(!r.remote) {
+						missing++;
+						continue;
+					}
+					r.node = (u8)st.nodes.size();
+					r.delay = pRemote->FloatAttribute("delay");
+					r.life = pRemote->FloatAttribute("life");
+					if(r.remote->vs & (1 << Remote::VS_PLAYER_CHARACTER)) node.vsPlayer = true;
+					if(r.remote->vs & (1 << Remote::VS_NPC_MONSTER)) node.vsMonster = true;
+					st.remotes.push_back(r);
+					remoteCount++;
+				}
+				st.nodes.push_back(node);
+			}
+			if(st.action == ActionStateID::INVALID || (st.remotes.empty() && !carry)) continue;
+			model.states.push_back(st);
+			if(carry) carryCount++;
+			else stateCount++;
+		}
+	}
+	for(XMLElement* pDoc = pRoot->FirstChildElement("DOC"); pDoc; pDoc = pDoc->NextSiblingElement("DOC")) {
+		const char* kfm = pDoc->Attribute("kfm");
+		if(!kfm) continue;
+		foreach_const(m, dynamicTrapModels) {
+			if(m->states.empty() || EA::StdC::Strcmp(m->kfm.c_str(), kfm) != 0) continue;
+			DynamicTrap& trap = dynamicTraps[pDoc->IntAttribute("id")];
+			trap.model = &*m;
+			trap.ratio = pDoc->FloatAttribute("ratio", 1.0f);
+			break;
+		}
+	}
+	LOG("Loaded %d dynamic trap docs (%d models, %d states, %d carry states, %d remotes, %d unknown remotes), base attack %.0f", (i32)dynamicTraps.size(), (i32)dynamicTrapModels.size(), stateCount, carryCount, remoteCount, missing, dynamicTrapBaseAttack);
 	return true;
 }
 
@@ -5422,6 +5699,7 @@ const char* TargetPresetToString(TargetPreset p)
 
 Remote::BoundType Remote::BoundTypeFromString(const char* str)
 {
+	if(!str) return BoundType::INVALID;
 	static const eastl::hash_map<eastl::string, BoundType> boundTypeMap = {
         {"E_BOUND_NONE", BoundType::E_BOUND_NONE},
         {"E_BOUND_RAY", BoundType::E_BOUND_RAY},
@@ -5459,6 +5737,7 @@ const char* Remote::BoundTypeToString(BoundType t)
 
 Remote::DamageGroup Remote::DamageGroupFromString(const char* str)
 {
+	if(!str) return DamageGroup::INVALID;
 	static const eastl::hash_map<eastl::string, DamageGroup> damageGroupMap = {
 	   {"eNONE", DamageGroup::eNONE},
 	   {"eENEMY", DamageGroup::eENEMY},

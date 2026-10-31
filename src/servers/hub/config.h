@@ -9,6 +9,7 @@ struct CConfigHub
 	i32 TraceNetwork = false;
 	i32 DevShowcase = false;
 	i32 DevAutoQueue = 0;
+	i32 DevPickMasters[2] = { 0, 0 };
 	i32 DevStageSweep = 0;
 	i32 DevShowcaseStart = 0;
 	i32 DevShowcaseSlices = 1;

@@ -169,6 +169,8 @@ struct World
 		eastl::fixed_map<i32,u8,12,false> skillLevels;
 		eastl::fixed_map<u32,GameXmlContent::CostLevel,12,false> castMods;
 		i32 skillPoints = 1;
+		vec3 lastGroundPos = vec3(0);
+		bool hasGroundPos = false;
 		i32 skillPointsSpent = 0;
 		i32 pveKills = 0;
 		i32 stageHitCombo = 0;
@@ -513,6 +515,12 @@ struct World
 		Time victoryNext = Time::ZERO;
 		Time victoryHealAt = Time::ZERO;
 		Time monsterWeakUntil = Time::ZERO;
+		Time monsterWeakFrom = Time::ZERO;
+		i32 monsterWeakStatus = 0;
+		Time monsterEvadeUntil = Time::ZERO;
+		Time monsterScriptStart = Time::ZERO;
+		u8 monsterScriptStep = 0;
+		u8 monsterScriptAlt = 0;
 		u32 fogHiddenFrom = 0;
 		bool monsterWeakHit = false;
 		bool monsterWalking = false;
@@ -523,6 +531,8 @@ struct World
 		Time monsterNextSearch = Time::ZERO;
 		Time coreAnnounceAt = Time::ZERO;
 		Time monsterNextSync = Time::ZERO;
+		Time monsterLastTurn = Time::ZERO;
+		f32 monsterSyncYaw = 0.0f;
 		bool monsterReturning = false;
 
 		vec3 pos;
@@ -553,6 +563,21 @@ struct World
 		eastl::fixed_vector<Time,16,false> hits;
 		i32 destroyHits = 0;
 		bool destroyed = false;
+
+		struct TrapSlot { u32 seed = 0; i32 activation = -1; u16 sentMask = 0; };
+		struct TrapHit { ActorUID target; u8 node; Time until; };
+		const GameXmlContent::DynamicTrap* trap = nullptr;
+		const GameXmlContent::DynamicTrapState* trapState = nullptr;
+		ActionStateID trapAction = ActionStateID::INVALID;
+		bool trapChecked = false;
+		Time trapStart = Time::ZERO;
+		f32 trapPrevElapsed = -1.0f;
+		eastl::fixed_vector<TrapSlot,8,true> trapSlots;
+		eastl::fixed_vector<TrapHit,8,true> trapHits;
+		const GameXmlContent::DynamicTrapState* trapMotion = nullptr;
+		f32 trapMotionOffset = 0.0f;
+		u32 trapCarried = 0;
+		eastl::fixed_vector<i32,8,true> trapMotionTracks;
 
 		explicit ActorDynamic(ActorUID UID_): UID(UID_) {}
 	};
@@ -701,7 +726,8 @@ struct World
 		i32 excludeIndex = -1;
 		i32 lastHitIndex = -1;
 		bool chainEnded = false;
-		eastl::fixed_vector<ActorUID,8,false> npcHits;
+		struct NpcHit { ActorUID uid; Time until; };
+		eastl::fixed_vector<NpcHit,16,true> npcHits;
 		u8 enemiesHit = 0;
 		u32 reflectGroupSeed = 0;
 		bool casterLocal = false;
@@ -857,12 +883,24 @@ struct World
 	void UpdateBotSkills();
 	void UpdateSummonAi(f32 delta);
 	void UpdateMonsterAi(f32 delta);
+	void StartMonsterAttack(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const GameXmlContent::MonsterAttack* attack, const vec3* targetPos, f32 dist, f32 yaw, f32 run);
+	bool UpdateMonsterScript(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const vec3* targetPos, f32 delta);
+	bool UpdateMonsterSeek(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, f32 speed, f32 delta);
+	struct PendingTrapHit { ActorUID dynamicUID; const GameXmlContent::DynamicTrapRemote* remote; u32 seed; vec3 nodePos; vec2 nodeDir; ActorUID targetUID; i32 playerIndex; };
+	void UpdateDynamicTraps();
+	void UpdateDynamicTrap(ActorDynamic& dyn, eastl::fixed_vector<PendingTrapHit,32,true>& hits);
+	void StartDynamicTrap(ActorDynamic& dyn);
+	void StopDynamicTrap(ActorDynamic& dyn);
+	bool CarryDynamicTrap(ActorDynamic& dyn, const GameXmlContent::DynamicTrapState& next);
+	void SendDynamicTrapRemote(ActorDynamic& dyn, i32 index);
+	void CollectDynamicTrapHits(ActorDynamic& dyn, u8 node, u32 activeRemotes, const vec3& from, const vec3& to, const vec2& dir, eastl::fixed_vector<PendingTrapHit,32,true>& hits);
+	void ApplyDynamicTrapHit(const PendingTrapHit& hit);
 	bool BotDangerAt(const Player& bot, const vec2& at, vec2* towerPos, f32* towerRange) const;
 	f32 NpcHitRadius(const ActorNpc& npc) const;
 	void UpdateMonsterHits();
 	bool MonsterHostile(const ActorNpc& monster, const ActorNpc& other) const;
 	bool MonsterHostile(const ActorNpc& monster, const Player& player) const;
-	void MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const GameXmlContent::MonsterAttack& attack, u32 remoteID);
+	void MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const GameXmlContent::MonsterAttack& attack, u32 remoteID, const vec3* aimPos = nullptr);
 	void SendNpcHit(const ActorNpc& attacker, ActorUID targetUID, const vec3& targetPos, i32 remote, u32 remoteID, i32 damage, i32 hp, i32 hpMax);
 	void DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i32 remote, u32 remoteID = 0, i32 status = 0, bool exact = false);
 	void ApplyStatusFromNpc(const ActorNpc& caster, Player& target, i32 statusID, f32 durationOverride = -1);
@@ -877,12 +915,15 @@ struct World
 	void MissionLive(const Player& player, i32 kills, i32 assists);
 	void SendMissionChanges(const Player& player, const MissionChanges& changed);
 	void FinishProgress(const Player& player, const struct AccountGameRecord& record);
-	struct MonsterHit { ActorUID attacker; ActorUID target; Time at; const GameXmlContent::MonsterAttack* attack; u32 remoteID; bool ally; };
+	struct MonsterHit { ActorUID attacker; ActorUID target; Time at; const GameXmlContent::MonsterAttack* attack; u32 remoteID; bool ally; vec3 aimPos = vec3(0); bool aimed = false; };
 	u32 nextMonsterRemoteID = 0;
 	struct DeathHit { ActorUID helper; Time at; const GameXmlContent::DeathRemote* remote; u32 remoteID; };
 	eastl::fixed_vector<DeathHit,32,true> deathHits;
 	void ApplyDeathHit(const DeathHit& hit);
 	eastl::fixed_vector<MonsterHit,256,true> monsterHits;
+	struct MonsterFireEvent { ActorUID npc; ActorUID target; Time at; const GameXmlContent::MonsterFire* fire; u32 seed; };
+	eastl::fixed_vector<MonsterFireEvent,64,true> monsterFires;
+	void FireMonsterRemote(const MonsterFireEvent& fire);
 	void UpdateSummonAttack(ActorNpc& npc, f32 delta);
 	void UpdateShowcase();
 	void ShowcaseOnCast(const Player& player);
@@ -1016,6 +1057,8 @@ public:
 	void RespawnPlayer(Player& player);
 	void RemovePlayer(Player& player);
 	void ClearMapContent();
+	void SwapMainMaster(Player& p);
+	void ResetMainMasterForAreaMove(Player& p);
 	void ResetSkillPoints(Player& player);
 	const GameXmlContent::SkillUpgrade* LatestUpgrade(const Player& player, i32 skillID, GameXmlContent::SkillUpgrade::Type type) const;
 	ActionStateID UpgradeAction(const Player& player, i32 skillID) const;
@@ -1054,6 +1097,7 @@ public:
 	bool NpcHittableBy(const ActorNpc& npc, const Player& attacker) const;
 	void DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage, const Replication::RemoteDamage* remoteHit = nullptr);
 	void RemoteHitNpcs(RemoteInst& inst);
+	bool RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist);
 	void StartLevelEvents();
 	void StartTimeRecord();
 	void UpdateLevelEvents();
@@ -1221,6 +1265,8 @@ public:
 	bool levelEventsStarted = false;
 	i32 levelPassDepth = 0;
 	bool hostileMonsters = false;
+	f32 killZ = -1000000.0f;
+	bool ingameSkillPoints = true;
 	u8 difficultyBit = GameXmlContent::ALL_DIFFICULTIES;
 	bool portalRequested = false;
 	f32 monsterStatScale = 1.0f;

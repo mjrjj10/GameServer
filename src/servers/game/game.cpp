@@ -198,6 +198,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 	if(const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(gameInfo.stageIndex)) {
 		const bool pve = stage->gameMode == GameModeType::GAME_MODE_STAGE || stage->gameMode == GameModeType::GAME_MODE_DEFENCE;
 		world.hostileMonsters = pve;
+		world.ingameSkillPoints = !pve;
 		replication.pveTeams = pve;
 		world.occupyMode = stage->gameMode == GameModeType::GAME_MODE_OCCUPY;
 		replication.occupyMode = world.occupyMode;
@@ -374,7 +375,7 @@ void Game::Update(Time localTime_)
 		case Phase::WaitingForReady: {
 			if(phaseTime < localTime) {
 				phase = Phase::PreGame;
-				phaseTime = TimeAdd(localTime, TimeMsToTime(MAX(PRE_GAME_MIN_MS, LevelStartLeadMs())));
+				phaseTime = TimeAdd(localTime, TimeMsToTime(pveStage ? 0.0 : MAX(PRE_GAME_MIN_MS, LevelStartLeadMs())));
 
 				foreach_const(p, playerList) {
 					replication.SendPreGameLevelEvents(p->clientHd);
@@ -425,6 +426,12 @@ void Game::Update(Time localTime_)
 		} break;
 
 		case Phase::Game: {
+			if((Config().DevTelemetry || Config().DevTrail) && localTime >= tNextTelemetry) {
+				static const f64 TELEMETRY_PERIOD_MS = 200.0;
+				tNextTelemetry = TimeAdd(localTime, TimeMsToTime(TELEMETRY_PERIOD_MS));
+				if(Config().DevTelemetry) WriteTelemetry();
+				if(Config().DevTrail) WriteTrail();
+			}
 			if(Config().DevAutoStage && pveStage && !gameEnded) {
 				foreach(p, world.players) if(p->clientHd != ClientHandle::INVALID && !p->removed) p->devGod = true;
 				if(tGameStarted != Time::ZERO) UpdateAutoStage();
@@ -597,11 +604,15 @@ bool Game::LoadMap()
 		replication.titanMode = true;
 		replication.titanNextIndex = (i8)world.giantCycle;
 	}
+	world.physics.SetGroundPlaneEnabled(map->groundPlane);
+	world.killZ = map->groundPlane ? -1000000.0f : map->killZ;
 	foreach_const(c, map->colliders) {
+		if(!c->walk) continue;
 		world.physics.CreateStaticCollider(c->mesh.data(), c->pos, c->rot, c->scale);
 	}
 
 	foreach(it, map->creatures) {
+		if(!it->IsSpawnPoint() && !(it->difficultyMask & world.difficultyBit)) continue;
 		// don't spawn "spawn points"
 		if(it->IsSpawnPoint()) {
 			if(it->faction == Faction::RED || it->faction == Faction::BLUE) {
@@ -628,6 +639,7 @@ bool Game::LoadMap()
 	}
 
 	foreach(it, map->dynamic) {
+		if(!(it->difficultyMask & world.difficultyBit)) continue;
 		if(world.hostileMonsters && GetGameXmlContent().FindMonsterAi((i32)it->docID)) {
 			World::ActorNpc& npc = world.SpawnNpcActor(it->docID, it->localID);
 			npc.pos = it->pos;
@@ -702,6 +714,76 @@ bool Game::LoadMap()
 		}
 	}
 	return true;
+}
+
+void Game::WriteTrail()
+{
+	FILE* f = fopen("trail.jsonl", "ab");
+	if(!f) return;
+	foreach_const(p, world.players) {
+		if(p->clientHd == ClientHandle::INVALID || p->removed || !p->body) continue;
+		const vec3 pos = p->body->GetWorldPos();
+		const World::ActorMaster& m = p->Main();
+		fprintf(f, "{\"t\":%.3f,\"stage\":%d,\"map\":%d,\"zone\":%d,\"started\":%d,\"name\":\"%ls\",\"x\":%.0f,\"y\":%.0f,\"z\":%.0f,\"yaw\":%.3f,\"class\":%d,\"hp\":%d,\"hpMax\":%d,\"dead\":%d}\n",
+			TimeDiffSec(TimeRelNow()), (i32)replication.stageIndex, (i32)replication.mapIndex, zoneIndex, tGameStarted != Time::ZERO ? 1 : 0, p->name.data(), pos.x, pos.y, pos.z, p->input.rot.bodyYaw, (i32)m.classType, m.hp, m.hpMax, p->dead ? 1 : 0);
+	}
+	fclose(f);
+}
+
+void Game::WriteTelemetry()
+{
+	static const i32 TELEMETRY_MAX_MONSTERS = 40;
+	FILE* f = fopen("telemetry.tmp", "wb");
+	if(!f) return;
+	fprintf(f, "{\"t\":%.3f,\"map\":%d,\"started\":%d,\"ended\":%d,\"locked\":%d,\"zone\":%d,\"pve\":%d,\"players\":[", TimeDiffSec(TimeRelNow()), (i32)replication.mapIndex, tGameStarted != Time::ZERO ? 1 : 0, gameEnded ? 1 : 0, world.combatLocked ? 1 : 0, zoneIndex, pveStage ? 1 : 0);
+	bool first = true;
+	foreach_const(p, world.players) {
+		if(p->clientHd == ClientHandle::INVALID || p->removed || !p->body) continue;
+		const vec3 pos = p->body->GetWorldPos();
+		const World::ActorMaster& m = p->Main();
+		fprintf(f, "%s{\"name\":\"%ls\",\"x\":%.0f,\"y\":%.0f,\"z\":%.0f,\"cx\":%.0f,\"cy\":%.0f,\"cz\":%.0f,\"yaw\":%.3f,\"hp\":%d,\"hpMax\":%d,\"dead\":%d,\"class\":%d}", first ? "" : ",", p->name.data(), pos.x, pos.y, pos.z, p->lastClientPos.x, p->lastClientPos.y, p->lastClientPos.z, p->input.rot.bodyYaw, m.hp, m.hpMax, p->dead ? 1 : 0, (i32)m.classType);
+		first = false;
+	}
+	fprintf(f, "],\"monsters\":[");
+	first = true;
+	i32 count = 0;
+	foreach_const(n, world.actorNpcList) {
+		if(count >= TELEMETRY_MAX_MONSTERS) break;
+		if(n->hp <= 0 || n->removeAt != Time::ZERO || !n->monsterAi || n->faction != Faction::MONSTER) continue;
+		bool targetsPlayer = false;
+		foreach_const(p, world.players) if(p->clientHd != ClientHandle::INVALID && !p->removed && (n->monsterTarget == p->Main().UID || n->monsterTarget == p->Sub().UID)) targetsPlayer = true;
+		const f32 reach = n->monsterAi->attacks.empty() ? 0.0f : n->monsterAi->attacks[0].range;
+		fprintf(f, "%s{\"doc\":%d,\"x\":%.0f,\"y\":%.0f,\"z\":%.0f,\"hp\":%d,\"hpMax\":%d,\"state\":%d,\"tgt\":%d,\"reach\":%.0f}", first ? "" : ",", (i32)n->docID, n->pos.x, n->pos.y, n->pos.z, n->hp, n->hpMax, (i32)n->actionState, targetsPlayer ? 1 : 0, reach);
+		first = false;
+		count++;
+	}
+	fprintf(f, "],\"incoming\":[");
+	first = true;
+	foreach_const(h, world.monsterHits) {
+		if(h->ally) continue;
+		bool onPlayer = false;
+		foreach_const(p, world.players) if(p->clientHd != ClientHandle::INVALID && !p->removed && (h->target == p->Main().UID || h->target == p->Sub().UID)) onPlayer = true;
+		if(!onPlayer) continue;
+		auto attacker = world.actorNpcMap.find(h->attacker);
+		if(attacker == world.actorNpcMap.end()) continue;
+		fprintf(f, "%s{\"doc\":%d,\"x\":%.0f,\"y\":%.0f,\"in\":%.3f,\"range\":%.0f,\"speed\":%.0f}", first ? "" : ",", (i32)attacker->second->docID, attacker->second->pos.x, attacker->second->pos.y, TimeDiffSec(TimeDiff(world.localTime, h->at)), h->attack->range, h->attack->speed);
+		first = false;
+	}
+	fprintf(f, "],\"exits\":[");
+	first = true;
+	if(world.map) {
+		foreach_const(n, world.map->levelEvents) {
+			if(n->kind != GameXmlContent::LevelEventNode::BOUND_TRIGGER || !n->enter || !world.LevelTriggerActive(*n)) continue;
+			const GameXmlContent::Map::Area* area = world.map->FindArea(n->areaID);
+			if(!area) continue;
+			fprintf(f, "%s{\"node\":%d,\"area\":%d,\"x\":%.0f,\"y\":%.0f,\"z\":%.0f}", first ? "" : ",", n->id, n->areaID, area->pos.x, area->pos.y, area->pos.z);
+			first = false;
+		}
+	}
+	fprintf(f, "]}");
+	fclose(f);
+	remove("telemetry.json");
+	rename("telemetry.tmp", "telemetry.json");
 }
 
 void Game::UpdateAutoStage()
@@ -811,6 +893,7 @@ void Game::MoveToNextZone()
 		replication.ResetClientForAreaMove(p->clientHd);
 	}
 	world.ClearMapContent();
+	foreach(p, world.players) world.ResetMainMasterForAreaMove(*p);
 	foreach(sp, mapSpawnPoints) sp->clear();
 	LoadMap();
 	PlacePlayersAtSpawn();

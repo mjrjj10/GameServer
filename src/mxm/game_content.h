@@ -797,7 +797,7 @@ struct GameXmlContent
 			i32 ownerID = 0;
 			u8 dirToNearPC = 0;
 			ActionStateID actionState = ActionStateID::INVALID;
-
+			u8 difficultyMask = 0xff;
 
 			inline bool IsSpawnPoint() const { return type == Type::SPAWN_POINT; }
 		};
@@ -818,10 +818,13 @@ struct GameXmlContent
 			vec3 pos;
 			vec3 rot;
 			f32 scale = 1;
+			bool walk = true;
 		};
 
 		MapIndex index = MapIndex(0);
 		eastl::vector<Collider> colliders;
+		bool groundPlane = true;
+		f32 killZ = -1000000.0f;
 		bool ingameLevels = false;
 		f32 levelStartLead = 5.0f;
 
@@ -1177,6 +1180,8 @@ struct GameXmlContent
 	const Map* FindPvpMap(MapIndex index) const;
 	eastl::hash_map<i32,i32> pvpMapAliases;
 
+	struct MonsterFire { i32 remote = 0; eastl::fixed_string<wchar,48,true> node; f32 at = 0; };
+
 	struct MonsterAttack
 	{
 		enum Target: u8 { MASTER = 0, MINION, STRUCTURE, TITAN, _COUNT };
@@ -1204,8 +1209,16 @@ struct GameXmlContent
 		f32 hpMin = 0;
 		f32 hpMax = 1;
 		f32 weakTime = 0;
+		f32 weakAt = 0;
+		f32 hitAt = -1.0f;
+		f32 firstAt = -1.0f;
+		f32 minRange = 0;
+		i32 weakStatus = 0;
+		f32 evade = 0;
+		bool selfCentered = false;
 		f32 share = 1;
 		eastl::fixed_vector<i32,4,false> selfStatuses;
+		eastl::fixed_vector<MonsterFire,4,false> fires;
 	};
 
 	struct MonsterAi
@@ -1239,6 +1252,13 @@ struct GameXmlContent
 		eastl::fixed_vector<u32,10,false> enemyTags;
 		eastl::array<const MonsterAttack*,MonsterAttack::_COUNT> byTarget = {};
 		eastl::fixed_vector<MonsterAttack,24,false> attacks;
+		struct ScriptStep { f32 t = 0; eastl::fixed_vector<u8,4,false> attacks; u8 pick = 0; f32 hpMin = 0; f32 hpMax = 2.0f; i32 aiTrigger = -1; };
+		f32 scriptStart = 0;
+		f32 scriptPeriod = 0;
+		ActionStateID scriptPause = ActionStateID::INVALID;
+		eastl::fixed_vector<ScriptStep,12,false> script;
+		eastl::fixed_vector<i32,8,false> seekDocs;
+		f32 seekReach = 0;
 		bool Hates(u32 tag) const { return eastl::find(enemyTags.begin(), enemyTags.end(), tag) != enemyTags.end(); }
 	};
 
@@ -1305,6 +1325,8 @@ struct GameXmlContent
 	}
 	const MonsterAi* FindMonsterAi(i32 creatureID) const { auto f = monsterAi.find(creatureID); return f == monsterAi.end() ? nullptr : &f->second; }
 	bool LoadMonsterAi();
+	void LoadMonsterScripts();
+	void LoadMonsterFires();
 	const eastl::fixed_vector<StatValue,24,false>* FindMonsterStats(i32 creatureID) const { auto f = monsterStats.find(creatureID); return f == monsterStats.end() ? nullptr : &f->second; }
 	eastl::hash_map<i32, eastl::fixed_vector<StatValue,24,false>> monsterStats;
 	eastl::hash_map<i32, eastl::fixed_vector<StatValue,4,false>> monsterGrowth;
@@ -1334,6 +1356,37 @@ struct GameXmlContent
 	eastl::hash_map<i32, eastl::fixed_vector<DeathRemote,4,false>> deathRemotes;
 	const eastl::fixed_vector<DeathRemote,4,false>* FindDeathRemotes(i32 creatureID) const { auto f = deathRemotes.find(creatureID); return f == deathRemotes.end() ? nullptr : &f->second; }
 	bool LoadDeathRemotes();
+	struct DynamicTrapTrack { eastl::vector<vec3> points; eastl::vector<vec2> dirs; };
+	struct DynamicTrapRemote { const Remote* remote = nullptr; u8 node = 0; f32 delay = 0; f32 life = 0; };
+	struct DynamicTrapNode { eastl::fixed_string<wchar,48,true> name; i32 track = -1; bool vsPlayer = false; bool vsMonster = false; };
+	struct DynamicTrapState
+	{
+		ActionStateID action = ActionStateID::INVALID;
+		f32 length = 0;
+		bool loop = false;
+		eastl::fixed_vector<DynamicTrapNode,8,false> nodes;
+		eastl::fixed_vector<DynamicTrapRemote,16,false> remotes;
+		eastl::fixed_vector<i32,8,false> removes;
+	};
+	struct DynamicTrapModel
+	{
+		eastl::fixed_string<char,64,true> kfm;
+		eastl::vector<DynamicTrapTrack> tracks;
+		eastl::fixed_vector<DynamicTrapState,12,false> states;
+		const DynamicTrapState* FindState(ActionStateID action) const
+		{
+			for(i32 i = 0; i < (i32)states.size(); i++) if(states[i].action == action) return &states[i];
+			return nullptr;
+		}
+	};
+	struct DynamicTrap { const DynamicTrapModel* model = nullptr; f32 ratio = 1; };
+	eastl::vector<DynamicTrapModel> dynamicTrapModels;
+	eastl::hash_map<i32, DynamicTrap> dynamicTraps;
+	f32 dynamicTrapBaseAttack = 0;
+	f32 dynamicTrapSpread = 0;
+	f32 dynamicTrapStep = 0;
+	const DynamicTrap* FindDynamicTrap(i32 docID) const { auto f = dynamicTraps.find(docID); return f == dynamicTraps.end() ? nullptr : &f->second; }
+	bool LoadDynamicTraps();
 	f32 FindMonsterLifeTime(i32 creatureID) const { auto f = monsterLifeTime.find(creatureID); return f == monsterLifeTime.end() ? 0.0f : f->second; }
 	f32 monsterGrowthPeriod = 0;
 	i32 monsterGrowthCap = 0;

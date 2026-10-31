@@ -67,6 +67,7 @@ struct Replication
 		SkinIndex subSkin;
 		eastl::array<SkillID,4> skills;
 		eastl::array<SkillID,2> stageSkills;
+		eastl::fixed_vector<eastl::pair<i32,u8>,16,false> skillLevels;
 		i32 supportKit = -1;
 		u8 badgeType = 0;
 		u8 badgeTier = 0;
@@ -454,6 +455,7 @@ struct Replication
 	void SendExecuteSkillAck(ClientHandle clientHd, ActorUID casterUID, SkillID skillID);
 	void SendCancelSkillToAll(ActorUID casterUID, SkillID skillID);
 	void SendInteractionStatusToAll(ActorUID objectUID, u32 allowedTeamMask, i32 interactionID, i32 occupiedTeam, ClientHandle exclude = ClientHandle::INVALID, f32 coolTime = 0);
+	void SendCastSkillRefused(ClientHandle clientHd, ActorUID casterUID, SkillID skillID, u32 ret);
 	void SendInteractionCastingToAll(ActorUID casterUID, ActorUID objectUID, u32 actionState, u32 castingTimeMS);
 	void SendInteractionExecuteOnlyToAll(ActorUID casterUID, ActorUID objectUID, u32 actionState);
 	void SendInteractionCancelToAll(ActorUID casterUID, ActorUID objectUID);
@@ -544,6 +546,7 @@ struct Replication
 		u8 comboCount = 0;
 	};
 	void SendRemoteCreate(const RemoteCreate& remote, ClientHandle exclude);
+	bool SendRemoteCreateTo(ClientHandle clientHd, const RemoteCreate& remote);
 	void SendWeaponCreatorShotToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, const wchar* fireObject, u16 creator, u8 chargingLevel, u8 comboCount, u16 firingCount);
 	void SendReflectedShotToAll(ActorUID shooterUID, ActorUID reflectorUID, u32 seed, const vec3& firePos, f32 worldYaw, const wchar* fireObject, u32 groupSeed, RemoteIdx doc);
 	void RelayRemoteSyncCreateFromRemoteDoc(ClientHandle senderHd, const u8* packetData, i32 packetSize);
@@ -593,6 +596,7 @@ private:
 	void SendMasterSkillSlots(ClientHandle clientHd, const ActorMaster& actor, const Player& player);
 
 	void SendInitialFrame(ClientHandle clientHd);
+	bool SendRemoteCreateToClient(i32 clientID, const RemoteCreate& remote);
 
 	void PlayerForceLocalActorID(i32 clientID, ActorUID actorUID, LocalActorID localActorID);
 	void CreateLocalActorID(i32 clientID, ActorUID actorUID);

@@ -160,16 +160,7 @@ void World::Update(Time localTime_)
 		if(p.input.tag) {
 			p.input.tag = 0;
 			if(p.casting.skillID != SkillID::INVALID) CancelCast(p, "tag");
-			AccumulateMasterScore(p);
-			p.mainCharaID ^= 1;
-			eastl::swap(p.mana, p.benchMana);
-			eastl::swap(p.stamina, p.benchStamina);
-			eastl::swap(p.res, p.benchRes);
-			p.manaDirty = true;
-			p.staminaDirty = true;
-			p.resDirty = true;
-			p.ultDirty = true;
-			p.regenResend = true;
+			SwapMainMaster(p);
 			if(!p.dead) ApplyStatus(p, p, STATUS_PC_TAG_GODMODE);
 			SendTagCooltimeToTeam(p, TagCooltimeMs(p));
 		}
@@ -254,6 +245,7 @@ void World::Update(Time localTime_)
 	UpdateSummons();
 	UpdateSummonAi((f32)tdelta);
 	UpdateMonsterAi((f32)tdelta);
+	UpdateDynamicTraps();
 	UpdateDefence();
 	UpdateIngameLevels();
 	if(!frozen) UpdatePassives();
@@ -279,6 +271,18 @@ void World::Update(Time localTime_)
 	}
 
 	physics.Step();
+
+	foreach(it, players) {
+		if(!it->body || it->dead) continue;
+		if(it->body->grounded) {
+			it->lastGroundPos = it->body->GetWorldPos();
+			it->hasGroundPos = true;
+		}
+		else if(it->hasGroundPos && it->body->GetWorldPos().z < killZ) {
+			LOG("Fall :: %ls below KillZ %.0f, back to (%.0f, %.0f, %.0f)", it->name.data(), killZ, it->lastGroundPos.x, it->lastGroundPos.y, it->lastGroundPos.z);
+			TeleportPlayer(*it, it->lastGroundPos, it->input.rot.bodyYaw);
+		}
+	}
 
 	foreach(it, players) {
 		if(it->clientHd != ClientHandle::INVALID || it->dead || it->posHistoryCount == 0) continue;
@@ -331,6 +335,8 @@ void World::Replicate()
 		rep.subSkin = player.subSkin;
 		rep.skills = player.skills;
 		rep.stageSkills = player.stageSkills;
+		rep.skillLevels.clear();
+		foreach_const(l, player.skillLevels) if(!rep.skillLevels.full()) rep.skillLevels.push_back(eastl::make_pair(l->first, l->second));
 		rep.supportKit = player.supportKit;
 		rep.badgeType = player.badgeType;
 		rep.badgeTier = player.badgeTier;
@@ -491,7 +497,21 @@ World::Player& World::CreatePlayer(const PlayerDescription& desc, const vec3& po
 	players.emplace_back(players.size(), desc);
 
 	Player& player = players.back();
-	player.devGod = Config().DevAutoStage != 0;
+	player.devGod = Config().DevAutoStage != 0 || (Config().DevGodPlayers != 0 && desc.clientHd != ClientHandle::INVALID);
+	if(!ingameSkillPoints) {
+		player.skillPoints = 0;
+		const GameXmlContent& content = GetGameXmlContent();
+		for(const ClassType cls : { player.mainClass, player.subClass }) {
+			if(cls == ClassType::NONE) continue;
+			foreach_const(sk, content.GetMaster(cls).skillIDs) {
+				const auto* ups = content.FindSkillUpgrades((i32)*sk);
+				if(!ups || ups->empty() || (player.skillLevels.find((i32)*sk) == player.skillLevels.end() && player.skillLevels.size() >= player.skillLevels.max_size())) continue;
+				u8 level = 0;
+				foreach_const(l, desc.stageSkillLevels) if(l->first == (i32)*sk) level = (u8)MIN((size_t)l->second, ups->size());
+				player.skillLevels[(i32)*sk] = level;
+			}
+		}
+	}
 	player.mainCharaID = 0;
 	player.level = 1;
 	player.experience = 0;
@@ -591,7 +611,7 @@ void World::ReplacePlayerMasters(Player& player, const PlayerDescription& desc)
 	player.devGod = devGod;
 	player.devVision = devVision;
 	CreatePlayerMasters(player);
-	if(player.clientHd != ClientHandle::INVALID) replication->SendSkillPoints(player.clientHd, player.userID, player.skillPoints);
+	if(ingameSkillPoints && player.clientHd != ClientHandle::INVALID) replication->SendSkillPoints(player.clientHd, player.userID, player.skillPoints);
 	ApplyPassives(player);
 	LOG("Loadout :: %ls masters=(%d, %d) skills=(%d, %d, %d, %d)", player.name.data(), (i32)player.mainClass, (i32)player.subClass, (i32)player.skills[0], (i32)player.skills[1], (i32)player.skills[2], (i32)player.skills[3]);
 }
@@ -672,10 +692,16 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 {
 	const SkillID skillID = ResolveComboRecast(player, skillIn, forcedAction);
 	const vec3 castPos = ResolveCastPos(player, skillID, castPosIn, forcedAction);
-	if(frozen || combatLocked) return;
+	static const u32 HYP_CAST_REFUSED = 102;
+	if(frozen || combatLocked || !SkillTargetsAllowed(player, skillID, targets)) {
+		if(forcedAction == ActionStateID::INVALID && player.clientHd != ClientHandle::INVALID) {
+			LOG("Skill :: %ls cast %d refused (frozen %d, locked %d)", player.name.data(), (i32)skillID, (i32)frozen, (i32)combatLocked);
+			replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, HYP_CAST_REFUSED);
+		}
+		return;
+	}
 	if(forcedAction == ActionStateID::INVALID) TitanOnCast(player, skillIn);
 	MarkInBattle(player);
-	if(!SkillTargetsAllowed(player, skillID, targets)) return;
 	const ActorUID hitEventTarget = player.memorizedTarget;
 	if(targets.size() == 0 && hitEventTarget != ActorUID::INVALID && GetGameXmlContent().UsesHitEventTarget((i32)skillID)) targets = Slice<const ActorUID>(&hitEventTarget, 1);
 	eastl::fixed_vector<ActorUID,10,false> allEnemyTargets;
@@ -1106,6 +1132,28 @@ void World::WarpPlayer(Player& p, const vec3& pos, f32 yaw)
 {
 	TeleportPlayer(p, pos, yaw);
 	if(p.clientHd != ClientHandle::INVALID) replication->SendTeleportRequest(p.clientHd, p.Main().UID, pos);
+}
+
+void World::SwapMainMaster(Player& p)
+{
+	AccumulateMasterScore(p);
+	p.mainCharaID ^= 1;
+	eastl::swap(p.mana, p.benchMana);
+	eastl::swap(p.stamina, p.benchStamina);
+	eastl::swap(p.res, p.benchRes);
+	p.manaDirty = true;
+	p.staminaDirty = true;
+	p.resDirty = true;
+	p.ultDirty = true;
+	p.regenResend = true;
+}
+
+void World::ResetMainMasterForAreaMove(Player& p)
+{
+	if(p.mainCharaID == 0) return;
+	if(p.casting.skillID != SkillID::INVALID) CancelCast(p, "area move");
+	SwapMainMaster(p);
+	LOG("Stage :: %ls leads with the first master again after the area move", p.name.data());
 }
 
 void World::ClearMapContent()
