@@ -1552,6 +1552,8 @@ struct GameXmlContent
 	eastl::hash_map<i32, f32> statusShield;
 	eastl::hash_map<i32, f32> creatureSight;
 	eastl::hash_map<i32, vec2> bushSize;
+	eastl::hash_set<i32> teamGateDocs;
+	bool IsTeamGate(i32 doc) const { return teamGateDocs.find(doc) != teamGateDocs.end(); }
 	f32 CreatureSight(i32 doc) const { auto f = creatureSight.find(doc); return f == creatureSight.end() ? 0.0f : f->second; }
 	const vec2* FindBushSize(i32 doc) const { auto f = bushSize.find(doc); return f == bushSize.end() ? nullptr : &f->second; }
 	f32 StatusShieldAmount(const StatusInfo& info) const

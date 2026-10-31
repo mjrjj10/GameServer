@@ -649,6 +649,10 @@ void World::DespawnEntities(i32 localID, i32 tagID)
 		if(tagID >= 0 ? npc->tagID != tagID : npc->localID != localID) continue;
 		if(npc->despawnAt == Time::ZERO || npc->despawnAt > localTime) npc->despawnAt = localTime;
 	}
+	foreach(d, actorDynamicList) {
+		if(tagID >= 0 ? d->tagID != tagID : d->localID != localID) continue;
+		foreach(g, teamGates) if(g->localID == d->localID) g->open = true;
+	}
 	LOG("LevelEvent :: despawn local %d tag %d", localID, tagID);
 }
 
@@ -854,6 +858,7 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 				d->tLastActionChange = localTime;
 				d->hits.clear();
 				physics.SetStaticEnabled(d->collider, node->action != ActionStateID::DYNAMIC_OPEN);
+				foreach(g, teamGates) if(g->localID == d->localID) g->open = node->action == ActionStateID::DYNAMIC_OPEN || node->action == ActionStateID::DYNAMIC_DIE;
 				LOG("LevelEvent :: dynamic %d action %d", d->localID, (i32)node->action);
 			}
 		} break;

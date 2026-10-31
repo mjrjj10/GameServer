@@ -254,6 +254,7 @@ void World::Update(Time localTime_)
 	if(!frozen) UpdateInteractions();
 	if(Config().DevShowcase) { if(!frozen) UpdateShowcase(); }
 	else {
+		BuildTeamGates();
 		if(!frozen && !combatLocked) UpdateBotMovement();
 		if(!frozen && !combatLocked) UpdateBotCombat();
 		if(!frozen && !combatLocked) UpdateBotSkills();

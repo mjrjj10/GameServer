@@ -542,6 +542,7 @@ void World::UpdateBotMovement()
 			const f32 len = glm::length(away);
 			goal = tower + (len > 1.0f ? away / len : vec2(1, 0)) * towerRange;
 		}
+		BotGateBlocks(bot, here, &goal);
 		bot.input.moveTo = vec3(goal, pos.z);
 		bot.input.speed = PlayerMoveSpeed(bot);
 	}
@@ -594,6 +595,62 @@ bool World::Pilot(Player& p, PilotDecision* out)
 	}
 	out->goal = vec3(goal, pos.z);
 	return true;
+}
+
+void World::BuildTeamGates()
+{
+	static const f32 GATE_PROBE_HEIGHT = 100.0f;
+	static const f32 GATE_PROBE_REACH = 1500.0f;
+	if(teamGatesBuilt || !map || !map->ingameLevels) return;
+	teamGatesBuilt = true;
+	const auto& content = GetGameXmlContent();
+	i32 built = 0;
+	foreach(d, actorDynamicList) {
+		if(!content.IsTeamGate((i32)d->docID) || (d->faction != Faction::RED && d->faction != Faction::BLUE)) continue;
+		const vec3 at = d->pos + vec3(0, 0, GATE_PROBE_HEIGHT);
+		f32 bestWidth = 1e9f;
+		vec2 bestAxis = vec2(0);
+		vec2 bestCenter = vec2(d->pos);
+		for(i32 k = 0; k < 2; k++) {
+			const f32 a = d->rot.z + (k ? PI * 0.5f : 0.0f);
+			const vec2 axis = vec2(cosf(a), sinf(a));
+			f32 left = 0, right = 0;
+			if(!physics.RaycastStatic(at, at + vec3(axis * GATE_PROBE_REACH, 0), &left)) continue;
+			if(!physics.RaycastStatic(at, at - vec3(axis * GATE_PROBE_REACH, 0), &right)) continue;
+			if(left + right >= bestWidth) continue;
+			bestWidth = left + right;
+			bestAxis = axis;
+			bestCenter = vec2(d->pos) + axis * (left - right) * 0.5f;
+		}
+		if(bestWidth > GATE_PROBE_REACH * 2.0f) {
+			LOG("Gate :: dynamic %d (doc %d) opening not found", d->localID, (i32)d->docID);
+			continue;
+		}
+		if(!teamGates.full()) teamGates.push_back({ d->localID, bestCenter - bestAxis * bestWidth * 0.5f, bestCenter + bestAxis * bestWidth * 0.5f, (i32)d->faction, d->action == ActionStateID::DYNAMIC_OPEN || d->action == ActionStateID::DYNAMIC_DIE });
+		LOG("Gate :: dynamic %d (doc %d, team %d) wall %.0f wide at (%.0f, %.0f)", d->localID, (i32)d->docID, (i32)d->faction, bestWidth, bestCenter.x, bestCenter.y);
+		built++;
+	}
+	LOG("Gate :: %d team gate walls", built);
+}
+
+bool World::BotGateBlocks(const Player& bot, const vec2& from, vec2* goal) const
+{
+	static const f32 GATE_STOP_DIST = 150.0f;
+	foreach_const(g, teamGates) {
+		if(g->open || g->team == (i32)bot.team) continue;
+		const vec2 d = *goal - from;
+		const vec2 s = g->b - g->a;
+		const f32 denom = Vec2Cross(d, s);
+		if(fabsf(denom) < 1e-3f) continue;
+		const f32 t = Vec2Cross(g->a - from, s) / denom;
+		const f32 u = Vec2Cross(g->a - from, d) / denom;
+		if(t < 0.0f || t > 1.0f || u < 0.0f || u > 1.0f) continue;
+		const vec2 hit = from + d * t;
+		const f32 len = glm::length(d);
+		*goal = len > 1.0f ? hit - d / len * GATE_STOP_DIST : from;
+		return true;
+	}
+	return false;
 }
 
 void World::UpdateObserver()

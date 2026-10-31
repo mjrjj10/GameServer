@@ -4379,13 +4379,14 @@ bool GameXmlContent::LoadSightData()
 			XMLElement* pEntity = pInfo->FirstChildElement("EntityComData");
 			const char* type = pDyn ? pDyn->Attribute("_Type") : nullptr;
 			const char* key = pEntity ? pEntity->Attribute("KEYNAME") : nullptr;
+			if(type && EA::StdC::Strcmp(type, "DYNAMIC_TYPE_GATE") == 0 && pDyn->BoolAttribute("_TeamPhysics")) teamGateDocs.insert(pInfo->IntAttribute("ID"));
 			if(!type || !key || EA::StdC::Strcmp(type, "DYNAMIC_TYPE_BUSH") != 0) continue;
 			const char* size = EA::StdC::Strrchr(key, '_');
 			i32 w = 0, l = 0;
 			if(size && EA::StdC::Sscanf(size + 1, "%dx%d", &w, &l) == 2) bushSize[pInfo->IntAttribute("ID")] = vec2((f32)w * 100.0f, (f32)l * 100.0f);
 		}
 	}
-	LOG("Loaded sight radius of %d creatures, %d bush types", (i32)creatureSight.size(), (i32)bushSize.size());
+	LOG("Loaded sight radius of %d creatures, %d bush types, %d team gates", (i32)creatureSight.size(), (i32)bushSize.size(), (i32)teamGateDocs.size());
 	return true;
 }
 
