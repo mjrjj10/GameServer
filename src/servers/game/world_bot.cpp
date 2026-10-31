@@ -135,11 +135,11 @@ static const i32 BOT_TITAN_PIECE_ITEM = 130100904;
 
 static const f32 BOT_FARM_RANGE = 4000.0f;
 
-bool World::BotFarmTarget(const Player& bot, vec2* goal)
+bool World::BotFarmTarget(const Player& bot, vec2* goal, f32 range)
 {
 	if(!map || !map->ingameLevels) return false;
 	const vec2 here = vec2(bot.body->GetWorldPos());
-	f32 bestMinion = BOT_FARM_RANGE, bestNeutral = BOT_FARM_RANGE;
+	f32 bestMinion = range, bestNeutral = range;
 	vec2 minion, neutral;
 	foreach_const(npc, actorNpcList) {
 		if(!npc->monsterAi || npc->ownerUID != ActorUID::INVALID || IsStructure(*npc) || !NpcHittableBy(*npc, bot)) continue;
@@ -149,16 +149,16 @@ bool World::BotFarmTarget(const Player& bot, vec2* goal)
 		}
 		else if((npc->faction == Faction::ORANGE || npc->faction == Faction::MONSTER) && d < bestNeutral) { bestNeutral = d; neutral = vec2(npc->pos); }
 	}
-	if(bestMinion < BOT_FARM_RANGE) { *goal = minion; return true; }
-	if(bestNeutral < BOT_FARM_RANGE) { *goal = neutral; return true; }
+	if(bestMinion < range) { *goal = minion; return true; }
+	if(bestNeutral < range) { *goal = neutral; return true; }
 	return false;
 }
 
-bool World::BotObjective(const Player& bot, vec2* goal)
+void World::BuildTitanSaveAreas()
 {
-	if(!map) return false;
-	if(!titanSaveAreasBuilt) {
-		titanSaveAreasBuilt = true;
+	if(titanSaveAreasBuilt || !map) return;
+	titanSaveAreasBuilt = true;
+	{
 		foreach_const(n, map->levelEvents) {
 			if(n->kind != GameXmlContent::LevelEventNode::BOUND_TRIGGER) continue;
 			const GameXmlContent::Map::Area* area = map->FindArea(n->areaID);
@@ -175,6 +175,12 @@ bool World::BotObjective(const Player& bot, vec2* goal)
 			}
 		}
 	}
+}
+
+bool World::BotObjective(const Player& bot, vec2* goal)
+{
+	if(!map) return false;
+	BuildTitanSaveAreas();
 	const vec2 here = vec2(bot.body->GetWorldPos());
 	if(bot.titanPieces > 0 && titanSaveAreaKnown[bot.team]) {
 		*goal = titanSaveAreas[bot.team];
@@ -191,6 +197,209 @@ bool World::BotObjective(const Player& bot, vec2* goal)
 }
 static const u32 BOT_DECISION_MIN_MS = 400;
 static const f32 HYP_BOT_OCCUPY_FIGHT_RANGE = 600.0f;
+static const f32 HYP_BOT_TITAN_ENGAGE_RANGE = 1500.0f;
+enum BotMode: u8 { BOT_MODE_FIGHT = 0, BOT_MODE_OCCUPY, BOT_MODE_OBJECTIVE, BOT_MODE_FARM, BOT_MODE_LANE, BOT_MODE_ROAM };
+static const char* const BOT_MODE_NAMES[] = { "fight", "occupy", "objective", "farm", "lane", "roam" };
+static const f32 HYP_BOT_LANE_FARM_RANGE = 1500.0f;
+static const f32 HYP_BOT_RETREAT_HP = 0.25f;
+static const f32 HYP_BOT_RETREAT_DONE_HP = 0.9f;
+static const i32 HYP_BOT_SIEGE_TANKS = 2;
+static const i32 HYP_BOT_SIEGE_GIANT_WEIGHT = 3;
+static const i32 BOT_LANE_MIN_POINTS = 10;
+static const f32 BOT_LANE_END_DIST = 3000.0f;
+static const f32 BOT_LANE_SAME_DIST = 1500.0f;
+static const i32 BOT_LANE_LOOKAHEAD = 2;
+static const f32 BOT_NAV_MERGE_DIST = 200.0f;
+static const f32 BOT_NAV_LINK_RANGE = 1500.0f;
+static const f32 BOT_NAV_REACHED = 200.0f;
+static const f32 BOT_NAV_REROUTE_DIST = 500.0f;
+static const f32 BOT_NAV_RAY_HEIGHT = 100.0f;
+static const f32 BOT_NAV_RAY_SIDE = 40.0f;
+
+bool World::BotSees(const vec3& from, const vec3& to)
+{
+	const vec2 d = vec2(to) - vec2(from);
+	const f32 len = glm::length(d);
+	if(len < 1.0f) return true;
+	const vec2 side = vec2(-d.y, d.x) / len * BOT_NAV_RAY_SIDE;
+	for(i32 k = -1; k <= 1; k++) {
+		const vec2 off = side * (f32)k;
+		if(physics.RaycastStatic(vec3(vec2(from) + off, from.z + BOT_NAV_RAY_HEIGHT), vec3(vec2(to) + off, to.z + BOT_NAV_RAY_HEIGHT), nullptr)) return false;
+	}
+	return true;
+}
+
+void World::BuildBotNav()
+{
+	botNavBuilt = true;
+	if(!map) return;
+	BuildTitanSaveAreas();
+	foreach_const(path, map->paths) {
+		i32 prev = -1;
+		foreach_const(pt, path->second) {
+			i32 node = -1;
+			for(i32 n = 0; n < (i32)botNav.size(); n++) {
+				if(glm::length(vec2(botNav[n].pos) - vec2(*pt)) < BOT_NAV_MERGE_DIST) { node = n; break; }
+			}
+			if(node < 0) {
+				node = (i32)botNav.size();
+				botNav.push_back();
+				botNav.back().pos = *pt;
+			}
+			if(prev >= 0 && prev != node && eastl::find(botNav[prev].links.begin(), botNav[prev].links.end(), (u16)node) == botNav[prev].links.end()) {
+				botNav[prev].links.push_back((u16)node);
+				botNav[node].links.push_back((u16)prev);
+			}
+			prev = node;
+		}
+	}
+	for(i32 a = 0; a < (i32)botNav.size(); a++) {
+		for(i32 b = a + 1; b < (i32)botNav.size(); b++) {
+			if(glm::length(vec2(botNav[a].pos) - vec2(botNav[b].pos)) > BOT_NAV_LINK_RANGE) continue;
+			if(eastl::find(botNav[a].links.begin(), botNav[a].links.end(), (u16)b) != botNav[a].links.end()) continue;
+			if(!BotSees(botNav[a].pos, botNav[b].pos)) continue;
+			botNav[a].links.push_back((u16)b);
+			botNav[b].links.push_back((u16)a);
+		}
+	}
+	for(i32 team = 0; team < 2; team++) {
+		if(!titanSaveAreaKnown[team] || !titanSaveAreaKnown[1 - team]) continue;
+		foreach_const(path, map->paths) {
+			const auto& pts = path->second;
+			if((i32)pts.size() < BOT_LANE_MIN_POINTS) continue;
+			if(glm::length(vec2(pts.front()) - titanSaveAreas[team]) > BOT_LANE_END_DIST || glm::length(vec2(pts.back()) - titanSaveAreas[1 - team]) > BOT_LANE_END_DIST) continue;
+			const vec2 mid = vec2(pts[pts.size() / 2]);
+			bool same = false;
+			foreach_const(lane, botLanes[team]) {
+				if(glm::length((*lane)[lane->size() / 2] - mid) < BOT_LANE_SAME_DIST) same = true;
+			}
+			if(same) continue;
+			botLanes[team].push_back();
+			foreach_const(pt, pts) botLanes[team].back().push_back(vec2(*pt));
+		}
+	}
+	LOG("Bot :: nav %d nodes, lanes %d/%d", (i32)botNav.size(), (i32)botLanes[0].size(), (i32)botLanes[1].size());
+}
+
+void World::BotPlanRoute(Player& bot, const vec2& goal)
+{
+	bot.botRoute.clear();
+	bot.botRouteGoal = goal;
+	const i32 count = (i32)botNav.size();
+	if(count == 0) return;
+	const vec3 pos = bot.body->GetWorldPos();
+	const vec3 goal3 = vec3(goal, pos.z);
+	eastl::vector<f32> dist(count, 1e30f);
+	eastl::vector<i32> prev(count, -1);
+	eastl::vector<bool> done(count, false);
+	i32 nearest = 0;
+	f32 nearestDist = 1e30f;
+	bool seen = false;
+	for(i32 n = 0; n < count; n++) {
+		const f32 d = glm::length(vec2(botNav[n].pos) - vec2(pos));
+		if(d < nearestDist) { nearestDist = d; nearest = n; }
+		if(d <= BOT_NAV_LINK_RANGE && BotSees(pos, botNav[n].pos)) { dist[n] = d; seen = true; }
+	}
+	if(!seen) dist[nearest] = nearestDist;
+	for(;;) {
+		i32 cur = -1;
+		for(i32 n = 0; n < count; n++) {
+			if(!done[n] && dist[n] < 1e29f && (cur < 0 || dist[n] < dist[cur])) cur = n;
+		}
+		if(cur < 0) break;
+		done[cur] = true;
+		foreach_const(l, botNav[cur].links) {
+			const f32 d = dist[cur] + glm::length(vec2(botNav[*l].pos) - vec2(botNav[cur].pos));
+			if(d < dist[*l]) { dist[*l] = d; prev[*l] = cur; }
+		}
+	}
+	i32 last = -1;
+	f32 lastCost = 1e30f;
+	i32 fallback = -1;
+	f32 fallbackDist = 1e30f;
+	for(i32 n = 0; n < count; n++) {
+		if(dist[n] >= 1e29f) continue;
+		const f32 d = glm::length(vec2(botNav[n].pos) - goal);
+		if(d < fallbackDist) { fallbackDist = d; fallback = n; }
+		if(d > BOT_NAV_LINK_RANGE || dist[n] + d >= lastCost || !BotSees(botNav[n].pos, goal3)) continue;
+		lastCost = dist[n] + d;
+		last = n;
+	}
+	if(last < 0) last = fallback;
+	eastl::fixed_vector<u16,256,true> reversed;
+	for(i32 n = last; n >= 0; n = prev[n]) reversed.push_back((u16)n);
+	for(i32 k = (i32)reversed.size() - 1; k >= 0 && !bot.botRoute.full(); k--) bot.botRoute.push_back(reversed[k]);
+}
+
+vec2 World::BotNavStep(Player& bot, const vec2& goal)
+{
+	if(!botNavBuilt) BuildBotNav();
+	const vec3 pos = bot.body->GetWorldPos();
+	const vec2 here = vec2(pos);
+	if(botNav.empty() || BotSees(pos, vec3(goal, pos.z))) {
+		bot.botRoute.clear();
+		return goal;
+	}
+	if(bot.botRoute.empty() || glm::length(goal - bot.botRouteGoal) > BOT_NAV_REROUTE_DIST) BotPlanRoute(bot, goal);
+	while(!bot.botRoute.empty() && glm::length(vec2(botNav[bot.botRoute.front()].pos) - here) < BOT_NAV_REACHED) bot.botRoute.erase(bot.botRoute.begin());
+	if(bot.botRoute.size() > 1 && BotSees(pos, botNav[bot.botRoute[1]].pos)) bot.botRoute.erase(bot.botRoute.begin());
+	if(bot.botRoute.empty()) return goal;
+	return vec2(botNav[bot.botRoute.front()].pos);
+}
+
+bool World::BotRetreat(Player& bot, vec2* goal)
+{
+	BuildTitanSaveAreas();
+	if(!titanSaveAreaKnown[bot.team]) return false;
+	const f32 ratio = HpRatio(bot.Main().hp, bot.Main().hpMax);
+	if(ratio < HYP_BOT_RETREAT_HP) bot.botRetreat = true;
+	else if(ratio >= HYP_BOT_RETREAT_DONE_HP) bot.botRetreat = false;
+	if(!bot.botRetreat || bot.titanForm >= 0) return false;
+	*goal = titanSaveAreas[bot.team];
+	return true;
+}
+
+bool World::BotLaneGoal(Player& bot, vec2* goal)
+{
+	if(!botNavBuilt) BuildBotNav();
+	const auto& lanes = botLanes[bot.team];
+	if(lanes.empty()) return false;
+	if(bot.botLane < 0) {
+		i32 rank = 0;
+		foreach_const(p, players) {
+			if(p->team == bot.team && p->index < bot.index) rank++;
+		}
+		bot.botLane = (i8)(rank % (i32)lanes.size());
+	}
+	const auto& lane = lanes[bot.botLane % (i32)lanes.size()];
+	const vec2 here = vec2(bot.body->GetWorldPos());
+	i32 nearest = 0;
+	f32 nearestDist = 1e30f;
+	for(i32 k = 0; k < (i32)lane.size(); k++) {
+		const f32 d = glm::length(lane[k] - here);
+		if(d < nearestDist) { nearestDist = d; nearest = k; }
+	}
+	*goal = lane[MIN(nearest + BOT_LANE_LOOKAHEAD, (i32)lane.size() - 1)];
+	return true;
+}
+
+bool World::BotSiegeOk(const Player& bot, const ActorNpc& tower) const
+{
+	if(!map || !map->ingameLevels || !IsStructure(tower)) return false;
+	if(bot.titanForm >= 0) return true;
+	const GameXmlContent::MonsterAttack* attack = tower.monsterAi->byTarget[GameXmlContent::MonsterAttack::MINION];
+	if(!attack) attack = tower.monsterAi->byTarget[GameXmlContent::MonsterAttack::MASTER];
+	if(!attack || attack->range <= 0) return false;
+	const auto& giants = GetGameXmlContent().titan.giants;
+	i32 tanks = 0;
+	foreach_const(npc, actorNpcList) {
+		if(!npc->monsterAi || npc->ownerUID != ActorUID::INVALID || npc->faction != (Faction)bot.team || npc->hp <= 0 || npc->removeAt != Time::ZERO || IsStructure(*npc)) continue;
+		if(glm::length(vec2(npc->pos) - vec2(tower.pos)) > attack->range) continue;
+		tanks += eastl::find(giants.begin(), giants.end(), (i32)npc->docID) != giants.end() ? HYP_BOT_SIEGE_GIANT_WEIGHT : 1;
+		if(tanks >= HYP_BOT_SIEGE_TANKS) return true;
+	}
+	return false;
+}
 static const u32 BOT_DECISION_SPAN_MS = 500;
 static const u32 BOT_STUCK_CHECK_MS = 500;
 static const f32 BOT_TOWER_MARGIN = 200.0f;
@@ -210,6 +419,7 @@ bool World::BotDangerAt(const Player& bot, const vec2& at, vec2* towerPos, f32* 
 		if(!attack) continue;
 		const f32 range = attack->range + BOT_TOWER_MARGIN;
 		if(glm::length(at - vec2(npc->pos)) >= range) continue;
+		if(BotSiegeOk(bot, *npc)) continue;
 		if(towerPos) *towerPos = vec2(npc->pos);
 		if(towerRange) *towerRange = range;
 		return true;
@@ -256,7 +466,16 @@ void World::UpdateBotMovement()
 			StartMapInteraction(bot, occupyObject);
 			continue;
 		}
-		if(target && best <= (occupyGoal ? HYP_BOT_OCCUPY_FIGHT_RANGE : BOT_ENGAGE_RANGE)) {
+		const bool titanNav = map && map->ingameLevels;
+		vec2 objective;
+		const bool objectiveGoal = titanNav && (BotRetreat(bot, &objective) || BotObjective(bot, &objective));
+		const f32 engage = occupyGoal || objectiveGoal ? HYP_BOT_OCCUPY_FIGHT_RANGE : (titanNav ? HYP_BOT_TITAN_ENGAGE_RANGE : BOT_ENGAGE_RANGE);
+		bool fighting = false;
+		bool farm = false;
+		u8 mode = BOT_MODE_ROAM;
+		if(target && best <= engage) {
+			fighting = true;
+			mode = BOT_MODE_FIGHT;
 			const vec2 tp = vec2(target->body->GetWorldPos());
 			const f32 range = WeaponIsMelee(bot) ? BOT_MELEE_RANGE : MIN(WeaponRange(bot) * BOT_RANGE_FRACTION, BOT_RANGED_MAX);
 			const vec2 from = here - tp;
@@ -271,13 +490,19 @@ void World::UpdateBotMovement()
 			const vec2 d = occupyPoint - here;
 			const f32 len = glm::length(d);
 			goal = len > BOT_ROAM_STEP ? here + d / len * BOT_ROAM_STEP : occupyPoint;
+			mode = BOT_MODE_OCCUPY;
 		}
-		else if(BotObjective(bot, &goal)) {
+		else if(objectiveGoal) {
+			goal = objective;
+			mode = BOT_MODE_OBJECTIVE;
+		}
+		else if(titanNav && !(farm = BotFarmTarget(bot, &goal, HYP_BOT_LANE_FARM_RANGE)) && BotLaneGoal(bot, &goal)) mode = BOT_MODE_LANE;
+		else if(!titanNav && BotObjective(bot, &goal)) {
 			const vec2 d = goal - here;
 			const f32 len = glm::length(d);
 			if(len > BOT_ROAM_STEP) goal = here + d / len * BOT_ROAM_STEP;
 		}
-		else if(BotFarmTarget(bot, &goal)) {
+		else if(titanNav ? farm : BotFarmTarget(bot, &goal, BOT_FARM_RANGE)) {
 			const f32 range = WeaponIsMelee(bot) ? BOT_MELEE_RANGE : MIN(WeaponRange(bot) * BOT_RANGE_FRACTION, BOT_RANGED_MAX);
 			const vec2 d = here - goal;
 			const f32 len = glm::length(d);
@@ -285,6 +510,7 @@ void World::UpdateBotMovement()
 			bot.input.rot.upperYaw = face;
 			bot.input.rot.bodyYaw = face;
 			goal = goal + (len > 1.0f ? d / len : vec2(1, 0)) * range;
+			mode = BOT_MODE_FARM;
 		}
 		else if(target) {
 			const vec2 toward = glm::normalize(vec2(target->body->GetWorldPos()) - here);
@@ -293,7 +519,18 @@ void World::UpdateBotMovement()
 		else {
 			goal = here + vec2(cosf(bot.input.rot.bodyYaw), sinf(bot.input.rot.bodyYaw)) * BOT_ROAM_STEP;
 		}
+		if(titanNav && mode != bot.botMode) {
+			LOG("BotMode :: %ls %s at (%.0f, %.0f) hp %d/%d pieces %d", bot.name.data(), BOT_MODE_NAMES[mode], here.x, here.y, bot.Main().hp, bot.Main().hpMax, bot.titanPieces);
+			bot.botMode = mode;
+		}
+		if(titanNav && !fighting) {
+			goal = BotNavStep(bot, goal);
+			const vec2 d = goal - here;
+			const f32 len = glm::length(d);
+			if(len > BOT_ROAM_STEP) goal = here + d / len * BOT_ROAM_STEP;
+		}
 		if(stuck) {
+			bot.botRoute.clear();
 			const vec2 d = goal - here;
 			const f32 len = glm::length(d);
 			goal = here + RotateVec(len > 1.0f ? d / len : vec2(1, 0), bot.botStrafe * PI * 0.6f) * BOT_ROAM_STEP;
