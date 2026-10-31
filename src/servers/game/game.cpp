@@ -785,7 +785,7 @@ void Game::WriteTelemetry()
 	foreach(p, world.players) if(p->clientHd != ClientHandle::INVALID && !p->removed && p->body) { pilotPlayer = &*p; break; }
 	World::PilotDecision pilot;
 	if(pilotPlayer && world.Pilot(*pilotPlayer, &pilot)) {
-		fprintf(f, "{\"gx\":%.0f,\"gy\":%.0f,\"gz\":%.0f,\"target\":", pilot.goal.x, pilot.goal.y, pilot.goal.z);
+		fprintf(f, "{\"gx\":%.0f,\"gy\":%.0f,\"gz\":%.0f,\"fx\":%.0f,\"fy\":%.0f,\"target\":", pilot.goal.x, pilot.goal.y, pilot.goal.z, pilot.finalGoal.x, pilot.finalGoal.y);
 		if(pilot.hasTarget) fprintf(f, "{\"x\":%.0f,\"y\":%.0f,\"z\":%.0f,\"hp\":%d,\"hpMax\":%d,\"doc\":%d,\"master\":%d}", pilot.target.x, pilot.target.y, pilot.target.z, pilot.hp, pilot.hpMax, pilot.doc, pilot.master ? 1 : 0);
 		else fprintf(f, "null");
 		fprintf(f, "}");

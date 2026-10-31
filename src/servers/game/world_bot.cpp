@@ -586,6 +586,7 @@ bool World::Pilot(Player& p, PilotDecision* out)
 		}
 	}
 	if(!retreat && !BotObjective(p, &goal) && !BotLaneGoal(p, &goal)) goal = here;
+	out->finalGoal = vec3(goal, pos.z);
 	goal = BotNavStep(p, goal);
 	vec2 tower;
 	f32 towerRange = 0;
@@ -593,7 +594,9 @@ bool World::Pilot(Player& p, PilotDecision* out)
 		const vec2 away = here - tower;
 		const f32 len = glm::length(away);
 		goal = tower + (len > 1.0f ? away / len : vec2(1, 0)) * towerRange;
+		out->finalGoal = vec3(goal, pos.z);
 	}
+	if(BotDangerAt(p, vec2(out->finalGoal), nullptr, nullptr)) out->finalGoal = vec3(goal, pos.z);
 	out->goal = vec3(goal, pos.z);
 	return true;
 }

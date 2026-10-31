@@ -899,7 +899,7 @@ struct World
 	struct TeamGate { i32 localID; vec2 a; vec2 b; i32 team; bool open; };
 	eastl::fixed_vector<TeamGate,32,false> teamGates;
 	bool BotGateBlocks(const Player& bot, const vec2& from, vec2* goal) const;
-	struct PilotDecision { vec3 goal = vec3(0); bool hasTarget = false; vec3 target = vec3(0); i32 hp = 0; i32 hpMax = 0; i32 doc = 0; bool master = false; };
+	struct PilotDecision { vec3 goal = vec3(0); vec3 finalGoal = vec3(0); bool hasTarget = false; vec3 target = vec3(0); i32 hp = 0; i32 hpMax = 0; i32 doc = 0; bool master = false; };
 	bool Pilot(Player& p, PilotDecision* out);
 	Time observerNextMove = Time::ZERO;
 	i32 observerTarget = -1;
