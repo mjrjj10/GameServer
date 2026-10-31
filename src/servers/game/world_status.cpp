@@ -130,6 +130,7 @@ void World::ConsumeStatus(u32 targetIndex, i32 statusID)
 {
 	ActiveStatus* st = FindActiveStatus(targetIndex, statusID);
 	if(st) st->until = localTime;
+	LOG("Status :: %ls status %d consumed (%s)", players[targetIndex].name.data(), statusID, st ? "found" : "not active");
 }
 
 void World::ApplyPassives(Player& player)

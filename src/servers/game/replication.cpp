@@ -1979,6 +1979,7 @@ void Replication::SendRemoteDamageToAll(const RemoteDamage& hit)
 		const LocalActorID targetLocalID = GetLocalActorID(clientHd, hit.targetUID);
 		if(targetLocalID == LocalActorID::INVALID) continue;
 		if(playerLocalInfo[clientID].hiddenActors.count(hit.targetUID)) continue;
+		TruthEvent("\"c\":%d,\"damage\":%d,\"to\":%u,\"att\":%u,\"doc\":%d,\"rx\":%.0f,\"ry\":%.0f,\"tx\":%.0f,\"ty\":%.0f", clientID, hit.damage, (u32)targetLocalID, (u32)GetLocalActorID(clientHd, hit.attackerUID), (i32)hit.remoteDoc, hit.remotePos.x, hit.remotePos.y, hit.targetPos.x, hit.targetPos.y);
 
 		PacketWriter<Sv::SN_BroadcastDamage,256> packet;
 		packet.Write<u32>(seq);
@@ -2840,7 +2841,11 @@ void Replication::SendEnterActor(ClientHandle clientHd, ActorUID actorUID, Class
 	for(auto it = pending.begin(); it != pending.end(); ++it) {
 		if(it->a != actorUID && it->b != actorUID) continue;
 		SendRevive(clientHd, it->userID, actorUID, it->a == actorUID ? it->b : it->a, pos);
-		LOG("Fog :: revive re-sent with the enter of actor %u", (u32)actorUID);
+		Sv::SN_PlayerSyncTeleport teleport;
+		teleport.objectID = (u32)localID;
+		teleport.pos = v2f(pos);
+		SendPacketData<Sv::SN_PlayerSyncTeleport>(clientHd, sizeof(teleport), &teleport);
+		LOG("Fog :: revive re-sent with the enter of actor %u, then teleported to (%.0f, %.0f)", (u32)actorUID, pos.x, pos.y);
 		pending.erase(it);
 		break;
 	}

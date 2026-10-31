@@ -839,6 +839,43 @@ void World::UpdateMonsterAi(f32 delta)
 			}
 			continue;
 		}
+		static const u32 minionTag = StatusTypeKey("Minion");
+		static const f64 MEASURED_MINION_RETARGET_MS = 1000.0;
+		static const f64 MEASURED_MINION_MASTER_CHASE_SEC = 5.0;
+		const bool targetIsMaster = targetPos && FindMasterActor(npc.monsterTarget) != nullptr;
+		if(!targetIsMaster) npc.monsterMasterSince = Time::ZERO;
+		else if(npc.monsterMasterSince == Time::ZERO) npc.monsterMasterSince = localTime;
+		if(titanMode && ai.tagKey == minionTag && targetIsMaster && localTime >= npc.monsterRetargetAt) {
+			npc.monsterRetargetAt = TimeAdd(localTime, TimeMsToTime(MEASURED_MINION_RETARGET_MS));
+			f32 bestOther = ai.perception;
+			const ActorNpc* other = nullptr;
+			const GameXmlContent::MonsterAttack* otherAttack = nullptr;
+			foreach_const(o, actorNpcList) {
+				if(!MonsterHostile(npc, *o)) continue;
+				const GameXmlContent::MonsterAttack* a = ai.byTarget[MonsterTargetKind(*o->monsterAi)];
+				if(!a) continue;
+				const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos)) - o->monsterAi->radius;
+				if(d < bestOther) { bestOther = d; other = &*o; otherAttack = a; }
+			}
+			const bool tooLong = TimeDiffSec(TimeDiff(npc.monsterMasterSince, localTime)) >= MEASURED_MINION_MASTER_CHASE_SEC;
+			if(other || tooLong) {
+				LOG("Monster :: creature=%d (local %d) releases its master target (%s)", (i32)npc.docID, npc.localID, other ? "closer minion or structure" : "chase too long");
+				npc.monsterMasterSince = Time::ZERO;
+				if(other) {
+					npc.monsterTarget = other->UID;
+					targetAt = other->pos;
+					targetPos = &targetAt;
+					attack = otherAttack;
+					replication->SendAiSetTargetToAll(npc.UID, other->UID);
+				}
+				else {
+					npc.monsterTarget = ActorUID::INVALID;
+					targetPos = nullptr;
+					npc.monsterNextSearch = TimeAdd(localTime, TimeMsToTime(MEASURED_MINION_RETARGET_MS));
+					replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
+				}
+			}
+		}
 		if(!targetPos && ai.perception > 0 && localTime >= npc.monsterNextSearch) {
 			npc.monsterNextSearch = TimeAdd(localTime, TimeMsToTime(MONSTER_SEARCH_MS));
 			f32 best = ai.perception;

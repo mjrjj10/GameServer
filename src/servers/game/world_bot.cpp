@@ -547,6 +547,55 @@ void World::UpdateBotMovement()
 	}
 }
 
+bool World::Pilot(Player& p, PilotDecision* out)
+{
+	static const f32 HYP_PILOT_ENGAGE_RANGE = 1300.0f;
+	if(!map || !map->ingameLevels || !p.body || p.dead || p.Main().classType == ClassType::NONE) return false;
+	const vec3 pos = p.body->GetWorldPos();
+	const vec2 here = vec2(pos);
+	f32 best = HYP_PILOT_ENGAGE_RANGE;
+	foreach_const(e, players) {
+		if(e->dead || e->untargetable || e->team == p.team || !e->body || e->Main().classType == ClassType::NONE || !(e->fogSeenBy & (1u << p.team))) continue;
+		if(BotDangerAt(p, vec2(e->body->GetWorldPos()), nullptr, nullptr)) continue;
+		const f32 d = glm::length(vec2(e->body->GetWorldPos()) - here);
+		if(d >= best) continue;
+		best = d;
+		out->hasTarget = true;
+		out->master = true;
+		out->target = e->body->GetWorldPos();
+		out->hp = e->Main().hp;
+		out->hpMax = e->Main().hpMax;
+		out->doc = 100000000 + (i32)e->Main().classType;
+	}
+	if(!out->hasTarget) {
+		foreach_const(npc, actorNpcList) {
+			if(!npc->monsterAi || !NpcHittableBy(*npc, p)) continue;
+			if(IsStructure(*npc) && !BotSiegeOk(p, *npc)) continue;
+			if(!IsStructure(*npc) && BotDangerAt(p, vec2(npc->pos), nullptr, nullptr)) continue;
+			const f32 d = glm::length(vec2(npc->pos) - here);
+			if(d >= best) continue;
+			best = d;
+			out->hasTarget = true;
+			out->target = npc->pos;
+			out->hp = npc->hp;
+			out->hpMax = npc->hpMax;
+			out->doc = (i32)npc->docID;
+		}
+	}
+	vec2 goal = here;
+	if(!BotRetreat(p, &goal) && !BotObjective(p, &goal) && !BotLaneGoal(p, &goal)) goal = here;
+	goal = BotNavStep(p, goal);
+	vec2 tower;
+	f32 towerRange = 0;
+	if(BotDangerAt(p, goal, &tower, &towerRange)) {
+		const vec2 away = here - tower;
+		const f32 len = glm::length(away);
+		goal = tower + (len > 1.0f ? away / len : vec2(1, 0)) * towerRange;
+	}
+	out->goal = vec3(goal, pos.z);
+	return true;
+}
+
 void World::UpdateObserver()
 {
 	static const f64 OBSERVER_MOVE_MS = 4000.0;

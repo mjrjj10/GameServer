@@ -780,7 +780,18 @@ void Game::WriteTelemetry()
 		fprintf(f, "%s{\"name\":\"%ls\",\"x\":%.0f,\"y\":%.0f,\"z\":%.0f,\"cx\":%.0f,\"cy\":%.0f,\"cz\":%.0f,\"yaw\":%.3f,\"hp\":%d,\"hpMax\":%d,\"dead\":%d,\"class\":%d}", first ? "" : ",", p->name.data(), pos.x, pos.y, pos.z, p->lastClientPos.x, p->lastClientPos.y, p->lastClientPos.z, p->input.rot.bodyYaw, m.hp, m.hpMax, p->dead ? 1 : 0, (i32)m.classType);
 		first = false;
 	}
-	fprintf(f, "],\"monsters\":[");
+	fprintf(f, "],\"pilot\":");
+	World::Player* pilotPlayer = nullptr;
+	foreach(p, world.players) if(p->clientHd != ClientHandle::INVALID && !p->removed && p->body) { pilotPlayer = &*p; break; }
+	World::PilotDecision pilot;
+	if(pilotPlayer && world.Pilot(*pilotPlayer, &pilot)) {
+		fprintf(f, "{\"gx\":%.0f,\"gy\":%.0f,\"gz\":%.0f,\"target\":", pilot.goal.x, pilot.goal.y, pilot.goal.z);
+		if(pilot.hasTarget) fprintf(f, "{\"x\":%.0f,\"y\":%.0f,\"z\":%.0f,\"hp\":%d,\"hpMax\":%d,\"doc\":%d,\"master\":%d}", pilot.target.x, pilot.target.y, pilot.target.z, pilot.hp, pilot.hpMax, pilot.doc, pilot.master ? 1 : 0);
+		else fprintf(f, "null");
+		fprintf(f, "}");
+	}
+	else fprintf(f, "null");
+	fprintf(f, ",\"monsters\":[");
 	first = true;
 	i32 count = 0;
 	foreach_const(n, world.actorNpcList) {

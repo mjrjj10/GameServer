@@ -540,6 +540,8 @@ struct World
 		Time monsterNextAttack = Time::ZERO;
 		eastl::array<Time,24> monsterSkillReady = {};
 		Time monsterNextSearch = Time::ZERO;
+		Time monsterRetargetAt = Time::ZERO;
+		Time monsterMasterSince = Time::ZERO;
 		Time coreAnnounceAt = Time::ZERO;
 		Time monsterNextSync = Time::ZERO;
 		Time monsterLastTurn = Time::ZERO;
@@ -891,6 +893,8 @@ struct World
 	void UpdateBotCombat();
 	void UpdateBotMovement();
 	void UpdateObserver();
+	struct PilotDecision { vec3 goal = vec3(0); bool hasTarget = false; vec3 target = vec3(0); i32 hp = 0; i32 hpMax = 0; i32 doc = 0; bool master = false; };
+	bool Pilot(Player& p, PilotDecision* out);
 	Time observerNextMove = Time::ZERO;
 	i32 observerTarget = -1;
 	f32 PlayerMoveSpeed(const Player& p) const;

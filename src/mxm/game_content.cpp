@@ -4820,7 +4820,7 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 			node.apply = e->IntAttribute("_bApply") == 1;
 			node.localID = e->IntAttribute("_LocalID");
 			node.tagID = e->IntAttribute("_TagID", -1);
-			if(node.apply || node.applyType == LevelEventNode::APPLY_LOCAL_ID) node.statusIndex = e->IntAttribute("_StatusIndex");
+			node.statusIndex = e->IntAttribute("_StatusIndex");
 		}
 		else if(XMLElement* e = pNode->FirstChildElement("_OnHitTriggerData")) { node.kind = LevelEventNode::ON_HIT_TRIGGER; node.localID = e->IntAttribute("_LocalID"); node.delay = e->FloatAttribute("_DelayTime"); node.hitCount = e->IntAttribute("_HitCount"); }
 		else if(XMLElement* e = pNode->FirstChildElement("_ActionChangeInfo")) { node.kind = LevelEventNode::ACTION_CHANGE; node.localID = e->IntAttribute("_ID"); if(const char* a = e->Attribute("_ActionIndex")) node.action = ActionStateFromString(a); }
