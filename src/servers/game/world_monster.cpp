@@ -622,6 +622,43 @@ bool World::UpdateMonsterScript(ActorNpc& npc, const GameXmlContent::MonsterAi& 
 	return true;
 }
 
+bool World::UpdateMonsterAllyBuff(ActorNpc& npc, const GameXmlContent::MonsterAi& ai)
+{
+	if(npc.faction != Faction::RED && npc.faction != Faction::BLUE) return false;
+	for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)npc.monsterSkillReady.size(); s++) {
+		const GameXmlContent::MonsterAttack& buff = ai.attacks[s];
+		if(buff.target != GameXmlContent::MonsterAttack::ALLY) continue;
+		if(npc.monsterSkillReady[s] == Time::ZERO) npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime((buff.firstAt >= 0 ? buff.firstAt : buff.cooldown) * 1000.0));
+		if(localTime < npc.monsterSkillReady[s]) continue;
+		Player* ally = nullptr;
+		f32 best = buff.range;
+		foreach(p, players) {
+			if(p->dead || p->untargetable || p->removed || !p->body || (Faction)p->team != npc.faction) continue;
+			const f32 d = glm::length(vec2(p->body->GetWorldPos()) - vec2(npc.pos));
+			if(d <= best) { best = d; ally = &*p; }
+		}
+		if(!ally) continue;
+		npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime(buff.cooldown * 1000.0));
+		const vec2 rel = vec2(ally->body->GetWorldPos()) - vec2(npc.pos);
+		const f32 yaw = glm::length(rel) > 1.0f ? atan2f(rel.y, rel.x) : npc.rot.z;
+		npc.rot.z = yaw;
+		npc.monsterSyncYaw = yaw;
+		npc.monsterLastTurn = localTime;
+		npc.actionState = buff.state;
+		replication->SendNpcTurnToAll(npc.UID, yaw);
+		replication->SendMonsterStateToAll(npc.UID, buff.state, npc.pos, 0.0f);
+		if(buff.anim > 0) {
+			npc.stateEndAt = TimeAdd(localTime, TimeMsToTime(buff.anim * 1000.0));
+			if(npc.monsterHoldUntil < npc.stateEndAt) npc.monsterHoldUntil = npc.stateEndAt;
+		}
+		foreach_const(st, buff.allyStatuses) ApplyStatusFromNpc(npc, *ally, *st);
+		foreach_const(st, buff.selfStatuses) ApplyMonsterStatus(npc, *st, true);
+		LOG("Monster :: creature=%d (local %d) buffs ally %ls with %s", (i32)npc.docID, npc.localID, ally->name.data(), ActionStateToString(buff.state));
+		return true;
+	}
+	return false;
+}
+
 bool World::UpdateMonsterSeek(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, f32 speed, f32 delta)
 {
 	if(localTime < npc.monsterHoldUntil) return true;
@@ -815,6 +852,7 @@ void World::UpdateMonsterAi(f32 delta)
 		}
 		if(hostileMonsters && ai.scriptPeriod > 0 && !ai.script.empty() && UpdateMonsterScript(npc, ai, targetPos, delta)) continue;
 		if(localTime < npc.monsterHoldUntil) continue;
+		if(UpdateMonsterAllyBuff(npc, ai)) continue;
 		if(targetPos && attack) {
 			const vec2 rel = vec2(*targetPos) - vec2(npc.pos);
 			const f32 dist = glm::length(rel);

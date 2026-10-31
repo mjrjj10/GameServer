@@ -886,6 +886,7 @@ struct World
 	void StartMonsterAttack(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const GameXmlContent::MonsterAttack* attack, const vec3* targetPos, f32 dist, f32 yaw, f32 run);
 	bool UpdateMonsterScript(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const vec3* targetPos, f32 delta);
 	bool UpdateMonsterSeek(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, f32 speed, f32 delta);
+	bool UpdateMonsterAllyBuff(ActorNpc& npc, const GameXmlContent::MonsterAi& ai);
 	struct PendingTrapHit { ActorUID dynamicUID; const GameXmlContent::DynamicTrapRemote* remote; u32 seed; vec3 nodePos; vec2 nodeDir; ActorUID targetUID; i32 playerIndex; };
 	void UpdateDynamicTraps();
 	void UpdateDynamicTrap(ActorDynamic& dyn, eastl::fixed_vector<PendingTrapHit,32,true>& hits);

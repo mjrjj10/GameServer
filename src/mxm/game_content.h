@@ -1184,7 +1184,7 @@ struct GameXmlContent
 
 	struct MonsterAttack
 	{
-		enum Target: u8 { MASTER = 0, MINION, STRUCTURE, TITAN, _COUNT };
+		enum Target: u8 { MASTER = 0, MINION, STRUCTURE, TITAN, ALLY, _COUNT };
 		Target target = MASTER;
 		ActionStateID state = ActionStateID::INVALID;
 		f32 range = 0;
@@ -1218,6 +1218,7 @@ struct GameXmlContent
 		bool selfCentered = false;
 		f32 share = 1;
 		eastl::fixed_vector<i32,4,false> selfStatuses;
+		eastl::fixed_vector<i32,4,false> allyStatuses;
 		eastl::fixed_vector<MonsterFire,4,false> fires;
 	};
 
