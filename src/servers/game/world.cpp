@@ -1142,6 +1142,7 @@ void World::SwapMainMaster(Player& p)
 {
 	AccumulateMasterScore(p);
 	p.mainCharaID ^= 1;
+	p.tagMissedBy |= p.hiddenFrom;
 	eastl::swap(p.mana, p.benchMana);
 	eastl::swap(p.stamina, p.benchStamina);
 	eastl::swap(p.res, p.benchRes);
@@ -1223,7 +1224,6 @@ void World::RespawnPlayer(Player& player)
 
 	LOG("Respawn :: %ls", player.name.data());
 	replication->SendReviveToAll(player.userID, player.Main().UID, player.Sub().UID, player.spawnPos);
-	player.reviveMissedBy = player.hiddenFrom;
 	foreach(c, player.characters) {
 		replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax);
 	}

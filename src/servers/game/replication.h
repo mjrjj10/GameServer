@@ -277,6 +277,8 @@ struct Replication
 	eastl::array<ClientHandle,MAX_PLAYERS> clientHandle;
 	eastl::array<PlayerStatePair,MAX_PLAYERS> playerState;
 	eastl::array<PlayerLocalInfo,MAX_PLAYERS> playerLocalInfo;
+	struct PendingRevive { UserID userID; ActorUID a; ActorUID b; };
+	eastl::array<eastl::fixed_vector<PendingRevive,10,true>,MAX_PLAYERS> pendingRevives;
 
 	struct SentMove
 	{
@@ -384,6 +386,7 @@ struct Replication
 	void SendPlayerJump(ClientHandle clientHd, ActorUID mainActorUID, f32 rotate, f32 moveDirX, f32 moveDirY);
 	void SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, SkillID skillID, i32 damage, i32 hp, i32 hpMax, u32 damageType = 0, i32 statusID = 0);
 	void SendHpToAll(ActorUID actorUID, i32 hp, i32 hpMax);
+	void SendHp(ClientHandle clientHd, ActorUID actorUID, i32 hp, i32 hpMax);
 	void SendBushStateToAll(ActorUID actorUID, ActorUID bushUID);
 	void SendLightArea(ClientHandle clientHd, bool on, u32 cell, u8 team, u8 radius);
 	void SendTagCooltime(ClientHandle clientHd, ActorUID actorUID, u32 ms);

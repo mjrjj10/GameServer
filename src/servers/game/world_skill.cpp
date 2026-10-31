@@ -1252,15 +1252,10 @@ void World::UpdateFog()
 				const f32 baseSpeed = const_cast<CharacterModel&>(content.GetMaster(shown.classType).character).getMoveSpeed();
 				const f32 speed = baseSpeed * (p->battleStage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (p->battleStage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f));
 				replication->SendEnterActor(viewer->clientHd, known, shown.classType, p->body->GetWorldPos(), p->input.rot.bodyYaw, p->input.rot.upperYaw, p->input.moveTo, p->battleStage > 0, speed, shown.actionState != ActionStateID::INVALID ? shown.actionState : ActionStateID::NONE_BEHAVIORSTATE, shown.hp, shown.hpMax);
-				if(p->reviveMissedBy & bit) {
-					p->reviveMissedBy &= ~bit;
-					replication->SendRevive(viewer->clientHd, p->userID, known, known == main ? p->Sub().UID : main, p->body->GetWorldPos());
-					LOG("Fog :: %ls revived while hidden, revive re-sent to viewer %ls", p->name.data(), viewer->name.data());
-				}
-				if(known != main) {
-					replication->SendPlayerTag(viewer->clientHd, main, known);
-					LOG("Fog :: %ls changed master while hidden, re-tagged for viewer %ls", p->name.data(), viewer->name.data());
-				}
+				const ActorMaster& bench = known == main ? p->Sub() : chara;
+				replication->SendHp(viewer->clientHd, bench.UID, bench.hp, bench.hpMax);
+				if(p->tagMissedBy & bit) replication->SendPlayerTag(viewer->clientHd, main, p->Sub().UID);
+				p->tagMissedBy &= ~bit;
 				p->hiddenFrom &= ~bit;
 			}
 		}

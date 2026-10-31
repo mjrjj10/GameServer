@@ -9,6 +9,23 @@
 #include <EAStdC/EAString.h>
 #include <mxm/game_content.h>
 #include "config.h"
+#include <chrono>
+
+static void TruthEvent(const char* fmt, ...)
+{
+	if(!Config().DevTruth) return;
+	static FILE* f = nullptr;
+	if(!f) f = fopen("truth_events.jsonl", "ab");
+	if(!f) return;
+	const i64 wall = (i64)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	fprintf(f, "{\"w\":%lld,", wall);
+	va_list args;
+	va_start(args, fmt);
+	vfprintf(f, fmt, args);
+	va_end(args);
+	fprintf(f, "}\n");
+	fflush(f);
+}
 
 static const u32 PACKET_DAMAGE_TYPE_STATUS = 1;
 
@@ -1830,6 +1847,7 @@ bool Replication::SendRemoteCreateToClient(i32 clientID, const RemoteCreate& rem
 	if(parentLocal == LocalActorID::INVALID || ownerLocal == LocalActorID::INVALID) return false;
 	if(playerLocalInfo[clientID].hiddenActors.count(remote.ownerUID) || playerLocalInfo[clientID].hiddenActors.count(remote.parentUID)) return false;
 	const LocalActorID targetLocal = remote.targetUID != ActorUID::INVALID ? GetLocalActorID(clientHd, remote.targetUID) : LocalActorID::INVALID;
+	TruthEvent("\"c\":%d,\"remote\":%u,\"doc\":%d,\"owner\":%u,\"x\":%.0f,\"y\":%.0f,\"creator\":%d", clientID, remote.seed, (i32)remote.doc, (u32)ownerLocal, remote.firePos.x, remote.firePos.y, (i32)remote.creator);
 
 	if(remote.creator != 0) {
 		PacketWriter<Sv::SN_RemoteSyncCreateFromCreatorId,512> packet;
@@ -2594,6 +2612,7 @@ void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID 
 		const LocalActorID targetLocal = GetLocalActorID(clientHd, targetUID);
 		if(targetLocal == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(targetUID)) continue;
 		const LocalActorID casterLocal = GetLocalActorID(clientHd, casterUID);
+		TruthEvent("\"c\":%d,\"status\":%d,\"to\":%u,\"from\":%u,\"dur\":%.2f,\"refresh\":%d", clientID, statusID, (u32)targetLocal, (u32)casterLocal, durationSec, refresh ? 1 : 0);
 
 		const f32 dist = to == vec3(0) ? 0.0f : glm::length(vec2(to - from));
 		PacketWriter<Sv::SN_AddStatus,128> packet;
@@ -2815,6 +2834,16 @@ void Replication::SendEnterActor(ClientHandle clientHd, ActorUID actorUID, Class
 	stat._MAX = (f32)hpMax;
 	stat._ReasonCode = 0;
 	SendPacket(clientHd, stat);
+
+	if(found == playerMap.end()) return;
+	auto& pending = pendingRevives[found->second];
+	for(auto it = pending.begin(); it != pending.end(); ++it) {
+		if(it->a != actorUID && it->b != actorUID) continue;
+		SendRevive(clientHd, it->userID, actorUID, it->a == actorUID ? it->b : it->a, pos);
+		LOG("Fog :: revive re-sent with the enter of actor %u", (u32)actorUID);
+		pending.erase(it);
+		break;
+	}
 }
 
 void Replication::SendChangeSkillSlot(ClientHandle clientHd, ActorUID actorUID, i32 slot, SkillID skill, i32 resetCooltimeID)
@@ -3132,6 +3161,19 @@ void Replication::SendHpToAll(ActorUID actorUID, i32 hp, i32 hpMax)
 	}
 }
 
+void Replication::SendHp(ClientHandle clientHd, ActorUID actorUID, i32 hp, i32 hpMax)
+{
+	const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+	if(localID == LocalActorID::INVALID) return;
+	Sv::SN_UpdateStat stat;
+	stat.characterID = (u32)localID;
+	stat._STAT_TYPE = 0;
+	stat._CUR = (f32)hp;
+	stat._MAX = (f32)hpMax;
+	stat._ReasonCode = 0;
+	SendPacket(clientHd, stat);
+}
+
 void Replication::SendNpcDeadAckToAll(ActorUID npcUID, ActorUID killerUID, u32 killerDoc)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
@@ -3230,6 +3272,11 @@ void Replication::SendReviveToAll(UserID userID, ActorUID activeUID, ActorUID in
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		SendRevive(clientHandle[clientID], userID, activeUID, inactiveUID, pos);
+		if(playerLocalInfo[clientID].hiddenActors.count(activeUID) || playerLocalInfo[clientID].hiddenActors.count(inactiveUID)) {
+			auto& pending = pendingRevives[clientID];
+			for(auto it = pending.begin(); it != pending.end(); ) it = it->userID == userID ? pending.erase(it) : it + 1;
+			pending.push_back({ userID, activeUID, inactiveUID });
+		}
 	}
 }
 
