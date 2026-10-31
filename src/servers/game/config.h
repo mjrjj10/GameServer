@@ -24,6 +24,7 @@ struct CConfigGame
 	i32 DevTelemetry = 0;
 	i32 DevTrail = 0;
 	i32 DevTruth = 0;
+	i32 DevObserver = 0;
 	i32 DevGodPlayers = 0;
 	i32 HostIP[4] = { 0, 0, 0, 0 };
 	i32 TraceNetwork = false;

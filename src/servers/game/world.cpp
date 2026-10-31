@@ -257,6 +257,7 @@ void World::Update(Time localTime_)
 		if(!frozen && !combatLocked) UpdateBotMovement();
 		if(!frozen && !combatLocked) UpdateBotCombat();
 		if(!frozen && !combatLocked) UpdateBotSkills();
+		if(!frozen && !combatLocked) UpdateObserver();
 	}
 
 	// execute skill programs

@@ -81,7 +81,7 @@ void World::UpdateBotSkills()
 		Player* target = nullptr;
 		f32 best = 1e9f;
 		foreach(e, players) {
-			if(e->dead || e->team == bot.team || !(e->fogSeenBy & (1u << bot.team))) continue;
+			if(e->dead || e->untargetable || e->team == bot.team || !(e->fogSeenBy & (1u << bot.team))) continue;
 			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(pos));
 			if(d < best) { best = d; target = &*e; }
 		}
@@ -547,6 +547,35 @@ void World::UpdateBotMovement()
 	}
 }
 
+void World::UpdateObserver()
+{
+	static const f64 OBSERVER_MOVE_MS = 4000.0;
+	static const f64 OBSERVER_FIGHT_RECENT_SEC = 3.0;
+	static const f32 OBSERVER_DISTANCE = 450.0f;
+	if(!Config().DevObserver || gameStartedAt == Time::ZERO || localTime < observerNextMove) return;
+	observerNextMove = TimeAdd(localTime, TimeMsToTime(OBSERVER_MOVE_MS));
+	Player* human = nullptr;
+	foreach(p, players) if(p->clientHd != ClientHandle::INVALID && !p->removed && p->body) { human = &*p; break; }
+	if(!human || human->dead) return;
+	human->untargetable = true;
+	human->devGod = true;
+	const Player* best = nullptr;
+	f64 bestAge = 1e9;
+	foreach_const(p, players) {
+		if(p->clientHd != ClientHandle::INVALID || p->dead || !p->body || p->Main().classType == ClassType::NONE) continue;
+		const f64 age = p->battleActionAt == Time::ZERO ? 1e6 : TimeDiffSec(TimeDiff(p->battleActionAt, localTime));
+		const f64 score = age + (p->index == (u32)observerTarget && age < OBSERVER_FIGHT_RECENT_SEC ? -OBSERVER_FIGHT_RECENT_SEC : 0.0);
+		if(score < bestAge) { bestAge = score; best = &*p; }
+	}
+	if(!best) return;
+	observerTarget = (i32)best->index;
+	const vec3 at = best->body->GetWorldPos();
+	const f32 yaw = best->input.rot.bodyYaw;
+	const vec3 spot = at - vec3(cosf(yaw), sinf(yaw), 0) * OBSERVER_DISTANCE;
+	MovePlayer(*human, vec3(spot.x, spot.y, at.z), yaw, true);
+	LOG("Observer :: watches %ls at (%.0f, %.0f) last action %.1fs ago", best->name.data(), at.x, at.y, bestAge);
+}
+
 void World::UpdateBotCombat()
 {
 	foreach(it, players) {
@@ -558,7 +587,7 @@ void World::UpdateBotCombat()
 		if(WeaponIsMelee(bot)) {
 			bool swing = false;
 			foreach_const(e, players) {
-				if(e->dead || e->team == bot.team || !(e->fogSeenBy & (1u << bot.team))) continue;
+				if(e->dead || e->untargetable || e->team == bot.team || !(e->fogSeenBy & (1u << bot.team))) continue;
 				if(glm::length(vec2(e->body->GetWorldPos()) - vec2(bot.body->GetWorldPos())) <= BOT_MELEE_RANGE + HitRadius(*e) + HitRadius(bot)) { swing = true; break; }
 			}
 			if(!swing && !Config().DevShowcase) {
@@ -580,7 +609,7 @@ void World::UpdateBotCombat()
 		Player* target = nullptr;
 		f32 best = range;
 		foreach(e, players) {
-			if(e->dead || e->team == bot.team || !(e->fogSeenBy & (1u << bot.team))) continue;
+			if(e->dead || e->untargetable || e->team == bot.team || !(e->fogSeenBy & (1u << bot.team))) continue;
 			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(pos));
 			if(d < best) { best = d; target = &*e; }
 		}

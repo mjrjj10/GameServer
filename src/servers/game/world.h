@@ -890,6 +890,9 @@ struct World
 	void UpdateSummons();
 	void UpdateBotCombat();
 	void UpdateBotMovement();
+	void UpdateObserver();
+	Time observerNextMove = Time::ZERO;
+	i32 observerTarget = -1;
 	f32 PlayerMoveSpeed(const Player& p) const;
 	void UpdateBotSkills();
 	void UpdateSummonAi(f32 delta);
