@@ -157,6 +157,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		attacker.lastHitAt = localTime;
 		MarkInBattle(attacker);
 		MarkInBattle(target);
+		if(target.body) TowerCallForHelp(attacker, target.body->GetWorldPos(), (Faction)target.team, nullptr);
 	}
 	if(HasStatusType(target, StatusType::GODMODE)) return;
 	if(attacker.team != target.team && HasStatusType(target, StatusType::BURROW)) return;
@@ -452,6 +453,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 {
 	if(damage <= 0 || !NpcHittableBy(npc, attacker)) return;
 	if(npc.ownerUID == ActorUID::INVALID && NpcHasStatusType(npc, StatusType::GODMODE)) return;
+	if(IsStructure(npc)) TowerCallForHelp(attacker, npc.pos, npc.faction, &npc);
 	if(npc.monsterEvadeUntil != Time::ZERO && localTime < npc.monsterEvadeUntil) return;
 	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence, 0.0f)) + 0.5f), 1);
 	const i32 hpBefore = npc.hp;

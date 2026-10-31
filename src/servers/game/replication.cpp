@@ -2875,6 +2875,16 @@ void Replication::SendTeleportRequest(ClientHandle clientHd, ActorUID actorUID, 
 	SendPacketData<Sv::SQ_TeleportObject>(clientHd, sizeof(packet), &packet);
 }
 
+void Replication::SendPlayerSyncTeleport(ClientHandle clientHd, ActorUID actorUID, const vec3& pos)
+{
+	const LocalActorID local = GetLocalActorID(clientHd, actorUID);
+	if(local == LocalActorID::INVALID) return;
+	Sv::SN_PlayerSyncTeleport packet;
+	packet.objectID = (u32)local;
+	packet.pos = v2f(pos);
+	SendPacketData<Sv::SN_PlayerSyncTeleport>(clientHd, sizeof(packet), &packet);
+}
+
 void Replication::SendPlayerSyncTeleportToAll(ActorUID actorUID, const vec3& pos)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {

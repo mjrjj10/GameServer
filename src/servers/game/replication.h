@@ -387,6 +387,7 @@ struct Replication
 	void SendDamageToAll(ActorUID attackerUID, ActorUID targetUID, SkillID skillID, i32 damage, i32 hp, i32 hpMax, u32 damageType = 0, i32 statusID = 0);
 	void SendHpToAll(ActorUID actorUID, i32 hp, i32 hpMax);
 	void SendHp(ClientHandle clientHd, ActorUID actorUID, i32 hp, i32 hpMax);
+	void SendPlayerSyncTeleport(ClientHandle clientHd, ActorUID actorUID, const vec3& pos);
 	void SendBushStateToAll(ActorUID actorUID, ActorUID bushUID);
 	void SendLightArea(ClientHandle clientHd, bool on, u32 cell, u8 team, u8 radius);
 	void SendTagCooltime(ClientHandle clientHd, ActorUID actorUID, u32 ms);

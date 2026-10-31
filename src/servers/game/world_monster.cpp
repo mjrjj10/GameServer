@@ -536,6 +536,24 @@ void World::FireMonsterRemote(const MonsterFireEvent& fire)
 	replication->SendRemoteCreateToAll(npc.UID, fire.seed, (RemoteIdx)fire.fire->remote, npc.pos, npc.rot.z, vec3(vec2(targetPos), npc.pos.z), fire.target, fire.fire->node.c_str());
 }
 
+void World::TowerCallForHelp(const Player& attacker, const vec3& victimPos, Faction victimTeam, const ActorNpc* hitTower)
+{
+	if(!map || !map->ingameLevels || (Faction)attacker.team == victimTeam || !attacker.body) return;
+	const vec3 at = attacker.body->GetWorldPos();
+	foreach(o, actorNpcList) {
+		ActorNpc& tower = *o;
+		if(!tower.monsterAi || tower.hp <= 0 || tower.removeAt != Time::ZERO || tower.faction != victimTeam || !IsStructure(tower)) continue;
+		const GameXmlContent::MonsterAttack* attack = tower.monsterAi->byTarget[GameXmlContent::MonsterAttack::MASTER];
+		if(!attack) continue;
+		if(glm::length(vec2(at) - vec2(tower.pos)) > attack->range) continue;
+		if(&tower != hitTower && glm::length(vec2(victimPos) - vec2(tower.pos)) > attack->range) continue;
+		if(tower.monsterTarget == attacker.Main().UID || FindMasterActor(tower.monsterTarget)) continue;
+		tower.monsterTarget = attacker.Main().UID;
+		replication->SendAiSetTargetToAll(tower.UID, tower.monsterTarget);
+		LOG("Monster :: tower creature=%d (local %d) switches to %ls (%s)", (i32)tower.docID, tower.localID, attacker.name.data(), &tower == hitTower ? "hit the tower" : "hit an allied master");
+	}
+}
+
 void World::UpdateMonsterDash(ActorNpc& npc)
 {
 	if(npc.dashEnd == Time::ZERO || localTime < npc.dashStart) return;
@@ -880,7 +898,8 @@ void World::UpdateMonsterAi(f32 delta)
 			npc.monsterNextSearch = TimeAdd(localTime, TimeMsToTime(MONSTER_SEARCH_MS));
 			f32 best = ai.perception;
 			ActorUID chosen = ActorUID::INVALID;
-			if(ai.byTarget[GameXmlContent::MonsterAttack::MASTER]) {
+			const bool mastersLast = titanMode && IsStructure(npc);
+			if(ai.byTarget[GameXmlContent::MonsterAttack::MASTER] && !mastersLast) {
 				foreach(p, players) {
 					if(!MonsterHostile(npc, *p)) continue;
 					const f32 d = glm::length(vec2(p->body->GetWorldPos()) - vec2(npc.pos));
@@ -893,6 +912,13 @@ void World::UpdateMonsterAi(f32 delta)
 				if(!a) continue;
 				const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos)) - o->monsterAi->radius;
 				if(d < best) { best = d; chosen = o->UID; targetAt = o->pos; attack = a; }
+			}
+			if(mastersLast && chosen == ActorUID::INVALID && ai.byTarget[GameXmlContent::MonsterAttack::MASTER]) {
+				foreach(p, players) {
+					if(!MonsterHostile(npc, *p)) continue;
+					const f32 d = glm::length(vec2(p->body->GetWorldPos()) - vec2(npc.pos));
+					if(d < best) { best = d; chosen = p->Main().UID; targetAt = p->body->GetWorldPos(); attack = ai.byTarget[GameXmlContent::MonsterAttack::MASTER]; }
+				}
 			}
 			if(chosen != ActorUID::INVALID) {
 				LOG("Monster :: creature=%d (local %d) at (%.0f, %.0f) targets %u at %.0f", (i32)npc.docID, npc.localID, npc.pos.x, npc.pos.y, (u32)chosen, best);

@@ -1256,6 +1256,7 @@ void World::UpdateFog()
 				replication->SendHp(viewer->clientHd, bench.UID, bench.hp, bench.hpMax);
 				if(p->tagMissedBy & bit) replication->SendPlayerTag(viewer->clientHd, main, p->Sub().UID);
 				p->tagMissedBy &= ~bit;
+				replication->SendPlayerSyncTeleport(viewer->clientHd, main, p->body->GetWorldPos());
 				p->hiddenFrom &= ~bit;
 			}
 		}
