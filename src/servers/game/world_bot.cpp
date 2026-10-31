@@ -104,7 +104,7 @@ void World::UpdateBotSkills()
 		const i32 skill = (*skills)[slot];
 
 		const f32 botCd = slot == 4 ? content.BotUgSkillCoolTime() : content.BotNormalSkillCoolTime();
-		const f32 cd = MAX(content.GetSkillCoolTime(skill), botCd);
+		const f32 cd = MAX(SkillCoolTime(bot, skill), botCd);
 		bot.botSkillReady[slot] = TimeAdd(localTime, TimeMsToTime(cd * 1000.0));
 		const GameXmlContent::SkillInput* in = content.FindSkillInput(skill);
 		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(MAX(MAX(content.BotAfterSkillDelay(), 0.5f), in ? in->globalCoolTime : 0.0f) * 1000.0));

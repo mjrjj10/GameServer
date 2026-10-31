@@ -122,6 +122,8 @@ struct Game
 	void UpdateAutoStage();
 	void WriteTelemetry();
 	void WriteTrail();
+	void WriteTruth();
+	Time tNextTruth = Time::ZERO;
 	Time tNextTelemetry = Time::ZERO;
 	Time tAutoStageNext = Time::ZERO;
 	Time tAutoStageWait = Time::ZERO;

@@ -579,6 +579,7 @@ struct Replication
 	void PlayerRegisterMasterActor(ClientHandle clientHd, ActorUID masterActorUID, ClassType classType); // TODO: temp, find a better solution
 
 	LocalActorID GetLocalActorID(ClientHandle clientHd, ActorUID actorUID) const; // Can return INVALID
+	bool HiddenFor(ClientHandle clientHd, ActorUID actorUID) const;
 	ActorUID GetWorldActorUID(ClientHandle clientHd, LocalActorID localActorID) const; // Can return INVALID
 
 	template<typename Packet, u32 CAPACITY>

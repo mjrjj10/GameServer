@@ -1206,7 +1206,7 @@ void GameXmlContent::LoadMonsterFires()
 {
 	static const wchar* FILES[] = { L"/client/ActionBase_Monster.xml", L"/client/ActionBase_Monster_MOB_A.xml", L"/client/ActionBase_Monster_MOB_B.xml", L"/client/ActionBase_Monster_MOB_C.xml", L"/client/ActionBase_Monster_MOB_D.xml", L"/client/ActionBase_Monster_MOB_PUBLIC.xml", L"/client/ActionBase_Monster_MOB_PvP.xml" };
 	eastl::hash_map<u64, eastl::fixed_vector<MonsterFire,4,false>> fires;
-	struct Dash { f32 dist = 0; f32 time = 0; i32 pass = -1; eastl::fixed_vector<i32,4,false> anims; };
+	struct Dash { f32 dist = 0; f32 time = 0; i32 pass = -1; eastl::fixed_vector<i32,4,false> anims; eastl::fixed_vector<i32,4,false> loops; };
 	eastl::hash_map<u64, Dash> dashes;
 	for(i32 f = 0; f < (i32)ARRAY_COUNT(FILES); f++) {
 		XMLDocument doc;
@@ -1219,8 +1219,9 @@ void GameXmlContent::LoadMonsterFires()
 				Dash& dash = dashes[((u64)StatusTypeKey(cls) << 32) | (u32)ActionStateFromString(state)];
 				const i32 pass = e->IntAttribute("AnimationIndex");
 				if(pass >= 0 && pass < 4) {
-					while((i32)dash.anims.size() <= pass) dash.anims.push_back(0);
+					while((i32)dash.anims.size() <= pass) { dash.anims.push_back(0); dash.loops.push_back(1); }
 					dash.anims[pass] = e->IntAttribute("AnimationId");
+					if(e->IntAttribute("AnimationLoop") > 1) dash.loops[pass] = e->IntAttribute("AnimationLoop");
 				}
 				if(EA::StdC::Strcmp(type, "GRAPH_MOVE_HORZ") == 0) {
 					const char* param = e->Attribute("Param1");
@@ -1231,6 +1232,7 @@ void GameXmlContent::LoadMonsterFires()
 			auto& list = fires[((u64)StatusTypeKey(cls) << 32) | (u32)ActionStateFromString(state)];
 			MonsterFire fire;
 			fire.remote = e->IntAttribute("RemoteIndex");
+			fire.pass = (u8)MAX(MIN(e->IntAttribute("AnimationIndex"), 3), 0);
 			const char* node = e->Attribute("NodeName");
 			for(const char* c = node ? node : "Scene Root"; *c && !fire.node.full(); c++) fire.node.push_back((wchar)*c);
 			const char* param = e->Attribute("Param1");
@@ -1257,6 +1259,9 @@ void GameXmlContent::LoadMonsterFires()
 		const u64 classKey = (u64)StatusTypeKey(ai.second.className.c_str()) << 32;
 		foreach(attack, ai.second.attacks) {
 			auto dash = dashes.find(classKey | (u32)attack->state);
+			if(dash != dashes.end()) {
+				for(i32 p = 0; p < (i32)dash->second.anims.size(); p++) attack->passes.push_back({ dash->second.anims[p], dash->second.loops[p] });
+			}
 			if(dash != dashes.end() && dash->second.pass >= 0 && dash->second.dist > 0) {
 				attack->dashDist = dash->second.dist;
 				attack->dashTime = dash->second.time;
@@ -2817,6 +2822,9 @@ bool GameXmlContent::LoadSkillUpgrades()
 			pLevel->QueryFloatAttribute("_ConsumeUG", &up.consume[4]);
 			pLevel->QueryFloatAttribute("_StanceDuration", &up.stanceDuration);
 			pLevel->QueryFloatAttribute("_ToggleConsumeValuePerInterval", &up.toggleValue);
+			pLevel->QueryFloatAttribute("_TargetMaxDistance", &up.targetMaxDistance);
+			pLevel->QueryFloatAttribute("_CoolTime", &up.coolTime);
+			pLevel->QueryIntAttribute("_WeaponFireCount", &up.weaponFireCount);
 			ParseReplaceList(pLevel, "_REMOTELIST", "_RemoteIndex", up.remoteReplace);
 			for(XMLElement* p = pLevel->FirstChildElement("_REMOTELIST"); p && !up.remoteResize.full(); p = p->NextSiblingElement("_REMOTELIST")) {
 				const i32 id = p->IntAttribute("_RemoteIndex");
@@ -3823,6 +3831,7 @@ bool GameXmlContent::LoadStatusStatMods()
 		mod.stat = StatusModStatFromName(stat);
 		mod.value = pMod->FloatAttribute("value");
 		mod.mul = pMod->BoolAttribute("mul");
+		mod.count = pMod->FloatAttribute("count");
 		mod.regen = mod.stat != StatusMod::MOVESPEED;
 		if(mod.stat == StatusMod::OTHER || mod.value == 0) continue;
 		found->second.mods.push_back(mod);
@@ -4462,6 +4471,7 @@ bool GameXmlContent::LoadMoveGraphs()
 				const f32 v = EA::StdC::StrtoF32(c, &end);
 				if(end == c) break;
 				curve.h.push_back(v);
+				if(fabsf(v) > curve.maxAbs) curve.peak = v;
 				curve.maxAbs = MAX(curve.maxAbs, fabsf(v));
 				c = end;
 			}

@@ -1042,9 +1042,9 @@ void World::UpdateStatuses()
 		}
 
 		if(it->info && it->info->type == StatusType::LINK && localTime < it->until && it->casterIndex != it->targetIndex) {
-			const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput(it->info->skillIndex);
 			const Player& linker = players[it->casterIndex];
-			if(in && in->maxDistance > 0 && (linker.dead || glm::length(vec2(linker.body->GetWorldPos()) - vec2(target.body->GetWorldPos())) > in->maxDistance)) {
+			const f32 linkMax = SkillMaxDistance(linker, it->info->skillIndex);
+			if(linkMax > 0 && (linker.dead || glm::length(vec2(linker.body->GetWorldPos()) - vec2(target.body->GetWorldPos())) > linkMax)) {
 				LOG("Status :: link %d between %ls and %ls snapped", it->statusID, linker.name.data(), target.name.data());
 				const i32 skillIndex = it->info->skillIndex;
 				const u32 casterIdx = it->casterIndex;

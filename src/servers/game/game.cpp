@@ -4,6 +4,7 @@
 #include "game.h"
 
 #include <EAStdC/EAString.h>
+#include <chrono>
 #include <EAStdC/EAScanf.h>
 #include <common/utils.h>
 
@@ -426,6 +427,11 @@ void Game::Update(Time localTime_)
 		} break;
 
 		case Phase::Game: {
+			if(Config().DevTruth && localTime >= tNextTruth) {
+				static const f64 TRUTH_PERIOD_MS = 100.0;
+				tNextTruth = TimeAdd(localTime, TimeMsToTime(TRUTH_PERIOD_MS));
+				WriteTruth();
+			}
 			if((Config().DevTelemetry || Config().DevTrail) && localTime >= tNextTelemetry) {
 				static const f64 TELEMETRY_PERIOD_MS = 200.0;
 				tNextTelemetry = TimeAdd(localTime, TimeMsToTime(TELEMETRY_PERIOD_MS));
@@ -727,6 +733,34 @@ void Game::WriteTrail()
 		fprintf(f, "{\"t\":%.3f,\"stage\":%d,\"map\":%d,\"zone\":%d,\"started\":%d,\"name\":\"%ls\",\"x\":%.0f,\"y\":%.0f,\"z\":%.0f,\"yaw\":%.3f,\"class\":%d,\"hp\":%d,\"hpMax\":%d,\"dead\":%d}\n",
 			TimeDiffSec(TimeRelNow()), (i32)replication.stageIndex, (i32)replication.mapIndex, zoneIndex, tGameStarted != Time::ZERO ? 1 : 0, p->name.data(), pos.x, pos.y, pos.z, p->input.rot.bodyYaw, (i32)m.classType, m.hp, m.hpMax, p->dead ? 1 : 0);
 	}
+	fclose(f);
+}
+
+void Game::WriteTruth()
+{
+	ClientHandle viewer = ClientHandle::INVALID;
+	foreach_const(p, world.players) if(p->clientHd != ClientHandle::INVALID && !p->removed) { viewer = p->clientHd; break; }
+	if(viewer == ClientHandle::INVALID) return;
+	FILE* f = fopen("truth.jsonl", "ab");
+	if(!f) return;
+	const i64 wall = (i64)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	fprintf(f, "{\"w\":%lld,\"t\":%.3f,\"p\":[", wall, TimeDiffSec(TimeRelNow()));
+	bool first = true;
+	foreach_const(p, world.players) {
+		if(p->removed || !p->body) continue;
+		const vec3 pos = p->body->GetWorldPos();
+		const World::ActorMaster& m = p->Main();
+		fprintf(f, "%s[%u,\"%ls\",%.0f,%.0f,%.0f,%d,%d,%d,%d,%d]", first ? "" : ",", (u32)replication.GetLocalActorID(viewer, m.UID), p->name.data(), pos.x, pos.y, pos.z, (i32)m.actionState, m.hp, p->dead ? 1 : 0, p->clientHd != ClientHandle::INVALID ? 1 : 0, replication.HiddenFor(viewer, m.UID) ? 1 : 0);
+		first = false;
+	}
+	fprintf(f, "],\"n\":[");
+	first = true;
+	foreach_const(n, world.actorNpcList) {
+		if(n->hp <= 0 || n->removeAt != Time::ZERO) continue;
+		fprintf(f, "%s[%u,%d,%.0f,%.0f,%.0f,%d,%d,%d]", first ? "" : ",", (u32)replication.GetLocalActorID(viewer, n->UID), (i32)n->docID, n->pos.x, n->pos.y, n->pos.z, (i32)n->actionState, n->hp, replication.HiddenFor(viewer, n->UID) ? 1 : 0);
+		first = false;
+	}
+	fprintf(f, "]}\n");
 	fclose(f);
 }
 

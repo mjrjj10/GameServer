@@ -909,7 +909,8 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	if(!followUp) {
 		if(const GameXmlContent::SkillStance* st = content.FindSkillStance((i32)skillID)) {
 			const GameXmlContent::SkillUpgrade* su = LatestUpgradeWith(player, (i32)skillID, [](const GameXmlContent::SkillUpgrade& u) { return u.stanceDuration > 0; });
-			SetStance(player.Main(), st->stance, su ? su->stanceDuration : st->duration, st->weaponFireCount, st->cancelByDefeat);
+			const GameXmlContent::SkillUpgrade* fu = LatestUpgradeWith(player, (i32)skillID, [](const GameXmlContent::SkillUpgrade& u) { return u.weaponFireCount > 0; });
+			SetStance(player.Main(), st->stance, su ? su->stanceDuration : st->duration, fu ? fu->weaponFireCount : st->weaponFireCount, st->cancelByDefeat);
 		}
 	}
 
@@ -939,8 +940,9 @@ vec3 World::ResolveCastPos(const Player& player, SkillID skillID, const vec3& ca
 		const f32 len = glm::length(rel);
 		if(in && len > 1.0f) {
 			f32 clamped = len;
+			const f32 maxDistance = SkillMaxDistance(player, (i32)skillID);
 			if(in->minDistance > 0) clamped = MAX(clamped, in->minDistance);
-			if(in->maxDistance > 0) clamped = MIN(clamped, in->maxDistance);
+			if(maxDistance > 0) clamped = MIN(clamped, maxDistance);
 			if(clamped != len) castPos = vec3(from + rel / len * clamped, castPos.z);
 		}
 	}
@@ -1006,7 +1008,7 @@ bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos
 	}
 	if(!PlayerPaySkillCost(player, (i32)skillID)) return false;
 	player.castLockUntil = TimeAdd(localTime, TimeMsToTime(CAST_LOCK_MS));
-	if((i32)skillID % 100 == ULTIMATE_SKILL_SUFFIX) player.ultCooldownUntil = TimeAdd(localTime, TimeMsToTime(GetGameXmlContent().GetSkillCoolTime((i32)skillID) * 1000.0));
+	if((i32)skillID % 100 == ULTIMATE_SKILL_SUFFIX) player.ultCooldownUntil = TimeAdd(localTime, TimeMsToTime(SkillCoolTime(player, (i32)skillID) * 1000.0));
 	if(castCostLevel) {
 		for(i32 r = 0; r < 3; r++) {
 			if(castCostLevel->consume[r] > 0 && player.res[r] >= 0) { player.res[r] -= castCostLevel->consume[r]; player.resDirty = true; }
@@ -1020,12 +1022,12 @@ bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos
 
 void World::TargetPositionMove(const Player& player, SkillID skillID, const GameXmlContent::Action& action, const vec3& castPos, f32* distance, vec2* gotoDir) const
 {
-	const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput((i32)skillID);
+	const f32 maxDistance = SkillMaxDistance(player, (i32)skillID);
 	foreach_const(cmd, action.commands) {
 		if(cmd->type == ActionCommand::Type::MOVE && (cmd->move.preset == ActionCommand::MovePreset::TARGET_POS || cmd->move.preset == ActionCommand::MovePreset::TARGET_POS_LEAP)) {
 			const vec2 rel = vec2(castPos) - vec2(player.body->GetWorldPos());
 			const f32 len = glm::length(rel);
-			*distance = in && in->maxDistance > 0 ? MIN(len, in->maxDistance) : len;
+			*distance = maxDistance > 0 ? MIN(len, maxDistance) : len;
 			if(len > 1.0f) *gotoDir = rel / len;
 		}
 	}

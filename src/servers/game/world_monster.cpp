@@ -600,18 +600,19 @@ void World::StartMonsterAttack(ActorNpc& npc, const GameXmlContent::MonsterAi& a
 		}
 	}
 	const f32 travel = attack->speed > 0 ? dist / attack->speed : 0.0f;
-	static const u32 minionTag = StatusTypeKey("Minion");
 	const bool fired = hostileMonsters && !attack->fires.empty();
-	const bool visual = fired || (!attack->fires.empty() && map && map->ingameLevels && ai.tagKey != minionTag && !IsStructure(npc));
+	const bool visual = fired || (!attack->fires.empty() && map && map->ingameLevels);
 	static const u32 MEASURED_MONSTER_FIRE_SEED_STEP = 4;
 	const u32 seed = MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID & MONSTER_REMOTE_ID_MASK);
 	nextMonsterRemoteID += visual ? (u32)attack->fires.size() * MEASURED_MONSTER_FIRE_SEED_STEP : 1;
 	const u32 remoteID = fired ? seed + 1 : seed;
-	const f32 hitDelay = attack->hitAt >= 0 ? attack->hitAt : (fired ? attack->fires[0].at : attack->delay);
+	eastl::array<f32,4> passStart = {{ 0, 0, 0, 0 }};
+	for(i32 p = 1; p < 4 && p - 1 < (i32)attack->passes.size(); p++) passStart[p] = passStart[p - 1] + GetGameXmlContent().GetAniSeqTime(ai.className.c_str(), attack->passes[p - 1].first) * (f32)attack->passes[p - 1].second;
+	const f32 hitDelay = attack->hitAt >= 0 ? attack->hitAt : (fired ? passStart[attack->fires[0].pass] + attack->fires[0].at : attack->delay);
 	if(visual) {
 		u32 fireSeed = seed;
 		foreach_const(f, attack->fires) {
-			monsterFires.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime(f->at * 1000.0)), &*f, fireSeed });
+			monsterFires.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime((passStart[f->pass] + f->at) * 1000.0)), &*f, fireSeed });
 			fireSeed += MEASURED_MONSTER_FIRE_SEED_STEP;
 		}
 	}
@@ -797,11 +798,13 @@ void World::UpdateMonsterAi(f32 delta)
 			}
 		}
 		const bool neutral = MonsterNeutral(npc, hostileMonsters);
+		const bool titanMode = map && map->ingameLevels;
 		if(neutral && targetLost) {
 			targetLost = false;
+			if(titanMode) replication->SendBattleStateToAll(npc.UID, false, walk);
 			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
 		}
-		if(neutral && targetPos && glm::length(vec2(npc.pos) - vec2(npc.home)) > MAX(ai.lost, ai.perception)) {
+		if(neutral && !titanMode && targetPos && glm::length(vec2(npc.pos) - vec2(npc.home)) > MAX(ai.lost, ai.perception)) {
 			targetPos = nullptr;
 			npc.monsterTarget = ActorUID::INVALID;
 			npc.monsterReturning = true;
@@ -859,13 +862,13 @@ void World::UpdateMonsterAi(f32 delta)
 				npc.monsterTarget = chosen;
 				targetPos = &targetAt;
 				targetLost = false;
-				if(hostileMonsters) replication->SendBattleStateToAll(npc.UID, true, run);
+				if(hostileMonsters || (map && map->ingameLevels)) replication->SendBattleStateToAll(npc.UID, true, run);
 				replication->SendAiSetTargetToAll(npc.UID, chosen);
 			}
 		}
 		if(targetLost) {
 			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
-			if(hostileMonsters) replication->SendBattleStateToAll(npc.UID, false, walk);
+			if(hostileMonsters || (map && map->ingameLevels)) replication->SendBattleStateToAll(npc.UID, false, walk);
 		}
 
 		if(targetPos && attack && ai.awake != ActionStateID::INVALID && !npc.monsterAwake) {

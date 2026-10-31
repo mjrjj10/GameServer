@@ -1476,6 +1476,19 @@ f32 World::PlayerSkillPower(const Player& player) const
 	return MasterStat(player.Main().classType, STAT_SKILLPOWER) + StatBonus(player, STAT_SKILLPOWER) + StatusModSum(player, StatusMod::SKILLPOWER);
 }
 
+f32 World::SkillMaxDistance(const Player& player, i32 skillID) const
+{
+	if(const GameXmlContent::SkillUpgrade* up = LatestUpgradeWith(player, skillID, [](const GameXmlContent::SkillUpgrade& u) { return u.targetMaxDistance > 0; })) return up->targetMaxDistance;
+	const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput(skillID);
+	return in ? in->maxDistance : 0.0f;
+}
+
+f32 World::SkillCoolTime(const Player& player, i32 skillID) const
+{
+	if(const GameXmlContent::SkillUpgrade* up = LatestUpgradeWith(player, skillID, [](const GameXmlContent::SkillUpgrade& u) { return u.coolTime > 0; })) return up->coolTime;
+	return GetGameXmlContent().GetSkillCoolTime(skillID);
+}
+
 f32 World::PlayerSkillDamage(const Player& player, SkillID skillID) const
 {
 	const f32 statusPower = StatusModSum(player, StatusMod::SKILLPOWER);

@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <STATUS_STAT_MODS>
+  <MOD status="1264070031" stat="STAT_TYPE_HEALTH" value="3" mul="1" count="1800" source="MEASURED 7 official 5v5 captures: 3.0% of max HP every 0.2 s in the base recovery zone (2738 ticks)" />
   <MOD status="1200100020" stat="STAT_TYPE_LIFESTEAL" value="20" source="GAMETIP_TITAN_LAYOUT_2_DESC_01" />
   <MOD status="1200100020" stat="STAT_TYPE_STAMINAREGEN" value="5" source="GAMETIP_TITAN_LAYOUT_2_DESC_01" />
   <MOD status="1200100022" stat="STAT_TYPE_HEALTHREGEN" value="30" source="GAMETIP_TITAN_LAYOUT_2_DESC_02" />

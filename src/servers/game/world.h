@@ -1091,6 +1091,8 @@ public:
 	void DropPendingActions(Player& player);
 	const GameXmlContent::SkillUpgrade* LatestUpgradeWith(const Player& player, i32 skillID, bool (*has)(const GameXmlContent::SkillUpgrade&)) const;
 	f32 PlayerSkillDamage(const Player& player, SkillID skillID) const;
+	f32 SkillMaxDistance(const Player& player, i32 skillID) const;
+	f32 SkillCoolTime(const Player& player, i32 skillID) const;
 	f32 PlayerSkillPower(const Player& player) const;
 	f32 DefenceMultiplier(const Player& attacker, const Player& target, bool skillHit) const;
 	i32 StatusDotTickDamage(const Player& caster, const Player& target, const ActiveStatus& st) const;

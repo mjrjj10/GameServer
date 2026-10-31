@@ -3279,6 +3279,11 @@ LocalActorID Replication::GetLocalActorID(ClientHandle clientHd, ActorUID actorU
 	return LocalActorID::INVALID;
 }
 
+bool Replication::HiddenFor(ClientHandle clientHd, ActorUID actorUID) const
+{
+	return playerLocalInfo[playerMap.at(clientHd)].hiddenActors.count(actorUID) > 0;
+}
+
 ActorUID Replication::GetWorldActorUID(ClientHandle clientHd, LocalActorID localActorID) const
 {
 	ProfileFunction();

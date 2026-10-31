@@ -1180,7 +1180,7 @@ struct GameXmlContent
 	const Map* FindPvpMap(MapIndex index) const;
 	eastl::hash_map<i32,i32> pvpMapAliases;
 
-	struct MonsterFire { i32 remote = 0; eastl::fixed_string<wchar,48,true> node; f32 at = 0; };
+	struct MonsterFire { i32 remote = 0; eastl::fixed_string<wchar,48,true> node; f32 at = 0; u8 pass = 0; };
 
 	struct MonsterAttack
 	{
@@ -1223,6 +1223,7 @@ struct GameXmlContent
 		f32 dashDist = 0;
 		f32 dashTime = 0;
 		eastl::fixed_vector<i32,4,false> dashPassAnims;
+		eastl::fixed_vector<eastl::pair<i32,i32>,4,false> passes;
 	};
 
 	struct MonsterAi
@@ -1514,6 +1515,9 @@ struct GameXmlContent
 		eastl::array<f32,5> consume = { -1, -1, -1, -1, -1 };
 		f32 stanceDuration = -1;
 		f32 toggleValue = -1;
+		f32 targetMaxDistance = -1;
+		f32 coolTime = -1;
+		i32 weaponFireCount = -1;
 	};
 	typedef eastl::fixed_vector<SkillUpgrade,8,false> SkillUpgradeList;
 	eastl::hash_map<i32, Remote> remoteVariants;
@@ -1574,17 +1578,18 @@ struct GameXmlContent
 	{
 		f32 time = 0;
 		f32 maxAbs = 0;
+		f32 peak = 0;
 		eastl::fixed_vector<f32,24,false> h;
 
 		f32 Eval(f32 u) const
 		{
 			const i32 n = (i32)h.size();
 			if(n == 0 || maxAbs <= 0) return 0;
-			if(n == 1) return h[0] / maxAbs;
+			if(n == 1) return h[0] / peak;
 			const f32 x = MAX(MIN(u, 1.0f), 0.0f) * (f32)(n - 1);
 			const i32 i = MIN((i32)x, n - 1);
 			const i32 j = MIN(i + 1, n - 1);
-			return (h[i] + (x - (f32)i) * (h[j] - h[i])) / maxAbs;
+			return (h[i] + (x - (f32)i) * (h[j] - h[i])) / peak;
 		}
 	};
 	const MoveCurve* GetMoveCurve(const char* className, i32 seqID) const { auto f = moveCurves.find(AniKey(className, seqID)); return f == moveCurves.end() ? nullptr : &f->second; }
