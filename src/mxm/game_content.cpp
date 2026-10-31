@@ -1206,6 +1206,8 @@ void GameXmlContent::LoadMonsterFires()
 {
 	static const wchar* FILES[] = { L"/client/ActionBase_Monster.xml", L"/client/ActionBase_Monster_MOB_A.xml", L"/client/ActionBase_Monster_MOB_B.xml", L"/client/ActionBase_Monster_MOB_C.xml", L"/client/ActionBase_Monster_MOB_D.xml", L"/client/ActionBase_Monster_MOB_PUBLIC.xml", L"/client/ActionBase_Monster_MOB_PvP.xml" };
 	eastl::hash_map<u64, eastl::fixed_vector<MonsterFire,4,false>> fires;
+	struct Dash { f32 dist = 0; f32 time = 0; i32 pass = -1; eastl::fixed_vector<i32,4,false> anims; };
+	eastl::hash_map<u64, Dash> dashes;
 	for(i32 f = 0; f < (i32)ARRAY_COUNT(FILES); f++) {
 		XMLDocument doc;
 		if(!LoadXMLFile(FILES[f], doc, true) || !doc.FirstChildElement()) continue;
@@ -1213,6 +1215,18 @@ void GameXmlContent::LoadMonsterFires()
 			const char* type = e->Attribute("CommandType");
 			const char* cls = e->Attribute("Class");
 			const char* state = e->Attribute("BehaviorState");
+			if(type && cls && state) {
+				Dash& dash = dashes[((u64)StatusTypeKey(cls) << 32) | (u32)ActionStateFromString(state)];
+				const i32 pass = e->IntAttribute("AnimationIndex");
+				if(pass >= 0 && pass < 4) {
+					while((i32)dash.anims.size() <= pass) dash.anims.push_back(0);
+					dash.anims[pass] = e->IntAttribute("AnimationId");
+				}
+				if(EA::StdC::Strcmp(type, "GRAPH_MOVE_HORZ") == 0) {
+					const char* param = e->Attribute("Param1");
+					if(param && EA::StdC::Sscanf(param, "%f|%f", &dash.dist, &dash.time) >= 1) dash.pass = pass;
+				}
+			}
 			if(!type || !cls || !state || EA::StdC::Strcmp(type, "REMOTE") != 0 || e->IntAttribute("RemoteIndex") <= 0) continue;
 			auto& list = fires[((u64)StatusTypeKey(cls) << 32) | (u32)ActionStateFromString(state)];
 			MonsterFire fire;
@@ -1242,6 +1256,12 @@ void GameXmlContent::LoadMonsterFires()
 	for(auto& ai : monsterAi) {
 		const u64 classKey = (u64)StatusTypeKey(ai.second.className.c_str()) << 32;
 		foreach(attack, ai.second.attacks) {
+			auto dash = dashes.find(classKey | (u32)attack->state);
+			if(dash != dashes.end() && dash->second.pass >= 0 && dash->second.dist > 0) {
+				attack->dashDist = dash->second.dist;
+				attack->dashTime = dash->second.time;
+				for(i32 p = 0; p <= dash->second.pass && p < (i32)dash->second.anims.size(); p++) attack->dashPassAnims.push_back(dash->second.anims[p]);
+			}
 			auto found = fires.find(classKey | (u32)attack->state);
 			if(found == fires.end()) continue;
 			attack->fires = found->second;

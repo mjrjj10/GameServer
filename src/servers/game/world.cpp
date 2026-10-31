@@ -740,10 +740,11 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	castCostLevel = followUp ? nullptr : PickCostLevel(player, skillID);
 	const GameXmlContent::SkillUpgrade* actionUpgrade = followUp ? nullptr : LatestUpgradeWith(player, (i32)skillID, [](const GameXmlContent::SkillUpgrade& u) { return u.action != ActionStateID::INVALID; });
 	ActionStateID actionState = skill.action;
+	ActionStateID remoteAction = ActionStateID::INVALID;
 	const GameXmlContent::RandomActionList* randomActions = nullptr;
 	if(followUp) actionState = forcedAction;
 	else if(castCostLevel && castCostLevel->action != ActionStateID::INVALID) { actionState = castCostLevel->action; randomActions = &castCostLevel->randomActions; }
-	else if(actionUpgrade) { actionState = actionUpgrade->action; randomActions = &actionUpgrade->randomActions; }
+	else if(actionUpgrade) { actionState = actionUpgrade->action; randomActions = &actionUpgrade->randomActions; remoteAction = actionUpgrade->action; }
 	else if(cast) actionState = cast->action;
 	else randomActions = content.FindSkillRandomActions((i32)skillID);
 	if(randomActions && !randomActions->empty()) {
@@ -899,7 +900,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	}
 
 	if(castRelease && player.lastComboSkill == skillID) player.lastComboSkill = SkillID::INVALID;
-	ScheduleSkillRemotes(player, skillID, castPos, targets, angle, followUp && !castRelease ? 0 : -1, cast ? cast->action : forcedAction);
+	ScheduleSkillRemotes(player, skillID, castPos, targets, angle, followUp && !castRelease ? 0 : -1, remoteAction != ActionStateID::INVALID ? remoteAction : cast ? cast->action : forcedAction);
 	castCostLevel = nullptr;
 	if(cast) StartCasting(player, skillID, *cast, castPos, targets, action);
 	skillProgramList.back().passes = lastAnimPasses;

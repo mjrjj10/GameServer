@@ -536,6 +536,30 @@ void World::FireMonsterRemote(const MonsterFireEvent& fire)
 	replication->SendRemoteCreateToAll(npc.UID, fire.seed, (RemoteIdx)fire.fire->remote, npc.pos, npc.rot.z, vec3(vec2(targetPos), npc.pos.z), fire.target, fire.fire->node.c_str());
 }
 
+void World::UpdateMonsterDash(ActorNpc& npc)
+{
+	if(npc.dashEnd == Time::ZERO || localTime < npc.dashStart) return;
+	static const f32 MONSTER_DASH_RAY_HEIGHT = 100.0f;
+	const f32 total = (f32)TimeDiffSec(TimeDiff(npc.dashStart, npc.dashEnd));
+	const f32 t = total > 0 ? MIN((f32)TimeDiffSec(TimeDiff(npc.dashStart, localTime)) / total, 1.0f) : 1.0f;
+	const vec2 next = npc.dashFrom + npc.dashDir * npc.dashDist * t;
+	const vec2 here = vec2(npc.pos);
+	f32 hit = 0;
+	const f32 radius = npc.monsterAi ? npc.monsterAi->radius : 0.0f;
+	const vec2 step = next - here;
+	const f32 len = glm::length(step);
+	bool blocked = false;
+	if(len > 1.0f && physics.RaycastStatic(vec3(here, npc.pos.z + MONSTER_DASH_RAY_HEIGHT), vec3(next + step / len * radius, npc.pos.z + MONSTER_DASH_RAY_HEIGHT), &hit)) {
+		npc.pos = vec3(here + step / len * MAX(hit - radius, 0.0f), npc.pos.z);
+		blocked = true;
+	}
+	else npc.pos = vec3(next, npc.pos.z);
+	if(t >= 1.0f || blocked) {
+		npc.dashEnd = Time::ZERO;
+		LOG("Monster :: creature=%d (local %d) dash ends at (%.0f, %.0f)%s", (i32)npc.docID, npc.localID, npc.pos.x, npc.pos.y, blocked ? " on a wall" : "");
+	}
+}
+
 void World::StartMonsterAttack(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const GameXmlContent::MonsterAttack* attack, const vec3* targetPos, f32 dist, f32 yaw, f32 run)
 {
 	npc.rot.z = yaw;
@@ -560,14 +584,31 @@ void World::StartMonsterAttack(ActorNpc& npc, const GameXmlContent::MonsterAi& a
 		npc.monsterWeakHit = false;
 	}
 	if(attack->evade > 0) npc.monsterEvadeUntil = TimeAdd(localTime, TimeMsToTime(attack->evade * 1000.0));
+	if(attack->dashDist > 0 && !attack->dashPassAnims.empty()) {
+		const auto& content = GetGameXmlContent();
+		f32 start = 0;
+		for(i32 p = 0; p + 1 < (i32)attack->dashPassAnims.size(); p++) start += content.GetAniSeqTime(ai.className.c_str(), attack->dashPassAnims[p]);
+		const f32 pass = content.GetAniSeqTime(ai.className.c_str(), attack->dashPassAnims.back());
+		const f32 duration = attack->dashTime > 0 ? attack->dashTime : pass;
+		if(duration > 0) {
+			npc.dashFrom = vec2(npc.pos);
+			npc.dashDir = vec2(cosf(yaw), sinf(yaw));
+			npc.dashDist = attack->dashDist;
+			npc.dashStart = TimeAdd(localTime, TimeMsToTime(start * 1000.0));
+			npc.dashEnd = TimeAdd(npc.dashStart, TimeMsToTime(duration * 1000.0));
+			LOG("Monster :: creature=%d (local %d) dashes %.0f in %.2fs from %.2fs", (i32)npc.docID, npc.localID, attack->dashDist, duration, start);
+		}
+	}
 	const f32 travel = attack->speed > 0 ? dist / attack->speed : 0.0f;
+	static const u32 minionTag = StatusTypeKey("Minion");
 	const bool fired = hostileMonsters && !attack->fires.empty();
+	const bool visual = fired || (!attack->fires.empty() && map && map->ingameLevels && ai.tagKey != minionTag && !IsStructure(npc));
 	static const u32 MEASURED_MONSTER_FIRE_SEED_STEP = 4;
 	const u32 seed = MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID & MONSTER_REMOTE_ID_MASK);
-	nextMonsterRemoteID += fired ? (u32)attack->fires.size() * MEASURED_MONSTER_FIRE_SEED_STEP : 1;
+	nextMonsterRemoteID += visual ? (u32)attack->fires.size() * MEASURED_MONSTER_FIRE_SEED_STEP : 1;
 	const u32 remoteID = fired ? seed + 1 : seed;
 	const f32 hitDelay = attack->hitAt >= 0 ? attack->hitAt : (fired ? attack->fires[0].at : attack->delay);
-	if(fired) {
+	if(visual) {
 		u32 fireSeed = seed;
 		foreach_const(f, attack->fires) {
 			monsterFires.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime(f->at * 1000.0)), &*f, fireSeed });
@@ -713,6 +754,7 @@ void World::UpdateMonsterAi(f32 delta)
 		const f32 run = ai.run * npc.speedMul;
 		UpdateNpcDefeat(npc);
 		UpdateNpcVictory(npc);
+		UpdateMonsterDash(npc);
 		if(!npc.monsterStarted) {
 			if(localTime < TimeAdd(npc.spawnedAt, TimeMsToTime(MAX(MONSTER_START_DELAY_MS, (f64)ai.spawnTime * 1000.0)))) continue;
 			npc.monsterStarted = true;

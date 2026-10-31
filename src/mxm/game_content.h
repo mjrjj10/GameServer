@@ -1220,6 +1220,9 @@ struct GameXmlContent
 		eastl::fixed_vector<i32,4,false> selfStatuses;
 		eastl::fixed_vector<i32,4,false> allyStatuses;
 		eastl::fixed_vector<MonsterFire,4,false> fires;
+		f32 dashDist = 0;
+		f32 dashTime = 0;
+		eastl::fixed_vector<i32,4,false> dashPassAnims;
 	};
 
 	struct MonsterAi

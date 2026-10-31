@@ -528,6 +528,11 @@ struct World
 		u8 monsterScriptAlt = 0;
 		u32 fogHiddenFrom = 0;
 		bool monsterWeakHit = false;
+		vec2 dashFrom = vec2(0);
+		vec2 dashDir = vec2(0);
+		f32 dashDist = 0;
+		Time dashStart = Time::ZERO;
+		Time dashEnd = Time::ZERO;
 		bool monsterWalking = false;
 		bool monsterChasing = false;
 		ActorUID monsterTarget = ActorUID::INVALID;
@@ -892,6 +897,7 @@ struct World
 	bool UpdateMonsterScript(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const vec3* targetPos, f32 delta);
 	bool UpdateMonsterSeek(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, f32 speed, f32 delta);
 	bool UpdateMonsterAllyBuff(ActorNpc& npc, const GameXmlContent::MonsterAi& ai);
+	void UpdateMonsterDash(ActorNpc& npc);
 	struct PendingTrapHit { ActorUID dynamicUID; const GameXmlContent::DynamicTrapRemote* remote; u32 seed; vec3 nodePos; vec2 nodeDir; ActorUID targetUID; i32 playerIndex; };
 	void UpdateDynamicTraps();
 	void UpdateDynamicTrap(ActorDynamic& dyn, eastl::fixed_vector<PendingTrapHit,32,true>& hits);
