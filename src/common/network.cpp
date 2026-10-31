@@ -282,8 +282,9 @@ void Server::SendPacketData(ClientHandle clientHd, u16 netID, u16 packetSize, co
 	if(clientID == -1) return;
 
 	const i32 packetTotalSize = packetSize+sizeof(NetHeader);
-	u8 sendBuff[8192];
-	ASSERT(packetTotalSize <= sizeof(sendBuff));
+	static const i32 MAX_PACKET_TOTAL_SIZE = 0xFFFF;
+	ASSERT(packetTotalSize <= MAX_PACKET_TOTAL_SIZE);
+	static thread_local u8 sendBuff[MAX_PACKET_TOTAL_SIZE];
 
 	NetHeader header;
 	header.size = packetTotalSize;
