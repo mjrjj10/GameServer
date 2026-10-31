@@ -3,6 +3,13 @@
 #include "world_common.h"
 #include <mxm/game_content.h>
 
+static f32 MovespeedMul(f32 percentSum)
+{
+	static const f32 MEASURED_MOVESPEED_MUL_MIN = 0.1f;
+	static const f32 MEASURED_MOVESPEED_MUL_MAX = 1.6f;
+	return MIN(MAX(1.0f + percentSum / 100.0f, MEASURED_MOVESPEED_MUL_MIN), MEASURED_MOVESPEED_MUL_MAX);
+}
+
 static const i32 STAT_STAMINAREGEN = 5;
 static const i32 STAT_MANAREGEN = 39;
 static const i32 STAT_ULTIMATEREGEN = 42;
@@ -50,7 +57,7 @@ void World::UpdateUltimateGauges(f32 delta)
 		}
 		{
 			const f32 base = MasterStat(cls, STAT_MOVESPEED) + StatBonus(*it, STAT_MOVESPEED);
-			const f32 speed = MAX(base * (1.0f + StatusModMulSum(*it, StatusMod::MOVESPEED) / 100.0f), 0.0f);
+			const f32 speed = base * MovespeedMul(StatusModMulSum(*it, StatusMod::MOVESPEED));
 			if(base > 0 && fabsf(speed - it->moveSpeedSent) > 0.01f) {
 				it->moveSpeedSent = speed;
 				replication->SendStatToAll(it->Main().UID, STAT_MOVESPEED, speed, speed);
@@ -994,7 +1001,7 @@ f32 World::PlayerMoveSpeed(const Player& p) const
 	const f32 baseSpeed = const_cast<CharacterModel&>(GetGameXmlContent().GetMaster(p.Main().classType).character).getMoveSpeed();
 	f32 mul = StatusModMulSum(p, StatusMod::MOVESPEED);
 	if(localTime < p.firingStatUntil) mul += p.firingMoveSpeedMul;
-	return baseSpeed * (p.battleStage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (p.battleStage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f)) * MAX(1.0f + mul / 100.0f, 0.0f);
+	return baseSpeed * (p.battleStage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (p.battleStage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f)) * MovespeedMul(mul);
 }
 
 void World::UpdateBattleStates()
@@ -1277,7 +1284,7 @@ void World::UpdateNpcFog()
 
 void World::StartSkillPoints()
 {
-	if(!ingameSkillPoints) return;
+	if(!ingameSkillPoints || (map && map->ingameLevels)) return;
 	foreach(it, players) it->nextSkillPointAt = TimeAdd(localTime, TimeMsToTime(SKILL_POINT_INTERVAL_MS));
 }
 

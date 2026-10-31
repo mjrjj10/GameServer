@@ -42,6 +42,7 @@ void World::GrantIngameExp(Player& player, i32 gain, ActorUID target)
 		player.ingameExp -= info.ExpToLevelUp(player.ingameLevel);
 		player.ingameLevel++;
 		levelUp = true;
+		GrantSkillPoint(player);
 		if(info.propertyPointsEvery > 0 && player.ingameLevel % info.propertyPointsEvery == 0) {
 			player.Main().traitPoints += info.propertyPointsStep;
 			player.Sub().traitPoints += info.propertyPointsStep;

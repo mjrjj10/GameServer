@@ -12,4 +12,42 @@
   <MOD status="1200100006" stat="STAT_TYPE_ENERGYREGEN" value="3" samples="6" />
   <MOD status="1200100003" stat="STAT_TYPE_TAG_COOLTIME" value="-25" mul="1" samples="8" />
   <MOD status="1200100006" stat="STAT_TYPE_TAG_COOLTIME" value="-25" mul="1" samples="6" />
+  <MOD status="1230010061" stat="STAT_TYPE_MOVESPEED" value="-40" mul="1" samples="46" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230020052" stat="STAT_TYPE_MOVESPEED" value="-50" mul="1" samples="30" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230070052" stat="STAT_TYPE_MOVESPEED" value="-60" mul="1" samples="77" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230090040" stat="STAT_TYPE_MOVESPEED" value="-30" mul="1" samples="3320" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230110050" stat="STAT_TYPE_MOVESPEED" value="-5" mul="1" samples="693" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230110080" stat="STAT_TYPE_MOVESPEED" value="-30" mul="1" samples="220" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230120060" stat="STAT_TYPE_MOVESPEED" value="-50" mul="1" samples="3" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230150071" stat="STAT_TYPE_MOVESPEED" value="-30" mul="1" samples="44" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230150080" stat="STAT_TYPE_MOVESPEED" value="-40" mul="1" samples="104" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230190030" stat="STAT_TYPE_MOVESPEED" value="-40" mul="1" samples="68" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230190031" stat="STAT_TYPE_MOVESPEED" value="-40" mul="1" samples="496" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230200011" stat="STAT_TYPE_MOVESPEED" value="-50" mul="1" samples="222" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230240010" stat="STAT_TYPE_MOVESPEED" value="-20" mul="1" samples="274" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230260066" stat="STAT_TYPE_MOVESPEED" value="-50" mul="1" samples="26" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230270002" stat="STAT_TYPE_MOVESPEED" value="-30" mul="1" samples="74" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230270020" stat="STAT_TYPE_MOVESPEED" value="-30" mul="1" samples="153" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230330000" stat="STAT_TYPE_MOVESPEED" value="-30" mul="1" samples="28" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1232000060" stat="STAT_TYPE_MOVESPEED" value="-10" mul="1" samples="2634" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1239000001" stat="STAT_TYPE_MOVESPEED" value="-50" mul="1" samples="55" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1239000012" stat="STAT_TYPE_MOVESPEED" value="-50" mul="1" samples="33" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230030051" stat="STAT_TYPE_MOVESPEED" value="-40" mul="1" source="KEYNAME" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1232000061" stat="STAT_TYPE_MOVESPEED" value="-15" mul="1" source="KEYNAME" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1232000062" stat="STAT_TYPE_MOVESPEED" value="-20" mul="1" source="KEYNAME" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1232000063" stat="STAT_TYPE_MOVESPEED" value="-25" mul="1" source="KEYNAME" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1232000064" stat="STAT_TYPE_MOVESPEED" value="-30" mul="1" source="KEYNAME" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1232000065" stat="STAT_TYPE_MOVESPEED" value="-40" mul="1" source="KEYNAME" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230370015" stat="STAT_TYPE_MOVESPEED" value="-50" mul="1" source="TOOLTIP_STR_SKILL_DESC_180370010" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230100041" stat="STAT_TYPE_MOVESPEED" value="-60" mul="1" source="SKILLTT_LEVEL" samples="331" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230140032" stat="STAT_TYPE_MOVESPEED" value="-30" mul="1" source="SKILLTT_LEVEL" samples="3" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230160041" stat="STAT_TYPE_MOVESPEED" value="-10" mul="1" source="SKILLTT_LEVEL" samples="14" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230160072" stat="STAT_TYPE_MOVESPEED" value="-20" mul="1" source="SKILLTT_LEVEL" samples="691" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230170015" stat="STAT_TYPE_MOVESPEED" value="-50" mul="1" source="SKILLTT_LEVEL" samples="9" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230180031" stat="STAT_TYPE_MOVESPEED" value="-60" mul="1" source="SKILLTT_LEVEL" samples="22" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230240032" stat="STAT_TYPE_MOVESPEED" value="-20" mul="1" source="SKILLTT_LEVEL" samples="2" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230250021" stat="STAT_TYPE_MOVESPEED" value="-50" mul="1" source="SKILLTT_LEVEL" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230360011" stat="STAT_TYPE_MOVESPEED" value="-50" mul="1" source="SKILLTT_LEVEL" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230380034" stat="STAT_TYPE_MOVESPEED" value="-40" mul="1" source="SKILLTT_LEVEL" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230380036" stat="STAT_TYPE_MOVESPEED" value="-40" mul="1" source="SKILLTT_LEVEL" note="Tools/notes/specs/slows_measured.md" />
 </STATUS_STAT_MODS>

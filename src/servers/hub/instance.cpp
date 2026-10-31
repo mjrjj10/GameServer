@@ -614,6 +614,10 @@ void RoomInstance::Update(Time localTime_)
 			if(u->isBot) continue;
 			TryPickMaster(u, (ClassType)Config().DevPickMasters[0]);
 			if(Config().DevPickMasters[1] > 0) TryPickMaster(u, (ClassType)Config().DevPickMasters[1]);
+			foreach_const(m, allowedMastersSet) {
+				if(u->Main().classType != ClassType::NONE && u->Sub().classType != ClassType::NONE) break;
+				TryPickMaster(u, *m);
+			}
 			SetReady(u);
 			LOG("[Room] %ls dev picks masters %d and %d", u->name.data(), Config().DevPickMasters[0], Config().DevPickMasters[1]);
 		}

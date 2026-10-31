@@ -1334,6 +1334,7 @@ bool GameXmlContent::LoadMonsterAi()
 				if(EA::StdC::Strcmp(target, "master") == 0) attack.target = MonsterAttack::MASTER;
 				else if(EA::StdC::Strcmp(target, "minion") == 0) attack.target = MonsterAttack::MINION;
 				else if(EA::StdC::Strcmp(target, "titan") == 0) attack.target = MonsterAttack::TITAN;
+				else if(EA::StdC::Strcmp(target, "ally") == 0) attack.target = MonsterAttack::ALLY;
 				else attack.target = MonsterAttack::STRUCTURE;
 				if(const char* state = pAttack->Attribute("state")) attack.state = ActionStateFromString(state);
 				attack.range = pAttack->FloatAttribute("range");
@@ -1367,6 +1368,7 @@ bool GameXmlContent::LoadMonsterAi()
 				attack.selfCentered = pAttack->BoolAttribute("selfCentered");
 				attack.share = pAttack->FloatAttribute("share", 1.0f);
 				ParseIdList(pAttack->Attribute("selfStatus"), attack.selfStatuses);
+				ParseIdList(pAttack->Attribute("allyStatus"), attack.allyStatuses);
 				ai.attacks.push_back(attack);
 			}
 			foreach_const(a, ai.attacks) if(!a->special && !ai.byTarget[a->target]) ai.byTarget[a->target] = &*a;
@@ -3801,7 +3803,7 @@ bool GameXmlContent::LoadStatusStatMods()
 		mod.stat = StatusModStatFromName(stat);
 		mod.value = pMod->FloatAttribute("value");
 		mod.mul = pMod->BoolAttribute("mul");
-		mod.regen = true;
+		mod.regen = mod.stat != StatusMod::MOVESPEED;
 		if(mod.stat == StatusMod::OTHER || mod.value == 0) continue;
 		found->second.mods.push_back(mod);
 		count++;
