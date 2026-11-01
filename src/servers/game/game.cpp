@@ -765,6 +765,18 @@ void Game::WriteTruth()
 		fprintf(f, "%s[%u,%d,%.0f,%.0f,%.0f,%d,%d,%d]", first ? "" : ",", (u32)replication.GetLocalActorID(viewer, n->UID), (i32)n->docID, n->pos.x, n->pos.y, n->pos.z, (i32)n->actionState, n->hp, replication.HiddenFor(viewer, n->UID) ? 1 : 0);
 		first = false;
 	}
+	fprintf(f, "],\"r\":[");
+	first = true;
+	foreach_const(r, world.remoteInsts) {
+		if(r->clientRemoteID == 0 || !r->remote) continue;
+		fprintf(f, "%s[%u,%d,%.0f,%.0f,%.0f]", first ? "" : ",", r->clientRemoteID, (i32)r->remote->ID, r->pos.x, r->pos.y, r->pos.z);
+		first = false;
+	}
+	foreach_const(r, world.monsterRemotes) {
+		if(!r->remote || r->seed == 0) continue;
+		fprintf(f, "%s[%u,%d,%.0f,%.0f,%.0f]", first ? "" : ",", r->seed, (i32)r->remote->ID, r->pos.x, r->pos.y, r->pos.z);
+		first = false;
+	}
 	fprintf(f, "]}\n");
 	fclose(f);
 }
