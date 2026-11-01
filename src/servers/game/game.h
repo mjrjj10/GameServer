@@ -123,6 +123,7 @@ struct Game
 	void WriteTelemetry();
 	void WriteTrail();
 	void WriteTruth();
+	void WriteUserNote(ClientHandle clientHd, const wchar* msg, i32 msgLen);
 	void RunScenario();
 	struct ScenarioStep { f32 at; eastl::fixed_string<wchar,128,true> cmd; };
 	eastl::fixed_vector<ScenarioStep,512,true> scenario;

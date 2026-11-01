@@ -1209,7 +1209,27 @@ void Game::OnPlayerChatMessage(ClientHandle clientHd, i32 chatType, const wchar*
 	// TODO: Actual chat system
 
 	Player& p = *playerMap.at(clientHd);
+	if(Config().DevTruth) WriteUserNote(clientHd, msg, msgLen);
 	replication.SendChatMessageToAll(p.name.data(), chatType, msg, msgLen);
+}
+
+void Game::WriteUserNote(ClientHandle clientHd, const wchar* msg, i32 msgLen)
+{
+	FILE* f = fopen("user_notes.jsonl", "ab");
+	if(!f) return;
+	const i64 wall = (i64)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	vec3 pos(0);
+	i32 classType = 0;
+	foreach_const(wp, world.players) {
+		if(wp->clientHd != clientHd || wp->removed || !wp->body) continue;
+		pos = wp->body->GetWorldPos();
+		classType = (i32)wp->Main().classType;
+	}
+	fprintf(f, "{\"w\":%lld,\"x\":%.0f,\"y\":%.0f,\"z\":%.0f,\"class\":%d,\"note\":\"", wall, pos.x, pos.y, pos.z, classType);
+	for(i32 i = 0; i < msgLen && msg[i]; i++) fprintf(f, "\\u%04x", (u32)(u16)msg[i]);
+	fprintf(f, "\"}\n");
+	fclose(f);
+	LOG("Note :: client %x at (%.0f, %.0f) wrote a note", (u32)clientHd, pos.x, pos.y);
 }
 
 void Game::OnPlayerChatWhisper(ClientHandle clientHd, const wchar* destNick, const wchar* msg)
