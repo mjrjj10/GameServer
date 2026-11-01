@@ -474,7 +474,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 		LightAttacker(attacker.body->GetWorldPos(), (i32)npc.faction);
 	}
 	if(npc.ownerUID == ActorUID::INVALID) OnMonsterDamaged(npc, hpBefore);
-	if(npc.ownerUID == ActorUID::INVALID && npc.monsterAi && (npc.faction == Faction::ORANGE || npc.faction == Faction::MONSTER) && npc.monsterTarget == ActorUID::INVALID && npc.hp > 0) {
+	if(npc.ownerUID == ActorUID::INVALID && npc.monsterAi && (npc.faction == Faction::ORANGE || npc.faction == Faction::MONSTER) && npc.monsterTarget == ActorUID::INVALID && npc.hp > 0 && !(npc.monsterReturning && map && map->ingameLevels)) {
 		npc.monsterTarget = attacker.Main().UID;
 		npc.monsterReturning = false;
 		LOG("Monster :: neutral creature=%d (local %d) attacked by %ls", (i32)npc.docID, npc.localID, attacker.name.data());

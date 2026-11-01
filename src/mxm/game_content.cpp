@@ -1400,6 +1400,14 @@ bool GameXmlContent::LoadMonsterAi()
 			if(!ai.byTarget[MonsterAttack::TITAN]) ai.byTarget[MonsterAttack::TITAN] = ai.byTarget[MonsterAttack::STRUCTURE];
 		}
 	}
+	XMLDocument xmlPvp;
+	if(LoadXMLFile(L"/client/CREATURE_MONSTER_PvP.xml", xmlPvp)) {
+		for(XMLElement* pInfo = xmlPvp.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+			auto found = monsterAi.find(pInfo->IntAttribute("ID"));
+			if(found == monsterAi.end()) continue;
+			if(XMLElement* p = pInfo->FirstChildElement("Ai_ComData")) p->QueryFloatAttribute("_ReturnToSpawnPosSpeedRate", &found->second.returnSpeedRate);
+		}
+	}
 	LOG("Loaded AI of %d monsters", (i32)monsterAi.size());
 	return true;
 }

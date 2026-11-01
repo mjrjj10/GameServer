@@ -19,6 +19,7 @@ static f32 YawGap(f32 a, f32 b)
 	return fabsf(d);
 }
 static const f32 MONSTER_WAYPOINT_REACHED = 60.0f;
+static const i32 MEASURED_GOT_MOB_RETURN_SUPERARMOR = 1264070082;
 static const f32 MONSTER_REACH_TOLERANCE = 1.0f;
 static const u8 MONSTER_ATTACK_STAT = 6;
 static const u32 NPC_DEAD_NO_KILLER_DOC = 0;
@@ -833,16 +834,19 @@ void World::UpdateMonsterAi(f32 delta)
 			const f32 dist = glm::length(rel);
 			if(dist > MONSTER_WAYPOINT_REACHED && run > 0) {
 				const f32 yaw = atan2f(rel.y, rel.x);
-				npc.pos = vec3(vec2(npc.pos) + rel / dist * MIN(run * delta, dist), npc.pos.z);
+				const f32 back = run * ai.returnSpeedRate;
+				npc.pos = vec3(vec2(npc.pos) + rel / dist * MIN(back * delta, dist), npc.pos.z);
 				npc.rot.z = yaw;
+				if(!npc.monsterReturning && titanMode) ApplyMonsterStatus(npc, MEASURED_GOT_MOB_RETURN_SUPERARMOR, true);
 				if(!npc.monsterReturning || localTime >= npc.monsterNextSync) {
 					npc.monsterReturning = true;
 					npc.monsterNextSync = TimeAdd(localTime, TimeMsToTime(MONSTER_SYNC_MS));
-					replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.home, yaw, run);
+					replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.home, yaw, back);
 				}
 			}
 			else if(npc.monsterReturning) {
 				npc.monsterReturning = false;
+				if(titanMode) ApplyMonsterStatus(npc, MEASURED_GOT_MOB_RETURN_SUPERARMOR, false);
 				npc.monsterChasing = false;
 				npc.hp = npc.hpMax;
 				if(ai.idle != ActionStateID::INVALID) {

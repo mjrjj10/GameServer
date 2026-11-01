@@ -1235,6 +1235,7 @@ struct GameXmlContent
 		f32 lost = 0;
 		f32 destroy = 0;
 		f32 radius = 0;
+		f32 returnSpeedRate = 1;
 		u32 tagKey = 0;
 		ActionStateID idle = ActionStateID::INVALID;
 		ActionStateID awake = ActionStateID::INVALID;
