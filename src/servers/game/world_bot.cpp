@@ -2,6 +2,7 @@
 #include "world.h"
 #include "world_common.h"
 #include <mxm/game_content.h>
+#include <chrono>
 
 static const f32 BOT_TITAN_MELEE_SKILL_DIST = 400.0f;
 
@@ -548,11 +549,23 @@ void World::UpdateBotMovement()
 	}
 }
 
+void World::PilotTourEvent(const char* what)
+{
+	FILE* f = fopen("pilot_tour.jsonl", "ab");
+	if(!f) return;
+	const i64 wall = (i64)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	u32 local = 0;
+	foreach_const(p, players) if(p->clientHd != ClientHandle::INVALID && !p->removed && pilotTour.npc != ActorUID::INVALID) local = (u32)replication->GetLocalActorID(p->clientHd, pilotTour.npc);
+	fprintf(f, "{\"w\":%lld,\"kind\":%d,\"id\":%d,\"local\":%u,\"warped\":%d,\"what\":\"%s\"}\n", wall, (i32)pilotTour.kind, pilotTour.kind == 1 ? pilotTour.localID : pilotTour.doc, local, pilotTour.warped ? 1 : 0, what);
+	fclose(f);
+}
+
 void World::PilotTourFinish(const char* result)
 {
+	if(pilotTour.kind) PilotTourEvent(result);
 	if(pilotTour.kind == 1) pilotTourInteractions.push_back(pilotTour.localID);
 	if(pilotTour.kind == 2) pilotTourNpcs.push_back(pilotTour.npc);
-	if(pilotTour.kind) LOG("PilotTour :: %s %d %s after %.1f s", pilotTour.kind == 1 ? "interaction" : "monster", pilotTour.kind == 1 ? pilotTour.localID : pilotTour.doc, result, TimeDiffSec(TimeDiff(pilotTour.since, localTime)));
+	if(pilotTour.kind) LOG("PilotTour :: %s %d %s after %.1f s%s", pilotTour.kind == 1 ? "interaction" : "monster", pilotTour.kind == 1 ? pilotTour.localID : pilotTour.doc, result, TimeDiffSec(TimeDiff(pilotTour.since, localTime)), pilotTour.warped ? " (warped)" : "");
 	pilotTour = PilotTour();
 }
 
@@ -596,6 +609,25 @@ bool World::PilotTourStep(Player& p, PilotDecision* out, vec2* goal)
 		if(!pilotTour.kind) return false;
 		pilotTour.since = localTime;
 		LOG("PilotTour :: next %s %d at %.0f", pilotTour.kind == 1 ? "interaction" : "monster", pilotTour.kind == 1 ? pilotTour.localID : pilotTour.doc, best);
+	}
+	static const f64 HYP_TOUR_WARP_AFTER_SEC = 20.0;
+	static const f32 HYP_TOUR_WARP_DIST = 700.0f;
+	static const f32 HYP_TOUR_WARP_STANDOFF = 350.0f;
+	static const f32 HYP_TOUR_WARP_LIFT = 30.0f;
+	if(!pilotTour.warped && TimeDiffSec(TimeDiff(pilotTour.since, localTime)) > HYP_TOUR_WARP_AFTER_SEC) {
+		vec3 at = vec3(0);
+		bool found = false;
+		if(pilotTour.kind == 1) foreach_const(m, mapInteractions) if(m->localID == pilotTour.localID && MapInteractionPos(*m, &at)) found = true;
+		if(pilotTour.kind == 2) if(ActorNpc* npc = FindNpcActor(pilotTour.npc)) { at = npc->pos; found = true; }
+		const vec2 rel = here - vec2(at);
+		const f32 len = glm::length(rel);
+		if(found && len > HYP_TOUR_WARP_DIST) {
+			const vec3 dest = vec3(vec2(at) + rel / len * HYP_TOUR_WARP_STANDOFF, at.z + HYP_TOUR_WARP_LIFT);
+			pilotTour.warped = true;
+			WarpPlayer(p, dest, atan2f(-rel.y, -rel.x));
+			LOG("PilotTour :: stuck %.0f from the stop after %.0f s, warped next to it", len, HYP_TOUR_WARP_AFTER_SEC);
+			PilotTourEvent("warped");
+		}
 	}
 	if(pilotTour.kind == 1) {
 		foreach_const(m, mapInteractions) {

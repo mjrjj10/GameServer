@@ -488,7 +488,10 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 		LightAttacker(attacker.body->GetWorldPos(), (i32)npc.faction);
 	}
 	if(npc.ownerUID == ActorUID::INVALID) OnMonsterDamaged(npc, hpBefore);
-	if(pilotTour.kind == 2 && pilotTour.npc == npc.UID) pilotTour.hit = true;
+	if(pilotTour.kind == 2 && pilotTour.npc == npc.UID && !pilotTour.hit) {
+		pilotTour.hit = true;
+		PilotTourEvent("first hit");
+	}
 	if(npc.ownerUID == ActorUID::INVALID) MonsterAggroOnHit(npc, attacker);
 	if(remoteHit && remoteHit->remoteID != 0) {
 		Replication::RemoteDamage hit = *remoteHit;
