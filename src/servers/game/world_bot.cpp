@@ -585,7 +585,15 @@ bool World::Pilot(Player& p, PilotDecision* out)
 			out->doc = (i32)npc->docID;
 		}
 	}
-	if(!retreat && !BotObjective(p, &goal) && !BotLaneGoal(p, &goal)) goal = here;
+	vec2 occupyPoint;
+	ActorUID occupyObject = ActorUID::INVALID;
+	f32 occupyReach = 0;
+	if(!retreat && !out->hasTarget && OccupyTarget(p, &occupyPoint, &occupyObject, &occupyReach)) {
+		out->hasInteract = true;
+		out->interact = vec3(occupyPoint, pos.z);
+		goal = occupyPoint;
+	}
+	else if(!retreat && !BotObjective(p, &goal) && !BotLaneGoal(p, &goal)) goal = here;
 	out->finalGoal = vec3(goal, pos.z);
 	goal = BotNavStep(p, goal);
 	vec2 tower;
@@ -736,6 +744,16 @@ void World::UpdateBotCombat()
 		}
 		else if(!target) continue;
 
+		const WeaponFiring& chargeWf = ActiveWeaponFiring(bot, bot.Main().stance);
+		if(!chargeWf.charge.empty() && !chargeWf.chargeTime.empty()) {
+			if(bot.weaponState != WEAPON_STATE_CHARGE) {
+				bot.botChargeGoal = BotRollChargeLevel(bot, chargeWf);
+				OnWeaponState(bot, WEAPON_STATE_CHARGE, 0, bot.firingCombo);
+				replication->RelayWeaponState(ClientHandle::INVALID, bot.Main().UID, MEASURED_WEAPON_STATE_WEAPON_ID, WEAPON_STATE_CHARGE, 0, bot.firingCombo);
+			}
+			if(bot.chargeAnnounced < bot.botChargeGoal) { bot.tNextBotShot = localTime; continue; }
+			OnWeaponState(bot, WEAPON_STATE_FIRE, bot.chargeAnnounced, bot.firingCombo);
+		}
 		if(!WeaponHeatShot(bot, localTime, replication, WeaponHeatScale(bot))) continue;
 		const vec2 rel = vec2(aim) - vec2(pos);
 		const vec2 dir = glm::length(rel) > 1.0f ? glm::normalize(rel) : vec2(1, 0);
@@ -743,6 +761,28 @@ void World::UpdateBotCombat()
 		PlayerWeaponShot(bot, pos, dir, best);
 		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot) * 1000.0));
 	}
+}
+
+struct BotChargeShare { i32 classType; f32 share[4]; };
+static const BotChargeShare MEASURED_BOT_CHARGE_SHARES[] = {
+	{ 6, { 0.38f, 0.09f, 0.21f, 0.32f } },
+	{ 20, { 0.76f, 0.24f, 0.0f, 0.0f } },
+	{ 36, { 0.94f, 0.06f, 0.0f, 0.0f } },
+	{ 9, { 0.99f, 0.01f, 0.0f, 0.0f } },
+};
+
+u8 World::BotRollChargeLevel(const Player& bot, const WeaponFiring& wf) const
+{
+	const i32 levels = (i32)MIN(wf.charge.size(), wf.chargeTime.size());
+	for(const BotChargeShare& row : MEASURED_BOT_CHARGE_SHARES) {
+		if(row.classType != (i32)bot.Main().classType) continue;
+		f32 r = (f32)Randf01();
+		for(i32 lv = 0; lv < 4; lv++) {
+			r -= row.share[lv];
+			if(r < 0) return (u8)MIN(lv, levels);
+		}
+	}
+	return 0;
 }
 
 f32 World::BotNextFireDelay(const Player& bot) const

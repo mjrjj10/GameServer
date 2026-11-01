@@ -268,6 +268,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 	}
 	LOG("Explosion :: at (%.0f, %.0f) radius=%.0f", center.x, center.y, radius);
 	const Remote* bombRemote = source && source->bombDoc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(source->bombDoc) : nullptr;
+	const bool bombHit = source && source->damage <= 0 && source->bombDoc != RemoteIdx::INVALID;
 	i32 mastersHit = 0;
 	foreach(it, players) {
 		if(it->team == owner.team || it->dead || it->untargetable) continue;
@@ -276,6 +277,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 		if(LagDistToPoint(*it, vec2(center)) > radius + HitRadius(*it) + WEAPON_HIT_TOLERANCE) continue;
 		const f32 falloff = bombRemote ? RemoteDistanceFalloff(*bombRemote, glm::length(vec2(pos) - vec2(center))) : 1.0f;
 		DamagePlayer(owner, *it, SkillID::INVALID, (i32)(damage * falloff), source ? &hitInfo : nullptr);
+		if(bombHit) PassiveOnWeaponHit(owner, *it, hitInfo);
 		mastersHit++;
 	}
 	foreach(npc, actorNpcList) {
@@ -283,6 +285,17 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 		const f32 d = glm::length(vec2(npc->pos) - vec2(center));
 		if(d > radius + NpcHitRadius(*npc)) continue;
 		DamageNpc(owner, *npc, SkillID::INVALID, (i32)(damage * (bombRemote ? RemoteDistanceFalloff(*bombRemote, d) : 1.0f)));
+	}
+	if(bombRemote && !bombRemote->friendlyStatuses.empty()) {
+		foreach(it, players) {
+			if(it->team != owner.team || it->dead) continue;
+			const vec3 pos = it->body->GetWorldPos();
+			if(fabsf(pos.z - center.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
+			if(glm::length(vec2(pos) - vec2(center)) > radius + HitRadius(*it)) continue;
+			foreach_const(st, bombRemote->friendlyStatuses) {
+				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(owner, *it, st->statusID);
+			}
+		}
 	}
 	if(mastersHit >= 2 && owner.mana >= 0) {
 		if(const ActiveStatus* st = FindPassiveOfType(owner, StatusType::ARTILLERY)) {
@@ -333,6 +346,13 @@ void World::UpdateProjectiles(f32 delta)
 	for(auto proj = projectileList.begin(); proj != projectileList.end(); ) {
 		Player& owner = players[proj->ownerIndex];
 		if(proj->angularVel > 0) SteerProjectile(*proj, delta);
+		if(proj->angularVel > 0 && proj->remoteID != 0 && proj->seedOwnerHd == ClientHandle::INVALID) {
+			proj->syncIn -= delta;
+			if(proj->syncIn <= 0) {
+				proj->syncIn += MEASURED_REMOTE_SYNC_PERIOD_SEC;
+				replication->SendRemoteSyncTargetToAll(proj->remoteID, proj->homingTarget >= 0 ? players[proj->homingTarget].Main().UID : ActorUID::INVALID, proj->pos + vec3(0, 0, FIRE_NODE_HEIGHT), &proj->dir);
+			}
+		}
 		f32 step = MIN(proj->speed * delta + proj->pendingAdvance, proj->range - proj->travelled);
 		proj->pendingAdvance = 0;
 		bool hitWall = false;
@@ -381,7 +401,7 @@ void World::UpdateProjectiles(f32 delta)
 					else repeatHits.push_back({ proj->volleyID, it->index, 1, localTime });
 				}
 				if(proj->damage > 0) DamagePlayer(owner, *it, SkillID::INVALID, (i32)(proj->damage * volleyMul * PassiveWeaponDamageMul(owner, *it)), &*proj);
-				PassiveOnWeaponHit(owner, *it, *proj);
+				if(proj->damage > 0 || proj->bombDoc == RemoteIdx::INVALID) PassiveOnWeaponHit(owner, *it, *proj);
 				const i32 cost = PenetrationCost(*it);
 				activationCost += (u32)cost;
 				if(!activationTarget) activationTarget = &*it;
@@ -652,13 +672,12 @@ void World::OnWeaponState(Player& player, i32 state, u8 chargeLevel, u8 firingCo
 void World::UpdateWeaponCharges()
 {
 	foreach(it, players) {
-		if(it->weaponState != WEAPON_STATE_CHARGE || it->dead || it->clientHd == ClientHandle::INVALID) continue;
+		if(it->weaponState != WEAPON_STATE_CHARGE || it->dead) continue;
 		const WeaponFiring& wf = ActiveWeaponFiring(*it, it->Main().stance);
 		const f64 held = TimeDiffSec(TimeDiff(it->chargeStart, localTime));
 		while(it->chargeAnnounced < wf.chargeTime.size() && it->chargeAnnounced < wf.charge.size() && held >= wf.chargeTime[it->chargeAnnounced]) {
 			it->chargeAnnounced++;
-			const WeaponIndex weapon = ActiveWeapon(*it);
-			replication->RelayWeaponState(ClientHandle::INVALID, it->Main().UID, (i32)weapon, WEAPON_STATE_CHARGE, it->chargeAnnounced, it->firingCombo);
+			replication->RelayWeaponState(it->clientHd, it->Main().UID, MEASURED_WEAPON_STATE_WEAPON_ID, WEAPON_STATE_CHARGE, it->chargeAnnounced, it->firingCombo);
 			LOG("Shot :: %ls charge level %d after %.2fs", it->name.data(), (i32)it->chargeAnnounced, held);
 		}
 	}

@@ -38,7 +38,10 @@ struct PlayerInputCastSkill
 struct Remote;
 
 static const i32 WEAPON_STATE_FIRE = 2;
+static const i32 MEASURED_WEAPON_STATE_WEAPON_ID = 90;
 static const i32 WEAPON_STATE_CHARGE = 7;
+static const f32 MEASURED_REMOTE_SYNC_FIRST_SEC = 0.03f;
+static const f32 MEASURED_REMOTE_SYNC_PERIOD_SEC = 0.33f;
 
 struct World
 {
@@ -168,6 +171,7 @@ struct World
 		i32 weaponState = 0;
 		Time chargeStart = Time::ZERO;
 		u8 chargeAnnounced = 0;
+		u8 botChargeGoal = 0;
 		eastl::fixed_map<i32,u8,12,false> skillLevels;
 		eastl::fixed_map<u32,GameXmlContent::CostLevel,12,false> castMods;
 		i32 skillPoints = 1;
@@ -551,6 +555,9 @@ struct World
 		Time monsterLastTurn = Time::ZERO;
 		f32 monsterSyncYaw = 0.0f;
 		bool monsterReturning = false;
+		bool monsterWalkStateOn = false;
+		bool monsterLowHpDone = false;
+		ActorUID monsterReturnTarget = ActorUID::INVALID;
 
 		vec3 pos;
 		vec3 rot;
@@ -561,6 +568,7 @@ struct World
 	struct ActorDynamic
 	{
 		const ActorUID UID;
+		u8 bushState = 0;
 		CreatureIndex docID;
 		i32 localID;
 		Faction faction;
@@ -645,6 +653,7 @@ struct World
 	struct Projectile
 	{
 		u32 ownerIndex;
+		f32 syncIn = MEASURED_REMOTE_SYNC_FIRST_SEC;
 		u16 nodeName = 0;
 		vec3 pos;
 		vec2 dir;
@@ -742,6 +751,7 @@ struct World
 		i32 hitsLeft;
 		bool areaDone;
 		u32 clientRemoteID = 0;
+		f32 syncIn = MEASURED_REMOTE_SYNC_FIRST_SEC;
 		i32 penetrationLeft = 0;
 		Time nextTimeEvent = Time::ZERO;
 		bool timeEventActive = false;
@@ -910,8 +920,10 @@ struct World
 	struct TeamGate { i32 localID; vec2 a; vec2 b; i32 team; bool open; };
 	eastl::fixed_vector<TeamGate,32,false> teamGates;
 	bool BotGateBlocks(const Player& bot, const vec2& from, vec2* goal) const;
-	struct PilotDecision { vec3 goal = vec3(0); vec3 finalGoal = vec3(0); bool hasTarget = false; vec3 target = vec3(0); i32 hp = 0; i32 hpMax = 0; i32 doc = 0; bool master = false; };
+	struct PilotDecision { vec3 goal = vec3(0); vec3 finalGoal = vec3(0); bool hasTarget = false; vec3 target = vec3(0); i32 hp = 0; i32 hpMax = 0; i32 doc = 0; bool master = false; bool hasInteract = false; vec3 interact = vec3(0); };
 	bool Pilot(Player& p, PilotDecision* out);
+	void GrantMasterKillExp(Player& killer, const Player& victim, const eastl::fixed_vector<Player*,10,false>& assisters);
+	void RewardMasterKill(Player* killer, const Player& victim);
 	Time observerNextMove = Time::ZERO;
 	i32 observerTarget = -1;
 	f32 PlayerMoveSpeed(const Player& p) const;
@@ -919,6 +931,8 @@ struct World
 	void UpdateSummonAi(f32 delta);
 	void UpdateMonsterAi(f32 delta);
 	void StartMonsterAttack(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const GameXmlContent::MonsterAttack* attack, const vec3* targetPos, f32 dist, f32 yaw, f32 run);
+	void StartMonsterWalkState(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, f32 speed);
+	bool UpdateMonsterMasterSpecial(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const GameXmlContent::MonsterAttack& current, f32 run);
 	bool UpdateMonsterScript(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const vec3* targetPos, f32 delta);
 	bool UpdateMonsterSeek(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, f32 speed, f32 delta);
 	bool UpdateMonsterAllyBuff(ActorNpc& npc, const GameXmlContent::MonsterAi& ai);
@@ -962,9 +976,9 @@ struct World
 	struct MonsterFireEvent { ActorUID npc; ActorUID target; Time at; const GameXmlContent::MonsterFire* fire; u32 seed; bool byRemotes = false; f32 castYaw = 0; };
 	eastl::fixed_vector<MonsterFireEvent,64,true> monsterFires;
 	void FireMonsterRemote(const MonsterFireEvent& fire);
-	struct MonsterRemote { ActorUID owner; ActorUID target; const Remote* remote; vec3 pos; vec2 dir; Time expire; Time nextTime; i32 activations; f32 travelled; bool impacted; eastl::fixed_vector<eastl::pair<ActorUID,Time>,24,true> hitUntil; };
+	struct MonsterRemote { ActorUID owner; ActorUID target; const Remote* remote; vec3 pos; vec2 dir; Time expire; Time nextTime; i32 activations; f32 travelled; bool impacted; u32 seed = 0; f32 syncIn = MEASURED_REMOTE_SYNC_FIRST_SEC; eastl::fixed_vector<eastl::pair<ActorUID,Time>,24,true> hitUntil; };
 	eastl::fixed_vector<MonsterRemote,128,true> monsterRemotes;
-	void SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send);
+	void SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed = 0);
 	void RetargetMonsters(ActorUID from, ActorUID to);
 	vec3 npcHitCenter = vec3(0);
 	bool npcHitCenterSet = false;
@@ -1001,6 +1015,8 @@ struct World
 	void RelayWarp(ActorNpc& npc, const vec3& to);
 	void ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos);
 	ActorUID statusCasterOverride = ActorUID::INVALID;
+	ActorUID statusTargetOverride = ActorUID::INVALID;
+	bool statusNoCaster = false;
 	ActorUID damageAttackerOverride = ActorUID::INVALID;
 	ClientHandle damageSeedOwnerOverride = ClientHandle::INVALID;
 	struct ClientRemoteSeed { u32 playerIndex; RemoteIdx doc; u32 seed; Time at; };
@@ -1069,6 +1085,7 @@ struct World
 	void OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize);
 	void OnWeaponAimPacket(Player& player, f32 aimYaw);
 	void OnWeaponState(Player& player, i32 state, u8 chargeLevel, u8 firingCombo);
+	u8 BotRollChargeLevel(const Player& bot, const WeaponFiring& wf) const;
 
 private:
 	ActorUID NewActorUID();
@@ -1141,7 +1158,7 @@ public:
 	f32 PlayerSkillConsume(const Player& player, i32 skillID, i32 index) const;
 	const GameXmlContent::CostLevel* UpgradeCastMods(Player& player, SkillID skillID, const GameXmlContent::CostLevel* costLevel);
 	void ReleaseCast(Player& player);
-	void CancelCast(Player& player, const char* reason);
+	void CancelCast(Player& player, const char* reason, ClientHandle skipHd = ClientHandle::INVALID);
 	void SyncNpcLeg(ActorNpc& npc, const vec3& goal);
 	void StopNpcLeg(ActorNpc& npc);
 	void WanderNpc(ActorNpc& npc, f32 moveSpeed, f32 delta);
@@ -1222,6 +1239,7 @@ public:
 	void SendTraitStats(Player& player, ActorMaster& chara);
 	void RefreshMasterHealth(Player& player, ActorMaster& chara);
 	u32 UpgradeTraits(Player& player, ActorUID characterUID, const u8* indices, i32 count);
+	void BotSpendTraits(Player& player);
 	u32 ResetTraits(Player& player, ActorUID characterUID);
 	void ApplyLevelStats(Player& player);
 	u32 KillPoints() const;
@@ -1314,7 +1332,9 @@ public:
 	bool BotRetreat(Player& bot, vec2* goal);
 	bool BotSiegeOk(const Player& bot, const ActorNpc& tower) const;
 	void SummonGiant(i32 team);
-	struct GroundItem { u32 uid = 0; i32 itemIndex = 0; vec3 pos = vec3(0); i32 tagID = -1; Time expireAt = Time::ZERO; i32 count = 1; i32 owner = -1; bool ron = false; };
+	struct GroundItem { u32 uid = 0; i32 itemIndex = 0; vec3 pos = vec3(0); i32 tagID = -1; Time expireAt = Time::ZERO; i32 count = 1; i32 owner = -1; bool ron = false; i32 team = -1; };
+	void DropMasterSoul(const Player& dead);
+	void RefreshBushStates();
 	bool TakeGroundItem(Player& player, u32 itemUID, GroundItem* taken = nullptr);
 	eastl::fixed_vector<GroundItem,256,false> groundItems;
 	struct LevelEventTimer { i32 node; Time at; i32 playerIndex; i32 fromNode; };
@@ -1388,6 +1408,7 @@ private:
 	void PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj);
 	void PassiveOnSkillHit(Player& attacker, Player& target);
 	void PassiveOnWeaponHit(Player& attacker);
+	void PassiveOnFriendlyHit(Player& owner);
 	void ApplyPassiveStatusRule(const PassiveStatusRule& rule, Player& owner, Player* hitTarget);
 	f32 PassiveWeaponDamageMul(Player& attacker, Player& target);
 	const ActiveStatus* FindPassiveOfType(const Player& p, StatusType type) const;

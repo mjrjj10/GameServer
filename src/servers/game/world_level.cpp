@@ -71,26 +71,69 @@ void World::GrantMonsterKillExp(const ActorNpc& npc, ActorUID killerUID)
 	const GameXmlContent::IngameLevelInfo& info = GetGameXmlContent().ingameLevel;
 	auto found = info.monsters.find((i32)npc.docID);
 	if(found == info.monsters.end()) return;
+	const GameXmlContent::IngameLevelInfo::MonsterExp& rule = found->second;
 	ActorMaster* killerMaster = FindMasterActor(killerUID);
-	if(!killerMaster || !killerMaster->parent) return;
-	Player& killer = *killerMaster->parent;
-	if(!KillRewarded(npc, killer)) return;
-	i32 base = found->second.exp;
-	if(found->second.growth > 0 && found->second.growthPeriod > 0 && gameStartedAt != Time::ZERO) {
-		base += found->second.growth * (i32)(TimeDiffSec(TimeDiff(gameStartedAt, localTime)) / found->second.growthPeriod);
+	Player* killer = killerMaster ? killerMaster->parent : nullptr;
+	if(killer && !KillRewarded(npc, *killer)) return;
+	i32 team = killer ? (i32)killer->team : (npc.faction == Faction::RED ? 1 : (npc.faction == Faction::BLUE ? 0 : -1));
+	if(team < 0) return;
+	i32 base = rule.exp;
+	if(rule.growth > 0 && rule.growthPeriod > 0 && gameStartedAt != Time::ZERO) {
+		base += rule.growth * (i32)(TimeDiffSec(TimeDiff(gameStartedAt, localTime)) / rule.growthPeriod);
 	}
-	eastl::fixed_vector<Player*,10,false> helpers;
-	foreach(p, players) {
-		if(&*p == &killer || p->team != killer.team || p->dead || !p->body) continue;
-		if(glm::length(vec2(p->body->GetWorldPos()) - vec2(npc.pos)) <= info.shareRadius) helpers.push_back(&*p);
+	switch(rule.mode) {
+		case GameXmlContent::IngameLevelInfo::MonsterExp::KILLER: {
+			if(killer) GrantIngameExp(*killer, base, npc.UID);
+		} break;
+		case GameXmlContent::IngameLevelInfo::MonsterExp::TEAM: {
+			foreach(p, players) if((i32)p->team == team) GrantIngameExp(*p, base + (&*p == killer ? rule.killerBonus : 0), npc.UID);
+		} break;
+		default: {
+			eastl::fixed_vector<Player*,10,false> sharers;
+			foreach(p, players) {
+				if((i32)p->team != team || p->dead || !p->body) continue;
+				if(&*p == killer || glm::length(vec2(p->body->GetWorldPos()) - vec2(npc.pos)) <= info.shareRadius) sharers.push_back(&*p);
+			}
+			if(sharers.empty()) return;
+			const i32 each = MAX((base - rule.killerBonus) / (i32)sharers.size(), 0);
+			foreach(p, sharers) GrantIngameExp(**p, each + (*p == killer ? rule.killerBonus : 0), npc.UID);
+		} break;
 	}
-	if(info.shares.empty()) {
-		GrantIngameExp(killer, base, npc.UID);
-		return;
+}
+
+void World::RewardMasterKill(Player* killer, const Player& victim)
+{
+	if(!map || !map->ingameLevels) return;
+	const f32 window = GetGameXmlContent().ingameLevel.masterKillAssistWindowSec;
+	Player* credited = killer && killer->team != victim.team ? killer : nullptr;
+	Time latest = Time::ZERO;
+	if(!credited) {
+		foreach_const(d, victim.recentDamage) {
+			Player& a = players[d->attackerIndex];
+			if(a.team == victim.team || d->damage <= 0 || TimeDiffSec(TimeDiff(d->at, localTime)) > window) continue;
+			if(!credited || d->at > latest) { credited = &a; latest = d->at; }
+		}
 	}
-	const auto& share = info.shares[MIN((i32)helpers.size(), (i32)info.shares.size() - 1)];
-	GrantIngameExp(killer, MAX((i32)(base * share.first + 0.5f), 1), npc.UID);
-	foreach(h, helpers) GrantIngameExp(**h, MAX((i32)(base * share.second + 0.5f), 1), npc.UID);
+	if(!credited) return;
+	eastl::fixed_vector<Player*,10,false> assisters;
+	foreach_const(d, victim.recentDamage) {
+		Player& a = players[d->attackerIndex];
+		if(&a == credited || a.team == victim.team || d->damage <= 0 || TimeDiffSec(TimeDiff(d->at, localTime)) > window) continue;
+		if(eastl::find(assisters.begin(), assisters.end(), &a) == assisters.end() && !assisters.full()) assisters.push_back(&a);
+	}
+	GrantMasterKillExp(*credited, victim, assisters);
+}
+
+void World::GrantMasterKillExp(Player& killer, const Player& victim, const eastl::fixed_vector<Player*,10,false>& assisters)
+{
+	if(!map || !map->ingameLevels || killer.team == victim.team) return;
+	const GameXmlContent::IngameLevelInfo& info = GetGameXmlContent().ingameLevel;
+	if(info.masterKillBase <= 0) return;
+	const i32 reward = (i32)(info.masterKillBase + info.masterKillPerLevel * (f32)victim.ingameLevel + 0.5f);
+	GrantIngameExp(killer, reward, victim.Main().UID);
+	if(assisters.empty()) return;
+	const i32 each = MAX((i32)(reward * info.masterKillAssistPool / (f32)assisters.size()), 1);
+	foreach_const(a, assisters) GrantIngameExp(**a, each, victim.Main().UID);
 }
 
 i32 World::IngameRespawnDelayMs(const Player& player) const
@@ -176,6 +219,24 @@ u32 World::UpgradeTraits(Player& player, ActorUID characterUID, const u8* indice
 	replication->SendCharacterPropertyInfoToAll(chara->UID, chara->traits);
 	LOG("Traits :: %ls master %d traits %d/%d/%d/%d (%d points left)", player.name.data(), (i32)chara->classType, chara->traits[0], chara->traits[1], chara->traits[2], chara->traits[3], chara->traitPoints);
 	return 0;
+}
+
+void World::BotSpendTraits(Player& player)
+{
+	const i32 maxPoints = GetGameXmlContent().traitMaxPoints;
+	for(i32 m = 0; m < 2; m++) {
+		ActorMaster& chara = m == 0 ? player.Main() : player.Sub();
+		eastl::fixed_vector<u8,64,false> picks;
+		eastl::array<u8,4> levels = chara.traits;
+		for(i32 k = 0; k < chara.traitPoints && !picks.full(); k++) {
+			i32 idx = 0;
+			while(idx < 4 && levels[idx] >= maxPoints) idx++;
+			if(idx >= 4) break;
+			levels[idx]++;
+			picks.push_back((u8)idx);
+		}
+		if(!picks.empty()) UpgradeTraits(player, chara.UID, picks.data(), (i32)picks.size());
+	}
 }
 
 u32 World::ResetTraits(Player& player, ActorUID characterUID)

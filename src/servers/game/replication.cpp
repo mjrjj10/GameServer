@@ -575,7 +575,7 @@ void Replication::SendClientLevelEventToAll(i32 eventID, ActorUID caller)
 	}
 }
 
-void Replication::SendCreateGroundItemToAll(u32 itemUID, i32 itemIndex, const vec3& pos)
+void Replication::SendCreateGroundItemToAll(u32 itemUID, i32 itemIndex, const vec3& pos, i32 gettableType, i32 factionType)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
@@ -588,8 +588,8 @@ void Replication::SendCreateGroundItemToAll(u32 itemUID, i32 itemIndex, const ve
 		packet.Write<u32>((u32)itemIndex);
 		packet.Write<u32>(1);
 		packet.Write<u32>(0);
-		packet.Write<i32>(0);
-		packet.Write<i32>(-1);
+		packet.Write<i32>(gettableType);
+		packet.Write<i32>(factionType);
 		packet.Write<u8>(0);
 		packet.Write<u8>(1);
 		SendPacket(clientHandle[clientID], packet);
@@ -2039,6 +2039,26 @@ void Replication::RelayRemoteSyncCreateFromRemoteDoc(ClientHandle senderHd, cons
 	if(remote.parentUID == ActorUID::INVALID || remote.ownerUID == ActorUID::INVALID) return;
 	SendRemoteCreate(remote, senderHd);
 }
+static const u8 REMOTE_SYNC_NO_MOVE_DIR = 8;
+static const f32 MEASURED_SYNC_TURN_MIN_RAD = 0.087f;
+
+void Replication::SendRemoteSyncTargetToAll(u32 remoteID, ActorUID targetUID, const vec3& pos, const vec2* moveDir)
+{
+	Sv::SN_RemoteSyncTarget packet;
+	packet.excludedFieldBits = moveDir ? 0 : REMOTE_SYNC_NO_MOVE_DIR;
+	packet.remoteID = remoteID;
+	packet.DestPos = v2f(pos);
+	packet.MoveDir = moveDir ? v2f(vec3(*moveDir, 0)) : v2f(vec3(0));
+	const u16 size = moveDir ? (u16)sizeof(Sv::SN_RemoteSyncTarget) : (u16)offsetof(Sv::SN_RemoteSyncTarget, MoveDir);
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID targetLocal = targetUID != ActorUID::INVALID ? GetLocalActorID(clientHd, targetUID) : LocalActorID::INVALID;
+		packet.targetEntity = targetLocal != LocalActorID::INVALID ? (u32)targetLocal : 0;
+		SendPacketData<Sv::SN_RemoteSyncTarget>(clientHd, size, &packet);
+	}
+}
+
 void Replication::RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetData, i32 packetSize)
 {
 	const Cl::CQ_RemoteSyncTarget& sync = *(const Cl::CQ_RemoteSyncTarget*)packetData;
@@ -2378,15 +2398,16 @@ void Replication::SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
+		const bool stopped = vec2(pos) == vec2(goal);
 		PacketWriter<Sv::SN_AIMonsterSyncMove,48> packet;
-		packet.Write<u8>(NPC_MOVE_YAW_AND_SPEED);
+		packet.Write<u8>(stopped ? NPC_MOVE_YAW_AND_POSITIONS : NPC_MOVE_YAW_AND_SPEED);
 		packet.Write<u32>((u32)localID);
 		packet.Write<i16>(yaw);
 		packet.Write<i16>(yaw);
-		packet.Write<u16>((u16)MIN(speed * MONSTER_SPEED_SCALE, 65535.0f));
+		if(!stopped) packet.Write<u16>((u16)MIN(speed * MONSTER_SPEED_SCALE, 65535.0f));
 		packet.Write<float3>(v2f(pos));
 		packet.Write<float3>(v2f(goal));
-		packet.Write<u8>(vec2(pos) == vec2(goal) ? NPC_MOVE_FLAG_STOPPED : 0);
+		packet.Write<u8>(stopped ? NPC_MOVE_FLAG_STOPPED : 0);
 		SendPacket(clientHd, packet);
 	}
 }
@@ -2655,6 +2676,19 @@ void Replication::SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorU
 		packet.targetID = (u32)targetLocal;
 		packet.casterID = casterLocal != LocalActorID::INVALID ? (u32)casterLocal : 0;
 		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendBushCurStateToAll(ActorUID bushUID, u32 state)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const LocalActorID local = GetLocalActorID(clientHandle[clientID], bushUID);
+		if(local == LocalActorID::INVALID) continue;
+		Sv::SN_BushState packet;
+		packet.bushID = (u32)local;
+		packet.curState = state;
+		SendPacket(clientHandle[clientID], packet);
 	}
 }
 
@@ -3017,11 +3051,12 @@ void Replication::SendToggleSkill(ActorUID casterUID, ClientHandle casterHd, Ski
 	}
 }
 
-void Replication::SendCancelSkillToAll(ActorUID casterUID, SkillID skillID)
+void Replication::SendCancelSkillToAll(ActorUID casterUID, SkillID skillID, ClientHandle skipHd)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
+		if(clientHd == skipHd) continue;
 		const LocalActorID localID = GetLocalActorID(clientHd, casterUID);
 		if(localID == LocalActorID::INVALID) continue;
 		Sv::SN_CancelSkill cancel;
@@ -3436,7 +3471,9 @@ void Replication::UpdatePlayersLocalState()
 			}
 #endif
 
-			SendActorDestroy(clientHd, actorUID);
+			const auto prevNpc = framePrev->npcMap.find(actorUID);
+			const bool deadNpc = prevNpc != framePrev->npcMap.end() && (prevNpc->second->hp <= 0 || prevNpc->second->actionState == ActionStateID::DIE_BEHAVIORSTATE);
+			if(!deadNpc) SendActorDestroy(clientHd, actorUID);
 
 			// Remove LocalActorID link
 			DeleteLocalActorID(pi, actorUID);
@@ -3618,6 +3655,9 @@ void Replication::FrameDifference()
 			sent.speed = syncSpeed;
 			sent.at = TimeRelNow();
 			sent.pos = cur.pos;
+			sent.upperYaw = cur.rotation.upperYaw;
+			sent.upperPitch = cur.rotation.upperPitch;
+			sent.bodyYaw = cur.rotation.bodyYaw;
 			ActionStateID action = cur.actionState;
 			if(action == ActionStateID::INVALID) {
 				action = ActionStateID::NONE_BEHAVIORSTATE;
@@ -3645,12 +3685,14 @@ void Replication::FrameDifference()
 		}
 
 		// rotation
-		const f32 rotEpsilon = 0.1f;
-		if(cur.clientHd == ClientHandle::INVALID && !rotationUpdated &&
-		   (fabs(cur.rotation.upperYaw - prev.rotation.upperYaw) > rotEpsilon ||
-		   fabs(cur.rotation.upperPitch - prev.rotation.upperPitch) > rotEpsilon ||
-		   fabs(cur.rotation.bodyYaw - prev.rotation.bodyYaw) > rotEpsilon))
+		SentMove& sentTurn = sentMoves[cur.actorUID];
+		const auto angleGap = [](f32 a, f32 b) { f32 d = fmodf(a - b + PI, 2 * PI); if(d < 0) d += 2 * PI; return fabsf(d - PI); };
+		const f32 turnGap = MAX(MAX(angleGap(cur.rotation.upperYaw, sentTurn.upperYaw), angleGap(cur.rotation.bodyYaw, sentTurn.bodyYaw)), fabsf(cur.rotation.upperPitch - sentTurn.upperPitch));
+		if(cur.clientHd == ClientHandle::INVALID && !rotationUpdated && turnGap >= MEASURED_SYNC_TURN_MIN_RAD)
 		{
+			sentTurn.upperYaw = cur.rotation.upperYaw;
+			sentTurn.upperPitch = cur.rotation.upperPitch;
+			sentTurn.bodyYaw = cur.rotation.bodyYaw;
 			Sv::SN_PlayerSyncTurn sync;
 			sync.UpperDir = { WorldYawToMxmYaw(cur.rotation.upperYaw), WorldPitchToMxmPitch(cur.rotation.upperPitch) };
 			sync.nRotate = WorldYawToMxmYaw(cur.rotation.bodyYaw);

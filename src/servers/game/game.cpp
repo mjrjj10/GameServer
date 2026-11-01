@@ -17,6 +17,7 @@ static const f32 STAGE_TIME_LIMIT_FALLBACK_SEC = 300.0f;
 static const f64 RETURN_TO_LOBBY_DELAY_SEC = 20.0;
 static const u32 MEASURED_PVE_FAIL_RETURN_MS = 15000;
 static const f32 HYP_HUMAN_POSITION_SNAP = 100.0f;
+static const f32 MEASURED_BOT_TAG_SHARE = 2.5f / 49.9f;
 static const u32 MEASURED_DEFENCE_RETURN_MS = 280;
 static const i32 MEASURED_DEFENCE_RESPAWN_MS = 12000;
 struct PvpGuildPointRule { i32 teamSize; u32 win; u32 lose; };
@@ -507,7 +508,7 @@ void Game::Update(Time localTime_)
 
 					eastl::array<f32,Action::_Count> actionWeight = {0.f};
 					actionWeight[Action::Move] = 8;
-					actionWeight[Action::Tag] = 2;
+					actionWeight[Action::Tag] = actionWeight[Action::Move] * MEASURED_BOT_TAG_SHARE / (1.0f - MEASURED_BOT_TAG_SHARE);
 					actionWeight[Action::Jump] = 0;
 
 					f32 actionSpace = 0;
@@ -820,6 +821,7 @@ void Game::WriteTelemetry()
 		fprintf(f, "{\"gx\":%.0f,\"gy\":%.0f,\"gz\":%.0f,\"fx\":%.0f,\"fy\":%.0f,\"target\":", pilot.goal.x, pilot.goal.y, pilot.goal.z, pilot.finalGoal.x, pilot.finalGoal.y);
 		if(pilot.hasTarget) fprintf(f, "{\"x\":%.0f,\"y\":%.0f,\"z\":%.0f,\"hp\":%d,\"hpMax\":%d,\"doc\":%d,\"master\":%d}", pilot.target.x, pilot.target.y, pilot.target.z, pilot.hp, pilot.hpMax, pilot.doc, pilot.master ? 1 : 0);
 		else fprintf(f, "null");
+		if(pilot.hasInteract) fprintf(f, ",\"interact\":{\"x\":%.0f,\"y\":%.0f}", pilot.interact.x, pilot.interact.y);
 		fprintf(f, "}");
 	}
 	else fprintf(f, "null");
@@ -2108,7 +2110,7 @@ void Game::OnPlayerCancelCast(ClientHandle clientHd, SkillID skillID)
 {
 	Player& p = *playerMap.at(clientHd);
 	World::Player& player = world.GetPlayer(p.playerIndex);
-	if(player.casting.skillID == skillID && skillID != SkillID::INVALID) world.CancelCast(player, "client");
+	if(player.casting.skillID != SkillID::INVALID && (skillID == SkillID::INVALID || skillID == player.casting.skillID)) world.CancelCast(player, "client", player.clientHd);
 }
 
 void Game::OnPlayerGameIsReady(ClientHandle clientHd)

@@ -13,6 +13,7 @@ static f32 MovespeedMul(f32 percentSum)
 static const i32 STAT_STAMINAREGEN = 5;
 static const i32 STAT_MANAREGEN = 39;
 static const i32 STAT_ULTIMATEREGEN = 42;
+static const u8 STAT_SKILL_COOLTIME_DISCOUNT = 53;
 static const f64 LAST_CHILD_STATUS_DELAY_MS = 50.0;
 static const i32 STAT_TAG_HEALTHREGEN_VALUE = 23;
 static const i32 STAT_TAG_COOLTIME = 31;
@@ -437,7 +438,10 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	}
 	if(remove) return;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
-	if(NpcDefeatReaction(npc, info) < 0) return;
+	if(NpcDefeatReaction(npc, info) < 0) {
+		replication->SendResistStatusToAll(npc.UID, caster.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
+		return;
+	}
 	vec3 pushTo;
 	f32 pushNominal = -1.0f;
 	f32 pushSec = 0;
@@ -589,10 +593,10 @@ void World::InterruptSkills(Player& player)
 	if(player.casting.skillID != SkillID::INVALID) CancelCast(player, "interrupted");
 }
 
-void World::CancelCast(Player& player, const char* reason)
+void World::CancelCast(Player& player, const char* reason, ClientHandle skipHd)
 {
 	LOG("Cast :: %ls skill=%d cancelled (%s)", player.name.data(), (i32)player.casting.skillID, reason);
-	replication->SendCancelSkillToAll(player.Main().UID, player.casting.skillID);
+	replication->SendCancelSkillToAll(player.Main().UID, player.casting.skillID, skipHd);
 	player.casting.skillID = SkillID::INVALID;
 }
 
@@ -1183,6 +1187,29 @@ void World::EndPlayerStatus(Player& player, i32 statusID)
 	foreach(it, activeStatuses) if(it->targetIndex == player.index && it->statusID == statusID && localTime < it->until) it->until = localTime;
 }
 
+static const u32 MEASURED_BUSH_STATE_NONE = 0;
+static const u32 MEASURED_BUSH_STATE_REVEALED = 1;
+static const u32 MEASURED_BUSH_STATE_CONTESTED = 2;
+
+void World::RefreshBushStates()
+{
+	const auto& content = GetGameXmlContent();
+	foreach(d, actorDynamicList) {
+		if(!content.FindBushSize((i32)d->docID)) continue;
+		u32 teams = 0;
+		bool revealed = false;
+		foreach_const(p, players) {
+			if(p->bushUID != d->UID || p->dead) continue;
+			teams |= 1u << p->team;
+			if(PlayerHasActiveStatus(*p, MEASURED_BUSH_REVEAL_STATUS)) revealed = true;
+		}
+		const u32 state = teams == 3u ? MEASURED_BUSH_STATE_CONTESTED : (revealed ? MEASURED_BUSH_STATE_REVEALED : MEASURED_BUSH_STATE_NONE);
+		if(state == d->bushState) continue;
+		d->bushState = (u8)state;
+		replication->SendBushCurStateToAll(d->UID, state);
+	}
+}
+
 void World::BushRevealOnFire(Player& player)
 {
 	if(!replication->titanMode || player.bushUID == ActorUID::INVALID) return;
@@ -1190,6 +1217,7 @@ void World::BushRevealOnFire(Player& player)
 	EndPlayerStatus(player, MEASURED_BUSH_REVEAL_STATUS);
 	ApplyStatus(player, player, MEASURED_BUSH_REVEAL_STATUS);
 	RevealToTeam(player, player.team == 0 ? 1 : 0);
+	RefreshBushStates();
 }
 
 static const f32 LIGHT_CELL_SIZE = 100.0f;
@@ -1312,6 +1340,7 @@ void World::UpdateFog()
 			ApplyStatus(*p, *p, MEASURED_BUSH_HIDE_STATUS, 0, STATUS_INFINITE_DURATION_SEC);
 		}
 	}
+	RefreshBushStates();
 	UpdateNpcFog();
 	foreach(p, players) {
 		if(!p->body || p->dead || p->hiddenUID != ActorUID::INVALID) continue;
@@ -1592,8 +1621,20 @@ f32 World::SkillMaxDistance(const Player& player, i32 skillID) const
 
 f32 World::SkillCoolTime(const Player& player, i32 skillID) const
 {
-	if(const GameXmlContent::SkillUpgrade* up = LatestUpgradeWith(player, skillID, [](const GameXmlContent::SkillUpgrade& u) { return u.coolTime > 0; })) return up->coolTime;
-	return GetGameXmlContent().GetSkillCoolTime(skillID);
+	const GameXmlContent& content = GetGameXmlContent();
+	const GameXmlContent::SkillUpgrade* up = LatestUpgradeWith(player, skillID, [](const GameXmlContent::SkillUpgrade& u) { return u.coolTime > 0; });
+	const f32 base = up ? up->coolTime : content.GetSkillCoolTime(skillID);
+	if(!map || !map->ingameLevels || skillID % 100 == ULTIMATE_SKILL_ID_SUFFIX) return base;
+	for(u32 m = 0; m < 2; m++) {
+		const ActorMaster& chara = *player.characters[m];
+		if(chara.classType == ClassType::NONE) continue;
+		foreach_const(sid, content.GetMaster(chara.classType).skillIDs) {
+			if((i32)*sid != skillID) continue;
+			const f32 discount = content.MasterTraitBonus(chara.classType, chara.traits, STAT_SKILL_COOLTIME_DISCOUNT);
+			return base * MAX(1.0f - discount / 100.0f, 0.0f);
+		}
+	}
+	return base;
 }
 
 f32 World::PlayerSkillDamage(const Player& player, SkillID skillID) const

@@ -32,7 +32,6 @@ static const f64 MULTI_KILL_WINDOW_MS = 15000.0;
 static const f64 DEAD_DAMAGE_WINDOW_MS = 15000.0;
 static const f32 PENETRATION_CAP = 50.0f;
 static const f32 SKILLDAMAGE_REDUCE_CAP = 80.0f;
-static const i32 STATUS_ELECTRO_PASSIVE_BUFF_MPREGEN = 1230040011;
 static const f64 RESPAWN_BASE_UNTIL_SEC[] = { 50.0, 170.0 };
 static const i32 RESPAWN_BASE_MS[] = { 3000, 4000, 5000 };
 static const i32 RESPAWN_LEAD_MIN[] = { 1, 2, 4 };
@@ -102,6 +101,17 @@ void World::PassiveOnWeaponHit(Player& attacker)
 	LOG("Passive :: %ls weapon hit recovers %d hp (status %d)", attacker.name.data(), amount, st->statusID);
 }
 
+void World::PassiveOnFriendlyHit(Player& owner)
+{
+	if(owner.dead || owner.mana < 0) return;
+	const ActiveStatus* st = FindPassiveOfType(owner, StatusType::ELECTRO);
+	if(!st || !st->info || st->info->hitEffectValue <= 0) return;
+	const f32 manaMax = MasterStat(owner.Main().classType, STAT_MANA);
+	if(manaMax <= 0 || owner.mana >= manaMax) return;
+	owner.mana = MIN(owner.mana + st->info->hitEffectValue, manaMax);
+	owner.manaDirty = true;
+}
+
 void World::HealPlayer(Player& healer, Player& target, i32 amount)
 {
 	if(target.dead || amount <= 0) return;
@@ -113,7 +123,6 @@ void World::HealPlayer(Player& healer, Player& target, i32 amount)
 	else healer.healOthers += healed;
 	chara.hp = MIN(chara.hp + amount, chara.hpMax);
 	LOG("Heal :: %ls -> %ls amount=%d hp=%d/%d", healer.name.data(), target.name.data(), amount, chara.hp, chara.hpMax);
-	if(healer.index != target.index && healer.Main().classType == ClassType::ELECTRO && FindPassiveOfType(healer, StatusType::ELECTRO)) ApplyStatus(healer, healer, STATUS_ELECTRO_PASSIVE_BUFF_MPREGEN);
 	replication->SendHpToAll(chara.UID, chara.hp, chara.hpMax);
 }
 
@@ -267,7 +276,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		if(rageMax > 0) {
 			attacker.rageGainAt = localTime;
 			if(attacker.res[1] < rageMax) {
-				attacker.res[1] = MIN(attacker.res[1] + MasterStat(ac, STAT_RAGE_ATTACK_RECOVERY_VALUE), rageMax);
+				attacker.res[1] = MIN(attacker.res[1] + MasterStat(ac, STAT_RAGE_ATTACK_RECOVERY_VALUE) + StatBonus(attacker, (u8)STAT_RAGE_ATTACK_RECOVERY_VALUE), rageMax);
 				attacker.resDirty = true;
 			}
 		}
@@ -343,8 +352,9 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		attacker.kills++;
 		MissionLive(attacker, 1, 0);
 		target.deaths++;
-		GrantSkillPoint(target);
+		if(!map || !map->ingameLevels) GrantSkillPoint(target);
 		DropTitanPieces(target);
+		DropMasterSoul(target);
 		const bool targetWasTitan = target.titanForm >= 0;
 		RevertTitan(target);
 		target.occupyStreak = 0;
@@ -417,6 +427,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			if(occupyMode) teamScore = TeamPoints(it->team);
 			replication->SendAssistScoreToAll(it->userID, it->team, it->assists, occupyMode ? it->points : it->kills, teamScore);
 		}
+		RewardMasterKill(&attacker, target);
 		replication->SendDeadDamageInfo(target.clientHd, attacker.index, target.recentDamage.data(), (i32)target.recentDamage.size(), (i32)TimeDiffMs(TimeDiff(firstDamageAt, localTime)));
 		target.recentDamage.clear();
 		replication->SendDeathToAll(attacker.Main().UID, chara.UID, CreatureIndex(100000000 + (i32)attacker.Main().classType), proj ? proj->remoteID : remoteID, proj ? proj->remoteDoc : remoteDoc, target.userID, respawnMs);
@@ -488,12 +499,12 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 		hit.attackerUID = attacker.Main().UID;
 		hit.targetUID = npc.UID;
 		hit.targetPos = npc.pos;
-		hit.damage = dealt;
+		hit.damage = MIN(dealt, hpBefore);
 		hit.hp = npc.hp;
 		hit.hpMax = npc.hpMax;
 		replication->SendRemoteDamageToAll(hit);
 	}
-	else replication->SendDamageToAll(attacker.Main().UID, npc.UID, skillID, dealt, npc.hp, npc.hpMax);
+	else replication->SendDamageToAll(attacker.Main().UID, npc.UID, skillID, MIN(dealt, hpBefore), npc.hp, npc.hpMax);
 	LOG("Summon :: creature=%d takes %d from %ls hp=%d/%d", (i32)npc.docID, dealt, attacker.name.data(), npc.hp, npc.hpMax);
 	if(npc.hp <= 0) {
 		if(npc.ownerUID == ActorUID::INVALID) {
@@ -533,7 +544,7 @@ void World::DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i
 	target.hp = MAX(target.hp - AbsorbNpcShield(target, dealt), 0);
 	OnMonsterDamaged(target, hpBefore);
 	if((target.faction == Faction::RED || target.faction == Faction::BLUE) && (attacker.faction == Faction::RED || attacker.faction == Faction::BLUE) && attacker.faction != target.faction) LightAttacker(attacker.pos, (i32)target.faction);
-	SendNpcHit(attacker, target.UID, target.pos, remote, remoteID, dealt, target.hp, target.hpMax);
+	SendNpcHit(attacker, target.UID, target.pos, remote, remoteID, MIN(dealt, hpBefore), target.hp, target.hpMax);
 	if(status > 0) ApplyStatusToNpcFromNpc(attacker, target, status);
 	if(target.hp <= 0) MonsterDie(target, attacker.UID, attacker.docID);
 }
@@ -600,8 +611,10 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	}
 	target.dead = true;
 	target.deaths++;
-	GrantSkillPoint(target);
+	if(!map || !map->ingameLevels) GrantSkillPoint(target);
 	DropTitanPieces(target);
+	DropMasterSoul(target);
+	RewardMasterKill(nullptr, target);
 	RevertTitan(target);
 	target.occupyStreak = 0;
 	i32 teamKills = 0;

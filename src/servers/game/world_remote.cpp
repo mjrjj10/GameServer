@@ -438,6 +438,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 			foreach_const(st, remote.friendlyStatuses) {
 				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) { statusCasterOverride = inst.sourceUID; ApplyStatus(owner, target, st->statusID, (f32)inst.damage); statusCasterOverride = ActorUID::INVALID; }
 			}
+			if(!remote.friendlyStatuses.empty() && &target != &owner) PassiveOnFriendlyHit(owner);
 		}
 	}
 	if(npcOwnerStatus) ApplyNpcOwnerStatus(inst.sourceUID, target, remote.onHitOwnerStatus);
@@ -501,7 +502,6 @@ void World::RemoteHitAlongPath(RemoteInst& inst)
 		if(glm::length(vec2(it->body->GetWorldPos()) - origin) > radius + HitRadius(*it)) continue;
 		RemoteHit(inst, *it);
 	}
-	if(!hostileMonsters) return;
 	Player& owner = players[inst.ownerIndex];
 	foreach(npc, actorNpcList) {
 		if(!NpcHittableBy(*npc, owner)) continue;
@@ -544,7 +544,6 @@ void World::RemoteApplyShape(RemoteInst& inst)
 		if(side > halfWidth + HitRadius(*it)) continue;
 		RemoteHit(inst, *it);
 	}
-	if(!hostileMonsters) return;
 	Player& owner = players[inst.ownerIndex];
 	foreach(npc, actorNpcList) {
 		if(!NpcHittableBy(*npc, owner)) continue;
@@ -650,6 +649,13 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 		hit.seedOwnerHd = inst.seedOwnerHd;
 		DamageNpc(players[inst.ownerIndex], npc, inst.skillID, (i32)(base * RemoteDistanceFalloff(remote, dist)), &hit);
 	}
+	Player& owner = players[inst.ownerIndex];
+	if(remote.onHitOwnerStatus != 0 && !owner.dead && (inst.sourceUID == ActorUID::INVALID || !FindNpcActor(inst.sourceUID))) {
+		const ActorUID prevCaster = statusCasterOverride;
+		statusCasterOverride = npc.UID;
+		ApplyStatus(owner, owner, remote.onHitOwnerStatus);
+		statusCasterOverride = prevCaster;
+	}
 	if(npc.hp <= 0 || npc.ownerUID != ActorUID::INVALID) return true;
 	foreach_const(st, remote.statuses) {
 		if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(players[inst.ownerIndex], npc, st->statusID, false);
@@ -712,6 +718,13 @@ void World::UpdateRemotes(f32 delta)
 			}
 		}
 
+		if(!destroyed && remote.homingLength > 0 && inst.speed > 0 && inst.clientRemoteID != 0 && inst.seedOwnerHd == ClientHandle::INVALID) {
+			inst.syncIn -= delta;
+			if(inst.syncIn <= 0) {
+				inst.syncIn += MEASURED_REMOTE_SYNC_PERIOD_SEC;
+				replication->SendRemoteSyncTargetToAll(inst.clientRemoteID, inst.target, inst.pos, &inst.dir);
+			}
+		}
 		const f32 destroyDelay = inst.speed <= 0 && (remote.destroyCreateRemote != RemoteIdx::INVALID || !remote.onDestroy.empty()) ? REMOTE_DESTROY_CHILD_DELAY : 0.0f;
 		if(!destroyed && remote.lifeTime > 0 && elapsed >= remote.lifeTime + destroyDelay) destroyed = true;
 		if(!destroyed && remote.lifeTime <= 0 && inst.speed <= 0 && inst.areaDone && elapsed >= destroyDelay) destroyed = true;
@@ -941,7 +954,7 @@ void World::SweepFireNodePath(RemoteInst& inst, Player& instOwner)
 			if(it->dead || !it->body || !RemoteCanAffect(inst, *it, false)) continue;
 			if(glm::length(vec2(it->body->GetWorldPos()) - center) <= radius + HitRadius(*it)) RemoteHit(inst, *it);
 		}
-		if(hostileMonsters || replication->titanMode) {
+		{
 			foreach(npc, actorNpcList) {
 				if(!NpcHittableBy(*npc, instOwner)) continue;
 				const f32 dist = glm::length(vec2(npc->pos) - center);
@@ -965,7 +978,7 @@ void World::ApplyAttachedRemote(RemoteInst& inst, Player& instOwner)
 			if(!RemoteCanAffect(inst, *it, false)) continue;
 			if(glm::length(vec2(it->body->GetWorldPos()) - vec2(instOwner.body->GetWorldPos())) <= radius + HitRadius(*it)) RemoteHit(inst, *it);
 		}
-		if(hostileMonsters) {
+		{
 			foreach(npc, actorNpcList) {
 				if(!NpcHittableBy(*npc, instOwner)) continue;
 				const f32 dist = glm::length(vec2(npc->pos) - vec2(instOwner.body->GetWorldPos()));
@@ -1083,7 +1096,7 @@ bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
 			}
 			bool npcStop = false;
 			vec2 npcStopPos = vec2(0);
-			if(hostileMonsters && inst.penetrationLeft > 0) {
+			if(inst.penetrationLeft > 0) {
 				Player& owner = players[inst.ownerIndex];
 				const vec2 seg = to - from;
 				const f32 segLen2 = glm::dot(seg, seg);

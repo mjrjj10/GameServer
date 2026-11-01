@@ -288,6 +288,9 @@ struct Replication
 		i32 stillFrames = 0;
 		Time at = Time::ZERO;
 		vec3 pos = vec3(0);
+		f32 upperYaw = 0;
+		f32 upperPitch = 0;
+		f32 bodyYaw = 0;
 	};
 	eastl::fixed_map<ActorUID,SentMove,64> sentMoves;
 
@@ -358,7 +361,7 @@ struct Replication
 
 	void SendClientLevelEvent(ClientHandle clientHd, i32 eventID, ActorUID caller = ActorUID::INVALID);
 	void SendClientLevelEventToAll(i32 eventID, ActorUID caller = ActorUID::INVALID);
-	void SendCreateGroundItemToAll(u32 itemUID, i32 itemIndex, const vec3& pos);
+	void SendCreateGroundItemToAll(u32 itemUID, i32 itemIndex, const vec3& pos, i32 gettableType = 0, i32 factionType = -1);
 	void SendCreatePrivateGroundItem(ClientHandle clientHd, ActorUID ownerUID, u32 itemUID, bool ron, i32 itemIndex, i32 count, const vec3& pos);
 	void SendGroundItemTaken(ClientHandle clientHd, ActorUID takerUID, u32 itemUID, u32 itemISN);
 	void SendMoney(ClientHandle clientHd, i64 gold, u32 reason);
@@ -455,12 +458,13 @@ struct Replication
 	void SendGaugeToAll(UserID userID, u8 updateType, bool overheated, f32 overheatTime, u16 gauge, u16 maxGauge);
 	void SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 max, u32 reason = 0);
 	void SendDespawnMonsterToAll(ActorUID actorUID);
+	void SendBushCurStateToAll(ActorUID bushUID, u32 state);
 	void SendStanceToAll(ActorUID actorUID, i32 stance, f32 durationSec);
 	void SendNpcBehaviorToAll(ActorUID actorUID, ActionStateID action, const vec3& pos, const vec3& targetPos, ActorUID targetUID, f32 moveSpeed);
 	void SendAiActionStateToAll(ActorUID actorUID, ActionStateID action, f32 worldYaw, const vec3& pos, bool keepSpeed);
 	void SendAiSetTargetToAll(ActorUID actorUID, ActorUID targetUID);
 	void SendExecuteSkillAck(ClientHandle clientHd, ActorUID casterUID, SkillID skillID);
-	void SendCancelSkillToAll(ActorUID casterUID, SkillID skillID);
+	void SendCancelSkillToAll(ActorUID casterUID, SkillID skillID, ClientHandle skipHd = ClientHandle::INVALID);
 	void SendInteractionStatusToAll(ActorUID objectUID, u32 allowedTeamMask, i32 interactionID, i32 occupiedTeam, ClientHandle exclude = ClientHandle::INVALID, f32 coolTime = 0);
 	void SendCastSkillRefused(ClientHandle clientHd, ActorUID casterUID, SkillID skillID, u32 ret);
 	void SendInteractionCastingToAll(ActorUID casterUID, ActorUID objectUID, u32 actionState, u32 castingTimeMS);
@@ -559,6 +563,7 @@ struct Replication
 	void SendReflectedShotToAll(ActorUID shooterUID, ActorUID reflectorUID, u32 seed, const vec3& firePos, f32 worldYaw, const wchar* fireObject, u32 groupSeed, RemoteIdx doc);
 	void RelayRemoteSyncCreateFromRemoteDoc(ClientHandle senderHd, const u8* packetData, i32 packetSize);
 	void RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetData, i32 packetSize);
+	void SendRemoteSyncTargetToAll(u32 remoteID, ActorUID targetUID, const vec3& pos, const vec2* moveDir);
 	u16 RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, RemoteIdx remoteDoc);
 	void RelayWeaponState(ClientHandle senderHd, ActorUID ownerUID, i32 weaponID, i32 state, u8 chargeLevel, u8 firingCombo);
 	void SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 score, i32 teamKills, i32 teamScore, UserID victimID, u8 victimTeam, i32 victimDeaths, i32 victimTeamKills);

@@ -1092,7 +1092,17 @@ bool GameXmlContent::LoadIngameLevel()
 		m.growth = e->IntAttribute("growth");
 		m.growthPeriod = e->FloatAttribute("growthPeriod");
 		m.points = e->IntAttribute("points");
+		m.killerBonus = e->IntAttribute("killerBonus");
+		const char* mode = e->Attribute("mode");
+		if(mode && EA::StdC::Strcmp(mode, "team") == 0) m.mode = IngameLevelInfo::MonsterExp::TEAM;
+		else if(mode && EA::StdC::Strcmp(mode, "killer") == 0) m.mode = IngameLevelInfo::MonsterExp::KILLER;
 		info.monsters[e->IntAttribute("ID")] = m;
+	}
+	if(XMLElement* e = pRoot->FirstChildElement("MASTER_KILL")) {
+		info.masterKillBase = e->FloatAttribute("base");
+		info.masterKillPerLevel = e->FloatAttribute("perVictimLevel");
+		info.masterKillAssistPool = e->FloatAttribute("assistPool");
+		info.masterKillAssistWindowSec = e->FloatAttribute("assistWindowSec");
 	}
 	for(XMLElement* e = pRoot->FirstChildElement("SHARE"); e && !info.shares.full(); e = e->NextSiblingElement("SHARE")) info.shares.push_back(eastl::make_pair(e->FloatAttribute("killer"), e->FloatAttribute("helper")));
 	LOG("Loaded in-game levels (max %d, %d monsters)", info.maxLevel, (i32)info.monsters.size());
@@ -1229,6 +1239,8 @@ void GameXmlContent::LoadMonsterFires()
 				}
 			}
 			if(!type || !cls || !state || EA::StdC::Strcmp(type, "REMOTE") != 0 || e->IntAttribute("RemoteIndex") <= 0) continue;
+			const char* rowParam2 = e->Attribute("Param2");
+			if(rowParam2 && EA::StdC::Strcmp(rowParam2, "Remove") == 0) continue;
 			auto& list = fires[((u64)StatusTypeKey(cls) << 32) | (u32)ActionStateFromString(state)];
 			MonsterFire fire;
 			fire.remote = e->IntAttribute("RemoteIndex");
@@ -1272,6 +1284,10 @@ void GameXmlContent::LoadMonsterFires()
 			attack->fires = found->second;
 			attached++;
 		}
+		if(ai.second.walkState != ActionStateID::INVALID) {
+			auto walkFires = fires.find(classKey | (u32)ai.second.walkState);
+			if(walkFires != fires.end()) for(const MonsterFire& f : walkFires->second) if(!ai.second.walkFires.full()) ai.second.walkFires.push_back(f);
+		}
 	}
 	LOG("Loaded %d monster fire states, attached to %d monster attacks", (i32)fires.size(), attached);
 }
@@ -1307,6 +1323,11 @@ bool GameXmlContent::LoadMonsterAi()
 			ai.teamBuff = pInfo->IntAttribute("teamBuff");
 			if(const char* team = pInfo->Attribute("team")) ai.playerSide = EA::StdC::Strcmp(team, "player") == 0;
 			ai.mineral = pInfo->BoolAttribute("mineral");
+			if(const char* walkState = pInfo->Attribute("walkState")) ai.walkState = ActionStateFromString(walkState);
+			if(const char* preAttack = pInfo->Attribute("preAttack")) ai.preAttack = ActionStateFromString(preAttack);
+			ai.lowHpRatio = pInfo->FloatAttribute("lowHp");
+			if(const char* lowHpState = pInfo->Attribute("lowHpState")) ai.lowHpState = ActionStateFromString(lowHpState);
+			ai.lowHpTime = pInfo->FloatAttribute("lowHpTime");
 			if(const char* hpBuffs = pInfo->Attribute("hpBuffs")) {
 				const char* at = hpBuffs;
 				while(*at && !ai.hpBuffs.full()) {
@@ -1417,15 +1438,20 @@ bool GameXmlContent::LoadMonsterAi()
 			const char* type = pA->Attribute("CommandType");
 			const char* preset = pA->Attribute("TargetPreset");
 			if(!cls || !state || !type || pA->Attribute("VariationType") || pA->Attribute("Param2")) continue;
-			const bool spawnStatus = EA::StdC::Strcmp(state, "SPAWN_BEHAVIORSTATE") == 0 && EA::StdC::Strcmp(type, "STATUS") == 0 && preset && EA::StdC::Strncmp(preset, "TARGET_SELF", 11) == 0;
+			const bool selfStatus = EA::StdC::Strcmp(type, "STATUS") == 0 && preset && EA::StdC::Strncmp(preset, "TARGET_SELF", 11) == 0;
+			const bool spawnStatus = selfStatus && EA::StdC::Strcmp(state, "SPAWN_BEHAVIORSTATE") == 0;
 			const bool dieRemote = EA::StdC::Strcmp(state, "DIE_BEHAVIORSTATE") == 0 && EA::StdC::Strcmp(type, "REMOTE") == 0;
-			if(!spawnStatus && !dieRemote) continue;
-			const i32 index = pA->IntAttribute(spawnStatus ? "StatusIndex" : "RemoteIndex");
+			if(!selfStatus && !dieRemote) continue;
+			const i32 index = pA->IntAttribute(dieRemote ? "RemoteIndex" : "StatusIndex");
 			if(index == 0) continue;
+			const ActionStateID stateID = ActionStateFromString(state);
 			foreach(it, monsterAi) {
-				if(it->second.className != cls) continue;
-				if(spawnStatus && !it->second.spawnStatuses.full()) { it->second.spawnStatuses.push_back(index); spawnStatusCount++; }
-				if(dieRemote && !it->second.dieRemotes.full()) { it->second.dieRemotes.push_back(index); dieRemoteCount++; }
+				MonsterAi& ai = it->second;
+				if(ai.className != cls) continue;
+				if(spawnStatus && !ai.spawnStatuses.full()) { ai.spawnStatuses.push_back(index); spawnStatusCount++; }
+				if(dieRemote && !ai.dieRemotes.full()) { ai.dieRemotes.push_back(index); dieRemoteCount++; }
+				if(selfStatus && stateID != ActionStateID::INVALID && stateID == ai.walkState && !ai.walkStatuses.full()) ai.walkStatuses.push_back(index);
+				if(selfStatus && stateID != ActionStateID::INVALID && stateID == ai.lowHpState && !ai.lowHpStatuses.full()) ai.lowHpStatuses.push_back(index);
 			}
 		}
 	}
@@ -5564,6 +5590,20 @@ bool GameXmlContent::LoadBotBrain()
 			EA::StdC::Snprintf(attr, sizeof(attr), "_StageSkill%d", i);
 			botStageSkills[i] = p->IntAttribute(attr);
 		}
+	}
+	foreach_const(m, masters) {
+		const i32 creature = (i32)m->ID;
+		if(botSkills.find(creature) != botSkills.end()) continue;
+		eastl::array<i32,5> slots = {{ 0, 0, 0, 0, 0 }};
+		foreach_const(sid, m->skillIDs) {
+			const i32 id = (i32)*sid;
+			const i32 order = (id / 10) % 10;
+			auto f = skillMap.find(*sid);
+			if(f == skillMap.end() || id % 10 != 0 || order < 1 || order > 5) continue;
+			if(f->second.type == SkillType::PASSIVE || f->second.type == SkillType::SHIRK) continue;
+			slots[order - 1] = id;
+		}
+		botSkills[creature] = slots;
 	}
 	LOG("Loaded bot skills for %d masters (skill cd %.0f, ult cd %.0f, after skill %.1f)", (i32)botSkills.size(), botNormalSkillCoolTime, botUgSkillCoolTime, botAfterSkillDelay);
 	return true;

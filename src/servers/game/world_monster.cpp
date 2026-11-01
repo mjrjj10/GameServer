@@ -20,6 +20,8 @@ static f32 YawGap(f32 a, f32 b)
 }
 static const f32 MONSTER_WAYPOINT_REACHED = 60.0f;
 static const i32 HYP_MONSTER_LANE_SPREAD = 60;
+static const u32 MEASURED_MONSTER_HIT_ID_OFFSET = 1;
+static const f64 MEASURED_NPC_DIE_STAND_MS = 90.0;
 static const f32 HYP_MONSTER_REMOTE_WALL_HEIGHT = 100.0f;
 static const f32 MONSTER_REMOTE_MIN_LIFE_SEC = 0.05f;
 static const u32 MEASURED_MONSTER_REMOTE_SEED_STEP = 4;
@@ -260,6 +262,7 @@ void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDo
 	npc.monsterTarget = ActorUID::INVALID;
 	const f32 destroy = npc.monsterAi ? npc.monsterAi->destroy : 0.0f;
 	npc.removeAt = TimeAdd(localTime, TimeMsToTime(MAX(destroy, 1.0f) * 1000.0));
+	npc.dieStandAt = TimeAdd(localTime, TimeMsToTime(MEASURED_NPC_DIE_STAND_MS));
 	LOG("Monster :: creature=%d (local %d) dies at (%.0f, %.0f) t=%.1f killer=%d", (i32)npc.docID, npc.localID, npc.pos.x, npc.pos.y, GameTimeSec(), (i32)killerDoc);
 	if(ActorMaster* killer = killerUID != ActorUID::INVALID ? FindMasterActor(killerUID) : nullptr) {
 		if(killer->parent) {
@@ -585,7 +588,7 @@ void World::FireMonsterRemote(const MonsterFireEvent& fire)
 		const f32 len = glm::length(rel);
 		const bool follows = remote->behaviorType == Remote::BehaviorType::HOMING || remote->behaviorType == Remote::BehaviorType::TARGET;
 		const vec2 dir = !follows ? vec2(cosf(fire.castYaw), sinf(fire.castYaw)) : (len > 1.0f ? rel / len : vec2(cosf(npc.rot.z), sinf(npc.rot.z)));
-		SpawnMonsterRemote(npc, *remote, npc.pos, dir, fire.target, false);
+		SpawnMonsterRemote(npc, *remote, npc.pos, dir, fire.target, false, fire.seed);
 		return;
 	}
 	if(remote && remote->maxSpeed > 0 && remote->destroyCreateRemote != RemoteIdx::INVALID && !monsterChains.full()) {
@@ -613,10 +616,10 @@ bool World::MonsterAttackUsesRemotes(const GameXmlContent::MonsterAttack& attack
 	return false;
 }
 
-void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send)
+void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed)
 {
 	if(send) {
-		const u32 seed = MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID & MONSTER_REMOTE_ID_MASK);
+		seed = MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID & MONSTER_REMOTE_ID_MASK);
 		nextMonsterRemoteID += MEASURED_MONSTER_REMOTE_SEED_STEP;
 		replication->SendRemoteCreateToAll(npc.UID, seed, remote.ID, pos, atan2f(dir.y, dir.x), pos, target);
 	}
@@ -632,6 +635,7 @@ void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const 
 	mr.activations = MAX(remote.activateCount, 1);
 	mr.travelled = 0;
 	mr.impacted = false;
+	mr.seed = seed;
 	monsterRemotes.push_back(mr);
 	if(remote.maxSpeed <= 0) {
 		auto it = actorNpcMap.find(npc.UID);
@@ -681,11 +685,15 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 			else ApplyStatusToNpcFromNpc(owner, *n, st->statusID);
 		}
 	};
-	const u32 remoteID = MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID++ & MONSTER_REMOTE_ID_MASK);
+	const u32 remoteID = mr.seed != 0 ? mr.seed + MEASURED_MONSTER_HIT_ID_OFFSET : (MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID++ & MONSTER_REMOTE_ID_MASK));
+	const bool targetOnly = remote.targetOnly && mr.target != ActorUID::INVALID;
+	const ActorMaster* targetMaster = targetOnly ? FindMasterActor(mr.target) : nullptr;
+	const Player* targetPlayer = targetMaster ? targetMaster->parent : nullptr;
 	if(remote.vs & (1u << Remote::VS_PLAYER_CHARACTER)) {
 		foreach(p, players) {
 			if(mr.activations <= 0) break;
 			if(p->dead || p->untargetable || p->removed || !p->body) continue;
+			if(targetOnly && targetPlayer != &*p) continue;
 			const bool enemy = FactionsOppose(owner.faction, (Faction)p->team, hostileMonsters) || MonsterNeutral(owner, hostileMonsters);
 			const bool ally = !enemy && owner.faction == (Faction)p->team;
 			if(!((enemy && hitsEnemies) || (ally && hitsAllies)) || !inside(vec2(p->body->GetWorldPos()), HitRadius(*p)) || !ready(p->Main().UID)) continue;
@@ -701,6 +709,7 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 		foreach(o, actorNpcList) {
 			if(mr.activations <= 0) break;
 			if(&*o == &owner || o->hp <= 0 || o->removeAt != Time::ZERO || !o->monsterAi) continue;
+			if(targetOnly && o->UID != mr.target) continue;
 			const bool enemy = FactionsOppose(owner.faction, o->faction, hostileMonsters);
 			const bool ally = !enemy && o->faction == owner.faction;
 			if(!((enemy && hitsEnemies) || (ally && hitsAllies)) || !inside(vec2(o->pos), NpcHitRadius(*o)) || !ready(o->UID)) continue;
@@ -758,6 +767,13 @@ void World::UpdateMonsterRemotes(f32 delta)
 				mr.pos += vec3(mr.dir * step, 0);
 				mr.travelled += step;
 				if(remote.maxDistance > 0 && mr.travelled >= remote.maxDistance) expired = true;
+			}
+			if(mr.seed != 0 && remote.homingLength > 0 && !expired) {
+				mr.syncIn -= delta;
+				if(mr.syncIn <= 0) {
+					mr.syncIn += MEASURED_REMOTE_SYNC_PERIOD_SEC;
+					replication->SendRemoteSyncTargetToAll(mr.seed + MEASURED_MONSTER_HIT_ID_OFFSET, locked ? mr.target : ActorUID::INVALID, mr.pos, &mr.dir);
+				}
 			}
 			MonsterRemoteApply(mr, owner);
 		}
@@ -854,6 +870,64 @@ void World::UpdateMonsterDash(ActorNpc& npc)
 	}
 }
 
+static void MonsterStateCooldown(eastl::array<Time,24>& ready, const GameXmlContent::MonsterAi& ai, ActionStateID state, Time until)
+{
+	for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)ready.size(); s++) if(ai.attacks[s].special && ai.attacks[s].state == state) ready[s] = until;
+}
+
+void World::StartMonsterWalkState(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, f32 speed)
+{
+	if(ai.walkState == ActionStateID::INVALID || npc.monsterWalkStateOn || localTime < npc.monsterHoldUntil) return;
+	npc.monsterWalkStateOn = true;
+	npc.monsterNextSync = localTime;
+	replication->SendMonsterStateToAll(npc.UID, ai.walkState, npc.pos, speed);
+	foreach_const(st, ai.walkStatuses) ApplyMonsterStatus(npc, *st, true);
+	const auto& content = GetGameXmlContent();
+	const vec2 dir = vec2(cosf(npc.rot.z), sinf(npc.rot.z));
+	foreach_const(f, ai.walkFires) if(const Remote* remote = content.FindRemote((RemoteIdx)f->remote)) SpawnMonsterRemote(npc, *remote, npc.pos, dir, ActorUID::INVALID, true);
+	LOG("Monster :: creature=%d (local %d) starts %s while moving", (i32)npc.docID, npc.localID, ActionStateToString(ai.walkState));
+}
+
+bool World::UpdateMonsterMasterSpecial(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const GameXmlContent::MonsterAttack& current, f32 run)
+{
+	if(current.target == GameXmlContent::MonsterAttack::MASTER || !map || !map->ingameLevels || localTime < npc.monsterNextAttack) return false;
+	const f32 hpRatio = npc.hpMax > 0 ? (f32)npc.hp / (f32)npc.hpMax : 1.0f;
+	for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)npc.monsterSkillReady.size(); s++) {
+		const GameXmlContent::MonsterAttack& special = ai.attacks[s];
+		if(!special.special || special.target != GameXmlContent::MonsterAttack::MASTER || hpRatio < special.hpMin || hpRatio > special.hpMax) continue;
+		if(npc.monsterSkillReady[s] == Time::ZERO) npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime((special.firstAt >= 0 ? special.firstAt : special.cooldown) * 1000.0));
+		if(localTime < npc.monsterSkillReady[s]) continue;
+		Player* chosen = nullptr;
+		f32 best = special.range;
+		foreach(p, players) {
+			if(!p->body || !MonsterHostile(npc, *p)) continue;
+			const f32 d = glm::length(vec2(p->body->GetWorldPos()) - vec2(npc.pos));
+			if(d < special.minRange || d > best) continue;
+			best = d;
+			chosen = &*p;
+		}
+		if(!chosen) continue;
+		const vec3 at = chosen->body->GetWorldPos();
+		const vec2 rel = vec2(at) - vec2(npc.pos);
+		const f32 yaw = best > 1.0f ? atan2f(rel.y, rel.x) : npc.rot.z;
+		npc.monsterReturnTarget = npc.monsterTarget;
+		npc.monsterTarget = chosen->Main().UID;
+		replication->SendAiSetTargetToAll(npc.UID, npc.monsterTarget);
+		MonsterStateCooldown(npc.monsterSkillReady, ai, special.state, TimeAdd(localTime, TimeMsToTime(special.cooldown * 1000.0)));
+		npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime(current.cooldown * 1000.0));
+		if(npc.monsterChasing || npc.monsterWalking) {
+			npc.monsterChasing = false;
+			if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, yaw);
+			else replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, yaw, 0.0f);
+		}
+		npc.monsterWalking = false;
+		LOG("Monster :: creature=%d (local %d) turns to master %ls for %s at %.0f", (i32)npc.docID, npc.localID, chosen->name.data(), ActionStateToString(special.state), best);
+		StartMonsterAttack(npc, ai, &special, &at, best, yaw, run);
+		return true;
+	}
+	return false;
+}
+
 void World::StartMonsterAttack(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const GameXmlContent::MonsterAttack* attack, const vec3* targetPos, f32 dist, f32 yaw, f32 run)
 {
 	npc.rot.z = yaw;
@@ -865,6 +939,16 @@ void World::StartMonsterAttack(ActorNpc& npc, const GameXmlContent::MonsterAi& a
 	npc.monsterSyncYaw = yaw;
 	npc.monsterLastTurn = localTime;
 	replication->SendNpcTurnToAll(npc.UID, yaw);
+	if(ai.preAttack != ActionStateID::INVALID) {
+		replication->SendMonsterStateToAll(npc.UID, ai.preAttack, npc.pos, run);
+		foreach_const(st, ai.walkStatuses) {
+			bool active = false;
+			foreach_const(a, npcStatuses) if(a->npcUID == npc.UID && a->statusID == *st && localTime < a->until) { active = true; break; }
+			if(active) ApplyMonsterStatus(npc, *st, false);
+		}
+		replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, run);
+	}
+	npc.monsterWalkStateOn = false;
 	replication->SendMonsterStateToAll(npc.UID, attack->state, npc.pos, run);
 	if(attack->anim > 0) {
 		npc.stateEndAt = TimeAdd(localTime, TimeMsToTime(attack->anim * 1000.0));
@@ -1178,7 +1262,7 @@ void World::UpdateMonsterAi(f32 delta)
 				if(!MonsterHostile(npc, *o)) continue;
 				const GameXmlContent::MonsterAttack* a = ai.byTarget[MonsterTargetKind(*o->monsterAi)];
 				if(!a) continue;
-				const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos)) - o->monsterAi->radius;
+				const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos));
 				if(d < bestOther) { bestOther = d; other = &*o; otherAttack = a; }
 			}
 			const bool tooLong = TimeDiffSec(TimeDiff(npc.monsterMasterSince, localTime)) >= MEASURED_MINION_MASTER_CHASE_SEC;
@@ -1216,7 +1300,7 @@ void World::UpdateMonsterAi(f32 delta)
 				if(!MonsterHostile(npc, *o)) continue;
 				const GameXmlContent::MonsterAttack* a = ai.byTarget[MonsterTargetKind(*o->monsterAi)];
 				if(!a) continue;
-				const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos)) - o->monsterAi->radius;
+				const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos));
 				if(d < best) { best = d; chosen = o->UID; targetAt = o->pos; attack = a; }
 			}
 			if(mastersLast && chosen == ActorUID::INVALID && ai.byTarget[GameXmlContent::MonsterAttack::MASTER]) {
@@ -1266,7 +1350,24 @@ void World::UpdateMonsterAi(f32 delta)
 		}
 		if(hostileMonsters && ai.scriptPeriod > 0 && !ai.script.empty() && UpdateMonsterScript(npc, ai, targetPos, delta)) continue;
 		if(localTime < npc.monsterHoldUntil) continue;
+		if(ai.lowHpState != ActionStateID::INVALID && !npc.monsterLowHpDone && npc.hpMax > 0 && (f32)npc.hp <= ai.lowHpRatio * (f32)npc.hpMax) {
+			npc.monsterLowHpDone = true;
+			if(npc.monsterChasing || npc.monsterWalking) {
+				npc.monsterChasing = false;
+				if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, npc.rot.z);
+				else replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, npc.rot.z, 0.0f);
+			}
+			npc.monsterWalking = false;
+			npc.monsterWalkStateOn = false;
+			npc.actionState = ai.lowHpState;
+			replication->SendMonsterStateToAll(npc.UID, ai.lowHpState, npc.pos, run);
+			foreach_const(st, ai.lowHpStatuses) ApplyMonsterStatus(npc, *st, true);
+			npc.monsterHoldUntil = TimeAdd(localTime, TimeMsToTime(ai.lowHpTime * 1000.0));
+			LOG("Monster :: creature=%d (local %d) below %.0f%% hp plays %s", (i32)npc.docID, npc.localID, ai.lowHpRatio * 100.0f, ActionStateToString(ai.lowHpState));
+			continue;
+		}
 		if(UpdateMonsterAllyBuff(npc, ai)) continue;
+		if(targetPos && attack && UpdateMonsterMasterSpecial(npc, ai, *attack, run)) continue;
 		if(targetPos && attack) {
 			const vec2 rel = vec2(*targetPos) - vec2(npc.pos);
 			const f32 dist = glm::length(rel);
@@ -1287,7 +1388,7 @@ void World::UpdateMonsterAi(f32 delta)
 					}
 					if(farIndex >= 0) {
 						const GameXmlContent::MonsterAttack& farAttack = ai.attacks[farIndex];
-						npc.monsterSkillReady[farIndex] = TimeAdd(localTime, TimeMsToTime(farAttack.cooldown * 1000.0));
+						MonsterStateCooldown(npc.monsterSkillReady, ai, farAttack.state, TimeAdd(localTime, TimeMsToTime(farAttack.cooldown * 1000.0)));
 						npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime(attack->cooldown * 1000.0));
 						if(npc.monsterChasing || npc.monsterWalking) {
 							npc.monsterChasing = false;
@@ -1302,6 +1403,7 @@ void World::UpdateMonsterAi(f32 delta)
 				}
 				if(run <= 0) continue;
 				npc.monsterWalking = false;
+				StartMonsterWalkState(npc, ai, run);
 				const f32 step = MIN(run * delta, dist - reach);
 				npc.pos = vec3(vec2(npc.pos) + rel / dist * step, npc.pos.z);
 				npc.rot.z = yaw;
@@ -1351,7 +1453,7 @@ void World::UpdateMonsterAi(f32 delta)
 				const GameXmlContent::MonsterAttack& special = ai.attacks[*s];
 				if(roll >= special.share) { roll -= special.share; continue; }
 				if(roll < 0) break;
-				npc.monsterSkillReady[*s] = TimeAdd(localTime, TimeMsToTime(special.cooldown * 1000.0));
+				MonsterStateCooldown(npc.monsterSkillReady, ai, special.state, TimeAdd(localTime, TimeMsToTime(special.cooldown * 1000.0)));
 				attack = &special;
 				LOG("Monster :: creature=%d (local %d) uses %s", (i32)npc.docID, npc.localID, ActionStateToString(special.state));
 				break;
@@ -1372,6 +1474,7 @@ void World::UpdateMonsterAi(f32 delta)
 			npc.actionState = ActionStateID::NONE_BEHAVIORSTATE;
 			replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, walk);
 		}
+		StartMonsterWalkState(npc, ai, walk);
 		if(!npc.laneOffsetSet) {
 			npc.laneOffsetSet = true;
 			npc.laneOffset = (f32)((i32)(RandUint() % (u32)(2 * HYP_MONSTER_LANE_SPREAD + 1)) - HYP_MONSTER_LANE_SPREAD);

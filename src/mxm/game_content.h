@@ -1276,6 +1276,14 @@ struct GameXmlContent
 		eastl::fixed_vector<ScriptStep,12,false> script;
 		eastl::fixed_vector<i32,8,false> seekDocs;
 		f32 seekReach = 0;
+		ActionStateID walkState = ActionStateID::INVALID;
+		ActionStateID preAttack = ActionStateID::INVALID;
+		eastl::fixed_vector<i32,4,false> walkStatuses;
+		eastl::fixed_vector<MonsterFire,4,false> walkFires;
+		f32 lowHpRatio = 0;
+		ActionStateID lowHpState = ActionStateID::INVALID;
+		f32 lowHpTime = 0;
+		eastl::fixed_vector<i32,4,false> lowHpStatuses;
 		bool Hates(u32 tag) const { return eastl::find(enemyTags.begin(), enemyTags.end(), tag) != enemyTags.end(); }
 	};
 
@@ -1283,7 +1291,7 @@ struct GameXmlContent
 
 	struct IngameLevelInfo
 	{
-		struct MonsterExp { i32 exp = 0; i32 growth = 0; f32 growthPeriod = 0; i32 points = 0; };
+		struct MonsterExp { enum Mode: u8 { SHARE, TEAM, KILLER }; Mode mode = SHARE; i32 exp = 0; i32 growth = 0; f32 growthPeriod = 0; i32 points = 0; i32 killerBonus = 0; };
 		i32 maxLevel = 1;
 		i32 passiveExp = 0;
 		f32 passivePeriod = 0;
@@ -1294,6 +1302,10 @@ struct GameXmlContent
 		f32 respawnPerLevelMs = 0;
 		f32 respawnPerSecMs = 0;
 		i32 killPoints = 1;
+		f32 masterKillBase = 0;
+		f32 masterKillPerLevel = 0;
+		f32 masterKillAssistPool = 0;
+		f32 masterKillAssistWindowSec = 0;
 		eastl::fixed_vector<i32,32,false> levelExp;
 		eastl::hash_map<i32, MonsterExp> monsters;
 		eastl::fixed_vector<eastl::pair<f32,f32>,8,false> shares;

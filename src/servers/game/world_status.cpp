@@ -68,8 +68,6 @@ bool StatusGraphAnchorOnly(const StatusInfo* info)
 }
 static const i32 STATUS_PC_DEFEAT_SUPERARMOR = 1230000101;
 static const i32 STATUS_PC_DEFEAT_AND_LIE_SUPERARMOR = 1230000102;
-static const u32 STATUS_RESIST_EVENT_PASSIVE = 0;
-static const u32 STATUS_RESIST_EVENT_PROTECTED = 2;
 static const f32 DEFEAT_PUSH_SEC = 1.0f;
 static const f32 DEFEAT_KNOCKDOWN_SEC = 1.5f;
 static const f32 DEFEAT_FLY_START_SEC = 1.0f;
@@ -142,7 +140,11 @@ void World::ApplyPassives(Player& player)
 		if(!list) continue;
 		for(i32 id : *list) {
 			if(FindActiveStatus(player.index, id)) continue;
+			statusTargetOverride = (*c)->UID;
+			statusNoCaster = true;
 			ApplyStatus(player, player, id);
+			statusNoCaster = false;
+			statusTargetOverride = ActorUID::INVALID;
 			ActiveStatus* st = FindActiveStatus(player.index, id);
 			if(st && st->info) st->custom = st->info->customInit;
 			LOG("Passive :: %ls status %d", player.name.data(), id);
@@ -371,9 +373,14 @@ void World::UpdatePassives()
 void World::PassiveOnSkillCast(Player& player, i32 skillID)
 {
 	if(GetGameXmlContent().GetSkillConsumeStamina(skillID) > 0) return;
+	bool ownSkill = false;
+	if(player.Main().classType != ClassType::NONE) {
+		foreach_const(sid, GetGameXmlContent().GetMaster(player.Main().classType).skillIDs) if((i32)*sid == skillID) ownSkill = true;
+	}
+	if(!ownSkill) return;
 	if(const ActiveStatus* stacking = FindPassiveOfType(player, StatusType::DOUBLEGUN)) {
 		const StatusInfo& info = *stacking->info;
-		if(eastl::find(info.costSkills.begin(), info.costSkills.end(), skillID) != info.costSkills.end() && info.stackMax > 0) {
+		if(info.stackMax > 0) {
 			player.skillStacks = localTime < player.skillStacksUntil ? (u8)MIN((i32)player.skillStacks + 1, info.stackMax) : 1;
 			player.skillStacksUntil = TimeAdd(localTime, TimeMsToTime(info.stackDurationSec * 1000.0));
 			const i32 passiveID = stacking->statusID;
@@ -489,15 +496,6 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 		}
 	}
 
-	if(const ActiveStatus* sniper = FindPassiveOfType(attacker, StatusType::SNIPER)) {
-		const i32 mark = GetGameXmlContent().FindSkillStatusOfType(sniper->info->skillIndex, StatusType::STACKBOMB);
-		if(mark != 0 && !target.dead && target.team != attacker.team) {
-			foreach(st, activeStatuses) {
-				if(st->statusID == mark && st->casterIndex == attacker.index && st->targetIndex != target.index) st->until = localTime;
-			}
-			ApplyStatus(attacker, target, mark);
-		}
-	}
 
 	eastl::fixed_vector<i32,4,false> toApply;
 	foreach(it, activeStatuses) {
@@ -745,8 +743,8 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	st.info = info;
 	st.targetIndex = target.index;
 	st.casterIndex = caster.index;
-	st.targetUID = target.Main().UID;
-	st.casterUID = statusCasterOverride != ActorUID::INVALID ? statusCasterOverride : caster.Main().UID;
+	st.targetUID = statusTargetOverride != ActorUID::INVALID ? statusTargetOverride : target.Main().UID;
+	st.casterUID = statusNoCaster ? ActorUID::INVALID : (statusCasterOverride != ActorUID::INVALID ? statusCasterOverride : caster.Main().UID);
 	st.damageAtStart = target.damageTaken;
 	st.until = TimeAdd(localTime, TimeMsToTime(MAX(duration, 0.1f) * 1000.0));
 	st.appliedAt = localTime;

@@ -379,7 +379,10 @@ void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 s
 {
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
 	const f32 hold = NpcDefeatReaction(npc, info);
-	if(hold < 0) return;
+	if(hold < 0) {
+		replication->SendResistStatusToAll(npc.UID, caster.UID, STATUS_RESIST_EVENT_PASSIVE);
+		return;
+	}
 	vec3 pushTo;
 	f32 pushNominal = -1.0f;
 	f32 pushSec = 0;
@@ -829,6 +832,7 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 			if(playerIndex < 0) break;
 			Player& p = players[playerIndex];
 			p.inSafeZone = node->active;
+			if(node->active && p.clientHd == ClientHandle::INVALID) BotSpendTraits(p);
 			if(p.clientHd != ClientHandle::INVALID) replication->SendSafeZone(p.clientHd, p.userID, node->active);
 		} break;
 		case GameXmlContent::LevelEventNode::INVOKE_AI_TRIGGER: FireAITrigger(node->aiIndex, playerIndex); break;
@@ -1030,6 +1034,26 @@ void World::DropTitanPieces(Player& player)
 	SetCarriedPieces(player, 0);
 }
 
+static const i32 MEASURED_MASTER_SOUL_ITEM = 130100903;
+static const i32 MEASURED_GETTABLE_TEAM = 1;
+static const i32 MEASURED_NETWORK_TEAM_BASE = 3;
+
+void World::DropMasterSoul(const Player& dead)
+{
+	if(!replication->titanMode || !dead.body || groundItems.full()) return;
+	const GameXmlContent::GroundItemInfo* info = GetGameXmlContent().FindGroundItem(MEASURED_MASTER_SOUL_ITEM);
+	if(!info) return;
+	GroundItem item;
+	item.uid = nextGroundItemUID++;
+	item.itemIndex = MEASURED_MASTER_SOUL_ITEM;
+	item.pos = dead.body->GetWorldPos();
+	item.team = (i32)dead.team;
+	item.expireAt = info->lifeTime > 0 ? TimeAdd(localTime, TimeMsToTime(info->lifeTime * 1000.0)) : Time::ZERO;
+	groundItems.push_back(item);
+	replication->SendCreateGroundItemToAll(item.uid, item.itemIndex, item.pos, MEASURED_GETTABLE_TEAM, MEASURED_NETWORK_TEAM_BASE + (i32)dead.team);
+	LOG("GroundItem :: %ls drops a master soul", dead.name.data());
+}
+
 static f32 ItemStatMax(const World::Player& player, u8 type)
 {
 	const ClassType cls = player.Main().classType;
@@ -1042,6 +1066,7 @@ bool World::TakeGroundItem(Player& player, u32 itemUID, GroundItem* taken)
 	auto found = eastl::find_if(groundItems.begin(), groundItems.end(), [itemUID](const GroundItem& g) { return g.uid == itemUID; });
 	if(found == groundItems.end() || player.dead) return false;
 	if(found->owner >= 0 && found->owner != (i32)player.index) return false;
+	if(found->team >= 0 && found->team != (i32)player.team) return false;
 	const GroundItem item = *found;
 	groundItems.erase(found);
 	if(taken) *taken = item;
