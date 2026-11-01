@@ -2874,6 +2874,7 @@ static const f32 CLIENT_SELF_SNAP_DIST = 180.0f;
 static const i32 SYNC_STOP_STILL_FRAMES = 4;
 static const f32 SYNC_TURN_COS = 0.985f;
 static const f32 SYNC_HEARTBEAT_SEC = 0.67f;
+static const f32 MEASURED_SYNC_SKILL_MOVE_MIN_SEC = 0.1f;
 
 void Replication::SendTeleportRequest(ClientHandle clientHd, ActorUID actorUID, const vec3& pos)
 {
@@ -3587,13 +3588,23 @@ void Replication::FrameDifference()
 		const bool turned = dirNow != dirSent || (dirNow && glm::dot(glm::normalize(sendDir), glm::normalize(sent.moveDir)) < SYNC_TURN_COS);
 		const bool heartbeat = dirNow && TimeDiffSec(TimeDiff(sent.at, TimeRelNow())) >= SYNC_HEARTBEAT_SEC;
 		const bool cadenceSend = Config().BotSyncCadence ? (turned || heartbeat || (prev.skillMoving && moved)) : (moved || turned);
-		if(cur.clientHd == ClientHandle::INVALID && !positionUpdated && !cur.skillMoving &&
-		   (cadenceSend ||
-		   fabs(sendSpeed - sent.speed) > speedEpsilon))
+		const f32 sinceSent = (f32)TimeDiffSec(TimeDiff(sent.at, TimeRelNow()));
+		const bool skillSend = cur.skillMoving && (!prev.skillMoving || (moved && sinceSent >= MEASURED_SYNC_SKILL_MOVE_MIN_SEC));
+		if(cur.clientHd == ClientHandle::INVALID && !positionUpdated &&
+		   (cur.skillMoving ? skillSend : (cadenceSend || fabs(sendSpeed - sent.speed) > speedEpsilon)))
 		{
-			sent.moveDir = sendDir;
-			sent.speed = sendSpeed;
+			vec2 syncDir = sendDir;
+			f32 syncSpeed = sendSpeed;
+			if(cur.skillMoving) {
+				const vec2 travel = vec2(cur.pos - sent.pos);
+				const f32 travelLen = glm::length(travel);
+				syncDir = prev.skillMoving && travelLen > posEpsilon ? travel / travelLen : vec2(0);
+				syncSpeed = prev.skillMoving && sinceSent > 0 ? travelLen / sinceSent : 0.0f;
+			}
+			sent.moveDir = syncDir;
+			sent.speed = syncSpeed;
 			sent.at = TimeRelNow();
+			sent.pos = cur.pos;
 			ActionStateID action = cur.actionState;
 			if(action == ActionStateID::INVALID) {
 				action = ActionStateID::NONE_BEHAVIORSTATE;
@@ -3601,10 +3612,10 @@ void Replication::FrameDifference()
 
 			Sv::SN_PlayerSyncMove sync;
 			sync.DestPos = v2f(cur.pos);
-			sync.MoveDir = v2f(sendDir);
+			sync.MoveDir = v2f(syncDir);
 			sync.UpperDir = { WorldYawToMxmYaw(cur.rotation.upperYaw), WorldPitchToMxmPitch(cur.rotation.upperPitch) };
 			sync.nRotate = WorldYawToMxmYaw(cur.rotation.bodyYaw);
-			sync.nSpeed = sendSpeed;
+			sync.nSpeed = syncSpeed;
 			sync.flags = 0;
 			sync.actionStateID = action;
 

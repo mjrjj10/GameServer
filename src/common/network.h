@@ -167,6 +167,7 @@ struct Server
 	i32 packetCounter = 0;
 	i32 traceServerID = -1;
 	bool doTraceNetwork = false;
+	bool doStreamNetwork = false;
 
 	bool Init();
 	void Cleanup();

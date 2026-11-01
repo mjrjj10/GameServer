@@ -14,6 +14,7 @@ bool CConfigGame::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "DevTelemetry=%d", &DevTelemetry) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevTrail=%d", &DevTrail) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevTruth=%d", &DevTruth) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevScenario=%d", &DevScenario) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevObserver=%d", &DevObserver) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevGodPlayers=%d", &DevGodPlayers) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcase=%d", &DevShowcase) == 1) return true;
@@ -29,6 +30,7 @@ bool CConfigGame::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "DevNoFireNode=%d", &DevNoFireNode) == 1) return true;
 	if(EA::StdC::Sscanf(line, "HostIP=%d.%d.%d.%d", &HostIP[0], &HostIP[1], &HostIP[2], &HostIP[3]) == 4) return true;
 	if(EA::StdC::Sscanf(line, "TraceNetwork=%d", &TraceNetwork) == 1) return true;
+	if(EA::StdC::Sscanf(line, "TraceStream=%d", &TraceStream) == 1) return true;
 	if(EA::StdC::Sscanf(line, "BotSyncCadence=%d", &BotSyncCadence) == 1) return true;
 	if(EA::StdC::Sscanf(line, "WindowWidth=%d", &WindowWidth) == 1) return true;
 	if(EA::StdC::Sscanf(line, "WindowHeight=%d", &WindowHeight) == 1) return true;
@@ -104,6 +106,7 @@ bool CConfigGame::SaveConfigFile()
 	out.append_sprintf("DevMirror=%d\n", DevMirror);
 	out.append_sprintf("HostIP=%d.%d.%d.%d\n", HostIP[0], HostIP[1], HostIP[2], HostIP[3]);
 	out.append_sprintf("TraceNetwork=%d\n", TraceNetwork);
+	out.append_sprintf("TraceStream=%d\n", TraceStream);
 	out.append_sprintf("WindowWidth=%d\n", WindowWidth);
 	out.append_sprintf("WindowHeight=%d\n", WindowHeight);
 	out.append_sprintf("DbgCamPosX=%f\n", DbgCamPosX);
@@ -137,6 +140,7 @@ void CConfigGame::Print() const
 	LOG("	DevObserver=%d", DevObserver);
 	LOG("	HostIP=%d.%d.%d.%d", HostIP[0], HostIP[1], HostIP[2], HostIP[3]);
 	LOG("	TraceNetwork=%d", TraceNetwork);
+	LOG("	TraceStream=%d", TraceStream);
 	LOG("	WindowWidth=%d", WindowWidth);
 	LOG("	WindowHeight=%d", WindowHeight);
 	LOG("	DbgCamPosX=%f", DbgCamPosX);

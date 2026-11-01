@@ -432,6 +432,7 @@ void Game::Update(Time localTime_)
 				tNextTruth = TimeAdd(localTime, TimeMsToTime(TRUTH_PERIOD_MS));
 				WriteTruth();
 			}
+			if(Config().DevScenario && tGameStarted != Time::ZERO) RunScenario();
 			if((Config().DevTelemetry || Config().DevTrail) && localTime >= tNextTelemetry) {
 				static const f64 TELEMETRY_PERIOD_MS = 200.0;
 				tNextTelemetry = TimeAdd(localTime, TimeMsToTime(TELEMETRY_PERIOD_MS));
@@ -764,6 +765,36 @@ void Game::WriteTruth()
 	}
 	fprintf(f, "]}\n");
 	fclose(f);
+}
+
+void Game::RunScenario()
+{
+	if(!scenarioLoaded) {
+		scenarioLoaded = true;
+		FILE* f = fopen("scenario.txt", "rb");
+		if(!f) return;
+		char line[256];
+		while(fgets(line, sizeof(line), f) && !scenario.full()) {
+			f32 at = 0;
+			i32 consumed = 0;
+			if(sscanf(line, "%f %n", &at, &consumed) < 1 || line[consumed] == 0) continue;
+			ScenarioStep step;
+			step.at = at;
+			for(const char* c = line + consumed; *c && *c != '\r' && *c != '\n'; c++) step.cmd.push_back((wchar)*c);
+			scenario.push_back(step);
+		}
+		fclose(f);
+		LOG("Scenario :: %d steps loaded", (i32)scenario.size());
+	}
+	ClientHandle human = ClientHandle::INVALID;
+	foreach_const(p, world.players) if(p->clientHd != ClientHandle::INVALID && !p->removed) { human = p->clientHd; break; }
+	if(human == ClientHandle::INVALID) return;
+	const f32 elapsed = (f32)TimeDiffSec(TimeDiff(tGameStarted, localTime));
+	while(scenarioNext < (i32)scenario.size() && elapsed >= scenario[scenarioNext].at) {
+		const ScenarioStep& step = scenario[scenarioNext++];
+		LOG("Scenario :: t=%.1f %ls", elapsed, step.cmd.c_str());
+		ParseChatCommand(human, step.cmd.data(), (i32)step.cmd.size());
+	}
 }
 
 void Game::WriteTelemetry()
@@ -2228,6 +2259,65 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 				killed++;
 			}
 			SendDbgMsg(clientHd, LFMT(L"Killed %d monster(s) within %.0f", killed, killRadius));
+			return true;
+		}
+
+		i32 monDoc = 0;
+		if((EA::StdC::Sscanf(msg, L"tpmon %d", &monDoc) == 1 || EA::StdC::Sscanf(msg, L"killdoc %d", &monDoc) == 1) && world.GetPlayer(p.playerIndex).body) {
+			World::Player& playerActor = world.GetPlayer(p.playerIndex);
+			const bool kill = msg[0] == L'k';
+			World::ActorNpc* best = nullptr;
+			f32 bestDist = FLT_MAX;
+			foreach(npc, world.actorNpcList) {
+				if((i32)npc->docID != monDoc || npc->hp <= 0 || npc->removeAt != Time::ZERO || npc->ownerUID != ActorUID::INVALID) continue;
+				const f32 d = glm::length(vec2(npc->pos) - vec2(playerActor.body->GetWorldPos()));
+				if(d < bestDist) { bestDist = d; best = &*npc; }
+			}
+			if(!best) {
+				SendDbgMsg(clientHd, LFMT(L"No alive monster %d", monDoc));
+				return true;
+			}
+			if(kill) {
+				world.MonsterDie(*best, playerActor.Main().UID, CreatureIndex(100000000 + (i32)playerActor.Main().classType));
+				SendDbgMsg(clientHd, LFMT(L"Killed monster %d (local %d)", monDoc, best->localID));
+			}
+			else {
+				static const f32 DEV_TPMON_OFFSET = 350.0f;
+				const vec3 to = best->pos + vec3(DEV_TPMON_OFFSET, 0, 0);
+				world.TeleportPlayer(playerActor, to, playerActor.input.rot.bodyYaw);
+				replication.SendTeleportRequest(clientHd, playerActor.Main().UID, to);
+				SendDbgMsg(clientHd, LFMT(L"Teleported near monster %d (local %d)", monDoc, best->localID));
+			}
+			return true;
+		}
+
+		i32 interactID = -1;
+		if(EA::StdC::Sscanf(msg, L"interact %d", &interactID) == 1 && world.GetPlayer(p.playerIndex).body) {
+			World::Player& playerActor = world.GetPlayer(p.playerIndex);
+			world.BuildMapInteractions();
+			const World::MapInteraction* best = nullptr;
+			vec3 bestPos;
+			f32 bestDist = FLT_MAX;
+			foreach_const(m, world.mapInteractions) {
+				vec3 at;
+				if(m->object == ActorUID::INVALID || !m->active || !world.MapInteractionPos(*m, &at)) continue;
+				i32 objectDoc = 0;
+				if(m->creature) { if(const World::ActorNpc* npc = world.FindNpcActor(m->object)) objectDoc = (i32)npc->docID; }
+				else { auto dyn = world.actorDynamicMap.find(m->object); if(dyn != world.actorDynamicMap.end()) objectDoc = (i32)dyn->second->docID; }
+				if(interactID > 0 && m->interactionID != interactID && objectDoc != interactID) continue;
+				const f32 d = glm::length(vec2(at) - vec2(playerActor.body->GetWorldPos()));
+				if(d < bestDist) { bestDist = d; best = &*m; bestPos = at; }
+			}
+			if(!best) {
+				SendDbgMsg(clientHd, LFMT(L"No open interaction %d", interactID));
+				return true;
+			}
+			static const f32 DEV_INTERACT_OFFSET = 80.0f;
+			const vec3 to = bestPos + vec3(DEV_INTERACT_OFFSET, 0, 0);
+			world.TeleportPlayer(playerActor, to, playerActor.input.rot.bodyYaw);
+			replication.SendTeleportRequest(clientHd, playerActor.Main().UID, to);
+			world.StartMapInteraction(playerActor, best->object);
+			SendDbgMsg(clientHd, LFMT(L"Interaction %d on object %d started", best->interactionID, best->localID));
 			return true;
 		}
 

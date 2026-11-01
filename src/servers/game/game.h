@@ -123,6 +123,11 @@ struct Game
 	void WriteTelemetry();
 	void WriteTrail();
 	void WriteTruth();
+	void RunScenario();
+	struct ScenarioStep { f32 at; eastl::fixed_string<wchar,128,true> cmd; };
+	eastl::fixed_vector<ScenarioStep,512,true> scenario;
+	i32 scenarioNext = 0;
+	bool scenarioLoaded = false;
 	Time tNextTruth = Time::ZERO;
 	Time tNextTelemetry = Time::ZERO;
 	Time tAutoStageNext = Time::ZERO;

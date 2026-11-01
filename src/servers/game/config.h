@@ -24,10 +24,12 @@ struct CConfigGame
 	i32 DevTelemetry = 0;
 	i32 DevTrail = 0;
 	i32 DevTruth = 0;
+	i32 DevScenario = 0;
 	i32 DevObserver = 0;
 	i32 DevGodPlayers = 0;
 	i32 HostIP[4] = { 0, 0, 0, 0 };
 	i32 TraceNetwork = false;
+	i32 TraceStream = false;
 	i32 BotSyncCadence = 0;
 	i32 WindowWidth = 1280;
 	i32 WindowHeight = 720;

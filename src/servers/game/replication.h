@@ -287,6 +287,7 @@ struct Replication
 		f32 speed = 0;
 		i32 stillFrames = 0;
 		Time at = Time::ZERO;
+		vec3 pos = vec3(0);
 	};
 	eastl::fixed_map<ActorUID,SentMove,64> sentMoves;
 
