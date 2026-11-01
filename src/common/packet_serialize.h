@@ -3857,6 +3857,17 @@ inline const char* PacketSerialize<Cl::CQ_WeaponState>(const void* packetData, c
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_DespawnMonster>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_DespawnMonster(%d, %d) :: {", Sv::SN_DespawnMonster::NET_ID, packetSize);
+	SER("	objectID=0x%08x", buff.Read<u32>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_UpdateStat>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

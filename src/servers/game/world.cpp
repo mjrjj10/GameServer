@@ -1154,7 +1154,9 @@ void World::WarpPlayer(Player& p, const vec3& pos, f32 yaw)
 void World::SwapMainMaster(Player& p)
 {
 	AccumulateMasterScore(p);
+	const ActorUID oldMain = p.Main().UID;
 	p.mainCharaID ^= 1;
+	RetargetMonsters(oldMain, p.Main().UID);
 	eastl::swap(p.mana, p.benchMana);
 	eastl::swap(p.stamina, p.benchStamina);
 	eastl::swap(p.res, p.benchRes);
@@ -1164,6 +1166,19 @@ void World::SwapMainMaster(Player& p)
 	p.ultDirty = true;
 	p.regenResend = true;
 	ShowTagToEnemies(p);
+}
+
+void World::RetargetMonsters(ActorUID from, ActorUID to)
+{
+	foreach(npc, actorNpcList) {
+		if(npc->monsterTarget != from) continue;
+		npc->monsterTarget = to;
+		replication->SendAiSetTargetToAll(npc->UID, to);
+	}
+	foreach(h, monsterHits) if(h->target == from) h->target = to;
+	foreach(f, monsterFires) if(f->target == from) f->target = to;
+	foreach(r, monsterRemotes) if(r->target == from) r->target = to;
+	foreach(c, monsterChains) if(c->target == from) c->target = to;
 }
 
 void World::ResetMainMasterForAreaMove(Player& p)

@@ -2658,6 +2658,19 @@ void Replication::SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorU
 	}
 }
 
+void Replication::SendDespawnMonsterToAll(ActorUID actorUID)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+		Sv::SN_DespawnMonster packet;
+		packet.objectID = (u32)localID;
+		SendPacket(clientHd, packet);
+	}
+}
+
 void Replication::SendStatToAll(ActorUID actorUID, i32 statType, f32 cur, f32 max, u32 reason)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {

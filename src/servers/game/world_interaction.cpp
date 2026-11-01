@@ -307,6 +307,10 @@ static bool HypPveMonsterTakesCc(const World::ActorNpc& npc)
 f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 {
 	if(!info || !npc.monsterAi) return 0.0f;
+	if(info->type == StatusType::DRAGGED || info->type == StatusType::DRAGGEDBYFORCE) {
+		const bool takes = eastl::find(npc.monsterAi->ccTypes.begin(), npc.monsterAi->ccTypes.end(), info->type) != npc.monsterAi->ccTypes.end();
+		return takes || (hostileMonsters && HypPveMonsterTakesCc(npc)) ? 0.0f : -1.0f;
+	}
 	ActionStateID state;
 	f32 sec = 0;
 	bool lie = false;
@@ -684,6 +688,11 @@ void World::DespawnEntities(i32 localID, i32 tagID)
 	foreach(d, actorDynamicList) {
 		if(tagID >= 0 ? d->tagID != tagID : d->localID != localID) continue;
 		foreach(g, teamGates) if(g->localID == d->localID) g->open = true;
+		if(d->destroyed) continue;
+		d->destroyed = true;
+		if(d->collider) physics.SetStaticEnabled(d->collider, false);
+		replication->SendStatToAll(d->UID, (i32)StatType::STAT_TYPE_HEALTH, 0, 1);
+		replication->SendDespawnMonsterToAll(d->UID);
 	}
 	LOG("LevelEvent :: despawn local %d tag %d", localID, tagID);
 }

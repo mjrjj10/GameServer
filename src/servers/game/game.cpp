@@ -16,6 +16,7 @@
 static const f32 STAGE_TIME_LIMIT_FALLBACK_SEC = 300.0f;
 static const f64 RETURN_TO_LOBBY_DELAY_SEC = 20.0;
 static const u32 MEASURED_PVE_FAIL_RETURN_MS = 15000;
+static const f32 HYP_HUMAN_POSITION_SNAP = 100.0f;
 static const u32 MEASURED_DEFENCE_RETURN_MS = 280;
 static const i32 MEASURED_DEFENCE_RESPAWN_MS = 12000;
 struct PvpGuildPointRule { i32 teamSize; u32 win; u32 lose; };
@@ -1148,9 +1149,12 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 		player.lastClientAction = action;
 		player.lastClientActionSince = world.localTime;
 	}
-	if(world.localTime < player.dashUntil || world.localTime < player.ccUntil) {
+	const vec3 bodyPos = player.body->GetWorldPos();
+	const bool drifted = glm::length(vec2(pos) - vec2(bodyPos)) > HYP_HUMAN_POSITION_SNAP || fabsf(pos.z - bodyPos.z) > HYP_HUMAN_POSITION_SNAP;
+	if(world.localTime < player.dashUntil || world.localTime < player.ccUntil || drifted) {
 		player.body->collider->setFootPosition(PxExtendedVec3(pos.x, pos.y, pos.z));
 		player.body->vel = vec3(0);
+		if(player.dashDone < player.dashDist) player.dashOrigin = pos - vec3(player.dashDir * player.dashDone, 0);
 	}
 
 	// TODO: check for movement hacking

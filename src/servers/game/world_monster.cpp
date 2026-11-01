@@ -19,6 +19,8 @@ static f32 YawGap(f32 a, f32 b)
 	return fabsf(d);
 }
 static const f32 MONSTER_WAYPOINT_REACHED = 60.0f;
+static const i32 HYP_MONSTER_LANE_SPREAD = 60;
+static const f32 HYP_MONSTER_REMOTE_WALL_HEIGHT = 100.0f;
 static const f32 MONSTER_REMOTE_MIN_LIFE_SEC = 0.05f;
 static const u32 MEASURED_MONSTER_REMOTE_SEED_STEP = 4;
 static const i32 MEASURED_GOT_MOB_RETURN_SUPERARMOR = 1264070082;
@@ -429,7 +431,7 @@ void World::ApplyMonsterAllyStatus(ActorUID casterUID, const GameXmlContent::Mon
 	}
 }
 
-void World::MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const GameXmlContent::MonsterAttack& attack, u32 remoteID, const vec3* aimPos)
+void World::MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const GameXmlContent::MonsterAttack& attack, u32 remoteID, const vec3* aimPos, const vec3* castAim)
 {
 	auto attackerIt = actorNpcMap.find(attackerUID);
 	if(attackerIt == actorNpcMap.end()) return;
@@ -443,6 +445,7 @@ void World::MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const Gam
 		vec3 center = attacker.pos;
 		if(attack.selfCentered) center = attacker.pos;
 		else if(aimPos && attack.hitRemote > 0 && GetGameXmlContent().FindRemote((RemoteIdx)attack.hitRemote) && GetGameXmlContent().FindRemote((RemoteIdx)attack.hitRemote)->bezier) center = *aimPos;
+		else if(castAim) center = *castAim;
 		else if(targetIt != actorNpcMap.end()) center = targetIt->second->pos;
 		else if(master && master->parent) center = master->parent->body->GetWorldPos();
 		foreach(p, players) {
@@ -561,7 +564,7 @@ void World::UpdateMonsterHits()
 		const MonsterHit hit = monsterHits[i];
 		monsterHits.erase(monsterHits.begin() + i);
 		if(hit.ally) ApplyMonsterAllyStatus(hit.attacker, *hit.attack);
-		else if(!hit.byRemotes) MonsterAttackHit(hit.attacker, hit.target, *hit.attack, hit.remoteID, hit.aimed ? &hit.aimPos : nullptr);
+		else if(!hit.byRemotes) MonsterAttackHit(hit.attacker, hit.target, *hit.attack, hit.remoteID, hit.aimed ? &hit.aimPos : nullptr, hit.castAim ? &hit.aimPos : nullptr);
 		if(!hit.ally && hit.attack->selfDie) {
 			auto self = actorNpcMap.find(hit.attacker);
 			if(self != actorNpcMap.end() && self->second->hp > 0) MonsterDie(*self->second, ActorUID::INVALID, CreatureIndex(0));
@@ -580,7 +583,9 @@ void World::FireMonsterRemote(const MonsterFireEvent& fire)
 	if(remote && fire.byRemotes) {
 		const vec2 rel = vec2(targetPos) - vec2(npc.pos);
 		const f32 len = glm::length(rel);
-		SpawnMonsterRemote(npc, *remote, npc.pos, len > 1.0f ? rel / len : vec2(cosf(npc.rot.z), sinf(npc.rot.z)), fire.target, false);
+		const bool follows = remote->behaviorType == Remote::BehaviorType::HOMING || remote->behaviorType == Remote::BehaviorType::TARGET;
+		const vec2 dir = !follows ? vec2(cosf(fire.castYaw), sinf(fire.castYaw)) : (len > 1.0f ? rel / len : vec2(cosf(npc.rot.z), sinf(npc.rot.z)));
+		SpawnMonsterRemote(npc, *remote, npc.pos, dir, fire.target, false);
 		return;
 	}
 	if(remote && remote->maxSpeed > 0 && remote->destroyCreateRemote != RemoteIdx::INVALID && !monsterChains.full()) {
@@ -725,9 +730,26 @@ void World::UpdateMonsterRemotes(f32 delta)
 			const bool homing = remote.behaviorType == Remote::BehaviorType::FOLLOW_TARGET || remote.behaviorType == Remote::BehaviorType::HOMING;
 			const vec2 rel = vec2(goal) - vec2(mr.pos);
 			const f32 dist = glm::length(rel);
-			if(homing && dist > 1.0f) mr.dir = rel / dist;
+			const bool steered = homing && remote.angularVel > 0;
+			const bool locked = homing && dist > 1.0f && (remote.homingLength <= 0 || dist <= remote.homingLength);
+			if(locked && !steered) mr.dir = rel / dist;
+			else if(locked) {
+				f32 turn = atan2f(rel.y, rel.x) - atan2f(mr.dir.y, mr.dir.x);
+				while(turn > PI) turn -= 2 * PI;
+				while(turn < -PI) turn += 2 * PI;
+				const f32 maxTurn = remote.angularVel * delta;
+				turn = MAX(MIN(turn, maxTurn), -maxTurn);
+				mr.dir = vec2(mr.dir.x * cosf(turn) - mr.dir.y * sinf(turn), mr.dir.x * sinf(turn) + mr.dir.y * cosf(turn));
+			}
 			const f32 step = remote.maxSpeed * delta;
-			if(homing && dist <= step) {
+			f32 wallDist = 0;
+			const bool hitWall = !remote.ignoreGround && physics.RaycastStatic(vec3(vec2(mr.pos), mr.pos.z + HYP_MONSTER_REMOTE_WALL_HEIGHT), vec3(vec2(mr.pos) + mr.dir * step, mr.pos.z + HYP_MONSTER_REMOTE_WALL_HEIGHT), &wallDist);
+			if(hitWall) {
+				mr.pos += vec3(mr.dir * wallDist, 0);
+				mr.impacted = true;
+				expired = true;
+			}
+			else if(homing && !steered && dist <= step) {
 				mr.pos = vec3(vec2(goal), mr.pos.z);
 				mr.impacted = true;
 				expired = true;
@@ -890,7 +912,7 @@ void World::StartMonsterAttack(ActorNpc& npc, const GameXmlContent::MonsterAi& a
 	if(visual) {
 		u32 fireSeed = seed;
 		foreach_const(f, attack->fires) {
-			monsterFires.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime((passStart[f->pass] + f->at) * 1000.0)), &*f, fireSeed, byRemotes });
+			monsterFires.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime((passStart[f->pass] + f->at) * 1000.0)), &*f, fireSeed, byRemotes, npc.rot.z });
 			fireSeed += MEASURED_MONSTER_FIRE_SEED_STEP;
 		}
 	}
@@ -901,7 +923,7 @@ void World::StartMonsterAttack(ActorNpc& npc, const GameXmlContent::MonsterAi& a
 		if(chainFire) impact = passStart[chainFire->pass] + chainFire->at + chainTravel;
 	}
 	for(i32 h = 0; !attack->noDamage && h < (i32)attack->hits && !monsterHits.full(); h++) {
-		monsterHits.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime((impact + h * attack->interval) * 1000.0)), attack, remoteID, false, targetPos ? *targetPos : npc.pos, attack->speed > 0 && targetPos != nullptr, byRemotes });
+		monsterHits.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime((impact + h * attack->interval) * 1000.0)), attack, remoteID, false, targetPos ? *targetPos : npc.pos, attack->speed > 0 && targetPos != nullptr, byRemotes, attack->speed <= 0 && targetPos != nullptr && !attack->selfCentered });
 	}
 	if(attack->allyStatus != 0 && !monsterHits.full()) monsterHits.push_back({ npc.UID, npc.UID, TimeAdd(localTime, TimeMsToTime(attack->allyDelay * 1000.0)), attack, 0, true });
 }
@@ -1021,6 +1043,17 @@ bool World::UpdateMonsterSeek(ActorNpc& npc, const GameXmlContent::MonsterAi& ai
 		replication->SendMonsterMoveToAll(npc.UID, npc.pos, vec3(vec2(goal->pos) - rel / best * ai.seekReach, npc.pos.z), yaw, speed);
 	}
 	return true;
+}
+
+static vec3 LaneGoal(const eastl::fixed_vector<vec3,48,true>& path, i32 point, f32 offset)
+{
+	const vec3& goal = path[point];
+	if(offset == 0) return goal;
+	const vec2 from = point > 0 ? vec2(path[point - 1]) : (point + 1 < (i32)path.size() ? vec2(goal) - (vec2(path[point + 1]) - vec2(goal)) : vec2(goal));
+	const vec2 seg = vec2(goal) - from;
+	const f32 len = glm::length(seg);
+	if(len < 1.0f) return goal;
+	return vec3(vec2(goal) + vec2(-seg.y, seg.x) / len * offset, goal.z);
 }
 
 void World::UpdateMonsterAi(f32 delta)
@@ -1339,10 +1372,14 @@ void World::UpdateMonsterAi(f32 delta)
 			npc.actionState = ActionStateID::NONE_BEHAVIORSTATE;
 			replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, walk);
 		}
+		if(!npc.laneOffsetSet) {
+			npc.laneOffsetSet = true;
+			npc.laneOffset = (f32)((i32)(RandUint() % (u32)(2 * HYP_MONSTER_LANE_SPREAD + 1)) - HYP_MONSTER_LANE_SPREAD);
+		}
 		const i32 pointBefore = npc.pathPoint;
 		f32 budget = walk * delta;
 		while(budget > 0 && npc.pathPoint < (i32)npc.path->size()) {
-			const vec3& goal = (*npc.path)[npc.pathPoint];
+			const vec3 goal = LaneGoal(*npc.path, npc.pathPoint, npc.laneOffset);
 			const vec2 rel = vec2(goal) - vec2(npc.pos);
 			const f32 dist = glm::length(rel);
 			if(dist <= MONSTER_WAYPOINT_REACHED) { npc.pathPoint++; continue; }
@@ -1353,7 +1390,7 @@ void World::UpdateMonsterAi(f32 delta)
 		}
 		if(npc.pathPoint < (i32)npc.path->size() && (npc.pathPoint != pointBefore || localTime >= npc.monsterNextSync)) {
 			npc.monsterNextSync = TimeAdd(localTime, TimeMsToTime(MONSTER_SYNC_MS));
-			replication->SendMonsterMoveToAll(npc.UID, npc.pos, (*npc.path)[npc.pathPoint], npc.rot.z, walk);
+			replication->SendMonsterMoveToAll(npc.UID, npc.pos, LaneGoal(*npc.path, npc.pathPoint, npc.laneOffset), npc.rot.z, walk);
 		}
 	}
 }
