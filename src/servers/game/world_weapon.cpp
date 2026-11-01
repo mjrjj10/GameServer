@@ -3,10 +3,8 @@
 #include "world_common.h"
 #include <mxm/game_content.h>
 
-static const i32 WEAPON_ACTION_MAX_STEP = 9;
 static const f32 WALL_HIT_SEARCH_RADIUS = 300.0f;
 static const f32 REFLECT_SAMPLE_STEP = 25.0f;
-static const i32 WEAPON_ATTACK_STATE_MAX_COMBO = 4;
 static const f64 BOT_ATTACK_STATE_MS = 300.0;
 static const f32 WEAPON_PROJECTILE_SPEED = 4000.0f;
 static const f32 WEAPON_MELEE_MAX_RANGE = 600.0f;
@@ -33,15 +31,15 @@ static f32 SegmentPointDist2D(const vec2& a, const vec2& b, const vec2& p)
 	return glm::length(p - (a + ab * t));
 }
 
-static ActionStateID WeaponAttackState(const World::Player& player)
+static ActionStateID WeaponAttackState(const World::Player& player, const WeaponFiring& wf)
 {
-	return (ActionStateID)((i32)ActionStateID::ATTACK_BEHAVIORSTATE + MIN((i32)player.firingCombo, WEAPON_ATTACK_STATE_MAX_COMBO));
+	return wf.AttackState(player.firingCombo, player.chargeLevel);
 }
 
-static void BotWeaponAnimation(const World::Player& player, Replication* replication)
+static void BotWeaponAnimation(const World::Player& player, const WeaponFiring& wf, Replication* replication)
 {
 	if(player.clientHd != ClientHandle::INVALID) return;
-	replication->SendAttackActionToOthers(ClientHandle::INVALID, player.Main().UID, WorldYawToMxmYaw(player.weaponAimYaw), WeaponAttackState(player));
+	replication->SendAttackActionToOthers(ClientHandle::INVALID, player.Main().UID, WorldYawToMxmYaw(player.weaponAimYaw), WeaponAttackState(player, wf));
 }
 
 void World::PlayerWeaponFire(Player& player)
@@ -63,7 +61,7 @@ void World::PlayerWeaponFire(Player& player)
 		const WeaponFiring& wf = ActiveWeaponFiring(player, swingStance);
 		if(player.chargeLevel > 0) ApplyResourceGain(player, ResourceEvent::CHARGED_SHOT);
 		const RemoteIdx swing = SelectWeaponRemote(player, wf);
-		BotWeaponAnimation(player, replication);
+		BotWeaponAnimation(player, wf, replication);
 		RunWeaponActionStatuses(player, swingStance);
 		const Remote* swingRemote = GetGameXmlContent().FindRemote(swing);
 		ASSERT(swingRemote);
@@ -96,13 +94,13 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	const f32 aimMin = wf.minDistance;
 	const bool spawnAtAim = wf.spawnAtAim;
 	const RemoteIdx idx = SelectWeaponRemote(player, wf);
-	BotWeaponAnimation(player, replication);
+	BotWeaponAnimation(player, wf, replication);
 	if(wf.firingStatDuration > 0) {
 		player.firingStatUntil = TimeAdd(localTime, TimeMsToTime(wf.firingStatDuration * 1000.0));
 		player.firingMoveSpeedMul = wf.firingMoveSpeedMul;
 	}
 	if(player.clientHd == ClientHandle::INVALID) {
-		player.botAttackState = WeaponAttackState(player);
+		player.botAttackState = WeaponAttackState(player, wf);
 		player.botAttackStateUntil = TimeAdd(localTime, TimeMsToTime(BOT_ATTACK_STATE_MS));
 	}
 	RunWeaponActionStatuses(player, shotStance);
@@ -115,7 +113,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		f32 reach = MAX(MIN(distance > 1.0f ? distance : WeaponReach(*remote, wf), aimMax), aimMin);
 		const vec3 aimPos = vec3(vec2(origin) + dir * reach, player.body->GetWorldPos().z);
 		const bool bot = player.clientHd == ClientHandle::INVALID;
-		if(!bot) replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(dir.y, dir.x)), WeaponAttackState(player));
+		if(!bot) replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(dir.y, dir.x)), WeaponAttackState(player, wf));
 		u32 clientSeed = 0;
 		if(!bot && player.pendingShotRawSize > 0) {
 			const u16 creator = replication->RelayWeaponShot(player.clientHd, player.pendingShotRaw.data(), player.pendingShotRawSize, aimPos, remote->ID);
@@ -175,7 +173,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		proj.remoteID = ((const Cl::CQ_GamePlayerSyncPhy*)player.pendingShotRaw.data())->RemoteSeedID + 1;
 		proj.seedOwnerHd = player.clientHd;
 	}
-	replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(proj.dir.y, proj.dir.x)), WeaponAttackState(player));
+	replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(proj.dir.y, proj.dir.x)), WeaponAttackState(player, wf));
 
 	if(player.pendingShotRawSize > 0) {
 		const vec3 target = vec3(vec2(origin) + proj.dir * proj.range, origin.z);
@@ -387,7 +385,10 @@ void World::UpdateProjectiles(f32 delta)
 				if(proj->chainRemote != RemoteIdx::INVALID && !proj->chained) {
 					proj->chained = true;
 					RemoteInst* chain = SpawnRemote(proj->ownerIndex, proj->chainRemote, hitPos, proj->dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, proj->chainDamage, true, nullptr, proj->nodeName, false, false, true);
-					if(chain) chain->excludeIndex = (i32)activationTarget->index;
+					if(chain) {
+						chain->excludeIndex = (i32)activationTarget->index;
+						chain->chainHitMask = 1u << activationTarget->index;
+					}
 				}
 				proj->hitsLeft--;
 				if(proj->hitsLeft <= 0 || proj->penetrationLeft <= 0) {
@@ -604,10 +605,10 @@ const WeaponFiring& World::ActiveWeaponFiring(const Player& p, i8 stance) const
 RemoteIdx World::SelectWeaponRemote(Player& player, const WeaponFiring& wf)
 {
 	const u32 m = player.mainCharaID & 1;
-	if(player.clientHd == ClientHandle::INVALID && !wf.combo.empty()) {
+	if(player.clientHd == ClientHandle::INVALID) {
 		const bool chained = player.firingCombo < wf.comboValid.size() && player.botComboShotAt != Time::ZERO && localTime <= TimeAdd(player.botComboShotAt, TimeMsToTime(wf.comboValid[player.firingCombo] * 1000.0));
-		player.firingCombo = chained && player.firingCombo < wf.combo.size() ? player.firingCombo + 1 : 0;
-		player.botComboShotAt = localTime;
+		player.firingCombo = chained ? player.firingCombo + 1 : 0;
+		player.botComboShotAt = wf.comboValid.empty() ? Time::ZERO : localTime;
 	}
 	RemoteIdx idx = wf.base;
 	if(player.chargeLevel > 0 && player.chargeLevel <= wf.charge.size()) idx = wf.charge[player.chargeLevel - 1];
@@ -697,8 +698,7 @@ f32 World::WeaponHitDamage(const Player& player, const Remote* remote) const
 void World::RunWeaponActionStatuses(Player& player, i8 stance)
 {
 	const auto& content = GetGameXmlContent();
-	const i32 step = player.chargeLevel > 0 ? 1 : (i32)player.firingCombo;
-	const ActionStateID state = (ActionStateID)((i32)ActionStateID::ATTACK_BEHAVIORSTATE + MIN(step, WEAPON_ACTION_MAX_STEP));
+	const ActionStateID state = ActiveWeaponFiring(player, stance).AttackState(player.firingCombo, player.chargeLevel);
 	const GameXmlContent::Action* action = content.FindSkillAction(player.Main().classType, state, stance);
 	if(!action) return;
 	foreach_const(cmd, action->commands) {

@@ -22,6 +22,7 @@ struct CConfigHub
 	eastl::fixed_vector<i32,64> devBotPool = {};
 	i32 DevMirror = 0;
 	i32 DevMirrorPass = 0;
+	i32 DevLabSkills = 0;
 	eastl::fixed_vector<i32,16> regionNewMaster = {};
 	eastl::fixed_vector<i32,16> eventBanMaster = {};
 

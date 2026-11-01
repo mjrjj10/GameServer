@@ -18,6 +18,8 @@
 #include "world_master_rules.h"
 
 struct StatusInfo;
+bool StatusSendsGraph(const StatusInfo* info);
+bool StatusGraphAnchorOnly(const StatusInfo* info);
 
 struct ColliderSize
 {
@@ -738,6 +740,7 @@ struct World
 		bool timeEventActive = false;
 		i32 excludeIndex = -1;
 		i32 lastHitIndex = -1;
+		u32 chainHitMask = 0;
 		bool chainEnded = false;
 		struct NpcHit { ActorUID uid; Time until; };
 		eastl::fixed_vector<NpcHit,16,true> npcHits;

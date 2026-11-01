@@ -347,9 +347,18 @@ struct StatusInfo
 struct WeaponFiring
 {
 	RemoteIdx base = RemoteIdx::INVALID;
-	eastl::fixed_vector<RemoteIdx,8,false> combo;
-	eastl::fixed_vector<f32,8,false> comboValid;
-	eastl::fixed_vector<f32,8,false> comboDelay;
+	eastl::fixed_vector<RemoteIdx,10,false> combo;
+	eastl::fixed_vector<f32,10,false> comboValid;
+	eastl::fixed_vector<f32,10,false> comboDelay;
+	ActionStateID animation = ActionStateID::ATTACK_BEHAVIORSTATE;
+	eastl::fixed_vector<ActionStateID,10,false> comboAnimation;
+	eastl::fixed_vector<ActionStateID,4,false> chargeAnimation;
+	ActionStateID AttackState(u8 firingCombo, u8 chargeLevel) const
+	{
+		if(chargeLevel > 0 && chargeLevel <= chargeAnimation.size()) return chargeAnimation[chargeLevel - 1];
+		if(firingCombo > 0 && firingCombo <= comboAnimation.size()) return comboAnimation[firingCombo - 1];
+		return animation;
+	}
 	f32 fireDelay = 0;
 	i32 firingMethod = 0;
 	f32 firingStatDuration = 0;

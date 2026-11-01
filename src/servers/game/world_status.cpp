@@ -11,7 +11,7 @@ static const f32 STATUS_PUSH_BASE_DISTANCE = 500.0f;
 static const f32 STATUS_LIFT_BASE_HEIGHT = 400.0f;
 static const f32 FLY_PULL_MAX_SCALE = 2.0f;
 
-static bool StatusSendsGraph(const StatusInfo* info)
+bool StatusSendsGraph(const StatusInfo* info)
 {
 	if(!info) return false;
 	if(info->blockMove) return true;
@@ -52,7 +52,7 @@ static bool StatusGraphTimed(const StatusInfo* info)
 	}
 }
 
-static bool StatusGraphAnchorOnly(const StatusInfo* info)
+bool StatusGraphAnchorOnly(const StatusInfo* info)
 {
 	if(!info) return false;
 	switch(info->type) {

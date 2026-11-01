@@ -442,7 +442,8 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	f32 pushSec = 0;
 	const bool push = StartNpcPush(npc, info, statusForceCenterSet ? statusForceCenter : caster.body->GetWorldPos(), &pushTo, &pushNominal, &pushSec);
 	const f32 duration = info && info->durationSec > 0 ? info->durationSec : (push ? pushSec : 0.0f);
-	replication->SendAddStatusToAll(statusID, npc.UID, caster.Main().UID, duration, npc.pos, pushTo, pushSec, 1, 1.0f, pushNominal, push, false);
+	const bool anchor = !push && StatusSendsGraph(info) && StatusGraphAnchorOnly(info);
+	replication->SendAddStatusToAll(statusID, npc.UID, caster.Main().UID, duration, npc.pos, anchor ? vec3(0) : pushTo, pushSec, 1, 1.0f, pushNominal, push || anchor, false);
 	if(npcStatuses.full()) return;
 	NpcStatus ns;
 	ns.npcUID = npc.UID;
@@ -1288,6 +1289,7 @@ void World::UpdateFog()
 				replication->SendLeaveActor(viewer->clientHd, main);
 				p->hiddenFrom |= bit;
 				p->fogHiddenUID = main;
+				LOG("Fog :: %ls hidden for %ls (bush %u)", p->name.data(), viewer->name.data(), (u32)p->bushUID);
 			}
 			else if(sees[viewer->team] && hidden) {
 				const ActorMaster& chara = p->Main();
@@ -1368,7 +1370,7 @@ void World::UpdateSkillPoints()
 			it->nextSkillPointAt = TimeAdd(it->nextSkillPointAt, TimeMsToTime(SKILL_POINT_INTERVAL_MS));
 			GrantSkillPoint(*it);
 		}
-		if(!botUpgrades || it->clientHd != ClientHandle::INVALID || it->skillPoints <= 0 || it->dead) continue;
+		if(!botUpgrades || (it->clientHd != ClientHandle::INVALID && Config().DevStartLevel <= 0) || it->skillPoints <= 0 || it->dead) continue;
 		for(i32 tries = 0; tries < (i32)ARRAY_COUNT(BOT_UPGRADE_ORDER) && it->skillPoints > 0; tries++) {
 			const i32 turn = it->botUpgradeTurn++;
 			const i32 slot = turn < MEASURED_BOT_SKILL_FIRST_UPGRADES ? turn % 2 : BOT_UPGRADE_ORDER[(turn - MEASURED_BOT_SKILL_FIRST_UPGRADES) % ARRAY_COUNT(BOT_UPGRADE_ORDER)];

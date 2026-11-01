@@ -5223,14 +5223,21 @@ bool GameXmlContent::LoadWeaponFiring()
 				}
 			}
 			if(pFire) pFire->QueryFloatAttribute("_FireDelayTime", &wf.fireDelay);
+			if(const char* anim = pData ? pData->Attribute("_Animation") : nullptr) wf.animation = ActionStateFromString(anim);
 			if(XMLElement* pCombo = pData ? pData->FirstChildElement("_COMBO") : nullptr) {
 				for(XMLElement* pLevel = pCombo->FirstChildElement("_LEVEL"); pLevel && !wf.comboValid.full(); pLevel = pLevel->NextSiblingElement("_LEVEL")) {
 					wf.comboValid.push_back(pLevel->FloatAttribute("_ValidTime"));
 					wf.comboDelay.push_back(pLevel->FloatAttribute("_FireDelayTime"));
+					const char* anim = pLevel->Attribute("_Animation");
+					wf.comboAnimation.push_back(anim ? ActionStateFromString(anim) : wf.animation);
 				}
 			}
 			if(XMLElement* pCharge = pData ? pData->FirstChildElement("_CHARGE") : nullptr) {
-				for(XMLElement* pLevel = pCharge->FirstChildElement("_LEVEL"); pLevel && !wf.chargeTime.full(); pLevel = pLevel->NextSiblingElement("_LEVEL")) wf.chargeTime.push_back(pLevel->FloatAttribute("_ChargingTime"));
+				for(XMLElement* pLevel = pCharge->FirstChildElement("_LEVEL"); pLevel && !wf.chargeTime.full(); pLevel = pLevel->NextSiblingElement("_LEVEL")) {
+					wf.chargeTime.push_back(pLevel->FloatAttribute("_ChargingTime"));
+					const char* anim = pLevel->Attribute("_Animation");
+					wf.chargeAnimation.push_back(anim ? ActionStateFromString(anim) : wf.animation);
+				}
 			}
 			XMLElement* pFactory = pInfo->FirstChildElement("RemoteFactoryComData");
 			XMLElement* pCreate = pFactory ? pFactory->FirstChildElement("_Create") : nullptr;

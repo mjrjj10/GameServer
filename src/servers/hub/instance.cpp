@@ -432,7 +432,13 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 		static u32 poolNext = 0;
 		foreach(u, userList) {
 			if(!u->isBot) continue;
-			for(u32 tries = 0; tries < Config().devBotPool.size() * 2 && u->Sub().classType == ClassType::NONE; tries++) TryPickMaster(u, (ClassType)Config().devBotPool[poolNext++ % Config().devBotPool.size()]);
+			bool humanTeam = false;
+			foreach_const(h, userList) if(!h->isBot && h->team == u->team) humanTeam = true;
+			for(u32 tries = 0; tries < Config().devBotPool.size() * 2 && u->Sub().classType == ClassType::NONE; tries++) {
+				const i32 cls = Config().devBotPool[poolNext++ % Config().devBotPool.size()];
+				if(humanTeam && (cls == Config().DevPickMasters[0] || cls == Config().DevPickMasters[1])) continue;
+				TryPickMaster(u, (ClassType)cls);
+			}
 			u->replicate.masterPick = true;
 			LOG("[Room] dev bot masters %d %d", (i32)u->Main().classType, (i32)u->Sub().classType);
 		}
@@ -448,7 +454,7 @@ void RoomInstance::Init(Server* server_, const NewUser* userlist, const i32 user
 void RoomInstance::PickBotMasters()
 {
 	foreach(u, userList) {
-		if(u->isBot && !Config().DevShowcase && Config().devBotPool.empty()) {
+		if(u->isBot && !Config().DevShowcase && (Config().devBotPool.empty() || u->Sub().classType == ClassType::NONE)) {
 			static const ClassType botMasters[] = {
 				ClassType::STRIKER, ClassType::ARTILLERY, ClassType::ASSASSIN, ClassType::ELECTRO,
 				ClassType::DEFENDER, ClassType::SNIPER, ClassType::LAUNCHER,
@@ -1152,6 +1158,22 @@ RoomInstance::User* RoomInstance::FindUser(ClientHandle clientHd)
 	return nullptr;
 }
 
+static void PickLabSkillPair(const GameXmlContent::Master& master, eastl::array<SkillID,2>& skills)
+{
+	static const i32 pairs[6][2] = { { 10, 20 }, { 30, 40 }, { 10, 30 }, { 20, 40 }, { 10, 40 }, { 20, 30 } };
+	static u32 next = RandUint() % 6;
+	const i32* pair = pairs[next++ % 6];
+	SkillID first = SkillID::INVALID;
+	SkillID second = SkillID::INVALID;
+	foreach_const(sid, master.skillIDs) {
+		if((i32)*sid % 100 == pair[0]) first = *sid;
+		if((i32)*sid % 100 == pair[1]) second = *sid;
+	}
+	if(first == SkillID::INVALID || second == SkillID::INVALID) return;
+	skills[0] = first;
+	skills[1] = second;
+}
+
 static void PickMeasuredLoadout(const GameXmlContent::Master& master, ClassType classType, eastl::array<SkillID,2>& skills)
 {
 	u32 total = 0;
@@ -1210,6 +1232,7 @@ bool RoomInstance::TryPickMaster(User* user, ClassType classType)
 				}
 				ArsenalSkills(arsenal, master, user->Main().skills.data());
 			}
+			if(Config().DevLabSkills) PickLabSkillPair(master, user->Main().skills);
 			user->Main().masterGearNo = user->isBot ? 1 : AccountGearsLoad(user->name.data()).SelectedPage((i32)classType);
 			user->Main().characterType = 1;
 		}
@@ -1235,6 +1258,7 @@ bool RoomInstance::TryPickMaster(User* user, ClassType classType)
 				}
 				ArsenalSkills(arsenal, master, user->Sub().skills.data());
 			}
+			if(Config().DevLabSkills) PickLabSkillPair(master, user->Sub().skills);
 			user->Sub().masterGearNo = user->isBot ? 1 : AccountGearsLoad(user->name.data()).SelectedPage((i32)classType);
 			user->Sub().characterType = 1;
 		}

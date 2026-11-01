@@ -386,7 +386,8 @@ void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 s
 		if(npcStatuses[i].npcUID == npc.UID && npcStatuses[i].statusID == statusID) npcStatuses.erase(npcStatuses.begin() + i);
 		else i++;
 	}
-	replication->SendAddStatusToAll(statusID, npc.UID, caster.UID, duration, npc.pos, pushTo, pushSec, 1, 1.0f, pushNominal, push, false);
+	const bool anchor = !push && StatusSendsGraph(info) && StatusGraphAnchorOnly(info);
+	replication->SendAddStatusToAll(statusID, npc.UID, caster.UID, duration, npc.pos, anchor ? vec3(0) : pushTo, pushSec, 1, 1.0f, pushNominal, push || anchor, false);
 	if(npcStatuses.full()) return;
 	NpcStatus ns;
 	ns.npcUID = npc.UID;

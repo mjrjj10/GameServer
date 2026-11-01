@@ -158,6 +158,10 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		MarkInBattle(attacker);
 		MarkInBattle(target);
 		if(target.body) TowerCallForHelp(attacker, target.body->GetWorldPos(), (Faction)target.team, nullptr);
+		if(attacker.team != target.team && !(attacker.fogSeenBy & (1u << target.team))) {
+			RevealToTeam(attacker, (i32)target.team);
+			nextFogUpdate = localTime;
+		}
 	}
 	if(HasStatusType(target, StatusType::GODMODE)) return;
 	if(attacker.team != target.team && HasStatusType(target, StatusType::BURROW)) return;

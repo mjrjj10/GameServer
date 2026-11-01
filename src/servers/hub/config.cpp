@@ -36,6 +36,7 @@ bool CConfigHub::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "DevShowcaseSlices=%d", &DevShowcaseSlices) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevMirror=%d", &DevMirror) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevMirrorPass=%d", &DevMirrorPass) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevLabSkills=%d", &DevLabSkills) == 1) return true;
 	if(EA::StdC::Sscanf(line, "LobbyMap=%d", &LobbyMap) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevDailyAreaEvent=%d", &DevDailyAreaEvent) == 1) return true;
 	if(ParseIdList(line, "RegionBanMaster=", regionBanMaster)) return true;

@@ -187,7 +187,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 			targetPos = pos + vec3(dir * inst.range, 0);
 			targetPos.z = aimPos->z;
 		}
-		const bool plainStaticBox = inst.speed <= 0 && remote->boundType == Remote::BoundType::E_BOUND_BOX && remote->angle <= 0;
+		const bool plainStaticBox = inst.speed <= 0 && (remote->boundType == Remote::BoundType::E_BOUND_BOX || remote->boundType == Remote::BoundType::E_BOUND_SPHERE) && remote->angle <= 0;
 		const f32 sendYaw = atan2f(dir.y, dir.x) + (remoteSendRootDir ? PI : 0.0f);
 		vec3 sendPos = vec3(vec2(pos), inst.pos.z) - vec3(0, 0, remote->offsetZ);
 		const bool atAimedPoint = aimPos && glm::length(vec2(*aimPos)) > 1.0f && glm::length(vec2(pos) - vec2(*aimPos)) < 1.0f;
@@ -263,6 +263,7 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 			world.remoteParentOverride = ActorUID::INVALID;
 			if(inst) {
 				inst->excludeIndex = excludeIndex;
+				inst->chainHitMask = parent.chainHitMask;
 				inst->costLevel = parent.costLevel;
 				inst->centeredBox = parent.centeredBox;
 				inst->sourceUID = parent.sourceUID;
@@ -600,7 +601,7 @@ void World::RemoteHitNpcs(RemoteInst& inst)
 {
 	const Remote& remote = *inst.remote;
 	const i32 base = (i32)(inst.damage * remote.attackMultiplier);
-	if(base <= 0 || (remote.damageGroup != Remote::DamageGroup::eENEMY && remote.damageGroup != Remote::DamageGroup::eALL)) return;
+	if((base <= 0 && remote.statuses.empty()) || (remote.damageGroup != Remote::DamageGroup::eENEMY && remote.damageGroup != Remote::DamageGroup::eALL)) return;
 	Player& owner = players[inst.ownerIndex];
 	const bool sphere = remote.boundType == Remote::BoundType::E_BOUND_SPHERE || remote.angle > 0;
 	foreach(npc, actorNpcList) {
@@ -883,10 +884,11 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 		const f32 sight = remote.sight > 0 ? remote.sight : 1450.0f;
 		Player* best = nullptr;
 		const u32 ownerTeam = players[inst.ownerIndex].team;
-		for(i32 pass = 0; pass < 2 && !best; pass++) {
+		for(i32 pass = 0; pass < 4 && !best; pass++) {
 			f32 bestDist = sight + WEAPON_TARGET_RADIUS;
 			foreach(it, players) {
-				if((it->team != ownerTeam) != (pass == 0) || !RemoteCanAffect(inst, *it, remote.vsOwner)) continue;
+				if((it->team != ownerTeam) != (pass < 2) || !RemoteCanAffect(inst, *it, remote.vsOwner)) continue;
+				if(pass % 2 == 0 && ((inst.chainHitMask >> it->index) & 1)) continue;
 				const f32 d = glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos));
 				if(d < bestDist) { bestDist = d; best = &*it; }
 			}
@@ -896,6 +898,7 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 			inst.pos = vec3(vec2(best->body->GetWorldPos()), inst.pos.z);
 			RemoteHit(inst, *best);
 			inst.excludeIndex = (i32)best->index;
+			inst.chainHitMask |= 1u << best->index;
 		}
 		else {
 			inst.chainEnded = true;
@@ -1101,6 +1104,7 @@ void World::DestroyRemote(i32 index)
 				remoteParentOverride = ActorUID::INVALID;
 				if(child) {
 					child->excludeIndex = childExclude;
+					child->chainHitMask = copy.chainHitMask;
 					child->costLevel = copy.costLevel;
 					child->centeredBox = copy.centeredBox;
 					child->sourceUID = copy.sourceUID;

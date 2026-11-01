@@ -17,6 +17,7 @@ bool CConfigGame::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "DevScenario=%d", &DevScenario) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevObserver=%d", &DevObserver) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevGodPlayers=%d", &DevGodPlayers) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevStartLevel=%d", &DevStartLevel) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcase=%d", &DevShowcase) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcaseCount=%d", &DevShowcaseCount) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcaseSteps=%d", &DevShowcaseSteps) == 1) return true;
