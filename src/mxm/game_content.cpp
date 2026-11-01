@@ -1408,7 +1408,28 @@ bool GameXmlContent::LoadMonsterAi()
 			if(XMLElement* p = pInfo->FirstChildElement("Ai_ComData")) p->QueryFloatAttribute("_ReturnToSpawnPosSpeedRate", &found->second.returnSpeedRate);
 		}
 	}
-	LOG("Loaded AI of %d monsters", (i32)monsterAi.size());
+	XMLDocument xmlPvpActions;
+	i32 spawnStatusCount = 0, dieRemoteCount = 0;
+	if(LoadXMLFile(L"/client/ActionBase_Monster_MOB_PvP.xml", xmlPvpActions)) {
+		for(XMLElement* pA = xmlPvpActions.FirstChildElement()->FirstChildElement(); pA; pA = pA->NextSiblingElement()) {
+			const char* cls = pA->Attribute("Class");
+			const char* state = pA->Attribute("BehaviorState");
+			const char* type = pA->Attribute("CommandType");
+			const char* preset = pA->Attribute("TargetPreset");
+			if(!cls || !state || !type || pA->Attribute("VariationType") || pA->Attribute("Param2")) continue;
+			const bool spawnStatus = EA::StdC::Strcmp(state, "SPAWN_BEHAVIORSTATE") == 0 && EA::StdC::Strcmp(type, "STATUS") == 0 && preset && EA::StdC::Strncmp(preset, "TARGET_SELF", 11) == 0;
+			const bool dieRemote = EA::StdC::Strcmp(state, "DIE_BEHAVIORSTATE") == 0 && EA::StdC::Strcmp(type, "REMOTE") == 0;
+			if(!spawnStatus && !dieRemote) continue;
+			const i32 index = pA->IntAttribute(spawnStatus ? "StatusIndex" : "RemoteIndex");
+			if(index == 0) continue;
+			foreach(it, monsterAi) {
+				if(it->second.className != cls) continue;
+				if(spawnStatus && !it->second.spawnStatuses.full()) { it->second.spawnStatuses.push_back(index); spawnStatusCount++; }
+				if(dieRemote && !it->second.dieRemotes.full()) { it->second.dieRemotes.push_back(index); dieRemoteCount++; }
+			}
+		}
+	}
+	LOG("Loaded AI of %d monsters (%d spawn statuses, %d death remotes)", (i32)monsterAi.size(), spawnStatusCount, dieRemoteCount);
 	return true;
 }
 
@@ -4825,7 +4846,8 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(XMLElement* e = pNode->FirstChildElement("_StatusChangeInfo")) {
 			node.kind = LevelEventNode::STATUS_CHANGE;
 			const char* applyType = e->Attribute("_ApplyType");
-			node.applyType = !applyType ? LevelEventNode::APPLY_OTHER : EA::StdC::Strcmp(applyType, "APPLY_MY_CHAR") == 0 ? LevelEventNode::APPLY_MY_CHAR : EA::StdC::Strcmp(applyType, "APPLY_LOCAL_ID") == 0 ? LevelEventNode::APPLY_LOCAL_ID : LevelEventNode::APPLY_OTHER;
+			node.applyType = !applyType ? LevelEventNode::APPLY_OTHER : EA::StdC::Strcmp(applyType, "APPLY_MY_CHAR") == 0 ? LevelEventNode::APPLY_MY_CHAR : EA::StdC::Strcmp(applyType, "APPLY_LOCAL_ID") == 0 ? LevelEventNode::APPLY_LOCAL_ID : EA::StdC::Strcmp(applyType, "APPLY_ALL_PARTY") == 0 ? LevelEventNode::APPLY_ALL_PARTY : LevelEventNode::APPLY_OTHER;
+			if(node.applyType == LevelEventNode::APPLY_ALL_PARTY) { const char* teamType = e->Attribute("_TeamType"); node.team = teamType ? StringToFaction(teamType) : Faction::INVALID; }
 			node.apply = e->IntAttribute("_bApply") == 1;
 			node.localID = e->IntAttribute("_LocalID");
 			node.tagID = e->IntAttribute("_TagID", -1);

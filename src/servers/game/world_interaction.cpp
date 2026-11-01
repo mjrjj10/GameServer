@@ -800,6 +800,13 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 				if(node->apply && playerIndex >= 0 && node->statusIndex != 0 && !players[playerIndex].dead) ApplyStatus(players[playerIndex], players[playerIndex], node->statusIndex);
 				else if(!node->apply && playerIndex >= 0 && node->statusIndex != 0) ConsumeStatus((u32)playerIndex, node->statusIndex);
 			}
+			else if(node->applyType == GameXmlContent::LevelEventNode::APPLY_ALL_PARTY && node->statusIndex != 0) {
+				foreach(p, players) {
+					if(!p->body || p->removed || ((node->team == Faction::RED || node->team == Faction::BLUE) && (Faction)p->team != node->team)) continue;
+					if(node->apply) { if(!p->dead) ApplyStatus(*p, *p, node->statusIndex); }
+					else ConsumeStatus(p->index, node->statusIndex);
+				}
+			}
 			else if(node->applyType == GameXmlContent::LevelEventNode::APPLY_LOCAL_ID && node->statusIndex != 0) {
 				foreach(npc, actorNpcList) {
 					if(npc->ownerUID != ActorUID::INVALID || npc->removeAt != Time::ZERO) continue;

@@ -249,6 +249,11 @@ void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDo
 	npc.actionState = ActionStateID::DIE_BEHAVIORSTATE;
 	replication->SendAiActionStateToAll(npc.UID, ActionStateID::DIE_BEHAVIORSTATE, npc.rot.z, npc.pos, false);
 	replication->SendNpcDeadAckToAll(npc.UID, killerUID, killerUID != ActorUID::INVALID ? (u32)killerDoc : NPC_DEAD_NO_KILLER_DOC);
+	if(npc.monsterAi && map && map->ingameLevels) {
+		foreach_const(r, npc.monsterAi->dieRemotes) {
+			if(const Remote* remote = GetGameXmlContent().FindRemote((RemoteIdx)*r)) SpawnMonsterRemote(npc, *remote, npc.pos, vec2(cosf(npc.rot.z), sinf(npc.rot.z)), ActorUID::INVALID, true);
+		}
+	}
 	if(npc.monsterTarget != ActorUID::INVALID) replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
 	npc.monsterTarget = ActorUID::INVALID;
 	const f32 destroy = npc.monsterAi ? npc.monsterAi->destroy : 0.0f;
@@ -1041,6 +1046,7 @@ void World::UpdateMonsterAi(f32 delta)
 		if(!npc.monsterStarted) {
 			if(localTime < TimeAdd(npc.spawnedAt, TimeMsToTime(MAX(MONSTER_START_DELAY_MS, (f64)ai.spawnTime * 1000.0)))) continue;
 			npc.monsterStarted = true;
+			if(map && map->ingameLevels) foreach_const(st, ai.spawnStatuses) ApplyMonsterStatus(npc, *st, true);
 			npc.actionState = ActionStateID::NONE_BEHAVIORSTATE;
 			if(ai.idle != ActionStateID::INVALID) {
 				npc.actionState = ai.idle;
