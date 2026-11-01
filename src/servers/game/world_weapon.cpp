@@ -41,8 +41,7 @@ static ActionStateID WeaponAttackState(const World::Player& player)
 static void BotWeaponAnimation(const World::Player& player, Replication* replication)
 {
 	if(player.clientHd != ClientHandle::INVALID) return;
-	const WeaponIndex weapon = player.titanForm >= 0 ? WeaponIndex(GetGameXmlContent().titan.forms[player.titanForm].weapon) : (player.mainCharaID & 1) == 0 ? player.mainWeapon : player.subWeapon;
-	replication->RelayWeaponState(ClientHandle::INVALID, player.Main().UID, (i32)weapon, 2, player.chargeLevel, player.firingCombo);
+	replication->SendAttackActionToOthers(ClientHandle::INVALID, player.Main().UID, WorldYawToMxmYaw(player.weaponAimYaw), WeaponAttackState(player));
 }
 
 void World::PlayerWeaponFire(Player& player)
@@ -113,8 +112,8 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	if(spawnAtAim && remote) {
 		f32 reach = MAX(MIN(distance > 1.0f ? distance : WeaponReach(*remote, wf), aimMax), aimMin);
 		const vec3 aimPos = vec3(vec2(origin) + dir * reach, player.body->GetWorldPos().z);
-		replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(dir.y, dir.x)), WeaponAttackState(player));
 		const bool bot = player.clientHd == ClientHandle::INVALID;
+		if(!bot) replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(dir.y, dir.x)), WeaponAttackState(player));
 		u32 clientSeed = 0;
 		if(!bot && player.pendingShotRawSize > 0) {
 			const u16 creator = replication->RelayWeaponShot(player.clientHd, player.pendingShotRaw.data(), player.pendingShotRawSize, aimPos, remote->ID);

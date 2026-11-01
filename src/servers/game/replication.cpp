@@ -176,6 +176,7 @@ static const i32 MEASURED_PVE_REMAIN_LIFE = -1;
 static const u32 MEASURED_DROP_TYPE_ITEM = 0;
 static const u32 MEASURED_DROP_TYPE_RON = 1;
 static const u8 MEASURED_PRIVATE_DROP_POSITION_TYPE = 2;
+static const char MEASURED_DAMAGE_HIT_NODE[] = "__$body";
 
 void Replication::SendStageClearResult(ClientHandle clientHd, const StageClear& clear, const StageMember* members, i32 memberCount)
 {
@@ -1999,7 +2000,8 @@ void Replication::SendRemoteDamageToAll(const RemoteDamage& hit)
 		packet.Write<u32>(skillField);
 		packet.Write<u32>(0);
 		packet.Write<u32>(hit.elementRelation);
-		packet.Write<u16>(0);
+		packet.Write<u16>((u16)(sizeof(MEASURED_DAMAGE_HIT_NODE) - 1));
+		packet.WriteRaw(MEASURED_DAMAGE_HIT_NODE, sizeof(MEASURED_DAMAGE_HIT_NODE) - 1);
 		packet.Write<u32>((u32)hit.damage);
 		packet.Write<u16>(0);
 		packet.Write<u32>(0);

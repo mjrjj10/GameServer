@@ -405,6 +405,7 @@ void World::UpdateSummonAi(f32 delta)
 					npc.chaseTarget = ActorUID::INVALID;
 					continue;
 				}
+				SyncNpcLeg(npc, target->body->GetWorldPos());
 				npc.pos = target->body->GetWorldPos();
 				continue;
 			}
