@@ -405,7 +405,7 @@ void World::SendNpcHit(const ActorNpc& attacker, ActorUID targetUID, const vec3&
 	hit.attackerUID = attacker.UID;
 	hit.targetUID = targetUID;
 	hit.dir = len > 1.0f ? rel / len : vec2(cosf(attacker.rot.z), sinf(attacker.rot.z));
-	hit.remotePos = info && info->maxSpeed > 0 ? targetPos : attacker.pos;
+	hit.remotePos = npcHitCenterSet ? npcHitCenter : (info && info->maxSpeed > 0 ? targetPos : attacker.pos);
 	hit.targetPos = targetPos;
 	hit.damage = damage;
 	hit.hp = hp;
@@ -690,7 +690,7 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 			const bool ally = !enemy && owner.faction == (Faction)p->team;
 			if(!((enemy && hitsEnemies) || (ally && hitsAllies)) || !inside(vec2(p->body->GetWorldPos()), HitRadius(*p)) || !ready(p->Main().UID)) continue;
 			if(enemy) {
-				if(damage > 0) DamagePlayerFromNpc(owner, *p, damage, (i32)remote.ID, 0, remoteID);
+				if(damage > 0) { npcHitCenter = vec3(origin, mr.pos.z); npcHitCenterSet = true; DamagePlayerFromNpc(owner, *p, damage, (i32)remote.ID, 0, remoteID); npcHitCenterSet = false; }
 				applyStatuses(remote.statuses, &*p, nullptr);
 			}
 			else applyStatuses(remote.friendlyStatuses, &*p, nullptr);
@@ -705,7 +705,7 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 			const bool ally = !enemy && o->faction == owner.faction;
 			if(!((enemy && hitsEnemies) || (ally && hitsAllies)) || !inside(vec2(o->pos), NpcHitRadius(*o)) || !ready(o->UID)) continue;
 			if(enemy) {
-				if(damage > 0) DamageNpcFromNpc(owner, *o, damage, (i32)remote.ID, remoteID, 0);
+				if(damage > 0) { npcHitCenter = vec3(origin, mr.pos.z); npcHitCenterSet = true; DamageNpcFromNpc(owner, *o, damage, (i32)remote.ID, remoteID, 0); npcHitCenterSet = false; }
 				applyStatuses(remote.statuses, nullptr, &*o);
 			}
 			else applyStatuses(remote.friendlyStatuses, nullptr, &*o);

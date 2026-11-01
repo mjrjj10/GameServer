@@ -141,6 +141,9 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		inst.range = inst.range > 0 ? MIN(aimDist, inst.range) : aimDist;
 	}
 	inst.spawnTime = localTime;
+	inst.firePath = GetGameXmlContent().FindFireNodePath(remote->ID);
+	inst.firePathYaw = atan2f(dir.y, dir.x);
+	inst.firePathDone = 0;
 	inst.target = target;
 	inst.hitsLeft = MAX(remote->activateCount, 1);
 	inst.penetrationLeft = remote->penetrationCount > 0 ? remote->penetrationCount : PENETRATION_UNLIMITED;
@@ -684,7 +687,7 @@ void World::UpdateRemotes(f32 delta)
 				destroyed = true;
 			}
 			else {
-				const f32 yaw = instOwner.input.rot.upperYaw;
+				const f32 yaw = inst.firePath ? inst.firePathYaw : instOwner.input.rot.upperYaw;
 				inst.dir = vec2(cosf(yaw), sinf(yaw));
 				inst.pos = instOwner.body->GetWorldPos() + vec3(inst.dir * (remote.forceTargetDir ? -remote.offsetY : remote.offsetY), FIRE_NODE_HEIGHT);
 			}
@@ -915,9 +918,47 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 	return false;
 }
 
+void World::SweepFireNodePath(RemoteInst& inst, Player& instOwner)
+{
+	const Remote& remote = *inst.remote;
+	const GameXmlContent::FireNodePath& path = *inst.firePath;
+	const f32 elapsed = (f32)TimeDiffSec(TimeDiff(inst.spawnTime, localTime));
+	const f32 pathEnd = path.step * (f32)(path.points.size() - 1);
+	const f32 end = MIN(MIN(elapsed, remote.lifeTime > 0 ? remote.lifeTime : pathEnd), pathEnd);
+	f32 t = MAX(inst.firePathDone, MAX(remote.activateDelay, 0.0f));
+	if(t > end) return;
+	const vec2 fwd = vec2(cosf(inst.firePathYaw), sinf(inst.firePathYaw));
+	const vec2 left = vec2(-fwd.y, fwd.x);
+	const vec3 base = instOwner.body->GetWorldPos();
+	const f32 radius = (f32)remote.boundSize[0];
+	for(; t <= end; t += path.step) {
+		const f32 f = t / path.step;
+		const i32 i = MIN((i32)f, (i32)path.points.size() - 2);
+		const vec3 p = glm::mix(path.points[i], path.points[i + 1], MIN(f - (f32)i, 1.0f));
+		const vec2 center = vec2(base) + fwd * p.x + left * p.y;
+		inst.pos = vec3(center, base.z + p.z);
+		foreach(it, players) {
+			if(it->dead || !it->body || !RemoteCanAffect(inst, *it, false)) continue;
+			if(glm::length(vec2(it->body->GetWorldPos()) - center) <= radius + HitRadius(*it)) RemoteHit(inst, *it);
+		}
+		if(hostileMonsters || replication->titanMode) {
+			foreach(npc, actorNpcList) {
+				if(!NpcHittableBy(*npc, instOwner)) continue;
+				const f32 dist = glm::length(vec2(npc->pos) - center);
+				if(dist <= radius + NpcHitRadius(*npc)) RemoteDamageNpc(inst, *npc, dist);
+			}
+		}
+	}
+	inst.firePathDone = t;
+}
+
 void World::ApplyAttachedRemote(RemoteInst& inst, Player& instOwner)
 {
 	const Remote& remote = *inst.remote;
+	if(inst.firePath) {
+		SweepFireNodePath(inst, instOwner);
+		return;
+	}
 	if(remote.behaviorType == Remote::BehaviorType::ORBIT) {
 		const f32 radius = remote.boundSize[0] * 0.5f + remote.orbitRadius;
 		foreach(it, players) {

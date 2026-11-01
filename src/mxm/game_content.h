@@ -1482,6 +1482,10 @@ struct GameXmlContent
 	f32 BotConstant(const char* key) const { auto f = botConstants.find(StatusTypeKey(key)); return f == botConstants.end() ? 0 : f->second; }
 	i32 BotStageSkillKind(i32 skill) const { for(i32 i = 0; i < (i32)botStageSkills.size(); i++) if(botStageSkills[i] == skill) return i; return -1; }
 	struct MeasuredFireNode { f32 forward = 0; f32 side = 0; f32 up = 0; };
+	struct FireNodePath { f32 step = 0; eastl::vector<vec3> points; };
+	eastl::vector<FireNodePath> fireNodePaths;
+	eastl::hash_map<i32, i32> fireNodePathByRemote;
+	const FireNodePath* FindFireNodePath(RemoteIdx remote) const { auto f = fireNodePathByRemote.find((i32)remote); return f == fireNodePathByRemote.end() ? nullptr : &fireNodePaths[f->second]; }
 	eastl::hash_map<u64, MeasuredFireNode> measuredFireNodes;
 	static u64 FireNodeKey(i32 skill, i32 remote, i32 index) { return ((u64)(u32)skill << 32) ^ ((u64)(u32)remote << 4) ^ (u64)(u32)index; }
 	const MeasuredFireNode* FindMeasuredFireNode(i32 skill, i32 remote, i32 index) const { auto f = measuredFireNodes.find(FireNodeKey(skill, remote, index)); return f == measuredFireNodes.end() ? nullptr : &f->second; }
@@ -1723,6 +1727,7 @@ private:
 	bool LoadSkillTooltips();
 	bool LoadStatusStatMods();
 	bool LoadMeasuredFireNodes();
+	bool LoadFireNodePaths();
 	bool LoadBalanceMultipliers();
 	bool LoadSkillCosts();
 	bool LoadSkillUpgrades();

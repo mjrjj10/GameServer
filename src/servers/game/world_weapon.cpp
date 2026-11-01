@@ -205,6 +205,15 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		proj.zoneRemote = bomb->ID;
 		proj.zoneDamage = (i32)WeaponHitDamage(player, nullptr);
 	}
+	if(remote && content.FindFireNodePath(remote->ID)) {
+		RemoteInst* swing = SpawnRemote(player.index, remote->ID, player.body->GetWorldPos(), proj.dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), false);
+		if(swing) {
+			swing->clientRemoteID = proj.remoteID;
+			swing->seedOwnerHd = proj.seedOwnerHd;
+		}
+		LOG("Shot :: %ls class=%d remote=%d swings along its fire node path", player.name.data(), (i32)classType, (i32)remote->ID);
+		return;
+	}
 	LOG("Shot :: %ls class=%d remote=%d graph=%d reliable=%d dist=%.0f range=%.0f speed=%.0f width=%.0f hits=%d aoe=%.0f", player.name.data(), (i32)classType, remote ? (i32)remote->ID : -1, graph, reliable, distance, proj.range, proj.speed, proj.halfWidth, proj.hitsLeft, proj.aoeRadius);
 	if(!wf.extraRemotes.empty()) {
 		const u32 firstID = proj.remoteID;

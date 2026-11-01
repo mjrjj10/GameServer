@@ -721,6 +721,9 @@ struct World
 		ActorUID casterMasterUID = ActorUID::INVALID;
 		u16 nodeName = 0;
 		const GameXmlContent::CostLevel* costLevel = nullptr;
+		const GameXmlContent::FireNodePath* firePath = nullptr;
+		f32 firePathYaw = 0;
+		f32 firePathDone = 0;
 		f32 followDist = -1.0f;
 		u32 instID = 0;
 		bool killNow = false;
@@ -963,6 +966,8 @@ struct World
 	eastl::fixed_vector<MonsterRemote,128,true> monsterRemotes;
 	void SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send);
 	void RetargetMonsters(ActorUID from, ActorUID to);
+	vec3 npcHitCenter = vec3(0);
+	bool npcHitCenterSet = false;
 	void UpdateMonsterRemotes(f32 delta);
 	void MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner);
 	bool MonsterAttackUsesRemotes(const GameXmlContent::MonsterAttack& attack) const;
@@ -1035,6 +1040,7 @@ struct World
 	void RunRemoteTimeEvent(RemoteInst& inst, f32 elapsed);
 	bool UpdateChainRemote(RemoteInst& inst);
 	void ApplyAttachedRemote(RemoteInst& inst, Player& instOwner);
+	void SweepFireNodePath(RemoteInst& inst, Player& instOwner);
 	bool UpdateTargetRemote(RemoteInst& inst, f32 delta);
 	bool UpdateGraphRemote(RemoteInst& inst, f32 delta);
 	bool UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed);

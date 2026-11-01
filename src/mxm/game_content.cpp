@@ -3199,6 +3199,8 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 	r = LoadMeasuredFireNodes();
 	if(!r) return false;
+	r = LoadFireNodePaths();
+	if(!r) return false;
 
 	r = LoadBalanceMultipliers();
 	if(!r) return false;
@@ -3884,6 +3886,29 @@ bool GameXmlContent::LoadMeasuredFireNodes()
 		measuredFireNodes[FireNodeKey(pFire->IntAttribute("skill"), pFire->IntAttribute("remote"), pFire->IntAttribute("index"))] = node;
 	}
 	LOG("Loaded %d measured fire nodes", (i32)measuredFireNodes.size());
+	return true;
+}
+
+bool GameXmlContent::LoadFireNodePaths()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/FireNodePaths.xml", doc)) return true;
+	for(XMLElement* pPath = doc.FirstChildElement()->FirstChildElement("PATH"); pPath; pPath = pPath->NextSiblingElement("PATH")) {
+		FireNodePath path;
+		path.step = pPath->FloatAttribute("step");
+		for(XMLElement* p = pPath->FirstChildElement("P"); p; p = p->NextSiblingElement("P")) path.points.push_back(vec3(p->FloatAttribute("forward"), p->FloatAttribute("left"), p->FloatAttribute("up")));
+		if(path.step <= 0 || path.points.size() < 2) continue;
+		const i32 index = (i32)fireNodePaths.size();
+		fireNodePaths.push_back(path);
+		const char* at = pPath->Attribute("remotes");
+		while(at && *at) {
+			while(*at == ' ') at++;
+			if(!*at) break;
+			fireNodePathByRemote[EA::StdC::AtoI32(at)] = index;
+			while(*at && *at != ' ') at++;
+		}
+	}
+	LOG("Loaded %d fire node paths for %d remotes", (i32)fireNodePaths.size(), (i32)fireNodePathByRemote.size());
 	return true;
 }
 
