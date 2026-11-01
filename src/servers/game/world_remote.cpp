@@ -646,7 +646,7 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 		hit.seedOwnerHd = inst.seedOwnerHd;
 		DamageNpc(players[inst.ownerIndex], npc, inst.skillID, (i32)(base * RemoteDistanceFalloff(remote, dist)), &hit);
 	}
-	if(!hostileMonsters || npc.hp <= 0 || npc.ownerUID != ActorUID::INVALID) return true;
+	if(npc.hp <= 0 || npc.ownerUID != ActorUID::INVALID) return true;
 	foreach_const(st, remote.statuses) {
 		if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(players[inst.ownerIndex], npc, st->statusID, false);
 	}

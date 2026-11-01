@@ -47,6 +47,7 @@ static void BotWeaponAnimation(const World::Player& player, Replication* replica
 void World::PlayerWeaponFire(Player& player)
 {
 	BreakHide(player);
+	BushRevealOnFire(player);
 	const vec2 dir = vec2(cosf(player.weaponAimYaw), sinf(player.weaponAimYaw));
 	const vec3 origin = player.body->GetWorldPos();
 
@@ -75,6 +76,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 {
 	if(player.dead) return;
 	BreakHide(player);
+	BushRevealOnFire(player);
 	MarkInBattle(player);
 	const ClassType classType = player.Main().classType;
 	if(WeaponIsMelee(player)) return;
@@ -405,6 +407,15 @@ void World::UpdateProjectiles(f32 delta)
 				hit.dir = proj->dir;
 				hit.seedOwnerHd = proj->seedOwnerHd;
 				DamageNpc(owner, *npc, SkillID::INVALID, proj->damage, &hit);
+				if(const Remote* shot = GetGameXmlContent().FindRemote(proj->remoteDoc)) {
+					if(npc->hp > 0 && npc->ownerUID == ActorUID::INVALID) {
+						foreach_const(st, shot->statuses) if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(owner, *npc, st->statusID, false);
+					}
+				}
+				if(proj->chainRemote != RemoteIdx::INVALID && !proj->chained) {
+					proj->chained = true;
+					SpawnRemote(proj->ownerIndex, proj->chainRemote, vec3(vec2(npc->pos), proj->pos.z), proj->dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, proj->chainDamage, true, nullptr, proj->nodeName, false, false, true);
+				}
 				proj->hitsLeft--;
 				if(proj->hitsLeft <= 0) {
 					proj->pos = vec3(vec2(npc->pos), proj->pos.z);

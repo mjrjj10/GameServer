@@ -1205,7 +1205,7 @@ void GameXmlContent::LoadMonsterScripts()
 void GameXmlContent::LoadMonsterFires()
 {
 	static const wchar* FILES[] = { L"/client/ActionBase_Monster.xml", L"/client/ActionBase_Monster_MOB_A.xml", L"/client/ActionBase_Monster_MOB_B.xml", L"/client/ActionBase_Monster_MOB_C.xml", L"/client/ActionBase_Monster_MOB_D.xml", L"/client/ActionBase_Monster_MOB_PUBLIC.xml", L"/client/ActionBase_Monster_MOB_PvP.xml" };
-	eastl::hash_map<u64, eastl::fixed_vector<MonsterFire,4,false>> fires;
+	eastl::hash_map<u64, eastl::fixed_vector<MonsterFire,24,false>> fires;
 	struct Dash { f32 dist = 0; f32 time = 0; i32 pass = -1; eastl::fixed_vector<i32,4,false> anims; eastl::fixed_vector<i32,4,false> loops; };
 	eastl::hash_map<u64, Dash> dashes;
 	for(i32 f = 0; f < (i32)ARRAY_COUNT(FILES); f++) {
@@ -2764,7 +2764,7 @@ static void ParseAppliedStatuses(XMLElement* pParent, const char* name, eastl::f
 	for(XMLElement* pStatus = pParent->FirstChildElement(name); pStatus; pStatus = pStatus->NextSiblingElement(name)) {
 		Remote::AppliedStatus st;
 		st.statusID = 0;
-		st.rate = 100;
+		st.rate = 0;
 		st.value = 100;
 		pStatus->QueryAttribute("DATAKEY", &st.statusID);
 		pStatus->QueryAttribute("_Rate", &st.rate);

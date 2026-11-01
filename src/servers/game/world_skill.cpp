@@ -1127,6 +1127,29 @@ void World::RevealToTeam(Player& player, i32 team)
 	player.fogRevealUntil[team] = TimeAdd(localTime, TimeMsToTime(FOG_REVEAL_MS));
 }
 
+static const i32 MEASURED_BUSH_HIDE_STATUS = 1200000010;
+static const i32 MEASURED_BUSH_REVEAL_STATUS = 1200000011;
+
+bool World::PlayerHasActiveStatus(const Player& player, i32 statusID) const
+{
+	foreach_const(it, activeStatuses) if(it->targetIndex == player.index && it->statusID == statusID && localTime < it->until) return true;
+	return false;
+}
+
+void World::EndPlayerStatus(Player& player, i32 statusID)
+{
+	foreach(it, activeStatuses) if(it->targetIndex == player.index && it->statusID == statusID && localTime < it->until) it->until = localTime;
+}
+
+void World::BushRevealOnFire(Player& player)
+{
+	if(!replication->titanMode || player.bushUID == ActorUID::INVALID) return;
+	EndPlayerStatus(player, MEASURED_BUSH_HIDE_STATUS);
+	EndPlayerStatus(player, MEASURED_BUSH_REVEAL_STATUS);
+	ApplyStatus(player, player, MEASURED_BUSH_REVEAL_STATUS);
+	RevealToTeam(player, player.team == 0 ? 1 : 0);
+}
+
 static const f32 LIGHT_CELL_SIZE = 100.0f;
 static const i32 LIGHT_GRID_WIDTH = 512;
 static const u8 LIGHT_RADIUS_CELLS = 2;
@@ -1237,6 +1260,14 @@ void World::UpdateFog()
 		if(bush != p->bushUID) {
 			p->bushUID = bush;
 			replication->SendBushStateToAll(p->Main().UID, bush);
+			if(bush == ActorUID::INVALID) {
+				EndPlayerStatus(*p, MEASURED_BUSH_HIDE_STATUS);
+				EndPlayerStatus(*p, MEASURED_BUSH_REVEAL_STATUS);
+			}
+			else if(!p->dead && !PlayerHasActiveStatus(*p, MEASURED_BUSH_REVEAL_STATUS)) ApplyStatus(*p, *p, MEASURED_BUSH_HIDE_STATUS, 0, STATUS_INFINITE_DURATION_SEC);
+		}
+		else if(bush != ActorUID::INVALID && !p->dead && !PlayerHasActiveStatus(*p, MEASURED_BUSH_HIDE_STATUS) && !PlayerHasActiveStatus(*p, MEASURED_BUSH_REVEAL_STATUS)) {
+			ApplyStatus(*p, *p, MEASURED_BUSH_HIDE_STATUS, 0, STATUS_INFINITE_DURATION_SEC);
 		}
 	}
 	UpdateNpcFog();

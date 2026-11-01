@@ -453,7 +453,6 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 {
 	if(damage <= 0 || !NpcHittableBy(npc, attacker)) return;
 	if(npc.ownerUID == ActorUID::INVALID && NpcHasStatusType(npc, StatusType::GODMODE)) return;
-	if(IsStructure(npc)) TowerCallForHelp(attacker, npc.pos, npc.faction, &npc);
 	if(npc.monsterEvadeUntil != Time::ZERO && localTime < npc.monsterEvadeUntil) return;
 	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence, 0.0f)) + 0.5f), 1);
 	const i32 hpBefore = npc.hp;
@@ -519,8 +518,12 @@ i32 World::AbsorbNpcShield(const ActorNpc& npc, i32 dealt)
 
 void World::DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i32 remote, u32 remoteID, i32 status, bool exact)
 {
-	if(damage <= 0 || target.hp <= 0 || target.removeAt != Time::ZERO) return;
+	if(target.hp <= 0 || target.removeAt != Time::ZERO) return;
 	if(NpcHasStatusType(target, StatusType::GODMODE)) return;
+	if(damage <= 0) {
+		if(status > 0) ApplyStatusToNpcFromNpc(attacker, target, status);
+		return;
+	}
 	const i32 dealt = exact ? damage : MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(target.defence, 0.0f)) + 0.5f), 1);
 	const i32 hpBefore = target.hp;
 	target.hp = MAX(target.hp - AbsorbNpcShield(target, dealt), 0);
@@ -552,8 +555,12 @@ void World::ApplyStatusFromNpc(const ActorNpc& caster, Player& target, i32 statu
 
 void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, i32 remote, i32 status, u32 remoteID)
 {
-	if(frozen || target.dead || target.untargetable || damage <= 0) return;
+	if(frozen || target.dead || target.untargetable) return;
 	if(HasStatusType(target, StatusType::GODMODE) || HasStatusType(target, StatusType::BURROW)) return;
+	if(damage <= 0) {
+		if(status > 0) ApplyStatusFromNpc(attacker, target, status);
+		return;
+	}
 	MarkInBattle(target);
 	{
 		bool known = false;

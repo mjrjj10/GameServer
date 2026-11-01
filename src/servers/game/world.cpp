@@ -765,6 +765,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	}
 	if(!followUp) DropPendingActions(player);
 	BreakHide(player);
+	BushRevealOnFire(player);
 
 	f32 angle = player.input.rot.upperYaw;
 	if(skill.type == SkillType::SHIRK) {
@@ -1182,6 +1183,8 @@ void World::ClearMapContent()
 	groundItems.clear();
 	monsterCalls.clear();
 	monsterHits.clear();
+	monsterChains.clear();
+	monsterRemotes.clear();
 	deathHits.clear();
 	boundTriggerStates.clear();
 	levelTriggerOverrides.clear();

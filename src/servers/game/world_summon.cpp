@@ -398,20 +398,26 @@ void World::UpdateSummonAi(f32 delta)
 		else {
 			ActorMaster* tm = FindMasterActor(npc.chaseTarget);
 			Player* target = tm ? tm->parent : nullptr;
+			const ActorNpc* npcTarget = target ? nullptr : FindNpcActor(npc.chaseTarget);
+			if(npcTarget && (npcTarget->hp <= 0 || npcTarget->removeAt != Time::ZERO)) npcTarget = nullptr;
 			if(npc.stuck) {
-				if(!target || target->dead) {
+				if((!target || target->dead) && !npcTarget) {
 					npc.stuck = false;
 					if(npc.chaseTarget != ActorUID::INVALID) replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
 					npc.chaseTarget = ActorUID::INVALID;
 					continue;
 				}
-				SyncNpcLeg(npc, target->body->GetWorldPos());
-				npc.pos = target->body->GetWorldPos();
+				const vec3 at = target ? target->body->GetWorldPos() : npcTarget->pos;
+				SyncNpcLeg(npc, at);
+				npc.pos = at;
 				continue;
 			}
-			if(!target || target->dead || glm::length(vec2(target->body->GetWorldPos()) - vec2(npc.pos)) > info->perception) {
+			const bool lost = target ? (target->dead || glm::length(vec2(target->body->GetWorldPos()) - vec2(npc.pos)) > info->perception) : (!npcTarget || glm::length(vec2(npcTarget->pos) - vec2(npc.pos)) > info->perception);
+			if(lost) {
 				target = nullptr;
+				npcTarget = nullptr;
 				f32 best = info->perception;
+				ActorUID chosen = ActorUID::INVALID;
 				foreach(e, players) {
 					if(e->dead || e->team == owner.team) continue;
 					bool taken = false;
@@ -420,21 +426,25 @@ void World::UpdateSummonAi(f32 delta)
 					}
 					if(taken) continue;
 					const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(npc.pos));
-					if(d < best) { best = d; target = &*e; }
+					if(d < best) { best = d; target = &*e; chosen = e->Main().UID; }
 				}
-				const ActorUID chosen = target ? target->Main().UID : ActorUID::INVALID;
+				foreach_const(o, actorNpcList) {
+					if(&*o == &npc || o->hp <= 0 || o->removeAt != Time::ZERO || !NpcHittableBy(*o, owner)) continue;
+					const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos));
+					if(d < best) { best = d; target = nullptr; npcTarget = &*o; chosen = o->UID; }
+				}
 				if(chosen != npc.chaseTarget) replication->SendAiSetTargetToAll(npc.UID, chosen);
 				npc.chaseTarget = chosen;
 			}
-			if(!target) {
+			if(!target && !npcTarget) {
 				if(info->moveSpeed > 0) WanderNpc(npc, info->moveSpeed, delta);
 				else StopNpcLeg(npc);
 				continue;
 			}
-			goal = target->body->GetWorldPos();
+			goal = target ? target->body->GetWorldPos() : npcTarget->pos;
 			const f32 d = glm::length(vec2(goal) - vec2(npc.pos));
-			if(d <= WEAPON_TARGET_RADIUS) {
-				LOG("Summon :: creature=%d reached %ls", (i32)npc.docID, target->name.data());
+			if(d <= WEAPON_TARGET_RADIUS && !info->skillStates[1].empty()) {
+				LOG("Summon :: creature=%d reached its target", (i32)npc.docID);
 				RunSummonState(npc, 1);
 				if(npc.despawnAt == Time::ZERO || npc.despawnAt > localTime) npc.stuck = true;
 				continue;
