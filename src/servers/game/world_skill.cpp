@@ -13,6 +13,7 @@ static f32 MovespeedMul(f32 percentSum)
 static const i32 STAT_STAMINAREGEN = 5;
 static const i32 STAT_MANAREGEN = 39;
 static const i32 STAT_ULTIMATEREGEN = 42;
+static const f64 LAST_CHILD_STATUS_DELAY_MS = 50.0;
 static const i32 STAT_TAG_HEALTHREGEN_VALUE = 23;
 static const i32 STAT_TAG_COOLTIME = 31;
 static const f32 TAG_COOLTIME_AUX = 3.75f;
@@ -740,6 +741,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	anim = animPasses[0].index;
 
 	const i32 passes = (i32)animPasses.size();
+	eastl::fixed_vector<eastl::pair<i32, u8>,16,true> docCounts;
 	for(i32 pass = 0; pass < passes; pass++) {
 	const i32 curAnim = animPasses[pass].index;
 	foreach_const(cmd, action.commands) {
@@ -770,6 +772,12 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.remove = cmd->remote.remove != 0;
 			pr.nodeName = cmd->nodeName;
 			pr.rootDummyDir = cmd->rootDummyDir != 0;
+			{
+				u8* count = nullptr;
+				foreach(dc, docCounts) if(dc->first == (i32)cmd->remote.idx) count = &dc->second;
+				if(!count) { docCounts.push_back(eastl::make_pair((i32)cmd->remote.idx, (u8)0)); count = &docCounts.back().second; }
+				pr.docIndex = (*count)++;
+			}
 			if(cmd->remote.removeAtAnimEnd) {
 				i32 animId = 0, loop = 1;
 				foreach_const(st, action.anims) if(st->index == curAnim) { animId = st->animationId; loop = MAX(st->loop, 1); }
@@ -844,9 +852,42 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 					pendingStatuses.push_back(ps);
 				}
 			}
+			else if(lastChild && !ps.remove) {
+				ps.lastChild = true;
+				ps.time = TimeAdd(ps.time, TimeMsToTime(LAST_CHILD_STATUS_DELAY_MS));
+				pendingStatuses.push_back(ps);
+			}
 			else if(ps.targetUID != ActorUID::INVALID) pendingStatuses.push_back(ps);
 		}
 	}
+	}
+
+	if(player.clientHd == ClientHandle::INVALID && !player.dead) {
+		bool moves = false;
+		foreach_const(cmd, action.commands) {
+			if(cmd->type == ActionCommand::Type::GRAPH_MOVE_HORZ || cmd->type == ActionCommand::Type::TELEPORT) moves = true;
+			if(cmd->type == ActionCommand::Type::MOVE && cmd->move.preset != ActionCommand::MovePreset::MOVE_NONE && cmd->move.preset != ActionCommand::MovePreset::SEE_TARGET &&
+				cmd->move.preset != ActionCommand::MovePreset::SEE_CURRENT_TARGET && cmd->move.preset != ActionCommand::MovePreset::SEE_MEMORIZED_TARGET) moves = true;
+		}
+		if(!moves) {
+			f32 still = 0;
+			bool blocked = false;
+			for(i32 pass = 0; pass < passes; pass++) {
+				i32 animId = 0, loop = 1;
+				foreach_const(st, action.anims) if(st->index == animPasses[pass].index) { animId = st->animationId; loop = MAX(st->loop, 1); }
+				const f32 passEnd = animPasses[pass].start + content.GetAniSeqTime(content.GetMaster(player.Main().classType).className.c_str(), animId) * (f32)loop;
+				foreach_const(cmd, action.commands) {
+					if(cmd->type != ActionCommand::Type::STATE_BLOCK || cmd->animIndex != animPasses[pass].index) continue;
+					still = MAX(still, animPasses[pass].start + cmd->delay);
+					blocked = true;
+				}
+				if(!blocked) still = MAX(still, passEnd);
+			}
+			if(still > 0) {
+				player.botSkillStillUntil = TimeAdd(localTime, TimeMsToTime(still * 1000.0));
+				player.input.moveTo = player.body->GetWorldPos();
+			}
+		}
 	}
 
 	if(teleportToTarget && !player.dead && currentTarget != ActorUID::INVALID) TeleportNextToTarget(player, currentTarget);

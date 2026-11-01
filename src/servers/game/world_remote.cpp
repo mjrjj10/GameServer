@@ -745,7 +745,7 @@ void World::SpawnPendingRemotes()
 			pr = pendingRemotes.erase_unsorted(pr);
 			continue;
 		}
-		const vec2 dir = vec2(cosf(pr->angle), sinf(pr->angle));
+		vec2 dir = vec2(cosf(pr->angle), sinf(pr->angle));
 		const Remote* remote = GetGameXmlContent().FindRemote(pr->idx);
 		const f32 offsetY = remote ? (remote->forceTargetDir ? -remote->offsetY : remote->offsetY) : 0;
 		vec3 pos = owner.body->GetWorldPos() + vec3(dir * offsetY, pr->nodeName == SCENE_ROOT_NODE ? (remote ? remote->offsetZ : 0.0f) : FIRE_NODE_HEIGHT);
@@ -793,7 +793,14 @@ void World::SpawnPendingRemotes()
 		const bool fromCaster = !atAimedPoint && !pr->atTarget && pr->sourceUID == ActorUID::INVALID && firePreset != ActionCommand::TargetPreset::CURRENT_FFF &&
 			firePreset != ActionCommand::TargetPreset::LAST_CHILD_FFF && firePreset != ActionCommand::TargetPreset::LAST_CHILD_TFF;
 		const FireNodeRule* fireNode = fromCaster && remote ? FindFireNodeRule(remote->ID) : nullptr;
-		if(fireNode) {
+		const RemoteIdx sentDoc = pr->sendIdx != RemoteIdx::INVALID ? pr->sendIdx : pr->idx;
+		const GameXmlContent::MeasuredFireNode* measured = fromCaster && remote && !pr->remove ? GetGameXmlContent().FindMeasuredFireNode((i32)pr->skillID, (i32)sentDoc, pr->docIndex) : nullptr;
+		if(measured) {
+			pos = owner.body->GetWorldPos() + vec3(dir * (measured->forward + offsetY) + Perp(dir) * measured->side, measured->up + remote->offsetZ);
+			const vec2 toAim = vec2(pr->castPos) - vec2(pos);
+			if(remote->behaviorType == Remote::BehaviorType::GRAPH && glm::length(vec2(pr->castPos)) > 1.0f && glm::length(toAim) > 1.0f) dir = glm::normalize(toAim);
+		}
+		else if(fireNode) {
 			pos += vec3(dir * fireNode->forward + Perp(dir) * fireNode->side, 0);
 			pos.z = owner.body->GetWorldPos().z + fireNode->up;
 		}
@@ -833,7 +840,7 @@ void World::SpawnPendingRemotes()
 				spawned->costLevel = pr->costLevel;
 				spawned->centeredBox = atAimedPoint;
 				spawned->aniEndAt = pr->aniEndAt;
-				const f32 nodeForward = atAimedPoint || fireNode ? 0 : WeaponNodeForward(GetGameXmlContent(), owner.Main().classType, pr->skillID, *spawned->remote, pr->nodeName);
+				const f32 nodeForward = atAimedPoint || fireNode || measured ? 0 : WeaponNodeForward(GetGameXmlContent(), owner.Main().classType, pr->skillID, *spawned->remote, pr->nodeName);
 				if(nodeForward > 0) {
 					spawned->pos += vec3(dir * nodeForward, 0);
 					LOG("Remote :: %d weapon node forward %.0f (skill indicator)", (i32)pr->idx, nodeForward);

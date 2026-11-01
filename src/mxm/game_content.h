@@ -1481,6 +1481,10 @@ struct GameXmlContent
 	f32 BotAfterSkillDelay() const { return botAfterSkillDelay; }
 	f32 BotConstant(const char* key) const { auto f = botConstants.find(StatusTypeKey(key)); return f == botConstants.end() ? 0 : f->second; }
 	i32 BotStageSkillKind(i32 skill) const { for(i32 i = 0; i < (i32)botStageSkills.size(); i++) if(botStageSkills[i] == skill) return i; return -1; }
+	struct MeasuredFireNode { f32 forward = 0; f32 side = 0; f32 up = 0; };
+	eastl::hash_map<u64, MeasuredFireNode> measuredFireNodes;
+	static u64 FireNodeKey(i32 skill, i32 remote, i32 index) { return ((u64)(u32)skill << 32) ^ ((u64)(u32)remote << 4) ^ (u64)(u32)index; }
+	const MeasuredFireNode* FindMeasuredFireNode(i32 skill, i32 remote, i32 index) const { auto f = measuredFireNodes.find(FireNodeKey(skill, remote, index)); return f == measuredFireNodes.end() ? nullptr : &f->second; }
 	const eastl::array<i32,5>* FindBotSkills(i32 creature) const { auto f = botSkills.find(creature); return f == botSkills.end() ? nullptr : &f->second; }
 	bool IsChildOnExisting(ClassType c, ActionStateID a) const { return childOnExisting.find(((u32)c << 16) | ((u32)a & 0xFFFF)) != childOnExisting.end(); }
 	i32 GetChildSkill(ClassType c, ActionStateID a) const { auto f = childSkill.find(((u32)c << 16) | ((u32)a & 0xFFFF)); return f == childSkill.end() ? 0 : f->second; }
@@ -1718,6 +1722,7 @@ private:
 	bool LoadStatusData();
 	bool LoadSkillTooltips();
 	bool LoadStatusStatMods();
+	bool LoadMeasuredFireNodes();
 	bool LoadBalanceMultipliers();
 	bool LoadSkillCosts();
 	bool LoadSkillUpgrades();

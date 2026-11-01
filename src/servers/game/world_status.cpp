@@ -971,6 +971,7 @@ void World::UpdateStatuses()
 	for(auto ps = pendingStatuses.begin(); ps != pendingStatuses.end(); ) {
 		if(localTime < ps->time) { ++ps; continue; }
 		Player& caster = players[ps->casterIndex];
+		if(ps->lastChild) ps->targetUID = caster.lastChildUID;
 		const ActorMaster* targetMaster = ps->targetUID != ActorUID::INVALID ? FindMasterActor(ps->targetUID) : nullptr;
 		if(targetMaster && ps->remove) {
 			foreach(it, activeStatuses) {

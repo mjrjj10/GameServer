@@ -7,6 +7,7 @@ static const i32 STAT_HEALTH = 0;
 static const f64 REMOVED_PLAYER_RESPAWN_MS = 1.0e12;
 static const i32 STATUS_PC_RESPAWN_INVICIBLE_3S = 1230000010;
 static const i32 STATUS_PC_TAG_GODMODE = 1230000020;
+static const f64 MEASURED_TAG_FIRST_ATTACK_MS = 110.0;
 static const f64 WEAPON_HIT_INTERVAL_MS = 80.0;
 static const i32 SKILL_SLOT_ENUM_FIRST = 2;
 static const f32 OBSTRUCT_LOW_HEIGHT = 30.0f;
@@ -163,6 +164,10 @@ void World::Update(Time localTime_)
 			SwapMainMaster(p);
 			if(!p.dead) ApplyStatus(p, p, STATUS_PC_TAG_GODMODE);
 			SendTagCooltimeToTeam(p, TagCooltimeMs(p));
+			if(p.clientHd == ClientHandle::INVALID) {
+				const Time ready = TimeAdd(localTime, TimeMsToTime(MEASURED_TAG_FIRST_ATTACK_MS));
+				if(p.tNextBotShot < ready) p.tNextBotShot = ready;
+			}
 		}
 
 		// cast skills

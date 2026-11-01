@@ -262,6 +262,7 @@ struct World
 		f32 mana = -1.0f;
 		Time tNextBotShot = Time::ZERO;
 		Time botMoveAt = Time::ZERO;
+		Time botSkillStillUntil = Time::ZERO;
 		Time botStuckCheck = Time::ZERO;
 		vec2 botLastPos = vec2(0);
 		f32 botStrafe = 1.0f;
@@ -694,6 +695,7 @@ struct World
 		Time time;
 		RemoteIdx idx;
 		RemoteIdx sendIdx = RemoteIdx::INVALID;
+		u8 docIndex = 0;
 		i32 preset;
 		f32 offsetSide;
 		f32 offsetFront;
@@ -816,6 +818,7 @@ struct World
 		f32 power;
 		bool remove = false;
 		bool aniEnd = false;
+		bool lastChild = false;
 		ActorUID sourceUID = ActorUID::INVALID;
 	};
 	eastl::fixed_vector<PendingStatus,256,false> pendingStatuses;

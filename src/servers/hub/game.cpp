@@ -1800,7 +1800,10 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 
 	replication.SendPartyCreateSucess(clientHd, UserID(1), party.stageType);
 	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_IN_CREATION);
-	if(Config().DevShowcase || Config().DevAutoQueue || pendingRegame[userID]) OnEnqueueGame(clientHd);
+	static i32 autoQueued = 0;
+	const bool autoQueue = Config().DevAutoQueue && (Config().DevAutoQueueGames <= 0 || autoQueued < Config().DevAutoQueueGames);
+	if(autoQueue && !Config().DevShowcase && !pendingRegame[userID]) autoQueued++;
+	if(Config().DevShowcase || autoQueue || pendingRegame[userID]) OnEnqueueGame(clientHd);
 	for(auto s = stayInvites.begin(); s != stayInvites.end();) {
 		if(s->leader != playerAccountData[userID]->nickname) { ++s; continue; }
 		OnPartyInvite(clientHd, s->invitee.data(), (i32)s->invitee.size());

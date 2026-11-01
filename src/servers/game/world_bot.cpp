@@ -434,7 +434,7 @@ void World::UpdateBotMovement()
 		Player& bot = *it;
 		if(bot.clientHd != ClientHandle::INVALID || bot.dead || bot.Main().classType == ClassType::NONE) continue;
 		if(localTime < bot.ccUntil || localTime < bot.dashUntil || bot.casting.skillID != SkillID::INVALID || AttachedToCaster(bot)) continue;
-		if(bot.interactSlot >= 0) continue;
+		if(bot.interactSlot >= 0 || localTime < bot.botSkillStillUntil) continue;
 		const vec3 pos = bot.body->GetWorldPos();
 		const vec2 here = vec2(pos);
 		bool stuck = false;

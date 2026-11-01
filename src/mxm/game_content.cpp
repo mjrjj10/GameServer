@@ -2641,8 +2641,8 @@ bool GameXmlContent::LoadAnimationData()
 				pActionBase->QueryStringAttribute("TargetParam", &TargetParam);
 				if(TargetParam) {
 					f32 p[7] = { 0 };
-					if(EA::StdC::Sscanf(TargetParam, "%f|%f|%f|%f|%f|%f|%f", &p[0], &p[1], &p[2], &p[3], &p[4], &p[5], &p[6]) == 7) {
-						cmd.remote.offsetSide = p[5];
+					if(EA::StdC::Sscanf(TargetParam, "%f|%f|%f|%f|%f|%f|%f", &p[0], &p[1], &p[2], &p[3], &p[4], &p[5], &p[6]) == 7 && p[3] <= 0) {
+						cmd.remote.offsetSide = -p[5];
 						cmd.remote.offsetFront = p[6];
 					}
 				}
@@ -3196,6 +3196,8 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadStatusStatMods();
+	if(!r) return false;
+	r = LoadMeasuredFireNodes();
 	if(!r) return false;
 
 	r = LoadBalanceMultipliers();
@@ -3867,6 +3869,21 @@ bool GameXmlContent::LoadStatusStatMods()
 		count++;
 	}
 	LOG("Loaded %d measured status stat mods", count);
+	return true;
+}
+
+bool GameXmlContent::LoadMeasuredFireNodes()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/MeasuredFireNodes.xml", doc)) return true;
+	for(XMLElement* pFire = doc.FirstChildElement()->FirstChildElement("FIRE"); pFire; pFire = pFire->NextSiblingElement("FIRE")) {
+		MeasuredFireNode node;
+		node.forward = pFire->FloatAttribute("forward");
+		node.side = pFire->FloatAttribute("side");
+		node.up = pFire->FloatAttribute("up");
+		measuredFireNodes[FireNodeKey(pFire->IntAttribute("skill"), pFire->IntAttribute("remote"), pFire->IntAttribute("index"))] = node;
+	}
+	LOG("Loaded %d measured fire nodes", (i32)measuredFireNodes.size());
 	return true;
 }
 
