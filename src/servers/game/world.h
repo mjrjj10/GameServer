@@ -920,7 +920,7 @@ struct World
 	struct TeamGate { i32 localID; vec2 a; vec2 b; i32 team; bool open; };
 	eastl::fixed_vector<TeamGate,32,false> teamGates;
 	bool BotGateBlocks(const Player& bot, const vec2& from, vec2* goal) const;
-	struct PilotTour { u8 kind = 0; i32 localID = -1; ActorUID npc = ActorUID::INVALID; i32 doc = 0; Time since = Time::ZERO; bool hit = false; bool warped = false; };
+	struct PilotTour { u8 kind = 0; i32 localID = -1; ActorUID npc = ActorUID::INVALID; i32 doc = 0; Time since = Time::ZERO; bool hit = false; bool reacted = false; bool warped = false; };
 	PilotTour pilotTour;
 	eastl::fixed_vector<i32,128,true> pilotTourInteractions;
 	eastl::fixed_vector<ActorUID,256,true> pilotTourNpcs;

@@ -590,6 +590,14 @@ void World::CallMonsters(const GameXmlContent::LevelEventNode& node, i32 playerI
 		npc.wanderDist = node.wander;
 	}
 	LOG("LevelEvent :: node %d calls %d x monster %d (tag %d) in area %d at t=%.1f", node.id, node.count, node.monster, node.tagID, node.areaID, GameTimeSec());
+	if(node.tagID < 0) return;
+	for(i32 slot = 0; slot < (i32)map->levelEvents.size(); slot++) {
+		const GameXmlContent::LevelEventNode& n = map->levelEvents[slot];
+		if(n.kind != GameXmlContent::LevelEventNode::DEAD_COUNT || n.tagID != node.tagID || deadCountsDone.find(slot) == deadCountsDone.end()) continue;
+		deadCountsDone.erase(slot);
+		deadCounts[slot] = 0;
+		LOG("LevelEvent :: dead count of tag %d re-armed by a respawn (node %d)", node.tagID, n.id);
+	}
 }
 
 void World::FireRandomCondition(const GameXmlContent::LevelEventNode& node, i32 playerIndex)
@@ -1354,13 +1362,17 @@ void World::OccupyScore(Player& player, i32 points, bool capture)
 
 bool World::OccupyTarget(const Player& bot, vec2* point, ActorUID* object, f32* reach) const
 {
-	if(!occupyMode) return false;
+	static const f32 HYP_BOT_TOTEM_SEARCH = 3500.0f;
+	static const i32 HYP_BOT_TOTEM_ROLE_EVERY = 3;
+	const bool titanTotems = !occupyMode && map && map->ingameLevels && bot.clientHd == ClientHandle::INVALID && bot.index % HYP_BOT_TOTEM_ROLE_EVERY == 0;
+	if(!occupyMode && !titanTotems) return false;
 	const vec2 here = vec2(bot.body->GetWorldPos());
-	f32 best = 1e9f;
+	f32 best = titanTotems ? HYP_BOT_TOTEM_SEARCH : 1e9f;
 	bool found = false;
 	foreach_const(m, mapInteractions) {
 		const GameXmlContent::InteractionInfo* info = GetGameXmlContent().FindInteraction(m->interactionID);
-		if(!info || !info->pvpOccupy || !m->active || m->occupiedTeam == (i32)PLAYER_FACTION_BASE + (i32)bot.team) continue;
+		if(!info || !m->active || m->occupiedTeam == (i32)PLAYER_FACTION_BASE + (i32)bot.team) continue;
+		if(occupyMode ? !info->pvpOccupy : (info->action != GameXmlContent::InteractionInfo::TOTEM || info->individual || m->creature)) continue;
 		if(m->coolUntil != Time::ZERO && localTime < m->coolUntil) continue;
 		vec3 pos;
 		if(!MapInteractionPos(*m, &pos)) continue;

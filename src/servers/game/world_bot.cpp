@@ -571,11 +571,10 @@ void World::PilotTourFinish(const char* result)
 
 bool World::PilotTourStep(Player& p, PilotDecision* out, vec2* goal)
 {
-	static const f64 HYP_TOUR_STOP_TIMEOUT_SEC = 90.0;
-	static const f32 HYP_TOUR_CAMP_RADIUS = 900.0f;
+	static const f64 HYP_TOUR_STOP_TIMEOUT_SEC = 150.0;
 	static const f32 HYP_TOUR_INTERACT_REACH = 500.0f;
 	const vec2 here = vec2(p.body->GetWorldPos());
-	if(pilotTour.kind && TimeDiffSec(TimeDiff(pilotTour.since, localTime)) > HYP_TOUR_STOP_TIMEOUT_SEC) PilotTourFinish(pilotTour.kind == 2 && pilotTour.hit ? "FAILED (hit but never targeted the player)" : "FAILED (not reached or not completed)");
+	if(pilotTour.kind && TimeDiffSec(TimeDiff(pilotTour.since, localTime)) > HYP_TOUR_STOP_TIMEOUT_SEC) PilotTourFinish(pilotTour.kind == 2 && pilotTour.reacted ? "FAILED (reacted but not killed)" : (pilotTour.kind == 2 && pilotTour.hit ? "FAILED (hit but never targeted the player)" : "FAILED (not reached or not completed)"));
 	if(pilotTour.kind == 1) {
 		bool still = false;
 		foreach_const(m, mapInteractions) if(m->localID == pilotTour.localID && m->active) still = true;
@@ -583,10 +582,10 @@ bool World::PilotTourStep(Player& p, PilotDecision* out, vec2* goal)
 	}
 	if(pilotTour.kind == 2) {
 		ActorNpc* npc = FindNpcActor(pilotTour.npc);
-		if(!npc || npc->hp <= 0) PilotTourFinish(pilotTour.hit ? "done (killed)" : "skipped (gone)");
-		else if(pilotTour.hit && npc->monsterTarget == p.Main().UID) {
-			foreach_const(o, actorNpcList) if(o->UID != npc->UID && o->monsterAi && glm::length(vec2(o->pos) - vec2(npc->pos)) < HYP_TOUR_CAMP_RADIUS) pilotTourNpcs.push_back(o->UID);
-			PilotTourFinish("done (reacted)");
+		if(!npc || npc->hp <= 0) PilotTourFinish(!pilotTour.hit ? "skipped (gone)" : (pilotTour.reacted ? "done (reacted, killed)" : "FAILED (killed but never targeted the player)"));
+		else if(pilotTour.hit && !pilotTour.reacted && npc->monsterTarget == p.Main().UID) {
+			pilotTour.reacted = true;
+			PilotTourEvent("reacted");
 		}
 	}
 	if(!pilotTour.kind) {
@@ -658,8 +657,8 @@ bool World::Pilot(Player& p, PilotDecision* out)
 	const vec3 pos = p.body->GetWorldPos();
 	const vec2 here = vec2(pos);
 	vec2 goal = here;
-	const bool retreat = BotRetreat(p, &goal);
-	const bool touring = Config().DevPilotTour && !retreat && PilotTourStep(p, out, &goal);
+	const bool touring = Config().DevPilotTour && PilotTourStep(p, out, &goal);
+	const bool retreat = !touring && BotRetreat(p, &goal);
 	f32 best = retreat || touring ? 0.0f : HYP_PILOT_ENGAGE_RANGE;
 	foreach_const(e, players) {
 		if(e->dead || e->untargetable || e->team == p.team || !e->body || e->Main().classType == ClassType::NONE || !(e->fogSeenBy & (1u << p.team))) continue;
