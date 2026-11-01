@@ -1783,11 +1783,12 @@ static const u16 MAX_FIRE_OBJECT_LEN = 64;
 static const u8 NPC_MOVE_FULL = 0x02;
 static const u8 NPC_MOVE_YAW_AND_POSITIONS = 0x32;
 static const u8 NPC_MOVE_POSITIONS_ONLY = 0x3e;
+static const u8 NPC_MOVE_YAW_AND_SPEED = 0x12;
 static const u8 NPC_MOVE_FLAG_STOPPED = 31;
 static const u8 NPC_MOVE_FLAG_MOVING = 32;
 static const f32 SUMMON_SPAWN_HEIGHT = 50.0f;
 static const f32 NPC_SPEED_SCALE = 5.0f;
-static const u8 NPC_STATE_KEEP_SPEED = 0x04;
+static const u8 NPC_STATE_KEEP_SPEED = 0x08;
 static const u8 MONSTER_STATE_NO_YAW = 0x04;
 static const f32 MONSTER_SPEED_SCALE = 5.0f;
 static const u8 SUMMON_OWNER_SKILLPOWER_STAT = 8;
@@ -2154,17 +2155,15 @@ void Replication::SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
-		Sv::SN_AIMonsterSyncMove packet;
-		packet.excludedFieldBits = 0;
-		packet.monsterID = (u32)localID;
-		packet.upperBodyPitch = 0;
-		packet.upperBodyYaw = yaw;
-		packet.lowerBodyYaw = yaw;
-		packet.angularSpeed = 0;
-		packet.linearSpeed = (u16)MIN(speed * 5.0f, 65535.0f);
-		packet.currPos = v2f(pos);
-		packet.goalPos = v2f(goal);
-		packet.movingFlags = 0;
+		PacketWriter<Sv::SN_AIMonsterSyncMove,48> packet;
+		packet.Write<u8>(NPC_MOVE_YAW_AND_SPEED);
+		packet.Write<u32>((u32)localID);
+		packet.Write<i16>(yaw);
+		packet.Write<i16>(yaw);
+		packet.Write<u16>((u16)MIN(speed * 5.0f, 65535.0f));
+		packet.Write<float3>(v2f(pos));
+		packet.Write<float3>(v2f(goal));
+		packet.Write<u8>(vec2(pos) == vec2(goal) ? NPC_MOVE_FLAG_STOPPED : 0);
 		SendPacket(clientHd, packet);
 	}
 }
@@ -2379,17 +2378,15 @@ void Replication::SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
-		Sv::SN_AIMonsterSyncMove packet;
-		packet.excludedFieldBits = 0;
-		packet.monsterID = (u32)localID;
-		packet.upperBodyPitch = 0;
-		packet.upperBodyYaw = yaw;
-		packet.lowerBodyYaw = yaw;
-		packet.angularSpeed = 0;
-		packet.linearSpeed = (u16)MIN(speed * MONSTER_SPEED_SCALE, 65535.0f);
-		packet.currPos = v2f(pos);
-		packet.goalPos = v2f(goal);
-		packet.movingFlags = 0;
+		PacketWriter<Sv::SN_AIMonsterSyncMove,48> packet;
+		packet.Write<u8>(NPC_MOVE_YAW_AND_SPEED);
+		packet.Write<u32>((u32)localID);
+		packet.Write<i16>(yaw);
+		packet.Write<i16>(yaw);
+		packet.Write<u16>((u16)MIN(speed * MONSTER_SPEED_SCALE, 65535.0f));
+		packet.Write<float3>(v2f(pos));
+		packet.Write<float3>(v2f(goal));
+		packet.Write<u8>(vec2(pos) == vec2(goal) ? NPC_MOVE_FLAG_STOPPED : 0);
 		SendPacket(clientHd, packet);
 	}
 }

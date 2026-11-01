@@ -3602,9 +3602,9 @@ inline const char* PacketSerialize<Sv::SN_AiSetActionState>(const void* packetDa
 	const u8 excluded = buff.Read<u8>();
 	SER("	excludedFieldBits=%u", excluded);
 	SER("	entityID=0x%08x", buff.Read<u32>());
-	SER("	motionType=%d", buff.Read<i16>());
+	if(!(excluded & 0x02)) SER("	motionType=%d", buff.Read<i16>());
 	if(!(excluded & 0x04)) SER("	lowerBodyYaw=%d", buff.Read<i16>());
-	if(!(excluded & 0x02)) SER("	moveSpeed=%u", buff.Read<u16>());
+	if(!(excluded & 0x08)) SER("	moveSpeed=%u", buff.Read<u16>());
 	SER("	pos=%s", PS::ToStr(buff.Read<float3>()));
 	SER("}");
 	return str.data();
