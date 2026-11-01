@@ -987,7 +987,7 @@ void World::UpdateMonsterAi(f32 delta)
 						const GameXmlContent::MonsterAttack& farAttack = ai.attacks[farIndex];
 						npc.monsterSkillReady[farIndex] = TimeAdd(localTime, TimeMsToTime(farAttack.cooldown * 1000.0));
 						npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime(attack->cooldown * 1000.0));
-						if(npc.monsterChasing) {
+						if(npc.monsterChasing || npc.monsterWalking) {
 							npc.monsterChasing = false;
 							if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, yaw);
 							else replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, yaw, 0.0f);
@@ -1013,7 +1013,7 @@ void World::UpdateMonsterAi(f32 delta)
 				}
 				continue;
 			}
-			if(npc.monsterChasing) {
+			if(npc.monsterChasing || npc.monsterWalking) {
 				npc.monsterChasing = false;
 				if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, yaw);
 				else replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, yaw, 0.0f);
