@@ -920,7 +920,13 @@ struct World
 	struct TeamGate { i32 localID; vec2 a; vec2 b; i32 team; bool open; };
 	eastl::fixed_vector<TeamGate,32,false> teamGates;
 	bool BotGateBlocks(const Player& bot, const vec2& from, vec2* goal) const;
+	struct PilotTour { u8 kind = 0; i32 localID = -1; ActorUID npc = ActorUID::INVALID; i32 doc = 0; Time since = Time::ZERO; bool hit = false; };
+	PilotTour pilotTour;
+	eastl::fixed_vector<i32,128,true> pilotTourInteractions;
+	eastl::fixed_vector<ActorUID,256,true> pilotTourNpcs;
+	void PilotTourFinish(const char* result);
 	struct PilotDecision { vec3 goal = vec3(0); vec3 finalGoal = vec3(0); bool hasTarget = false; vec3 target = vec3(0); i32 hp = 0; i32 hpMax = 0; i32 doc = 0; bool master = false; bool hasInteract = false; vec3 interact = vec3(0); };
+	bool PilotTourStep(Player& p, PilotDecision* out, vec2* goal);
 	bool Pilot(Player& p, PilotDecision* out);
 	void GrantMasterKillExp(Player& killer, const Player& victim, const eastl::fixed_vector<Player*,10,false>& assisters);
 	void RewardMasterKill(Player* killer, const Player& victim);
@@ -952,6 +958,7 @@ struct World
 	void UpdateMonsterHits();
 	bool MonsterHostile(const ActorNpc& monster, const ActorNpc& other) const;
 	bool MonsterHostile(const ActorNpc& monster, const Player& player) const;
+	void MonsterAggroOnHit(ActorNpc& npc, Player& attacker);
 	void MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const GameXmlContent::MonsterAttack& attack, u32 remoteID, const vec3* aimPos = nullptr, const vec3* castAim = nullptr);
 	void SendNpcHit(const ActorNpc& attacker, ActorUID targetUID, const vec3& targetPos, i32 remote, u32 remoteID, i32 damage, i32 hp, i32 hpMax);
 	void DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i32 remote, u32 remoteID = 0, i32 status = 0, bool exact = false);

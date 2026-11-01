@@ -1280,6 +1280,7 @@ void World::CompleteMapInteraction(Player& player)
 	}
 	replication->SendInteractionExecuteOnlyToAll(player.Main().UID, m.object, (u32)ActionStateID::INTERACTION_EXECUTE_BEHAVIORSTAT);
 	LOG("Interaction :: %ls takes object %d (team %d)", player.name.data(), m.localID, (i32)player.team);
+	if(pilotTour.kind == 1 && pilotTour.localID == m.localID) PilotTourFinish("done");
 	if(info->requireMinerals > 0) {
 		minerals = MAX(minerals - info->requireMinerals, 0);
 		SendMinerals();

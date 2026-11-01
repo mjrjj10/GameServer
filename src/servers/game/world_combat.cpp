@@ -488,12 +488,8 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 		LightAttacker(attacker.body->GetWorldPos(), (i32)npc.faction);
 	}
 	if(npc.ownerUID == ActorUID::INVALID) OnMonsterDamaged(npc, hpBefore);
-	if(npc.ownerUID == ActorUID::INVALID && npc.monsterAi && (npc.faction == Faction::ORANGE || npc.faction == Faction::MONSTER) && npc.monsterTarget == ActorUID::INVALID && npc.hp > 0 && !(npc.monsterReturning && map && map->ingameLevels)) {
-		npc.monsterTarget = attacker.Main().UID;
-		npc.monsterReturning = false;
-		LOG("Monster :: neutral creature=%d (local %d) attacked by %ls", (i32)npc.docID, npc.localID, attacker.name.data());
-		replication->SendAiSetTargetToAll(npc.UID, npc.monsterTarget);
-	}
+	if(pilotTour.kind == 2 && pilotTour.npc == npc.UID) pilotTour.hit = true;
+	if(npc.ownerUID == ActorUID::INVALID) MonsterAggroOnHit(npc, attacker);
 	if(remoteHit && remoteHit->remoteID != 0) {
 		Replication::RemoteDamage hit = *remoteHit;
 		hit.attackerUID = attacker.Main().UID;

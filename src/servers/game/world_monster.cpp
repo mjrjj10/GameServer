@@ -79,6 +79,22 @@ bool World::MonsterHostile(const ActorNpc& monster, const Player& player) const
 	return FactionsOppose(monster.faction, (Faction)player.team, hostileMonsters) && (monster.monsterAi->Hates(playerTag) || (hostileMonsters && monster.monsterAi->enemyTags.empty()));
 }
 
+void World::MonsterAggroOnHit(ActorNpc& npc, Player& attacker)
+{
+	if(!npc.monsterAi || npc.monsterTarget != ActorUID::INVALID || npc.hp <= 0 || IsStructure(npc)) return;
+	if(!npc.monsterAi->byTarget[GameXmlContent::MonsterAttack::MASTER]) return;
+	const bool neutral = MonsterNeutral(npc, hostileMonsters);
+	if(!neutral && !MonsterHostile(npc, attacker)) return;
+	const bool titanMode = map && map->ingameLevels;
+	if(npc.monsterReturning && titanMode) ApplyMonsterStatus(npc, MEASURED_GOT_MOB_RETURN_SUPERARMOR, false);
+	npc.monsterTarget = attacker.Main().UID;
+	npc.monsterReturning = false;
+	npc.monsterNextSearch = localTime;
+	LOG("Monster :: creature=%d (local %d) attacked by %ls, targets the attacker", (i32)npc.docID, npc.localID, attacker.name.data());
+	if(hostileMonsters || titanMode) replication->SendBattleStateToAll(npc.UID, true, npc.monsterAi->run * npc.speedMul);
+	replication->SendAiSetTargetToAll(npc.UID, npc.monsterTarget);
+}
+
 static const u32 MONSTER_REMOTE_ID_BASE = 0xC0000000u;
 static const u32 MONSTER_REMOTE_ID_MASK = 0x3FFFFFFFu;
 static const u32 MEASURED_MONSTER_HIT_PENETRATION = 10;

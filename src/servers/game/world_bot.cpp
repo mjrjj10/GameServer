@@ -548,6 +548,77 @@ void World::UpdateBotMovement()
 	}
 }
 
+void World::PilotTourFinish(const char* result)
+{
+	if(pilotTour.kind == 1) pilotTourInteractions.push_back(pilotTour.localID);
+	if(pilotTour.kind == 2) pilotTourNpcs.push_back(pilotTour.npc);
+	if(pilotTour.kind) LOG("PilotTour :: %s %d %s after %.1f s", pilotTour.kind == 1 ? "interaction" : "monster", pilotTour.kind == 1 ? pilotTour.localID : pilotTour.doc, result, TimeDiffSec(TimeDiff(pilotTour.since, localTime)));
+	pilotTour = PilotTour();
+}
+
+bool World::PilotTourStep(Player& p, PilotDecision* out, vec2* goal)
+{
+	static const f64 HYP_TOUR_STOP_TIMEOUT_SEC = 90.0;
+	static const f32 HYP_TOUR_CAMP_RADIUS = 900.0f;
+	static const f32 HYP_TOUR_INTERACT_REACH = 500.0f;
+	const vec2 here = vec2(p.body->GetWorldPos());
+	if(pilotTour.kind && TimeDiffSec(TimeDiff(pilotTour.since, localTime)) > HYP_TOUR_STOP_TIMEOUT_SEC) PilotTourFinish(pilotTour.kind == 2 && pilotTour.hit ? "FAILED (hit but never targeted the player)" : "FAILED (not reached or not completed)");
+	if(pilotTour.kind == 1) {
+		bool still = false;
+		foreach_const(m, mapInteractions) if(m->localID == pilotTour.localID && m->active) still = true;
+		if(!still) PilotTourFinish("skipped (inactive)");
+	}
+	if(pilotTour.kind == 2) {
+		ActorNpc* npc = FindNpcActor(pilotTour.npc);
+		if(!npc || npc->hp <= 0) PilotTourFinish(pilotTour.hit ? "done (killed)" : "skipped (gone)");
+		else if(pilotTour.hit && npc->monsterTarget == p.Main().UID) {
+			foreach_const(o, actorNpcList) if(o->UID != npc->UID && o->monsterAi && glm::length(vec2(o->pos) - vec2(npc->pos)) < HYP_TOUR_CAMP_RADIUS) pilotTourNpcs.push_back(o->UID);
+			PilotTourFinish("done (reacted)");
+		}
+	}
+	if(!pilotTour.kind) {
+		f32 best = 1e12f;
+		foreach_const(m, mapInteractions) {
+			const GameXmlContent::InteractionInfo* info = GetGameXmlContent().FindInteraction(m->interactionID);
+			if(!m->active || m->creature || !info || info->pvpOccupy || info->action == GameXmlContent::InteractionInfo::OCCUPY) continue;
+			if(eastl::find(pilotTourInteractions.begin(), pilotTourInteractions.end(), m->localID) != pilotTourInteractions.end()) continue;
+			vec3 at;
+			if(!MapInteractionPos(*m, &at)) continue;
+			const f32 d = glm::length(vec2(at) - here);
+			if(d < best) { best = d; pilotTour = PilotTour(); pilotTour.kind = 1; pilotTour.localID = m->localID; }
+		}
+		foreach_const(npc, actorNpcList) {
+			if(!npc->monsterAi || npc->hp <= 0 || npc->ownerUID != ActorUID::INVALID || IsStructure(*npc) || !(npc->faction == Faction::ORANGE || (npc->faction == Faction::MONSTER && !hostileMonsters)) || !NpcHittableBy(*npc, p)) continue;
+			if(eastl::find(pilotTourNpcs.begin(), pilotTourNpcs.end(), npc->UID) != pilotTourNpcs.end()) continue;
+			const f32 d = glm::length(vec2(npc->pos) - here);
+			if(d < best) { best = d; pilotTour = PilotTour(); pilotTour.kind = 2; pilotTour.npc = npc->UID; pilotTour.doc = (i32)npc->docID; }
+		}
+		if(!pilotTour.kind) return false;
+		pilotTour.since = localTime;
+		LOG("PilotTour :: next %s %d at %.0f", pilotTour.kind == 1 ? "interaction" : "monster", pilotTour.kind == 1 ? pilotTour.localID : pilotTour.doc, best);
+	}
+	if(pilotTour.kind == 1) {
+		foreach_const(m, mapInteractions) {
+			vec3 at;
+			if(m->localID != pilotTour.localID || !MapInteractionPos(*m, &at)) continue;
+			*goal = vec2(at);
+			if(glm::length(vec2(at) - here) < HYP_TOUR_INTERACT_REACH) {
+				out->hasInteract = true;
+				out->interact = at;
+			}
+		}
+		return true;
+	}
+	ActorNpc* npc = FindNpcActor(pilotTour.npc);
+	*goal = vec2(npc->pos);
+	out->hasTarget = true;
+	out->target = npc->pos;
+	out->hp = npc->hp;
+	out->hpMax = npc->hpMax;
+	out->doc = (i32)npc->docID;
+	return true;
+}
+
 bool World::Pilot(Player& p, PilotDecision* out)
 {
 	static const f32 HYP_PILOT_ENGAGE_RANGE = 1300.0f;
@@ -556,7 +627,8 @@ bool World::Pilot(Player& p, PilotDecision* out)
 	const vec2 here = vec2(pos);
 	vec2 goal = here;
 	const bool retreat = BotRetreat(p, &goal);
-	f32 best = retreat ? 0.0f : HYP_PILOT_ENGAGE_RANGE;
+	const bool touring = Config().DevPilotTour && !retreat && PilotTourStep(p, out, &goal);
+	f32 best = retreat || touring ? 0.0f : HYP_PILOT_ENGAGE_RANGE;
 	foreach_const(e, players) {
 		if(e->dead || e->untargetable || e->team == p.team || !e->body || e->Main().classType == ClassType::NONE || !(e->fogSeenBy & (1u << p.team))) continue;
 		if(BotDangerAt(p, vec2(e->body->GetWorldPos()), nullptr, nullptr)) continue;
@@ -588,7 +660,8 @@ bool World::Pilot(Player& p, PilotDecision* out)
 	vec2 occupyPoint;
 	ActorUID occupyObject = ActorUID::INVALID;
 	f32 occupyReach = 0;
-	if(!retreat && !out->hasTarget && OccupyTarget(p, &occupyPoint, &occupyObject, &occupyReach)) {
+	if(touring) {}
+	else if(!retreat && !out->hasTarget && OccupyTarget(p, &occupyPoint, &occupyObject, &occupyReach)) {
 		out->hasInteract = true;
 		out->interact = vec3(occupyPoint, pos.z);
 		goal = occupyPoint;
