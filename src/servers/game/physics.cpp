@@ -351,12 +351,15 @@ vec3 PhysicsScene::FindMovePos(PhysicsDynamicBody* body, const vec3& disp, f32 t
 	return end;
 }
 
+static const u32 BODY_BLOCKER_WORD = 1;
+
 struct IgnoreTeamWalls: PxQueryFilterCallback
 {
 	u32 teamWord = 0;
 	PxQueryHitType::Enum preFilter(const PxFilterData&, const PxShape* shape, const PxRigidActor*, PxHitFlags&) override
 	{
-		return teamWord != 0 && shape->getQueryFilterData().word0 == teamWord ? PxQueryHitType::eNONE : PxQueryHitType::eBLOCK;
+		const PxFilterData data = shape->getQueryFilterData();
+		return data.word1 == BODY_BLOCKER_WORD || (teamWord != 0 && data.word0 == teamWord) ? PxQueryHitType::eNONE : PxQueryHitType::eBLOCK;
 	}
 	PxQueryHitType::Enum postFilter(const PxFilterData&, const PxQueryHit&) override { return PxQueryHitType::eBLOCK; }
 };
@@ -389,6 +392,21 @@ PxRigidStatic* PhysicsScene::CreateWall(const vec3& pos, f32 width, f32 depth, f
 	shape->release();
 	scene->addActor(*wall);
 	return wall;
+}
+
+PxRigidStatic* PhysicsScene::CreateBodyBlocker(const vec3& pos, f32 radius, f32 height)
+{
+	auto& ctx = PhysContext();
+	const f32 halfHeight = MAX(height * 0.5f, 1.0f);
+	PxShape* shape = ctx.physics->createShape(PxCapsuleGeometry(radius, halfHeight), *ctx.matMapSurface, true);
+	if(!shape) return nullptr;
+	shape->setQueryFilterData(PxFilterData(0, BODY_BLOCKER_WORD, 0, 0));
+	const glm::quat upright = glm::angleAxis(glm::half_pi<f32>(), vec3(0, 1, 0));
+	PxRigidStatic* blocker = ctx.physics->createRigidStatic(PxTransform(PxVec3(pos.x, pos.y, pos.z + halfHeight), PxQuat(upright.x, upright.y, upright.z, upright.w)));
+	blocker->attachShape(*shape);
+	shape->release();
+	scene->addActor(*blocker);
+	return blocker;
 }
 
 void PhysicsScene::RemoveWall(PxRigidStatic* wall)

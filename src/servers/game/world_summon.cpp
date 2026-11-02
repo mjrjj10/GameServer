@@ -672,6 +672,7 @@ void World::UpdateSummons()
 				replication->SendAiActionStateToAll(it->UID, ActionStateID::NONE_BEHAVIORSTATE, it->rot.z, it->pos, NpcKeepsSpeed(*it));
 			}
 			if(localTime >= it->removeAt) {
+				physics.RemoveWall(it->bodyBlocker);
 				actorNpcMap.erase(it->UID);
 				it = actorNpcList.erase(it);
 			}
@@ -733,6 +734,7 @@ void World::UpdateSummons()
 				++it;
 				continue;
 			}
+			physics.RemoveWall(it->bodyBlocker);
 			actorNpcMap.erase(it->UID);
 			it = actorNpcList.erase(it);
 		}

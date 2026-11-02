@@ -222,6 +222,12 @@ bool World::BotSees(const vec3& from, const vec3& to)
 	const vec2 d = vec2(to) - vec2(from);
 	const f32 len = glm::length(d);
 	if(len < 1.0f) return true;
+	foreach_const(it, actorNpcList) {
+		if(!it->bodyBlocker || !it->monsterAi) continue;
+		const vec2 c = vec2(it->pos) - vec2(from);
+		const f32 along = MIN(MAX(glm::dot(c, d) / (len * len), 0.0f), 1.0f);
+		if(glm::length(c - d * along) < it->monsterAi->bodyBlockRadius + PLAYER_BODY_RADIUS) return false;
+	}
 	const vec2 side = vec2(-d.y, d.x) / len * BOT_NAV_RAY_SIDE;
 	for(i32 k = -1; k <= 1; k++) {
 		const vec2 off = side * (f32)k;
@@ -350,6 +356,10 @@ vec2 World::BotNavStep(Player& bot, const vec2& goal)
 
 bool World::BotRetreat(Player& bot, vec2* goal)
 {
+	if(bot.devGod) {
+		bot.botRetreat = false;
+		return false;
+	}
 	BuildTitanSaveAreas();
 	if(!titanSaveAreaKnown[bot.team]) return false;
 	const f32 ratio = HpRatio(bot.Main().hp, bot.Main().hpMax);
@@ -544,6 +554,7 @@ void World::UpdateBotMovement()
 			goal = tower + (len > 1.0f ? away / len : vec2(1, 0)) * towerRange;
 		}
 		BotGateBlocks(bot, here, &goal);
+		BotKeepOutOfBlockers(bot, &goal);
 		bot.input.moveTo = vec3(goal, pos.z);
 		bot.input.speed = PlayerMoveSpeed(bot);
 	}
@@ -747,6 +758,21 @@ void World::BuildTeamGates()
 		built++;
 	}
 	LOG("Gate :: %d team gate walls", built);
+}
+
+void World::BotKeepOutOfBlockers(const Player& bot, vec2* goal) const
+{
+	static const f32 HYP_BOT_BLOCKER_MARGIN = 20.0f;
+	foreach_const(it, actorNpcList) {
+		if(!it->bodyBlocker || !it->monsterAi) continue;
+		const vec2 center = vec2(it->pos);
+		const f32 keep = it->monsterAi->bodyBlockRadius + bot.body->GetBoundSize().x + HYP_BOT_BLOCKER_MARGIN;
+		const vec2 d = *goal - center;
+		const f32 len = glm::length(d);
+		if(len >= keep) continue;
+		const vec2 out = len > 1.0f ? d / len : glm::normalize(vec2(bot.body->GetWorldPos()) - center + vec2(0.001f, 0));
+		*goal = center + out * keep;
+	}
 }
 
 bool World::BotGateBlocks(const Player& bot, const vec2& from, vec2* goal) const

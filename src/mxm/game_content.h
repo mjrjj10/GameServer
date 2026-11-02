@@ -1245,6 +1245,9 @@ struct GameXmlContent
 		f32 destroy = 0;
 		f32 radius = 0;
 		f32 returnSpeedRate = 1;
+		f32 bodyBlockRadius = 0;
+		u8 sizeRank = 0;
+		f32 bodyBlockHeight = 0;
 		eastl::fixed_vector<i32,8,false> spawnStatuses;
 		eastl::fixed_vector<i32,4,false> dieRemotes;
 		u32 tagKey = 0;

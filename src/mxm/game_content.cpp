@@ -1427,6 +1427,15 @@ bool GameXmlContent::LoadMonsterAi()
 			auto found = monsterAi.find(pInfo->IntAttribute("ID"));
 			if(found == monsterAi.end()) continue;
 			if(XMLElement* p = pInfo->FirstChildElement("Ai_ComData")) p->QueryFloatAttribute("_ReturnToSpawnPosSpeedRate", &found->second.returnSpeedRate);
+			const XMLElement* entity = pInfo->FirstChildElement("EntityComData");
+			const char* sizeType = entity ? entity->Attribute("_SizeType") : nullptr;
+			if(sizeType) found->second.sizeRank = EA::StdC::Strstr(sizeType, "BIG") ? 3 : EA::StdC::Strstr(sizeType, "MEDIUM") ? 2 : EA::StdC::Strstr(sizeType, "SMALL") ? 1 : 0;
+			const XMLElement* mesh = pInfo->FirstChildElement("PhysXMeshComData");
+			const char* group = mesh ? mesh->Attribute("_ActorGroup") : nullptr;
+			if(entity && group && EA::StdC::Strcmp(group, "GROUP_BODY_BOSSNPC") == 0 && entity->FloatAttribute("_MoveSpeed") <= 0) {
+				found->second.bodyBlockRadius = mesh->FloatAttribute("_ColliderRadius");
+				found->second.bodyBlockHeight = mesh->FloatAttribute("_ColliderHeight");
+			}
 		}
 	}
 	XMLDocument xmlPvpActions;

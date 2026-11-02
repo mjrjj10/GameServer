@@ -46,6 +46,7 @@ static const f32 MEASURED_REMOTE_SYNC_PERIOD_SEC = 0.33f;
 struct World
 {
 	friend struct WorldRemoteSpawner;
+	static constexpr f32 PLAYER_BODY_RADIUS = 110.0f;
 
 	struct Player;
 	struct ActorMaster;
@@ -466,6 +467,7 @@ struct World
 		ActorUID killerUID = ActorUID::INVALID;
 		CreatureIndex docID;
 		i32 localID;
+		PxRigidStatic* bodyBlocker = nullptr;
 		Faction faction;
 		i32 spawnAnim = 0;
 		i32 ownerID = 0;
@@ -551,6 +553,7 @@ struct World
 		Time monsterNextSearch = Time::ZERO;
 		Time monsterRetargetAt = Time::ZERO;
 		Time monsterMasterSince = Time::ZERO;
+		bool towerCalled = false;
 		Time coreAnnounceAt = Time::ZERO;
 		Time monsterNextSync = Time::ZERO;
 		Time monsterLastTurn = Time::ZERO;
@@ -921,6 +924,7 @@ struct World
 	struct TeamGate { i32 localID; vec2 a; vec2 b; i32 team; bool open; };
 	eastl::fixed_vector<TeamGate,32,false> teamGates;
 	bool BotGateBlocks(const Player& bot, const vec2& from, vec2* goal) const;
+	void BotKeepOutOfBlockers(const Player& bot, vec2* goal) const;
 	struct PilotTour { u8 kind = 0; i32 localID = -1; ActorUID npc = ActorUID::INVALID; i32 doc = 0; Time since = Time::ZERO; bool hit = false; bool reacted = false; bool warped = false; };
 	PilotTour pilotTour;
 	eastl::fixed_vector<i32,128,true> pilotTourInteractions;
@@ -945,6 +949,7 @@ struct World
 	bool UpdateMonsterSeek(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, f32 speed, f32 delta);
 	bool UpdateMonsterAllyBuff(ActorNpc& npc, const GameXmlContent::MonsterAi& ai);
 	void UpdateMonsterDash(ActorNpc& npc);
+	ActorUID StructurePickMonster(const ActorNpc& npc, const GameXmlContent::MonsterAi& ai, vec3* at, const GameXmlContent::MonsterAttack** attack) const;
 	void TowerCallForHelp(const Player& attacker, const vec3& victimPos, Faction victimTeam, const ActorNpc* hitTower);
 	struct PendingTrapHit { ActorUID dynamicUID; const GameXmlContent::DynamicTrapRemote* remote; u32 seed; vec3 nodePos; vec2 nodeDir; ActorUID targetUID; i32 playerIndex; };
 	void UpdateDynamicTraps();
