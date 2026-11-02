@@ -2147,7 +2147,7 @@ void Game::OnPlayerCancelCast(ClientHandle clientHd, SkillID skillID)
 {
 	Player& p = *playerMap.at(clientHd);
 	World::Player& player = world.GetPlayer(p.playerIndex);
-	if(player.casting.skillID != SkillID::INVALID && (skillID == SkillID::INVALID || skillID == player.casting.skillID)) world.CancelCast(player, "client", player.clientHd);
+	if(player.casting.skillID != SkillID::INVALID && (skillID == SkillID::INVALID || skillID == player.casting.skillID)) world.CancelCast(player, "client");
 }
 
 void Game::OnPlayerGameIsReady(ClientHandle clientHd)
