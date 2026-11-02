@@ -54,6 +54,7 @@ void Replication::PlayerLocalInfo::Reset()
 	actorUIDSet.clear();
 	hiddenActors.clear();
 	shownMain.clear();
+	monsterSpeedSent.clear();
 	nextPlayerLocalActorID = LocalActorID::FIRST_OTHER_PLAYER;
 	nextNpcLocalActorID = LocalActorID::FIRST_NPC;
 	nextMonsterLocalActorID = LocalActorID::INVALID;
@@ -420,6 +421,7 @@ void Replication::ResetClientForAreaMove(ClientHandle clientHd)
 	playerState[clientID].prev = PlayerState::CONNECTED;
 	playerLocalInfo[clientID].actorUIDSet.clear();
 	playerLocalInfo[clientID].hiddenActors.clear();
+	playerLocalInfo[clientID].monsterSpeedSent.clear();
 }
 
 void Replication::SendMasterTrainingEvent(ClientHandle clientHd, u8 eventType, u32 ret, u32 entityID, u32 param1, u32 param2)
@@ -2197,6 +2199,7 @@ void Replication::SendMonsterStateToAll(ActorUID actorUID, ActionStateID action,
 		packet.Write<LocalActorID>(localID);
 		packet.Write<i16>((i16)action);
 		packet.Write<u16>((u16)MIN(speed * MONSTER_SPEED_SCALE, 65535.0f));
+		playerLocalInfo[clientID].monsterSpeedSent.erase(actorUID);
 		packet.Write(pos);
 		SendPacket(clientHd, packet);
 	}
@@ -2396,12 +2399,17 @@ void Replication::SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
 		const bool stopped = vec2(pos) == vec2(goal);
+		const u16 speedSent = (u16)MIN(speed * MONSTER_SPEED_SCALE, 65535.0f);
+		auto& told = playerLocalInfo[clientID].monsterSpeedSent;
+		auto known = told.find(actorUID);
+		const bool withSpeed = !stopped && (known == told.end() || known->second != speedSent);
+		if(withSpeed) told[actorUID] = speedSent;
 		PacketWriter<Sv::SN_AIMonsterSyncMove,48> packet;
-		packet.Write<u8>(stopped ? NPC_MOVE_YAW_AND_POSITIONS : NPC_MOVE_YAW_AND_SPEED);
+		packet.Write<u8>(withSpeed ? NPC_MOVE_YAW_AND_SPEED : NPC_MOVE_YAW_AND_POSITIONS);
 		packet.Write<u32>((u32)localID);
 		packet.Write<i16>(yaw);
 		packet.Write<i16>(yaw);
-		if(!stopped) packet.Write<u16>((u16)MIN(speed * MONSTER_SPEED_SCALE, 65535.0f));
+		if(withSpeed) packet.Write<u16>(speedSent);
 		packet.Write<float3>(v2f(pos));
 		packet.Write<float3>(v2f(goal));
 		packet.Write<u8>(stopped ? NPC_MOVE_FLAG_STOPPED : 0);
@@ -2839,7 +2847,10 @@ void Replication::SendLeaveActor(ClientHandle clientHd, ActorUID actorUID)
 	packet.objectID = localID;
 	SendPacket(clientHd, packet);
 	auto found = playerMap.find(clientHd);
-	if(found != playerMap.end()) playerLocalInfo[found->second].hiddenActors.insert(actorUID);
+	if(found != playerMap.end()) {
+		playerLocalInfo[found->second].hiddenActors.insert(actorUID);
+		playerLocalInfo[found->second].monsterSpeedSent.erase(actorUID);
+	}
 }
 
 void Replication::MarkHidden(ClientHandle clientHd, ActorUID actorUID)
@@ -4025,6 +4036,7 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 	DBG_ASSERT(actor.actorUID != ActorUID::INVALID);
 
 	const i32 clientID = playerMap.at(clientHd);
+	playerLocalInfo[clientID].monsterSpeedSent.erase(actor.actorUID);
 	auto found = playerLocalInfo[clientID].localActorIDMap.find(actor.actorUID);
 	ASSERT(found != playerLocalInfo[clientID].localActorIDMap.end());
 

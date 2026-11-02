@@ -258,6 +258,7 @@ struct Replication
 		LocalActorID nextMonsterLocalActorID;
 		eastl::fixed_set<ActorUID,256> hiddenActors;
 		eastl::fixed_map<ActorUID,ActorUID,32> shownMain;
+		eastl::fixed_map<ActorUID,u16,512> monsterSpeedSent;
 
 		void Reset();
 	};
