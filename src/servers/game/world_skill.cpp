@@ -1143,23 +1143,7 @@ void World::SendHideDetectToAll(ActorUID detectorUID, ActorUID targetUID, u8 fla
 
 void World::ShowHiddenToEnemies(Player& player, ActorUID was, ActorUID hidden)
 {
-	foreach(viewer, players) {
-		if(viewer->clientHd == ClientHandle::INVALID || viewer->team == player.team) continue;
-		const u32 bit = 1u << viewer->index;
-		if(was != ActorUID::INVALID && (player.hiddenFrom & bit)) {
-			const ActorMaster* chara = FindMasterActor(was);
-			if(chara) {
-				const f32 baseSpeed = const_cast<CharacterModel&>(GetGameXmlContent().GetMaster(chara->classType).character).getMoveSpeed();
-				const f32 speed = baseSpeed * (player.battleStage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (player.battleStage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f));
-				replication->SendEnterActor(viewer->clientHd, was, chara->classType, player.body->GetWorldPos(), player.input.rot.bodyYaw, player.input.rot.upperYaw, player.input.moveTo, player.battleStage > 0, speed, chara->actionState != ActionStateID::INVALID ? chara->actionState : ActionStateID::NONE_BEHAVIORSTATE, chara->hp, chara->hpMax);
-			}
-			player.hiddenFrom &= ~bit;
-		}
-		if(hidden != ActorUID::INVALID) {
-			replication->SendLeaveActor(viewer->clientHd, hidden);
-			player.hiddenFrom |= bit;
-		}
-	}
+	(void)was;
 	LOG("Hide :: %ls %s from enemies", player.name.data(), hidden != ActorUID::INVALID ? "hidden" : "visible");
 }
 
@@ -1344,6 +1328,7 @@ void World::UpdateFog()
 	RefreshBushStates();
 	UpdateNpcFog();
 	foreach(p, players) {
+		if(p->body && !p->dead && p->hiddenUID != ActorUID::INVALID) p->fogSeenBy = (u8)(p->team == 0 ? 1 : 2);
 		if(!p->body || p->dead || p->hiddenUID != ActorUID::INVALID) continue;
 		const ActorUID main = p->Main().UID;
 		if(p->hiddenFrom != 0 && p->fogHiddenUID != ActorUID::INVALID && p->fogHiddenUID != main) {
