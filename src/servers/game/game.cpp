@@ -678,7 +678,12 @@ bool Game::LoadMap()
 		actor.action = it->actionState;
 		actor.entityType = it->entityType;
 		actor.seed = (i32)RandUint();
-
+		const auto meshKey = GetGameXmlContent().dynamicMeshKey.find((i32)it->docID);
+		if(map->ingameLevels && meshKey != GetGameXmlContent().dynamicMeshKey.end()) {
+			eastl::fixed_string<char,100,false> meshName;
+			meshName.sprintf("%s/%s", meshKey->second.c_str(), meshKey->second.c_str());
+			if(world.physics.HasStaticMesh(meshName.c_str())) actor.collider = world.physics.CreateStaticCollider(meshName.c_str(), actor.pos, actor.rot);
+		}
 	}
 
 	if(map->index != MapIndex::PVP_DEATHMATCH) return true;

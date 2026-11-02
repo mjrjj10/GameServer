@@ -568,6 +568,7 @@ struct World
 		bool monsterWalkStateOn = false;
 		bool monsterLowHpDone = false;
 		ActorUID monsterReturnTarget = ActorUID::INVALID;
+		bool monsterReturnPending = false;
 
 		vec3 pos;
 		vec3 rot;
@@ -598,6 +599,7 @@ struct World
 		eastl::fixed_vector<Time,16,false> hits;
 		i32 destroyHits = 0;
 		bool destroyed = false;
+		Time respawnAt = Time::ZERO;
 
 		struct TrapSlot { u32 seed = 0; i32 activation = -1; u16 sentMask = 0; };
 		struct TrapHit { ActorUID target; u8 node; Time until; };
@@ -964,6 +966,7 @@ struct World
 	void TowerCallForHelp(const Player& attacker, const vec3& victimPos, Faction victimTeam, const ActorNpc* hitTower);
 	struct PendingTrapHit { ActorUID dynamicUID; const GameXmlContent::DynamicTrapRemote* remote; u32 seed; vec3 nodePos; vec2 nodeDir; ActorUID targetUID; i32 playerIndex; };
 	void UpdateDynamicTraps();
+	void UpdateDynamicRespawns();
 	void UpdateDynamicTrap(ActorDynamic& dyn, eastl::fixed_vector<PendingTrapHit,32,true>& hits);
 	void StartDynamicTrap(ActorDynamic& dyn);
 	void StopDynamicTrap(ActorDynamic& dyn);

@@ -394,6 +394,12 @@ PxRigidStatic* PhysicsScene::CreateWall(const vec3& pos, f32 width, f32 depth, f
 	return wall;
 }
 
+bool PhysicsScene::HasStaticMesh(const char* meshName) const
+{
+	auto& ctx = PhysContext();
+	return ctx.triangleMeshMap.find(eastl::hash<const char*>{}(meshName)) != ctx.triangleMeshMap.end();
+}
+
 PxRigidStatic* PhysicsScene::CreateBodyBlocker(const vec3& pos, f32 radius, f32 height)
 {
 	auto& ctx = PhysContext();

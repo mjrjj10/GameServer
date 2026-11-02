@@ -267,6 +267,14 @@ void World::BuildBotNav()
 			prev = node;
 		}
 	}
+	const auto cells = GetGameXmlContent().measuredWalkCells.find((i32)map->index);
+	if(cells != GetGameXmlContent().measuredWalkCells.end()) {
+		foreach_const(c, cells->second) {
+			if(InsideBodyBlocker(vec2(*c), PLAYER_BODY_RADIUS)) continue;
+			botNav.push_back();
+			botNav.back().pos = *c;
+		}
+	}
 	for(i32 a = 0; a < (i32)botNav.size(); a++) {
 		for(i32 b = a + 1; b < (i32)botNav.size(); b++) {
 			if(glm::length(vec2(botNav[a].pos) - vec2(botNav[b].pos)) > BOT_NAV_LINK_RANGE) continue;

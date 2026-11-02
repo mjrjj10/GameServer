@@ -3662,6 +3662,10 @@ void Replication::FrameDifference()
 				syncDir = !cur.graphMoving && prev.skillMoving && travelLen > posEpsilon ? travel / travelLen : vec2(0);
 				syncSpeed = !cur.graphMoving && prev.skillMoving && sinceSent > 0 ? travelLen / sinceSent : 0.0f;
 			}
+			if(cur.graphMoving) {
+				syncDir = vec2(0);
+				syncSpeed = 0;
+			}
 			sent.moveDir = syncDir;
 			sent.speed = syncSpeed;
 			sent.at = TimeRelNow();

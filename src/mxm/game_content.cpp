@@ -3235,6 +3235,7 @@ bool GameXmlContent::Load()
 	r = LoadStatusStatMods();
 	if(!r) return false;
 	r = LoadMeasuredFireNodes();
+	if(r) r = LoadMeasuredWalkCells();
 	if(!r) return false;
 	r = LoadFireNodePaths();
 	if(!r) return false;
@@ -3923,6 +3924,22 @@ bool GameXmlContent::LoadMeasuredFireNodes()
 		measuredFireNodes[FireNodeKey(pFire->IntAttribute("skill"), pFire->IntAttribute("remote"), pFire->IntAttribute("index"))] = node;
 	}
 	LOG("Loaded %d measured fire nodes", (i32)measuredFireNodes.size());
+	return true;
+}
+
+bool GameXmlContent::LoadMeasuredWalkCells()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/MeasuredWalkCells.xml", doc, true) || !doc.FirstChildElement()) return true;
+	i32 count = 0;
+	for(XMLElement* pMap = doc.FirstChildElement()->FirstChildElement("MAP"); pMap; pMap = pMap->NextSiblingElement("MAP")) {
+		auto& cells = measuredWalkCells[pMap->IntAttribute("index")];
+		for(XMLElement* c = pMap->FirstChildElement("CELL"); c; c = c->NextSiblingElement("CELL")) {
+			cells.push_back(vec3(c->FloatAttribute("x"), c->FloatAttribute("y"), c->FloatAttribute("z")));
+			count++;
+		}
+	}
+	LOG("Loaded %d measured walk cells", count);
 	return true;
 }
 
@@ -5539,8 +5556,14 @@ bool GameXmlContent::LoadInteractionReceivers()
 		if(XMLElement* pDyn = pInfo->FirstChildElement("DynamicComData")) {
 			const char* dynType = pDyn->Attribute("_Type");
 			XMLElement* pBalance = pDyn->FirstChildElement("_RankDetailBalanceData");
-			if(id && dynType && EA::StdC::Strcmp(dynType, "DYNAMIC_TYPE_DESTROY") == 0 && pBalance && pBalance->IntAttribute("_BaseHitCount") > 0) dynamicDestroyHits[id] = pBalance->IntAttribute("_BaseHitCount");
+			const bool jumpable = pDyn->BoolAttribute("_Jumpable");
+			if(id && ((dynType && EA::StdC::Strcmp(dynType, "DYNAMIC_TYPE_DESTROY") == 0) || jumpable) && pBalance && pBalance->IntAttribute("_BaseHitCount") > 0) {
+				dynamicDestroyHits[id] = pBalance->IntAttribute("_BaseHitCount");
+				if(jumpable) dynamicJumpable.insert(id);
+				if(XMLElement* pStats = pInfo->FirstChildElement("StatsComData")) if(pStats->FloatAttribute("_DestroyTime") > 0) dynamicRespawnSec[id] = pStats->FloatAttribute("_DestroyTime");
+			}
 		}
+		if(XMLElement* pKfm = pInfo->FirstChildElement("Kfm_ComData")) if(id && pKfm->Attribute("KeyName")) dynamicMeshKey[id] = pKfm->Attribute("KeyName");
 		if(XMLElement* pStats = pInfo->FirstChildElement("StatsComData")) {
 			if(const i32 baseDrop = pStats->IntAttribute("_DropIndex")) {
 				static const char* DIFFICULTY_TAGS[] = { "_EASY", nullptr, "_HARD", "_EXTREME", "_HELL" };

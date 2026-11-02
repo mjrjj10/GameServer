@@ -78,6 +78,26 @@ ActorUID World::InteractionObjectOf(const Player& owner) const
 	return ActorUID::INVALID;
 }
 
+void World::UpdateDynamicRespawns()
+{
+	for(auto it = actorDynamicList.begin(); it != actorDynamicList.end(); ++it) {
+		if(!it->destroyed || it->respawnAt == Time::ZERO || localTime < it->respawnAt) continue;
+		const ActorDynamic old = *it;
+		ActorDynamic& fresh = SpawnDynamic(old.docID, old.localID);
+		fresh.pos = old.pos;
+		fresh.rot = old.rot;
+		fresh.faction = old.faction;
+		fresh.tagID = old.tagID;
+		fresh.entityType = old.entityType;
+		fresh.seed = (i32)RandUint();
+		fresh.collider = old.collider;
+		if(fresh.collider) physics.SetStaticEnabled(fresh.collider, true);
+		LOG("LevelEvent :: dynamic %d (doc %d) respawns", old.localID, (i32)old.docID);
+		RemoveDynamic(old.UID);
+		return;
+	}
+}
+
 void World::RemoveDynamic(ActorUID uid)
 {
 	auto found = actorDynamicMap.find(uid);
@@ -469,6 +489,9 @@ void World::DestroyDynamic(ActorDynamic& dynamic, i32 killerIndex)
 	static const u32 DYNAMIC_DEAD_NO_KILLER_DOC = 0;
 	if(dynamic.destroyed) return;
 	dynamic.destroyed = true;
+	if(dynamic.collider) physics.SetStaticEnabled(dynamic.collider, false);
+	const auto respawn = GetGameXmlContent().dynamicRespawnSec.find((i32)dynamic.docID);
+	if(respawn != GetGameXmlContent().dynamicRespawnSec.end()) dynamic.respawnAt = TimeAdd(localTime, TimeMsToTime(respawn->second * 1000.0));
 	replication->SendStatToAll(dynamic.UID, (i32)StatType::STAT_TYPE_HEALTH, 0, 1);
 	replication->SendNpcDeadAckToAll(dynamic.UID, ActorUID::INVALID, DYNAMIC_DEAD_NO_KILLER_DOC);
 	LOG("LevelEvent :: dynamic %d (doc %d, tag %d) destroyed after %d hits", dynamic.localID, (i32)dynamic.docID, dynamic.tagID, dynamic.destroyHits);
@@ -1169,6 +1192,11 @@ void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle s
 	if(!hit || hit->destroyed) return;
 	const auto& destroyHits = GetGameXmlContent().dynamicDestroyHits;
 	const auto destroyable = destroyHits.find((i32)hit->docID);
+	if(destroyable != destroyHits.end() && GetGameXmlContent().dynamicJumpable.count((i32)hit->docID)) {
+		static const f32 MEASURED_JUMPWALL_MAX_HP = 1491.0f;
+		const f32 left = MAX(1.0f - (f32)(hit->destroyHits + 1) / (f32)destroyable->second, 0.0f);
+		replication->SendStatToAll(hit->UID, (i32)StatType::STAT_TYPE_HEALTH, MEASURED_JUMPWALL_MAX_HP * left, MEASURED_JUMPWALL_MAX_HP);
+	}
 	if(destroyable != destroyHits.end() && ++hit->destroyHits >= destroyable->second) {
 		i32 killerIndex = -1;
 		foreach_const(p, players) if(p->clientHd == seedOwnerHd && seedOwnerHd != ClientHandle::INVALID) killerIndex = (i32)p->index;

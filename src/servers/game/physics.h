@@ -112,6 +112,7 @@ struct PhysicsScene
 	PxRigidStatic* CreateWall(const vec3& pos, f32 width, f32 depth, f32 height, f32 yaw, i32 team);
 	void RemoveWall(PxRigidStatic* wall);
 	PxRigidStatic* CreateBodyBlocker(const vec3& pos, f32 radius, f32 height);
+	bool HasStaticMesh(const char* meshName) const;
 	eastl::vector<PxRigidStatic*> mapStatics;
 	void ClearMapStatics();
 	void SetGroundPlaneEnabled(bool enabled);

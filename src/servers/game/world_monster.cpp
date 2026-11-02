@@ -987,6 +987,7 @@ bool World::UpdateMonsterMasterSpecial(ActorNpc& npc, const GameXmlContent::Mons
 		const vec2 rel = vec2(at) - vec2(npc.pos);
 		const f32 yaw = best > 1.0f ? atan2f(rel.y, rel.x) : npc.rot.z;
 		npc.monsterReturnTarget = npc.monsterTarget;
+		npc.monsterReturnPending = true;
 		npc.monsterTarget = chosen->Main().UID;
 		replication->SendAiSetTargetToAll(npc.UID, npc.monsterTarget);
 		MonsterStateCooldown(npc.monsterSkillReady, ai, special.state, TimeAdd(localTime, TimeMsToTime(special.cooldown * 1000.0)));
@@ -1230,6 +1231,18 @@ void World::UpdateMonsterAi(f32 delta)
 		}
 		if(!npc.monsterAi || npc.hp <= 0 || npc.removeAt != Time::ZERO) continue;
 		if(!npc.bodyBlocker && npc.monsterAi->bodyBlockRadius > 0 && npc.monsterAi->walk <= 0 && npc.monsterAi->run <= 0) npc.bodyBlocker = physics.CreateBodyBlocker(npc.pos, npc.monsterAi->bodyBlockRadius, npc.monsterAi->bodyBlockHeight);
+		if(npc.monsterReturnPending && localTime >= npc.stateEndAt) {
+			npc.monsterReturnPending = false;
+			const ActorUID back = npc.monsterReturnTarget;
+			const ActorNpc* backNpc = back != ActorUID::INVALID ? FindNpcActor(back) : nullptr;
+			const ActorMaster* backMaster = back != ActorUID::INVALID && !backNpc ? FindMasterActor(back) : nullptr;
+			const bool alive = (backNpc && backNpc->hp > 0 && backNpc->removeAt == Time::ZERO) || (backMaster && backMaster->parent && !backMaster->parent->dead);
+			npc.monsterTarget = alive ? back : ActorUID::INVALID;
+			npc.monsterReturnTarget = ActorUID::INVALID;
+			npc.monsterNextSearch = localTime;
+			replication->SendAiSetTargetToAll(npc.UID, npc.monsterTarget);
+			LOG("Monster :: creature=%d (local %d) back to its target after a special (%s)", (i32)npc.docID, npc.localID, alive ? "restored" : "none");
+		}
 		SetMonsterBattle(npc, npc.monsterTarget != ActorUID::INVALID);
 		if(combatLocked && hostileMonsters) continue;
 		if(npc.despawnAt != Time::ZERO && localTime >= npc.despawnAt) continue;
@@ -1425,6 +1438,11 @@ void World::UpdateMonsterAi(f32 delta)
 			}
 			if(chosen != ActorUID::INVALID) {
 				LOG("Monster :: creature=%d (local %d) at (%.0f, %.0f) targets %u at %.0f", (i32)npc.docID, npc.localID, npc.pos.x, npc.pos.y, (u32)chosen, best);
+				if(mastersLast && FindMasterActor(chosen)) {
+					i32 inRange = 0;
+					foreach_const(o, actorNpcList) if(MonsterHostile(npc, *o) && glm::length(vec2(o->pos) - vec2(npc.pos)) < ai.perception) inRange++;
+					LOG("Monster :: tower creature=%d (local %d) picks a master with %d hostile monsters in range", (i32)npc.docID, npc.localID, inRange);
+				}
 				npc.monsterTarget = chosen;
 				targetPos = &targetAt;
 				targetLost = false;
