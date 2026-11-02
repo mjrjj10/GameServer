@@ -19,7 +19,6 @@ static f32 YawGap(f32 a, f32 b)
 	return fabsf(d);
 }
 static const f32 MONSTER_WAYPOINT_REACHED = 60.0f;
-static const i32 HYP_MONSTER_LANE_SPREAD = 60;
 static const u32 MEASURED_MONSTER_HIT_ID_OFFSET = 1;
 static const f64 MEASURED_NPC_DIE_STAND_MS = 90.0;
 static const f32 HYP_MONSTER_REMOTE_WALL_HEIGHT = 100.0f;
@@ -1207,17 +1206,6 @@ bool World::UpdateMonsterSeek(ActorNpc& npc, const GameXmlContent::MonsterAi& ai
 	return true;
 }
 
-static vec3 LaneGoal(const eastl::fixed_vector<vec3,48,true>& path, i32 point, f32 offset)
-{
-	const vec3& goal = path[point];
-	if(offset == 0) return goal;
-	const vec2 from = point > 0 ? vec2(path[point - 1]) : (point + 1 < (i32)path.size() ? vec2(goal) - (vec2(path[point + 1]) - vec2(goal)) : vec2(goal));
-	const vec2 seg = vec2(goal) - from;
-	const f32 len = glm::length(seg);
-	if(len < 1.0f) return goal;
-	return vec3(vec2(goal) + vec2(-seg.y, seg.x) / len * offset, goal.z);
-}
-
 void World::UpdateMonsterAi(f32 delta)
 {
 	UpdateMonsterHits();
@@ -1617,14 +1605,10 @@ void World::UpdateMonsterAi(f32 delta)
 			replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, walk);
 		}
 		StartMonsterWalkState(npc, ai, walk);
-		if(!npc.laneOffsetSet) {
-			npc.laneOffsetSet = true;
-			npc.laneOffset = (f32)((i32)(RandUint() % (u32)(2 * HYP_MONSTER_LANE_SPREAD + 1)) - HYP_MONSTER_LANE_SPREAD);
-		}
 		const i32 pointBefore = npc.pathPoint;
 		f32 budget = walk * delta;
 		while(budget > 0 && npc.pathPoint < (i32)npc.path->size()) {
-			const vec3 goal = LaneGoal(*npc.path, npc.pathPoint, npc.laneOffset);
+			const vec3 goal = (*npc.path)[npc.pathPoint];
 			const vec2 rel = vec2(goal) - vec2(npc.pos);
 			const f32 dist = glm::length(rel);
 			if(dist <= MONSTER_WAYPOINT_REACHED) { npc.pathPoint++; continue; }
@@ -1635,7 +1619,7 @@ void World::UpdateMonsterAi(f32 delta)
 		}
 		if(npc.pathPoint < (i32)npc.path->size() && (npc.pathPoint != pointBefore || localTime >= npc.monsterNextSync)) {
 			npc.monsterNextSync = TimeAdd(localTime, TimeMsToTime(MONSTER_SYNC_MS));
-			replication->SendMonsterMoveToAll(npc.UID, npc.pos, LaneGoal(*npc.path, npc.pathPoint, npc.laneOffset), npc.rot.z, walk);
+			replication->SendMonsterMoveToAll(npc.UID, npc.pos, (*npc.path)[npc.pathPoint], npc.rot.z, walk);
 		}
 	}
 }

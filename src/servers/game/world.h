@@ -523,8 +523,6 @@ struct World
 		i32 growthLevel = 0;
 		const eastl::fixed_vector<vec3,48,true>* path = nullptr;
 		i32 pathPoint = 0;
-		f32 laneOffset = 0;
-		bool laneOffsetSet = false;
 		bool monsterStarted = false;
 		bool monsterAwake = false;
 		Time monsterHoldUntil = Time::ZERO;
