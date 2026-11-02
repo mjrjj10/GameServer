@@ -1940,6 +1940,20 @@ u16 Replication::RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i3
 	return remote.creator;
 }
 
+void Replication::SendWeaponStateTo(ClientHandle clientHd, ActorUID ownerUID, i32 weaponID, i32 state, i32 result)
+{
+	const LocalActorID ownerLocal = GetLocalActorID(clientHd, ownerUID);
+	if(ownerLocal == LocalActorID::INVALID) return;
+	Sv::SN_WeaponState packet;
+	packet.ownerID = ownerLocal;
+	packet.weaponID = weaponID;
+	packet.state = state;
+	packet.chargeLevel = 0;
+	packet.firingCombo = 0;
+	packet.result = result;
+	SendPacket(clientHd, packet);
+}
+
 void Replication::RelayWeaponState(ClientHandle senderHd, ActorUID ownerUID, i32 weaponID, i32 state, u8 chargeLevel, u8 firingCombo)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
