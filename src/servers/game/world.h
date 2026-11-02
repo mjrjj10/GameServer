@@ -468,6 +468,12 @@ struct World
 		CreatureIndex docID;
 		i32 localID;
 		PxRigidStatic* bodyBlocker = nullptr;
+		bool battleSent = false;
+		vec2 dragCenter = vec2(0);
+		f32 dragMin = 0;
+		f32 dragMax = 0;
+		f32 dragDuration = 0;
+		f32 dragElapsed = 0;
 		Faction faction;
 		i32 spawnAnim = 0;
 		i32 ownerID = 0;
@@ -926,6 +932,9 @@ struct World
 	bool BotGateBlocks(const Player& bot, const vec2& from, vec2* goal) const;
 	void BotKeepOutOfBlockers(const Player& bot, vec2* goal) const;
 	bool InsideBodyBlocker(const vec2& at, f32 margin) const;
+	void SetMonsterBattle(ActorNpc& npc, bool inBattle);
+	void StartNpcDrag(ActorNpc& npc, const StatusInfo* info, const vec2& center, f32 duration);
+	void UpdateNpcDrag(ActorNpc& npc, f32 delta);
 	struct PilotTour { u8 kind = 0; i32 localID = -1; ActorUID npc = ActorUID::INVALID; i32 doc = 0; Time since = Time::ZERO; bool hit = false; bool reacted = false; bool warped = false; };
 	PilotTour pilotTour;
 	eastl::fixed_vector<i32,128,true> pilotTourInteractions;

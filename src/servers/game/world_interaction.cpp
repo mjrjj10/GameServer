@@ -376,6 +376,35 @@ void World::UpdateNpcDefeat(ActorNpc& npc)
 	}
 }
 
+void World::StartNpcDrag(ActorNpc& npc, const StatusInfo* info, const vec2& center, f32 duration)
+{
+	if(!info || info->type != StatusType::DRAGGEDBYFORCE || duration <= 0) return;
+	npc.dragCenter = center;
+	npc.dragMin = info->dragForceMin;
+	npc.dragMax = info->dragForceMax;
+	npc.dragDuration = duration;
+	npc.dragElapsed = 0;
+}
+
+void World::UpdateNpcDrag(ActorNpc& npc, f32 delta)
+{
+	if(npc.dragElapsed >= npc.dragDuration) return;
+	const f32 dt = MIN(delta, npc.dragDuration - npc.dragElapsed);
+	const f32 accel = (npc.dragMax - npc.dragMin) / npc.dragDuration;
+	const f32 t0 = npc.dragElapsed;
+	const f32 t1 = t0 + dt;
+	const f32 step = (t1 * t1 - t0 * t0) * accel * 0.5f + npc.dragMin * dt;
+	const vec2 rel = npc.dragCenter - vec2(npc.pos);
+	const f32 dist = glm::length(rel);
+	npc.dragElapsed = t1;
+	if(dist <= 0.001f) return;
+	if(dist <= step) {
+		npc.pos = vec3(npc.dragCenter, npc.pos.z);
+		npc.dragElapsed = npc.dragDuration;
+	}
+	else npc.pos = vec3(vec2(npc.pos) + rel / dist * step, npc.pos.z);
+}
+
 void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 statusID)
 {
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
@@ -390,6 +419,7 @@ void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 s
 	const bool push = StartNpcPush(npc, info, caster.pos, &pushTo, &pushNominal, &pushSec);
 	const f32 duration = info && info->durationSec > 0 ? info->durationSec : (push ? pushSec : hold);
 	if(duration <= 0) return;
+	StartNpcDrag(npc, info, npcHitCenterSet ? vec2(npcHitCenter) : vec2(caster.pos), duration);
 	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
 		if(npcStatuses[i].npcUID == npc.UID && npcStatuses[i].statusID == statusID) npcStatuses.erase(npcStatuses.begin() + i);
 		else i++;

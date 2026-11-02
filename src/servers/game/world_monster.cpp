@@ -91,7 +91,7 @@ void World::MonsterAggroOnHit(ActorNpc& npc, Player& attacker)
 	npc.monsterReturning = false;
 	npc.monsterNextSearch = localTime;
 	LOG("Monster :: creature=%d (local %d) attacked by %ls, targets the attacker", (i32)npc.docID, npc.localID, attacker.name.data());
-	if(hostileMonsters || titanMode) replication->SendBattleStateToAll(npc.UID, true, npc.monsterAi->run * npc.speedMul);
+	SetMonsterBattle(npc, true);
 	replication->SendAiSetTargetToAll(npc.UID, npc.monsterTarget);
 }
 
@@ -264,6 +264,7 @@ void World::SaveProgress(const Player& player)
 void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDoc)
 {
 	if(npc.removeAt != Time::ZERO) return;
+	SetMonsterBattle(npc, false);
 	npc.hp = 0;
 	npc.killerUID = killerUID;
 	physics.RemoveWall(npc.bodyBlocker);
@@ -914,6 +915,13 @@ static f32 NpcPushProgress(f32 t)
 	return MEASURED_NPC_PUSH_CURVE[i] + (MEASURED_NPC_PUSH_CURVE[i + 1] - MEASURED_NPC_PUSH_CURVE[i]) * (x - (f32)i);
 }
 
+void World::SetMonsterBattle(ActorNpc& npc, bool inBattle)
+{
+	if(!npc.monsterAi || !(hostileMonsters || (map && map->ingameLevels)) || npc.battleSent == inBattle) return;
+	npc.battleSent = inBattle;
+	replication->SendBattleStateToAll(npc.UID, inBattle, inBattle ? npc.monsterAi->run : npc.monsterAi->walk);
+}
+
 void World::UpdateMonsterDash(ActorNpc& npc)
 {
 	if(npc.dashEnd == Time::ZERO || localTime < npc.dashStart) return;
@@ -1221,7 +1229,8 @@ void World::UpdateMonsterAi(f32 delta)
 			continue;
 		}
 		if(!npc.monsterAi || npc.hp <= 0 || npc.removeAt != Time::ZERO) continue;
-		if(!npc.bodyBlocker && npc.monsterAi->bodyBlockRadius > 0) npc.bodyBlocker = physics.CreateBodyBlocker(npc.pos, npc.monsterAi->bodyBlockRadius, npc.monsterAi->bodyBlockHeight);
+		if(!npc.bodyBlocker && npc.monsterAi->bodyBlockRadius > 0 && npc.monsterAi->walk <= 0 && npc.monsterAi->run <= 0) npc.bodyBlocker = physics.CreateBodyBlocker(npc.pos, npc.monsterAi->bodyBlockRadius, npc.monsterAi->bodyBlockHeight);
+		SetMonsterBattle(npc, npc.monsterTarget != ActorUID::INVALID);
 		if(combatLocked && hostileMonsters) continue;
 		if(npc.despawnAt != Time::ZERO && localTime >= npc.despawnAt) continue;
 		const GameXmlContent::MonsterAi& ai = *npc.monsterAi;
@@ -1230,6 +1239,7 @@ void World::UpdateMonsterAi(f32 delta)
 		UpdateNpcDefeat(npc);
 		UpdateNpcVictory(npc);
 		UpdateMonsterDash(npc);
+		UpdateNpcDrag(npc, delta);
 		if(!npc.monsterStarted) {
 			if(localTime < TimeAdd(npc.spawnedAt, TimeMsToTime(MAX(MONSTER_START_DELAY_MS, (f64)ai.spawnTime * 1000.0)))) continue;
 			npc.monsterStarted = true;
@@ -1276,7 +1286,7 @@ void World::UpdateMonsterAi(f32 delta)
 		const bool titanMode = map && map->ingameLevels;
 		if(neutral && targetLost) {
 			targetLost = false;
-			if(titanMode) replication->SendBattleStateToAll(npc.UID, false, walk);
+			SetMonsterBattle(npc, false);
 			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
 		}
 		static const f32 MEASURED_GOT_NEUTRAL_MAX_FIGHT_DIST = 3000.0f;
@@ -1418,13 +1428,13 @@ void World::UpdateMonsterAi(f32 delta)
 				npc.monsterTarget = chosen;
 				targetPos = &targetAt;
 				targetLost = false;
-				if(hostileMonsters || (map && map->ingameLevels)) replication->SendBattleStateToAll(npc.UID, true, run);
+				SetMonsterBattle(npc, true);
 				replication->SendAiSetTargetToAll(npc.UID, chosen);
 			}
 		}
 		if(targetLost) {
 			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
-			if(hostileMonsters || (map && map->ingameLevels)) replication->SendBattleStateToAll(npc.UID, false, walk);
+			SetMonsterBattle(npc, false);
 		}
 
 		if(targetPos && attack && ai.awake != ActionStateID::INVALID && !npc.monsterAwake) {
