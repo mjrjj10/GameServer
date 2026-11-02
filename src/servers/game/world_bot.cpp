@@ -169,6 +169,13 @@ void World::BuildTitanSaveAreas()
 				if(!cond || cond->kind != GameXmlContent::LevelEventNode::TEAM_CONDITION || (cond->team != Faction::RED && cond->team != Faction::BLUE)) continue;
 				foreach_const(s, cond->outputs) {
 					const GameXmlContent::LevelEventNode* save = map->FindLevelEvent(*s);
+					if(save && save->kind == GameXmlContent::LevelEventNode::STATUS_CHANGE && save->apply && save->statusIndex != 0) {
+						const StatusInfo* heal = GetGameXmlContent().FindStatus(save->statusIndex);
+						if(heal && heal->type == StatusType::HEAL) {
+							titanHealAreas[(i32)cond->team] = vec2(area->pos);
+							titanHealAreaKnown[(i32)cond->team] = true;
+						}
+					}
 					if(!save || save->kind != GameXmlContent::LevelEventNode::SAVE_GOT_PIECE) continue;
 					titanSaveAreas[(i32)cond->team] = vec2(area->pos);
 					titanSaveAreaKnown[(i32)cond->team] = true;
@@ -348,7 +355,7 @@ vec2 World::BotNavStep(Player& bot, const vec2& goal)
 		return goal;
 	}
 	if(bot.botRoute.empty() || glm::length(goal - bot.botRouteGoal) > BOT_NAV_REROUTE_DIST) BotPlanRoute(bot, goal);
-	while(!bot.botRoute.empty() && glm::length(vec2(botNav[bot.botRoute.front()].pos) - here) < BOT_NAV_REACHED) bot.botRoute.erase(bot.botRoute.begin());
+	while(!bot.botRoute.empty() && (glm::length(vec2(botNav[bot.botRoute.front()].pos) - here) < BOT_NAV_REACHED || InsideBodyBlocker(vec2(botNav[bot.botRoute.front()].pos), PLAYER_BODY_RADIUS))) bot.botRoute.erase(bot.botRoute.begin());
 	if(bot.botRoute.size() > 1 && BotSees(pos, botNav[bot.botRoute[1]].pos)) bot.botRoute.erase(bot.botRoute.begin());
 	if(bot.botRoute.empty()) return goal;
 	return vec2(botNav[bot.botRoute.front()].pos);
@@ -366,7 +373,7 @@ bool World::BotRetreat(Player& bot, vec2* goal)
 	if(ratio < HYP_BOT_RETREAT_HP) bot.botRetreat = true;
 	else if(ratio >= HYP_BOT_RETREAT_DONE_HP) bot.botRetreat = false;
 	if(!bot.botRetreat || bot.titanForm >= 0) return false;
-	*goal = vec2(bot.spawnPos);
+	*goal = titanHealAreaKnown[bot.team] ? titanHealAreas[bot.team] : vec2(bot.spawnPos);
 	return true;
 }
 
@@ -390,7 +397,9 @@ bool World::BotLaneGoal(Player& bot, vec2* goal)
 		const f32 d = glm::length(lane[k] - here);
 		if(d < nearestDist) { nearestDist = d; nearest = k; }
 	}
-	*goal = lane[MIN(nearest + BOT_LANE_LOOKAHEAD, (i32)lane.size() - 1)];
+	i32 next = MIN(nearest + BOT_LANE_LOOKAHEAD, (i32)lane.size() - 1);
+	while(next < (i32)lane.size() - 1 && InsideBodyBlocker(lane[next], PLAYER_BODY_RADIUS + BOT_NAV_REACHED)) next++;
+	*goal = lane[next];
 	return true;
 }
 
@@ -758,6 +767,14 @@ void World::BuildTeamGates()
 		built++;
 	}
 	LOG("Gate :: %d team gate walls", built);
+}
+
+bool World::InsideBodyBlocker(const vec2& at, f32 margin) const
+{
+	foreach_const(it, actorNpcList) {
+		if(it->bodyBlocker && it->monsterAi && glm::length(at - vec2(it->pos)) < it->monsterAi->bodyBlockRadius + margin) return true;
+	}
+	return false;
 }
 
 void World::BotKeepOutOfBlockers(const Player& bot, vec2* goal) const

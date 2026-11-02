@@ -925,6 +925,7 @@ struct World
 	eastl::fixed_vector<TeamGate,32,false> teamGates;
 	bool BotGateBlocks(const Player& bot, const vec2& from, vec2* goal) const;
 	void BotKeepOutOfBlockers(const Player& bot, vec2* goal) const;
+	bool InsideBodyBlocker(const vec2& at, f32 margin) const;
 	struct PilotTour { u8 kind = 0; i32 localID = -1; ActorUID npc = ActorUID::INVALID; i32 doc = 0; Time since = Time::ZERO; bool hit = false; bool reacted = false; bool warped = false; };
 	PilotTour pilotTour;
 	eastl::fixed_vector<i32,128,true> pilotTourInteractions;
@@ -1331,6 +1332,8 @@ public:
 	void UpdateMapInteractions();
 	eastl::array<vec2,2> titanSaveAreas;
 	eastl::array<bool,2> titanSaveAreaKnown = {{ false, false }};
+	eastl::array<vec2,2> titanHealAreas;
+	eastl::array<bool,2> titanHealAreaKnown = {{ false, false }};
 	enum EndKill { END_KILL_TOWER = 0, END_KILL_BOSS, END_KILL_MINION, END_KILL_NEUTRAL };
 	bool titanSaveAreasBuilt = false;
 	bool BotObjective(const Player& bot, vec2* goal);
