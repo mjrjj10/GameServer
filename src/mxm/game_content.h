@@ -1259,6 +1259,8 @@ struct GameXmlContent
 		f32 groggyChance = 0;
 		f32 groggyTime = 0;
 		f32 spawnTime = 0;
+		f32 chaseRing = 0;
+		f32 chaseArc = 0;
 		i32 masterMark = 0;
 		i32 teamBuff = 0;
 		bool playerSide = false;

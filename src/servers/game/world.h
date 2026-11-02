@@ -564,6 +564,7 @@ struct World
 		Time monsterNextSync = Time::ZERO;
 		Time monsterLastTurn = Time::ZERO;
 		f32 monsterSyncYaw = 0.0f;
+		vec2 monsterChaseOffset = vec2(0);
 		bool monsterReturning = false;
 		bool monsterWalkStateOn = false;
 		bool monsterLowHpDone = false;
