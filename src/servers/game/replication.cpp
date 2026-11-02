@@ -3655,7 +3655,7 @@ void Replication::FrameDifference()
 		const f32 sinceSent = (f32)TimeDiffSec(TimeDiff(sent.at, TimeRelNow()));
 		const bool skillSend = cur.skillMoving && (!prev.skillMoving || (moved && sinceSent >= MEASURED_SYNC_SKILL_MOVE_MIN_SEC));
 		if(cur.clientHd == ClientHandle::INVALID && !positionUpdated &&
-		   (cur.skillMoving ? skillSend : (cadenceSend || blockedChanged || (!sent.blocked && fabs(sendSpeed - sent.speed) > speedEpsilon))))
+		   (cur.skillMoving ? (skillSend || (stopped && glm::length(sent.moveDir) > 0.01f)) : (cadenceSend || blockedChanged || (!sent.blocked && fabs(sendSpeed - sent.speed) > speedEpsilon))))
 		{
 			vec2 syncDir = sendDir;
 			f32 syncSpeed = sendSpeed;
