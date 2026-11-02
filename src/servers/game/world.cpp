@@ -695,17 +695,17 @@ World::ActorMasterHandle World::MasterInvalidHandle()
 }
 
 static const f64 CAST_LOCK_MS = 500.0;
+static const u32 ERROR_TYPE_SKILL_INVALID_STATE_BLOCK = 563;
 static const i32 ULTIMATE_SKILL_SUFFIX = 50;
 
 void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPosIn, Slice<const ActorUID> targets, f32 clientTime, ActionStateID forcedAction)
 {
 	const SkillID skillID = ResolveComboRecast(player, skillIn, forcedAction);
 	const vec3 castPos = ResolveCastPos(player, skillID, castPosIn, forcedAction);
-	static const u32 HYP_CAST_REFUSED = 102;
 	if(frozen || combatLocked || !SkillTargetsAllowed(player, skillID, targets)) {
 		if(forcedAction == ActionStateID::INVALID && player.clientHd != ClientHandle::INVALID) {
 			LOG("Skill :: %ls cast %d refused (frozen %d, locked %d)", player.name.data(), (i32)skillID, (i32)frozen, (i32)combatLocked);
-			replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, HYP_CAST_REFUSED);
+			replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_SKILL_INVALID_STATE_BLOCK);
 		}
 		return;
 	}
@@ -985,7 +985,6 @@ const GameXmlContent::CostLevel* World::PickCostLevel(const Player& player, Skil
 	return picked;
 }
 
-static const u32 ERROR_TYPE_SKILL_INVALID_STATE_BLOCK = 563;
 
 bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets)
 {

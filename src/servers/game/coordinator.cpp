@@ -265,8 +265,9 @@ void InstancePool::Lane::Update()
 	for(auto room = instancePvpList.begin(); room != instancePvpList.end();) {
 		bool linked = false;
 		foreach_const(c, this->clientList) if(c->sortieUID == room->sortieUID) { linked = true; break; }
-		if(linked || !room->game.Finished()) { ++room; continue; }
-		LOG("[Lane_%d] Destroyed game (sortieUID=%llu)", laneIndex, room->sortieUID);
+		const bool abandoned = room->phase == PvpInstance::Phase::PlayingGame;
+		if(linked || (!room->game.Finished() && !abandoned)) { ++room; continue; }
+		LOG("[Lane_%d] Destroyed game (sortieUID=%llu)%s", laneIndex, room->sortieUID, room->game.Finished() ? "" : " abandoned by every client");
 		room->game.Cleanup();
 		instancePvpMap.erase(room->sortieUID);
 		room = instancePvpList.erase(room);
