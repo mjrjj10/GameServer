@@ -3631,8 +3631,22 @@ void Replication::FrameDifference()
 		const vec2 step = vec2(cur.pos - prev.pos);
 		const f32 stepLen = glm::length(step);
 		const vec2 realDir = stepLen > 0.01f ? step / stepLen : cur.moveDir;
-		const vec2 sendDir = stopped ? vec2(0) : (moved ? realDir : sent.moveDir);
-		const f32 sendSpeed = stopped ? 0.0f : (moved ? cur.speed * MAX(glm::dot(cur.moveDir, realDir), 0.0f) : sent.speed);
+		static const f64 MEASURE_WINDOW_SEC = 0.25;
+		static const f32 HYP_BLOCKED_SPEED_RATIO = 0.35f;
+		if(sent.probeAt == Time::ZERO) { sent.probeAt = TimeRelNow(); sent.probePos = cur.pos; }
+		const f64 probeElapsed = TimeDiffSec(TimeDiff(sent.probeAt, TimeRelNow()));
+		if(probeElapsed >= MEASURE_WINDOW_SEC) {
+			sent.measuredSpeed = glm::length(vec2(cur.pos - sent.probePos)) / (f32)probeElapsed;
+			sent.probePos = cur.pos;
+			sent.probeAt = TimeRelNow();
+		}
+		const f32 nominalSpeed = cur.speed * MAX(glm::dot(cur.moveDir, realDir), 0.0f);
+		const bool wasBlocked = sent.blocked;
+		static const f32 MEASURED_SYNC_MIN_MOVING_SPEED = 200.0f;
+		sent.blocked = cur.clientHd == ClientHandle::INVALID && !cur.skillMoving && moved && (nominalSpeed < MEASURED_SYNC_MIN_MOVING_SPEED || (sent.measuredSpeed >= 0.0f && sent.measuredSpeed < MAX(nominalSpeed * HYP_BLOCKED_SPEED_RATIO, MEASURED_SYNC_MIN_MOVING_SPEED)));
+		const vec2 sendDir = stopped || sent.blocked ? vec2(0) : (moved ? realDir : sent.moveDir);
+		const f32 sendSpeed = stopped || sent.blocked ? 0.0f : (moved ? nominalSpeed : sent.speed);
+		const bool blockedChanged = sent.blocked != wasBlocked;
 		const bool dirNow = glm::length(sendDir) > 0.01f;
 		const bool dirSent = glm::length(sent.moveDir) > 0.01f;
 		const bool turned = dirNow != dirSent || (dirNow && glm::dot(glm::normalize(sendDir), glm::normalize(sent.moveDir)) < SYNC_TURN_COS);
@@ -3641,7 +3655,7 @@ void Replication::FrameDifference()
 		const f32 sinceSent = (f32)TimeDiffSec(TimeDiff(sent.at, TimeRelNow()));
 		const bool skillSend = cur.skillMoving && (!prev.skillMoving || (moved && sinceSent >= MEASURED_SYNC_SKILL_MOVE_MIN_SEC));
 		if(cur.clientHd == ClientHandle::INVALID && !positionUpdated &&
-		   (cur.skillMoving ? skillSend : (cadenceSend || fabs(sendSpeed - sent.speed) > speedEpsilon)))
+		   (cur.skillMoving ? skillSend : (cadenceSend || blockedChanged || (!sent.blocked && fabs(sendSpeed - sent.speed) > speedEpsilon))))
 		{
 			vec2 syncDir = sendDir;
 			f32 syncSpeed = sendSpeed;

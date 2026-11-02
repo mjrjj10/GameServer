@@ -291,6 +291,10 @@ struct Replication
 		f32 upperYaw = 0;
 		f32 upperPitch = 0;
 		f32 bodyYaw = 0;
+		vec3 probePos = vec3(0);
+		Time probeAt = Time::ZERO;
+		f32 measuredSpeed = -1.0f;
+		bool blocked = false;
 	};
 	eastl::fixed_map<ActorUID,SentMove,64> sentMoves;
 
