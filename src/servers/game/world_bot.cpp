@@ -703,7 +703,7 @@ bool World::Pilot(Player& p, PilotDecision* out)
 	}
 	if(!out->hasTarget) {
 		foreach_const(npc, actorNpcList) {
-			if(!npc->monsterAi || !NpcHittableBy(*npc, p)) continue;
+			if(!npc->monsterAi || !NpcHittableBy(*npc, p) || NpcHasStatusType(*npc, StatusType::GODMODE)) continue;
 			if(IsStructure(*npc) && !BotSiegeOk(p, *npc)) continue;
 			if(!IsStructure(*npc) && BotDangerAt(p, vec2(npc->pos), nullptr, nullptr)) continue;
 			const f32 d = glm::length(vec2(npc->pos) - here);
