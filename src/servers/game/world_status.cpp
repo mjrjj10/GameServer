@@ -1031,6 +1031,12 @@ void World::UpdateStatuses()
 				it->healTicksDone++;
 				const i32 amount = (i32)(m->mul ? target.Main().hpMax * m->value / 100.0f : m->value + it->skillPower * it->info->healMul);
 				HealPlayer(players[it->casterIndex], target, amount * it->overlap);
+				ActorMaster& bench = target.Sub();
+				if(it->info->bothCharacters && bench.hp > 0 && bench.hp < bench.hpMax) {
+					const i32 benchAmount = (i32)(m->mul ? bench.hpMax * m->value / 100.0f : m->value + it->skillPower * it->info->healMul) * it->overlap;
+					bench.hp = MIN(bench.hp + benchAmount, bench.hpMax);
+					replication->SendStatToAll(bench.UID, (i32)StatType::STAT_TYPE_HEALTH, (f32)bench.hp, (f32)bench.hpMax, STAT_REASON_REGEN);
+				}
 			}
 		}
 

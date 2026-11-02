@@ -33,6 +33,7 @@ static inline f32 StatusSentDuration(const StatusInfo& st)
 	return st.durationSec > 0 ? st.durationSec : (st.durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f);
 }
 static const f32 OBSTRUCT_JUMPABLE_HEIGHT = 120.0f;
+static const u32 STAT_REASON_REGEN = 4;
 static const f32 OBSTRUCT_SIDE = 50.0f;
 
 static inline f32 SkillMoveDuration(const GameXmlContent& content, ClassType cls, const GameXmlContent::Action& action, i32 animIndex)

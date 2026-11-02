@@ -527,6 +527,8 @@ struct World
 		bool monsterAwake = false;
 		Time monsterHoldUntil = Time::ZERO;
 		Time defeatLieAt = Time::ZERO;
+		Time airborneAt = Time::ZERO;
+		i32 airborneStep = 0;
 		Time stateEndAt = Time::ZERO;
 		f32 speedMul = 1.0f;
 		u8 victoryStep = 0;
@@ -761,6 +763,7 @@ struct World
 		ActorUID target;
 		i32 hitsLeft;
 		bool areaDone;
+		bool wallHitDone = false;
 		u32 clientRemoteID = 0;
 		f32 syncIn = MEASURED_REMOTE_SYNC_FIRST_SEC;
 		i32 penetrationLeft = 0;
@@ -1470,12 +1473,13 @@ private:
 	void RemoteHitAlongPath(RemoteInst& inst);
 	void UpdateStatuses();
 	void RemoteApplyArea(RemoteInst& inst);
+	void RemoteHitWalls(RemoteInst& inst, f32 farEdge);
 	f32 LagDistToSegment(const Player& p, const vec2& a, const vec2& b) const;
 	bool LagSegmentHits(const Player& p, const vec2& a, const vec2& b, f32 lateral, f32 forwardReach) const;
 	f32 LagDistToPoint(const Player& p, const vec2& point) const;
 	vec2 LagClosestPos(const Player& p, const vec2& point) const;
 	bool RemoteHit(RemoteInst& inst, Player& target);
-	void TriggerSkillHitEvent(const RemoteInst& inst, Player& owner, Player& target);
+	void TriggerSkillHitEvent(const RemoteInst& inst, Player& owner, ActorUID targetUID, const vec3& targetPos);
 	i32 PenetrationCost(const Player& p) const;
 	void BeginRemoteActivation(const RemoteInst& inst);
 	void AddRemoteActivation(const Player& target, f32 z);

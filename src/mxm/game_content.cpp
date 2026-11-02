@@ -3705,7 +3705,10 @@ bool GameXmlContent::LoadStatusData()
 			pCommon->QueryAttribute("_MaxOverlapCount", &st.maxOverlap);
 			pCommon->QueryAttribute("_NextStatusIndex", &st.nextStatus);
 			pCommon->QueryFloatAttribute("_TargetingRange", &st.targetingRange);
-			if(const char* tt = pCommon->Attribute("_TargetingType")) st.targetsFriendlyPc = EA::StdC::Strcmp(tt, "FRIENDLY_PC") == 0;
+			if(const char* tt = pCommon->Attribute("_TargetingType")) {
+				st.targetsFriendlyPc = EA::StdC::Strcmp(tt, "FRIENDLY_PC") == 0;
+				st.bothCharacters = EA::StdC::Strcmp(tt, "BOTH_CHARACTER") == 0;
+			}
 			if(XMLElement* pDef = pCommon->FirstChildElement("_DEFENDER")) pDef->QueryFloatAttribute("_ExplodeDmg", &st.explodeDamage);
 			pCommon->QueryFloatAttribute("_AdditionalDamageByCaster", &st.additionalDamageByCaster);
 			{

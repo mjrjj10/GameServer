@@ -341,7 +341,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	}
 	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty()) {
 		AddRemoteActivation(target, inst.pos.z);
-		if(enemy) TriggerSkillHitEvent(inst, owner, target);
+		if(enemy) TriggerSkillHitEvent(inst, owner, target.Main().UID, target.body->GetWorldPos());
 		return true;
 	}
 
@@ -458,14 +458,14 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 		SpawnRemoteRules(*this, copy, remote.onHitCharacter, at, (i32)target.index, RemoteIdx::INVALID, true);
 	}
 
-	if(enemy) TriggerSkillHitEvent(inst, owner, target);
+	if(enemy) TriggerSkillHitEvent(inst, owner, target.Main().UID, target.body->GetWorldPos());
 	statusFromBehind = false;
 	statusForceCenterSet = false;
 	statusPushDirSet = false;
 	return true;
 }
 
-void World::TriggerSkillHitEvent(const RemoteInst& inst, Player& owner, Player& target)
+void World::TriggerSkillHitEvent(const RemoteInst& inst, Player& owner, ActorUID targetUID, const vec3& targetPos)
 {
 	const auto& content = GetGameXmlContent();
 	const i32 hitEventRemote = content.FindSkillHitEventRemote((i32)inst.skillID);
@@ -473,19 +473,18 @@ void World::TriggerSkillHitEvent(const RemoteInst& inst, Player& owner, Player& 
 	if(eastl::find(comboTriggeredCasts.begin(), comboTriggeredCasts.end(), inst.castID) != comboTriggeredCasts.end()) return;
 	if(comboTriggeredCasts.full()) comboTriggeredCasts.erase(comboTriggeredCasts.begin());
 	comboTriggeredCasts.push_back(inst.castID);
-	owner.memorizedTarget = target.Main().UID;
-	const ActorUID targetUID = target.Main().UID;
-	const vec2 rel = vec2(target.body->GetWorldPos() - owner.body->GetWorldPos());
+	owner.memorizedTarget = targetUID;
+	const vec2 rel = vec2(targetPos - owner.body->GetWorldPos());
 	LOG("ComboHit :: %ls skill=%d remote=%d -> next part", owner.name.data(), (i32)inst.skillID, (i32)inst.remote->ID);
 	castCostLevel = inst.costLevel;
 	schedulePassOffset = ComboPassOffset(owner, inst.skillID);
-	ScheduleSkillRemotes(owner, inst.skillID, target.body->GetWorldPos(), Slice<const ActorUID>(&targetUID, 1), atan2f(rel.y, rel.x), 1);
+	ScheduleSkillRemotes(owner, inst.skillID, targetPos, Slice<const ActorUID>(&targetUID, 1), atan2f(rel.y, rel.x), 1);
 	schedulePassOffset = 0;
 	castCostLevel = nullptr;
 	if(Config().DevShowcase) return;
 	if(owner.clientHd != ClientHandle::INVALID) {
 		auto sk = content.skillMap.find(inst.skillID);
-		if(sk != content.skillMap.end()) UpdateComboSlot(owner, inst.skillID, sk->second.type, target.body->GetWorldPos(), true);
+		if(sk != content.skillMap.end()) UpdateComboSlot(owner, inst.skillID, sk->second.type, targetPos, true);
 	}
 	i32 combo = ComboSkillFor(owner, (i32)inst.skillID);
 	if(combo == 0) combo = content.GetNextComboSkill((i32)inst.skillID);
@@ -540,6 +539,7 @@ void World::RemoteApplyShape(RemoteInst& inst)
 		default: return;
 	}
 	if(length <= 0) return;
+	RemoteHitWalls(inst, start + length);
 
 	foreach(it, players) {
 		const vec3 pos = it->body->GetWorldPos();
@@ -564,6 +564,23 @@ void World::RemoteApplyShape(RemoteInst& inst)
 	}
 }
 
+void World::RemoteHitWalls(RemoteInst& inst, f32 farEdge)
+{
+	const Remote& remote = *inst.remote;
+	if(inst.wallHitDone || inst.damage <= 0 || remote.attackMultiplier <= 0 || farEdge <= 0) return;
+	if(remote.damageGroup != Remote::DamageGroup::eENEMY && remote.damageGroup != Remote::DamageGroup::eALL) return;
+	const Player& owner = players[inst.ownerIndex];
+	if(!owner.body) return;
+	const vec2 from = vec2(owner.body->GetWorldPos());
+	const vec2 to = vec2(inst.pos) + inst.dir * farEdge;
+	if(glm::length(to - from) < 1.0f) return;
+	f32 wallDist = 0;
+	const PxRigidActor* wallActor = nullptr;
+	if(!physics.RaycastStatic(vec3(from, inst.wallZ), vec3(to, inst.wallZ), &wallDist, (i32)owner.team, &wallActor) || !wallActor) return;
+	inst.wallHitDone = true;
+	OnDynamicHit(wallActor, inst.clientRemoteID, ClientHandle::INVALID, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, vec3(from + glm::normalize(to - from) * wallDist, inst.wallZ));
+}
+
 void World::RemoteApplyArea(RemoteInst& inst)
 {
 	const Remote& remote = *inst.remote;
@@ -571,6 +588,7 @@ void World::RemoteApplyArea(RemoteInst& inst)
 		RemoteApplyShape(inst);
 		return;
 	}
+	RemoteHitWalls(inst, RemoteBoundOffset(remote) + (remote.boundType == Remote::BoundType::E_BOUND_SPHERE ? remote.boundSize[0] * 0.5f : remote.boundSize[1] * 0.5f));
 	const bool fanBox = remote.boundType == Remote::BoundType::E_BOUND_BOX && remote.angle > 0;
 	const vec2 origin = vec2(inst.pos) + inst.dir * RemoteBoundOffset(remote);
 	if(remote.boundType == Remote::BoundType::E_BOUND_SPHERE || fanBox) {
@@ -664,6 +682,7 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 		ApplyStatus(owner, owner, remote.onHitOwnerStatus);
 		statusCasterOverride = prevCaster;
 	}
+	if(npc.hp > 0 && !owner.dead) TriggerSkillHitEvent(inst, owner, npc.UID, npc.pos);
 	if(npc.hp <= 0 || npc.ownerUID != ActorUID::INVALID) return true;
 	foreach_const(st, remote.statuses) {
 		if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(players[inst.ownerIndex], npc, st->statusID, false);

@@ -297,6 +297,7 @@ struct StatusInfo
 	i32 linkTargetStatus = 0;
 	f32 targetingRange = 0;
 	bool targetsFriendlyPc = false;
+	bool bothCharacters = false;
 	f32 explodeDamage = 0;
 	f32 additionalDamageByCaster = 0;
 	NextCondition nextCondition = NextCondition::NONE;

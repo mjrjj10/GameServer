@@ -24,7 +24,6 @@ static const i32 STAT_TAG_HEALTHREGEN_RATIO = 27;
 static const i32 STAT_TAG_STAMINAREGEN_RATIO = 29;
 static const i32 STAT_TAG_MANAREGEN_VALUE = 44;
 static const i32 STAT_TAG_MANAREGEN_RATIO = 47;
-static const u32 STAT_REASON_REGEN = 4;
 static const f64 REGEN_INTERVAL_MS = 1000.0;
 static const f64 RAGE_DECAY_DELAY_MS = 6000.0;
 static const f32 HIDE_DETECT_RADIUS_UNIT = 100.0f;

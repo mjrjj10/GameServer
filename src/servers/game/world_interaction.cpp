@@ -316,6 +316,8 @@ static const f32 NPC_DEFEAT_SYNC_SEC = 1.0f;
 static const f32 NPC_LIE_SEC = 1.0f;
 static const f32 MEASURED_NPC_PUSH_BASE_DISTANCE = 500.0f;
 static const f32 NPC_PUSH_RAY_HEIGHT = 100.0f;
+static const f32 MEASURED_NPC_AIRBORNE_LIFT[] = { 0.0f, 298.0f, 371.0f, 391.0f, 356.0f, 322.0f, 284.0f, 210.0f, 84.0f, 0.0f };
+static const f64 MEASURED_NPC_AIRBORNE_STEP_MS = 100.0;
 
 static bool HypPveMonsterTakesCc(const World::ActorNpc& npc)
 {
@@ -349,6 +351,8 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 	npc.actionState = state;
 	replication->SendMonsterStateToAll(npc.UID, state, npc.pos, 0.0f);
 	npc.defeatLieAt = lie ? TimeAdd(localTime, TimeMsToTime(sec * 1000.0)) : Time::ZERO;
+	npc.airborneAt = info->type == StatusType::AIRBORNE ? localTime : Time::ZERO;
+	npc.airborneStep = 0;
 	npc.stateEndAt = TimeAdd(localTime, TimeMsToTime(total * 1000.0));
 	if(npc.monsterHoldUntil < npc.stateEndAt) npc.monsterHoldUntil = npc.stateEndAt;
 	npc.monsterChasing = false;
@@ -384,6 +388,16 @@ bool World::StartNpcPush(ActorNpc& npc, const StatusInfo* info, const vec3& sour
 
 void World::UpdateNpcDefeat(ActorNpc& npc)
 {
+	if(npc.airborneAt != Time::ZERO) {
+		const i32 step = (i32)(TimeDurationMs(npc.airborneAt, localTime) / MEASURED_NPC_AIRBORNE_STEP_MS);
+		const i32 last = (i32)(sizeof(MEASURED_NPC_AIRBORNE_LIFT) / sizeof(MEASURED_NPC_AIRBORNE_LIFT[0])) - 1;
+		if(step > npc.airborneStep) {
+			npc.airborneStep = MIN(step, last);
+			const vec3 lifted = vec3(vec2(npc.pos), npc.pos.z + MEASURED_NPC_AIRBORNE_LIFT[npc.airborneStep]);
+			replication->SendMonsterMoveToAll(npc.UID, lifted, lifted, npc.rot.z, 0.0f);
+			if(npc.airborneStep >= last) npc.airborneAt = Time::ZERO;
+		}
+	}
 	if(npc.defeatLieAt != Time::ZERO && localTime >= npc.defeatLieAt) {
 		npc.defeatLieAt = Time::ZERO;
 		npc.actionState = ActionStateID::LIE_BEHAVIORSTATE;
