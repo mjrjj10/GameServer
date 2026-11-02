@@ -949,6 +949,7 @@ struct World
 	bool UpdateMonsterSeek(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, f32 speed, f32 delta);
 	bool UpdateMonsterAllyBuff(ActorNpc& npc, const GameXmlContent::MonsterAi& ai);
 	void UpdateMonsterDash(ActorNpc& npc);
+	eastl::hash_map<u32, u32> monsterRemotePenetration;
 	ActorUID StructurePickMonster(const ActorNpc& npc, const GameXmlContent::MonsterAi& ai, vec3* at, const GameXmlContent::MonsterAttack** attack) const;
 	void TowerCallForHelp(const Player& attacker, const vec3& victimPos, Faction victimTeam, const ActorNpc* hitTower);
 	struct PendingTrapHit { ActorUID dynamicUID; const GameXmlContent::DynamicTrapRemote* remote; u32 seed; vec3 nodePos; vec2 nodeDir; ActorUID targetUID; i32 playerIndex; };

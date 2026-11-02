@@ -539,6 +539,7 @@ struct Remote
 	f32 homingTime = 0;
 	bool homingLockOn = false;
 	f32 angularVel = 0;
+	f32 forceDelay = 0;
 	f32 criticalRate = 0;
 	i32 onHitOwnerStatus = 0;
 	f32 activateDelay = 0;
@@ -1247,6 +1248,7 @@ struct GameXmlContent
 		f32 returnSpeedRate = 1;
 		f32 bodyBlockRadius = 0;
 		u8 sizeRank = 0;
+		i32 density = 0;
 		f32 bodyBlockHeight = 0;
 		eastl::fixed_vector<i32,8,false> spawnStatuses;
 		eastl::fixed_vector<i32,4,false> dieRemotes;

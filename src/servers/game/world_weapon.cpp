@@ -569,7 +569,7 @@ void World::UpdateWeaponHeat(Player& player)
 		player.overheatUntil[m] = Time::ZERO;
 		player.heat[m] = h->overheatResetGauge;
 		player.heatLastShot[m] = TimeAdd(localTime, TimeMsToTime(-h->autoRegenDelay * 1000.0));
-		replication->SendGaugeToAll(player.userID, 1, false, 0, (u16)h->maxGauge, (u16)h->maxGauge);
+		replication->SendGauge(player.clientHd, player.userID, 1, false, 0, (u16)h->maxGauge, (u16)h->maxGauge);
 		LOG("Overheat :: %ls weapon cooled down", player.name.data());
 	}
 }

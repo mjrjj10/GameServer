@@ -1429,6 +1429,7 @@ bool GameXmlContent::LoadMonsterAi()
 			if(XMLElement* p = pInfo->FirstChildElement("Ai_ComData")) p->QueryFloatAttribute("_ReturnToSpawnPosSpeedRate", &found->second.returnSpeedRate);
 			const XMLElement* entity = pInfo->FirstChildElement("EntityComData");
 			const char* sizeType = entity ? entity->Attribute("_SizeType") : nullptr;
+			if(entity) entity->QueryIntAttribute("_DensityCount", &found->second.density);
 			if(sizeType) found->second.sizeRank = EA::StdC::Strstr(sizeType, "BIG") ? 3 : EA::StdC::Strstr(sizeType, "MEDIUM") ? 2 : EA::StdC::Strstr(sizeType, "SMALL") ? 1 : 0;
 			const XMLElement* mesh = pInfo->FirstChildElement("PhysXMeshComData");
 			const char* group = mesh ? mesh->Attribute("_ActorGroup") : nullptr;
@@ -3085,6 +3086,7 @@ bool GameXmlContent::LoadRemoteData()
 				remote.maxSpeed = _MaxSpeed;
 				remote.maxDistance = _MaxDistance;
 				pComp->QueryFloatAttribute("_AngularVel", &remote.angularVel);
+				pComp->QueryFloatAttribute("_ForceDelay", &remote.forceDelay);
 				if(pComp->Attribute("_GroundMoveType")) remote.groundMoveOffsetZ = pComp->FloatAttribute("_GroundMoveOffsetZ", 0.0f);
 			}
 

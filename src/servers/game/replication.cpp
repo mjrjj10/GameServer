@@ -1605,8 +1605,9 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 	LOG("Replication :: game end (red %d - blue %d)", redScore, blueScore);
 }
 
-void Replication::SendGaugeToAll(UserID userID, u8 updateType, bool overheated, f32 overheatTime, u16 gauge, u16 maxGauge)
+void Replication::SendGauge(ClientHandle clientHd, UserID userID, u8 updateType, bool overheated, f32 overheatTime, u16 gauge, u16 maxGauge)
 {
+	if(clientHd == ClientHandle::INVALID) return;
 	PacketWriter<Sv::SN_Gauge> packet;
 	packet.Write<u32>((u32)userID);
 	packet.Write<u8>(updateType);
@@ -1614,11 +1615,7 @@ void Replication::SendGaugeToAll(UserID userID, u8 updateType, bool overheated, 
 	packet.Write<f32>(overheatTime);
 	packet.Write<u16>(gauge);
 	packet.Write<u16>(maxGauge);
-
-	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
-		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
-		SendPacket(clientHandle[clientID], packet);
-	}
+	SendPacket(clientHd, packet);
 }
 
 void Replication::SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 score, i32 teamKills, i32 teamScore, UserID victimID, u8 victimTeam, i32 victimDeaths, i32 victimTeamKills)

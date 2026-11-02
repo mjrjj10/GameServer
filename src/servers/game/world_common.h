@@ -108,7 +108,7 @@ static inline bool WeaponHeatShot(World::Player& player, Time now, Replication* 
 	if(player.heat[m] >= h->maxGauge) {
 		player.heat[m] = h->maxGauge;
 		player.overheatUntil[m] = TimeAdd(now, TimeMsToTime(h->overheatDuration * 1000.0));
-		replication->SendGaugeToAll(player.userID, 1, true, h->overheatDuration, (u16)h->maxGauge, (u16)h->maxGauge);
+		replication->SendGauge(player.clientHd, player.userID, 1, true, h->overheatDuration, (u16)h->maxGauge, (u16)h->maxGauge);
 		LOG("Overheat :: %ls locked %.1fs", player.name.data(), h->overheatDuration);
 	}
 	return true;

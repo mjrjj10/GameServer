@@ -144,6 +144,14 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	inst.firePath = GetGameXmlContent().FindFireNodePath(remote->ID);
 	inst.firePathYaw = atan2f(dir.y, dir.x);
 	inst.firePathDone = 0;
+	if(target != ActorUID::INVALID && remote->behaviorType == Remote::BehaviorType::HOMING && remote->homingAngle > 0 && remote->homingAngle < 360 && glm::length(dir) > 0.5f) {
+		const ActorMaster* tm = FindMasterActor(target);
+		if(tm && tm->parent && tm->parent->body) {
+			const vec2 rel = vec2(tm->parent->body->GetWorldPos() - pos);
+			const f32 len = glm::length(rel);
+			if(len > 1.0f && glm::dot(rel / len, glm::normalize(dir)) < cosf(remote->homingAngle * 0.5f * PI / 180.0f)) target = ActorUID::INVALID;
+		}
+	}
 	inst.target = target;
 	inst.hitsLeft = MAX(remote->activateCount, 1);
 	inst.penetrationLeft = remote->penetrationCount > 0 ? remote->penetrationCount : PENETRATION_UNLIMITED;
@@ -995,6 +1003,10 @@ bool World::UpdateTargetRemote(RemoteInst& inst, f32 delta)
 {
 	const Remote& remote = *inst.remote;
 	if(remote.behaviorType == Remote::BehaviorType::TARGET && remote.attachTargetObject && inst.target != ActorUID::INVALID) return false;
+	if(inst.target == ActorUID::INVALID && remote.behaviorType == Remote::BehaviorType::HOMING && remote.forceDelay > 0 && TimeDiffSec(TimeDiff(inst.spawnTime, localTime)) < remote.forceDelay) {
+		inst.pos += vec3(inst.dir * (inst.speed > 0 ? inst.speed : 0.0f) * delta, 0);
+		return false;
+	}
 	if(inst.target == ActorUID::INVALID && remote.behaviorType == Remote::BehaviorType::HOMING && remote.homingLength > 0) {
 		f32 bestDist = remote.homingLength;
 		const f32 halfCos = cosf(remote.homingAngle * 0.5f * PI / 180.0f);

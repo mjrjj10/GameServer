@@ -432,7 +432,14 @@ void World::SendNpcHit(const ActorNpc& attacker, ActorUID targetUID, const vec3&
 	hit.hp = hp;
 	hit.hpMax = hpMax;
 	replication->SendRemoteDamageToAll(hit);
-	if(hostileMonsters) replication->SendRemoteActivatedToAll(remoteID, ClientHandle::INVALID, ClientHandle::INVALID, targetUID, MEASURED_MONSTER_HIT_PENETRATION, hit.remotePos);
+	u32 density = MEASURED_MONSTER_HIT_PENETRATION;
+	if(const ActorMaster* m = FindMasterActor(targetUID)) density = (u32)MAX(GetGameXmlContent().GetMaster(m->classType).densityCount, 1);
+	else if(const ActorNpc* n = FindNpcActor(targetUID)) density = n->monsterAi && n->monsterAi->density > 0 ? (u32)n->monsterAi->density : MEASURED_MONSTER_HIT_PENETRATION;
+	static const u32 MONSTER_PENETRATION_TRACKED_MAX = 4096;
+	if(monsterRemotePenetration.size() > MONSTER_PENETRATION_TRACKED_MAX) monsterRemotePenetration.clear();
+	u32& penetration = monsterRemotePenetration[remoteID];
+	penetration += density;
+	replication->SendRemoteActivatedToAll(remoteID, ClientHandle::INVALID, ClientHandle::INVALID, targetUID, penetration, hit.remotePos);
 }
 
 void World::ApplyMonsterAllyStatus(ActorUID casterUID, const GameXmlContent::MonsterAttack& attack)
@@ -601,14 +608,18 @@ void World::FireMonsterRemote(const MonsterFireEvent& fire)
 	if(it == actorNpcMap.end() || it->second->hp <= 0) return;
 	const ActorNpc& npc = *it->second;
 	const vec3 targetPos = MonsterFireTargetPos(npc, fire.target);
-	replication->SendRemoteCreateToAll(npc.UID, fire.seed, (RemoteIdx)fire.fire->remote, npc.pos, npc.rot.z, vec3(vec2(targetPos), npc.pos.z), fire.target, fire.fire->node.c_str());
+	static const i32 MEASURED_MONSTER_REMOTES_AT_TARGET[] = { 1480012051, 1480012052 };
+	bool atTarget = false;
+	for(i32 r : MEASURED_MONSTER_REMOTES_AT_TARGET) if(r == fire.fire->remote && fire.target != ActorUID::INVALID) atTarget = true;
+	const vec3 firePos = atTarget ? vec3(vec2(targetPos), npc.pos.z) : npc.pos;
+	replication->SendRemoteCreateToAll(npc.UID, fire.seed, (RemoteIdx)fire.fire->remote, firePos, npc.rot.z, vec3(vec2(targetPos), npc.pos.z), fire.target, fire.fire->node.c_str());
 	const Remote* remote = GetGameXmlContent().FindRemote((RemoteIdx)fire.fire->remote);
 	if(remote && fire.byRemotes) {
 		const vec2 rel = vec2(targetPos) - vec2(npc.pos);
 		const f32 len = glm::length(rel);
 		const bool follows = remote->behaviorType == Remote::BehaviorType::HOMING || remote->behaviorType == Remote::BehaviorType::TARGET;
 		const vec2 dir = !follows ? vec2(cosf(fire.castYaw), sinf(fire.castYaw)) : (len > 1.0f ? rel / len : vec2(cosf(npc.rot.z), sinf(npc.rot.z)));
-		SpawnMonsterRemote(npc, *remote, npc.pos, dir, fire.target, false, fire.seed);
+		SpawnMonsterRemote(npc, *remote, firePos, dir, fire.target, false, fire.seed);
 		return;
 	}
 	if(remote && remote->maxSpeed > 0 && remote->destroyCreateRemote != RemoteIdx::INVALID && !monsterChains.full()) {
