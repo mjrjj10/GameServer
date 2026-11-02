@@ -358,6 +358,7 @@ bool World::StartNpcPush(ActorNpc& npc, const StatusInfo* info, const vec3& sour
 	npc.dashDist = dist;
 	npc.dashStart = localTime;
 	npc.dashEnd = TimeAdd(localTime, TimeMsToTime(*graphSec * 1000.0));
+	npc.dashPush = true;
 	return true;
 }
 

@@ -542,6 +542,7 @@ struct World
 		f32 dashDist = 0;
 		Time dashStart = Time::ZERO;
 		Time dashEnd = Time::ZERO;
+		bool dashPush = false;
 		bool monsterWalking = false;
 		bool monsterChasing = false;
 		ActorUID monsterTarget = ActorUID::INVALID;

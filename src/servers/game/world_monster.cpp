@@ -862,13 +862,23 @@ void World::TowerCallForHelp(const Player& attacker, const vec3& victimPos, Fact
 	}
 }
 
+static const f32 MEASURED_NPC_PUSH_CURVE[] = { 0.0f, 0.45f, 0.67f, 0.80f, 0.88f, 0.93f, 0.99f, 1.0f, 1.0f, 1.0f, 1.0f };
+
+static f32 NpcPushProgress(f32 t)
+{
+	const i32 last = (i32)(sizeof(MEASURED_NPC_PUSH_CURVE) / sizeof(MEASURED_NPC_PUSH_CURVE[0])) - 1;
+	const f32 x = MAX(MIN(t, 1.0f), 0.0f) * (f32)last;
+	const i32 i = MIN((i32)x, last - 1);
+	return MEASURED_NPC_PUSH_CURVE[i] + (MEASURED_NPC_PUSH_CURVE[i + 1] - MEASURED_NPC_PUSH_CURVE[i]) * (x - (f32)i);
+}
+
 void World::UpdateMonsterDash(ActorNpc& npc)
 {
 	if(npc.dashEnd == Time::ZERO || localTime < npc.dashStart) return;
 	static const f32 MONSTER_DASH_RAY_HEIGHT = 100.0f;
 	const f32 total = (f32)TimeDiffSec(TimeDiff(npc.dashStart, npc.dashEnd));
 	const f32 t = total > 0 ? MIN((f32)TimeDiffSec(TimeDiff(npc.dashStart, localTime)) / total, 1.0f) : 1.0f;
-	const vec2 next = npc.dashFrom + npc.dashDir * npc.dashDist * t;
+	const vec2 next = npc.dashFrom + npc.dashDir * npc.dashDist * (npc.dashPush ? NpcPushProgress(t) : t);
 	const vec2 here = vec2(npc.pos);
 	f32 hit = 0;
 	const f32 radius = npc.monsterAi ? npc.monsterAi->radius : 0.0f;
@@ -990,6 +1000,7 @@ void World::StartMonsterAttack(ActorNpc& npc, const GameXmlContent::MonsterAi& a
 			npc.dashDist = attack->dashDist;
 			npc.dashStart = TimeAdd(localTime, TimeMsToTime(start * 1000.0));
 			npc.dashEnd = TimeAdd(npc.dashStart, TimeMsToTime(duration * 1000.0));
+			npc.dashPush = false;
 			LOG("Monster :: creature=%d (local %d) dashes %.0f in %.2fs from %.2fs", (i32)npc.docID, npc.localID, attack->dashDist, duration, start);
 		}
 	}
