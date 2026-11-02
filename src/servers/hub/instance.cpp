@@ -1162,7 +1162,8 @@ static void PickLabSkillPair(const GameXmlContent::Master& master, eastl::array<
 {
 	static const i32 pairs[6][2] = { { 10, 20 }, { 30, 40 }, { 10, 30 }, { 20, 40 }, { 10, 40 }, { 20, 30 } };
 	static u32 next = RandUint() % 6;
-	const i32* pair = pairs[next++ % 6];
+	const i32 forced[2] = { Config().DevLabSkillA, Config().DevLabSkillB };
+	const i32* pair = forced[0] > 0 ? forced : pairs[next++ % 6];
 	SkillID first = SkillID::INVALID;
 	SkillID second = SkillID::INVALID;
 	foreach_const(sid, master.skillIDs) {

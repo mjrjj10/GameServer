@@ -24,6 +24,8 @@ struct CConfigHub
 	i32 DevMirror = 0;
 	i32 DevMirrorPass = 0;
 	i32 DevLabSkills = 0;
+	i32 DevLabSkillA = 0;
+	i32 DevLabSkillB = 0;
 	eastl::fixed_vector<i32,16> regionNewMaster = {};
 	eastl::fixed_vector<i32,16> eventBanMaster = {};
 
