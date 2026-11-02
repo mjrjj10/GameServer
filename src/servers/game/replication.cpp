@@ -3662,8 +3662,8 @@ void Replication::FrameDifference()
 			if(cur.skillMoving) {
 				const vec2 travel = vec2(cur.pos - sent.pos);
 				const f32 travelLen = glm::length(travel);
-				syncDir = prev.skillMoving && travelLen > posEpsilon ? travel / travelLen : vec2(0);
-				syncSpeed = prev.skillMoving && sinceSent > 0 ? travelLen / sinceSent : 0.0f;
+				syncDir = !cur.graphMoving && prev.skillMoving && travelLen > posEpsilon ? travel / travelLen : vec2(0);
+				syncSpeed = !cur.graphMoving && prev.skillMoving && sinceSent > 0 ? travelLen / sinceSent : 0.0f;
 			}
 			sent.moveDir = syncDir;
 			sent.speed = syncSpeed;
