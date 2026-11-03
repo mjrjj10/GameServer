@@ -752,7 +752,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	ActionStateID remoteAction = ActionStateID::INVALID;
 	const GameXmlContent::RandomActionList* randomActions = nullptr;
 	if(followUp) actionState = forcedAction;
-	else if(castCostLevel && castCostLevel->action != ActionStateID::INVALID) { actionState = castCostLevel->action; randomActions = &castCostLevel->randomActions; }
+	else if(castCostLevel && castCostLevel->action != ActionStateID::INVALID) { actionState = castCostLevel->action; randomActions = &castCostLevel->randomActions; remoteAction = castCostLevel->action; }
 	else if(actionUpgrade) { actionState = actionUpgrade->action; randomActions = &actionUpgrade->randomActions; remoteAction = actionUpgrade->action; }
 	else if(cast) actionState = cast->action;
 	else randomActions = content.FindSkillRandomActions((i32)skillID);
@@ -840,13 +840,13 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	vec2 gotoDir = vec2(0);
 	ActorUID chaseTarget = ActorUID::INVALID;
 
-	const auto& action = content.GetSkillAction(player.Main().classType, actionState, player.Main().stance);
+	const auto& action = content.GetSkillAction(ActionClass(player), actionState, player.Main().stance);
 
 	foreach_const(cmd, action.commands) {
 		switch(cmd->type) {
 			case ActionCommand::Type::GRAPH_MOVE_HORZ: {
 				distance = cmd->graphMoveHorz.distance;
-				moveDuration = SkillMoveDuration(content, player.Main().classType, action, cmd->animIndex);
+				moveDuration = SkillMoveDuration(content, ActionClassName(player), action, cmd->animIndex);
 			} break;
 
 			case ActionCommand::Type::MOVE: {
@@ -859,15 +859,16 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 					case ActionCommand::MovePreset::GOTO_CURRENT_TARGET_CHASE:
 					case ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH:
 					case ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE: {
-						const ActorMaster* tm = targets.size() > 0 ? FindMasterActor(targets[0]) : nullptr;
-						if(tm && distance == 0) {
-							const vec2 rel = vec2(tm->parent->body->GetWorldPos()) - vec2(player.body->GetWorldPos());
+						vec2 targetPos;
+						f32 targetRadius = 0;
+						if(targets.size() > 0 && TargetBody(targets[0], &targetPos, &targetRadius) && distance == 0) {
+							const vec2 rel = targetPos - vec2(player.body->GetWorldPos());
 							const f32 len = glm::length(rel);
 							if(len > 1.0f) {
 								const bool through = cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH || cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE;
 								gotoDir = rel / len;
-								distance = through ? len + HitRadius(*tm->parent) + HitRadius(player) : MAX(len - HitRadius(*tm->parent) - HitRadius(player), 0.0f);
-								moveDuration = SkillMoveDuration(content, player.Main().classType, action, cmd->animIndex);
+								distance = through ? len + targetRadius + HitRadius(player) : MAX(len - targetRadius - HitRadius(player), 0.0f);
+								moveDuration = SkillMoveDuration(content, ActionClassName(player), action, cmd->animIndex);
 								if(cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_CHASE || cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE) chaseTarget = targets[0];
 							}
 						}
@@ -1079,6 +1080,8 @@ void World::StartCasting(Player& player, SkillID skillID, const GameXmlContent::
 void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType, const vec3& castPos, bool onHit)
 {
 	const auto& content = GetGameXmlContent();
+	const i32 chainSlot = skillType == SkillType::COMBO ? player.comboSlot : -1;
+	const SkillID chainBase = player.comboBase;
 	if(player.comboSlot >= 0 && skillType == SkillType::COMBO) {
 		replication->SendChangeSkillSlot(player.clientHd, player.Main().UID, player.comboSlot, player.comboBase, 0);
 		LOG("Combo :: %ls slot %d back to %d", player.name.data(), player.comboSlot, (i32)player.comboBase);
@@ -1093,12 +1096,14 @@ void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType
 		const i32 order = ((i32)skillID / 10) % 10;
 		if((player.skills[base] == skillID || player.skills[base + 1] == skillID) && order >= 1 && order <= 4) slot = SKILL_SLOT_ENUM_FIRST + order - 1;
 		else if(order == 5 && (i32)skillID % 10 == 0) slot = SKILL_SLOT_ENUM_UG;
+		const bool chained = slot < 0 && chainSlot >= 0;
+		if(chained) slot = chainSlot;
 		if(slot >= 0) {
 			player.comboPending = SkillID(combo);
 			player.comboSkill = SkillID(combo);
 			player.comboSendAt = TimeAdd(localTime, TimeMsToTime(50.0));
 			player.comboSlot = slot;
-			player.comboBase = skillID;
+			player.comboBase = chained ? chainBase : skillID;
 			player.comboCastPos = castPos;
 			const i32 windowMs = content.GetComboDurationMs(combo);
 			ASSERT(windowMs > 0);

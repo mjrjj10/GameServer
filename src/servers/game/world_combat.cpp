@@ -9,6 +9,52 @@ static const i32 STAT_CRITICALDAMAGE = 10;
 static const i32 STAT_RAGE_ATTACK_RECOVERY_VALUE = 51;
 static const i32 STAT_RAGE_DAMAGE_RECOVERY_RATIO = 50;
 
+static const i32 TITAN_FORM_FIRST_DOC = 100000900;
+
+ClassType World::ActionClass(const Player& p) const
+{
+	const auto& forms = GetGameXmlContent().titan.forms;
+	if(p.titanForm < 0 || p.titanForm >= (i32)forms.size()) return p.Main().classType;
+	const i32 offset = forms[p.titanForm].doc - TITAN_FORM_FIRST_DOC;
+	return offset == 1 ? ClassType::TITAN_SIEGE : ClassType::TITAN;
+}
+
+const char* World::ActionClassName(const Player& p) const
+{
+	const ClassType cls = ActionClass(p);
+	if(cls == ClassType::TITAN) return "TITAN";
+	if(cls == ClassType::TITAN_SIEGE) return "TITAN_SIEGE";
+	return GetGameXmlContent().GetMaster(cls).className.c_str();
+}
+
+void World::SendShieldStat(const Player& p)
+{
+	f32 left = 0;
+	f32 total = 0;
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex != p.index || it->shieldMax <= 0 || it->until <= localTime) continue;
+		left += MAX(it->shieldHP, 0.0f);
+		total += it->shieldMax;
+	}
+	replication->SendStatToAll(p.Main().UID, (i32)StatType::STAT_TYPE_SHIELD_DEFENCE, left, total);
+}
+
+bool World::TargetBody(ActorUID uid, vec2* pos, f32* radius) const
+{
+	if(const ActorMaster* tm = FindMasterActor(uid)) {
+		if(!tm->parent || !tm->parent->body) return false;
+		*pos = vec2(tm->parent->body->GetWorldPos());
+		*radius = HitRadius(*tm->parent);
+		return true;
+	}
+	if(const ActorNpc* npc = FindNpcActor(uid)) {
+		*pos = vec2(npc->pos);
+		*radius = NpcHitRadius(*npc);
+		return true;
+	}
+	return false;
+}
+
 void World::GainRageOnHit(Player& attacker)
 {
 	const f32 gain = MasterStat(attacker.Main().classType, STAT_RAGE_ATTACK_RECOVERY_VALUE) + StatBonus(attacker, (u8)STAT_RAGE_ATTACK_RECOVERY_VALUE);
@@ -237,6 +283,8 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			if(st->targetIndex != target.index || !st->info || localTime >= st->until) continue;
 			if(st->info->type == StatusType::WEAK_ON_CRITICAL && attacker.team != target.team) bonus = 100.0f;
 		}
+		static const f32 DESC_PIERCE_CRITICAL_STEP = 33.0f;
+		if(proj && proj->hitList.size() > 1 && FindPassiveOfType(attacker, StatusType::SNIPER)) bonus += DESC_PIERCE_CRITICAL_STEP * (f32)(proj->hitList.size() - 1);
 		if(rate + bonus > 0 && (RandUint() % 10000) < (u32)((rate + bonus) * 100.0f)) {
 			const f32 critDamage = MasterStat(ac, proj ? STAT_CRITICALDAMAGE : STAT_SKILL_CRITICALDAMAGE);
 			damage = (i32)(damage * (critDamage > 0 ? critDamage : 100.0f) / 100.0f);
@@ -255,6 +303,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		CounterAttack(attacker, target, proj != nullptr);
 		return;
 	}
+	bool shieldHit = false;
 	foreach(it, activeStatuses) {
 		if(damage <= 0) break;
 		if(it->targetIndex != target.index || it->shieldHP <= 0) continue;
@@ -262,7 +311,9 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		it->shieldHP -= absorbed;
 		it->absorbed += absorbed;
 		damage -= (i32)absorbed;
+		shieldHit = true;
 	}
+	if(shieldHit) SendShieldStat(target);
 	if(damage <= 0) return;
 
 	ActorMaster& chara = target.Main();
@@ -408,9 +459,10 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			foreach_const(it, players) if(it->team == target.team && !it->dead) allDead = false;
 			if(allDead) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_TEAM_ALL_DEAD, (u32)(target.team == 0 ? TeamType::RED : TeamType::BLUE), attacker.Main().UID, chara.UID, KillPoints());
 		}
+		const bool pointsMode = occupyMode || (map && map->ingameLevels);
 		if(occupyMode) attacker.points += (i32)KillPoints();
-		replication->SendScoreToAll(attacker.userID, attacker.team, attacker.kills, occupyMode ? attacker.points : attacker.kills, teamKills, occupyMode ? TeamPoints(attacker.team) : teamKills, target.userID, target.team, target.deaths, victimTeamKills);
 		AddPoints(attacker, (i32)KillPoints());
+		replication->SendScoreToAll(attacker.userID, attacker.team, attacker.kills, pointsMode ? attacker.points : attacker.kills, teamKills, pointsMode ? TeamPoints(attacker.team) : teamKills, target.userID, target.team, target.deaths, victimTeamKills);
 		for(i32 k = 0; k < (i32)target.recentDamage.size(); ) {
 			if(localTime > TimeAdd(target.recentDamage[k].at, TimeMsToTime(DEAD_DAMAGE_WINDOW_MS))) target.recentDamage.erase(target.recentDamage.begin() + k);
 			else k++;
@@ -428,8 +480,8 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			MissionLive(*it, 0, 1);
 			i32 teamScore = 0;
 			foreach_const(p, players) if(p->team == it->team) teamScore += p->kills;
-			if(occupyMode) teamScore = TeamPoints(it->team);
-			replication->SendAssistScoreToAll(it->userID, it->team, it->assists, occupyMode ? it->points : it->kills, teamScore);
+			if(pointsMode) teamScore = TeamPoints(it->team);
+			replication->SendAssistScoreToAll(it->userID, it->team, it->assists, pointsMode ? it->points : it->kills, teamScore);
 		}
 		RewardMasterKill(&attacker, target);
 		replication->SendDeadDamageInfo(target.clientHd, attacker.index, target.recentDamage.data(), (i32)target.recentDamage.size(), (i32)TimeDiffMs(TimeDiff(firstDamageAt, localTime)));
@@ -594,6 +646,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	}
 	const f32 def = (MasterStat(target.Main().classType, STAT_DEFENCE) + StatBonus(target, STAT_DEFENCE)) * MAX(1.0f + StatusModMulSum(target, StatusMod::DEFENCE) / 100.0f, 0.0f);
 	damage = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(def, 0.0f)) + 0.5f), 1);
+	bool shieldHit = false;
 	foreach(it, activeStatuses) {
 		if(damage <= 0) break;
 		if(it->targetIndex != target.index || it->shieldHP <= 0) continue;
@@ -601,7 +654,9 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 		it->shieldHP -= absorbed;
 		it->absorbed += absorbed;
 		damage -= (i32)absorbed;
+		shieldHit = true;
 	}
+	if(shieldHit) SendShieldStat(target);
 	if(damage <= 0) return;
 	GainRageOnDamage(target, damage);
 	ActorMaster& chara = target.Main();

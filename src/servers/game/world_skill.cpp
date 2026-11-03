@@ -289,7 +289,7 @@ u32 World::PlayerPaySkillCost(Player& player, i32 skillID)
 void World::RunStanceOut(Player& player, i8 oldStance)
 {
 	const auto& content = GetGameXmlContent();
-	const GameXmlContent::Action* action = content.FindSkillAction(player.Main().classType, ActionStateID::STANCE_OUT_BEHAVIORSTATE, oldStance);
+	const GameXmlContent::Action* action = content.FindSkillAction(ActionClass(player), ActionStateID::STANCE_OUT_BEHAVIORSTATE, oldStance);
 	if(!action) return;
 	foreach_const(cmd, action->commands) {
 		if(cmd->type == ActionCommand::Type::STATUS && cmd->status.statusIndex != 0) {
@@ -415,8 +415,17 @@ void World::ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID)
 	npcStatuses.push_back(ns);
 }
 
+void World::ApplySummonDrainLife(ActorNpc& npc, const StatusInfo& info)
+{
+	if(npc.ownerUID == ActorUID::INVALID || info.typeName != "STATUS_TYPE_PUREDOT" || info.durationSec > 0 || info.intervalSec <= 0 || info.paramRatio <= 0) return;
+	const f32 life = ceilf(1.0f / info.paramRatio) * info.intervalSec;
+	npc.despawnAt = TimeAdd(localTime, TimeMsToTime(life * 1000.0));
+	LOG("Summon :: creature=%d drained by status %d, life %.1fs", (i32)npc.docID, info.ID, life);
+}
+
 void World::TrackNpcSelfStatus(ActorUID npcUID, const StatusInfo& info)
 {
+	if(ActorNpc* drained = FindNpcActor(npcUID)) ApplySummonDrainLife(*drained, info);
 	if(info.durationSec <= 0) return;
 	const Time until = TimeAdd(localTime, TimeMsToTime(info.durationSec * 1000.0));
 	foreach(ns, npcStatuses) {
@@ -442,11 +451,7 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	}
 	if(remove) return;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
-	if(info && npc.ownerUID != ActorUID::INVALID && info->typeName == "STATUS_TYPE_PUREDOT" && info->durationSec <= 0 && info->intervalSec > 0 && info->paramRatio > 0) {
-		const Time drained = TimeAdd(localTime, TimeMsToTime(ceilf(1.0f / info->paramRatio) * info->intervalSec * 1000.0));
-		npc.despawnAt = drained;
-		LOG("Summon :: creature=%d drained by status %d, life %.1fs", (i32)npc.docID, statusID, ceilf(1.0f / info->paramRatio) * info->intervalSec);
-	}
+	if(info) ApplySummonDrainLife(npc, *info);
 	if(NpcDefeatReaction(npc, info) < 0) {
 		replication->SendResistStatusToAll(npc.UID, caster.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
 		return;
@@ -678,11 +683,11 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	if(skillFound == content.skillMap.end()) return false;
 	const auto& skill = skillFound->second;
 	const ActionStateID actionID = forcedAction != ActionStateID::INVALID ? forcedAction : skill.action;
-	if(!content.SkillActionKnown(player.Main().classType, actionID, player.Main().stance)) {
+	if(!content.SkillActionKnown(ActionClass(player), actionID, player.Main().stance)) {
 		LOG("Skill :: %ls skill=%d action %d not on active master %d, dropped", player.name.data(), (i32)skillID, (i32)actionID, (i32)player.Main().classType);
 		return false;
 	}
-	const auto& action = content.GetSkillAction(player.Main().classType, actionID, player.Main().stance);
+	const auto& action = content.GetSkillAction(ActionClass(player), actionID, player.Main().stance);
 
 	i32 anim = 0;
 	if(player.lastComboSkill == skillID && TimeDiffSec(TimeDiff(player.lastComboTime, localTime)) < 3.0) {
@@ -706,7 +711,10 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 
 	const u32 castID = nextCastID++;
 	const i32 damage = (i32)(PlayerSkillDamage(player, skillID) * player.castChargeRatio);
-	const ActorUID currentTarget = targets.size() > 0 ? targets[0] : ActorUID::INVALID;
+	eastl::fixed_vector<ActorUID,8,false> liveTargets;
+	foreach_const(t, targets) if(!liveTargets.full() && (FindMasterActor(*t) || FindNpcActor(*t))) liveTargets.push_back(*t);
+	const ActorUID currentTarget = liveTargets.size() > 0 ? liveTargets[0] : ActorUID::INVALID;
+	u32 lockOnIndex = 0;
 	const i32 upgradeSummon = UpgradeSummon(player, (i32)skillID);
 
 	bool scheduled = false;
@@ -737,7 +745,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			}
 			if(cmd->animIndex >= 0 && cmd->animIndex < 8) acts[cmd->animIndex] |= a;
 		}
-		const char* className = content.GetMaster(player.Main().classType).className.c_str();
+		const char* className = ActionClassName(player);
 		i32 lastActing = -1;
 		for(i32 i = 0; i < 8; i++) if(acts[i]) lastActing = i;
 		if((!regCombo || !acts[0]) && (!hitEventCombo || !acts[0])) {
@@ -781,6 +789,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.castPos = castPos;
 			pr.angle = cmd->lowerDummyDir ? MovementYaw(player, angle) : angle;
 			pr.target = cmd->remote.targetPreset == ActionCommand::TargetPreset::MEMORIZED_TFT ? player.memorizedTarget : currentTarget;
+			if(cmd->remote.targetPreset == ActionCommand::TargetPreset::MULTI_LOCKON_FFF && liveTargets.size() > 0) pr.target = liveTargets[lockOnIndex++ % liveTargets.size()];
 			pr.atTarget = cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET;
 			pr.stopAtTarget = cmd->remote.stopAtTarget;
 			pr.remove = cmd->remote.remove != 0;
@@ -795,7 +804,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			if(cmd->remote.removeAtAnimEnd) {
 				i32 animId = 0, loop = 1;
 				foreach_const(st, action.anims) if(st->index == curAnim) { animId = st->animationId; loop = MAX(st->loop, 1); }
-				const f32 passEnd = animPasses[pass].start + content.GetAniSeqTime(content.GetMaster(player.Main().classType).className.c_str(), animId) * (f32)loop;
+				const f32 passEnd = animPasses[pass].start + content.GetAniSeqTime(ActionClassName(player), animId) * (f32)loop;
 				if(passEnd > t) pr.aniEndAt = TimeAdd(localTime, TimeMsToTime(passEnd * 1000.0));
 			}
 			pendingRemotes.push_back(pr);
@@ -853,7 +862,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			if(cmd->status.removeAtEnd) {
 				i32 animId = 0, loop = 1;
 				foreach_const(st, action.anims) if(st->index == curAnim) { animId = st->animationId; loop = MAX(st->loop, 1); }
-				const f32 passLen = animId != 0 ? content.GetAniSeqTime(content.GetMaster(player.Main().classType).className.c_str(), animId) * (f32)loop : action.seqLength;
+				const f32 passLen = animId != 0 ? content.GetAniSeqTime(ActionClassName(player), animId) * (f32)loop : action.seqLength;
 				ps.duration = MAX(animPasses[pass].start + passLen - t, 0.3f);
 			}
 			ps.power = (f32)damage;
@@ -889,7 +898,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			for(i32 pass = 0; pass < passes; pass++) {
 				i32 animId = 0, loop = 1;
 				foreach_const(st, action.anims) if(st->index == animPasses[pass].index) { animId = st->animationId; loop = MAX(st->loop, 1); }
-				const f32 passEnd = animPasses[pass].start + content.GetAniSeqTime(content.GetMaster(player.Main().classType).className.c_str(), animId) * (f32)loop;
+				const f32 passEnd = animPasses[pass].start + content.GetAniSeqTime(ActionClassName(player), animId) * (f32)loop;
 				foreach_const(cmd, action.commands) {
 					if(cmd->type != ActionCommand::Type::STATE_BLOCK || cmd->animIndex != animPasses[pass].index) continue;
 					still = MAX(still, animPasses[pass].start + cmd->delay);
@@ -938,7 +947,7 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			;
 		case ActionCommand::Type::GRAPH_MOVE_HORZ: {
 			distance = cmd.graphMoveHorz.distance;
-			moveDuration = SkillMoveDuration(content, caster->classType, action, cmd.animIndex);
+			moveDuration = SkillMoveDuration(content, caster->parent ? ActionClassName(*caster->parent) : content.GetMaster(caster->classType).className.c_str(), action, cmd.animIndex);
 			foreach_const(st, action.anims) {
 				if(st->index != cmd.animIndex) continue;
 				curve = content.GetMoveCurve(content.GetMaster(caster->classType).className.c_str(), st->animationId);
@@ -988,14 +997,15 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			const bool gotoTarget = preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET || preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_CHASE ||
 				preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH || preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE;
 			if(gotoTarget && !prog.targetList.empty()) {
-				const ActorMaster* tm = FindMasterActor(prog.targetList[0]);
-				if(tm) {
-					const vec2 rel = vec2(tm->parent->body->GetWorldPos()) - from;
+				vec2 targetPos;
+				f32 targetRadius = 0;
+				if(TargetBody(prog.targetList[0], &targetPos, &targetRadius)) {
+					const vec2 rel = targetPos - from;
 					const f32 len = glm::length(rel);
 					if(len > 1.0f) moveDir = rel / len;
 					const bool through = preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH || preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE;
-					if(!through) moveDist = MIN(moveDist, MAX(len - HitRadius(*tm->parent) - HitRadius(mover), 0.0f));
-					else if(moveDist > 999990.0f) moveDist = len + HitRadius(*tm->parent) + HitRadius(mover);
+					if(!through) moveDist = MIN(moveDist, MAX(len - targetRadius - HitRadius(mover), 0.0f));
+					else if(moveDist > 999990.0f) moveDist = len + targetRadius + HitRadius(mover);
 				}
 			}
 		}
@@ -1554,10 +1564,10 @@ f32 World::ComboPassOffset(const Player& player, SkillID skillID) const
 	for(i32 i = (i32)skillProgramList.size() - 1; i >= 0; i--) {
 		const SkillProgram& pg = skillProgramList[i];
 		if(pg.casterUID != player.Main().UID || pg.skillID != skillID) continue;
-		const GameXmlContent::Action* action = content.FindSkillAction(player.Main().classType, pg.actionID, pg.stance);
+		const GameXmlContent::Action* action = content.FindSkillAction(ActionClass(player), pg.actionID, pg.stance);
 		if(!action) return 0;
 		f32 first = 0;
-		foreach_const(st, action->anims) if(st->index == 0) first = content.GetAniSeqTime(content.GetMaster(player.Main().classType).className.c_str(), st->animationId) * (f32)MAX(st->loop, 1);
+		foreach_const(st, action->anims) if(st->index == 0) first = content.GetAniSeqTime(ActionClassName(player), st->animationId) * (f32)MAX(st->loop, 1);
 		return MAX(first - TimeDiffSec(TimeDiff(pg.startTime, localTime)), 0.0f);
 	}
 	return 0;

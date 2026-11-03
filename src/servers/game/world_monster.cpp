@@ -74,7 +74,8 @@ bool World::MonsterHostile(const ActorNpc& monster, const Player& player) const
 {
 	static const u32 playerTag = StatusTypeKey("Player");
 	if(player.dead || player.untargetable || !player.body) return false;
-	if(MonsterNeutral(monster, hostileMonsters)) return monster.monsterTarget == player.Main().UID;
+	if(MonsterNeutral(monster, hostileMonsters)) return monster.monsterTarget == player.Main().UID && player.hiddenUID == ActorUID::INVALID;
+	if((monster.faction == Faction::RED || monster.faction == Faction::BLUE) && !(player.fogSeenBy & (1u << (monster.faction == Faction::RED ? 0 : 1)))) return false;
 	return FactionsOppose(monster.faction, (Faction)player.team, hostileMonsters) && (monster.monsterAi->Hates(playerTag) || (hostileMonsters && monster.monsterAi->enemyTags.empty()));
 }
 
@@ -970,6 +971,8 @@ bool World::UpdateMonsterMasterSpecial(ActorNpc& npc, const GameXmlContent::Mons
 	for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)npc.monsterSkillReady.size(); s++) {
 		const GameXmlContent::MonsterAttack& special = ai.attacks[s];
 		if(!special.special || special.target != GameXmlContent::MonsterAttack::MASTER || hpRatio < special.hpMin || hpRatio > special.hpMax) continue;
+		const Remote* specialRemote = GetGameXmlContent().FindRemote(RemoteIdx(special.remote));
+		if(specialRemote && specialRemote->monsterOnly) continue;
 		if(npc.monsterSkillReady[s] == Time::ZERO) npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime((special.firstAt >= 0 ? special.firstAt : special.cooldown) * 1000.0));
 		if(localTime < npc.monsterSkillReady[s]) continue;
 		Player* chosen = nullptr;

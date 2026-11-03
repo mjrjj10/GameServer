@@ -2730,6 +2730,7 @@ bool GameXmlContent::LoadAnimationData()
 				pActionBase->QueryStringAttribute("Param2", &Param2);
 				cmd.status.removeAtEnd = Param2 && (EA::StdC::Strstr(Param2, "RemoveWhenAniEnd") || EA::StdC::Strstr(Param2, "RemoveWhenActionEnd") || EA::StdC::Strstr(Param2, "CleanUpWhenActionEnd")) ? 1 : 0;
 				cmd.status.remove = Param2 && EA::StdC::Strcmp(Param2, "Remove") == 0 ? 1 : 0;
+				if(cmd.status.remove || cmd.status.removeAtEnd) actionRemovedStatuses.insert(cmd.status.statusIndex);
 				const char* Param1 = nullptr;
 				pActionBase->QueryStringAttribute("Param1", &Param1);
 				cmd.status.condition = ActionCommand::StatusConditionFromString(Param1);

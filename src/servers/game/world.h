@@ -821,6 +821,7 @@ struct World
 		bool dotDone = false;
 		i32 overlap;
 		f32 shieldHP;
+		f32 shieldMax = 0;
 		f32 skillPower = 0;
 		Time nextHealTick;
 		i32 healTicksDone;
@@ -978,6 +979,10 @@ struct World
 	void ApplyDynamicTrapHit(const PendingTrapHit& hit);
 	bool BotDangerAt(const Player& bot, const vec2& at, vec2* towerPos, f32* towerRange) const;
 	f32 NpcHitRadius(const ActorNpc& npc) const;
+	bool TargetBody(ActorUID uid, vec2* pos, f32* radius) const;
+	void SendShieldStat(const Player& p);
+	ClassType ActionClass(const Player& p) const;
+	const char* ActionClassName(const Player& p) const;
 	void UpdateMonsterHits();
 	bool MonsterHostile(const ActorNpc& monster, const ActorNpc& other) const;
 	bool MonsterHostile(const ActorNpc& monster, const Player& player) const;
@@ -1196,6 +1201,7 @@ public:
 	void ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID);
 	void UpdateNpcStatuses();
 	void TrackNpcSelfStatus(ActorUID npcUID, const StatusInfo& info);
+	void ApplySummonDrainLife(ActorNpc& npc, const StatusInfo& info);
 	bool NpcHittableBy(const ActorNpc& npc, const Player& attacker) const;
 	void DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage, const Replication::RemoteDamage* remoteHit = nullptr);
 	void GainRageOnHit(Player& attacker);

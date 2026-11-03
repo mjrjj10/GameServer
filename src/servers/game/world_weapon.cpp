@@ -146,7 +146,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	if(remote && remote->maxDistance > 0) remoteRange = remote->maxDistance;
 	else if(remote && remote->lifeTime > 0) remoteRange = remote->lifeTime * proj.speed;
 
-	proj.range = graph ? (reliable ? MIN(distance, aimMax) : MIN(classRange, aimMax)) : remoteRange;
+	proj.range = graph ? MAX(reliable ? MIN(distance, aimMax) : MIN(classRange, aimMax), aimMin) : remoteRange;
 	if(remote && remote->useOwnerRemoteSpeedRatio) proj.speed *= OwnerRemoteSpeedRatio(player);
 	proj.graph = graph;
 	proj.ignoreWalls = !remote || remote->ignoreGround;
@@ -176,8 +176,8 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(proj.dir.y, proj.dir.x)), WeaponAttackState(player, wf));
 
 	if(player.pendingShotRawSize > 0) {
-		const vec3 target = vec3(vec2(origin) + proj.dir * proj.range, origin.z);
-		const u16 creator = replication->RelayWeaponShot(player.clientHd, player.pendingShotRaw.data(), player.pendingShotRawSize, target, remote ? remote->ID : RemoteIdx::INVALID);
+		const vec3 target = vec3(vec2(origin) + proj.dir * proj.range, proj.graph ? player.body->GetWorldPos().z : origin.z);
+		const u16 creator = replication->RelayWeaponShot(player.clientHd, player.pendingShotRaw.data(), player.pendingShotRawSize, target, remote ? remote->ID : RemoteIdx::INVALID, proj.graph);
 		LOG("WeaponShot :: %ls firing=%d creator=%u doc=%d", player.name.data(), wf.firingMethod, creator, remote ? (i32)remote->ID : -1);
 		player.pendingShotRawSize = 0;
 	}
@@ -186,7 +186,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		nextRemoteSeed += 1 + wf.CreatedRemotes();
 		proj.remoteID = seed + 1;
 		const vec3 firePos = proj.pos + vec3(0, 0, FIRE_NODE_HEIGHT);
-		const vec3 target = firePos + vec3(proj.dir * proj.range, 0);
+		const vec3 target = vec3(vec2(firePos) + proj.dir * proj.range, proj.graph ? proj.pos.z : firePos.z);
 		eastl::fixed_string<wchar,32,false> fireObject;
 		for(char c : wf.fireDummy) fireObject.push_back((wchar)c);
 		const u16 creator = DefaultWeaponCreator(player, wf);
@@ -727,7 +727,7 @@ void World::RunWeaponActionStatuses(Player& player, i8 stance)
 {
 	const auto& content = GetGameXmlContent();
 	const ActionStateID state = ActiveWeaponFiring(player, stance).AttackState(player.firingCombo, player.chargeLevel);
-	const GameXmlContent::Action* action = content.FindSkillAction(player.Main().classType, state, stance);
+	const GameXmlContent::Action* action = content.FindSkillAction(ActionClass(player), state, stance);
 	if(!action) return;
 	foreach_const(cmd, action->commands) {
 		if(cmd->type != ActionCommand::Type::STATUS || cmd->status.statusIndex == 0 || cmd->status.removeAtEnd || cmd->status.remove) continue;

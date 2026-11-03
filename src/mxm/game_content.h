@@ -1613,6 +1613,7 @@ struct GameXmlContent
 	eastl::hash_map<i32, i32> dynamicDestroyHits;
 	eastl::hash_map<i32, f32> dynamicRespawnSec;
 	eastl::hash_set<i32> dynamicJumpable;
+	eastl::hash_set<i32> actionRemovedStatuses;
 	eastl::hash_map<i32, eastl::vector<vec3>> measuredWalkCells;
 	eastl::hash_map<i32, eastl::fixed_string<char,48,false>> dynamicMeshKey;
 	struct LevelAITriggerSource { eastl::fixed_string<wchar,128,true> level; i32 node; u8 mask; i32 aiIndex; f32 delay; };

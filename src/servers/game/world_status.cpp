@@ -607,6 +607,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	if(caster.team != target.team) target.statusesTaken++;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
 	f32 duration = info && info->durationSec > 0 ? info->durationSec : (info && info->type == StatusType::MOTION ? 0.0f : 1.0f);
+	if(info && info->durationSec < 0 && GetGameXmlContent().actionRemovedStatuses.count(statusID)) duration = STATUS_INFINITE_DURATION_SEC;
 	f32 graphDuration = duration * (info && info->timeRatio > 0 ? info->timeRatio : 1.0f);
 	DefeatGraphTimes(info, &duration, &graphDuration);
 	if(durationOverride > 0) duration = durationOverride;
@@ -770,7 +771,9 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	}
 	st.shieldHits = info ? info->shieldCount : 0;
 	if(st.shieldHits > 0) st.shieldHP = 0;
+	st.shieldMax = st.shieldHP;
 	activeStatuses.push_back(st);
+	if(st.shieldMax > 0) SendShieldStat(target);
 
 	if(info && info->type == StatusType::LINK && &caster != &target) {
 		if(info->linkCasterStatus != 0) ApplyStatus(caster, caster, info->linkCasterStatus, power);
@@ -1073,6 +1076,11 @@ void World::UpdateStatuses()
 		const bool countShield = it->info && it->info->shieldCount > 0;
 		const bool shieldBroken = it->info && (countShield ? it->shieldHits <= 0 : ((it->info->type == StatusType::SHIELD && it->shieldHP <= 0) || (shieldBomb && it->shieldHP <= 0 && it->absorbed > 0)));
 		const bool timeOver = localTime >= it->until;
+		if(shieldBroken && it->info->skillIndex != 0) {
+			foreach(sib, activeStatuses) {
+				if(sib != it && sib->targetIndex == it->targetIndex && sib->info && sib->info->skillIndex == it->info->skillIndex && sib->appliedAt == it->appliedAt && sib->until > localTime) sib->until = localTime;
+			}
+		}
 		if(timeOver || target.dead || shieldBroken || it->removeOnHit) {
 			if(timeOver && !target.dead && it->info && it->info->type == StatusType::NEARLY_IMMORTAL && it->info->paramRatio > 0) {
 				const i32 taken = MAX(target.damageTaken - it->damageAtStart, 0);
@@ -1112,7 +1120,9 @@ void World::UpdateStatuses()
 				target.ccUntil = cc;
 				LOG("Status :: %ls control %d ended early, control until +%.2f s", target.name.data(), it->statusID, TimeDiffSec(TimeDiff(localTime, cc)));
 			}
+			const bool hadShield = it->shieldMax > 0;
 			it = activeStatuses.erase_unsorted(it);
+			if(hadShield) SendShieldStat(target);
 			if(next != 0 && !pendingStatuses.full()) {
 				PendingStatus ps;
 				ps.time = localTime;

@@ -412,7 +412,8 @@ void World::UpdateSummonAi(f32 delta)
 				npc.pos = at;
 				continue;
 			}
-			const bool lost = target ? (target->dead || glm::length(vec2(target->body->GetWorldPos()) - vec2(npc.pos)) > info->perception) : (!npcTarget || glm::length(vec2(npcTarget->pos) - vec2(npc.pos)) > info->perception);
+			const f32 keepRange = info->targetLost > 0 ? info->targetLost : info->perception;
+			const bool lost = target ? (target->dead || glm::length(vec2(target->body->GetWorldPos()) - vec2(npc.pos)) > keepRange) : (!npcTarget || glm::length(vec2(npcTarget->pos) - vec2(npc.pos)) > keepRange);
 			if(lost) {
 				target = nullptr;
 				npcTarget = nullptr;
@@ -641,7 +642,7 @@ void World::UpdateSummons()
 				ga.range = st->targetingRange;
 				ga.pos = pc->pos;
 				const Time statusEnd = st->durationSec > 0 ? TimeAdd(localTime, TimeMsToTime(st->durationSec * 1000.0)) : pc->until;
-				ga.until = st->durationSec > 0 ? statusEnd : pc->until;
+				ga.until = st->durationSec > 0 && statusEnd < pc->until ? statusEnd : pc->until;
 				ga.nextPulse = localTime;
 				ga.sourceUID = pc->source;
 				groundAuras.push_back(ga);

@@ -36,9 +36,8 @@ static const f32 OBSTRUCT_JUMPABLE_HEIGHT = 120.0f;
 static const u32 STAT_REASON_REGEN = 4;
 static const f32 OBSTRUCT_SIDE = 50.0f;
 
-static inline f32 SkillMoveDuration(const GameXmlContent& content, ClassType cls, const GameXmlContent::Action& action, i32 animIndex)
+static inline f32 SkillMoveDuration(const GameXmlContent& content, const char* className, const GameXmlContent::Action& action, i32 animIndex)
 {
-	const char* className = content.GetMaster(cls).className.c_str();
 	foreach_const(st, action.anims) {
 		if(st->index != animIndex) continue;
 		const GameXmlContent::MoveCurve* curve = content.GetMoveCurve(className, st->animationId);

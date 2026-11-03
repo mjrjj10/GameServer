@@ -1902,7 +1902,7 @@ bool Replication::SendRemoteCreateToClient(i32 clientID, const RemoteCreate& rem
 	return true;
 }
 
-u16 Replication::RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, RemoteIdx remoteDoc)
+u16 Replication::RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, RemoteIdx remoteDoc, bool groundTarget)
 {
 	ConstBuffer buff(packetData, packetSize);
 	RemoteCreate remote;
@@ -1934,7 +1934,7 @@ u16 Replication::RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i3
 
 	remote.fireRotation[2] = (u16)WorldYawToCentiDegrees(atan2f(target.y - clientFirePos.y, target.x - clientFirePos.x));
 	remote.firePos = clientFirePos + vec3(0, 0, REMOTE_FIRE_HEIGHT);
-	remote.targetPos = vec3(target.x, target.y, remote.firePos.z);
+	remote.targetPos = vec3(target.x, target.y, groundTarget ? target.z : remote.firePos.z);
 	remote.doc = remoteDoc;
 	SendRemoteCreate(remote, senderHd);
 	return remote.creator;

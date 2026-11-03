@@ -545,7 +545,7 @@ void World::RemoteApplyShape(RemoteInst& inst)
 
 	foreach(it, players) {
 		const vec3 pos = it->body->GetWorldPos();
-		if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
+		if(fabsf(pos.z - (inst.pos.z - remote.offsetZ)) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 		const vec2 center = vec2(inst.pos) + inst.dir * (start + length * 0.5f);
 		const vec2 rel = LagClosestPos(*it, center) - vec2(inst.pos);
 		const f32 along = glm::dot(rel, inst.dir);
@@ -598,7 +598,7 @@ void World::RemoteApplyArea(RemoteInst& inst)
 		const f32 radius = remote.boundSize[0] * 0.5f;
 		foreach(it, players) {
 			const vec3 pos = it->body->GetWorldPos();
-			if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
+			if(fabsf(pos.z - (inst.pos.z - remote.offsetZ)) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 			const vec2 rel = LagClosestPos(*it, origin) - origin;
 			const f32 dist = glm::length(rel);
 			if(dist > radius + HitRadius(*it)) continue;
@@ -613,7 +613,7 @@ void World::RemoteApplyArea(RemoteInst& inst)
 		const f32 length = remote.boundSize[1];
 		foreach(it, players) {
 			const vec3 pos = it->body->GetWorldPos();
-			if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
+			if(fabsf(pos.z - (inst.pos.z - remote.offsetZ)) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 			const f32 back = length * 0.5f;
 			const vec2 center = origin + inst.dir * (length * 0.5f - back);
 			const vec2 rel = LagClosestPos(*it, center) - origin + inst.dir * back;
@@ -1040,10 +1040,34 @@ bool World::UpdateTargetRemote(RemoteInst& inst, f32 delta)
 			bestDist = d;
 			inst.target = it->Main().UID;
 		}
+		foreach(npc, actorNpcList) {
+			if(npc->hp <= 0 || !NpcHittableBy(*npc, players[inst.ownerIndex])) continue;
+			const vec2 rel = vec2(npc->pos - inst.pos);
+			const f32 d = glm::length(rel);
+			if(d > bestDist) continue;
+			if(d > 1.0f && remote.homingAngle > 0 && remote.homingAngle < 360 && glm::dot(rel / d, inst.dir) < halfCos) continue;
+			bestDist = d;
+			inst.target = npc->UID;
+		}
 		if(inst.target != ActorUID::INVALID) LOG("Remote :: %d homing acquired a target at %.0f", (i32)remote.ID, bestDist);
 	}
 	const ActorMaster* targetMaster = inst.target != ActorUID::INVALID ? FindMasterActor(inst.target) : nullptr;
-	if(!targetMaster || targetMaster->parent->dead) return true;
+	if(!targetMaster) {
+		ActorNpc* targetNpc = inst.target != ActorUID::INVALID ? FindNpcActor(inst.target) : nullptr;
+		if(!targetNpc || targetNpc->hp <= 0) return true;
+		const vec2 rel = vec2(targetNpc->pos - inst.pos);
+		const f32 dist = glm::length(rel);
+		const f32 step = (inst.speed > 0 ? inst.speed : 3000.0f) * delta;
+		if(dist <= step + remote.boundSize[0] * 0.5f + NpcHitRadius(*targetNpc)) {
+			inst.pos = vec3(vec2(targetNpc->pos), inst.pos.z);
+			RemoteDamageNpc(inst, *targetNpc, 0.0f);
+			return true;
+		}
+		inst.dir = rel / dist;
+		inst.pos += vec3(inst.dir * step, 0);
+		return false;
+	}
+	if(targetMaster->parent->dead) return true;
 	Player& target = *targetMaster->parent;
 	const vec3 tpos = target.body->GetWorldPos();
 	const vec2 rel = vec2(tpos - inst.pos);
