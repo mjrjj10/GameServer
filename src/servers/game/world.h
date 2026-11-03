@@ -320,6 +320,7 @@ struct World
 		vec3 pushTarget = vec3(0);
 		f32 pushSpeed = 0;
 		Time pushUntil = Time::ZERO;
+		bool pushSilent = false;
 		Time carryReleaseAt = Time::ZERO;
 		vec2 dragCenter = vec2(0);
 		f32 dragMin = 0;
@@ -988,6 +989,7 @@ struct World
 	f32 NpcHitRadius(const ActorNpc& npc) const;
 	bool TargetBody(ActorUID uid, vec2* pos, f32* radius) const;
 	void SendShieldStat(const Player& p);
+	void SendNpcShieldStat(ActorUID npcUID);
 	ClassType ActionClass(const Player& p) const;
 	const char* ActionClassName(const Player& p) const;
 	void UpdateMonsterHits();
@@ -1411,7 +1413,7 @@ public:
 	bool stageCleared = false;
 	bool noRespawn = false;
 	bool NodeInDifficulty(const GameXmlContent::LevelEventNode& node) const { return difficultyBit == GameXmlContent::ALL_DIFFICULTIES || (node.difficultyMask & difficultyBit) != 0; }
-	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; };
+	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; f32 shieldMax = 0; };
 	void ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool remove);
 	i32 AbsorbNpcShield(const ActorNpc& npc, i32 dealt);
 	bool TeleportNextToTarget(Player& player, ActorUID target);
@@ -1455,7 +1457,7 @@ private:
 	void PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj);
 	void PassiveOnWeaponStatusHit(Player& attacker, Player& target);
 	void PassiveOnSkillHit(Player& attacker, Player& target);
-	void PassiveOnWeaponHit(Player& attacker);
+	void PassiveOnWeaponHit(Player& attacker, bool npcTarget);
 	void PassiveOnFriendlyHit(Player& owner);
 	void ApplyPassiveStatusRule(const PassiveStatusRule& rule, Player& owner, Player* hitTarget);
 	f32 PassiveWeaponDamageMul(Player& attacker, Player& target);

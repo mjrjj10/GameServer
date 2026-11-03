@@ -55,4 +55,19 @@
   <MOD status="1230000141" stat="STAT_TYPE_MOVESPEED" value="15" mul="1" source="MEASURED official after-dodge speed status: x1.15 (362 cases)" />
   <MOD status="1230130020" stat="STAT_TYPE_MOVESPEED" value="50" mul="1" source="MEASURED official Kromede Windborne Shield speed: x1.50 (27 cases)" />
   <MOD status="1230040176" stat="STAT_TYPE_MOVESPEED" value="50" mul="1" source="MEASURED official Demenos Shock Therapy self speed: 105.5 -> 158.2 for 4 s" />
+  <MOD status="1230070062" stat="STAT_TYPE_MOVESPEED" value="15" mul="1" source="MEASURED official Unholy Fury: speed 104.3 -> 120.0 (n=15)" />
+  <MOD status="1230070062" stat="STAT_TYPE_DEFENCE" value="10" mul="1" source="MEASURED official Unholy Fury: defence 115.6 -> 125.6 (n=11)" />
+  <MOD status="1230070066" stat="STAT_TYPE_MOVESPEED" value="15" mul="1" source="MEASURED official Unholy Fury: speed 104.3 -> 120.0 (n=15)" />
+  <MOD status="1230070066" stat="STAT_TYPE_DEFENCE" value="10" mul="1" source="MEASURED official Unholy Fury: defence 115.6 -> 125.6 (n=11)" />
+  <MOD status="1230070067" stat="STAT_TYPE_MOVESPEED" value="15" mul="1" source="MEASURED official Unholy Fury: speed 104.3 -> 120.0 (n=15)" />
+  <MOD status="1230070067" stat="STAT_TYPE_DEFENCE" value="10" mul="1" source="MEASURED official Unholy Fury: defence 115.6 -> 125.6 (n=11)" />
+  <MOD status="1230070068" stat="STAT_TYPE_MOVESPEED" value="15" mul="1" source="MEASURED official Unholy Fury: speed 104.3 -> 120.0 (n=15)" />
+  <MOD status="1230070068" stat="STAT_TYPE_DEFENCE" value="10" mul="1" source="MEASURED official Unholy Fury: defence 115.6 -> 125.6 (n=11)" />
+  <MOD status="1230070069" stat="STAT_TYPE_MOVESPEED" value="15" mul="1" source="MEASURED official Unholy Fury: speed 104.3 -> 120.0 (n=15)" />
+  <MOD status="1230070069" stat="STAT_TYPE_DEFENCE" value="10" mul="1" source="MEASURED official Unholy Fury: defence 115.6 -> 125.6 (n=11)" />
+  <MOD status="1230070070" stat="STAT_TYPE_MOVESPEED" value="15" mul="1" source="MEASURED official Unholy Fury: speed 104.3 -> 120.0 (n=15)" />
+  <MOD status="1230070070" stat="STAT_TYPE_DEFENCE" value="10" mul="1" source="MEASURED official Unholy Fury: defence 115.6 -> 125.6 (n=11)" />
+  <MOD status="1230070042" stat="STAT_TYPE_MOVESPEED" value="10" mul="1" source="MEASURED official Quickening: speed x1.10 (n=48)" />
+  <MOD status="1230070043" stat="STAT_TYPE_MOVESPEED" value="10" mul="1" source="MEASURED official Quickening upgrade: speed x1.10 (n=58)" />
+  <MOD status="1230070043" stat="STAT_TYPE_DEFENCE" value="10" mul="1" source="MEASURED official Quickening upgrade: defence +10 (n=58)" />
 </STATUS_STAT_MODS>

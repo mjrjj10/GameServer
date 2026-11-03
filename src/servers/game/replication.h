@@ -121,6 +121,7 @@ struct Replication
 		u8 taggedOut = false;
 		bool skillMoving = false;
 		bool graphMoving = false;
+		bool statusGraph = false;
 	};
 
 	struct ActorNpc: Actor<ActorType::Npc>

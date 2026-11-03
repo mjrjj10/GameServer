@@ -3683,6 +3683,7 @@ bool GameXmlContent::LoadStatusData()
 			XMLElement* pCommon = pInfo->FirstChildElement("ST_COMMONSTATUS");
 			const char* statusKey = pInfo->Attribute("KEYNAME");
 			st.staminaBurn = statusKey && EA::StdC::Strstr(statusKey, "STAMINABURN") != nullptr;
+			if(statusKey) st.keyName = statusKey;
 			const char* statusDesc = pCommon ? pCommon->Attribute("_Description") : nullptr;
 			const char* defenceDown = statusKey && statusDesc && EA::StdC::Strstr(statusKey, "DEFENCEDOWN") ? EA::StdC::Strstr(statusDesc, "-") : nullptr;
 			if(defenceDown && EA::StdC::Strchr(defenceDown, '%')) st.descDefenceDown = (f32)EA::StdC::AtoI32(defenceDown + 1);
@@ -4046,43 +4047,48 @@ bool GameXmlContent::LoadSkillTooltips()
 				pT->QueryFloatAttribute("value_1", &dmg);
 				if(dmg > 0 && skillBaseDamage.find(skillID) == skillBaseDamage.end()) skillBaseDamage[skillID] = dmg / remoteDelegateMul;
 			}
-			eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,40,false>, i32>,16,false> keyStatus;
-			i32 delegateID = 0;
-			for(XMLElement* pAttr = pBase->FirstChildElement("attrMap"); pAttr; pAttr = pAttr->NextSiblingElement("attrMap")) {
-				const char* key = nullptr;
-				i32 data = 0;
-				pAttr->QueryStringAttribute("DATAKEY", &key);
-				pAttr->QueryAttribute("DATA", &data);
-				if(!key) continue;
-				if(EA::StdC::Strcmp(key, "TTATTR_STATUS_DELIGATE") == 0) delegateID = data;
-				if(!keyStatus.full()) keyStatus.push_back(eastl::make_pair(eastl::fixed_string<char,40,false>(key), data));
-			}
-			for(XMLElement* pT = pBase->FirstChildElement("tableDatas"); pT; pT = pT->NextSiblingElement("tableDatas")) {
-				const char* attrType = nullptr; const char* attrKey = nullptr; const char* proc = nullptr; const char* apply = nullptr; const char* stat = nullptr;
-				pT->QueryStringAttribute("attrType", &attrType);
-				if(!attrType || EA::StdC::Strcmp(attrType, "TTATTR_STATUS_STAT") != 0) continue;
-				pT->QueryStringAttribute("attrKey", &attrKey);
-				i32 statusID = delegateID;
-				if(attrKey) {
-					foreach_const(k, keyStatus) {
-						if(k->first == attrKey) statusID = k->second;
-					}
+			for(XMLElement* pLevel = pBase; pLevel; pLevel = pLevel->NextSiblingElement("data")) {
+				eastl::fixed_set<i32,16,true> levelTouched;
+				eastl::fixed_vector<eastl::pair<eastl::fixed_string<char,40,false>, i32>,16,false> keyStatus;
+				i32 delegateID = 0;
+				for(XMLElement* pAttr = pLevel->FirstChildElement("attrMap"); pAttr; pAttr = pAttr->NextSiblingElement("attrMap")) {
+					const char* key = nullptr;
+					i32 data = 0;
+					pAttr->QueryStringAttribute("DATAKEY", &key);
+					pAttr->QueryAttribute("DATA", &data);
+					if(!key) continue;
+					if(EA::StdC::Strcmp(key, "TTATTR_STATUS_DELIGATE") == 0) delegateID = data;
+					if(!keyStatus.full()) keyStatus.push_back(eastl::make_pair(eastl::fixed_string<char,40,false>(key), data));
 				}
-				auto found = statusMap.find(statusID);
-				if(found == statusMap.end() || found->second.modsFromTT) continue;
-				pT->QueryStringAttribute("proc", &proc);
-				pT->QueryStringAttribute("apply", &apply);
-				pT->QueryStringAttribute("stat", &stat);
-				StatusMod mod;
-				pT->QueryFloatAttribute("value_1", &mod.value);
-				pT->QueryFloatAttribute("value_2", &mod.count);
-				if(mod.value == 0 || !stat) continue;
-				mod.regen = proc && EA::StdC::Strcmp(proc, "STATPROC_REGEN") == 0;
-				mod.mul = apply && EA::StdC::Strcmp(apply, "STATAPPLY_MUL") == 0;
-				mod.stat = StatusModStatFromName(stat);
-				if(mod.mul && mod.stat != StatusMod::OTHER && !skillMulStats.full()) skillMulStats.push_back({ skillID, statusID, (u8)mod.stat, mod.value });
-				if(!found->second.mods.full()) { found->second.mods.push_back(mod); modCount++; }
-				touched.insert(statusID);
+				for(XMLElement* pT = pLevel->FirstChildElement("tableDatas"); pT; pT = pT->NextSiblingElement("tableDatas")) {
+					const char* attrType = nullptr; const char* attrKey = nullptr; const char* proc = nullptr; const char* apply = nullptr; const char* stat = nullptr;
+					pT->QueryStringAttribute("attrType", &attrType);
+					if(!attrType || EA::StdC::Strcmp(attrType, "TTATTR_STATUS_STAT") != 0) continue;
+					pT->QueryStringAttribute("attrKey", &attrKey);
+					i32 statusID = delegateID;
+					if(attrKey) {
+						foreach_const(k, keyStatus) {
+							if(k->first == attrKey) statusID = k->second;
+						}
+					}
+					auto found = statusMap.find(statusID);
+					if(found == statusMap.end() || found->second.modsFromTT) continue;
+					if(touched.count(statusID) && !levelTouched.count(statusID)) continue;
+					pT->QueryStringAttribute("proc", &proc);
+					pT->QueryStringAttribute("apply", &apply);
+					pT->QueryStringAttribute("stat", &stat);
+					StatusMod mod;
+					pT->QueryFloatAttribute("value_1", &mod.value);
+					pT->QueryFloatAttribute("value_2", &mod.count);
+					if(mod.value == 0 || !stat) continue;
+					mod.regen = proc && EA::StdC::Strcmp(proc, "STATPROC_REGEN") == 0;
+					mod.mul = apply && EA::StdC::Strcmp(apply, "STATAPPLY_MUL") == 0;
+					mod.stat = StatusModStatFromName(stat);
+					if(mod.mul && mod.stat != StatusMod::OTHER && !skillMulStats.full()) skillMulStats.push_back({ skillID, statusID, (u8)mod.stat, mod.value });
+					if(!found->second.mods.full()) { found->second.mods.push_back(mod); modCount++; }
+					touched.insert(statusID);
+					levelTouched.insert(statusID);
+				}
 			}
 		}
 	}
@@ -4100,6 +4106,20 @@ bool GameXmlContent::LoadSkillTooltips()
 		mod.count = 1;
 		st.mods.push_back(mod);
 		modCount++;
+	}
+	{
+		eastl::hash_map<eastl::string,i32> statusByKey;
+		foreach_const(it, statusMap) if(!it->second.keyName.empty()) statusByKey[eastl::string(it->second.keyName.c_str())] = it->second.ID;
+		foreach(it, statusMap) {
+			StatusInfo& st = it->second;
+			const char* key = st.keyName.c_str();
+			const char* flag = EA::StdC::Strstr(key, "_FLAG");
+			if(!flag) continue;
+			eastl::string effect(key, flag);
+			effect += flag + 5;
+			auto found = statusByKey.find(effect);
+			if(found != statusByKey.end()) st.flagEffectStatus = found->second;
+		}
 	}
 	static const f32 MEASURED_DESC_HEAL_SKILLPOWER_RATIO = 8.0f / 37.0f;
 	foreach(it, statusMap) {

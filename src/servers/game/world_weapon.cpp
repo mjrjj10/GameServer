@@ -325,10 +325,11 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 			if(npc->ownerUID == ActorUID::INVALID || npc->faction != ownFaction || npc->hp <= 0 || npc->hp >= npc->hpMax) continue;
 			if(glm::length(vec2(npc->pos) - vec2(center)) > radius + NpcHitRadius(*npc)) continue;
 			foreach_const(st, bombRemote->friendlyStatuses) {
-				const StatusInfo* info = GetGameXmlContent().FindStatus(st->statusID);
+				const StatusInfo* flagged = GetGameXmlContent().FindStatus(st->statusID);
+				const StatusInfo* info = flagged && flagged->flagEffectStatus != 0 ? GetGameXmlContent().FindStatus(flagged->flagEffectStatus) : flagged;
 				if(!info || info->descHealPct <= 0) continue;
 				npc->hp = MIN(npc->hp + (i32)(npc->hpMax * info->descHealPct / 100.0f), npc->hpMax);
-				replication->SendAddStatusToAll(st->statusID, npc->UID, owner.Main().UID, StatusSentDuration(*info), npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false);
+				replication->SendAddStatusToAll(info->ID, npc->UID, owner.Main().UID, StatusSentDuration(*info), npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false);
 				replication->SendHpToAll(npc->UID, npc->hp, npc->hpMax);
 				LOG("Summon :: creature=%d repaired %.0f%% by %ls (hp %d/%d)", (i32)npc->docID, info->descHealPct, owner.name.data(), npc->hp, npc->hpMax);
 			}

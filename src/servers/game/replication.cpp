@@ -3366,7 +3366,7 @@ void Replication::SendReviveToAll(UserID userID, ActorUID activeUID, ActorUID in
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		SendRevive(clientHandle[clientID], userID, activeUID, inactiveUID, pos);
-		if(playerLocalInfo[clientID].hiddenActors.count(activeUID) || playerLocalInfo[clientID].hiddenActors.count(inactiveUID)) {
+		if(playerLocalInfo[clientID].hiddenActors.count(activeUID)) {
 			auto& pending = pendingRevives[clientID];
 			for(auto it = pending.begin(); it != pending.end(); ) it = it->userID == userID ? pending.erase(it) : it + 1;
 			pending.push_back({ userID, activeUID, inactiveUID });
@@ -3676,8 +3676,9 @@ void Replication::FrameDifference()
 		const bool cadenceSend = Config().BotSyncCadence ? (turned || heartbeat || (prev.skillMoving && moved)) : (moved || turned);
 		const f32 sinceSent = (f32)TimeDiffSec(TimeDiff(sent.at, TimeRelNow()));
 		const bool skillSend = cur.skillMoving && (!prev.skillMoving || (moved && sinceSent >= MEASURED_SYNC_SKILL_MOVE_MIN_SEC));
-		if(cur.clientHd == ClientHandle::INVALID && !positionUpdated &&
-		   (cur.skillMoving ? (skillSend || (stopped && glm::length(sent.moveDir) > 0.01f)) : (cadenceSend || blockedChanged || (!sent.blocked && fabs(sendSpeed - sent.speed) > speedEpsilon))))
+		const bool landed = prev.statusGraph && !cur.statusGraph;
+		if(cur.clientHd == ClientHandle::INVALID && !positionUpdated && !cur.statusGraph &&
+		   (landed || cur.skillMoving ? (landed || skillSend || (stopped && glm::length(sent.moveDir) > 0.01f)) : (cadenceSend || blockedChanged || (!sent.blocked && fabs(sendSpeed - sent.speed) > speedEpsilon))))
 		{
 			vec2 syncDir = sendDir;
 			f32 syncSpeed = sendSpeed;
@@ -3728,7 +3729,7 @@ void Replication::FrameDifference()
 		SentMove& sentTurn = sentMoves[cur.actorUID];
 		const auto angleGap = [](f32 a, f32 b) { f32 d = fmodf(a - b + PI, 2 * PI); if(d < 0) d += 2 * PI; return fabsf(d - PI); };
 		const f32 turnGap = MAX(MAX(angleGap(cur.rotation.upperYaw, sentTurn.upperYaw), angleGap(cur.rotation.bodyYaw, sentTurn.bodyYaw)), fabsf(cur.rotation.upperPitch - sentTurn.upperPitch));
-		if(cur.clientHd == ClientHandle::INVALID && !rotationUpdated && turnGap >= MEASURED_SYNC_TURN_MIN_RAD)
+		if(cur.clientHd == ClientHandle::INVALID && !rotationUpdated && !cur.statusGraph && turnGap >= MEASURED_SYNC_TURN_MIN_RAD)
 		{
 			sentTurn.upperYaw = cur.rotation.upperYaw;
 			sentTurn.upperPitch = cur.rotation.upperPitch;

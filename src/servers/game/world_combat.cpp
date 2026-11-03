@@ -27,6 +27,18 @@ const char* World::ActionClassName(const Player& p) const
 	return GetGameXmlContent().GetMaster(cls).className.c_str();
 }
 
+void World::SendNpcShieldStat(ActorUID npcUID)
+{
+	f32 left = 0;
+	f32 total = 0;
+	foreach_const(ns, npcStatuses) {
+		if(ns->npcUID != npcUID || ns->shieldMax <= 0 || ns->until <= localTime) continue;
+		left += MAX(ns->shieldHP, 0.0f);
+		total += ns->shieldMax;
+	}
+	replication->SendStatToAll(npcUID, (i32)StatType::STAT_TYPE_SHIELD_DEFENCE, left, total);
+}
+
 void World::SendShieldStat(const Player& p)
 {
 	f32 left = 0;
@@ -146,7 +158,7 @@ i32 World::StatusDotTickDamage(const Player& caster, const Player& target, const
 	return MAX((i32)perStack, perStack > 0 ? 1 : 0) * st.overlap;
 }
 
-void World::PassiveOnWeaponHit(Player& attacker)
+void World::PassiveOnWeaponHit(Player& attacker, bool npcTarget)
 {
 	if(attacker.dead || localTime < attacker.hitRecoverReadyAt) return;
 	const ActiveStatus* st = FindPassiveOfType(attacker, StatusType::HIT_RECOVER);
@@ -154,7 +166,7 @@ void World::PassiveOnWeaponHit(Player& attacker)
 	ActorMaster& chara = attacker.Main();
 	if(!rule || chara.hp >= chara.hpMax) return;
 	attacker.hitRecoverReadyAt = TimeAdd(localTime, TimeMsToTime(rule->cooldownMs));
-	const i32 amount = (i32)(chara.hpMax * rule->hpRatio);
+	const i32 amount = (i32)(chara.hpMax * (npcTarget ? rule->npcHpRatio : rule->hpRatio));
 	chara.hp = MIN(chara.hp + amount, chara.hpMax);
 	replication->SendStatToAll(chara.UID, (i32)StatType::STAT_TYPE_HEALTH, (f32)chara.hp, (f32)chara.hpMax, STAT_REASON_HIT);
 	LOG("Passive :: %ls weapon hit recovers %d hp (status %d)", attacker.name.data(), amount, st->statusID);
@@ -337,13 +349,14 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	GainRageOnHit(attacker);
 	if(attacker.index != target.index) GainRageOnDamage(target, damage);
 
+	const bool weaponHit = skillID == SkillID::INVALID && damageStatusID == 0 && damageAttackerOverride == ActorUID::INVALID && (proj || remoteDoc != RemoteIdx::INVALID);
 	LOG("Damage :: %ls -> %ls skill=%d damage=%d%s hp=%d/%d in=%d remote=%u element=%d", attacker.name.data(), target.name.data(), (i32)skillID, damage, damageType == PACKET_DAMAGE_TYPE_CRITICAL ? " CRIT" : "", chara.hp, chara.hpMax,
 		damageIn, (u32)(proj ? proj->remoteDoc : remoteDoc), (i32)(elementMul * 100.0f));
 	if(attacker.team != target.team) {
 		RevealToTeam(attacker, target.team);
 		LightAttacker(attacker.body->GetWorldPos(), target.team);
 		attacker.damageDealt += damage;
-		const bool normalHit = proj && skillID == SkillID::INVALID && damageStatusID == 0;
+		const bool normalHit = weaponHit;
 		if(normalHit) WeaponLifesteal(attacker, damage);
 		attacker.damageStats[END_DMG_MAX_DEALT] = MAX(attacker.damageStats[END_DMG_MAX_DEALT], (u32)damage);
 		attacker.damageStats[normalHit ? END_DMG_NORMAL_DEALT : END_DMG_SKILL_DEALT] += (u32)damage;
@@ -399,7 +412,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	else {
 		replication->SendDamageToAll(attacker.Main().UID, chara.UID, skillID, damage, chara.hp, chara.hpMax, damageType, damageStatusID);
 	}
-	if(proj && attacker.index != target.index && attacker.team != target.team) PassiveOnWeaponHit(attacker);
+	if(weaponHit && attacker.index != target.index && attacker.team != target.team) PassiveOnWeaponHit(attacker, false);
 
 	if(chara.hp > 0) PassiveOnDamaged(target);
 	if(chara.hp == 0) {
@@ -561,6 +574,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 		replication->SendRemoteDamageToAll(hit);
 	}
 	else replication->SendDamageToAll(attacker.Main().UID, npc.UID, skillID, MIN(dealt, hpBefore), npc.hp, npc.hpMax);
+	if(skillID == SkillID::INVALID && remoteHit && damageAttackerOverride == ActorUID::INVALID) PassiveOnWeaponHit(attacker, true);
 	LOG("Summon :: creature=%d takes %d from %ls hp=%d/%d", (i32)npc.docID, dealt, attacker.name.data(), npc.hp, npc.hpMax);
 	if(npc.hp <= 0) {
 		if(npc.ownerUID == ActorUID::INVALID) {
@@ -584,6 +598,7 @@ i32 World::AbsorbNpcShield(const ActorNpc& npc, i32 dealt)
 		if(ns->shieldHP <= 0) ns->until = localTime;
 		LOG("Status :: creature=%d shield %d absorbs %.0f (%.0f left)", (i32)npc.docID, ns->statusID, absorbed, ns->shieldHP);
 	}
+	if(left != dealt) SendNpcShieldStat(npc.UID);
 	return left;
 }
 

@@ -883,6 +883,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			const Time prevUntil = chainedPush ? target.pushUntil : localTime;
 			const Time newUntil = TimeAdd(localTime, TimeMsToTime(graphDuration * 1000.0));
 			target.pushUntil = newUntil > prevUntil ? newUntil : prevUntil;
+			target.pushSilent = info && (info->type == StatusType::PUSH || info->type == StatusType::FLY || info->type == StatusType::AIRBORNE || info->type == StatusType::KNOCKDOWN);
 			target.pushTarget = to;
 			target.pushSpeed = glm::length(vec2(to - target.body->GetWorldPos())) / MAX((f32)TimeDiffSec(TimeDiff(localTime, target.pushUntil)), 0.05f);
 			if(target.pushUntil > target.ccUntil) target.ccUntil = target.pushUntil;

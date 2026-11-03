@@ -395,6 +395,7 @@ void World::Replicate()
 			rch.rotation = player.movement.rot;
 			rch.skillMoving = localTime < player.dashUntil || AttachedToCaster(player);
 			rch.graphMoving = (localTime < player.dashUntil && !AttachedToCaster(player)) || localTime < player.pushUntil || player.dragElapsed < player.dragDuration;
+			rch.statusGraph = localTime < player.pushUntil && player.pushSilent;
 
 			const bool idle = chara.actionState == ActionStateID::INVALID || chara.actionState == ActionStateID::NONE_BEHAVIORSTATE;
 			rch.actionState = idle && player.clientHd == ClientHandle::INVALID && localTime < player.botAttackStateUntil ? player.botAttackState : chara.actionState;
@@ -843,6 +844,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	f32 moveDuration = 0;
 	vec2 gotoDir = vec2(0);
 	ActorUID chaseTarget = ActorUID::INVALID;
+	f32 gotoDistance = -1.0f;
 
 	const auto& action = content.GetSkillAction(ActionClass(player), actionState, player.Main().stance);
 
@@ -865,14 +867,17 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 					case ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE: {
 						vec2 targetPos;
 						f32 targetRadius = 0;
-						if(targets.size() > 0 && TargetBody(targets[0], &targetPos, &targetRadius) && distance == 0) {
+						if(targets.size() > 0 && TargetBody(targets[0], &targetPos, &targetRadius)) {
 							const vec2 rel = targetPos - vec2(player.body->GetWorldPos());
 							const f32 len = glm::length(rel);
 							if(len > 1.0f) {
 								const bool through = cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH || cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE;
 								gotoDir = rel / len;
-								distance = through ? len + targetRadius + HitRadius(player) : MAX(len - targetRadius - HitRadius(player), 0.0f);
-								moveDuration = SkillMoveDuration(content, ActionClassName(player), action, cmd->animIndex);
+								gotoDistance = through ? len + targetRadius + HitRadius(player) : MAX(len - targetRadius - HitRadius(player), 0.0f);
+								if(distance == 0) {
+									distance = gotoDistance;
+									moveDuration = SkillMoveDuration(content, ActionClassName(player), action, cmd->animIndex);
+								}
 								if(cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_CHASE || cmd->move.preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE) chaseTarget = targets[0];
 							}
 						}
@@ -881,6 +886,8 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 			} break;
 		}
 	}
+
+	if(gotoDistance >= 0 && distance > gotoDistance) distance = gotoDistance;
 
 	Replication::SkillExec rpExec;
 	rpExec.casterUID = player.Main().UID;

@@ -472,7 +472,9 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	ns.until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
 	ns.linked = false;
 	if(info && info->type == StatusType::SHIELD) ns.shieldHP = GetGameXmlContent().StatusShieldAmount(*info);
+	ns.shieldMax = ns.shieldHP;
 	npcStatuses.push_back(ns);
+	if(ns.shieldMax > 0) SendNpcShieldStat(npc.UID);
 	LOG("Status :: %ls gives creature=%d status=%d for %.1fs shield=%.0f", caster.name.data(), (i32)npc.docID, statusID, duration, ns.shieldHP);
 }
 
@@ -513,7 +515,9 @@ void World::UpdateNpcStatuses()
 		}
 		if((linked || !ns.linked) && localTime < ns.until && FindNpcActor(ns.npcUID)) { i++; continue; }
 		replication->SendRemoveStatusToAll(ns.statusID, ns.npcUID, ns.casterUID);
+		const ActorUID shieldedUID = ns.shieldMax > 0 ? ns.npcUID : ActorUID::INVALID;
 		npcStatuses.erase(npcStatuses.begin() + i);
+		if(shieldedUID != ActorUID::INVALID && FindNpcActor(shieldedUID)) SendNpcShieldStat(shieldedUID);
 	}
 }
 

@@ -287,11 +287,12 @@ struct HitRecoverRule
 {
 	i32 status;
 	f32 hpRatio;
+	f32 npcHpRatio;
 	f64 cooldownMs;
 };
 
 static const HitRecoverRule HIT_RECOVER_RULES[] = {
-	{ 1230070005, 0.08f, 1000.0 },
+	{ 1230070005, 0.08f, 0.04f, 1000.0 },
 };
 
 static inline const HitRecoverRule* FindHitRecoverRule(i32 status)

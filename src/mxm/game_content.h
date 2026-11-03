@@ -345,6 +345,8 @@ struct StatusInfo
 	bool staminaBurn = false;
 	f32 descDefenceDown = 0;
 	f32 descHeal = 0;
+	eastl::fixed_string<char,64,true> keyName;
+	i32 flagEffectStatus = 0;
 	f32 descHealPct = 0;
 };
 
