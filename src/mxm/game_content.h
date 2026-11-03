@@ -149,6 +149,7 @@ struct SummonInfo
 	f32 targetLost = 0;
 	f32 hideDetectRadius = 0;
 	f32 destroyTime = 0;
+	i32 publicDrop = 0;
 	i32 spawnAnim = 0;
 	i32 spawnInteraction = 0;
 	bool targetable = false;

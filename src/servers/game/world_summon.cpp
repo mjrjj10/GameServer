@@ -731,6 +731,10 @@ void World::UpdateSummons()
 		}
 		if(it->despawnAt != Time::ZERO && localTime >= it->despawnAt) {
 			LOG("Summon :: creature=%d despawned", (i32)it->docID);
+			if(it->hp <= 0) {
+				const SummonInfo* dying = GetGameXmlContent().FindSummon((i32)it->docID);
+				if(dying && dying->publicDrop != 0) SpawnDropGroupAt(dying->publicDrop, it->pos, -1);
+			}
 			physics.RemoveWall(it->wall);
 			it->wall = nullptr;
 			const SummonInfo* info = GetGameXmlContent().FindSummon((i32)it->docID);

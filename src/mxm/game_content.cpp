@@ -4348,6 +4348,8 @@ void GameXmlContent::LoadSummonInfo(XMLElement* pInfo)
 		if(XMLElement* p = pInfo->FirstChildElement("StatsComData")) {
 			p->QueryAttribute("_VariationType", &si.variation);
 			p->QueryFloatAttribute("_DestroyTime", &si.destroyTime);
+			const char* dropType = p->Attribute("_DropType");
+			if(dropType && EA::StdC::Strcmp(dropType, "DROP_TYPE_PUBLIC") == 0) p->QueryAttribute("_DropIndex", &si.publicDrop);
 		}
 		if(XMLElement* p = pInfo->FirstChildElement("SkillComData")) {
 			for(XMLElement* s = p->FirstChildElement("_SkillID"); s; s = s->NextSiblingElement("_SkillID")) {
