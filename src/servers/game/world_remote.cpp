@@ -331,16 +331,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 
 	const i32 amount = (i32)(inst.damage * remote.attackMultiplier);
 	if(enemy && remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;
-	if(enemy && remote.changeCasterAction != ActionStateID::INVALID && !inst.actionChanged && !owner.dead && owner.Main().UID == inst.casterMasterUID) {
-		inst.actionChanged = true;
-		const ActorUID targetUID = target.Main().UID;
-		LOG("Remote :: %ls hit %ls -> caster action %d", owner.name.data(), target.name.data(), (i32)remote.changeCasterAction);
-		owner.dashDone = owner.dashDist;
-		owner.dashUntil = localTime;
-		hitActionOnly = true;
-		PlayerCastSkill(owner, inst.skillID, target.body->GetWorldPos(), Slice<const ActorUID>(&targetUID, 1), 0, remote.changeCasterAction);
-		hitActionOnly = false;
-	}
+	if(enemy) ChangeCasterActionOnHit(inst, owner, target.Main().UID, target.body->GetWorldPos());
 	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty()) {
 		AddRemoteActivation(target, inst.pos.z);
 		if(enemy) TriggerSkillHitEvent(inst, owner, target.Main().UID, target.body->GetWorldPos());
@@ -683,6 +674,19 @@ void World::RemoteHitNpcs(RemoteInst& inst)
 	}
 }
 
+void World::ChangeCasterActionOnHit(RemoteInst& inst, Player& owner, ActorUID targetUID, const vec3& targetPos)
+{
+	const Remote& remote = *inst.remote;
+	if(remote.changeCasterAction == ActionStateID::INVALID || inst.actionChanged || owner.dead || owner.Main().UID != inst.casterMasterUID) return;
+	inst.actionChanged = true;
+	LOG("Remote :: %ls hit -> caster action %d", owner.name.data(), (i32)remote.changeCasterAction);
+	owner.dashDone = owner.dashDist;
+	owner.dashUntil = localTime;
+	hitActionOnly = true;
+	PlayerCastSkill(owner, inst.skillID, targetPos, Slice<const ActorUID>(&targetUID, 1), 0, remote.changeCasterAction);
+	hitActionOnly = false;
+}
+
 bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 {
 	const Remote& remote = *inst.remote;
@@ -715,6 +719,7 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 		statusCasterOverride = prevCaster;
 	}
 	if(npc.hp > 0 && !owner.dead) TriggerSkillHitEvent(inst, owner, npc.UID, npc.pos);
+	if(npc.hp > 0) ChangeCasterActionOnHit(inst, owner, npc.UID, npc.pos);
 	if(npc.hp <= 0 || npc.ownerUID != ActorUID::INVALID) return true;
 	foreach_const(st, remote.statuses) {
 		if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(players[inst.ownerIndex], npc, st->statusID, false);

@@ -928,6 +928,10 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	if(motionGraph) sentTo = vec3(0);
 	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, motionGraph ? vec3(0) : from, sentTo, StatusGraphTimed(info) ? graphDuration : 0.0f, 1, ccScale, nominalDist, StatusSendsGraph(info));
 	if(npcCasterStatus != 0) ApplyNpcOwnerStatus(npcCaster, target, npcCasterStatus);
+	if(info && info->motionAction != ActionStateID::INVALID && info->skillIndex != 0 && !target.dead && (info->skillIndex / 10000) % 100 == (i32)target.Main().classType && GetGameXmlContent().SkillActionKnown(target.Main().classType, info->motionAction, target.Main().stance)) {
+		LOG("Status :: %ls motion status %d plays action %d", target.name.data(), statusID, (i32)info->motionAction);
+		PlayerCastSkill(target, SkillID(info->skillIndex), target.body->GetWorldPos(), Slice<const ActorUID>(), 0, info->motionAction);
+	}
 	if(info && info->blockSkill && caster.team != target.team && !target.dead) InterruptSkills(target);
 	const i32 guard = DefeatGuardStatus(info);
 	if(guard != 0 && caster.team != target.team && !target.dead) {

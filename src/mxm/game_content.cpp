@@ -418,6 +418,7 @@ void GameXmlContent::LoadAllSkills()
 			pNodeCommonSkill->QueryIntAttribute("_CoolTimeID", &in.coolTimeID);
 			pNodeCommonSkill->QueryFloatAttribute("_CoolTime", &in.coolTime);
 			pNodeCommonSkill->QueryFloatAttribute("_GlobalCoolTime", &in.globalCoolTime);
+			pNodeCommonSkill->QueryIntAttribute("_ResetCoolTimeID", &in.resetCoolTimeID);
 			skillInput[skillID] = in;
 		}
 		if(XMLElement* pCast = pNodeCommonSkill->FirstChildElement("_Cast")) {
@@ -3786,6 +3787,10 @@ bool GameXmlContent::LoadStatusData()
 				st.typeName = type;
 				st.typeKey = StatusTypeKey(type);
 				st.type = StatusTypeFromString(type);
+			}
+			st.bigAggro = type && EA::StdC::Strcmp(type, "STATUS_TYPE_BIGAGGRO") == 0;
+			if(const char* motion = pCommon->Attribute("_AnimationName")) {
+				if(st.type == StatusType::MOTION) st.motionAction = ActionStateFromString(motion);
 			}
 
 			{

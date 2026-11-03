@@ -646,8 +646,10 @@ void World::UpdateCasts()
 			}
 		}
 		if(it->comboSlot >= 0 && localTime >= it->comboUntil) {
-			replication->SendChangeSkillSlot(it->clientHd, it->Main().UID, it->comboSlot, it->comboBase, 0);
-			LOG("Combo :: %ls slot %d window ended", it->name.data(), it->comboSlot);
+			const GameXmlContent::SkillInput* unused = GetGameXmlContent().FindSkillInput((i32)it->comboSkill);
+			const i32 resetID = unused ? unused->resetCoolTimeID : 0;
+			replication->SendChangeSkillSlot(it->clientHd, it->Main().UID, it->comboSlot, it->comboBase, resetID);
+			LOG("Combo :: %ls slot %d window ended (cooltime reset %d)", it->name.data(), it->comboSlot, resetID);
 			it->comboSlot = -1;
 		}
 		if(it->hitCombo != SkillID::INVALID && localTime >= it->hitComboAt) {

@@ -854,6 +854,40 @@ f32 World::MonsterChainTravel(const ActorNpc& npc, const GameXmlContent::Monster
 	return -1.0f;
 }
 
+ActorUID World::MonsterTauntTarget(const ActorNpc& npc, const GameXmlContent::MonsterAi& ai, vec3* at, const GameXmlContent::MonsterAttack** attack) const
+{
+	f32 best = FLT_MAX;
+	ActorUID chosen = ActorUID::INVALID;
+	const GameXmlContent::MonsterAttack* masterAttack = ai.byTarget[GameXmlContent::MonsterAttack::MASTER];
+	foreach_const(st, activeStatuses) {
+		if(!st->info || !st->info->bigAggro || localTime >= st->until || !masterAttack) continue;
+		const Player& p = players[st->targetIndex];
+		if(p.dead || !p.body || !MonsterHostile(npc, p)) continue;
+		const f32 d = glm::length(vec2(p.body->GetWorldPos()) - vec2(npc.pos));
+		if(d > st->info->targetingRange || d >= best) continue;
+		best = d;
+		chosen = p.Main().UID;
+		*at = p.body->GetWorldPos();
+		*attack = masterAttack;
+	}
+	foreach_const(ns, npcStatuses) {
+		if(localTime >= ns->until) continue;
+		const StatusInfo* info = GetGameXmlContent().FindStatus(ns->statusID);
+		if(!info || !info->bigAggro) continue;
+		const ActorNpc* holder = FindNpcActor(ns->npcUID);
+		if(!holder || holder->hp <= 0 || !MonsterHostile(npc, *holder)) continue;
+		const GameXmlContent::MonsterAttack* a = holder->monsterAi ? ai.byTarget[MonsterTargetKind(*holder->monsterAi)] : masterAttack;
+		if(!a) continue;
+		const f32 d = glm::length(vec2(holder->pos) - vec2(npc.pos));
+		if(d > info->targetingRange || d >= best) continue;
+		best = d;
+		chosen = holder->UID;
+		*at = holder->pos;
+		*attack = a;
+	}
+	return chosen;
+}
+
 ActorUID World::StructurePickMonster(const ActorNpc& npc, const GameXmlContent::MonsterAi& ai, vec3* at, const GameXmlContent::MonsterAttack** attack) const
 {
 	ActorUID chosen = ActorUID::INVALID;
@@ -1407,6 +1441,20 @@ void World::UpdateMonsterAi(f32 delta)
 				targetPos = &targetAt;
 				attack = monsterAttack;
 				replication->SendAiSetTargetToAll(npc.UID, monster);
+			}
+		}
+		{
+			vec3 tauntAt;
+			const GameXmlContent::MonsterAttack* tauntAttack = nullptr;
+			const ActorUID taunt = MonsterTauntTarget(npc, ai, &tauntAt, &tauntAttack);
+			if(taunt != ActorUID::INVALID && taunt != npc.monsterTarget) {
+				LOG("Monster :: creature=%d (local %d) is taunted by %u", (i32)npc.docID, npc.localID, (u32)taunt);
+				npc.monsterTarget = taunt;
+				npc.monsterMasterSince = Time::ZERO;
+				targetAt = tauntAt;
+				targetPos = &targetAt;
+				attack = tauntAttack;
+				replication->SendAiSetTargetToAll(npc.UID, taunt);
 			}
 		}
 		if(!targetPos && ai.perception > 0 && localTime >= npc.monsterNextSearch) {
