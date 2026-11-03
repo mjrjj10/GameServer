@@ -476,20 +476,29 @@ void World::UpdateSummonAi(f32 delta)
 void World::EnforceSummonLimit(const Player& owner, u32 ownerIndex, i32 creature)
 {
 	i32 limit = 0;
+	i32 groupMin = creature;
+	i32 groupMax = creature;
 	foreach_const(st, activeStatuses) {
 		if(st->targetIndex != owner.index || !st->info || localTime >= st->until) continue;
 		foreach_const(l, st->info->summonLimits) if(l->first == creature) limit = l->second;
+	}
+	for(const SummonGroupLimitRule& rule : MEASURED_SUMMON_GROUP_LIMITS) {
+		if(rule.master != owner.Main().classType || creature < rule.creatureMin || creature > rule.creatureMax) continue;
+		limit = rule.limit;
+		groupMin = rule.creatureMin;
+		groupMax = rule.creatureMax;
 	}
 	if(limit <= 0) return;
 	i32 alive = 0;
 	ActorNpc* oldest = nullptr;
 	foreach(npc, actorNpcList) {
-		if(npc->ownerIndex != ownerIndex || (i32)npc->docID != creature || npc->removeAt != Time::ZERO || (npc->despawnAt != Time::ZERO && localTime >= npc->despawnAt)) continue;
+		if(npc->ownerIndex != ownerIndex || (i32)npc->docID < groupMin || (i32)npc->docID > groupMax || npc->removeAt != Time::ZERO || (npc->despawnAt != Time::ZERO && localTime >= npc->despawnAt)) continue;
 		alive++;
 		if(!oldest || npc->spawnedAt < oldest->spawnedAt) oldest = &*npc;
 	}
 	if(alive >= limit && oldest) {
 		LOG("Summon :: creature=%d limit %d reached, oldest removed", creature, limit);
+		oldest->hp = 0;
 		oldest->despawnAt = localTime;
 	}
 }

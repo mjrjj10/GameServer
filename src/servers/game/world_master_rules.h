@@ -370,6 +370,18 @@ static inline const ChargeHoldRule* FindChargeHoldRule(SkillID skill)
 	return nullptr;
 }
 
+struct SummonGroupLimitRule
+{
+	ClassType master;
+	i32 creatureMin;
+	i32 creatureMax;
+	i32 limit;
+};
+
+static const SummonGroupLimitRule MEASURED_SUMMON_GROUP_LIMITS[] = {
+	{ ClassType::MECHANIC, 100033800, 100033839, 3 },
+};
+
 struct StatusDrainRule
 {
 	i32 status;
