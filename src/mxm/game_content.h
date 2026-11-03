@@ -925,6 +925,7 @@ struct GameXmlContent
 					u8 removeAtEnd;
 					u8 remove;
 					ActionCommand::StatusCondition condition;
+					i32 childCreature;
 				} status;
 
 				struct {

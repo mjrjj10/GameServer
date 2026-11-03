@@ -863,6 +863,7 @@ struct World
 		bool remove = false;
 		bool aniEnd = false;
 		bool lastChild = false;
+		i32 childCreature = 0;
 		ActorUID sourceUID = ActorUID::INVALID;
 	};
 	eastl::fixed_vector<PendingStatus,256,false> pendingStatuses;

@@ -343,10 +343,18 @@ void World::ToggleOn(Player& player, SkillID skillID, const vec3& castPos)
 	player.toggleNext = TimeAdd(localTime, TimeMsToTime(tg->interval * 1000.0));
 	const vec3 pos = player.body->GetWorldPos();
 	const f32 yaw = player.input.rot.upperYaw;
+	const GameXmlContent::CostLevel* mods = UpgradeCastMods(player, skillID, nullptr);
 	foreach_const(id, tg->remotes) {
-		SpawnRemote(player.index, RemoteIdx(*id), pos, vec2(cosf(yaw), sinf(yaw)), ActorUID::INVALID, skillID, player.toggleCastID, (i32)SkillDamage(skillID), true, nullptr, 0, player.clientHd != ClientHandle::INVALID);
+		i32 rid = *id;
+		if(mods) foreach_const(rr, mods->remoteReplace) if(rr->first == rid) rid = rr->second;
+		SpawnRemote(player.index, RemoteIdx(rid), pos, vec2(cosf(yaw), sinf(yaw)), ActorUID::INVALID, skillID, player.toggleCastID, (i32)SkillDamage(skillID), true, nullptr, 0, player.clientHd != ClientHandle::INVALID);
 	}
-	foreach_const(id, tg->statuses) ApplyStatus(player, player, *id);
+	foreach_const(id, tg->statuses) {
+		i32 sid = *id;
+		f32 duration = -1.0f;
+		if(mods) foreach_const(sr, mods->statusReplace) if(sr->statusID == sid) { sid = sr->replaceID; if(sr->durationSec > 0) duration = sr->durationSec; }
+		ApplyStatus(player, player, sid, 0, duration);
+	}
 	LOG("Toggle :: %ls skill=%d on (%d remotes, %d statuses)", player.name.data(), (i32)skillID, (i32)tg->remotes.size(), (i32)tg->statuses.size());
 	auto sk = GetGameXmlContent().skillMap.find(skillID);
 	replication->SendToggleSkill(player.Main().UID, player.clientHd, skillID, true, sk != GetGameXmlContent().skillMap.end() ? sk->second.action : ActionStateID::INVALID);
@@ -365,9 +373,12 @@ void World::ToggleOff(Player& player)
 		else i++;
 	}
 	if(tg) {
+		const GameXmlContent::CostLevel* mods = UpgradeCastMods(player, player.toggleSkill, nullptr);
 		foreach(it, activeStatuses) {
 			if(it->targetIndex != player.index) continue;
-			if(eastl::find(tg->statuses.begin(), tg->statuses.end(), it->statusID) != tg->statuses.end()) it->until = localTime;
+			bool own = eastl::find(tg->statuses.begin(), tg->statuses.end(), it->statusID) != tg->statuses.end();
+			if(mods) foreach_const(sr, mods->statusReplace) if(sr->replaceID == it->statusID && eastl::find(tg->statuses.begin(), tg->statuses.end(), sr->statusID) != tg->statuses.end()) own = true;
+			if(own) it->until = localTime;
 		}
 	}
 	LOG("Toggle :: %ls skill=%d off", player.name.data(), (i32)player.toggleSkill);
@@ -763,14 +774,14 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		const char* className = ActionClassName(player);
 		i32 lastActing = -1;
 		for(i32 i = 0; i < 8; i++) if(acts[i]) lastActing = i;
-		if((!regCombo || !acts[0]) && (!hitEventCombo || !acts[0])) {
+		if(!hitEventCombo || !acts[0]) {
 			f32 start = 0;
-			for(i32 i = 0; i <= lastActing && (!regCombo || i <= 1); i++) {
+			for(i32 i = 0; i <= lastActing && (!regCombo || acts[0] || i <= 1); i++) {
 				if((acts[i] || visuals[i] || moves[i]) && !animPasses.full()) animPasses.push_back({ i, start });
 				i32 animId = 0, loop = 1;
 				foreach_const(st, action.anims) if(st->index == i) { animId = st->animationId; loop = MAX(st->loop, 1); }
 				start += content.GetAniSeqTime(className, animId) * (f32)loop;
-				if(regCombo && acts[i]) break;
+				if(regCombo && !acts[0] && acts[i]) break;
 			}
 		}
 	}
@@ -892,6 +903,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			}
 			else if(lastChild && !ps.remove) {
 				ps.lastChild = true;
+				ps.childCreature = cmd->status.childCreature;
 				ps.time = TimeAdd(ps.time, TimeMsToTime(LAST_CHILD_STATUS_DELAY_MS));
 				pendingStatuses.push_back(ps);
 			}

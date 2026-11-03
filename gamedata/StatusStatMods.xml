@@ -89,4 +89,15 @@
   <MOD status="1230260002" stat="STAT_TYPE_MOVESPEED" value="50" mul="1" source="skilldesc STR_SKILL_DESC: The Cat dodge: +50% movespeed once invincibility ends" />
   <MOD status="1230100062" stat="STAT_TYPE_MOVESPEED" value="100" mul="1" source="skilldesc STR_SKILL_DESC: Soulmaster dodge Doppelganger: +100% movespeed while stealthed" />
   <MOD status="1230050071" stat="STAT_TYPE_MOVESPEED" value="20" mul="1" source="skilldesc STR_SKILL_DESC: Koom Magnetic Barrier: grants 20% Movespeed for 3 seconds" />
+  <MOD status="1230020040" stat="STAT_TYPE_DEFENCE" value="15" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 4/5" />
+  <MOD status="1230050065" stat="STAT_TYPE_MOVESPEED" value="-35" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 4/7" />
+  <MOD status="1230060100" stat="STAT_TYPE_MOVESPEED" value="10" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 13/20" />
+  <MOD status="1230100052" stat="STAT_TYPE_MOVESPEED" value="50" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 20/33" />
+  <MOD status="1230160030" stat="STAT_TYPE_MOVESPEED" value="30" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 53/118" />
+  <MOD status="1230180050" stat="STAT_TYPE_MOVESPEED" value="-18" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 29/60" />
+  <MOD status="1230340052" stat="STAT_TYPE_MOVESPEED" value="5" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 4/5" />
+  <MOD status="1230340053" stat="STAT_TYPE_MOVESPEED" value="5" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 4/7" />
+  <MOD status="1230330011" stat="STAT_TYPE_ATTACK" value="35" mul="1" source="STR_SKILL_DESC_180330010: [High Roller] instead increases weapon damage by 35%" />
+  <MOD status="1230330011" stat="STAT_TYPE_SKILLPOWER" value="350" source="STR_SKILL_DESC_180330010: [High Roller] and skill power by 350" />
+  <MOD status="1230330041" stat="STAT_TYPE_MOVESPEED" value="30" mul="1" source="STR_SKILL_DESC_180330040: [High Roller] grants its effects (skilltt 1230330040 movespeed +30%); official captures delta +29.7" />
 </STATUS_STAT_MODS>

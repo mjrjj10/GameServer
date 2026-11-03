@@ -2727,6 +2727,14 @@ bool GameXmlContent::LoadAnimationData()
 				pActionBase->QueryStringAttribute("TargetPreset", &TargetPreset);
 				cmd.status.targetPreset = TargetPreset ? ActionCommand::TargetPresetFromString(TargetPreset) : ActionCommand::TargetPreset::CURRENT_FFF;
 				if(cmd.type == ActionCommand::Type::STATUS_SKILL_TARGET) cmd.status.targetPreset = ActionCommand::TargetPreset::CURRENT_FFF;
+				cmd.status.childCreature = 0;
+				if(cmd.status.targetPreset == ActionCommand::TargetPreset::CHILD_INDEX_FFF) {
+					const char* TargetParam = nullptr;
+					pActionBase->QueryStringAttribute("TargetParam", &TargetParam);
+					const char* f = TargetParam;
+					for(i32 i = 0; f && i < 4; i++) { f = EA::StdC::Strchr(f, '|'); if(f) f++; }
+					if(f) cmd.status.childCreature = EA::StdC::AtoI32(f);
+				}
 				const char* Param2 = nullptr;
 				pActionBase->QueryStringAttribute("Param2", &Param2);
 				cmd.status.removeAtEnd = Param2 && (EA::StdC::Strstr(Param2, "RemoveWhenAniEnd") || EA::StdC::Strstr(Param2, "RemoveWhenActionEnd") || EA::StdC::Strstr(Param2, "CleanUpWhenActionEnd")) ? 1 : 0;

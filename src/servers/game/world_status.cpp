@@ -995,6 +995,14 @@ void World::UpdateStatuses()
 	for(auto ps = pendingStatuses.begin(); ps != pendingStatuses.end(); ) {
 		if(localTime < ps->time) { ++ps; continue; }
 		Player& caster = players[ps->casterIndex];
+		if(ps->childCreature != 0) {
+			foreach(npc, actorNpcList) {
+				if(npc->ownerIndex != ps->casterIndex || (i32)npc->docID != ps->childCreature || localTime >= npc->despawnAt) continue;
+				ApplyStatusToNpc(caster, *npc, ps->statusID, ps->remove);
+			}
+			ps = pendingStatuses.erase_unsorted(ps);
+			continue;
+		}
 		if(ps->lastChild) ps->targetUID = caster.lastChildUID;
 		const ActorMaster* targetMaster = ps->targetUID != ActorUID::INVALID ? FindMasterActor(ps->targetUID) : nullptr;
 		if(targetMaster && ps->remove) {
