@@ -70,4 +70,19 @@
   <MOD status="1230070042" stat="STAT_TYPE_MOVESPEED" value="10" mul="1" source="MEASURED official Quickening: speed x1.10 (n=48)" />
   <MOD status="1230070043" stat="STAT_TYPE_MOVESPEED" value="10" mul="1" source="MEASURED official Quickening upgrade: speed x1.10 (n=58)" />
   <MOD status="1230070043" stat="STAT_TYPE_DEFENCE" value="10" mul="1" source="MEASURED official Quickening upgrade: defence +10 (n=58)" />
+  <MOD status="1230030160" stat="STAT_TYPE_ATTACK" value="20" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: Sizuka Snap Strike rank 6: +20% Weapon Damage" />
+  <MOD status="1230030160" stat="STAT_TYPE_SKILLPOWER" value="200" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: Sizuka Snap Strike rank 6: +200 Skill Power" />
+  <MOD status="1230150037" stat="STAT_TYPE_ATTACK" value="30" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: Photog Lens Focus rank 6: Weapon Damage +30% to allies" />
+  <MOD status="1230160054" stat="STAT_TYPE_DEFENCE" value="100" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: Ice Queen Frost Spire rank 6: +100% Defense for 10 sec" />
+  <MOD status="1230220031" stat="STAT_TYPE_MOVESPEED" value="50" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: Lilu Birds of a Feather rank 3: +50% Movespeed for allies" />
+  <MOD status="1230250011" stat="STAT_TYPE_MOVESPEED" value="100" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: Rytlock skill 1 rank 6: +100% movespeed for 1 second" />
+  <MOD status="1230300034" stat="STAT_TYPE_SKILLPOWER" value="100" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: AndroB Combat Protocol rank 3: Skill Power +100 while active" />
+  <MOD status="1230300035" stat="STAT_TYPE_SKILLPOWER" value="200" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: AndroB Combat Protocol ranks 3+6: Skill Power +100 each (sum assumed)" />
+  <MOD status="1230300052" stat="STAT_TYPE_MOVESPEED" value="50" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: AndroB ultimate rank 3: Maia's Movespeed +50% for 3 seconds" />
+  <MOD status="1230330014" stat="STAT_TYPE_DEFENCE" value="20" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: Shugo Enchantment Stone Bundle rank 6: +20% Defense Effect" />
+  <MOD status="1230370013" stat="STAT_TYPE_MOVESPEED" value="30" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: Yuri Sol Fist rank 3: Movespeed +30% for 3 seconds on hit" />
+  <MOD status="1230370041" stat="STAT_TYPE_MOVESPEED" value="50" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: Yuri skill 4 rank 6: Movespeed +50% for 2 seconds" />
+  <MOD status="1230390033" stat="STAT_TYPE_MOVESPEED" value="30" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: Priest skill 3 rank 3: +30% Movespeed to allies" />
+  <MOD status="1230400047" stat="STAT_TYPE_DEFENCE" value="100" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: Ghostwidow Ethereal rank 6: +100% Defense for 3 sec" />
+  <MOD status="1230400084" stat="STAT_TYPE_MOVESPEED" value="15" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: Ghostwidow skill 1 rank 3: Movespeed +15% for 5 sec" />
 </STATUS_STAT_MODS>
