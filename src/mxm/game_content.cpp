@@ -3789,6 +3789,13 @@ bool GameXmlContent::LoadStatusData()
 				st.type = StatusTypeFromString(type);
 			}
 			st.bigAggro = type && EA::StdC::Strcmp(type, "STATUS_TYPE_BIGAGGRO") == 0;
+			for(XMLElement* pGroup = pCommon->FirstChildElement(); pGroup; pGroup = pGroup->NextSiblingElement()) {
+				for(XMLElement* pLimit = pGroup->FirstChildElement("_SummonLimit"); pLimit && !st.summonLimits.full(); pLimit = pLimit->NextSiblingElement("_SummonLimit")) {
+					const i32 creature = pLimit->IntAttribute("DATAKEY");
+					const i32 limit = pLimit->IntAttribute("DATA");
+					if(creature != 0 && limit > 0) st.summonLimits.push_back(eastl::make_pair(creature, limit));
+				}
+			}
 			if(const char* motion = pCommon->Attribute("_AnimationName")) {
 				if(st.type == StatusType::MOTION) st.motionAction = ActionStateFromString(motion);
 			}

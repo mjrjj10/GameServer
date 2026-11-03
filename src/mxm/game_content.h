@@ -302,6 +302,7 @@ struct StatusInfo
 	i32 linkTargetStatus = 0;
 	f32 targetingRange = 0;
 	bool bigAggro = false;
+	eastl::fixed_vector<eastl::pair<i32,i32>,2,false> summonLimits;
 	bool targetsFriendlyPc = false;
 	bool bothCharacters = false;
 	f32 explodeDamage = 0;

@@ -473,6 +473,27 @@ void World::UpdateSummonAi(f32 delta)
 	}
 }
 
+void World::EnforceSummonLimit(const Player& owner, u32 ownerIndex, i32 creature)
+{
+	i32 limit = 0;
+	foreach_const(st, activeStatuses) {
+		if(st->targetIndex != owner.index || !st->info || localTime >= st->until) continue;
+		foreach_const(l, st->info->summonLimits) if(l->first == creature) limit = l->second;
+	}
+	if(limit <= 0) return;
+	i32 alive = 0;
+	ActorNpc* oldest = nullptr;
+	foreach(npc, actorNpcList) {
+		if(npc->ownerIndex != ownerIndex || (i32)npc->docID != creature || npc->removeAt != Time::ZERO || (npc->despawnAt != Time::ZERO && localTime >= npc->despawnAt)) continue;
+		alive++;
+		if(!oldest || npc->spawnedAt < oldest->spawnedAt) oldest = &*npc;
+	}
+	if(alive >= limit && oldest) {
+		LOG("Summon :: creature=%d limit %d reached, oldest removed", creature, limit);
+		oldest->despawnAt = localTime;
+	}
+}
+
 void World::PlaySummonExtraMotion(ActorNpc& npc, const SummonInfo& info, i32 motion)
 {
 	if(motion < 1 || motion > 3 || info.extraMotions[motion - 1].empty()) return;
@@ -527,6 +548,7 @@ void World::UpdateSummons()
 					if(other->ownerIndex == ps->ownerIndex && other->ai == SummonInfo::AI_RELAY && localTime < other->despawnAt) reuse = &*other;
 				}
 			}
+			if(!reuse) EnforceSummonLimit(owner, ps->ownerIndex, ps->creature);
 			ActorNpc& actor = reuse ? *reuse : SpawnNpcActor(CreatureIndex(ps->creature), nextSummonLocalID++);
 			const f32 life = relay ? RELAY_LIFE_SEC : info && info->lifeTime > 0 ? info->lifeTime : 5.0f;
 			if(!reuse) {
