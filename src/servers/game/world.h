@@ -759,6 +759,7 @@ struct World
 		f32 firePathYaw = 0;
 		f32 firePathDone = 0;
 		f32 followDist = -1.0f;
+		f32 hitZOffset = 0;
 		u32 instID = 0;
 		bool killNow = false;
 		const Remote* remote;

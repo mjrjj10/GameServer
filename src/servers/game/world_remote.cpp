@@ -542,7 +542,7 @@ void World::RemoteApplyShape(RemoteInst& inst)
 
 	foreach(it, players) {
 		const vec3 pos = it->body->GetWorldPos();
-		if(fabsf(pos.z - (inst.pos.z - remote.offsetZ)) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
+		if(fabsf(pos.z - (inst.pos.z - inst.hitZOffset)) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 		const vec2 center = vec2(inst.pos) + inst.dir * (start + length * 0.5f);
 		const vec2 rel = LagClosestPos(*it, center) - vec2(inst.pos);
 		const f32 along = glm::dot(rel, inst.dir);
@@ -589,7 +589,7 @@ void World::RemoteApplyPolygonOutline(RemoteInst& inst)
 	const f32 inner = MEASURED_POLYGON_BLADE_RADIUS * cosf(PI / (f32)remote.polygonSides);
 	foreach(it, players) {
 		const vec3 pos = it->body->GetWorldPos();
-		if(fabsf(pos.z - (inst.pos.z - remote.offsetZ)) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
+		if(fabsf(pos.z - (inst.pos.z - inst.hitZOffset)) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 		const f32 d = glm::length(LagClosestPos(*it, vec2(inst.pos)) - vec2(inst.pos));
 		if(d < inner - halfWidth - HitRadius(*it) || d > MEASURED_POLYGON_BLADE_RADIUS + halfWidth + HitRadius(*it)) continue;
 		RemoteHit(inst, *it);
@@ -619,7 +619,7 @@ void World::RemoteApplyArea(RemoteInst& inst)
 		const f32 radius = remote.boundSize[0] * 0.5f;
 		foreach(it, players) {
 			const vec3 pos = it->body->GetWorldPos();
-			if(fabsf(pos.z - (inst.pos.z - remote.offsetZ)) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
+			if(fabsf(pos.z - (inst.pos.z - inst.hitZOffset)) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 			const vec2 rel = LagClosestPos(*it, origin) - origin;
 			const f32 dist = glm::length(rel);
 			if(dist > radius + HitRadius(*it)) continue;
@@ -634,7 +634,7 @@ void World::RemoteApplyArea(RemoteInst& inst)
 		const f32 length = remote.boundSize[1];
 		foreach(it, players) {
 			const vec3 pos = it->body->GetWorldPos();
-			if(fabsf(pos.z - (inst.pos.z - remote.offsetZ)) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
+			if(fabsf(pos.z - (inst.pos.z - inst.hitZOffset)) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 			const f32 back = length * 0.5f;
 			const vec2 center = origin + inst.dir * (length * 0.5f - back);
 			const vec2 rel = LagClosestPos(*it, center) - origin + inst.dir * back;
@@ -833,6 +833,7 @@ void World::SpawnPendingRemotes()
 		const Remote* remote = GetGameXmlContent().FindRemote(pr->idx);
 		const f32 offsetY = remote ? (remote->forceTargetDir ? -remote->offsetY : remote->offsetY) : 0;
 		vec3 pos = owner.body->GetWorldPos() + vec3(dir * offsetY, pr->nodeName == SCENE_ROOT_NODE ? (remote ? remote->offsetZ : 0.0f) : FIRE_NODE_HEIGHT);
+		const f32 ownerZ = owner.body->GetWorldPos().z;
 
 		bool atAimedPoint = pr->atTarget;
 		switch((ActionCommand::TargetPreset)pr->preset) {
@@ -924,6 +925,7 @@ void World::SpawnPendingRemotes()
 				if(pr->casterMasterUID != ActorUID::INVALID) spawned->casterMasterUID = pr->casterMasterUID;
 				spawned->costLevel = pr->costLevel;
 				spawned->centeredBox = atAimedPoint;
+				if(remote && remote->offsetZ != 0 && (measured || fabsf(pos.z - (ownerZ + remote->offsetZ)) < 1.0f)) spawned->hitZOffset = remote->offsetZ;
 				spawned->aniEndAt = pr->aniEndAt;
 				const f32 nodeForward = atAimedPoint || fireNode || measured ? 0 : WeaponNodeForward(GetGameXmlContent(), owner.Main().classType, pr->skillID, *spawned->remote, pr->nodeName);
 				if(nodeForward > 0) {
