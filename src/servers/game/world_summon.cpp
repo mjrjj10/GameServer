@@ -117,7 +117,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			const f32 duration = st->durationSec > 0 ? st->durationSec : 1.0f;
 			replication->SendAddStatusToAll(c->index, npc.UID, npc.UID, StatusSentDuration(*st), npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false);
 			TrackNpcSelfStatus(npc.UID, *st);
-			if(st->type == StatusType::SUICIDE) {
+			if(st->type == StatusType::SUICIDE || st->type == StatusType::COMA) {
 				const Time at = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
 				if(npc.despawnAt == Time::ZERO || at < npc.despawnAt) npc.despawnAt = at;
 			}

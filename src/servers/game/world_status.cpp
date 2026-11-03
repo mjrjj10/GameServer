@@ -532,6 +532,15 @@ void World::PassiveOnWeaponStatusHit(Player& attacker, Player& target)
 	}
 }
 
+i32 World::StanceUpgradedStatus(Player& player, i32 statusID)
+{
+	const ActorMaster& m = player.Main();
+	if(m.stance == 0 || m.stanceSkill == SkillID::INVALID) return statusID;
+	const GameXmlContent::CostLevel* mods = UpgradeCastMods(player, m.stanceSkill, nullptr);
+	if(mods) foreach_const(sr, mods->statusReplace) if(sr->statusID == statusID) return sr->replaceID;
+	return statusID;
+}
+
 void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj)
 {
 	PassiveStackOnHit(attacker, target, (i32)proj.remoteDoc, SkillID::INVALID);
@@ -539,7 +548,7 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 		const Remote* remote = GetGameXmlContent().FindRemote(proj.remoteDoc);
 		if(remote) {
 			foreach_const(st, remote->statuses) {
-				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(attacker, target, st->statusID);
+				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(attacker, target, StanceUpgradedStatus(attacker, st->statusID));
 			}
 		}
 	}

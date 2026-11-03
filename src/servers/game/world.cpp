@@ -933,6 +933,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 			const GameXmlContent::SkillUpgrade* su = LatestUpgradeWith(player, (i32)skillID, [](const GameXmlContent::SkillUpgrade& u) { return u.stanceDuration > 0; });
 			const GameXmlContent::SkillUpgrade* fu = LatestUpgradeWith(player, (i32)skillID, [](const GameXmlContent::SkillUpgrade& u) { return u.weaponFireCount > 0; });
 			SetStance(player.Main(), st->stance, su ? su->stanceDuration : st->duration, fu ? fu->weaponFireCount : st->weaponFireCount, st->cancelByDefeat);
+			player.Main().stanceSkill = skillID;
 		}
 	}
 

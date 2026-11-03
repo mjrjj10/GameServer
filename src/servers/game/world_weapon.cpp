@@ -470,7 +470,7 @@ void World::UpdateProjectiles(f32 delta)
 				DamageNpc(owner, *npc, SkillID::INVALID, proj->damage, &hit);
 				if(const Remote* shot = GetGameXmlContent().FindRemote(proj->remoteDoc)) {
 					if(npc->hp > 0 && npc->ownerUID == ActorUID::INVALID) {
-						foreach_const(st, shot->statuses) if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(owner, *npc, st->statusID, false);
+						foreach_const(st, shot->statuses) if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(owner, *npc, StanceUpgradedStatus(owner, st->statusID), false);
 					}
 				}
 				if(proj->chainRemote != RemoteIdx::INVALID && !proj->chained) {

@@ -459,6 +459,7 @@ struct World
 		i8 stance = 0;
 		Time stanceUntil = Time::ZERO;
 		i32 stanceShotsLeft = -1;
+		SkillID stanceSkill = SkillID::INVALID;
 		bool stanceCancelByDefeat = false;
 
 		explicit ActorMaster(ActorUID UID_): UID(UID_) {}
@@ -1484,6 +1485,7 @@ private:
 	void CounterAttack(Player& attacker, Player& target, bool weaponHit);
 	void UpdatePassives();
 	void SetStance(ActorMaster& master, i8 stance, f32 duration, i32 weaponFireCount, bool cancelByDefeat);
+	i32 StanceUpgradedStatus(Player& player, i32 statusID);
 	void StanceWeaponUse(Player& player);
 	void UpdateStances();
 	void InterruptSkills(Player& player);
