@@ -945,5 +945,6 @@ f32 World::BotNextFireDelay(const Player& bot) const
 	const WeaponFiring& wf = ActiveWeaponFiring(bot, bot.Main().stance);
 	f32 delay = wf.fireDelay;
 	if(bot.firingCombo < wf.comboDelay.size() && wf.comboDelay[bot.firingCombo] > 0 && wf.comboDelay[bot.firingCombo] <= wf.comboValid[bot.firingCombo]) delay = wf.comboDelay[bot.firingCombo];
+	if(wf.continuityCount > 0 && (i32)bot.firingCombo + 1 >= wf.continuityCount) delay = MAX(delay, wf.continuityDelay);
 	return MAX(delay, BOT_MIN_FIRE_DELAY) * WeaponFireDelayScale(bot);
 }

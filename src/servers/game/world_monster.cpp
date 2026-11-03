@@ -1545,28 +1545,33 @@ void World::UpdateMonsterAi(f32 delta)
 				if(run <= 0) continue;
 				npc.monsterWalking = false;
 				StartMonsterWalkState(npc, ai, run);
-				const bool resync = !npc.monsterChasing || localTime >= npc.monsterNextSync;
+				const f32 stepMax = run * delta;
+				const bool legDone = npc.monsterChasing && glm::length(npc.monsterLegGoal - vec2(npc.pos)) <= stepMax;
+				const bool resync = !npc.monsterChasing || localTime >= npc.monsterNextSync || legDone;
 				if(ai.chaseRing > 0 && resync) {
 					const f32 turn = ((f32)(RandUint() % 20001) / 10000.0f - 1.0f) * ai.chaseArc;
 					const vec2 back = -rel / dist;
 					npc.monsterChaseOffset = vec2(back.x * cosf(turn) - back.y * sinf(turn), back.x * sinf(turn) + back.y * cosf(turn)) * ai.chaseRing;
 				}
-				const vec2 chaseGoal = ai.chaseRing > 0 ? vec2(*targetPos) + npc.monsterChaseOffset : vec2(*targetPos) - rel / dist * reach;
-				const vec2 toGoal = chaseGoal - vec2(npc.pos);
-				const f32 goalDist = glm::length(toGoal);
-				const vec2 heading = goalDist > 1.0f ? toGoal / goalDist : rel / dist;
-				const f32 moveYaw = atan2f(heading.y, heading.x);
-				const f32 step = MIN(run * delta, dist - reach);
-				npc.pos = vec3(vec2(npc.pos) + heading * step, npc.pos.z);
-				npc.rot.z = moveYaw;
-				const bool turned = YawGap(moveYaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD && TimeDurationMs(npc.monsterLastTurn, localTime) >= HYP_MONSTER_TURN_RESYNC_MS;
+				vec2 freshGoal = ai.chaseRing > 0 ? vec2(*targetPos) + npc.monsterChaseOffset : vec2(*targetPos) - rel / dist * reach;
+				if(glm::length(freshGoal - vec2(npc.pos)) <= stepMax) freshGoal = vec2(*targetPos);
+				const vec2 toFresh = freshGoal - vec2(npc.pos);
+				const f32 freshYaw = glm::length(toFresh) > 1.0f ? atan2f(toFresh.y, toFresh.x) : yaw;
+				const bool turned = npc.monsterChasing && YawGap(freshYaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD && TimeDurationMs(npc.monsterLastTurn, localTime) >= HYP_MONSTER_TURN_RESYNC_MS;
 				if(resync || turned) {
 					npc.monsterChasing = true;
-					npc.monsterSyncYaw = moveYaw;
+					npc.monsterLegGoal = freshGoal;
+					npc.monsterSyncYaw = freshYaw;
 					npc.monsterLastTurn = localTime;
 					npc.monsterNextSync = TimeAdd(localTime, TimeMsToTime(MONSTER_SYNC_MS));
-					replication->SendMonsterMoveToAll(npc.UID, npc.pos, vec3(chaseGoal, npc.pos.z), moveYaw, run);
+					replication->SendMonsterMoveToAll(npc.UID, npc.pos, vec3(npc.monsterLegGoal, npc.pos.z), freshYaw, run);
 				}
+				const vec2 toLeg = npc.monsterLegGoal - vec2(npc.pos);
+				const f32 legDist = glm::length(toLeg);
+				const vec2 heading = legDist > 1.0f ? toLeg / legDist : rel / dist;
+				const f32 step = MIN(MIN(stepMax, dist - reach), legDist);
+				npc.pos = vec3(vec2(npc.pos) + heading * step, npc.pos.z);
+				npc.rot.z = atan2f(heading.y, heading.x);
 				continue;
 			}
 			if(npc.monsterChasing || npc.monsterWalking) {

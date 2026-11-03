@@ -366,6 +366,8 @@ struct WeaponFiring
 		return animation;
 	}
 	f32 fireDelay = 0;
+	i32 continuityCount = 0;
+	f32 continuityDelay = 0;
 	i32 firingMethod = 0;
 	f32 firingStatDuration = 0;
 	f32 firingMoveSpeedMul = 0;
@@ -470,6 +472,7 @@ struct Remote
 	f32 offsetY = 0;
 	f32 offsetX = 0;
 	u8 polygonSides = 0;
+	f32 fov = 0;
 	bool forceTargetDir = false;
 	f32 forceFixedAngle = 0;
 	f32 offsetZ = 0;

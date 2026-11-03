@@ -575,6 +575,7 @@ struct World
 		Time monsterLastTurn = Time::ZERO;
 		f32 monsterSyncYaw = 0.0f;
 		vec2 monsterChaseOffset = vec2(0);
+		vec2 monsterLegGoal = vec2(0);
 		bool monsterReturning = false;
 		bool monsterWalkStateOn = false;
 		bool monsterLowHpDone = false;
@@ -782,6 +783,7 @@ struct World
 		i32 excludeIndex = -1;
 		i32 lastHitIndex = -1;
 		u32 chainHitMask = 0;
+		ActorUID chainNpcHit = ActorUID::INVALID;
 		bool chainEnded = false;
 		struct NpcHit { ActorUID uid; Time until; };
 		eastl::fixed_vector<NpcHit,16,true> npcHits;

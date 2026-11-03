@@ -251,6 +251,9 @@ bool World::PassiveOnLethal(Player& target)
 	target.reviveAt = TimeAdd(localTime, TimeMsToTime((undeadInfo ? undeadInfo->durationSec : 0.0f) * 1000.0));
 	target.reviveRatio = TOOLTIP_DEATHKNIGHT_REVIVE_HP;
 	ApplyStatus(target, target, undead);
+	if(st->info->skillIndex != 0 && GetGameXmlContent().SkillActionKnown(target.Main().classType, ActionStateID::EXTRAMOTION_3_BEHAVIORSTATE, target.Main().stance)) {
+		PlayerCastSkill(target, SkillID(st->info->skillIndex), target.body->GetWorldPos(), Slice<const ActorUID>(), 0, ActionStateID::EXTRAMOTION_3_BEHAVIORSTATE);
+	}
 	LOG("Passive :: %ls cheated death (undead status %d)", target.name.data(), undead);
 	return true;
 }
@@ -722,6 +725,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 
 	foreach(it, activeStatuses) {
 		if(it->statusID == statusID && it->targetIndex == target.index) {
+			if(it->appliedAt == localTime && it->casterIndex == caster.index && (!info || info->maxOverlap <= 1)) return;
 			const Time until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
 			if(until > it->until) it->until = until;
 			const bool stacked = info && it->overlap < info->maxOverlap;

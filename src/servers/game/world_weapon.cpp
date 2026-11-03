@@ -482,7 +482,8 @@ void World::UpdateProjectiles(f32 delta)
 				}
 				if(proj->chainRemote != RemoteIdx::INVALID && !proj->chained) {
 					proj->chained = true;
-					SpawnRemote(proj->ownerIndex, proj->chainRemote, vec3(vec2(npc->pos), proj->pos.z), proj->dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, proj->chainDamage, true, nullptr, proj->nodeName, false, false, true);
+					RemoteInst* npcChain = SpawnRemote(proj->ownerIndex, proj->chainRemote, vec3(vec2(npc->pos), proj->pos.z), proj->dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, proj->chainDamage, true, nullptr, proj->nodeName, false, false, true);
+					if(npcChain) npcChain->chainNpcHit = npc->UID;
 				}
 				proj->hitsLeft--;
 				if(proj->hitsLeft <= 0) {

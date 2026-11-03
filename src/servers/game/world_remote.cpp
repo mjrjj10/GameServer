@@ -275,6 +275,7 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 			if(inst) {
 				inst->excludeIndex = excludeIndex;
 				inst->chainHitMask = parent.chainHitMask;
+				inst->chainNpcHit = parent.chainNpcHit;
 				inst->costLevel = parent.costLevel;
 				inst->centeredBox = parent.centeredBox;
 				inst->sourceUID = parent.sourceUID;
@@ -967,16 +968,37 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 		const f32 sight = remote.sight > 0 ? remote.sight : 1450.0f;
 		Player* best = nullptr;
 		const u32 ownerTeam = players[inst.ownerIndex].team;
-		for(i32 pass = 0; pass < 4 && !best; pass++) {
+		const f32 halfCos = remote.fov > 0 && remote.fov < 360 ? cosf(remote.fov * 0.5f * PI / 180.0f) : -2.0f;
+		const auto inCone = [&](const vec2& at) {
+			const vec2 rel = at - vec2(inst.pos);
+			const f32 len = glm::length(rel);
+			return len < 1.0f || glm::dot(rel / len, inst.dir) >= halfCos;
+		};
+		ActorNpc* bestNpc = nullptr;
+		for(i32 pass = 0; pass < 4 && !best && !bestNpc; pass++) {
 			f32 bestDist = sight + WEAPON_TARGET_RADIUS;
 			foreach(it, players) {
 				if((it->team != ownerTeam) != (pass < 2) || !RemoteCanAffect(inst, *it, remote.vsOwner)) continue;
 				if(pass % 2 == 0 && ((inst.chainHitMask >> it->index) & 1)) continue;
+				if(!inCone(vec2(it->body->GetWorldPos()))) continue;
 				const f32 d = glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos));
 				if(d < bestDist) { bestDist = d; best = &*it; }
 			}
+			if(pass < 2) {
+				foreach(npc, actorNpcList) {
+					if(npc->hp <= 0 || !NpcHittableBy(*npc, players[inst.ownerIndex]) || npc->UID == inst.chainNpcHit || !inCone(vec2(npc->pos))) continue;
+					const f32 d = glm::length(vec2(npc->pos) - vec2(inst.pos));
+					if(d < bestDist) { bestDist = d; bestNpc = &*npc; best = nullptr; }
+				}
+			}
 		}
-		if(best) {
+		if(bestNpc) {
+			inst.dir = glm::length(vec2(bestNpc->pos - inst.pos)) > 1.0f ? glm::normalize(vec2(bestNpc->pos - inst.pos)) : inst.dir;
+			inst.pos = vec3(vec2(bestNpc->pos), inst.pos.z);
+			RemoteDamageNpc(inst, *bestNpc, 0.0f);
+			inst.chainNpcHit = bestNpc->UID;
+		}
+		else if(best) {
 			inst.dir = glm::length(vec2(best->body->GetWorldPos() - inst.pos)) > 1.0f ? glm::normalize(vec2(best->body->GetWorldPos() - inst.pos)) : inst.dir;
 			inst.pos = vec3(vec2(best->body->GetWorldPos()), inst.pos.z);
 			RemoteHit(inst, *best);
@@ -1254,6 +1276,7 @@ void World::DestroyRemote(i32 index)
 				if(child) {
 					child->excludeIndex = childExclude;
 					child->chainHitMask = copy.chainHitMask;
+					child->chainNpcHit = copy.chainNpcHit;
 					child->costLevel = copy.costLevel;
 					child->centeredBox = copy.centeredBox;
 					child->sourceUID = copy.sourceUID;

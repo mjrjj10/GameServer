@@ -3064,6 +3064,7 @@ bool GameXmlContent::LoadRemoteData()
 			else if((EA::StdC::Strcmp("RemoteTargetComData", compName) == 0)) {
 				pComp->QueryFloatAttribute("_HitInvalidTime", &remote.hitInvalidTime);
 				pComp->QueryFloatAttribute("_Sight", &remote.sight);
+				pComp->QueryFloatAttribute("_FOV", &remote.fov);
 				remote.targetOnly = XmlAttrTrue(pComp, "_TargetOnly");
 				if(XMLElement* pHoming = pComp->FirstChildElement("_Homing")) ParseHoming(pHoming, remote);
 				if(XMLElement* pOrbit = pComp->FirstChildElement("_Orbit")) pOrbit->QueryFloatAttribute("_Radius", &remote.orbitRadius);
@@ -5371,6 +5372,10 @@ bool GameXmlContent::LoadWeaponFiring()
 				}
 			}
 			if(pFire) pFire->QueryFloatAttribute("_FireDelayTime", &wf.fireDelay);
+			if(pFire) {
+				pFire->QueryIntAttribute("_ContinuityCount", &wf.continuityCount);
+				wf.continuityDelay = pFire->FloatAttribute("_ContinuityDelayMS") / 1000.0f;
+			}
 			if(const char* anim = pData ? pData->Attribute("_Animation") : nullptr) wf.animation = ActionStateFromString(anim);
 			if(XMLElement* pCombo = pData ? pData->FirstChildElement("_COMBO") : nullptr) {
 				for(XMLElement* pLevel = pCombo->FirstChildElement("_LEVEL"); pLevel && !wf.comboValid.full(); pLevel = pLevel->NextSiblingElement("_LEVEL")) {
