@@ -434,10 +434,15 @@ void World::UpdateSummonAi(f32 delta)
 					const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos));
 					if(d < best) { best = d; target = nullptr; npcTarget = &*o; chosen = o->UID; }
 				}
-				if(chosen != npc.chaseTarget) replication->SendAiSetTargetToAll(npc.UID, chosen);
+				if(chosen != npc.chaseTarget) {
+					replication->SendAiSetTargetToAll(npc.UID, chosen);
+					if(chosen != ActorUID::INVALID && (npc.extraMotion == 2 || npc.extraMotion == 3)) PlaySummonExtraMotion(npc, *info, 1);
+					else if(chosen == ActorUID::INVALID && npc.extraMotion == 1) PlaySummonExtraMotion(npc, *info, 3);
+				}
 				npc.chaseTarget = chosen;
 			}
 			if(!target && !npcTarget) {
+				if(npc.extraMotion == 0 && localTime >= npc.spawnedAt) PlaySummonExtraMotion(npc, *info, 2);
 				if(info->moveSpeed > 0 && info->normalMoveSpeed > 0) WanderNpc(npc, info->moveSpeed, delta);
 				else StopNpcLeg(npc);
 				continue;
@@ -466,6 +471,30 @@ void World::UpdateSummonAi(f32 delta)
 			npc.rot.z = atan2f(legDir.y, legDir.x);
 		}
 	}
+}
+
+void World::PlaySummonExtraMotion(ActorNpc& npc, const SummonInfo& info, i32 motion)
+{
+	if(motion < 1 || motion > 3 || info.extraMotions[motion - 1].empty()) return;
+	static const ActionStateID MOTIONS[3] = { ActionStateID::EXTRAMOTION_1_BEHAVIORSTATE, ActionStateID::EXTRAMOTION_2_BEHAVIORSTATE, ActionStateID::EXTRAMOTION_3_BEHAVIORSTATE };
+	npc.extraMotion = (u8)motion;
+	replication->SendMonsterStateToAll(npc.UID, MOTIONS[motion - 1], npc.pos, 0.0f);
+	foreach_const(c, info.extraMotions[motion - 1]) {
+		if(pendingSummonCommands.full()) continue;
+		PendingSummonCommand pc;
+		pc.time = TimeAdd(localTime, TimeMsToTime(c->delay * 1000.0));
+		pc.remove = c->remove;
+		pc.ownerIndex = npc.ownerIndex;
+		pc.kind = SummonCommand::STATUS;
+		pc.index = c->index;
+		pc.pos = npc.pos;
+		pc.yaw = npc.rot.z;
+		pc.skill = 0;
+		pc.source = npc.UID;
+		pc.until = npc.despawnAt;
+		pendingSummonCommands.push_back(pc);
+	}
+	LOG("Summon :: creature=%d plays extra motion %d", (i32)npc.docID, motion);
 }
 
 void World::UpdateSummons()
@@ -633,6 +662,12 @@ void World::UpdateSummons()
 				pr.sourceUID = pc->source;
 				pr.nodeName = pc->nodeName;
 				pendingRemotes.push_back(pr);
+			}
+		}
+		else if(pc->remove) {
+			if(pc->source != ActorUID::INVALID && FindNpcActor(pc->source)) {
+				foreach(ns, npcStatuses) if(ns->npcUID == pc->source && ns->statusID == pc->index) ns->until = localTime;
+				replication->SendRemoveStatusToAll(pc->index, pc->source, pc->source);
 			}
 		}
 		else {

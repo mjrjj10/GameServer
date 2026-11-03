@@ -492,6 +492,7 @@ struct World
 		ActorUID ownerUID = ActorUID::INVALID;
 		Time despawnAt = Time::ZERO;
 		Time spawnedAt = Time::ZERO;
+		u8 extraMotion = 0;
 		Time selfDestructAt = Time::ZERO;
 		Time standAt = Time::ZERO;
 		Time dieStandAt = Time::ZERO;
@@ -895,6 +896,7 @@ struct World
 		vec3 aim = vec3(0);
 		Time until;
 		u16 nodeName = 0;
+		bool remove = false;
 	};
 	eastl::fixed_vector<PendingSummonCommand,128,false> pendingSummonCommands;
 
@@ -939,6 +941,7 @@ struct World
 	bool SkillCostAffordable(const Player& player, i32 skillID, f32 mp) const { return SkillCostError(player, skillID, mp) == 0; }
 	void UpdateWeaponHeat(Player& player);
 	void UpdateSummons();
+	void PlaySummonExtraMotion(ActorNpc& npc, const SummonInfo& info, i32 motion);
 	void UpdateBotCombat();
 	void UpdateBotMovement();
 	void UpdateObserver();

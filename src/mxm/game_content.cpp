@@ -5243,6 +5243,22 @@ bool GameXmlContent::LoadSummonActions()
 		const bool spawn = EA::StdC::Strcmp(state, "SPAWN_BEHAVIORSTATE") == 0;
 		const bool die = EA::StdC::Strcmp(state, "DIE_BEHAVIORSTATE") == 0;
 		const bool attack = EA::StdC::Strcmp(state, "ATTACK_BEHAVIORSTATE") == 0;
+		i32 extraMotion = 0;
+		if(EA::StdC::Sscanf(state, "EXTRAMOTION_%d_BEHAVIORSTATE", &extraMotion) == 1) {
+			if(extraMotion < 1 || extraMotion > 3 || EA::StdC::Strcmp(type, "STATUS") != 0) continue;
+			SummonCommand motionCmd;
+			motionCmd.kind = SummonCommand::STATUS;
+			pA->QueryAttribute("StatusIndex", &motionCmd.index);
+			pA->QueryFloatAttribute("Delay", &motionCmd.delay);
+			const char* removeParam = pA->Attribute("Param2");
+			motionCmd.remove = removeParam && EA::StdC::Strcmp(removeParam, "Remove") == 0;
+			if(motionCmd.index == 0) continue;
+			foreach(it, summonMap) {
+				auto& list = it->second.extraMotions[extraMotion - 1];
+				if(it->second.className == cls && !list.full()) { list.push_back(motionCmd); count++; }
+			}
+			continue;
+		}
 		i32 skillState = 0;
 		if(!spawn && !die && !attack && EA::StdC::Sscanf(state, "SKILL_%d_BEHAVIORSTATE", &skillState) != 1) continue;
 		if(skillState < 0 || skillState > 20) continue;

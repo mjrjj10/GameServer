@@ -126,6 +126,7 @@ struct SummonCommand
 	enum Kind: u8 { REMOTE = 0, STATUS, DIE };
 	Kind kind = REMOTE;
 	bool onCurrent = false;
+	bool remove = false;
 	u8 dieMode = 0;
 	i32 index = 0;
 	f32 delay = 0;
@@ -158,6 +159,7 @@ struct SummonInfo
 	f32 aiDistance = 0;
 	eastl::array<eastl::fixed_vector<SummonCommand,12,false>,21> skillStates;
 	eastl::array<i32,21> stateAnim = {};
+	eastl::array<eastl::fixed_vector<SummonCommand,4,false>,3> extraMotions;
 };
 
 struct StatusMod

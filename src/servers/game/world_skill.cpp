@@ -317,7 +317,7 @@ void World::SetStance(ActorMaster& master, i8 stance, f32 duration, i32 weaponFi
 	master.stanceShotsLeft = stance != 0 && weaponFireCount > 0 ? weaponFireCount : -1;
 	master.stanceCancelByDefeat = stance != 0 && cancelByDefeat;
 	if(stance == 0 && oldStance != 0) replication->SendStanceToAll(master.UID, 0, STANCE_EXIT_DURATION);
-	if(stance != 0 && master.parent && &master.parent->Main() == &master && FindPassiveOfType(*master.parent, StatusType::DOUBLEGUN)) {
+	if(stance != oldStance && master.parent && &master.parent->Main() == &master && FindPassiveOfType(*master.parent, StatusType::DOUBLEGUN)) {
 		const u32 m = master.parent->mainCharaID & 1;
 		master.parent->heat[m] = 0;
 		if(master.parent->overheatUntil[m] != Time::ZERO) master.parent->overheatUntil[m] = localTime;
