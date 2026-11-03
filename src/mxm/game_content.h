@@ -142,6 +142,7 @@ struct SummonInfo
 	eastl::fixed_vector<SummonCommand,12,false> onDie;
 	f32 lifeTime = 0;
 	f32 moveSpeed = 0;
+	f32 normalMoveSpeed = 0;
 	f32 rotateSpeed = 0;
 	f32 perception = 0;
 	f32 targetLost = 0;
@@ -343,6 +344,8 @@ struct StatusInfo
 	i32 casterStatus = 0;
 	bool staminaBurn = false;
 	f32 descDefenceDown = 0;
+	f32 descHeal = 0;
+	f32 descHealPct = 0;
 };
 
 struct WeaponFiring
@@ -463,6 +466,8 @@ struct Remote
 	RemoteIdx destroyCreateRemote = RemoteIdx::INVALID;
 	f32 attackMultiplier = 0;
 	f32 offsetY = 0;
+	f32 offsetX = 0;
+	u8 polygonSides = 0;
 	bool forceTargetDir = false;
 	f32 forceFixedAngle = 0;
 	f32 offsetZ = 0;

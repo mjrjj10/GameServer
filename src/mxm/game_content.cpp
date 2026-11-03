@@ -2963,6 +2963,9 @@ bool GameXmlContent::LoadRemoteData()
 		pEntityInfo->QueryAttribute("ID", &ID);
 
 		remote.ID = RemoteIdx(ID);
+		if(KEYNAME && EA::StdC::Strstr(KEYNAME, "_TRIANGLE")) remote.polygonSides = 3;
+		else if(KEYNAME && EA::StdC::Strstr(KEYNAME, "_SQUARE")) remote.polygonSides = 4;
+		else if(KEYNAME && EA::StdC::Strstr(KEYNAME, "_PENTAGON")) remote.polygonSides = 5;
 
 		VERBOSE("Remote: { ID=%u, KEYNAME='%s' }", ID, KEYNAME);
 
@@ -3021,6 +3024,7 @@ bool GameXmlContent::LoadRemoteData()
 				pComp->QueryFloatAttribute("_AttackMultiplier", &remote.attackMultiplier);
 				remote.useOwnerRemoteSpeedRatio = XmlAttrTrue(pComp, "_UseOwnerRemoteSpeedRatio");
 				pComp->QueryFloatAttribute("_OffsetY", &remote.offsetY);
+				pComp->QueryFloatAttribute("_OffsetX", &remote.offsetX);
 				if(XMLElement* pFd = pComp->FirstChildElement("_ForceDir")) {
 					const char* fdType = nullptr;
 					pFd->QueryStringAttribute("_Type", &fdType);
@@ -3682,6 +3686,14 @@ bool GameXmlContent::LoadStatusData()
 			const char* statusDesc = pCommon ? pCommon->Attribute("_Description") : nullptr;
 			const char* defenceDown = statusKey && statusDesc && EA::StdC::Strstr(statusKey, "DEFENCEDOWN") ? EA::StdC::Strstr(statusDesc, "-") : nullptr;
 			if(defenceDown && EA::StdC::Strchr(defenceDown, '%')) st.descDefenceDown = (f32)EA::StdC::AtoI32(defenceDown + 1);
+			const char* descHp = statusDesc && !EA::StdC::Strstr(statusDesc, " X ") ? EA::StdC::Strstr(statusDesc, "HP ") : nullptr;
+			if(descHp) {
+				const char* digits = descHp + 3;
+				const char* end = digits;
+				while(*end >= '0' && *end <= '9') end++;
+				if(end > digits && *end == ' ') st.descHeal = (f32)EA::StdC::AtoI32(digits);
+				if(end > digits && *end == '%') st.descHealPct = (f32)EA::StdC::AtoI32(digits);
+			}
 			if(!pCommon) continue;
 
 			f32 durationMs = 0;
@@ -4089,6 +4101,19 @@ bool GameXmlContent::LoadSkillTooltips()
 		st.mods.push_back(mod);
 		modCount++;
 	}
+	static const f32 MEASURED_DESC_HEAL_SKILLPOWER_RATIO = 8.0f / 37.0f;
+	foreach(it, statusMap) {
+		StatusInfo& st = it->second;
+		if(st.descHeal <= 0 || !st.mods.empty() || st.type != StatusType::HEAL) continue;
+		StatusMod mod;
+		mod.stat = StatusMod::HEALTH;
+		mod.regen = true;
+		mod.value = st.descHeal;
+		mod.count = 1;
+		st.mods.push_back(mod);
+		if(st.healMul <= 0) st.healMul = MEASURED_DESC_HEAL_SKILLPOWER_RATIO;
+		modCount++;
+	}
 	LOG("Loaded %d status stat modifiers from skilltt", modCount);
 
 	XMLDocument xmlDesc;
@@ -4267,6 +4292,7 @@ void GameXmlContent::LoadSummonInfo(XMLElement* pInfo)
 		SummonInfo si;
 		if(XMLElement* p = pInfo->FirstChildElement("EntityComData")) {
 			p->QueryFloatAttribute("_MoveSpeed", &si.moveSpeed);
+			si.normalMoveSpeed = p->FloatAttribute("_NormalMoveSpeed", si.moveSpeed);
 			p->QueryFloatAttribute("_RotateSpeed", &si.rotateSpeed);
 			const char* t = nullptr;
 			p->QueryStringAttribute("_IsTargetable", &t);

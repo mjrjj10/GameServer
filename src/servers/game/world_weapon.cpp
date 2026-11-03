@@ -103,7 +103,8 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		player.botAttackState = WeaponAttackState(player, wf);
 		player.botAttackStateUntil = TimeAdd(localTime, TimeMsToTime(BOT_ATTACK_STATE_MS));
 	}
-	RunWeaponActionStatuses(player, shotStance);
+	const vec3 shotAim = vec3(vec2(origin) + dir * MAX(MIN(distance > 1.0f ? distance : aimMax, aimMax), aimMin), player.body->GetWorldPos().z);
+	RunWeaponActionStatuses(player, shotStance, &shotAim);
 	const Remote* remote = content.FindRemote(idx);
 	ASSERT(remote);
 	LOG("Shot :: %ls firing remote %d (combo %d charge %d count %d)", player.name.data(), (i32)idx, player.firingCombo, player.chargeLevel, player.shotCount[player.mainCharaID & 1]);
@@ -152,8 +153,9 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	proj.ignoreWalls = !remote || remote->ignoreGround;
 	proj.wallZ = player.body->GetWorldPos().z + BodyMidHeight(player);
 	proj.halfWidth = remote ? remote->boundSize[0] * 0.5f : 20.0f;
-	proj.hitsLeft = remote ? MAX(remote->activateCount, 1) : 1;
-	proj.penetrationLeft = remote && remote->penetrationCount > 0 ? remote->penetrationCount : PENETRATION_UNLIMITED;
+	const bool chainShot = remote && remote->behaviorType == Remote::BehaviorType::CHAIN;
+	proj.hitsLeft = chainShot ? 1 : remote ? MAX(remote->activateCount, 1) : 1;
+	proj.penetrationLeft = chainShot ? 1 : remote && remote->penetrationCount > 0 ? remote->penetrationCount : PENETRATION_UNLIMITED;
 	proj.forwardReach = (remote && remote->boundType == Remote::BoundType::E_BOUND_BOX) ? MAX(remote->offsetY + RemoteBoundOffset(*remote) + remote->boundSize[1] * 0.5f, 0.0f) : 0.0f;
 	proj.aoeRadius = bomb ? bomb->boundSize[0] * 0.5f : 0;
 	proj.bombDoc = bomb ? bomb->ID : RemoteIdx::INVALID;
@@ -221,6 +223,28 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		for(i32 k = 0; k < (i32)wf.extraRemotes.size() && !projectileList.full(); k++) {
 			const Remote* extra = content.FindRemote(wf.extraRemotes[k]);
 			if(!extra) continue;
+			const Remote* delayedChild = extra->boundType == Remote::BoundType::E_BOUND_NONE && extra->destroyCreateRemote != RemoteIdx::INVALID ? content.FindRemote(extra->destroyCreateRemote) : nullptr;
+			if(delayedChild) {
+				if(pendingRemotes.full()) continue;
+				static const char* const LEFT_FIRE_DUMMY = "Attack_Fire_Dummy_l";
+				PendingRemote pr;
+				pr.casterMasterUID = player.Main().UID;
+				pr.time = TimeAdd(localTime, TimeMsToTime(MAX(extra->lifeTime, 0.0f) * 1000.0));
+				pr.idx = delayedChild->ID;
+				pr.preset = (i32)ActionCommand::TargetPreset::SELF_FFF;
+				pr.offsetSide = 0;
+				pr.offsetFront = 0;
+				pr.ownerIndex = player.index;
+				pr.skillID = SkillID::INVALID;
+				pr.castID = nextCastID++;
+				pr.damage = (i32)WeaponHitDamage(player, delayedChild);
+				pr.castPos = proj.pos + vec3(proj.dir * proj.range, 0);
+				pr.angle = atan2f(proj.dir.y, proj.dir.x);
+				pr.target = ActorUID::INVALID;
+				pr.nodeName = content.FindNodeName(LEFT_FIRE_DUMMY);
+				pendingRemotes.push_back(pr);
+				continue;
+			}
 			Projectile p = proj;
 			p.remoteDoc = extra->ID;
 			p.damage = (i32)WeaponHitDamage(player, extra);
@@ -294,6 +318,19 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 			if(glm::length(vec2(pos) - vec2(center)) > radius + HitRadius(*it)) continue;
 			foreach_const(st, bombRemote->friendlyStatuses) {
 				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(owner, *it, st->statusID);
+			}
+		}
+		const Faction ownFaction = owner.team == 0 ? Faction::RED : Faction::BLUE;
+		foreach(npc, actorNpcList) {
+			if(npc->ownerUID == ActorUID::INVALID || npc->faction != ownFaction || npc->hp <= 0 || npc->hp >= npc->hpMax) continue;
+			if(glm::length(vec2(npc->pos) - vec2(center)) > radius + NpcHitRadius(*npc)) continue;
+			foreach_const(st, bombRemote->friendlyStatuses) {
+				const StatusInfo* info = GetGameXmlContent().FindStatus(st->statusID);
+				if(!info || info->descHealPct <= 0) continue;
+				npc->hp = MIN(npc->hp + (i32)(npc->hpMax * info->descHealPct / 100.0f), npc->hpMax);
+				replication->SendAddStatusToAll(st->statusID, npc->UID, owner.Main().UID, StatusSentDuration(*info), npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false);
+				replication->SendHpToAll(npc->UID, npc->hp, npc->hpMax);
+				LOG("Summon :: creature=%d repaired %.0f%% by %ls (hp %d/%d)", (i32)npc->docID, info->descHealPct, owner.name.data(), npc->hp, npc->hpMax);
 			}
 		}
 	}
@@ -723,13 +760,31 @@ f32 World::WeaponHitDamage(const Player& player, const Remote* remote) const
 	return attack * mult * MAX(1.0f + StatusModMulSum(player, StatusMod::ATTACK) / 100.0f, 0.0f);
 }
 
-void World::RunWeaponActionStatuses(Player& player, i8 stance)
+void World::RunWeaponActionStatuses(Player& player, i8 stance, const vec3* aimPos)
 {
 	const auto& content = GetGameXmlContent();
 	const ActionStateID state = ActiveWeaponFiring(player, stance).AttackState(player.firingCombo, player.chargeLevel);
 	const GameXmlContent::Action* action = content.FindSkillAction(ActionClass(player), state, stance);
 	if(!action) return;
 	foreach_const(cmd, action->commands) {
+		if(aimPos && cmd->type == ActionCommand::Type::REMOTE && cmd->remote.targetPreset == ActionCommand::TargetPreset::POS_TTT_1 && !cmd->remote.remove && !pendingRemotes.full()) {
+			PendingRemote pr;
+			pr.casterMasterUID = player.Main().UID;
+			pr.time = TimeAdd(localTime, TimeMsToTime(cmd->delay * 1000.0));
+			pr.idx = cmd->remote.idx;
+			pr.preset = (i32)cmd->remote.targetPreset;
+			pr.offsetSide = 0;
+			pr.offsetFront = 0;
+			pr.ownerIndex = player.index;
+			pr.skillID = SkillID::INVALID;
+			pr.castID = nextCastID++;
+			pr.damage = 0;
+			pr.castPos = *aimPos;
+			pr.angle = atan2f(aimPos->y - player.body->GetWorldPos().y, aimPos->x - player.body->GetWorldPos().x);
+			pr.target = ActorUID::INVALID;
+			pendingRemotes.push_back(pr);
+			continue;
+		}
 		if(cmd->type != ActionCommand::Type::STATUS || cmd->status.statusIndex == 0 || cmd->status.removeAtEnd || cmd->status.remove) continue;
 		const auto preset = cmd->status.targetPreset;
 		if(preset != ActionCommand::TargetPreset::SELF_FFF && preset != ActionCommand::TargetPreset::SELF_TFF) continue;

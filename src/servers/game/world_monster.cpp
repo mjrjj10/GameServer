@@ -1209,6 +1209,24 @@ bool World::UpdateMonsterSeek(ActorNpc& npc, const GameXmlContent::MonsterAi& ai
 	return true;
 }
 
+static const f32 NPC_GROUND_RECHECK_DIST = 50.0f;
+static const f32 NPC_GROUND_PROBE_UP = 400.0f;
+static const f32 NPC_GROUND_PROBE_DOWN = 1500.0f;
+static const f32 NPC_GROUND_MAX_SLOPE = 1.0f;
+
+void World::SnapNpcToGround(ActorNpc& npc)
+{
+	if(!npc.monsterAi || !map || !map->ingameLevels) return;
+	const f32 moved = glm::length(vec2(npc.pos) - npc.groundCheckedAt);
+	if(moved < NPC_GROUND_RECHECK_DIST) return;
+	npc.groundCheckedAt = vec2(npc.pos);
+	const vec3 from = vec3(vec2(npc.pos), npc.pos.z + NPC_GROUND_PROBE_UP);
+	f32 dist = 0;
+	if(!physics.RaycastStatic(from, from - vec3(0, 0, NPC_GROUND_PROBE_UP + NPC_GROUND_PROBE_DOWN), &dist)) return;
+	const f32 ground = from.z - dist;
+	if(fabsf(ground - npc.pos.z) <= moved * NPC_GROUND_MAX_SLOPE) npc.pos.z = ground;
+}
+
 void World::UpdateMonsterAi(f32 delta)
 {
 	UpdateMonsterHits();
@@ -1216,6 +1234,7 @@ void World::UpdateMonsterAi(f32 delta)
 	if(frozen) return;
 	foreach(it, actorNpcList) {
 		ActorNpc& npc = *it;
+		SnapNpcToGround(npc);
 		if(npc.selfDestructAt != Time::ZERO && localTime >= npc.selfDestructAt && npc.hp > 0 && npc.removeAt == Time::ZERO) {
 			MonsterDie(npc, ActorUID::INVALID, CreatureIndex(0));
 			continue;

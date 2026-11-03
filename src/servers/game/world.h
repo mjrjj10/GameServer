@@ -337,6 +337,11 @@ struct World
 		f32 dashDone = 0;
 		const GameXmlContent::MoveCurve* dashCurve = nullptr;
 		Time ccImmuneUntil = Time::ZERO;
+		Time dodgeRageReadyAt = Time::ZERO;
+		SkillID lastCastSkill = SkillID::INVALID;
+		ActionStateID lastCastAction = ActionStateID::INVALID;
+		i8 lastCastStance = 0;
+		Time lastCastStart = Time::ZERO;
 		Time battleActionAt = Time::ZERO;
 		u8 battleStage = 0;
 		u32 hiddenFrom = 0;
@@ -527,6 +532,7 @@ struct World
 		bool monsterAwake = false;
 		Time monsterHoldUntil = Time::ZERO;
 		Time defeatLieAt = Time::ZERO;
+		vec2 groundCheckedAt = vec2(0);
 		Time airborneAt = Time::ZERO;
 		i32 airborneStep = 0;
 		Time stateEndAt = Time::ZERO;
@@ -957,6 +963,7 @@ struct World
 	void UpdateBotSkills();
 	void UpdateSummonAi(f32 delta);
 	void UpdateMonsterAi(f32 delta);
+	void SnapNpcToGround(ActorNpc& npc);
 	void StartMonsterAttack(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const GameXmlContent::MonsterAttack* attack, const vec3* targetPos, f32 dist, f32 yaw, f32 run);
 	void StartMonsterWalkState(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, f32 speed);
 	bool UpdateMonsterMasterSpecial(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const GameXmlContent::MonsterAttack& current, f32 run);
@@ -1172,7 +1179,7 @@ public:
 	i32 UpgradeSummon(const Player& player, i32 skillID) const;
 	f32 ComboPassOffset(const Player& player, SkillID skillID) const;
 	void RunStanceOut(Player& player, i8 oldStance);
-	void RunWeaponActionStatuses(Player& player, i8 stance);
+	void RunWeaponActionStatuses(Player& player, i8 stance, const vec3* aimPos = nullptr);
 	f32 WeaponHeatScale(const Player& player) const;
 	f32 WeaponFireDelayScale(const Player& player) const;
 	f32 BotNextFireDelay(const Player& bot) const;
@@ -1483,6 +1490,7 @@ private:
 	void UpdateStatuses();
 	void RemoteApplyArea(RemoteInst& inst);
 	void RemoteHitWalls(RemoteInst& inst, f32 farEdge);
+	void RemoteApplyPolygonOutline(RemoteInst& inst);
 	f32 LagDistToSegment(const Player& p, const vec2& a, const vec2& b) const;
 	bool LagSegmentHits(const Player& p, const vec2& a, const vec2& b, f32 lateral, f32 forwardReach) const;
 	f32 LagDistToPoint(const Player& p, const vec2& point) const;

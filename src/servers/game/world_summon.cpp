@@ -438,7 +438,7 @@ void World::UpdateSummonAi(f32 delta)
 				npc.chaseTarget = chosen;
 			}
 			if(!target && !npcTarget) {
-				if(info->moveSpeed > 0) WanderNpc(npc, info->moveSpeed, delta);
+				if(info->moveSpeed > 0 && info->normalMoveSpeed > 0) WanderNpc(npc, info->moveSpeed, delta);
 				else StopNpcLeg(npc);
 				continue;
 			}

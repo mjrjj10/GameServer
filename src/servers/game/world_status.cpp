@@ -422,6 +422,11 @@ void World::PassiveOnSkillCast(Player& player, i32 skillID)
 		}
 	}
 	if(const ActiveStatus* st = FindPassiveOfType(player, StatusType::DEFENDER)) {
+		const auto used = GetGameXmlContent().skillMap.find(SkillID(skillID));
+		if(used != GetGameXmlContent().skillMap.end() && used->second.type == SkillType::SHIRK && localTime >= player.dodgeRageReadyAt && st->info->Param("_DodgeRecoveryRP") > 0) {
+			GainResource(player, 1, st->info->Param("_DodgeRecoveryRP"));
+			player.dodgeRageReadyAt = TimeAdd(localTime, TimeMsToTime(st->info->Param("_DodgeRecoveryRPCooltime")));
+		}
 		if(st->info->ListHas("DATA", skillID)) {
 			HealPlayer(player, player, (i32)(player.Main().hpMax * st->info->Param("_RecoveryFactorHP") / 100.0f));
 			player.ccImmuneUntil = TimeAdd(localTime, TimeMsToTime(TOOLTIP_DEFENDER_CC_IMMUNE_SEC * 1000.0));

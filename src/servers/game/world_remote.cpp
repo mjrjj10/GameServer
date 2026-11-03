@@ -202,7 +202,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		const f32 sendYaw = atan2f(dir.y, dir.x) + (remoteSendRootDir ? PI : 0.0f);
 		vec3 sendPos = vec3(vec2(pos), inst.pos.z) - vec3(0, 0, remote->offsetZ);
 		const bool atAimedPoint = aimPos && glm::length(vec2(*aimPos)) > 1.0f && glm::length(vec2(pos) - vec2(*aimPos)) < 1.0f;
-		if(plainStaticBox && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY), 0);
+		if(plainStaticBox && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY) + Perp(dir) * remote->offsetX, 0);
 		if(remoteTargetEntityOverride != ActorUID::INVALID) targetPos = pos;
 		replication->SendRemoteCreateToAll(remoteParentOverride != ActorUID::INVALID ? remoteParentOverride : players[ownerIndex].Main().UID, seed, sendIdx, remoteSendFromSet ? remoteSendFrom : sendPos, sendYaw, targetPos,
 			remoteTargetEntityOverride != ActorUID::INVALID ? remoteTargetEntityOverride : (targetMaster ? target : ActorUID::INVALID), child && remote->behaviorType == Remote::BehaviorType::CHAIN ? CHAIN_CHILD_NODE : (Config().DevNoFireNode ? GetGameXmlContent().GetNodeName(0) : GetGameXmlContent().GetNodeName(nodeName)), casterCreatesLocally ? players[ownerIndex].clientHd : ClientHandle::INVALID);
@@ -541,6 +541,10 @@ void World::RemoteApplyShape(RemoteInst& inst)
 		default: return;
 	}
 	if(length <= 0) return;
+	if(remote.boundType == Remote::BoundType::E_BOUND_BEAM_NIF && remote.polygonSides >= 3) {
+		RemoteApplyPolygonOutline(inst);
+		return;
+	}
 	RemoteHitWalls(inst, start + length);
 
 	foreach(it, players) {
@@ -581,6 +585,30 @@ void World::RemoteHitWalls(RemoteInst& inst, f32 farEdge)
 	if(!physics.RaycastStatic(vec3(from, inst.wallZ), vec3(to, inst.wallZ), &wallDist, (i32)owner.team, &wallActor) || !wallActor) return;
 	inst.wallHitDone = true;
 	OnDynamicHit(wallActor, inst.clientRemoteID, ClientHandle::INVALID, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, vec3(from + glm::normalize(to - from) * wallDist, inst.wallZ));
+}
+
+static const f32 MEASURED_POLYGON_BLADE_RADIUS = 470.0f;
+
+void World::RemoteApplyPolygonOutline(RemoteInst& inst)
+{
+	const Remote& remote = *inst.remote;
+	const f32 halfWidth = remote.boundSize[0] * 0.5f;
+	const f32 inner = MEASURED_POLYGON_BLADE_RADIUS * cosf(PI / (f32)remote.polygonSides);
+	foreach(it, players) {
+		const vec3 pos = it->body->GetWorldPos();
+		if(fabsf(pos.z - (inst.pos.z - remote.offsetZ)) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
+		const f32 d = glm::length(LagClosestPos(*it, vec2(inst.pos)) - vec2(inst.pos));
+		if(d < inner - halfWidth - HitRadius(*it) || d > MEASURED_POLYGON_BLADE_RADIUS + halfWidth + HitRadius(*it)) continue;
+		RemoteHit(inst, *it);
+	}
+	Player& owner = players[inst.ownerIndex];
+	foreach(npc, actorNpcList) {
+		if(!NpcHittableBy(*npc, owner)) continue;
+		const f32 r = NpcHitRadius(*npc);
+		const f32 d = glm::length(vec2(npc->pos) - vec2(inst.pos));
+		if(d < inner - halfWidth - r || d > MEASURED_POLYGON_BLADE_RADIUS + halfWidth + r) continue;
+		RemoteDamageNpc(inst, *npc, d);
+	}
 }
 
 void World::RemoteApplyArea(RemoteInst& inst)
@@ -850,6 +878,7 @@ void World::SpawnPendingRemotes()
 			pos.z = owner.body->GetWorldPos().z + fireNode->up;
 		}
 
+		if(remote && remote->offsetX != 0) pos += vec3(Perp(dir) * remote->offsetX, 0);
 		if(remote && IsChainedZoneRemote(remote->ID)) {
 			const f32 length = (f32)remote->boundSize[1];
 			foreach_const(ri, remoteInsts) {

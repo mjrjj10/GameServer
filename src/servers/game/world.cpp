@@ -833,6 +833,10 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	prog.startTime = localTime;
 	prog.commandID = 0;
 	skillProgramList.push_back(prog);
+	player.lastCastSkill = skillID;
+	player.lastCastAction = actionState;
+	player.lastCastStance = player.Main().stance;
+	player.lastCastStart = localTime;
 
 	// go through the skill program to find out how much the master moves
 	f32 distance = 0;

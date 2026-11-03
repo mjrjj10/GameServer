@@ -1561,16 +1561,27 @@ const GameXmlContent::SkillUpgrade* World::LatestUpgradeWith(const Player& playe
 f32 World::ComboPassOffset(const Player& player, SkillID skillID) const
 {
 	const auto& content = GetGameXmlContent();
-	for(i32 i = (i32)skillProgramList.size() - 1; i >= 0; i--) {
+	ActionStateID actionID = ActionStateID::INVALID;
+	i8 stance = 0;
+	Time start = Time::ZERO;
+	for(i32 i = (i32)skillProgramList.size() - 1; i >= 0 && start == Time::ZERO; i--) {
 		const SkillProgram& pg = skillProgramList[i];
 		if(pg.casterUID != player.Main().UID || pg.skillID != skillID) continue;
-		const GameXmlContent::Action* action = content.FindSkillAction(ActionClass(player), pg.actionID, pg.stance);
-		if(!action) return 0;
-		f32 first = 0;
-		foreach_const(st, action->anims) if(st->index == 0) first = content.GetAniSeqTime(ActionClassName(player), st->animationId) * (f32)MAX(st->loop, 1);
-		return MAX(first - TimeDiffSec(TimeDiff(pg.startTime, localTime)), 0.0f);
+		actionID = pg.actionID;
+		stance = pg.stance;
+		start = pg.startTime;
 	}
-	return 0;
+	if(start == Time::ZERO && player.lastCastSkill == skillID) {
+		actionID = player.lastCastAction;
+		stance = player.lastCastStance;
+		start = player.lastCastStart;
+	}
+	if(start == Time::ZERO) return 0;
+	const GameXmlContent::Action* action = content.FindSkillAction(ActionClass(player), actionID, stance);
+	if(!action) return 0;
+	f32 first = 0;
+	foreach_const(st, action->anims) if(st->index == 0) first = content.GetAniSeqTime(ActionClassName(player), st->animationId) * (f32)MAX(st->loop, 1);
+	return MAX(first - TimeDiffSec(TimeDiff(start, localTime)), 0.0f);
 }
 
 i32 World::UpgradeSummon(const Player& player, i32 skillID) const
