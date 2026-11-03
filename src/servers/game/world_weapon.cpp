@@ -155,7 +155,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	proj.halfWidth = remote ? remote->boundSize[0] * 0.5f : 20.0f;
 	const bool chainShot = remote && remote->behaviorType == Remote::BehaviorType::CHAIN;
 	proj.hitsLeft = chainShot ? 1 : remote ? MAX(remote->activateCount, 1) : 1;
-	proj.penetrationLeft = chainShot ? 1 : remote && remote->penetrationCount > 0 ? remote->penetrationCount : PENETRATION_UNLIMITED;
+	proj.penetrationLeft = remote && remote->penetrationCount > 0 ? remote->penetrationCount : PENETRATION_UNLIMITED;
 	proj.forwardReach = (remote && remote->boundType == Remote::BoundType::E_BOUND_BOX) ? MAX(remote->offsetY + RemoteBoundOffset(*remote) + remote->boundSize[1] * 0.5f, 0.0f) : 0.0f;
 	proj.aoeRadius = bomb ? bomb->boundSize[0] * 0.5f : 0;
 	proj.bombDoc = bomb ? bomb->ID : RemoteIdx::INVALID;

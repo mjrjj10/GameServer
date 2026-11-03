@@ -1554,7 +1554,7 @@ void World::UpdateMonsterAi(f32 delta)
 					npc.monsterChaseOffset = vec2(back.x * cosf(turn) - back.y * sinf(turn), back.x * sinf(turn) + back.y * cosf(turn)) * ai.chaseRing;
 				}
 				vec2 freshGoal = ai.chaseRing > 0 ? vec2(*targetPos) + npc.monsterChaseOffset : vec2(*targetPos) - rel / dist * reach;
-				if(glm::length(freshGoal - vec2(npc.pos)) <= stepMax) freshGoal = vec2(*targetPos);
+				if(ai.chaseRing <= 0 && glm::length(freshGoal - vec2(npc.pos)) <= run * (f32)MONSTER_SYNC_MS / 1000.0f) freshGoal = vec2(*targetPos);
 				const vec2 toFresh = freshGoal - vec2(npc.pos);
 				const f32 freshYaw = glm::length(toFresh) > 1.0f ? atan2f(toFresh.y, toFresh.x) : yaw;
 				const bool turned = npc.monsterChasing && YawGap(freshYaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD && TimeDurationMs(npc.monsterLastTurn, localTime) >= HYP_MONSTER_TURN_RESYNC_MS;

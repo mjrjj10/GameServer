@@ -12,6 +12,7 @@ static const f32 REPEAT_HIT_REDUCTION = 0.1f;
 static const f32 REPEAT_HIT_REDUCTION_CAP = 0.6f;
 static const i32 BEZIER_ARC_SAMPLES = 24;
 static const f32 REMOTE_DESTROY_CHILD_DELAY = 0.05f;
+static const f32 MEASURED_CHAIN_HOP_SEC = 0.126f;
 
 static bool RemoteCreateSendsEntity(ActionCommand::TargetPreset preset, Remote::BehaviorType behavior)
 {
@@ -783,8 +784,10 @@ void World::UpdateRemotes(f32 delta)
 				replication->SendRemoteSyncTargetToAll(inst.clientRemoteID, inst.target, inst.pos, &inst.dir);
 			}
 		}
-		const f32 destroyDelay = inst.speed <= 0 && (remote.destroyCreateRemote != RemoteIdx::INVALID || !remote.onDestroy.empty()) ? REMOTE_DESTROY_CHILD_DELAY : 0.0f;
-		if(!destroyed && remote.lifeTime > 0 && elapsed >= remote.lifeTime + destroyDelay) destroyed = true;
+		const bool chainHop = remote.behaviorType == Remote::BehaviorType::CHAIN && remote.destroyCreateRemote != RemoteIdx::INVALID;
+		const f32 destroyDelay = !chainHop && inst.speed <= 0 && (remote.destroyCreateRemote != RemoteIdx::INVALID || !remote.onDestroy.empty()) ? REMOTE_DESTROY_CHILD_DELAY : 0.0f;
+		const f32 lifeEnd = chainHop && remote.lifeTime > MEASURED_CHAIN_HOP_SEC ? MEASURED_CHAIN_HOP_SEC : remote.lifeTime;
+		if(!destroyed && remote.lifeTime > 0 && elapsed >= lifeEnd + destroyDelay) destroyed = true;
 		if(!destroyed && remote.lifeTime <= 0 && inst.speed <= 0 && inst.areaDone && elapsed >= destroyDelay) destroyed = true;
 		if(destroyed && !inst.killNow && inst.timeEventActive && ((remote.lifeTime > 0 && elapsed + delta >= remote.lifeTime) || (inst.speed > 0 && inst.range > 0 && inst.travelled >= inst.range - 0.01f))) {
 			const f32 endSec = MIN(remote.lifeTime > 0 ? remote.lifeTime : FLT_MAX, inst.speed > 0 && inst.range > 0 ? inst.range / inst.speed : FLT_MAX);
@@ -963,6 +966,8 @@ void World::RunRemoteTimeEvent(RemoteInst& inst, f32 elapsed)
 bool World::UpdateChainRemote(RemoteInst& inst)
 {
 	const Remote& remote = *inst.remote;
+	const bool hopWait = remote.destroyCreateRemote != RemoteIdx::INVALID || inst.chainNpcHit != ActorUID::INVALID || inst.chainHitMask != 0;
+	if(hopWait && TimeDiffSec(TimeDiff(inst.spawnTime, localTime)) < MEASURED_CHAIN_HOP_SEC) return false;
 	if(!inst.areaDone) {
 		inst.areaDone = true;
 		const f32 sight = remote.sight > 0 ? remote.sight : 1450.0f;
