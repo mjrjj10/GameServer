@@ -745,11 +745,23 @@ void World::UpdateShowcase()
 		if(resMax > 0) caster.res[r] = Config().DevShowcaseFullRes != 0 || resMax <= 1.0f ? resMax : resMax - 1.0f;
 	}
 	if(Config().DevShowcaseUpgrade > 0) {
-		foreach_const(c, caster.characters) {
-			foreach_const(sid, content.GetMaster((*c)->classType).skillIDs) {
-				if(const auto* ups = content.FindSkillUpgrades((i32)*sid)) caster.skillLevels[(i32)*sid] = (u8)MIN(Config().DevShowcaseUpgrade, (i32)ups->size());
+		for(u32 m = 0; m < 2; m++) {
+			if(caster.characters[m]->classType == ClassType::NONE) continue;
+			foreach_const(sid, content.GetMaster(caster.characters[m]->classType).skillIDs) {
+				const auto* ups = content.FindSkillUpgrades((i32)*sid);
+				if(!ups || ups->empty()) continue;
+				const u8 want = (u8)MIN(Config().DevShowcaseUpgrade, (i32)ups->size());
+				u8& level = caster.skillLevels[(i32)*sid];
+				if(level == want) continue;
+				level = want;
+				SendSkillLevel(caster, m, *sid);
 			}
 		}
+	}
+	i32 skillLevel = 0;
+	if(skill != 0) {
+		auto lv = caster.skillLevels.find(skill);
+		if(lv != caster.skillLevels.end()) skillLevel = lv->second;
 	}
 	caster.resDirty = true;
 	caster.ultGauge = MasterStat(caster.Main().classType, STAT_ULTIMATE);
@@ -777,7 +789,7 @@ void World::UpdateShowcase()
 	showcase.prevExpect = expect;
 	showcase.prevDummy = dummy.index;
 	showcase.prevCaster = caster.index;
-	LOG("Showcase :: wall=%lld master=%d slot=%s skill=%d caster=%ls range=%.0f dist=%.0f test=%s expect=%d", ShowcaseWallMs(), (i32)cls, slotNames[step], skill, caster.name.data(), range, glm::length(vec2(dummyPos) - vec2(casterPos)), testName, expect);
+	LOG("Showcase :: wall=%lld master=%d slot=%s skill=%d caster=%ls range=%.0f dist=%.0f test=%s expect=%d level=%d", ShowcaseWallMs(), (i32)cls, slotNames[step], skill, caster.name.data(), range, glm::length(vec2(dummyPos) - vec2(casterPos)), testName, expect, skillLevel);
 	if(mirror) LOG("Mirror :: turn=%d caster=%ls target=%ls", turn, caster.name.data(), dummy.name.data());
 	if(skill != 0) {
 		if(const GameXmlContent::SkillInput* need = content.FindSkillInput(skill)) {

@@ -1489,6 +1489,13 @@ static void AcquiredProps(const World::Player& player, SkillID skill, eastl::fix
 	for(u8 i = 0; i < f->second && i < ups->size(); i++) out.push_back((*ups)[i].propertyID);
 }
 
+void World::SendSkillLevel(const Player& player, u32 masterIndex, SkillID skill)
+{
+	eastl::fixed_vector<i32,8,false> props;
+	AcquiredProps(player, skill, props);
+	replication->SendPlayerSkillUpdateToAll(player.characters[masterIndex]->UID, skill, masterIndex == player.mainCharaID, Slice<const i32>(props.data(), props.size()));
+}
+
 void World::ResetSkillPoints(Player& player)
 {
 	const i32 slots[] = { 0, 1, SKILL_UPGRADE_SLOT_ULTIMATE };
@@ -1519,10 +1526,8 @@ bool World::UpgradeSkillSlot(Player& player, i32 slot)
 		if(level >= ups->size()) continue;
 		level++;
 		upgraded = true;
-		eastl::fixed_vector<i32,8,false> props;
-		AcquiredProps(player, skill, props);
-		replication->SendPlayerSkillUpdateToAll(player.characters[m]->UID, skill, m == active, Slice<const i32>(props.data(), props.size()));
-		LOG("Upgrade :: %ls slot %d skill %d level %d (property %d)", player.name.data(), slot, (i32)skill, (i32)level, props.back());
+		SendSkillLevel(player, m, skill);
+		LOG("Upgrade :: %ls slot %d skill %d level %d (property %d)", player.name.data(), slot, (i32)skill, (i32)level, (*ups)[level - 1].propertyID);
 	}
 	if(!upgraded) return false;
 	player.skillPoints--;

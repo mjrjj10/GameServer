@@ -1178,6 +1178,7 @@ public:
 	bool botUpgrades = true;
 	void GrantSkillPoint(Player& player);
 	bool UpgradeSkillSlot(Player& player, i32 slot);
+	void SendSkillLevel(const Player& player, u32 masterIndex, SkillID skill);
 	void RespawnPlayer(Player& player);
 	void RemovePlayer(Player& player);
 	void ClearMapContent();
