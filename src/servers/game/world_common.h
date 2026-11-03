@@ -96,6 +96,17 @@ static inline f32 CurrentHeat(const World::Player& player, const WeaponHeatInfo&
 	return MIN(MAX(player.heat[m] + h.autoRegen * (idle - h.autoRegenDelay) / h.autoRegenInterval, 0.0f), h.maxGauge);
 }
 
+static inline vec2 SteerToward(const vec2& dir, const vec2& rel, f32 maxTurn)
+{
+	f32 turn = atan2f(rel.y, rel.x) - atan2f(dir.y, dir.x);
+	while(turn > PI) turn -= 2 * PI;
+	while(turn < -PI) turn += 2 * PI;
+	turn = MAX(MIN(turn, maxTurn), -maxTurn);
+	const f32 c = cosf(turn);
+	const f32 sn = sinf(turn);
+	return vec2(dir.x * c - dir.y * sn, dir.x * sn + dir.y * c);
+}
+
 static inline bool WeaponHeatShot(World::Player& player, Time now, Replication* replication, f32 consumptionScale)
 {
 	const WeaponHeatInfo* h = ActiveWeaponHeat(player);

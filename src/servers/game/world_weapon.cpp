@@ -369,14 +369,7 @@ void World::SteerProjectile(Projectile& proj, f32 delta)
 	if(proj.homingTarget < 0) return;
 	const vec2 rel = vec2(players[proj.homingTarget].body->GetWorldPos() - proj.pos);
 	if(glm::length(rel) < 1.0f) return;
-	f32 turn = atan2f(rel.y, rel.x) - atan2f(proj.dir.y, proj.dir.x);
-	while(turn > PI) turn -= 2 * PI;
-	while(turn < -PI) turn += 2 * PI;
-	const f32 maxTurn = proj.angularVel * delta;
-	turn = MAX(MIN(turn, maxTurn), -maxTurn);
-	const f32 c = cosf(turn);
-	const f32 sn = sinf(turn);
-	proj.dir = vec2(proj.dir.x * c - proj.dir.y * sn, proj.dir.x * sn + proj.dir.y * c);
+	proj.dir = SteerToward(proj.dir, rel, proj.angularVel * delta);
 }
 
 void World::UpdateProjectiles(f32 delta)

@@ -1111,6 +1111,7 @@ struct World
 	void SweepFireNodePath(RemoteInst& inst, Player& instOwner);
 	bool UpdateTargetRemote(RemoteInst& inst, f32 delta);
 	bool UpdateGraphRemote(RemoteInst& inst, f32 delta);
+	bool AdvanceSteeredRemote(RemoteInst& inst, f32 delta);
 	bool UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed);
 	void DestroyRemote(i32 index);
 	void ExpireHitRecords();

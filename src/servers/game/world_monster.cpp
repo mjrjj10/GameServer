@@ -774,14 +774,7 @@ void World::UpdateMonsterRemotes(f32 delta)
 			const bool steered = homing && remote.angularVel > 0;
 			const bool locked = homing && dist > 1.0f && (remote.homingLength <= 0 || dist <= remote.homingLength);
 			if(locked && !steered) mr.dir = rel / dist;
-			else if(locked) {
-				f32 turn = atan2f(rel.y, rel.x) - atan2f(mr.dir.y, mr.dir.x);
-				while(turn > PI) turn -= 2 * PI;
-				while(turn < -PI) turn += 2 * PI;
-				const f32 maxTurn = remote.angularVel * delta;
-				turn = MAX(MIN(turn, maxTurn), -maxTurn);
-				mr.dir = vec2(mr.dir.x * cosf(turn) - mr.dir.y * sinf(turn), mr.dir.x * sinf(turn) + mr.dir.y * cosf(turn));
-			}
+			else if(locked) mr.dir = SteerToward(mr.dir, rel, remote.angularVel * delta);
 			const f32 step = remote.maxSpeed * delta;
 			f32 wallDist = 0;
 			const bool hitWall = !remote.ignoreGround && physics.RaycastStatic(vec3(vec2(mr.pos), mr.pos.z + HYP_MONSTER_REMOTE_WALL_HEIGHT), vec3(vec2(mr.pos) + mr.dir * step, mr.pos.z + HYP_MONSTER_REMOTE_WALL_HEIGHT), &wallDist);

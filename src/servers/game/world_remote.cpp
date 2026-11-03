@@ -1083,7 +1083,9 @@ bool World::UpdateTargetRemote(RemoteInst& inst, f32 delta)
 	const Remote& remote = *inst.remote;
 	if(remote.behaviorType == Remote::BehaviorType::TARGET && remote.attachTargetObject && inst.target != ActorUID::INVALID) return false;
 	if(inst.target == ActorUID::INVALID && remote.behaviorType == Remote::BehaviorType::HOMING && remote.forceDelay > 0 && TimeDiffSec(TimeDiff(inst.spawnTime, localTime)) < remote.forceDelay) {
-		inst.pos += vec3(inst.dir * (inst.speed > 0 ? inst.speed : 0.0f) * delta, 0);
+		const f32 forced = (inst.speed > 0 ? inst.speed : 0.0f) * delta;
+		inst.pos += vec3(inst.dir * forced, 0);
+		inst.travelled += forced;
 		return false;
 	}
 	if(inst.target == ActorUID::INVALID && remote.behaviorType == Remote::BehaviorType::HOMING && remote.homingLength > 0) {
@@ -1109,10 +1111,15 @@ bool World::UpdateTargetRemote(RemoteInst& inst, f32 delta)
 		}
 		if(inst.target != ActorUID::INVALID) LOG("Remote :: %d homing acquired a target at %.0f", (i32)remote.ID, bestDist);
 	}
+	const bool steered = remote.behaviorType == Remote::BehaviorType::HOMING && remote.angularVel > 0;
 	const ActorMaster* targetMaster = inst.target != ActorUID::INVALID ? FindMasterActor(inst.target) : nullptr;
 	if(!targetMaster) {
 		ActorNpc* targetNpc = inst.target != ActorUID::INVALID ? FindNpcActor(inst.target) : nullptr;
-		if(!targetNpc || targetNpc->hp <= 0) return true;
+		if(!targetNpc || targetNpc->hp <= 0) {
+			if(!steered) return true;
+			inst.target = ActorUID::INVALID;
+			return AdvanceSteeredRemote(inst, delta);
+		}
 		const vec2 rel = vec2(targetNpc->pos - inst.pos);
 		const f32 dist = glm::length(rel);
 		const f32 step = (inst.speed > 0 ? inst.speed : 3000.0f) * delta;
@@ -1121,11 +1128,19 @@ bool World::UpdateTargetRemote(RemoteInst& inst, f32 delta)
 			RemoteDamageNpc(inst, *targetNpc, 0.0f);
 			return true;
 		}
+		if(steered) {
+			inst.dir = SteerToward(inst.dir, rel, remote.angularVel * delta);
+			return AdvanceSteeredRemote(inst, delta);
+		}
 		inst.dir = rel / dist;
 		inst.pos += vec3(inst.dir * step, 0);
 		return false;
 	}
-	if(targetMaster->parent->dead) return true;
+	if(targetMaster->parent->dead) {
+		if(!steered) return true;
+		inst.target = ActorUID::INVALID;
+		return AdvanceSteeredRemote(inst, delta);
+	}
 	Player& target = *targetMaster->parent;
 	const vec3 tpos = target.body->GetWorldPos();
 	const vec2 rel = vec2(tpos - inst.pos);
@@ -1136,12 +1151,26 @@ bool World::UpdateTargetRemote(RemoteInst& inst, f32 delta)
 		RemoteHit(inst, target);
 		return true;
 	}
+	else if(steered) {
+		inst.dir = SteerToward(inst.dir, rel, remote.angularVel * delta);
+		return AdvanceSteeredRemote(inst, delta);
+	}
 	else {
 		inst.dir = rel / dist;
 		inst.pos += vec3(inst.dir * step, 0);
 		RemoteHitAlongPath(inst);
 	}
 	return false;
+}
+
+bool World::AdvanceSteeredRemote(RemoteInst& inst, f32 delta)
+{
+	f32 step = (inst.speed > 0 ? inst.speed : 3000.0f) * delta;
+	if(inst.range > 0) step = MAX(MIN(step, inst.range - inst.travelled), 0.0f);
+	inst.pos += vec3(inst.dir * step, 0);
+	inst.travelled += step;
+	RemoteHitAlongPath(inst);
+	return inst.range > 0 && inst.travelled >= inst.range - 0.01f;
 }
 
 bool World::UpdateGraphRemote(RemoteInst& inst, f32 delta)
