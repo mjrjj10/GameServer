@@ -1198,6 +1198,8 @@ public:
 	void TrackNpcSelfStatus(ActorUID npcUID, const StatusInfo& info);
 	bool NpcHittableBy(const ActorNpc& npc, const Player& attacker) const;
 	void DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage, const Replication::RemoteDamage* remoteHit = nullptr);
+	void GainRageOnHit(Player& attacker);
+	void GainRageOnDamage(Player& target, i32 damage);
 	void RemoteHitNpcs(RemoteInst& inst);
 	bool RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist);
 	void StartLevelEvents();
@@ -1438,6 +1440,7 @@ private:
 	void OnEvade(Player& target);
 	void PassiveStackOnHit(Player& attacker, Player& target, i32 remoteID, SkillID skillID);
 	void PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj);
+	void PassiveOnWeaponStatusHit(Player& attacker, Player& target);
 	void PassiveOnSkillHit(Player& attacker, Player& target);
 	void PassiveOnWeaponHit(Player& attacker);
 	void PassiveOnFriendlyHit(Player& owner);

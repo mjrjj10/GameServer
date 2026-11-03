@@ -428,7 +428,7 @@ void World::UpdateProjectiles(f32 delta)
 			foreach(npc, actorNpcList) {
 				if(destroyed || proj->npcHitList.full() || proj->damage <= 0 || !NpcHittableBy(*npc, owner)) continue;
 				if(eastl::find(proj->npcHitList.begin(), proj->npcHitList.end(), npc->UID) != proj->npcHitList.end()) continue;
-				if(SegmentPointDist2D(from, to, vec2(npc->pos)) > proj->halfWidth + NpcHitRadius(*npc)) continue;
+				if(SegmentPointDist2D(from, lastStep ? to + proj->dir * proj->forwardReach : to, vec2(npc->pos)) > proj->halfWidth + NpcHitRadius(*npc) + PROJECTILE_HIT_TOLERANCE) continue;
 				proj->npcHitList.push_back(npc->UID);
 				Replication::RemoteDamage hit;
 				hit.remoteID = proj->remoteID;
@@ -677,7 +677,7 @@ void World::UpdateWeaponCharges()
 		const f64 held = TimeDiffSec(TimeDiff(it->chargeStart, localTime));
 		while(it->chargeAnnounced < wf.chargeTime.size() && it->chargeAnnounced < wf.charge.size() && held >= wf.chargeTime[it->chargeAnnounced]) {
 			it->chargeAnnounced++;
-			replication->RelayWeaponState(it->clientHd, it->Main().UID, MEASURED_WEAPON_STATE_WEAPON_ID, WEAPON_STATE_CHARGE, it->chargeAnnounced, it->firingCombo);
+			replication->RelayWeaponState(ClientHandle::INVALID, it->Main().UID, MEASURED_WEAPON_STATE_WEAPON_ID, WEAPON_STATE_CHARGE, it->chargeAnnounced, it->firingCombo);
 			LOG("Shot :: %ls charge level %d after %.2fs", it->name.data(), (i32)it->chargeAnnounced, held);
 		}
 	}

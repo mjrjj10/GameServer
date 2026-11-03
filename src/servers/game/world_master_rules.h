@@ -8,6 +8,7 @@ enum class ResourceEvent: u8
 	CHARGED_SHOT,
 	CHARGING_PER_SEC,
 	REMOTE_HIT_ENEMY,
+	SELF_STATUS,
 };
 
 struct ResourceGainRule
@@ -17,18 +18,20 @@ struct ResourceGainRule
 	i32 slot;
 	f32 amount;
 	RemoteIdx remote;
+	i32 status = 0;
 };
 
 static const ResourceGainRule RESOURCE_GAIN_RULES[] = {
 	{ ClassType::SHUTTLE, ResourceEvent::CHARGED_SHOT, 1, 20.0f, RemoteIdx::INVALID },
 	{ ClassType::SHUTTLE, ResourceEvent::CHARGING_PER_SEC, 1, 5.0f, RemoteIdx::INVALID },
 	{ ClassType::SHUTTLE, ResourceEvent::REMOTE_HIT_ENEMY, 1, 22.0f, RemoteIdx(1440410000) },
+	{ ClassType::JINSEOYEON, ResourceEvent::SELF_STATUS, 2, 1.0f, RemoteIdx::INVALID, 1230120011 },
 };
 
-static inline const ResourceGainRule* FindResourceGainRule(ClassType master, ResourceEvent event, RemoteIdx remote = RemoteIdx::INVALID)
+static inline const ResourceGainRule* FindResourceGainRule(ClassType master, ResourceEvent event, RemoteIdx remote = RemoteIdx::INVALID, i32 status = 0)
 {
 	for(const ResourceGainRule& rule : RESOURCE_GAIN_RULES) {
-		if(rule.master == master && rule.event == event && (rule.remote == RemoteIdx::INVALID || rule.remote == remote)) return &rule;
+		if(rule.master == master && rule.event == event && (rule.remote == RemoteIdx::INVALID || rule.remote == remote) && rule.status == status) return &rule;
 	}
 	return nullptr;
 }

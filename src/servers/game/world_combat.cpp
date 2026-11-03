@@ -7,6 +7,19 @@ static const f64 NO_RESPAWN_MS = 1.0e12;
 static const i32 STAT_CRITICALRATE = 9;
 static const i32 STAT_CRITICALDAMAGE = 10;
 static const i32 STAT_RAGE_ATTACK_RECOVERY_VALUE = 51;
+static const i32 STAT_RAGE_DAMAGE_RECOVERY_RATIO = 50;
+
+void World::GainRageOnHit(Player& attacker)
+{
+	const f32 gain = MasterStat(attacker.Main().classType, STAT_RAGE_ATTACK_RECOVERY_VALUE) + StatBonus(attacker, (u8)STAT_RAGE_ATTACK_RECOVERY_VALUE);
+	if(gain > 0) GainResource(attacker, 1, gain);
+}
+
+void World::GainRageOnDamage(Player& target, i32 damage)
+{
+	const f32 gain = damage > 0 ? floorf(sqrtf((f32)damage)) * MasterStat(target.Main().classType, STAT_RAGE_DAMAGE_RECOVERY_RATIO) / 100.0f : 0.0f;
+	if(gain > 0) GainResource(target, 1, gain);
+}
 static const u32 STAT_REASON_HIT = 1;
 static const i32 STAT_SKILL_CRITICALRATE = 63;
 static const i32 STAT_SKILL_CRITICALDAMAGE = 64;
@@ -270,17 +283,8 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		}
 	}
 
-	if(attacker.res[1] >= 0) {
-		const ClassType ac = attacker.Main().classType;
-		const f32 rageMax = MasterStat(ac, RESOURCES[1].maxStat);
-		if(rageMax > 0) {
-			attacker.rageGainAt = localTime;
-			if(attacker.res[1] < rageMax) {
-				attacker.res[1] = MIN(attacker.res[1] + MasterStat(ac, STAT_RAGE_ATTACK_RECOVERY_VALUE) + StatBonus(attacker, (u8)STAT_RAGE_ATTACK_RECOVERY_VALUE), rageMax);
-				attacker.resDirty = true;
-			}
-		}
-	}
+	GainRageOnHit(attacker);
+	if(attacker.index != target.index) GainRageOnDamage(target, damage);
 
 	LOG("Damage :: %ls -> %ls skill=%d damage=%d%s hp=%d/%d in=%d remote=%u element=%d", attacker.name.data(), target.name.data(), (i32)skillID, damage, damageType == PACKET_DAMAGE_TYPE_CRITICAL ? " CRIT" : "", chara.hp, chara.hpMax,
 		damageIn, (u32)(proj ? proj->remoteDoc : remoteDoc), (i32)(elementMul * 100.0f));
@@ -478,6 +482,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 		attacker.bestHitCombo = MAX(attacker.bestHitCombo, attacker.stageHitCombo);
 	}
 	npc.hp = MAX(npc.hp - AbsorbNpcShield(npc, dealt), 0);
+	GainRageOnHit(attacker);
 	if(npc.monsterWeakUntil != Time::ZERO && localTime < npc.monsterWeakUntil && localTime >= npc.monsterWeakFrom) npc.monsterWeakHit = true;
 	if(IsStructure(npc)) attacker.damageStats[END_DMG_BUILDING_DEALT] += (u32)(hpBefore - npc.hp);
 	static const u32 coreTag = StatusTypeKey("Core");
@@ -571,6 +576,12 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 {
 	if(frozen || target.dead || target.untargetable) return;
 	if(HasStatusType(target, StatusType::GODMODE) || HasStatusType(target, StatusType::BURROW)) return;
+	if(HasStatusType(target, StatusType::EVADE)) {
+		LOG("Evade :: %ls evaded creature=%d", target.name.data(), (i32)attacker.docID);
+		replication->SendEvadeToAll(attacker.UID, target.Main().UID, remoteID, RemoteIdx(remote), ClientHandle::INVALID);
+		OnEvade(target);
+		return;
+	}
 	if(damage <= 0) {
 		if(status > 0) ApplyStatusFromNpc(attacker, target, status);
 		return;
@@ -592,6 +603,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 		damage -= (i32)absorbed;
 	}
 	if(damage <= 0) return;
+	GainRageOnDamage(target, damage);
 	ActorMaster& chara = target.Main();
 	target.damageTaken += damage;
 	target.hitsTaken++;

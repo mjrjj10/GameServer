@@ -317,6 +317,11 @@ void World::SetStance(ActorMaster& master, i8 stance, f32 duration, i32 weaponFi
 	master.stanceShotsLeft = stance != 0 && weaponFireCount > 0 ? weaponFireCount : -1;
 	master.stanceCancelByDefeat = stance != 0 && cancelByDefeat;
 	if(stance == 0 && oldStance != 0) replication->SendStanceToAll(master.UID, 0, STANCE_EXIT_DURATION);
+	if(stance != oldStance && master.parent && &master.parent->Main() == &master && FindPassiveOfType(*master.parent, StatusType::DOUBLEGUN)) {
+		const u32 m = master.parent->mainCharaID & 1;
+		master.parent->heat[m] = 0;
+		master.parent->overheatUntil[m] = Time::ZERO;
+	}
 	LOG("Stance :: %ls stance=%d duration=%.1f weaponFireCount=%d", master.parent ? master.parent->name.data() : L"?", (i32)stance, duration, weaponFireCount);
 	if(oldStance != 0 && stance == 0 && master.parent) RunStanceOut(*master.parent, oldStance);
 }
@@ -437,6 +442,11 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	}
 	if(remove) return;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
+	if(info && npc.ownerUID != ActorUID::INVALID && info->typeName == "STATUS_TYPE_PUREDOT" && info->durationSec <= 0 && info->intervalSec > 0 && info->paramRatio > 0) {
+		const Time drained = TimeAdd(localTime, TimeMsToTime(ceilf(1.0f / info->paramRatio) * info->intervalSec * 1000.0));
+		npc.despawnAt = drained;
+		LOG("Summon :: creature=%d drained by status %d, life %.1fs", (i32)npc.docID, statusID, ceilf(1.0f / info->paramRatio) * info->intervalSec);
+	}
 	if(NpcDefeatReaction(npc, info) < 0) {
 		replication->SendResistStatusToAll(npc.UID, caster.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
 		return;

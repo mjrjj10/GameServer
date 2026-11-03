@@ -2149,7 +2149,7 @@ void Game::OnPlayerCancelCast(ClientHandle clientHd, SkillID skillID)
 	World::Player& player = world.GetPlayer(p.playerIndex);
 	if(player.casting.skillID != SkillID::INVALID && (skillID == SkillID::INVALID || skillID == player.casting.skillID)) {
 		static const i32 MEASURED_CANCEL_WEAPON_RESULT = -1;
-		replication.SendWeaponStateTo(clientHd, player.Main().UID, (i32)world.ActiveWeapon(player), WEAPON_STATE_CHARGE, MEASURED_CANCEL_WEAPON_RESULT);
+		replication.SendWeaponStateTo(clientHd, player.Main().UID, MEASURED_WEAPON_STATE_WEAPON_ID, WEAPON_STATE_CHARGE, MEASURED_CANCEL_WEAPON_RESULT);
 		world.CancelCast(player, "client");
 	}
 }

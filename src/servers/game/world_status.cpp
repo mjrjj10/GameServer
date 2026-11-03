@@ -484,19 +484,8 @@ void World::OnEvade(Player& target)
 	}
 }
 
-void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj)
+void World::PassiveOnWeaponStatusHit(Player& attacker, Player& target)
 {
-	PassiveStackOnHit(attacker, target, (i32)proj.remoteDoc, SkillID::INVALID);
-	if(proj.remoteDoc != RemoteIdx::INVALID && !target.dead) {
-		const Remote* remote = GetGameXmlContent().FindRemote(proj.remoteDoc);
-		if(remote) {
-			foreach_const(st, remote->statuses) {
-				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(attacker, target, st->statusID);
-			}
-		}
-	}
-
-
 	eastl::fixed_vector<i32,4,false> toApply;
 	foreach(it, activeStatuses) {
 		if(it->targetIndex != attacker.index || !it->info || it->until <= localTime) continue;
@@ -533,6 +522,22 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 		LOG("Passive :: %ls weapon hit -> status %d on %ls", attacker.name.data(), *id, target.name.data());
 		ApplyStatus(attacker, target, *id);
 	}
+}
+
+void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj)
+{
+	PassiveStackOnHit(attacker, target, (i32)proj.remoteDoc, SkillID::INVALID);
+	if(proj.remoteDoc != RemoteIdx::INVALID && !target.dead) {
+		const Remote* remote = GetGameXmlContent().FindRemote(proj.remoteDoc);
+		if(remote) {
+			foreach_const(st, remote->statuses) {
+				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(attacker, target, st->statusID);
+			}
+		}
+	}
+
+
+	PassiveOnWeaponStatusHit(attacker, target);
 
 	if(target.dead) return;
 	for(const WeaponBonusRule& rule : WEAPON_BONUS_RULES) {
@@ -702,7 +707,8 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	const bool dragForce = info && info->type == StatusType::DRAGGEDBYFORCE;
 	const bool displacement = info && (info->type == StatusType::PUSH || info->type == StatusType::FORCEBACK ||
 		info->type == StatusType::KNOCKDOWN || info->type == StatusType::AIRBORNE || info->type == StatusType::FLY || info->type == StatusType::DRAGGED || dragForce);
-	if(displacement && HasStatusType(target, StatusType::SUPERARMOR)) {
+	const bool hostileHardCc = info && caster.team != target.team && info->kind == StatusInfo::Kind::HARD_CC && info->type != StatusType::ACTIONBLOCK;
+	if((displacement || hostileHardCc) && HasStatusType(target, StatusType::SUPERARMOR)) {
 		LOG("Status :: %ls resisted %d (superarmor)", target.name.data(), statusID);
 		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
 		return;
@@ -899,6 +905,9 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	}
 
 	LOG("Status :: %ls -> %ls status=%d type=%s duration=%.2f shield=%.0f", caster.name.data(), target.name.data(), statusID, info ? info->typeName.c_str() : "?", duration, st.shieldHP);
+	if(caster.index == target.index) {
+		if(const ResourceGainRule* rule = FindResourceGainRule(target.Main().classType, ResourceEvent::SELF_STATUS, RemoteIdx::INVALID, statusID)) GainResource(target, rule->slot, rule->amount);
+	}
 	vec3 sentTo = dragForce ? forceCenter : to;
 	if(info && (info->type == StatusType::AIRBORNE || info->type == StatusType::FLY) && info->heightRatio > 0) sentTo.z = from.z + STATUS_LIFT_BASE_HEIGHT * info->heightRatio * ccScale;
 	if(info && (info->attachToCaster || StatusGraphAnchorOnly(info))) sentTo = vec3(0);

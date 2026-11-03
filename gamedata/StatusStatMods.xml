@@ -51,4 +51,8 @@
   <MOD status="1230360011" stat="STAT_TYPE_MOVESPEED" value="-50" mul="1" source="SKILLTT_LEVEL" note="Tools/notes/specs/slows_measured.md" />
   <MOD status="1230380034" stat="STAT_TYPE_MOVESPEED" value="-40" mul="1" source="SKILLTT_LEVEL" note="Tools/notes/specs/slows_measured.md" />
   <MOD status="1230380036" stat="STAT_TYPE_MOVESPEED" value="-40" mul="1" source="SKILLTT_LEVEL" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230120091" stat="STAT_TYPE_HEALTH" value="15" mul="1" count="1" source="MEASURED official Chi Pull empowered: +306 HP = 15% of 2040 max HP in one tick" />
+  <MOD status="1230000141" stat="STAT_TYPE_MOVESPEED" value="15" mul="1" source="MEASURED official after-dodge speed status: x1.15 (362 cases)" />
+  <MOD status="1230130020" stat="STAT_TYPE_MOVESPEED" value="50" mul="1" source="MEASURED official Kromede Windborne Shield speed: x1.50 (27 cases)" />
+  <MOD status="1230040176" stat="STAT_TYPE_MOVESPEED" value="50" mul="1" source="MEASURED official Demenos Shock Therapy self speed: 105.5 -> 158.2 for 4 s" />
 </STATUS_STAT_MODS>

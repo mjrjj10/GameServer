@@ -372,6 +372,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	if(amount > 0) {
 		if(enemy && inst.skillID != SkillID::INVALID) PassiveOnSkillHit(owner, target);
 		if(enemy) PassiveStackOnHit(owner, target, (i32)remote.ID, inst.skillID);
+		if(enemy && inst.skillID == SkillID::INVALID) PassiveOnWeaponStatusHit(owner, target);
 		i32 stackBonus = 0;
 		if(enemy && (i32)inst.skillID % 100 == ULTIMATE_SKILL_SUFFIX) {
 			foreach_const(st, activeStatuses) {
@@ -409,6 +410,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	}
 
 	inst.lastHitIndex = (i32)target.index;
+	if(enemy && HasStatusType(target, StatusType::EVADE)) return true;
 	const bool npcOwnerStatus = enemy && remote.onHitOwnerStatus != 0 && inst.sourceUID != ActorUID::INVALID && FindNpcActor(inst.sourceUID);
 	if(enemy && remote.onHitOwnerStatus != 0 && !owner.dead && !npcOwnerStatus) {
 		const ActorUID prevCaster = statusCasterOverride;
