@@ -534,6 +534,9 @@ struct World
 		Time monsterHoldUntil = Time::ZERO;
 		Time defeatLieAt = Time::ZERO;
 		vec2 groundCheckedAt = vec2(0);
+		i32 drainPerTick = 0;
+		f32 drainInterval = 0;
+		Time nextDrainAt = Time::ZERO;
 		Time airborneAt = Time::ZERO;
 		i32 airborneStep = 0;
 		Time stateEndAt = Time::ZERO;

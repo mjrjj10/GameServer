@@ -470,6 +470,13 @@ void World::UpdateSummonAi(f32 delta)
 
 void World::UpdateSummons()
 {
+	foreach(npc, actorNpcList) {
+		if(npc->drainPerTick <= 0 || npc->hp <= 0 || localTime < npc->nextDrainAt || localTime >= npc->despawnAt) continue;
+		npc->nextDrainAt = TimeAdd(npc->nextDrainAt, TimeMsToTime(npc->drainInterval * 1000.0));
+		npc->hp = MAX(npc->hp - npc->drainPerTick, 0);
+		replication->SendHpToAll(npc->UID, npc->hp, npc->hpMax);
+		if(npc->hp <= 0) npc->despawnAt = localTime;
+	}
 	for(auto ps = pendingSummons.begin(); ps != pendingSummons.end(); ) {
 		if(!ps->remove || localTime < ps->time) { ++ps; continue; }
 		foreach(npc, actorNpcList) {

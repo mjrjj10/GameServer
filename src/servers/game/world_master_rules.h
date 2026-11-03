@@ -36,6 +36,24 @@ static inline const ResourceGainRule* FindResourceGainRule(ClassType master, Res
 	return nullptr;
 }
 
+struct ResourceStartEmpty
+{
+	ClassType master;
+	i32 slot;
+};
+
+static const ResourceStartEmpty MEASURED_RESOURCE_START_EMPTY[] = {
+	{ ClassType::JINSEOYEON, 2 },
+};
+
+static inline bool ResourceStartsFull(ClassType master, i32 slot, bool startFull)
+{
+	for(const ResourceStartEmpty& rule : MEASURED_RESOURCE_START_EMPTY) {
+		if(rule.master == master && rule.slot == slot) return false;
+	}
+	return startFull;
+}
+
 struct MeasuredStatusStat
 {
 	i32 status;

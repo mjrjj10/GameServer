@@ -785,8 +785,8 @@ void World::UpdateRemotes(f32 delta)
 		const f32 destroyDelay = inst.speed <= 0 && (remote.destroyCreateRemote != RemoteIdx::INVALID || !remote.onDestroy.empty()) ? REMOTE_DESTROY_CHILD_DELAY : 0.0f;
 		if(!destroyed && remote.lifeTime > 0 && elapsed >= remote.lifeTime + destroyDelay) destroyed = true;
 		if(!destroyed && remote.lifeTime <= 0 && inst.speed <= 0 && inst.areaDone && elapsed >= destroyDelay) destroyed = true;
-		if(destroyed && !inst.killNow && inst.speed > 0 && inst.timeEventActive && ((remote.lifeTime > 0 && elapsed + delta >= remote.lifeTime) || (inst.range > 0 && inst.travelled >= inst.range - 0.01f))) {
-			const f32 endSec = MIN(remote.lifeTime > 0 ? remote.lifeTime : FLT_MAX, inst.range > 0 ? inst.range / inst.speed : FLT_MAX);
+		if(destroyed && !inst.killNow && inst.timeEventActive && ((remote.lifeTime > 0 && elapsed + delta >= remote.lifeTime) || (inst.speed > 0 && inst.range > 0 && inst.travelled >= inst.range - 0.01f))) {
+			const f32 endSec = MIN(remote.lifeTime > 0 ? remote.lifeTime : FLT_MAX, inst.speed > 0 && inst.range > 0 ? inst.range / inst.speed : FLT_MAX);
 			if(TimeDiffSec(TimeDiff(inst.spawnTime, inst.nextTimeEvent)) <= endSec + 0.001f) RunRemoteTimeEvent(inst, elapsed);
 		}
 
@@ -811,8 +811,10 @@ void World::SpawnPendingRemotes()
 		Player& owner = players[pr->ownerIndex];
 		if(pr->remove) {
 			bool ended = false;
+			bool sameCast = false;
+			foreach_const(ri, remoteInsts) if(ri->ownerIndex == pr->ownerIndex && ri->remote && ri->remote->ID == pr->idx && !ri->killNow && ri->castID == pr->castID) sameCast = true;
 			foreach(ri, remoteInsts) {
-				if(ri->ownerIndex == pr->ownerIndex && ri->remote && ri->remote->ID == pr->idx && !ri->killNow) { ri->killNow = true; ended = true; }
+				if(ri->ownerIndex == pr->ownerIndex && ri->remote && ri->remote->ID == pr->idx && !ri->killNow && (!sameCast || ri->castID == pr->castID)) { ri->killNow = true; ended = true; }
 			}
 			if(ended) LOG("Remote :: %ls ends live remote %d (action Remove)", owner.name.data(), (i32)pr->idx);
 			pr = pendingRemotes.erase_unsorted(pr);

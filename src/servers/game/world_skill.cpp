@@ -75,7 +75,7 @@ void World::UpdateUltimateGauges(f32 delta)
 		if(staminaMax > 0 && it->stamina < 0) { it->stamina = staminaMax; it->staminaDirty = true; }
 		if(manaMax > 0 && it->mana < 0) { it->mana = manaMax; it->manaDirty = true; }
 		for(int r = 0; r < 3; r++) {
-			if(resMax[r] > 0 && it->res[r] < 0) { it->res[r] = RESOURCES[r].startFull ? resMax[r] : 0; it->resDirty = true; }
+			if(resMax[r] > 0 && it->res[r] < 0) { it->res[r] = ResourceStartsFull(cls, r, RESOURCES[r].startFull) ? resMax[r] : 0; it->resDirty = true; }
 		}
 
 		const ActorMaster& sub = it->Sub();
@@ -93,7 +93,7 @@ void World::UpdateUltimateGauges(f32 delta)
 		}
 		for(int r = 0; r < 3; r++) {
 			if(benchResMax[r] <= 0 || it->benchRes[r] >= 0) continue;
-			it->benchRes[r] = RESOURCES[r].startFull ? benchResMax[r] : 0;
+			it->benchRes[r] = ResourceStartsFull(benchCls, r, RESOURCES[r].startFull) ? benchResMax[r] : 0;
 			replication->SendStatToAll(sub.UID, RESOURCES[r].maxStat, it->benchRes[r], benchResMax[r]);
 		}
 
@@ -418,9 +418,18 @@ void World::ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID)
 void World::ApplySummonDrainLife(ActorNpc& npc, const StatusInfo& info)
 {
 	if(npc.ownerUID == ActorUID::INVALID || info.typeName != "STATUS_TYPE_PUREDOT" || info.durationSec > 0 || info.intervalSec <= 0 || info.paramRatio <= 0) return;
-	const f32 life = ceilf(1.0f / info.paramRatio) * info.intervalSec;
-	npc.despawnAt = TimeAdd(localTime, TimeMsToTime(life * 1000.0));
-	LOG("Summon :: creature=%d drained by status %d, life %.1fs", (i32)npc.docID, info.ID, life);
+	static const f64 DRAINED_SUMMON_MAX_LIFE_SEC = 600.0;
+	if(npc.hpMax <= 0) {
+		const f32 life = ceilf(1.0f / info.paramRatio) * info.intervalSec;
+		npc.despawnAt = TimeAdd(localTime, TimeMsToTime(life * 1000.0));
+		LOG("Summon :: creature=%d drained by status %d, life %.1fs", (i32)npc.docID, info.ID, life);
+		return;
+	}
+	npc.drainPerTick = MAX((i32)(npc.hpMax * info.paramRatio), 1);
+	npc.drainInterval = info.intervalSec;
+	npc.nextDrainAt = TimeAdd(localTime, TimeMsToTime(info.intervalSec * 1000.0));
+	npc.despawnAt = TimeAdd(localTime, TimeMsToTime(DRAINED_SUMMON_MAX_LIFE_SEC * 1000.0));
+	LOG("Summon :: creature=%d drained by status %d, %d hp every %.1fs", (i32)npc.docID, info.ID, npc.drainPerTick, info.intervalSec);
 }
 
 void World::TrackNpcSelfStatus(ActorUID npcUID, const StatusInfo& info)
