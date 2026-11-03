@@ -85,4 +85,8 @@
   <MOD status="1230390033" stat="STAT_TYPE_MOVESPEED" value="30" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: Priest skill 3 rank 3: +30% Movespeed to allies" />
   <MOD status="1230400047" stat="STAT_TYPE_DEFENCE" value="100" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: Ghostwidow Ethereal rank 6: +100% Defense for 3 sec" />
   <MOD status="1230400084" stat="STAT_TYPE_MOVESPEED" value="15" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP: Ghostwidow skill 1 rank 3: Movespeed +15% for 5 sec" />
+  <MOD status="1230150010" stat="STAT_TYPE_MOVESPEED" value="100" mul="1" source="skilldesc STR_SKILL_DESC: Photog passive Flash Step: skills grant 100% movespeed for 1 second" />
+  <MOD status="1230260002" stat="STAT_TYPE_MOVESPEED" value="50" mul="1" source="skilldesc STR_SKILL_DESC: The Cat dodge: +50% movespeed once invincibility ends" />
+  <MOD status="1230100062" stat="STAT_TYPE_MOVESPEED" value="100" mul="1" source="skilldesc STR_SKILL_DESC: Soulmaster dodge Doppelganger: +100% movespeed while stealthed" />
+  <MOD status="1230050071" stat="STAT_TYPE_MOVESPEED" value="20" mul="1" source="skilldesc STR_SKILL_DESC: Koom Magnetic Barrier: grants 20% Movespeed for 3 seconds" />
 </STATUS_STAT_MODS>
