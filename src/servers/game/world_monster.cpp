@@ -63,10 +63,17 @@ static GameXmlContent::MonsterAttack::Target MonsterTargetKind(const GameXmlCont
 	return ai.tagKey == titanTag ? GameXmlContent::MonsterAttack::TITAN : GameXmlContent::MonsterAttack::STRUCTURE;
 }
 
+static const GameXmlContent::MonsterAttack* MonsterAttackOn(const GameXmlContent::MonsterAi& ai, const World::ActorNpc& other)
+{
+	return ai.byTarget[other.monsterAi ? MonsterTargetKind(*other.monsterAi) : GameXmlContent::MonsterAttack::MASTER];
+}
+
 bool World::MonsterHostile(const ActorNpc& monster, const ActorNpc& other) const
 {
-	if(&monster == &other || !other.monsterAi || other.hp <= 0 || other.removeAt != Time::ZERO) return false;
+	static const u32 playerSummoneeTag = StatusTypeKey("Player_Summonee");
+	if(&monster == &other || other.hp <= 0 || other.removeAt != Time::ZERO) return false;
 	if(other.despawnAt != Time::ZERO && localTime >= other.despawnAt) return false;
+	if(!other.monsterAi) return other.playerSummon && FactionsOppose(monster.faction, other.faction, hostileMonsters) && monster.monsterAi->Hates(playerSummoneeTag);
 	return FactionsOppose(monster.faction, other.faction, hostileMonsters) && monster.monsterAi->Hates(other.monsterAi->tagKey);
 }
 
@@ -483,7 +490,7 @@ void World::MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const Gam
 		}
 		foreach(o, actorNpcList) {
 			if(&*o == &attacker || o->hp <= 0 || !MonsterHostile(attacker, *o) || glm::length(vec2(o->pos) - vec2(center)) > attack.radius) continue;
-			const bool execute = attack.executeMinion && MonsterTargetKind(*o->monsterAi) == GameXmlContent::MonsterAttack::MINION;
+			const bool execute = attack.executeMinion && o->monsterAi && MonsterTargetKind(*o->monsterAi) == GameXmlContent::MonsterAttack::MINION;
 			DamageNpcFromNpc(attacker, *o, execute ? o->hpMax : damage, attack.hitRemote, remoteID, attack.status, execute);
 		}
 		return;
@@ -741,10 +748,10 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 	if(remote.vs & (1u << Remote::VS_NPC_MONSTER)) {
 		foreach(o, actorNpcList) {
 			if(mr.activations <= 0) break;
-			if(&*o == &owner || o->hp <= 0 || o->removeAt != Time::ZERO || !o->monsterAi) continue;
+			if(&*o == &owner || o->hp <= 0 || o->removeAt != Time::ZERO || (!o->monsterAi && !o->playerSummon)) continue;
 			if(targetOnly && o->UID != mr.target) continue;
-			const bool enemy = FactionsOppose(owner.faction, o->faction, hostileMonsters);
-			const bool ally = !enemy && o->faction == owner.faction;
+			const bool enemy = o->monsterAi ? FactionsOppose(owner.faction, o->faction, hostileMonsters) : owner.monsterAi && MonsterHostile(owner, *o);
+			const bool ally = !enemy && o->monsterAi && o->faction == owner.faction;
 			if(!((enemy && hitsEnemies) || (ally && hitsAllies)) || !inside(vec2(o->pos), NpcHitRadius(*o)) || !ready(o->UID)) continue;
 			if(enemy) {
 				if(damage > 0) { npcHitCenter = vec3(origin, mr.pos.z); npcHitCenterSet = true; DamageNpcFromNpc(owner, *o, damage, (i32)remote.ID, remoteID, 0); npcHitCenterSet = false; }
@@ -895,7 +902,7 @@ ActorUID World::StructurePickMonster(const ActorNpc& npc, const GameXmlContent::
 	u8 bestSize = 0;
 	f32 best = ai.perception;
 	foreach_const(o, actorNpcList) {
-		if(!MonsterHostile(npc, *o)) continue;
+		if(!o->monsterAi || !MonsterHostile(npc, *o)) continue;
 		const GameXmlContent::MonsterAttack* a = ai.byTarget[MonsterTargetKind(*o->monsterAi)];
 		if(!a) continue;
 		const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos));
@@ -1311,12 +1318,14 @@ void World::UpdateMonsterAi(f32 delta)
 		const GameXmlContent::MonsterAttack* attack = nullptr;
 		vec3 targetAt;
 		bool targetLost = false;
+		bool summonTarget = false;
 		if(npc.monsterTarget != ActorUID::INVALID) {
 			auto t = actorNpcMap.find(npc.monsterTarget);
 			if(t != actorNpcMap.end() && MonsterHostile(npc, *t->second)) {
 				targetAt = t->second->pos;
 				targetPos = &targetAt;
-				attack = ai.byTarget[MonsterTargetKind(*t->second->monsterAi)];
+				attack = MonsterAttackOn(ai, *t->second);
+				summonTarget = !t->second->monsterAi;
 			}
 			else if(ActorMaster* m = FindMasterActor(npc.monsterTarget)) {
 				if(m->parent && MonsterHostile(npc, *m->parent)) {
@@ -1389,7 +1398,7 @@ void World::UpdateMonsterAi(f32 delta)
 		static const f64 MEASURED_CHIEF_MASTER_CHASE_SEC = 7.0;
 		const bool lanePusher = ai.tagKey == minionTag || ai.tagKey == titanTag || ai.tagKey == chiefTag;
 		const f64 masterChaseSec = ai.tagKey == titanTag ? MEASURED_TITAN_MASTER_CHASE_SEC : (ai.tagKey == chiefTag ? MEASURED_CHIEF_MASTER_CHASE_SEC : MEASURED_MINION_MASTER_CHASE_SEC);
-		const bool targetIsMaster = targetPos && FindMasterActor(npc.monsterTarget) != nullptr;
+		const bool targetIsMaster = targetPos && (summonTarget || FindMasterActor(npc.monsterTarget) != nullptr);
 		if(!targetIsMaster) {
 			npc.monsterMasterSince = Time::ZERO;
 			npc.towerCalled = false;
@@ -1398,13 +1407,17 @@ void World::UpdateMonsterAi(f32 delta)
 			npc.monsterMasterSince = localTime;
 			npc.monsterRetargetAt = TimeAdd(localTime, TimeMsToTime(MEASURED_MINION_RETARGET_MS));
 		}
-		if(titanMode && lanePusher && targetIsMaster && localTime >= npc.monsterRetargetAt) {
+		vec3 tauntAt;
+		const GameXmlContent::MonsterAttack* tauntAttack = nullptr;
+		const ActorUID taunt = MonsterTauntTarget(npc, ai, &tauntAt, &tauntAttack);
+		const bool heldByTaunt = taunt != ActorUID::INVALID && taunt == npc.monsterTarget;
+		if(titanMode && lanePusher && targetIsMaster && !heldByTaunt && localTime >= npc.monsterRetargetAt) {
 			npc.monsterRetargetAt = TimeAdd(localTime, TimeMsToTime(MEASURED_MINION_RETARGET_MS));
 			f32 bestOther = ai.perception;
 			const ActorNpc* other = nullptr;
 			const GameXmlContent::MonsterAttack* otherAttack = nullptr;
 			foreach_const(o, actorNpcList) {
-				if(!MonsterHostile(npc, *o)) continue;
+				if(!o->monsterAi || !MonsterHostile(npc, *o)) continue;
 				const GameXmlContent::MonsterAttack* a = ai.byTarget[MonsterTargetKind(*o->monsterAi)];
 				if(!a) continue;
 				const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos));
@@ -1429,7 +1442,7 @@ void World::UpdateMonsterAi(f32 delta)
 				}
 			}
 		}
-		if(titanMode && IsStructure(npc) && targetIsMaster && !npc.towerCalled && localTime >= npc.monsterRetargetAt) {
+		if(titanMode && IsStructure(npc) && targetIsMaster && !heldByTaunt && !npc.towerCalled && localTime >= npc.monsterRetargetAt) {
 			npc.monsterRetargetAt = TimeAdd(localTime, TimeMsToTime(MONSTER_SEARCH_MS));
 			vec3 monsterAt;
 			const GameXmlContent::MonsterAttack* monsterAttack = nullptr;
@@ -1444,19 +1457,14 @@ void World::UpdateMonsterAi(f32 delta)
 				replication->SendAiSetTargetToAll(npc.UID, monster);
 			}
 		}
-		{
-			vec3 tauntAt;
-			const GameXmlContent::MonsterAttack* tauntAttack = nullptr;
-			const ActorUID taunt = MonsterTauntTarget(npc, ai, &tauntAt, &tauntAttack);
-			if(taunt != ActorUID::INVALID && taunt != npc.monsterTarget) {
-				LOG("Monster :: creature=%d (local %d) is taunted by %u", (i32)npc.docID, npc.localID, (u32)taunt);
-				npc.monsterTarget = taunt;
-				npc.monsterMasterSince = Time::ZERO;
-				targetAt = tauntAt;
-				targetPos = &targetAt;
-				attack = tauntAttack;
-				replication->SendAiSetTargetToAll(npc.UID, taunt);
-			}
+		if(taunt != ActorUID::INVALID && taunt != npc.monsterTarget) {
+			LOG("Monster :: creature=%d (local %d) is taunted by %u", (i32)npc.docID, npc.localID, (u32)taunt);
+			npc.monsterTarget = taunt;
+			npc.monsterMasterSince = Time::ZERO;
+			targetAt = tauntAt;
+			targetPos = &targetAt;
+			attack = tauntAttack;
+			replication->SendAiSetTargetToAll(npc.UID, taunt);
 		}
 		if(!targetPos && ai.perception > 0 && localTime >= npc.monsterNextSearch) {
 			npc.monsterNextSearch = TimeAdd(localTime, TimeMsToTime(MONSTER_SEARCH_MS));
@@ -1476,7 +1484,7 @@ void World::UpdateMonsterAi(f32 delta)
 			}
 			else foreach_const(o, actorNpcList) {
 				if(!MonsterHostile(npc, *o)) continue;
-				const GameXmlContent::MonsterAttack* a = ai.byTarget[MonsterTargetKind(*o->monsterAi)];
+				const GameXmlContent::MonsterAttack* a = MonsterAttackOn(ai, *o);
 				if(!a) continue;
 				const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos));
 				if(d < best) { best = d; chosen = o->UID; targetAt = o->pos; attack = a; }

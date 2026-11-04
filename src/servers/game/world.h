@@ -528,6 +528,7 @@ struct World
 		Time nextPassive = Time::ZERO;
 		Time passiveBlockedUntil = Time::ZERO;
 		const GameXmlContent::MonsterAi* monsterAi = nullptr;
+		bool playerSummon = false;
 		i32 growthLevel = 0;
 		const eastl::fixed_vector<vec3,48,true>* path = nullptr;
 		i32 pathPoint = 0;

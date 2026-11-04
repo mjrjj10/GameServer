@@ -576,6 +576,7 @@ void World::UpdateSummons()
 					actor.wall = physics.CreateWall(actor.pos, w.width, w.depth, WALL_HEIGHT, actor.rot.z, (i32)owner.team);
 					LOG("Summon :: creature=%d is a wall %.0fx%.0f", ps->creature, w.width, w.depth);
 				}
+				actor.playerSummon = info && (info->targetable || actor.wall) && !info->aiTargetProof;
 				if(info && (info->targetable || actor.wall)) {
 					foreach_const(st, info->baseStats) {
 						if(st->type == (u8)StatType::STAT_TYPE_HEALTH) actor.hp = actor.hpMax = (i32)st->value;

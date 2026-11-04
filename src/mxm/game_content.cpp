@@ -4371,6 +4371,8 @@ void GameXmlContent::LoadSummonInfo(XMLElement* pInfo)
 		}
 		if(XMLElement* p = pInfo->FirstChildElement("MoveController_ComData")) p->QueryFloatAttribute("_AIDistanceWidth", &si.aiDistance);
 		if(XMLElement* p = pInfo->FirstChildElement("StatsComData")) {
+			const char* proof = p->Attribute("_AITargetProof");
+			si.aiTargetProof = proof && EA::StdC::Stricmp(proof, "true") == 0;
 			p->QueryAttribute("_VariationType", &si.variation);
 			p->QueryFloatAttribute("_DestroyTime", &si.destroyTime);
 			const char* dropType = p->Attribute("_DropType");

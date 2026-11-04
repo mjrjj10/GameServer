@@ -153,6 +153,7 @@ struct SummonInfo
 	i32 spawnAnim = 0;
 	i32 spawnInteraction = 0;
 	bool targetable = false;
+	bool aiTargetProof = false;
 	eastl::fixed_vector<i32,4,false> skills;
 	enum Ai: u8 { AI_NONE = 0, AI_RELAY, AI_CHASE };
 	Ai ai = AI_NONE;

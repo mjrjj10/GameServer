@@ -614,11 +614,16 @@ void World::DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i
 	const i32 dealt = exact ? damage : MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(target.defence, 0.0f)) + 0.5f), 1);
 	const i32 hpBefore = target.hp;
 	target.hp = MAX(target.hp - AbsorbNpcShield(target, dealt), 0);
-	OnMonsterDamaged(target, hpBefore);
+	if(target.ownerUID == ActorUID::INVALID) OnMonsterDamaged(target, hpBefore);
 	if((target.faction == Faction::RED || target.faction == Faction::BLUE) && (attacker.faction == Faction::RED || attacker.faction == Faction::BLUE) && attacker.faction != target.faction) LightAttacker(attacker.pos, (i32)target.faction);
 	SendNpcHit(attacker, target.UID, target.pos, remote, remoteID, MIN(dealt, hpBefore), target.hp, target.hpMax);
 	if(status > 0) ApplyStatusToNpcFromNpc(attacker, target, status);
-	if(target.hp <= 0) MonsterDie(target, attacker.UID, attacker.docID);
+	if(target.hp > 0) return;
+	if(target.ownerUID == ActorUID::INVALID) MonsterDie(target, attacker.UID, attacker.docID);
+	else {
+		target.killerUID = attacker.UID;
+		target.despawnAt = localTime;
+	}
 }
 
 void World::ApplyStatusFromNpc(const ActorNpc& caster, Player& target, i32 statusID, f32 durationOverride)
