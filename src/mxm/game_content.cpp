@@ -3923,6 +3923,7 @@ static StatusMod::Stat StatusModStatFromName(const char* stat)
 		{ "STAT_TYPE_TAG_HEALTHREGEN_VALUE", StatusMod::TAG_HEALTHREGEN },
 		{ "STAT_TYPE_TAG_COOLTIME", StatusMod::TAG_COOLTIME },
 		{ "STAT_TYPE_HEALTHREGEN", StatusMod::HEALTHREGEN },
+		{ "SERVER_DAMAGE_TAKEN_RATIO", StatusMod::DAMAGE_TAKEN },
 		{ "STAT_TYPE_LIFESTEAL", StatusMod::LIFESTEAL },
 	};
 	for(const auto& n : NAMES) {
@@ -3945,10 +3946,17 @@ bool GameXmlContent::LoadStatusStatMods()
 		mod.value = pMod->FloatAttribute("value");
 		mod.mul = pMod->BoolAttribute("mul");
 		mod.count = pMod->FloatAttribute("count");
-		mod.regen = mod.stat != StatusMod::MOVESPEED;
+		mod.regen = mod.stat == StatusMod::HEALTH;
 		if(mod.stat == StatusMod::OTHER || mod.value == 0) continue;
 		found->second.mods.push_back(mod);
 		count++;
+	}
+	static const struct { i32 status; StatusType type; } DESC_STATUS_RESISTS[] = {
+		{ 1230410023, StatusType::SHOCKED },
+	};
+	for(const auto& r : DESC_STATUS_RESISTS) {
+		auto found = statusMap.find(r.status);
+		if(found != statusMap.end() && !found->second.defenseTypes.full()) found->second.defenseTypes.push_back(r.type);
 	}
 	LOG("Loaded %d measured status stat mods", count);
 	return true;

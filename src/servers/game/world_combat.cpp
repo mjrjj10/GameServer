@@ -148,6 +148,7 @@ f32 World::DefenceMultiplier(const Player& attacker, const Player& target, bool 
 	const f32 pen = MIN(MAX(MasterStat(attacker.Main().classType, penStat) + StatBonus(attacker, (u8)penStat), 0.0f), PENETRATION_CAP) / 100.0f;
 	f32 mul = DEFENCE_SCALE / (DEFENCE_SCALE + MAX(def * (1.0f - pen), 0.0f));
 	if(skillHit) mul *= 1.0f - MIN(MAX(MasterStat(target.Main().classType, STAT_SKILLDAMAGE_REDUCE_RATIO) + StatBonus(target, STAT_SKILLDAMAGE_REDUCE_RATIO), 0.0f), SKILLDAMAGE_REDUCE_CAP) / 100.0f;
+	mul *= MAX(1.0f + StatusModMulSum(target, StatusMod::DAMAGE_TAKEN) / 100.0f, 0.0f);
 	return mul;
 }
 
@@ -660,7 +661,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 		if(!known) target.hitByDocs.push_back((i32)attacker.docID);
 	}
 	const f32 def = (MasterStat(target.Main().classType, STAT_DEFENCE) + StatBonus(target, STAT_DEFENCE)) * MAX(1.0f + StatusModMulSum(target, StatusMod::DEFENCE) / 100.0f, 0.0f);
-	damage = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(def, 0.0f)) + 0.5f), 1);
+	damage = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(def, 0.0f)) * MAX(1.0f + StatusModMulSum(target, StatusMod::DAMAGE_TAKEN) / 100.0f, 0.0f) + 0.5f), 1);
 	bool shieldHit = false;
 	foreach(it, activeStatuses) {
 		if(damage <= 0) break;

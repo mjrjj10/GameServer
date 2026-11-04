@@ -100,4 +100,21 @@
   <MOD status="1230330011" stat="STAT_TYPE_ATTACK" value="35" mul="1" source="STR_SKILL_DESC_180330010: [High Roller] instead increases weapon damage by 35%" />
   <MOD status="1230330011" stat="STAT_TYPE_SKILLPOWER" value="350" source="STR_SKILL_DESC_180330010: [High Roller] and skill power by 350" />
   <MOD status="1230330041" stat="STAT_TYPE_MOVESPEED" value="30" mul="1" source="STR_SKILL_DESC_180330040: [High Roller] grants its effects (skilltt 1230330040 movespeed +30%); official captures delta +29.7" />
+  <MOD status="1230210047" stat="STAT_TYPE_MOVESPEED" value="-30" mul="1" source="STATUS_PC _Description: -30% slow, 1 s" />
+  <MOD status="1230080021" stat="STAT_TYPE_DEFENCE" value="-30" mul="1" source="STATUS_PC _Description: defence -30%" />
+  <MOD status="1230160031" stat="STAT_TYPE_MOVESPEED" value="50" mul="1" source="STATUS_PC _Description: movespeed +50; official captures 99 -> 128.7 (+30% 1230160030) -> 160 cap with both" />
+  <MOD status="1230410012" stat="SERVER_DAMAGE_TAKEN_RATIO" value="-30" mul="1" source="STATUS_PC _Description: damage taken -30%" />
+  <MOD status="1239100010" stat="SERVER_DAMAGE_TAKEN_RATIO" value="10" mul="1" source="STATUS_PC _Description: damage taken +10%" />
+  <MOD status="1230020030" stat="STAT_TYPE_ATTACK" value="0" source="STATUS_PC _Description: link status (강화 연결용), no stat" />
+  <MOD status="1230030170" stat="STAT_TYPE_ATTACK" value="0" source="STATUS_PC _Description: crit +0% (_Description), no stat" />
+  <MOD status="1230030140" stat="STAT_TYPE_ATTACK" value="0" source="STATUS_PC _Description: link status for the movespeed buff (연결용), no stat" />
+  <MOD status="1230130070" stat="STAT_TYPE_ATTACK" value="0" source="STATUS_PC _Description: link status for the attack buff and effect (연결용), no stat" />
+  <MOD status="1230180051" stat="STAT_TYPE_ATTACK" value="0" source="STATUS_PC _Description: empty link status (강화 연결용 빈 상태이상), no stat" />
+  <MOD status="1230180042" stat="STAT_TYPE_ATTACK" value="0" source="STATUS_PC _Description: empty status (빈 상태이상), no stat" />
+  <MOD status="1230230040" stat="STAT_TYPE_ATTACK" value="0" source="STATUS_PC _Description: rage regen 0 while toggled; Efreet has no rage regen stat, no stat" />
+  <MOD status="1230270051" stat="STAT_TYPE_ATTACK" value="0" source="STATUS_PC _Description: bind cast marker, no stat" />
+  <MOD status="1230270053" stat="STAT_TYPE_ATTACK" value="0" source="STATUS_PC _Description: bind cast marker rank 1, no stat" />
+  <MOD status="1230270055" stat="STAT_TYPE_ATTACK" value="0" source="STATUS_PC _Description: bind cast marker rank 2, no stat" />
+  <MOD status="1230300033" stat="STAT_TYPE_ATTACK" value="0" source="STATUS_PC _Description: melee mode upgrade link status (강화용), no stat" />
+  <MOD status="1230330013" stat="STAT_TYPE_DEFENCE" value="20" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP1_280331006: Shugo Enchantment Stone Bundle rank 6 adds +20% Defense Effect (1230330012 -> 1230330013)" />
 </STATUS_STAT_MODS>
