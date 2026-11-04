@@ -759,7 +759,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	else randomActions = content.FindSkillRandomActions((i32)skillID);
 	if(randomActions && !randomActions->empty()) {
 		const u32 pick = RandUint() % (u32)(randomActions->size() + 1);
-		if(pick > 0) actionState = (*randomActions)[pick - 1];
+		if(pick > 0) { actionState = (*randomActions)[pick - 1]; remoteAction = actionState; }
 	}
 
 	if(!followUp && !CheckAndPayCast(player, skillID, castPos, targets)) return;

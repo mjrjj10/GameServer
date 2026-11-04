@@ -738,6 +738,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			const bool stacked = info && it->overlap < info->maxOverlap;
 			if(stacked) it->overlap++;
 			it->skillPower = PlayerSkillPower(caster);
+			if(!statusNoCaster) it->casterUID = statusCasterOverride != ActorUID::INVALID ? statusCasterOverride : caster.Main().UID;
 			if(info && info->dotDamage > 0 && info->intervalSec <= 0) it->dotDone = false;
 			LOG("Status :: %ls -> %ls status=%d refreshed overlap=%d", caster.name.data(), target.name.data(), statusID, it->overlap);
 			const vec3 pos = target.body->GetWorldPos();

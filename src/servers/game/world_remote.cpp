@@ -987,11 +987,14 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 			return len < 1.0f || glm::dot(rel / len, inst.dir) >= halfCos;
 		};
 		ActorNpc* bestNpc = nullptr;
-		for(i32 pass = 0; pass < 4 && !best && !bestNpc; pass++) {
+		const bool friendChain = remote.includeParty && !remote.friendlyStatuses.empty();
+		const bool firstHop = inst.chainHitMask == 0 && inst.chainNpcHit == ActorUID::INVALID;
+		for(i32 pass = 0; pass < (friendChain ? 1 : 4) && !best && !bestNpc; pass++) {
 			f32 bestDist = sight + WEAPON_TARGET_RADIUS;
 			foreach(it, players) {
-				if((it->team != ownerTeam) != (pass < 2) || !RemoteCanAffect(inst, *it, remote.vsOwner)) continue;
-				if(pass % 2 == 0 && ((inst.chainHitMask >> it->index) & 1)) continue;
+				if(friendChain ? (firstHop && it->index == inst.ownerIndex) : (it->team != ownerTeam) != (pass < 2)) continue;
+				if(!RemoteCanAffect(inst, *it, remote.vsOwner)) continue;
+				if(!friendChain && pass % 2 == 0 && ((inst.chainHitMask >> it->index) & 1)) continue;
 				if(!inCone(vec2(it->body->GetWorldPos()))) continue;
 				const f32 d = glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos));
 				if(d < bestDist) { bestDist = d; best = &*it; }
@@ -1009,6 +1012,7 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 			inst.pos = vec3(vec2(bestNpc->pos), inst.pos.z);
 			RemoteDamageNpc(inst, *bestNpc, 0.0f);
 			inst.chainNpcHit = bestNpc->UID;
+			if(friendChain) inst.excludeIndex = -1;
 		}
 		else if(best) {
 			inst.dir = glm::length(vec2(best->body->GetWorldPos() - inst.pos)) > 1.0f ? glm::normalize(vec2(best->body->GetWorldPos() - inst.pos)) : inst.dir;
@@ -1017,6 +1021,7 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 			RemoteHit(inst, *best);
 			inst.excludeIndex = (i32)best->index;
 			inst.chainHitMask |= 1u << best->index;
+			if(friendChain) inst.chainNpcHit = ActorUID::INVALID;
 		}
 		else {
 			inst.chainEnded = true;
