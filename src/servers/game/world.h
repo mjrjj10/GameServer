@@ -639,6 +639,7 @@ struct World
 	{
 		SkillID skillID = SkillID::INVALID;
 		ActionStateID actionID;
+		ClassType actionClass = ClassType::NONE;
 		i8 stance = 0;
 		vec3 castPos;
 		f32 castAngle;

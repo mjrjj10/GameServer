@@ -822,11 +822,16 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	 */
 
 	// Trigger new skill execution
+	if(!content.SkillActionKnown(ActionClass(player), actionState, player.Main().stance)) {
+		WARN("PlayerCastSkill :: %ls skill=%d action %d unknown for action class %d", player.name.data(), (i32)skillID, (i32)actionState, (i32)ActionClass(player));
+		return;
+	}
 	player.Main().actionState = actionState;
 
 	SkillProgram prog;
 	prog.skillID = skillID;
 	prog.actionID = actionState;
+	prog.actionClass = ActionClass(player);
 	prog.stance = player.Main().stance;
 	prog.castPos = castPos;
 	prog.castAngle = angle;
@@ -1130,8 +1135,9 @@ void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType
 void World::QueueChildSkill(Player& player, ActionStateID actionState, const vec3& castPos, Slice<const ActorUID> targets)
 {
 	const auto& content = GetGameXmlContent();
-	const i32 child = content.GetChildSkill(player.Main().classType, actionState);
-	if(child > 0 && content.IsChildOnExisting(player.Main().classType, actionState)) {
+	const ClassType actionClass = ActionClass(player);
+	const i32 child = content.GetChildSkill(actionClass, actionState);
+	if(child > 0 && content.IsChildOnExisting(actionClass, actionState)) {
 		ChildSkillOnExisting(player, child, castPos);
 	}
 	else if(child > 0) {
@@ -1287,7 +1293,7 @@ void World::ExecuteSkillProgram(SkillProgram& prog)
 		return;
 	}
 	const vec2 dir = vec2(cosf(prog.castAngle), sinf(prog.castAngle));
-	const auto& action = GetGameXmlContent().GetSkillAction(caster->classType, prog.actionID, prog.stance);
+	const auto& action = GetGameXmlContent().GetSkillAction(prog.actionClass, prog.actionID, prog.stance);
 	const f32 elapsed = (f32)TimeDiffSec(TimeDiff(prog.startTime, localTime));
 	bool pending = false;
 	for(i32 i = 0; i < (i32)action.commands.size() && i < 64; i++) {

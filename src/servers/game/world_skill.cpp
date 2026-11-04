@@ -962,7 +962,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 cmdIndex, const vec2& dir)
 {
 	const auto& content = GetGameXmlContent();
-	const auto& action = content.GetSkillAction(caster->classType, prog.actionID, prog.stance);
+	const auto& action = content.GetSkillAction(prog.actionClass, prog.actionID, prog.stance);
 	const auto& cmd = action.commands[cmdIndex];
 	f32 distance = 0;
 	f32 moveDuration = 0;
