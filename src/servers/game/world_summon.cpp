@@ -804,6 +804,10 @@ void World::UpdateSummons()
 				}
 			}
 			if(it->ownerUID != ActorUID::INVALID) {
+				if(it->hp > 0) {
+					it->hp = 0;
+					replication->SendHpToAll(it->UID, 0, it->hpMax);
+				}
 				it->actionState = ActionStateID::DIE_BEHAVIORSTATE;
 				replication->SendAiActionStateToAll(it->UID, ActionStateID::DIE_BEHAVIORSTATE, it->rot.z, it->pos, NpcKeepsSpeed(*it));
 				const ActorMaster* killer = it->killerUID != ActorUID::INVALID ? FindMasterActor(it->killerUID) : nullptr;
