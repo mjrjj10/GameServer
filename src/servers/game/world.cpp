@@ -805,6 +805,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	const bool actionOnly = hitActionOnly && followUp;
 	hitActionOnly = false;
 	if(!castRelease && !actionOnly) replication->FramePushSkillCast(rpCast);
+	if(!followUp) PassiveOnSkillCast(player, (i32)skillID);
 	if(cast && cast->action == ActionStateID::INVALID) {
 		static const GameXmlContent::Action noCastAction = {};
 		castCostLevel = nullptr;
@@ -1044,7 +1045,6 @@ bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos
 		LOG("Cost :: %ls skill=%d empowered level (consumed rp=%.0f bb=%.0f, %d remotes / %d statuses replaced, damage x%.3f)", player.name.data(), (i32)skillID,
 			castCostLevel->consume[1], castCostLevel->consume[2], (i32)castCostLevel->remoteReplace.size(), (i32)castCostLevel->statusReplace.size(), castCostLevel->damageRatio);
 	}
-	PassiveOnSkillCast(player, (i32)skillID);
 	return true;
 }
 

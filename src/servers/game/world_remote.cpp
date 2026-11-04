@@ -1013,6 +1013,7 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 		else if(best) {
 			inst.dir = glm::length(vec2(best->body->GetWorldPos() - inst.pos)) > 1.0f ? glm::normalize(vec2(best->body->GetWorldPos() - inst.pos)) : inst.dir;
 			inst.pos = vec3(vec2(best->body->GetWorldPos()), inst.pos.z);
+			if(remote.targetOnly) inst.target = best->Main().UID;
 			RemoteHit(inst, *best);
 			inst.excludeIndex = (i32)best->index;
 			inst.chainHitMask |= 1u << best->index;

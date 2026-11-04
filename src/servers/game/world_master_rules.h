@@ -454,7 +454,6 @@ struct PassiveStatusRule
 };
 
 static const PassiveStatusRule PASSIVE_STATUS_RULES[] = {
-	{ ClassType::CATTHECAT, PassiveTrigger::SKILL_USE, PassiveTarget::SELF, 1230260000, 0, 0 },
 	{ ClassType::ANDROA, PassiveTrigger::SKILL_USE, PassiveTarget::SELF, 1230290001, 0, 0 },
 	{ ClassType::ANDROB, PassiveTrigger::SKILL_USE, PassiveTarget::LOWEST_HP_ALLY_IN_STATUS_RANGE, 1230300001, 0, 250 },
 	{ ClassType::BOXER, PassiveTrigger::SKILL_HIT, PassiveTarget::HIT_TARGET, 1230320002, 0, 0 },

@@ -2095,6 +2095,7 @@ void Replication::RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetD
 }
 void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject, ClientHandle exclude)
 {
+	if(!frameCur->skillCastList.empty() || !frameCur->skillExecList.empty()) SendFrameSkillPackets();
 	if(!fireObject || !fireObject[0]) fireObject = FIRE_OBJECT_SCENE_ROOT;
 	RemoteCreate remote;
 	remote.parentUID = ownerUID;
@@ -2649,6 +2650,7 @@ void Replication::SendActionStateOnlyToAll(ActorUID actorUID, ActionStateID stat
 
 void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap, f32 scale, f32 nominalDist, bool withGraph, bool refresh)
 {
+	if(!frameCur->skillCastList.empty() || !frameCur->skillExecList.empty()) SendFrameSkillPackets();
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
@@ -3775,6 +3777,11 @@ void Replication::FrameDifference()
 		}
 	}
 
+	SendFrameSkillPackets();
+}
+
+void Replication::SendFrameSkillPackets()
+{
 	// skill casts
 	foreach_const(it, frameCur->skillCastList) {
 		const auto& cast = *it;
@@ -3886,6 +3893,8 @@ void Replication::FrameDifference()
 			}
 		}
 	}
+	frameCur->skillCastList.clear();
+	frameCur->skillExecList.clear();
 }
 
 void Replication::SendActorMasterSpawn(ClientHandle clientHd, const ActorMaster& actor, const Player& parent)

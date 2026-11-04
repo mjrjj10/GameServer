@@ -780,10 +780,17 @@ void World::RunWeaponActionStatuses(Player& player, i8 stance, const vec3* aimPo
 			pendingRemotes.push_back(pr);
 			continue;
 		}
-		if(cmd->type != ActionCommand::Type::STATUS || cmd->status.statusIndex == 0 || cmd->status.removeAtEnd || cmd->status.remove) continue;
+		if(cmd->type != ActionCommand::Type::STATUS || cmd->status.statusIndex == 0 || cmd->status.remove) continue;
 		const auto preset = cmd->status.targetPreset;
 		if(preset != ActionCommand::TargetPreset::SELF_FFF && preset != ActionCommand::TargetPreset::SELF_TFF) continue;
-		if(!player.dead) ApplyStatus(player, player, cmd->status.statusIndex);
+		f32 duration = -1.0f;
+		if(cmd->status.removeAtEnd) {
+			i32 animId = 0, loop = 1;
+			foreach_const(st, action->anims) if(st->index == MAX(cmd->animIndex, 0)) { animId = st->animationId; loop = MAX(st->loop, 1); }
+			duration = animId != 0 ? content.GetAniSeqTime(ActionClassName(player), animId) * (f32)loop : action->seqLength;
+			if(duration <= 0) continue;
+		}
+		if(!player.dead) ApplyStatus(player, player, cmd->status.statusIndex, 0, duration);
 	}
 }
 

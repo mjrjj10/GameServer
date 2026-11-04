@@ -110,6 +110,20 @@ void World::UpdateBotSkills()
 		const GameXmlContent::SkillInput* in = content.FindSkillInput(skill);
 		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(MAX(MAX(content.BotAfterSkillDelay(), 0.5f), in ? in->globalCoolTime : 0.0f) * 1000.0));
 
+		if(in && in->friendlyOnly && in->takesTarget) {
+			const f32 maxDist = content.GetBotSkillMaxDistance(skill);
+			Player* ally = nullptr;
+			f32 lowest = 2.0f;
+			foreach(f, players) {
+				if(&*f == &bot || f->dead || f->untargetable || f->team != bot.team || !f->body) continue;
+				if(glm::length(vec2(f->body->GetWorldPos()) - vec2(pos)) > maxDist) continue;
+				const f32 ratio = (f32)f->Main().hp / (f32)MAX(f->Main().hpMax, 1);
+				if(ratio < lowest) { lowest = ratio; ally = &*f; }
+			}
+			if(!ally) continue;
+			target = ally;
+			best = glm::length(vec2(ally->body->GetWorldPos()) - vec2(pos));
+		}
 		const vec3 tpos = target->body->GetWorldPos();
 		const f32 yaw = atan2f(tpos.y - pos.y, tpos.x - pos.x);
 		bot.input.rot.upperYaw = yaw;

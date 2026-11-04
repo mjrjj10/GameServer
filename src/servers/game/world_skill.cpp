@@ -3,11 +3,12 @@
 #include "world_common.h"
 #include <mxm/game_content.h>
 
-static f32 MovespeedMul(f32 percentSum)
+static f32 MovespeedMul(f32 percentSum, f32 statPercent)
 {
 	static const f32 MEASURED_MOVESPEED_MUL_MIN = 0.1f;
-	static const f32 MEASURED_MOVESPEED_MUL_MAX = 1.6f;
-	return MIN(MAX(1.0f + percentSum / 100.0f, MEASURED_MOVESPEED_MUL_MIN), MEASURED_MOVESPEED_MUL_MAX);
+	static const f32 MEASURED_MOVESPEED_STAT_MAX = 160.0f;
+	const f32 maxMul = statPercent > 0 ? MAX(MEASURED_MOVESPEED_STAT_MAX / statPercent, 1.0f) : 1.6f;
+	return MIN(MAX(1.0f + percentSum / 100.0f, MEASURED_MOVESPEED_MUL_MIN), maxMul);
 }
 
 static const i32 STAT_STAMINAREGEN = 5;
@@ -58,7 +59,7 @@ void World::UpdateUltimateGauges(f32 delta)
 		}
 		{
 			const f32 base = MasterStat(cls, STAT_MOVESPEED) + StatBonus(*it, STAT_MOVESPEED);
-			const f32 speed = base * MovespeedMul(StatusModMulSum(*it, StatusMod::MOVESPEED));
+			const f32 speed = base * MovespeedMul(StatusModMulSum(*it, StatusMod::MOVESPEED), base);
 			if(base > 0 && fabsf(speed - it->moveSpeedSent) > 0.01f) {
 				it->moveSpeedSent = speed;
 				replication->SendStatToAll(it->Main().UID, STAT_MOVESPEED, speed, speed);
@@ -1107,7 +1108,7 @@ f32 World::PlayerMoveSpeed(const Player& p) const
 	const f32 baseSpeed = const_cast<CharacterModel&>(GetGameXmlContent().GetMaster(p.Main().classType).character).getMoveSpeed();
 	f32 mul = StatusModMulSum(p, StatusMod::MOVESPEED);
 	if(localTime < p.firingStatUntil) mul += p.firingMoveSpeedMul;
-	return baseSpeed * (p.battleStage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (p.battleStage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f)) * MovespeedMul(mul);
+	return baseSpeed * (p.battleStage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (p.battleStage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f)) * MovespeedMul(mul, MasterStat(p.Main().classType, STAT_MOVESPEED) + StatBonus(p, STAT_MOVESPEED));
 }
 
 void World::UpdateBattleStates()
