@@ -791,7 +791,7 @@ void World::UpdateRemotes(f32 delta)
 		}
 		const bool chainHop = remote.behaviorType == Remote::BehaviorType::CHAIN && remote.destroyCreateRemote != RemoteIdx::INVALID;
 		const f32 destroyDelay = !chainHop && inst.speed <= 0 && (remote.destroyCreateRemote != RemoteIdx::INVALID || !remote.onDestroy.empty()) ? REMOTE_DESTROY_CHILD_DELAY : 0.0f;
-		const f32 lifeEnd = chainHop && remote.lifeTime > MEASURED_CHAIN_HOP_SEC ? MEASURED_CHAIN_HOP_SEC : remote.lifeTime;
+		const f32 lifeEnd = chainHop && !(remote.includeParty && !remote.friendlyStatuses.empty()) && remote.lifeTime > MEASURED_CHAIN_HOP_SEC ? MEASURED_CHAIN_HOP_SEC : remote.lifeTime;
 		if(!destroyed && remote.lifeTime > 0 && elapsed >= lifeEnd + destroyDelay) destroyed = true;
 		if(!destroyed && remote.lifeTime <= 0 && inst.speed <= 0 && inst.areaDone && elapsed >= destroyDelay) destroyed = true;
 		if(destroyed && !inst.killNow && inst.timeEventActive && ((remote.lifeTime > 0 && elapsed + delta >= remote.lifeTime) || (inst.speed > 0 && inst.range > 0 && inst.travelled >= inst.range - 0.01f))) {
@@ -973,7 +973,7 @@ void World::RunRemoteTimeEvent(RemoteInst& inst, f32 elapsed)
 bool World::UpdateChainRemote(RemoteInst& inst)
 {
 	const Remote& remote = *inst.remote;
-	const bool hopWait = remote.destroyCreateRemote != RemoteIdx::INVALID || inst.chainNpcHit != ActorUID::INVALID || inst.chainHitMask != 0;
+	const bool hopWait = !(remote.includeParty && !remote.friendlyStatuses.empty()) && (remote.destroyCreateRemote != RemoteIdx::INVALID || inst.chainNpcHit != ActorUID::INVALID || inst.chainHitMask != 0);
 	if(hopWait && TimeDiffSec(TimeDiff(inst.spawnTime, localTime)) < MEASURED_CHAIN_HOP_SEC) return false;
 	if(!inst.areaDone) {
 		inst.areaDone = true;
