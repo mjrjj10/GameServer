@@ -16,6 +16,7 @@
 struct AccountData;
 
 static const wchar* const FIRE_OBJECT_SCENE_ROOT = L"Scene Root";
+static const u8 MEASURED_REMOTE_CREATE_FLAG_PARENT_REMOTE = 8;
 static const wchar* const FIRE_OBJECT_ATTACK_PREFIX = L"Attack";
 
 inline bool FireObjectStartsWith(const wchar* name, u16 len, const wchar* prefix)
@@ -564,10 +565,14 @@ struct Replication
 		u8 gaugeLevel = 0;
 		u16 firingCount = 0;
 		u8 comboCount = 0;
+		u32 parentRemoteID = 0;
+		ClientHandle parentSeedOwnerHd = ClientHandle::INVALID;
+		ActorUID hitInvalidUID = ActorUID::INVALID;
 	};
 	void SendRemoteCreate(const RemoteCreate& remote, ClientHandle exclude);
 	bool SendRemoteCreateTo(ClientHandle clientHd, const RemoteCreate& remote);
 	void SendWeaponCreatorShotToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, const wchar* fireObject, u16 creator, u8 chargingLevel, u8 comboCount, u16 firingCount);
+	void SendChildRemoteCreateToAll(ActorUID ownerUID, ActorUID parentUID, u32 parentRemoteID, ClientHandle parentSeedOwnerHd, u32 seed, RemoteIdx doc, u16 creator, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, ActorUID hitInvalidUID, const wchar* fireObject, u8 flags, ClientHandle exclude);
 	void SendReflectedShotToAll(ActorUID shooterUID, ActorUID reflectorUID, u32 seed, const vec3& firePos, f32 worldYaw, const wchar* fireObject, u32 groupSeed, RemoteIdx doc);
 	void RelayRemoteSyncCreateFromRemoteDoc(ClientHandle senderHd, const u8* packetData, i32 packetSize);
 	void RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetData, i32 packetSize);

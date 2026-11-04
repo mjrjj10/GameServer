@@ -759,6 +759,9 @@ struct World
 		u16 nodeName = 0;
 		const GameXmlContent::CostLevel* costLevel = nullptr;
 		const GameXmlContent::FireNodePath* firePath = nullptr;
+		const GameXmlContent::MeasuredFireNode* measuredNode = nullptr;
+		vec3 castOrigin = vec3(0);
+		f32 castYaw = 0;
 		f32 firePathYaw = 0;
 		f32 firePathDone = 0;
 		f32 followDist = -1.0f;
@@ -1039,6 +1042,7 @@ struct World
 	eastl::fixed_vector<MonsterRemote,128,true> monsterRemotes;
 	void SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed = 0);
 	void RetargetMonsters(ActorUID from, ActorUID to);
+	u32 SendRemoteCreator(const RemoteInst& parent, u16 creator, const vec3& pos, u32 childCount, ActorUID spawnerActor, const vec3& aimPos, bool hitInvalidParent);
 	vec3 npcHitCenter = vec3(0);
 	bool npcHitCenterSet = false;
 	void UpdateMonsterRemotes(f32 delta);
@@ -1082,6 +1086,8 @@ struct World
 	eastl::fixed_vector<ClientRemoteSeed,32,false> clientRemoteSeeds;
 	void BindClientRemote(Player& player, RemoteIdx doc, u32 seed);
 	ActorUID remoteParentOverride = ActorUID::INVALID;
+	u32 remoteSendParentID = 0;
+	ClientHandle remoteSendParentSeedHd = ClientHandle::INVALID;
 	ActorUID remoteTargetEntityOverride = ActorUID::INVALID;
 	vec3 remoteSendFrom = vec3(0);
 	bool remoteSendFromSet = false;

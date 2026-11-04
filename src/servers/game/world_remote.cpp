@@ -2,6 +2,7 @@
 #include "world.h"
 #include "world_common.h"
 #include <mxm/game_content.h>
+#include <EASTL/sort.h>
 
 static const u16 SCENE_ROOT_NODE = 0;
 static const wchar* CHAIN_CHILD_NODE = L"";
@@ -205,8 +206,13 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		const bool atAimedPoint = aimPos && glm::length(vec2(*aimPos)) > 1.0f && glm::length(vec2(pos) - vec2(*aimPos)) < 1.0f;
 		if(plainStaticBox && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY) + Perp(dir) * remote->offsetX, 0);
 		if(remoteTargetEntityOverride != ActorUID::INVALID) targetPos = pos;
-		replication->SendRemoteCreateToAll(remoteParentOverride != ActorUID::INVALID ? remoteParentOverride : players[ownerIndex].Main().UID, seed, sendIdx, remoteSendFromSet ? remoteSendFrom : sendPos, sendYaw, targetPos,
-			remoteTargetEntityOverride != ActorUID::INVALID ? remoteTargetEntityOverride : (targetMaster ? target : ActorUID::INVALID), child && remote->behaviorType == Remote::BehaviorType::CHAIN ? CHAIN_CHILD_NODE : (Config().DevNoFireNode ? GetGameXmlContent().GetNodeName(0) : GetGameXmlContent().GetNodeName(nodeName)), casterCreatesLocally ? players[ownerIndex].clientHd : ClientHandle::INVALID);
+		const ActorUID sendOwner = remoteParentOverride != ActorUID::INVALID ? remoteParentOverride : players[ownerIndex].Main().UID;
+		const ActorUID sendTarget = remoteTargetEntityOverride != ActorUID::INVALID ? remoteTargetEntityOverride : (targetMaster ? target : ActorUID::INVALID);
+		const wchar* sendNode = child && remote->behaviorType == Remote::BehaviorType::CHAIN ? CHAIN_CHILD_NODE : (Config().DevNoFireNode ? GetGameXmlContent().GetNodeName(0) : GetGameXmlContent().GetNodeName(nodeName));
+		const ClientHandle sendExclude = casterCreatesLocally ? players[ownerIndex].clientHd : ClientHandle::INVALID;
+		const vec3 sendFrom = remoteSendFromSet ? remoteSendFrom : sendPos;
+		if(remoteSendParentID != 0) replication->SendChildRemoteCreateToAll(sendOwner, sendOwner, remoteSendParentID, remoteSendParentSeedHd, seed, sendIdx, 0, sendFrom, sendYaw, targetPos, sendTarget, ActorUID::INVALID, sendNode, MEASURED_REMOTE_CREATE_FLAG_PARENT_REMOTE, sendExclude);
+		else replication->SendRemoteCreateToAll(sendOwner, seed, sendIdx, sendFrom, sendYaw, targetPos, sendTarget, sendNode, sendExclude);
 	}
 
 	remoteInsts.push_back(inst);
@@ -228,10 +234,44 @@ static RemoteIdx CostReplacedRemote(const GameXmlContent::CostLevel* level, Remo
 	return idx;
 }
 
-static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, const Remote::SpawnRules& rules, const vec3& pos, i32 excludeIndex, RemoteIdx skipFirst, bool clientChains = false)
+static i32 ClientCreatorKindRank(u8 kind)
 {
-	bool skipped = false;
+	switch(kind) {
+		case Remote::SPAWN_DEFAULT: return 0;
+		case Remote::SPAWN_RADIATE: return 1;
+		case Remote::SPAWN_CIRCLE: return 2;
+		default: return 3;
+	}
+}
+
+static u32 CreatorChildCount(const Remote::SpawnRules& rules, bool& replicable)
+{
+	u32 count = 0;
+	replicable = true;
 	foreach_const(rule, rules) {
+		if(rule->kind == Remote::SPAWN_SINGLE) continue;
+		if(rule->kind == Remote::SPAWN_CIRCLE) replicable = false;
+		count += (u32)MAX(rule->maxNum, 1);
+	}
+	if(count == 0) replicable = false;
+	return count;
+}
+
+static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, const Remote::SpawnRules& rules, u16 creator, const vec3& pos, i32 excludeIndex, RemoteIdx skipFirst, ActorUID spawnerActor = ActorUID::INVALID, const vec3& aimPos = vec3(0))
+{
+	bool replicable = false;
+	const u32 childCount = CreatorChildCount(rules, replicable);
+	const bool collapse = creator != 0 && replicable && (parent.clientRemoteID != 0 || spawnerActor != ActorUID::INVALID);
+	bool hitInvalidParent = false;
+	foreach_const(rule, rules) if(rule->kind != Remote::SPAWN_SINGLE && rule->hitInvalidParentLastTarget) hitInvalidParent = true;
+	u32 childID = collapse ? world.SendRemoteCreator(parent, creator, pos, childCount, spawnerActor, aimPos, hitInvalidParent) : 0;
+	eastl::fixed_vector<const Remote::SpawnRule*,4,false> ordered;
+	foreach_const(rule, rules) ordered.push_back(&*rule);
+	eastl::stable_sort(ordered.begin(), ordered.end(), [](const Remote::SpawnRule* a, const Remote::SpawnRule* b) { return ClientCreatorKindRank(a->kind) < ClientCreatorKindRank(b->kind); });
+	bool skipped = false;
+	foreach_const(it, ordered) {
+		const Remote::SpawnRule* rule = *it;
+		if(spawnerActor != ActorUID::INVALID && rule->kind == Remote::SPAWN_SINGLE) continue;
 		if(!skipped && rule->creature <= 0 && rule->kind == Remote::SPAWN_SINGLE && rule->idx == skipFirst) {
 			skipped = true;
 			continue;
@@ -240,18 +280,19 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 			world.SpawnCreatureFromRemote(parent, rule->creature, pos);
 			continue;
 		}
+		const bool fromCreator = collapse && rule->kind != Remote::SPAWN_SINGLE;
 		const Remote* child = GetGameXmlContent().FindRemote(rule->idx);
-		if(!child) continue;
-
+		if(!child) {
+			if(fromCreator) childID += (u32)MAX(rule->maxNum, 1);
+			continue;
+		}
 		for(i32 n = 0; n < rule->maxNum; n++) {
 			vec2 dir = parent.dir;
 			vec3 at = pos;
 			switch(rule->kind) {
 				case Remote::SPAWN_RADIATE: {
-					if(rule->maxNum > 1 && rule->maxAngle > 0) {
-						if(rule->maxAngle >= 360.0f) dir = RotateDir(parent.dir, 360.0f * n / rule->maxNum);
-						else dir = RotateDir(parent.dir, -rule->maxAngle * 0.5f + rule->maxAngle * n / (rule->maxNum - 1));
-					}
+					dir = RotateDir(parent.dir, ((f32)n - (f32)(rule->maxNum - 1) * 0.5f) * rule->maxAngle / (f32)MAX(rule->maxNum, 1));
+					at = pos + vec3(dir * rule->offsetForward, rule->offsetHeight);
 				} break;
 				case Remote::SPAWN_CIRCLE: {
 					const f32 a = (RandUint() % 3600) * 0.1f * PI / 180.0f;
@@ -270,9 +311,15 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 				if(glm::length(rel) > 1.0f) dir = glm::normalize(rel);
 			}
 			if(parent.sourceUID != ActorUID::INVALID && world.FindNpcActor(parent.sourceUID)) world.remoteParentOverride = parent.sourceUID;
-			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, CostReplacedRemote(parent.costLevel, rule->idx), at + vec3(dir * child->offsetY, 0), dir, childTarget, parent.skillID, parent.castID, parent.damage,
-				parent.clientRemoteID != 0 && !(clientChains && rule->kind != Remote::SPAWN_SINGLE && !rule->targetOwner), false, parent.nodeName);
+			const bool broadcast = !fromCreator && parent.clientRemoteID != 0;
+			if(broadcast) {
+				world.remoteSendParentID = parent.clientRemoteID;
+				world.remoteSendParentSeedHd = parent.seedOwnerHd;
+			}
+			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, CostReplacedRemote(parent.costLevel, rule->idx), at + vec3(dir * child->offsetY, 0), dir, childTarget, parent.skillID, parent.castID, parent.damage, broadcast, false, parent.nodeName);
 			world.remoteParentOverride = ActorUID::INVALID;
+			world.remoteSendParentID = 0;
+			world.remoteSendParentSeedHd = ClientHandle::INVALID;
 			if(inst) {
 				inst->excludeIndex = excludeIndex;
 				inst->chainHitMask = parent.chainHitMask;
@@ -280,9 +327,28 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 				inst->costLevel = parent.costLevel;
 				inst->centeredBox = parent.centeredBox;
 				inst->sourceUID = parent.sourceUID;
+				if(fromCreator) {
+					inst->clientRemoteID = childID;
+					inst->damageRemoteID = 0;
+					inst->seedOwnerHd = ClientHandle::INVALID;
+				}
 			}
+			if(fromCreator) childID++;
 		}
 	}
+}
+
+u32 World::SendRemoteCreator(const RemoteInst& parent, u16 creator, const vec3& pos, u32 childCount, ActorUID spawnerActor, const vec3& aimPos, bool hitInvalidParent)
+{
+	const u32 seed = nextRemoteSeed;
+	nextRemoteSeed += (childCount + 2) & ~1u;
+	const bool fromRemote = spawnerActor == ActorUID::INVALID;
+	const ActorUID ownerUID = parent.sourceUID != ActorUID::INVALID && FindNpcActor(parent.sourceUID) ? parent.sourceUID : players[parent.ownerIndex].Main().UID;
+	const ActorMaster* targetMaster = parent.target != ActorUID::INVALID ? FindMasterActor(parent.target) : nullptr;
+	const ActorUID hitInvalid = fromRemote && hitInvalidParent && parent.lastHitIndex >= 0 ? players[parent.lastHitIndex].Main().UID : ActorUID::INVALID;
+	replication->SendChildRemoteCreateToAll(ownerUID, fromRemote ? ownerUID : spawnerActor, fromRemote ? parent.clientRemoteID : 0, fromRemote ? parent.seedOwnerHd : ClientHandle::INVALID, seed, RemoteIdx::INVALID, creator, pos, atan2f(parent.dir.y, parent.dir.x), fromRemote ? pos : aimPos,
+		targetMaster ? parent.target : ActorUID::INVALID, hitInvalid, GetGameXmlContent().GetNodeName(parent.nodeName), fromRemote ? MEASURED_REMOTE_CREATE_FLAG_PARENT_REMOTE : 0, ClientHandle::INVALID);
+	return seed + 1;
 }
 
 i32 World::PenetrationCost(const Player& p) const
@@ -449,8 +515,8 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	if(!remote.onActivate.empty() || !remote.onHitCharacter.empty()) {
 		const RemoteInst copy = inst;
 		const vec3 at = vec3(vec2(target.body->GetWorldPos()), inst.pos.z);
-		SpawnRemoteRules(*this, copy, remote.onActivate, at, -1, RemoteIdx::INVALID);
-		SpawnRemoteRules(*this, copy, remote.onHitCharacter, at, (i32)target.index, RemoteIdx::INVALID, true);
+		SpawnRemoteRules(*this, copy, remote.onActivate, remote.creatorOnActivate, at, -1, RemoteIdx::INVALID);
+		SpawnRemoteRules(*this, copy, remote.onHitCharacter, remote.creatorOnHitCharacter, at, (i32)target.index, RemoteIdx::INVALID);
 	}
 
 	if(enemy) TriggerSkillHitEvent(inst, owner, target.Main().UID, target.body->GetWorldPos());
@@ -927,6 +993,11 @@ void World::SpawnPendingRemotes()
 				spawned->centeredBox = atAimedPoint;
 				if(remote && remote->offsetZ != 0 && (measured || fabsf(pos.z - (ownerZ + remote->offsetZ)) < 1.0f)) spawned->hitZOffset = remote->offsetZ;
 				spawned->aniEndAt = pr->aniEndAt;
+				if(measured) {
+					spawned->measuredNode = measured;
+					spawned->castOrigin = owner.body->GetWorldPos();
+					spawned->castYaw = pr->angle;
+				}
 				const f32 nodeForward = atAimedPoint || fireNode || measured ? 0 : WeaponNodeForward(GetGameXmlContent(), owner.Main().classType, pr->skillID, *spawned->remote, pr->nodeName);
 				if(nodeForward > 0) {
 					spawned->pos += vec3(dir * nodeForward, 0);
@@ -967,7 +1038,7 @@ void World::RunRemoteTimeEvent(RemoteInst& inst, f32 elapsed)
 		if(remote.maxDistance <= 0 && remote.lifeTime > 0) inst.range = inst.travelled + MAX(remote.lifeTime - elapsed, 0.0f) * inst.speed;
 	}
 	const RemoteInst copy = inst;
-	SpawnRemoteRules(*this, copy, remote.onTime, copy.pos, copy.excludeIndex, RemoteIdx::INVALID, true);
+	SpawnRemoteRules(*this, copy, remote.onTime, remote.creatorOnTime, copy.pos, copy.excludeIndex, RemoteIdx::INVALID);
 }
 
 bool World::UpdateChainRemote(RemoteInst& inst)
@@ -1318,8 +1389,19 @@ void World::DestroyRemote(i32 index)
 				const Remote* nextRemote = GetGameXmlContent().FindRemote(next);
 				const f32 nextOffset = nextRemote ? nextRemote->offsetY : 0;
 				if(copy.sourceUID != ActorUID::INVALID && FindNpcActor(copy.sourceUID)) remoteParentOverride = copy.sourceUID;
-				RemoteInst* child = SpawnRemote(copy.ownerIndex, CostReplacedRemote(copy.costLevel, next), copy.pos + vec3(copy.dir * nextOffset, 0), copy.dir, copy.target, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, copy.nodeName, false, false, true);
+				vec3 childPos = copy.pos + vec3(copy.dir * nextOffset, 0);
+				vec2 childDir = copy.dir;
+				if(copy.measuredNode && copy.measuredNode->hasChild) {
+					const vec2 face = vec2(cosf(copy.castYaw), sinf(copy.castYaw));
+					childPos = copy.castOrigin + vec3(face * copy.measuredNode->childForward + Perp(face) * copy.measuredNode->childSide, copy.measuredNode->childUp);
+					childDir = RotateDir(face, copy.measuredNode->childRot);
+				}
+				remoteSendParentID = copy.clientRemoteID;
+				remoteSendParentSeedHd = copy.seedOwnerHd;
+				RemoteInst* child = SpawnRemote(copy.ownerIndex, CostReplacedRemote(copy.costLevel, next), childPos, childDir, copy.target, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, copy.nodeName, false, false, true);
 				remoteParentOverride = ActorUID::INVALID;
+				remoteSendParentID = 0;
+				remoteSendParentSeedHd = ClientHandle::INVALID;
 				if(child) {
 					child->excludeIndex = childExclude;
 					child->chainHitMask = copy.chainHitMask;
@@ -1329,7 +1411,7 @@ void World::DestroyRemote(i32 index)
 					child->sourceUID = copy.sourceUID;
 				}
 			}
-			SpawnRemoteRules(*this, copy, remote.onDestroy, copy.pos, childExclude, next, true);
+			SpawnRemoteRules(*this, copy, remote.onDestroy, remote.creatorOnDestroy, copy.pos, childExclude, next);
 		}
 	}
 }

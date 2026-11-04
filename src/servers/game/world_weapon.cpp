@@ -898,12 +898,7 @@ void World::ReflectProjectile(const Projectile& src, RemoteInst& reflector, cons
 
 u16 World::DefaultWeaponCreator(const Player& player, const WeaponFiring& wf) const
 {
-	const auto& content = GetGameXmlContent();
-	const auto& master = content.GetMaster(player.Main().classType);
-	if(master.defaultWeaponIDs.empty()) return 0;
-	const WeaponFiring* def = content.FindWeaponFiring((i32)master.defaultWeaponIDs[0], player.Main().stance);
-	if(!def || def->firingMethod != wf.firingMethod) return 0;
-	return MeasuredDefaultWeaponCreator(player.Main().classType);
+	return GetGameXmlContent().FindFiringCreator(wf.firingMethod);
 }
 
 f32 World::OwnerRemoteSpeedRatio(const Player& player) const

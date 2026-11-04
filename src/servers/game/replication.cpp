@@ -1846,16 +1846,23 @@ bool Replication::SendRemoteCreateToClient(i32 clientID, const RemoteCreate& rem
 	if(clientID < 0 || clientID >= MAX_PLAYERS || playerState[clientID].cur < PlayerState::IN_GAME) return false;
 	const ClientHandle clientHd = clientHandle[clientID];
 
-	const LocalActorID parentLocal = GetLocalActorID(clientHd, remote.parentUID);
 	const LocalActorID ownerLocal = GetLocalActorID(clientHd, remote.ownerUID);
-	if(parentLocal == LocalActorID::INVALID || ownerLocal == LocalActorID::INVALID) return false;
-	if(playerLocalInfo[clientID].hiddenActors.count(remote.ownerUID) || playerLocalInfo[clientID].hiddenActors.count(remote.parentUID)) return false;
+	if(ownerLocal == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(remote.ownerUID)) return false;
+	u32 parentField = 0;
+	if(remote.parentRemoteID != 0) parentField = clientHd == remote.parentSeedOwnerHd ? remote.parentRemoteID - 1 : remote.parentRemoteID;
+	else {
+		const LocalActorID parentLocal = GetLocalActorID(clientHd, remote.parentUID);
+		if(parentLocal == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(remote.parentUID)) return false;
+		parentField = (u32)parentLocal;
+	}
+	const LocalActorID hitLocal = remote.hitInvalidUID != ActorUID::INVALID ? GetLocalActorID(clientHd, remote.hitInvalidUID) : LocalActorID::INVALID;
+	const u32 hitField = remote.hitInvalidUID == ActorUID::INVALID ? remote.hitInvalidTarget : (hitLocal != LocalActorID::INVALID ? (u32)hitLocal : 0);
 	const LocalActorID targetLocal = remote.targetUID != ActorUID::INVALID ? GetLocalActorID(clientHd, remote.targetUID) : LocalActorID::INVALID;
 	TruthEvent("\"c\":%d,\"remote\":%u,\"doc\":%d,\"owner\":%u,\"x\":%.0f,\"y\":%.0f,\"creator\":%d", clientID, remote.seed, (i32)remote.doc, (u32)ownerLocal, remote.firePos.x, remote.firePos.y, (i32)remote.creator);
 
 	if(remote.creator != 0) {
 		PacketWriter<Sv::SN_RemoteSyncCreateFromCreatorId,512> packet;
-		packet.Write<u32>((u32)parentLocal);
+		packet.Write<u32>(parentField);
 		packet.Write<u32>((u32)ownerLocal);
 		packet.Write<u32>(remote.seed);
 		packet.Write<float3>(v2f(remote.firePos));
@@ -1867,7 +1874,7 @@ bool Replication::SendRemoteCreateToClient(i32 clientID, const RemoteCreate& rem
 		packet.WriteRaw(remote.fireObject, remote.fireObjectLen * sizeof(wchar));
 		packet.Write<u16>(remote.scale);
 		packet.Write<f32>(remote.lifeTime);
-		packet.Write<u32>(remote.hitInvalidTarget);
+		packet.Write<u32>(hitField);
 		packet.Write<u16>(remote.creator);
 		packet.Write<u16>(remote.errorAngle[0]);
 		packet.Write<u16>(remote.errorAngle[1]);
@@ -1882,7 +1889,7 @@ bool Replication::SendRemoteCreateToClient(i32 clientID, const RemoteCreate& rem
 	}
 
 	PacketWriter<Sv::SN_RemoteSyncCreateFromRemoteDoc,512> packet;
-	packet.Write<u32>((u32)parentLocal);
+	packet.Write<u32>(parentField);
 	packet.Write<u32>((u32)ownerLocal);
 	packet.Write<u32>(remote.seed);
 	packet.Write<float3>(v2f(remote.firePos));
@@ -1894,7 +1901,7 @@ bool Replication::SendRemoteCreateToClient(i32 clientID, const RemoteCreate& rem
 	packet.WriteRaw(remote.fireObject, remote.fireObjectLen * sizeof(wchar));
 	packet.Write<u16>(remote.scale);
 	packet.Write<f32>(remote.lifeTime);
-	packet.Write<u32>(remote.hitInvalidTarget);
+	packet.Write<u32>(hitField);
 	packet.Write<u32>((u32)remote.doc);
 	packet.Write<u32>((u32)targetLocal);
 	packet.Write<u8>(remote.flags);
@@ -2110,6 +2117,28 @@ void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx d
 	remote.targetUID = targetUID;
 	SendRemoteCreate(remote, exclude);
 }
+void Replication::SendChildRemoteCreateToAll(ActorUID ownerUID, ActorUID parentUID, u32 parentRemoteID, ClientHandle parentSeedOwnerHd, u32 seed, RemoteIdx doc, u16 creator, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, ActorUID hitInvalidUID, const wchar* fireObject, u8 flags, ClientHandle exclude)
+{
+	if(!fireObject || !fireObject[0]) fireObject = FIRE_OBJECT_SCENE_ROOT;
+	RemoteCreate remote;
+	remote.parentUID = parentUID;
+	remote.ownerUID = ownerUID;
+	remote.parentRemoteID = parentRemoteID;
+	remote.parentSeedOwnerHd = parentSeedOwnerHd;
+	remote.seed = seed;
+	remote.firePos = firePos;
+	remote.fireRotation[2] = (u16)WorldYawToCentiDegrees(worldYaw);
+	remote.targetPos = targetPos;
+	remote.fireObject = fireObject;
+	remote.fireObjectLen = (u16)EA::StdC::Strlen(fireObject);
+	remote.doc = doc;
+	remote.creator = creator;
+	remote.targetUID = targetUID;
+	remote.hitInvalidUID = hitInvalidUID;
+	remote.flags = flags;
+	SendRemoteCreate(remote, exclude);
+}
+
 void Replication::SendWeaponCreatorShotToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, const wchar* fireObject, u16 creator, u8 chargingLevel, u8 comboCount, u16 firingCount)
 {
 	RemoteCreate remote;

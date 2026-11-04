@@ -535,12 +535,21 @@ struct Remote
 		f32 radius = 0;
 		f32 angleY = 0;
 		bool targetOwner = false;
+		f32 offsetForward = 0;
+		f32 offsetHeight = 0;
+		bool hitInvalidParentLastTarget = false;
 	};
 	typedef eastl::fixed_vector<SpawnRule,4,false> SpawnRules;
 	SpawnRules onDestroy;
 	SpawnRules onTime;
 	SpawnRules onActivate;
 	SpawnRules onHitCharacter;
+	u16 creatorOnDestroy = 0;
+	u16 creatorOnTime = 0;
+	u16 creatorOnActivate = 0;
+	u16 creatorOnHitCharacter = 0;
+	u16 spawnerCreator = 0;
+	bool spawnerFromTime = false;
 	f32 timeEventDelay = -1;
 	bool timeEventRecycle = false;
 
@@ -1483,6 +1492,8 @@ struct GameXmlContent
 	bool LoadCharacterBaseStats();
 
 	const Master& GetMaster(ClassType classType) const;
+	eastl::hash_map<i32,u16> firingCreators;
+	u16 FindFiringCreator(i32 fm) const { auto f = firingCreators.find(fm); return f == firingCreators.end() ? 0 : f->second; }
 	i32 GetFirstComboSkill(i32 baseSkill) const { auto f = firstComboSkill.find(baseSkill); return f == firstComboSkill.end() ? 0 : f->second; }
 	i32 GetNextComboSkill(i32 skillID) const { auto f = nextComboSkill.find(skillID); return f == nextComboSkill.end() ? 0 : f->second; }
 	typedef eastl::fixed_vector<ActionStateID,4,false> RandomActionList;
@@ -1521,7 +1532,7 @@ struct GameXmlContent
 	f32 BotAfterSkillDelay() const { return botAfterSkillDelay; }
 	f32 BotConstant(const char* key) const { auto f = botConstants.find(StatusTypeKey(key)); return f == botConstants.end() ? 0 : f->second; }
 	i32 BotStageSkillKind(i32 skill) const { for(i32 i = 0; i < (i32)botStageSkills.size(); i++) if(botStageSkills[i] == skill) return i; return -1; }
-	struct MeasuredFireNode { f32 forward = 0; f32 side = 0; f32 up = 0; };
+	struct MeasuredFireNode { f32 forward = 0; f32 side = 0; f32 up = 0; bool hasChild = false; f32 childForward = 0; f32 childSide = 0; f32 childUp = 0; f32 childRot = 0; };
 	struct FireNodePath { f32 step = 0; eastl::vector<vec3> points; };
 	eastl::vector<FireNodePath> fireNodePaths;
 	eastl::hash_map<i32, i32> fireNodePathByRemote;
@@ -1774,6 +1785,7 @@ private:
 	bool LoadMeasuredFireNodes();
 	bool LoadMeasuredWalkCells();
 	bool LoadFireNodePaths();
+	bool LoadClientRemoteCreators();
 	bool LoadBalanceMultipliers();
 	bool LoadSkillCosts();
 	bool LoadSkillUpgrades();

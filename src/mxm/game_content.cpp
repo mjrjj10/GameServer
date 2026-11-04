@@ -2,6 +2,7 @@
 #include <EAStdC/EAString.h>
 #include <EAStdC/EASprintf.h>
 #include <EASTL/sort.h>
+#include <EASTL/string.h>
 #include <tinyxml2.h>
 
 #include "core.h"
@@ -2780,6 +2781,10 @@ bool GameXmlContent::LoadAnimationData()
 	return true;
 }
 
+static const i32 MEASURED_CLIENT_RADIATE_DEFAULT_NUM = 10;
+static const f32 MEASURED_CLIENT_RADIATE_DEFAULT_ANGLE = 360.0f;
+static const f32 MEASURED_CLIENT_CIRCLE_DEFAULT_RADIUS = 100.0f;
+
 static void ParseRemoteSpawnRules(XMLElement* pEvent, Remote::SpawnRules& out)
 {
 	if(!pEvent) return;
@@ -2797,18 +2802,26 @@ static void ParseRemoteSpawnRules(XMLElement* pEvent, Remote::SpawnRules& out)
 			const char* toOwner = nullptr;
 			pAct->QueryStringAttribute("_TargetOwner", &toOwner);
 			const bool targetOwner = toOwner && EA::StdC::Stricmp(toOwner, "true") == 0;
+			const char* hitInvalidText = pAct->Attribute("_HitInvalidParentLastTarget");
+			const bool hitInvalidParent = hitInvalidText && EA::StdC::Stricmp(hitInvalidText, "true") == 0;
 			for(XMLElement* pKind = pAct->FirstChildElement(); pKind; pKind = pKind->NextSiblingElement()) {
 				Remote::SpawnRule rule;
 				rule.targetOwner = targetOwner;
+				rule.hitInvalidParentLastTarget = hitInvalidParent;
 				i32 idx = -1;
 				if(EA::StdC::Strcmp(pKind->Name(), "_Radiate") == 0) {
 					rule.kind = Remote::SPAWN_RADIATE;
+					rule.maxNum = MEASURED_CLIENT_RADIATE_DEFAULT_NUM;
+					rule.maxAngle = MEASURED_CLIENT_RADIATE_DEFAULT_ANGLE;
 					pKind->QueryAttribute("_Index", &idx);
 					pKind->QueryAttribute("_MaxNum", &rule.maxNum);
 					pKind->QueryFloatAttribute("_MaxAngle", &rule.maxAngle);
+					pKind->QueryFloatAttribute("_OffsetForward", &rule.offsetForward);
+					pKind->QueryFloatAttribute("_OffsetHeight", &rule.offsetHeight);
 				}
 				else if(EA::StdC::Strcmp(pKind->Name(), "_CircleArea") == 0) {
 					rule.kind = Remote::SPAWN_CIRCLE;
+					rule.radius = MEASURED_CLIENT_CIRCLE_DEFAULT_RADIUS;
 					pKind->QueryAttribute("_Index", &idx);
 					pKind->QueryAttribute("_MaxNum", &rule.maxNum);
 					pKind->QueryFloatAttribute("_Radius", &rule.radius);
@@ -3142,6 +3155,259 @@ bool GameXmlContent::LoadRemoteData()
 	return true;
 }
 
+static const u16 MEASURED_CLIENT_CREATOR_BASE = 1000;
+static const char* const CLIENT_CREATOR_SUB_TAGS[6] = { "_CHARGINGREMOTE", "_ADDREMOTE", "_OVERHEAT", "_FIRINGCOUNT", "_COMBO", "_GAUGE" };
+static const char* const CLIENT_CREATOR_EVENTS[8] = { "_Activate", "_ActivateOnGround", "_ActivateOnNotGround", "_ActivateOnCantPierce", "_ActivateOnShield", "_Destroy", "_ReachedMaxDistance", "_Time" };
+enum ClientCreatorSlot: u8 { CREATOR_SLOT_ACTIVATE = 0, CREATOR_SLOT_NOT_GROUND = 2, CREATOR_SLOT_DESTROY = 5, CREATOR_SLOT_TIME = 7, CREATOR_SLOT_FACTORY = 8, CREATOR_SLOT_CHARGE = 9 };
+
+struct ClientCreatorSub { u32 rate = 100; u32 index = 0xFFFFFFFF; eastl::string dummy; };
+struct ClientCreatorRemote { eastl::string dummy; u32 remoteIndex = 0xFFFFFFFF; eastl::array<eastl::vector<ClientCreatorSub>,6> subs; u32 tail[2] = { 0, 0 }; };
+struct ClientCreatorArea { u32 field[6] = { 0, 0, 0, 0, 0, 0 }; u8 flag = 0; i32 count = 0; bool hasFlag = true; };
+struct ClientCreation
+{
+	eastl::vector<ClientCreatorRemote> defaults;
+	eastl::vector<ClientCreatorArea> radiate;
+	eastl::vector<ClientCreatorArea> circleFall;
+	eastl::vector<ClientCreatorArea> circle;
+	eastl::vector<ClientCreatorArea> fall;
+	eastl::vector<ClientCreatorRemote> parallel;
+	i32 ownerID = 0;
+	u8 slot = 0;
+	bool firstTime = false;
+	bool spawner = false;
+};
+
+static u32 ClientXmlU32(const XMLElement* e, const char* name, u32 def)
+{
+	double v = 0;
+	if(e->QueryDoubleAttribute(name, &v) != XML_SUCCESS) return def;
+	return v < 0 ? (u32)(i32)v : (u32)v;
+}
+
+static u32 ClientXmlI32(const XMLElement* e, const char* name, i32 def)
+{
+	double v = 0;
+	if(e->QueryDoubleAttribute(name, &v) != XML_SUCCESS) return (u32)def;
+	return (u32)(i32)v;
+}
+
+static u8 ClientXmlBool(const XMLElement* e, const char* name, u8 def)
+{
+	const char* v = e->Attribute(name);
+	return v ? (u8)(EA::StdC::Stricmp(v, "true") == 0) : def;
+}
+
+static ClientCreatorRemote ParseClientCreatorRemote(XMLElement* pKind, u32 tail0, u32 tail1)
+{
+	ClientCreatorRemote r;
+	r.tail[0] = tail0;
+	r.tail[1] = tail1;
+	XMLElement* pRemote = pKind->FirstChildElement("_Remote");
+	if(!pRemote) return r;
+	if(const char* d = pRemote->Attribute("_FiringDummy")) r.dummy = d;
+	r.remoteIndex = ClientXmlU32(pRemote, "_RemoteIndex", 0xFFFFFFFF);
+	for(i32 s = 0; s < 6; s++) {
+		for(XMLElement* pSub = pRemote->FirstChildElement(CLIENT_CREATOR_SUB_TAGS[s]); pSub; pSub = pSub->NextSiblingElement(CLIENT_CREATOR_SUB_TAGS[s])) {
+			ClientCreatorSub sub;
+			sub.rate = ClientXmlU32(pSub, "_Rate", 100);
+			sub.index = ClientXmlU32(pSub, "_Index", 0xFFFFFFFF);
+			if(const char* d = pSub->Attribute("_FiringDummy")) sub.dummy = d;
+			r.subs[s].push_back(sub);
+		}
+	}
+	return r;
+}
+
+static ClientCreation ParseClientCreation(XMLElement* pCreate)
+{
+	ClientCreation c;
+	for(XMLElement* p = pCreate->FirstChildElement(); p; p = p->NextSiblingElement()) {
+		const char* tag = p->Name();
+		if(EA::StdC::Strcmp(tag, "_Default") == 0) c.defaults.push_back(ParseClientCreatorRemote(p, ClientXmlI32(p, "_AngleX", 0), ClientXmlI32(p, "_AngleY", 0)));
+		else if(EA::StdC::Strcmp(tag, "_Parallel") == 0) c.parallel.push_back(ParseClientCreatorRemote(p, ClientXmlU32(p, "_MaxNum", 0), ClientXmlI32(p, "_Offset", 0)));
+		else if(EA::StdC::Strcmp(tag, "_Radiate") == 0) {
+			ClientCreatorArea a;
+			a.field[0] = ClientXmlU32(p, "_Index", 0xFFFFFFFF);
+			a.field[1] = ClientXmlU32(p, "_MaxNum", 10);
+			a.field[2] = ClientXmlI32(p, "_MaxAngle", 360);
+			a.field[3] = ClientXmlI32(p, "_OffsetAngle", 0);
+			a.field[4] = ClientXmlI32(p, "_OffsetForward", 0);
+			a.field[5] = ClientXmlI32(p, "_OffsetHeight", 0);
+			a.flag = ClientXmlBool(p, "_OnlyUseParentRotateZ", 1);
+			a.count = 6;
+			c.radiate.push_back(a);
+		}
+		else if(EA::StdC::Strcmp(tag, "_CircleArea") == 0 || EA::StdC::Strcmp(tag, "_CircleAreaFall") == 0) {
+			ClientCreatorArea a;
+			a.field[0] = ClientXmlU32(p, "_Index", 0xFFFFFFFF);
+			a.field[1] = ClientXmlU32(p, "_MaxNum", 1);
+			a.field[2] = ClientXmlI32(p, "_Radius", 100);
+			a.flag = ClientXmlBool(p, "_CheckKynapse", 0);
+			a.count = 3;
+			if(EA::StdC::Strcmp(tag, "_CircleArea") == 0) c.circle.push_back(a);
+			else c.circleFall.push_back(a);
+		}
+		else if(EA::StdC::Strcmp(tag, "_Fall") == 0) {
+			ClientCreatorArea a;
+			a.field[0] = ClientXmlU32(p, "_Index", 0xFFFFFFFF);
+			a.field[1] = ClientXmlU32(p, "_MaxNum", 10);
+			a.field[2] = ClientXmlI32(p, "_Height", 0);
+			a.field[3] = ClientXmlI32(p, "_RandomOffset", 0);
+			a.count = 4;
+			a.hasFlag = false;
+			c.fall.push_back(a);
+		}
+	}
+	return c;
+}
+
+static i32 ClientBytes8(u32 a0, u32 a1, u32 b0, u32 b1)
+{
+	u8 a[8], b[8];
+	memcpy(a, &a0, 4);
+	memcpy(a + 4, &a1, 4);
+	memcpy(b, &b0, 4);
+	memcpy(b + 4, &b1, 4);
+	return memcmp(a, b, 8);
+}
+
+static i32 ClientStrCmp(const eastl::string& a, const eastl::string& b)
+{
+	const i32 r = EA::StdC::Strcmp(a.c_str(), b.c_str());
+	return r < 0 ? -1 : (r > 0 ? 1 : 0);
+}
+
+static i32 CmpClientCreatorRemote(const ClientCreatorRemote& a, const ClientCreatorRemote& b)
+{
+	i32 r = ClientStrCmp(a.dummy, b.dummy);
+	if(r) return r;
+	r = (i32)(a.remoteIndex - b.remoteIndex);
+	if(r) return r;
+	for(i32 s = 0; s < 6; s++) {
+		r = (i32)a.subs[s].size() - (i32)b.subs[s].size();
+		if(r) return r;
+		for(i32 k = 0; k < (i32)a.subs[s].size(); k++) {
+			r = ClientBytes8(a.subs[s][k].rate, a.subs[s][k].index, b.subs[s][k].rate, b.subs[s][k].index);
+			if(!r) r = ClientStrCmp(a.subs[s][k].dummy, b.subs[s][k].dummy);
+			if(r) return r;
+		}
+	}
+	return ClientBytes8(a.tail[0], a.tail[1], b.tail[0], b.tail[1]);
+}
+
+static i32 CmpClientCreatorArea(const ClientCreatorArea& a, const ClientCreatorArea& b)
+{
+	for(i32 f = 0; f < a.count; f++) if(a.field[f] != b.field[f]) return (i32)(b.field[f] - a.field[f]);
+	return a.hasFlag ? (i32)b.flag - (i32)a.flag : 0;
+}
+
+template<class T, class F> static i32 CmpClientList(const eastl::vector<T>& a, const eastl::vector<T>& b, F cmp)
+{
+	const i32 n = (i32)MIN(a.size(), b.size());
+	for(i32 k = 0; k < n; k++) {
+		const i32 r = cmp(a[k], b[k]);
+		if(r) return r;
+	}
+	return (i32)a.size() - (i32)b.size();
+}
+
+static i32 CmpClientCreation(const ClientCreation& a, const ClientCreation& b)
+{
+	i32 r = CmpClientList(a.defaults, b.defaults, CmpClientCreatorRemote);
+	if(!r) r = CmpClientList(a.radiate, b.radiate, CmpClientCreatorArea);
+	if(!r) r = CmpClientList(a.circleFall, b.circleFall, CmpClientCreatorArea);
+	if(!r) r = CmpClientList(a.circle, b.circle, CmpClientCreatorArea);
+	if(!r) r = CmpClientList(a.fall, b.fall, CmpClientCreatorArea);
+	if(!r) r = CmpClientList(a.parallel, b.parallel, CmpClientCreatorRemote);
+	return r;
+}
+
+static XMLElement* ClientPureSpawnerEvent(XMLElement* pInfo)
+{
+	XMLElement* pSfx = pInfo->FirstChildElement("RemoteSFXComData");
+	const char* res = pSfx ? pSfx->Attribute("_ResName") : nullptr;
+	const char* resTarget = pSfx ? pSfx->Attribute("_ResNameTarget") : nullptr;
+	if((res && *res) || (resTarget && *resTarget)) return nullptr;
+	XMLElement* pBound = pInfo->FirstChildElement("RemoteBoundComData2");
+	const char* boundType = pBound ? pBound->Attribute("_Type") : nullptr;
+	if(boundType && EA::StdC::Strcmp(boundType, "E_BOUND_NONE") != 0) return nullptr;
+	XMLElement* pSteer = pInfo->FirstChildElement("SteeringBehaviorsComData");
+	if(pSteer && pSteer->FloatAttribute("_MaxSpeed") > 0) return nullptr;
+	XMLElement* pSystem = pInfo->FirstChildElement("RemoteSystemComData");
+	if(!pSystem) return nullptr;
+	XMLElement* pTime = pSystem->FirstChildElement("_Time");
+	if(pTime && !pTime->NextSiblingElement("_Time") && pTime->FirstChildElement("_CreateRemote") && pTime->FloatAttribute("_Time") <= 0) return pTime;
+	XMLElement* pDestroy = pSystem->FirstChildElement("_Destroy");
+	XMLElement* pCommon = pInfo->FirstChildElement("RemoteComData2");
+	if(pDestroy && pDestroy->FirstChildElement("_CreateRemote") && (!pCommon || pCommon->FloatAttribute("_LifeTime") <= 0)) return pDestroy;
+	return nullptr;
+}
+
+bool GameXmlContent::LoadClientRemoteCreators()
+{
+	static const wchar* FILES[] = { L"/REMOTE_PC.xml", L"/client/REMOTE_DYNAMIC.xml", L"/client/REMOTE_MOB_A.xml", L"/client/REMOTE_MOB_B.xml", L"/client/REMOTE_MOB_C.xml", L"/client/REMOTE_MOB_PUBLIC.xml", L"/client/FIRING_METHOD.xml" };
+	eastl::vector<ClientCreation> creations;
+	for(i32 f = 0; f < (i32)ARRAY_COUNT(FILES); f++) {
+		XMLDocument doc;
+		if(!LoadXMLFile(FILES[f], doc)) return false;
+		for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+			const i32 id = pInfo->IntAttribute("ID");
+			if(XMLElement* pFactory = pInfo->FirstChildElement("RemoteFactoryComData")) {
+				XMLElement* pCreate = pFactory->FirstChildElement("_Create");
+				ClientCreation c = pCreate ? ParseClientCreation(pCreate) : ClientCreation();
+				c.ownerID = id;
+				c.slot = CREATOR_SLOT_FACTORY;
+				creations.push_back(c);
+				for(XMLElement* pCharge = pFactory->FirstChildElement("_CHARGE"); pCharge; pCharge = pCharge->NextSiblingElement("_CHARGE")) {
+					for(XMLElement* pLevel = pCharge->FirstChildElement("_Create"); pLevel; pLevel = pLevel->NextSiblingElement("_Create")) {
+						ClientCreation cc = ParseClientCreation(pLevel);
+						cc.ownerID = id;
+						cc.slot = CREATOR_SLOT_CHARGE;
+						creations.push_back(cc);
+					}
+				}
+			}
+			XMLElement* pSystem = pInfo->FirstChildElement("RemoteSystemComData");
+			if(!pSystem) continue;
+			XMLElement* pSpawnerEvent = ClientPureSpawnerEvent(pInfo);
+			for(XMLElement* pEvent = pSystem->FirstChildElement(); pEvent; pEvent = pEvent->NextSiblingElement()) {
+				i32 slot = -1;
+				for(i32 e = 0; e < (i32)ARRAY_COUNT(CLIENT_CREATOR_EVENTS); e++) if(EA::StdC::Strcmp(pEvent->Name(), CLIENT_CREATOR_EVENTS[e]) == 0) slot = e;
+				XMLElement* pCreate = slot >= 0 ? pEvent->FirstChildElement("_CreateRemote") : nullptr;
+				if(!pCreate) continue;
+				ClientCreation c = ParseClientCreation(pCreate);
+				c.ownerID = id;
+				c.slot = (u8)slot;
+				c.firstTime = slot == CREATOR_SLOT_TIME && pEvent == pSystem->FirstChildElement("_Time");
+				c.spawner = pEvent == pSpawnerEvent;
+				creations.push_back(c);
+			}
+		}
+	}
+	eastl::vector<i32> order;
+	for(i32 k = 0; k < (i32)creations.size(); k++) order.push_back(k);
+	eastl::sort(order.begin(), order.end(), [&](i32 a, i32 b) { return CmpClientCreation(creations[a], creations[b]) < 0; });
+	u16 creatorID = MEASURED_CLIENT_CREATOR_BASE;
+	for(i32 k = 0; k < (i32)order.size(); k++) {
+		const ClientCreation& c = creations[order[k]];
+		if(k == 0 || CmpClientCreation(creations[order[k - 1]], c) < 0) creatorID++;
+		if(c.slot == CREATOR_SLOT_FACTORY) { firingCreators[c.ownerID] = creatorID; continue; }
+		auto found = remoteMap.find(RemoteIdx(c.ownerID));
+		if(found == remoteMap.end()) continue;
+		Remote& remote = found->second;
+		if(c.slot == CREATOR_SLOT_DESTROY) remote.creatorOnDestroy = creatorID;
+		else if(c.slot == CREATOR_SLOT_TIME && c.firstTime) remote.creatorOnTime = creatorID;
+		else if(c.slot == CREATOR_SLOT_ACTIVATE) remote.creatorOnActivate = creatorID;
+		else if(c.slot == CREATOR_SLOT_NOT_GROUND) remote.creatorOnHitCharacter = creatorID;
+		if(c.spawner) {
+			remote.spawnerCreator = creatorID;
+			remote.spawnerFromTime = c.slot == CREATOR_SLOT_TIME;
+		}
+	}
+	LOG("Loaded %d client remote creations, %d creator ids", (i32)creations.size(), (i32)(creatorID - MEASURED_CLIENT_CREATOR_BASE));
+	return true;
+}
+
 bool GameXmlContent::Load()
 {
 	LOG("Loading GameContent...");
@@ -3318,6 +3584,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadWeaponFiring();
+	if(!r) return false;
+
+	r = LoadClientRemoteCreators();
 	if(!r) return false;
 
 	r = LoadSkillTargeting();
@@ -3971,6 +4240,11 @@ bool GameXmlContent::LoadMeasuredFireNodes()
 		node.forward = pFire->FloatAttribute("forward");
 		node.side = pFire->FloatAttribute("side");
 		node.up = pFire->FloatAttribute("up");
+		node.hasChild = pFire->Attribute("childForward") != nullptr;
+		node.childForward = pFire->FloatAttribute("childForward");
+		node.childSide = pFire->FloatAttribute("childSide");
+		node.childUp = pFire->FloatAttribute("childUp");
+		node.childRot = pFire->FloatAttribute("childRot");
 		measuredFireNodes[FireNodeKey(pFire->IntAttribute("skill"), pFire->IntAttribute("remote"), pFire->IntAttribute("index"))] = node;
 	}
 	LOG("Loaded %d measured fire nodes", (i32)measuredFireNodes.size());

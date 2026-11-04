@@ -116,58 +116,6 @@ static inline bool IsMeasuredReflector(RemoteIdx remote)
 	return false;
 }
 
-struct WeaponCreatorRule
-{
-	ClassType master;
-	u16 creator;
-};
-
-static const WeaponCreatorRule MEASURED_DEFAULT_WEAPON_CREATORS[] = {
-	{ ClassType(1), 1734 },
-	{ ClassType(2), 1739 },
-	{ ClassType(3), 1752 },
-	{ ClassType(4), 1764 },
-	{ ClassType(5), 1718 },
-	{ ClassType(6), 1780 },
-	{ ClassType(7), 1789 },
-	{ ClassType(8), 1794 },
-	{ ClassType(9), 1805 },
-	{ ClassType(10), 1813 },
-	{ ClassType(11), 1822 },
-	{ ClassType(12), 1833 },
-	{ ClassType(13), 1834 },
-	{ ClassType(14), 1843 },
-	{ ClassType(15), 1848 },
-	{ ClassType(16), 1859 },
-	{ ClassType(17), 1869 },
-	{ ClassType(18), 1881 },
-	{ ClassType(19), 1891 },
-	{ ClassType(20), 1895 },
-	{ ClassType(21), 1900 },
-	{ ClassType(22), 1905 },
-	{ ClassType(23), 1910 },
-	{ ClassType(24), 1915 },
-	{ ClassType(25), 1916 },
-	{ ClassType(27), 1946 },
-	{ ClassType(28), 1951 },
-	{ ClassType(29), 1957 },
-	{ ClassType(31), 1694 },
-	{ ClassType(32), 1968 },
-	{ ClassType(33), 1969 },
-	{ ClassType(34), 1978 },
-	{ ClassType(35), 1984 },
-	{ ClassType(37), 1995 },
-	{ ClassType(38), 2000 },
-	{ ClassType(39), 2005 },
-	{ ClassType(40), 2006 },
-};
-
-static inline u16 MeasuredDefaultWeaponCreator(ClassType master)
-{
-	for(const WeaponCreatorRule& r : MEASURED_DEFAULT_WEAPON_CREATORS) if(r.master == master) return r.creator;
-	return 0;
-}
-
 struct FireNodeRule
 {
 	RemoteIdx remote;
