@@ -1318,6 +1318,9 @@ void World::UpdateMonsterAi(f32 delta)
 		const GameXmlContent::MonsterAttack* attack = nullptr;
 		vec3 targetAt;
 		bool targetLost = false;
+		vec3 tauntAt;
+		const GameXmlContent::MonsterAttack* tauntAttack = nullptr;
+		const ActorUID taunt = MonsterTauntTarget(npc, ai, &tauntAt, &tauntAttack);
 		bool summonTarget = false;
 		if(npc.monsterTarget != ActorUID::INVALID) {
 			auto t = actorNpcMap.find(npc.monsterTarget);
@@ -1334,7 +1337,7 @@ void World::UpdateMonsterAi(f32 delta)
 					attack = ai.byTarget[GameXmlContent::MonsterAttack::MASTER];
 				}
 			}
-			if(targetPos && glm::length(vec2(*targetPos) - vec2(npc.pos)) > MAX(ai.lost, ai.perception)) targetPos = nullptr;
+			if(targetPos && npc.monsterTarget != taunt && glm::length(vec2(*targetPos) - vec2(npc.pos)) > MAX(ai.lost, ai.perception)) targetPos = nullptr;
 			if(!targetPos || !attack) {
 				targetPos = nullptr;
 				npc.monsterTarget = ActorUID::INVALID;
@@ -1407,9 +1410,6 @@ void World::UpdateMonsterAi(f32 delta)
 			npc.monsterMasterSince = localTime;
 			npc.monsterRetargetAt = TimeAdd(localTime, TimeMsToTime(MEASURED_MINION_RETARGET_MS));
 		}
-		vec3 tauntAt;
-		const GameXmlContent::MonsterAttack* tauntAttack = nullptr;
-		const ActorUID taunt = MonsterTauntTarget(npc, ai, &tauntAt, &tauntAttack);
 		const bool heldByTaunt = taunt != ActorUID::INVALID && taunt == npc.monsterTarget;
 		if(titanMode && lanePusher && targetIsMaster && !heldByTaunt && localTime >= npc.monsterRetargetAt) {
 			npc.monsterRetargetAt = TimeAdd(localTime, TimeMsToTime(MEASURED_MINION_RETARGET_MS));
@@ -1464,6 +1464,8 @@ void World::UpdateMonsterAi(f32 delta)
 			targetAt = tauntAt;
 			targetPos = &targetAt;
 			attack = tauntAttack;
+			targetLost = false;
+			SetMonsterBattle(npc, true);
 			replication->SendAiSetTargetToAll(npc.UID, taunt);
 		}
 		if(!targetPos && ai.perception > 0 && localTime >= npc.monsterNextSearch) {
