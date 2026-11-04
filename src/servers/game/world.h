@@ -1494,6 +1494,7 @@ private:
 	bool AttachedToCaster(const Player& p) const;
 	f32 StatusModSum(const Player& p, i32 stat) const;
 	f32 StatusModMulSum(const Player& p, i32 stat) const;
+	f32 SlimeMassMod(const Player& p, i32 stat, bool mul) const;
 	f32 StatusRegenBonus(const Player& p, i32 stat, bool mul) const;
 	bool IsBlocked(const Player& p, bool attack, bool skill, bool shirk) const;
 	void HealPlayer(Player& healer, Player& target, i32 amount);

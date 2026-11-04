@@ -958,9 +958,25 @@ bool World::IsBlocked(const Player& p, bool attack, bool skill, bool shirk) cons
 	return false;
 }
 
+static const f32 MEASURED_SLIME_MASS_BAND_START[4] = { 30.0f, 50.0f, 70.0f, 90.0f };
+static const f32 MEASURED_SLIME_POWER_PCT[5] = { -50.0f, -25.0f, 0.0f, 25.0f, 50.0f };
+static const f32 MEASURED_SLIME_SPEED_PCT[5] = { 25.0f, 10.0f, 0.0f, -10.0f, -25.0f };
+static const f32 MEASURED_SLIME_SKILLPOWER[5] = { -75.0f, -37.5f, 0.0f, 37.5f, 75.0f };
+
+f32 World::SlimeMassMod(const Player& p, i32 stat, bool mul) const
+{
+	if(stat != StatusMod::ATTACK && stat != StatusMod::DEFENCE && stat != StatusMod::MOVESPEED && stat != StatusMod::SKILLPOWER) return 0;
+	if(!FindPassiveOfType(p, StatusType::SLIME)) return 0;
+	i32 band = 0;
+	for(i32 i = 0; i < 4; i++) if(p.res[1] >= MEASURED_SLIME_MASS_BAND_START[i]) band = i + 1;
+	if(!mul) return stat == StatusMod::SKILLPOWER ? MEASURED_SLIME_SKILLPOWER[band] : 0;
+	if(stat == StatusMod::MOVESPEED) return MEASURED_SLIME_SPEED_PCT[band];
+	return stat == StatusMod::SKILLPOWER ? 0 : MEASURED_SLIME_POWER_PCT[band];
+}
+
 f32 World::StatusModMulSum(const Player& p, i32 stat) const
 {
-	f32 sum = 0;
+	f32 sum = SlimeMassMod(p, stat, true);
 	foreach_const(it, activeStatuses) {
 		if(it->targetIndex != p.index || !it->info || localTime >= it->until) continue;
 		foreach_const(m, it->info->mods) {
@@ -984,7 +1000,7 @@ f32 World::StatusRegenBonus(const Player& p, i32 stat, bool mul) const
 
 f32 World::StatusModSum(const Player& p, i32 stat) const
 {
-	f32 sum = 0;
+	f32 sum = SlimeMassMod(p, stat, false);
 	foreach_const(it, activeStatuses) {
 		if(it->targetIndex != p.index || !it->info) continue;
 		foreach_const(m, it->info->mods) {
