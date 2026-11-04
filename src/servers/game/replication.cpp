@@ -2461,6 +2461,23 @@ void Replication::SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const
 	}
 }
 
+void Replication::SendMonsterLiftToAll(ActorUID actorUID, const vec3& pos)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+		PacketWriter<Sv::SN_AIMonsterSyncMove,48> packet;
+		packet.Write<u8>(NPC_MOVE_POSITIONS_ONLY);
+		packet.Write<u32>((u32)localID);
+		packet.Write<float3>(v2f(pos));
+		packet.Write<float3>(v2f(pos));
+		packet.Write<u8>(NPC_MOVE_FLAG_STOPPED);
+		SendPacket(clientHd, packet);
+	}
+}
+
 void Replication::SendNpcTurnToAll(ActorUID actorUID, f32 worldYaw)
 {
 	const i16 yaw = WorldYawToMonsterDeciDegrees(worldYaw);

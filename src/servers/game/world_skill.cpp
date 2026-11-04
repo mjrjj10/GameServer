@@ -473,10 +473,12 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	if(remove) return;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
 	if(info) ApplySummonDrainLife(npc, *info);
-	if(NpcDefeatReaction(npc, info) < 0) {
+	const f32 reaction = NpcDefeatReaction(npc, info);
+	if(reaction < 0) {
 		replication->SendResistStatusToAll(npc.UID, caster.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
 		return;
 	}
+	const bool reactsByState = reaction > 0 && info && info->type != StatusType::PUSH;
 	vec3 pushTo;
 	f32 pushNominal = -1.0f;
 	f32 pushSec = 0;
@@ -484,7 +486,7 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	const f32 duration = info && info->durationSec > 0 ? info->durationSec : (push ? pushSec : 0.0f);
 	StartNpcDrag(npc, info, statusForceCenterSet ? vec2(statusForceCenter) : vec2(caster.body->GetWorldPos()), duration);
 	const bool anchor = !push && StatusSendsGraph(info) && StatusGraphAnchorOnly(info);
-	replication->SendAddStatusToAll(statusID, npc.UID, caster.Main().UID, duration, npc.pos, anchor ? vec3(0) : pushTo, pushSec, 1, 1.0f, pushNominal, push || anchor, false);
+	if(!reactsByState) replication->SendAddStatusToAll(statusID, npc.UID, caster.Main().UID, duration, npc.pos, anchor ? vec3(0) : pushTo, pushSec, 1, 1.0f, pushNominal, push || anchor, false);
 	if(npcStatuses.full()) return;
 	NpcStatus ns;
 	ns.npcUID = npc.UID;

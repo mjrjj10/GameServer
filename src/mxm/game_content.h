@@ -128,6 +128,8 @@ struct SummonCommand
 	bool onCurrent = false;
 	bool remove = false;
 	u8 dieMode = 0;
+	i8 animIndex = -1;
+	i32 animId = 0;
 	i32 index = 0;
 	f32 delay = 0;
 	u16 nodeName = 0;

@@ -5599,6 +5599,8 @@ bool GameXmlContent::LoadSummonActions()
 		else continue;
 		if(cmd.kind != SummonCommand::DIE && cmd.index == 0) continue;
 		pA->QueryFloatAttribute("Delay", &cmd.delay);
+		cmd.animIndex = (i8)pA->IntAttribute("AnimationIndex", -1);
+		cmd.animId = stateAnimId;
 		const char* preset = nullptr;
 		pA->QueryStringAttribute("TargetPreset", &preset);
 		cmd.onCurrent = preset && EA::StdC::Strstr(preset, "CURRENT");

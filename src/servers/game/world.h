@@ -718,6 +718,9 @@ struct World
 		bool homingLockOn = false;
 		bool reflected = false;
 		i32 homingTarget = -1;
+		ActorUID homingNpc = ActorUID::INVALID;
+		ActorUID syncedTarget = ActorUID::INVALID;
+		bool syncedInit = false;
 		u32 volleyID = 0;
 		eastl::fixed_vector<u32,16,false> hitList;
 		eastl::fixed_vector<ActorUID,4,false> npcHitList;
@@ -785,6 +788,8 @@ struct World
 		bool wallHitDone = false;
 		u32 clientRemoteID = 0;
 		f32 syncIn = MEASURED_REMOTE_SYNC_FIRST_SEC;
+		ActorUID syncedTarget = ActorUID::INVALID;
+		bool syncedInit = false;
 		i32 penetrationLeft = 0;
 		Time nextTimeEvent = Time::ZERO;
 		bool timeEventActive = false;

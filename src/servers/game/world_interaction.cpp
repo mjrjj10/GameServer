@@ -349,7 +349,7 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 	if(eastl::find(npc.monsterAi->ccTypes.begin(), npc.monsterAi->ccTypes.end(), info->type) == npc.monsterAi->ccTypes.end() && !(hostileMonsters && HypPveMonsterTakesCc(npc))) return -1.0f;
 	const f32 total = sec + (lie ? NPC_LIE_SEC : 0.0f);
 	npc.actionState = state;
-	replication->SendMonsterStateToAll(npc.UID, state, npc.pos, 0.0f);
+	replication->SendMonsterStateToAll(npc.UID, state, npc.pos, npc.monsterAi->run * npc.speedMul);
 	npc.defeatLieAt = lie ? TimeAdd(localTime, TimeMsToTime(sec * 1000.0)) : Time::ZERO;
 	npc.airborneAt = info->type == StatusType::AIRBORNE ? localTime : Time::ZERO;
 	npc.airborneStep = 0;
@@ -394,14 +394,14 @@ void World::UpdateNpcDefeat(ActorNpc& npc)
 		if(step > npc.airborneStep) {
 			npc.airborneStep = MIN(step, last);
 			const vec3 lifted = vec3(vec2(npc.pos), npc.pos.z + MEASURED_NPC_AIRBORNE_LIFT[npc.airborneStep]);
-			replication->SendMonsterMoveToAll(npc.UID, lifted, lifted, npc.rot.z, 0.0f);
+			replication->SendMonsterLiftToAll(npc.UID, lifted);
 			if(npc.airborneStep >= last) npc.airborneAt = Time::ZERO;
 		}
 	}
 	if(npc.defeatLieAt != Time::ZERO && localTime >= npc.defeatLieAt) {
 		npc.defeatLieAt = Time::ZERO;
 		npc.actionState = ActionStateID::LIE_BEHAVIORSTATE;
-		replication->SendMonsterStateToAll(npc.UID, ActionStateID::LIE_BEHAVIORSTATE, npc.pos, 0.0f);
+		replication->SendMonsterStateToAll(npc.UID, ActionStateID::LIE_BEHAVIORSTATE, npc.pos, npc.monsterAi ? npc.monsterAi->run * npc.speedMul : 0.0f);
 	}
 	if(npc.stateEndAt != Time::ZERO && localTime >= npc.stateEndAt) {
 		npc.stateEndAt = Time::ZERO;
@@ -459,7 +459,7 @@ void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 s
 		else i++;
 	}
 	const bool anchor = !push && StatusSendsGraph(info) && StatusGraphAnchorOnly(info);
-	replication->SendAddStatusToAll(statusID, npc.UID, caster.UID, duration, npc.pos, anchor ? vec3(0) : pushTo, pushSec, 1, 1.0f, pushNominal, push || anchor, false);
+	if(!(hold > 0 && info->type != StatusType::PUSH)) replication->SendAddStatusToAll(statusID, npc.UID, caster.UID, duration, npc.pos, anchor ? vec3(0) : pushTo, pushSec, 1, 1.0f, pushNominal, push || anchor, false);
 	if(npcStatuses.full()) return;
 	NpcStatus ns;
 	ns.npcUID = npc.UID;

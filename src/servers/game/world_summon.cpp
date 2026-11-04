@@ -30,6 +30,19 @@ void World::SpawnCreatureFromRemote(const RemoteInst& parent, i32 creature, cons
 	LOG("Remote :: %d creates creature %d at (%.0f, %.0f)", (i32)parent.remote->ID, creature, pos.x, pos.y);
 }
 
+static f32 SummonPassStart(const SummonInfo& info, i32 state, i32 pass)
+{
+	f32 start = 0;
+	for(i32 k = 0; k < pass; k++) {
+		foreach_const(c, info.skillStates[state]) {
+			if(c->animIndex != k || c->animId == 0) continue;
+			start += GetGameXmlContent().GetAniSeqTime(info.className.c_str(), c->animId);
+			break;
+		}
+	}
+	return start;
+}
+
 void World::RunSummonState(ActorNpc& npc, i32 state)
 {
 	const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc.docID);
@@ -84,7 +97,12 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 		LOG("Summon :: creature=%d plays %s", (i32)npc.docID, name.c_str());
 	}
 	f32 t = 0;
+	i32 pass = 0;
 	foreach_const(c, info->skillStates[state]) {
+		if(c->animIndex > pass) {
+			pass = c->animIndex;
+			t = SummonPassStart(*info, state, pass);
+		}
 		t += c->delay;
 		if(c->kind == SummonCommand::REMOTE) {
 			if(pendingSummonCommands.full()) continue;
@@ -98,7 +116,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			pc.yaw = yaw;
 			pc.skill = info->skills.empty() ? 0 : info->skills[0];
 			pc.until = npc.despawnAt;
-			pc.target = current && current != &owner ? current->Main().UID : ActorUID::INVALID;
+			pc.target = current && current != &owner ? current->Main().UID : (npc.ai == SummonInfo::AI_CHASE && FindNpcActor(npc.chaseTarget) ? npc.chaseTarget : ActorUID::INVALID);
 			pc.source = npc.UID;
 			pc.aim = npc.aimPos;
 			pendingSummonCommands.push_back(pc);
@@ -323,6 +341,7 @@ void World::UpdateSummonAttack(ActorNpc& npc, f32 delta)
 		npc.chaseTarget = chosen;
 	}
 	if(!target && !targetNpc) { StopNpcLeg(npc); return; }
+	if(npc.standAt != Time::ZERO && localTime < npc.standAt) return;
 	const vec3 goal = target ? target->body->GetWorldPos() : targetNpc->pos;
 	const vec2 rel = vec2(goal) - vec2(npc.pos);
 	const f32 dist = glm::length(rel);
@@ -331,7 +350,7 @@ void World::UpdateSummonAttack(ActorNpc& npc, f32 delta)
 		if(info->moveSpeed <= 0) return;
 		const f32 step = MIN(info->moveSpeed * delta, dist - npc.attackRule->attackRange);
 		SyncNpcLeg(npc, vec3(vec2(goal) - rel / dist * npc.attackRule->attackRange, goal.z));
-		npc.pos = vec3(vec2(npc.pos) + rel / dist * step, goal.z);
+		npc.pos = vec3(vec2(npc.pos) + rel / dist * step, npc.pos.z);
 		npc.rot.z = yaw;
 		return;
 	}
@@ -344,7 +363,7 @@ void World::UpdateSummonAttack(ActorNpc& npc, f32 delta)
 	npc.actionState = ActionStateID::ATTACK_BEHAVIORSTATE;
 	replication->SendAiActionStateToAll(npc.UID, ActionStateID::ATTACK_BEHAVIORSTATE, yaw, npc.pos, info->moveSpeed > 0);
 	RunSummonState(npc, 0);
-	const f32 animSec = GetGameXmlContent().GetAniSeqTime(info->className.c_str(), info->stateAnim[0]);
+	const f32 animSec = MAX(GetGameXmlContent().GetAniSeqTime(info->className.c_str(), info->stateAnim[0]), SummonPassStart(*info, 0, 8));
 	if(animSec > 0) npc.standAt = TimeAdd(localTime, TimeMsToTime(animSec * 1000.0));
 	LOG("Summon :: creature=%d attacks %s %d at %.0f", (i32)npc.docID, target ? "master" : "creature", target ? (i32)target->index : (i32)targetNpc->docID, dist);
 }
@@ -407,9 +426,8 @@ void World::UpdateSummonAi(f32 delta)
 					npc.chaseTarget = ActorUID::INVALID;
 					continue;
 				}
-				const vec3 at = target ? target->body->GetWorldPos() : npcTarget->pos;
-				SyncNpcLeg(npc, at);
-				npc.pos = at;
+				npc.legMoving = false;
+				npc.pos = target ? target->body->GetWorldPos() : npcTarget->pos;
 				continue;
 			}
 			const f32 keepRange = info->targetLost > 0 ? info->targetLost : info->perception;
@@ -429,10 +447,10 @@ void World::UpdateSummonAi(f32 delta)
 					const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(npc.pos));
 					if(d < best) { best = d; target = &*e; chosen = e->Main().UID; }
 				}
-				foreach_const(o, actorNpcList) {
+				if(!target) foreach_const(o, actorNpcList) {
 					if(&*o == &npc || o->hp <= 0 || o->removeAt != Time::ZERO || !NpcHittableBy(*o, owner)) continue;
 					const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos));
-					if(d < best) { best = d; target = nullptr; npcTarget = &*o; chosen = o->UID; }
+					if(d < best) { best = d; npcTarget = &*o; chosen = o->UID; }
 				}
 				if(chosen != npc.chaseTarget) {
 					replication->SendAiSetTargetToAll(npc.UID, chosen);

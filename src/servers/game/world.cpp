@@ -9,9 +9,10 @@ static const i32 STATUS_PC_RESPAWN_INVICIBLE_3S = 1230000010;
 static const i32 STATUS_PC_TAG_GODMODE = 1230000020;
 static const f64 MEASURED_TAG_FIRST_ATTACK_MS = 110.0;
 static const f64 WEAPON_HIT_INTERVAL_MS = 80.0;
-static const i32 SKILL_SLOT_ENUM_FIRST = 2;
+static const i32 MEASURED_COMBO_SLOT_FIRST = 0;
 static const f32 OBSTRUCT_LOW_HEIGHT = 30.0f;
-static const i32 SKILL_SLOT_ENUM_UG = 6;
+static const i32 MEASURED_COMBO_SLOT_UG = 2;
+static const i32 MEASURED_COMBO_SLOT_SHIRK = 3;
 
 static void AddTitleBonus(World::ActorMaster& chara, i32 title, WeaponIndex weapon)
 {
@@ -1111,8 +1112,10 @@ void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType
 		const i32 base = (i32)player.mainCharaID * 2;
 		i32 slot = -1;
 		const i32 order = ((i32)skillID / 10) % 10;
-		if((player.skills[base] == skillID || player.skills[base + 1] == skillID) && order >= 1 && order <= 4) slot = SKILL_SLOT_ENUM_FIRST + order - 1;
-		else if(order == 5 && (i32)skillID % 10 == 0) slot = SKILL_SLOT_ENUM_UG;
+		if(player.skills[base] == skillID && order >= 1 && order <= 4) slot = MEASURED_COMBO_SLOT_FIRST;
+		else if(player.skills[base + 1] == skillID && order >= 1 && order <= 4) slot = MEASURED_COMBO_SLOT_FIRST + 1;
+		else if(order == 5 && (i32)skillID % 10 == 0) slot = MEASURED_COMBO_SLOT_UG;
+		else if(order == 0 && (i32)skillID % 10 != 0) slot = MEASURED_COMBO_SLOT_SHIRK;
 		const bool chained = slot < 0 && chainSlot >= 0;
 		if(chained) slot = chainSlot;
 		if(slot >= 0) {

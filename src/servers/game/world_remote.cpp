@@ -389,7 +389,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	if(!RemoteCanAffect(inst, target, true)) return false;
 	if(remote.targetOnly && inst.target != ActorUID::INVALID) {
 		const ActorMaster* designated = FindMasterActor(inst.target);
-		if(designated && designated->parent != &target) return false;
+		if(designated ? designated->parent != &target : FindNpcActor(inst.target) != nullptr) return false;
 	}
 	if(remote.activateDelay > 0 && TimeDiffSec(TimeDiff(inst.spawnTime, localTime)) < remote.activateDelay) return false;
 	const bool enemy = target.team != owner.team;
@@ -758,6 +758,7 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 	const Remote& remote = *inst.remote;
 	const i32 base = (i32)(inst.damage * remote.attackMultiplier);
 	if(remote.damageGroup != Remote::DamageGroup::eENEMY && remote.damageGroup != Remote::DamageGroup::eALL) return false;
+	if(remote.targetOnly && inst.target != ActorUID::INVALID && inst.target != npc.UID) return false;
 	const Time until = TimeAdd(localTime, TimeMsToTime(MAX(remote.hitInvalidTime, 0.1f) * 1000.0));
 	bool recorded = false;
 	foreach(h, inst.npcHits) {
@@ -768,6 +769,7 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 		break;
 	}
 	if(!recorded) inst.npcHits.push_back({ npc.UID, until });
+	if(inst.speed <= 0) inst.hitsLeft--;
 	if(base > 0) {
 		Replication::RemoteDamage hit;
 		hit.remoteID = inst.clientRemoteID != 0 ? inst.clientRemoteID : inst.damageRemoteID;
@@ -836,7 +838,7 @@ void World::UpdateRemotes(f32 delta)
 			if(remote.behaviorType == Remote::BehaviorType::CHAIN) destroyed = UpdateChainRemote(inst);
 			else if(attached) {
 				if(remote.lifeTime <= 0 || elapsed < remote.lifeTime) ApplyAttachedRemote(inst, instOwner);
-				if(remote.behaviorType == Remote::BehaviorType::ORBIT && inst.hitsLeft <= 0) destroyed = true;
+				if(inst.hitsLeft <= 0 && (remote.behaviorType == Remote::BehaviorType::ORBIT || remote.lifeTime > 0)) destroyed = true;
 			}
 			else switch(remote.behaviorType) {
 				case Remote::BehaviorType::CASTER_TARGET: break;
@@ -849,9 +851,12 @@ void World::UpdateRemotes(f32 delta)
 		}
 
 		if(!destroyed && remote.homingLength > 0 && inst.speed > 0 && inst.clientRemoteID != 0 && inst.seedOwnerHd == ClientHandle::INVALID) {
+			if(!inst.syncedInit) { inst.syncedInit = true; inst.syncedTarget = inst.target; }
 			inst.syncIn -= delta;
-			if(inst.syncIn <= 0) {
-				inst.syncIn += MEASURED_REMOTE_SYNC_PERIOD_SEC;
+			const bool retarget = inst.target != inst.syncedTarget;
+			if(retarget || inst.syncIn <= 0) {
+				inst.syncIn = retarget ? MEASURED_REMOTE_SYNC_PERIOD_SEC : inst.syncIn + MEASURED_REMOTE_SYNC_PERIOD_SEC;
+				inst.syncedTarget = inst.target;
 				replication->SendRemoteSyncTargetToAll(inst.clientRemoteID, inst.target, inst.pos, &inst.dir);
 			}
 		}

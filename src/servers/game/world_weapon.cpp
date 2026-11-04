@@ -349,11 +349,17 @@ void World::SteerProjectile(Projectile& proj, f32 delta)
 	const Player& owner = players[proj.ownerIndex];
 	const auto targetable = [&](const Player& p) { return p.team != owner.team && !p.dead && !p.untargetable; };
 	if(proj.homingTarget >= 0 && !targetable(players[proj.homingTarget])) proj.homingTarget = -1;
+	const ActorNpc* lockedNpc = proj.homingNpc != ActorUID::INVALID ? FindNpcActor(proj.homingNpc) : nullptr;
+	if(proj.homingNpc != ActorUID::INVALID && (!lockedNpc || !NpcHittableBy(*lockedNpc, owner))) { proj.homingNpc = ActorUID::INVALID; lockedNpc = nullptr; }
+	if(proj.homingTarget >= 0 && glm::length(vec2(players[proj.homingTarget].body->GetWorldPos() - proj.pos)) > proj.homingLength) proj.homingTarget = -1;
+	if(lockedNpc && glm::length(vec2(lockedNpc->pos - proj.pos)) > proj.homingLength) { proj.homingNpc = ActorUID::INVALID; lockedNpc = nullptr; }
+	const bool hasTarget = proj.homingTarget >= 0 || lockedNpc;
 	proj.homingTimer += delta;
-	if(proj.homingTimer >= proj.homingTime && !(proj.homingLockOn && proj.homingTarget >= 0)) {
+	if(proj.homingTimer >= proj.homingTime && !(proj.homingLockOn && hasTarget)) {
 		proj.homingTimer = 0;
 		f32 bestDist = proj.homingLength;
 		i32 found = -1;
+		const ActorNpc* foundNpc = nullptr;
 		foreach_const(it, players) {
 			if(!targetable(*it)) continue;
 			const vec2 rel = vec2(it->body->GetWorldPos() - proj.pos);
@@ -363,11 +369,23 @@ void World::SteerProjectile(Projectile& proj, f32 delta)
 			bestDist = d;
 			found = (i32)it->index;
 		}
+		foreach_const(npc, actorNpcList) {
+			if(!NpcHittableBy(*npc, owner)) continue;
+			const vec2 rel = vec2(npc->pos - proj.pos);
+			const f32 d = glm::length(rel);
+			if(d > bestDist) continue;
+			if(d > 1.0f && glm::dot(rel / d, proj.dir) < proj.homingHalfCos) continue;
+			bestDist = d;
+			found = -1;
+			foundNpc = &*npc;
+		}
 		if(found >= 0 && found != proj.homingTarget) LOG("Shot :: homing projectile locked %ls at %.0f", players[found].name.data(), bestDist);
 		proj.homingTarget = found;
+		proj.homingNpc = foundNpc ? foundNpc->UID : ActorUID::INVALID;
+		lockedNpc = foundNpc;
 	}
-	if(proj.homingTarget < 0) return;
-	const vec2 rel = vec2(players[proj.homingTarget].body->GetWorldPos() - proj.pos);
+	if(proj.homingTarget < 0 && !lockedNpc) return;
+	const vec2 rel = lockedNpc ? vec2(lockedNpc->pos - proj.pos) : vec2(players[proj.homingTarget].body->GetWorldPos() - proj.pos);
 	if(glm::length(rel) < 1.0f) return;
 	proj.dir = SteerToward(proj.dir, rel, proj.angularVel * delta);
 }
@@ -378,10 +396,14 @@ void World::UpdateProjectiles(f32 delta)
 		Player& owner = players[proj->ownerIndex];
 		if(proj->angularVel > 0) SteerProjectile(*proj, delta);
 		if(proj->angularVel > 0 && proj->remoteID != 0 && proj->seedOwnerHd == ClientHandle::INVALID) {
+			const ActorUID target = proj->homingTarget >= 0 ? players[proj->homingTarget].Main().UID : proj->homingNpc;
+			if(!proj->syncedInit) { proj->syncedInit = true; proj->syncedTarget = target; }
 			proj->syncIn -= delta;
-			if(proj->syncIn <= 0) {
-				proj->syncIn += MEASURED_REMOTE_SYNC_PERIOD_SEC;
-				replication->SendRemoteSyncTargetToAll(proj->remoteID, proj->homingTarget >= 0 ? players[proj->homingTarget].Main().UID : ActorUID::INVALID, proj->pos + vec3(0, 0, FIRE_NODE_HEIGHT), &proj->dir);
+			const bool retarget = target != proj->syncedTarget;
+			if(retarget || proj->syncIn <= 0) {
+				proj->syncIn = retarget ? MEASURED_REMOTE_SYNC_PERIOD_SEC : proj->syncIn + MEASURED_REMOTE_SYNC_PERIOD_SEC;
+				proj->syncedTarget = target;
+				replication->SendRemoteSyncTargetToAll(proj->remoteID, target, proj->pos + vec3(0, 0, FIRE_NODE_HEIGHT), &proj->dir);
 			}
 		}
 		f32 step = MIN(proj->speed * delta + proj->pendingAdvance, proj->range - proj->travelled);
@@ -457,7 +479,7 @@ void World::UpdateProjectiles(f32 delta)
 				}
 			}
 			foreach(npc, actorNpcList) {
-				if(destroyed || proj->npcHitList.full() || proj->damage <= 0 || !NpcHittableBy(*npc, owner)) continue;
+				if(destroyed || proj->npcHitList.full() || (proj->damage <= 0 && proj->bombDoc == RemoteIdx::INVALID) || !NpcHittableBy(*npc, owner)) continue;
 				if(eastl::find(proj->npcHitList.begin(), proj->npcHitList.end(), npc->UID) != proj->npcHitList.end()) continue;
 				if(SegmentPointDist2D(from, lastStep ? to + proj->dir * proj->forwardReach : to, vec2(npc->pos)) > proj->halfWidth + NpcHitRadius(*npc) + PROJECTILE_HIT_TOLERANCE) continue;
 				proj->npcHitList.push_back(npc->UID);
@@ -467,7 +489,7 @@ void World::UpdateProjectiles(f32 delta)
 				hit.remotePos = vec3(vec2(proj->pos), npc->pos.z);
 				hit.dir = proj->dir;
 				hit.seedOwnerHd = proj->seedOwnerHd;
-				DamageNpc(owner, *npc, SkillID::INVALID, proj->damage, &hit);
+				if(proj->damage > 0) DamageNpc(owner, *npc, SkillID::INVALID, proj->damage, &hit);
 				if(const Remote* shot = GetGameXmlContent().FindRemote(proj->remoteDoc)) {
 					if(npc->hp > 0 && npc->ownerUID == ActorUID::INVALID) {
 						foreach_const(st, shot->statuses) if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(owner, *npc, StanceUpgradedStatus(owner, st->statusID), false);
