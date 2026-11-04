@@ -709,10 +709,11 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 	auto applyStatuses = [&](const eastl::fixed_vector<Remote::AppliedStatus,4,false>& list, Player* p, ActorNpc* n) {
 		foreach_const(st, list) {
 			if(st->rate < 100 && (i32)(RandUint() % 100) >= st->rate) continue;
+			const StatusInfo* stInfo = GetGameXmlContent().FindStatus(st->statusID);
 			bool active = false;
 			if(p) { foreach_const(a, activeStatuses) if(a->targetIndex == p->index && a->statusID == st->statusID) { active = true; break; } }
 			else { foreach_const(a, npcStatuses) if(a->npcUID == n->UID && a->statusID == st->statusID && localTime < a->until) { active = true; break; } }
-			if(active) continue;
+			if(active && (!stInfo || stInfo->maxOverlap <= 1)) continue;
 			if(p) ApplyStatusFromNpc(owner, *p, st->statusID);
 			else ApplyStatusToNpcFromNpc(owner, *n, st->statusID);
 		}

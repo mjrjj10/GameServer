@@ -672,7 +672,10 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 		shieldHit = true;
 	}
 	if(shieldHit) SendShieldStat(target);
-	if(damage <= 0) return;
+	if(damage <= 0) {
+		if(status > 0) ApplyStatusFromNpc(attacker, target, status);
+		return;
+	}
 	GainRageOnDamage(target, damage);
 	ActorMaster& chara = target.Main();
 	target.damageTaken += damage;

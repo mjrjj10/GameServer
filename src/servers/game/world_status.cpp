@@ -295,7 +295,7 @@ void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& cente
 			if(inside && glm::length(vec2(p->body->GetWorldPos()) - center) > range + HitRadius(*p)) inside = false;
 			ActiveStatus* cur = FindActiveStatus(p->index, *id);
 			if(!inside) {
-				if(bound && cur && cur->casterIndex == casterIndex) cur->until = localTime;
+				if(cur && cur->casterIndex == casterIndex) cur->until = localTime;
 				continue;
 			}
 			if(cur) continue;
@@ -544,6 +544,7 @@ i32 World::StanceUpgradedStatus(Player& player, i32 statusID)
 void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj)
 {
 	PassiveStackOnHit(attacker, target, (i32)proj.remoteDoc, SkillID::INVALID);
+	PassiveOnWeaponStatusHit(attacker, target);
 	if(proj.remoteDoc != RemoteIdx::INVALID && !target.dead) {
 		const Remote* remote = GetGameXmlContent().FindRemote(proj.remoteDoc);
 		if(remote) {
@@ -552,9 +553,6 @@ void World::PassiveOnWeaponHit(Player& attacker, Player& target, const Projectil
 			}
 		}
 	}
-
-
-	PassiveOnWeaponStatusHit(attacker, target);
 
 	if(target.dead) return;
 	for(const WeaponBonusRule& rule : WEAPON_BONUS_RULES) {
