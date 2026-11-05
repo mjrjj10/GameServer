@@ -1696,7 +1696,7 @@ void World::UpdateMonsterAi(f32 delta)
 						continue;
 					}
 				}
-				if(run <= 0) continue;
+				if(run <= 0 || localTime < npc.monsterDashTurnAt) continue;
 				npc.monsterWalking = false;
 				StartMonsterWalkState(npc, ai, run);
 				const f32 stepMax = run * delta;
