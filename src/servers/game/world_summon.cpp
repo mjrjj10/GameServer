@@ -3,6 +3,11 @@
 #include "world_common.h"
 #include <mxm/game_content.h>
 
+static bool SummonStatusClientOnly(const StatusInfo& st)
+{
+	return st.type == StatusType::HIDE && st.instant;
+}
+
 static const i32 RELAY_MODE_STATE_OFFSET = 9;
 static const i32 RELAY_IDS_PER_MODE = 3;
 static const i32 RELAY_ARTILLERY_MODE = 2;
@@ -135,7 +140,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			const StatusInfo* st = GetGameXmlContent().FindStatus(c->index);
 			if(!st) continue;
 			const f32 duration = st->durationSec > 0 ? st->durationSec : 1.0f;
-			replication->SendAddStatusToAll(c->index, npc.UID, npc.UID, StatusSentDuration(*st), npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false);
+			if(!SummonStatusClientOnly(*st)) replication->SendAddStatusToAll(c->index, npc.UID, npc.UID, StatusSentDuration(*st), npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false);
 			TrackNpcSelfStatus(npc.UID, *st);
 			if(st->type == StatusType::SUICIDE || st->type == StatusType::COMA) {
 				const Time at = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
@@ -722,7 +727,8 @@ void World::UpdateSummons()
 			}
 		}
 		else if(pc->remove) {
-			if(pc->source != ActorUID::INVALID && FindNpcActor(pc->source)) {
+			const StatusInfo* removed = GetGameXmlContent().FindStatus(pc->index);
+			if(pc->source != ActorUID::INVALID && FindNpcActor(pc->source) && !(removed && SummonStatusClientOnly(*removed))) {
 				foreach(ns, npcStatuses) if(ns->npcUID == pc->source && ns->statusID == pc->index) ns->until = localTime;
 				replication->SendRemoveStatusToAll(pc->index, pc->source, pc->source);
 			}
@@ -730,7 +736,7 @@ void World::UpdateSummons()
 		else {
 			const StatusInfo* st = GetGameXmlContent().FindStatus(pc->index);
 			const ActorNpc* source = pc->source != ActorUID::INVALID ? FindNpcActor(pc->source) : nullptr;
-			if(st && source && localTime < source->despawnAt) {
+			if(st && source && localTime < source->despawnAt && !SummonStatusClientOnly(*st)) {
 				replication->SendAddStatusToAll(pc->index, source->UID, source->UID, StatusSentDuration(*st), source->pos, source->pos, 0, 1, 1.0f, -1.0f, false);
 				TrackNpcSelfStatus(source->UID, *st);
 			}

@@ -1504,7 +1504,7 @@ public:
 	f32 GroupingDamageMul(const Player& attacker, const Player& target) const;
 	void GroupingSummonKill(Player& killer, const ActorNpc& summon);
 	bool TeamSees(i32 team, const Player& target);
-	bool TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack = 0, f32 sightMargin = 0);
+	bool TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack = 0, f32 sightMargin = 0, const PxRigidActor* ignoreActor = nullptr);
 	void UpdateDynamicFog();
 	bool PlayerHasActiveStatus(const Player& player, i32 statusID) const;
 	void EndPlayerStatus(Player& player, i32 statusID);
@@ -1540,6 +1540,7 @@ private:
 	f32 PassiveWeaponDamageMul(Player& attacker, Player& target);
 	const ActiveStatus* FindPassiveOfType(const Player& p, StatusType type) const;
 	void SyncPassivesOnDeath(const Player& target);
+	i32 PlayerUpgradedStatus(const Player& player, i32 statusID, f32* duration) const;
 	bool PassiveBlocksCC(Player& target, const StatusInfo& info, f32 ccDuration, f32* ccScale);
 	void SendPassiveCounter(const ActiveStatus& st, i32 value);
 	void PassiveOnDamaged(Player& target);

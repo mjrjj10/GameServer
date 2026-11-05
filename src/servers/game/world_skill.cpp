@@ -1010,6 +1010,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 					if(sr->durationSec > 0) replaceDuration = sr->durationSec;
 				}
 			}
+			if(ps.statusID == cmd->status.statusIndex) ps.statusID = PlayerUpgradedStatus(player, ps.statusID, &replaceDuration);
 			ps.casterIndex = player.index;
 			const auto preset = cmd->status.targetPreset;
 			const bool self = preset == ActionCommand::TargetPreset::SELF_FFF || preset == ActionCommand::TargetPreset::SELF_FFF_1 ||
@@ -1442,7 +1443,7 @@ bool World::TeamSees(i32 team, const Player& target)
 	return TeamSeesAt(team, target.body->GetWorldPos(), target.bushUID);
 }
 
-bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack, f32 sightMargin)
+bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack, f32 sightMargin, const PxRigidActor* ignoreActor)
 {
 	const auto& content = GetGameXmlContent();
 	const vec3 eye = at + vec3(0, 0, FOG_EYE_HEIGHT);
@@ -1453,7 +1454,8 @@ bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack, f3
 		const vec3 from = p->body->GetWorldPos();
 		const f32 sight = content.CreatureSight(100000000 + (i32)p->Main().classType);
 		if(glm::length(vec2(from) - vec2(at)) > (sight > 0 ? sight : FOG_DEFAULT_SIGHT) + sightMargin) continue;
-		if(!physics.RaycastStatic(from + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit) || hit >= glm::length(vec2(from) - vec2(at)) - slack) return true;
+		const PxRigidActor* blocker = nullptr;
+		if(!physics.RaycastStatic(from + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit, -1, &blocker) || hit >= glm::length(vec2(from) - vec2(at)) - slack || (ignoreActor && blocker == ignoreActor)) return true;
 	}
 	if(bushUID != ActorUID::INVALID) return false;
 	foreach_const(lit, litCells) {
@@ -1467,7 +1469,8 @@ bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack, f3
 		if(npcTeam != team) continue;
 		const f32 sight = content.CreatureSight((i32)npc->docID);
 		if(sight <= 0 || glm::length(vec2(npc->pos) - vec2(at)) > sight + sightMargin) continue;
-		if(!physics.RaycastStatic(npc->pos + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit) || hit >= glm::length(vec2(npc->pos) - vec2(at)) - slack) return true;
+		const PxRigidActor* npcBlocker = nullptr;
+		if(!physics.RaycastStatic(npc->pos + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit, -1, &npcBlocker) || hit >= glm::length(vec2(npc->pos) - vec2(at)) - slack || (ignoreActor && npcBlocker == ignoreActor)) return true;
 	}
 	return false;
 }
@@ -1479,7 +1482,8 @@ void World::UpdateDynamicFog()
 	const auto& content = GetGameXmlContent();
 	foreach(d, actorDynamicList) {
 		bool sees[2];
-		for(i32 team = 0; team < 2; team++) sees[team] = TeamSeesAt(team, d->pos, ActorUID::INVALID, DYNAMIC_FOG_SLACK, MEASURED_DYNAMIC_SIGHT_MARGIN);
+		const i32 ownTeam = d->faction == Faction::RED ? 0 : d->faction == Faction::BLUE ? 1 : -1;
+		for(i32 team = 0; team < 2; team++) sees[team] = team == ownTeam || TeamSeesAt(team, d->pos, ActorUID::INVALID, DYNAMIC_FOG_SLACK, MEASURED_DYNAMIC_SIGHT_MARGIN, d->collider);
 		const bool silent = !d->fogInit;
 		d->fogInit = true;
 		const bool jumpWall = content.dynamicJumpable.count((i32)d->docID) != 0;
@@ -1957,6 +1961,22 @@ static void MergeReplace(List& into, const List& from)
 		if(it != into.end()) *it = *r;
 		else if(!into.full()) into.push_back(*r);
 	}
+}
+
+i32 World::PlayerUpgradedStatus(const Player& player, i32 statusID, f32* duration) const
+{
+	foreach_const(lv, player.skillLevels) {
+		const auto* ups = GetGameXmlContent().FindSkillUpgrades(lv->first);
+		if(!ups) continue;
+		for(u8 i = 0; i < lv->second && i < ups->size(); i++) {
+			foreach_const(sr, (*ups)[i].statusReplace) {
+				if(sr->statusID != statusID) continue;
+				if(duration && sr->durationSec > 0) *duration = sr->durationSec;
+				return sr->replaceID;
+			}
+		}
+	}
+	return statusID;
 }
 
 const GameXmlContent::CostLevel* World::UpgradeCastMods(Player& player, SkillID skillID, const GameXmlContent::CostLevel* costLevel)
