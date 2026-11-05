@@ -4487,8 +4487,8 @@ void Replication::SendMasterSkillSlots(ClientHandle clientHd, const Replication:
 		packet.Write<SkillID>(player.stageSkills[1]);
 		packet.Write<SkillID>(player.skills[skillOffset]);
 		packet.Write<SkillID>(player.skills[skillOffset + 1]);
-		SkillID shirk = master.skillIDs.back();
-		foreach_const(sid, master.skillIDs) {
+		SkillID shirk = master.shirkSkill != SkillID::INVALID ? master.shirkSkill : master.skillIDs.back();
+		if(master.shirkSkill == SkillID::INVALID) foreach_const(sid, master.skillIDs) {
 			auto f = content.skillMap.find(*sid);
 			if(f != content.skillMap.end() && f->second.type == SkillType::SHIRK) { shirk = *sid; break; }
 		}

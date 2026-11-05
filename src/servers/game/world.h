@@ -580,6 +580,7 @@ struct World
 		f32 dashOriginDist = 0;
 		Time ccNextMove = Time::ZERO;
 		Time monsterDashTurnAt = Time::ZERO;
+		bool monsterDashHold = false;
 		f32 monsterStopSpeed = 0;
 		bool monsterWalking = false;
 		bool monsterChasing = false;

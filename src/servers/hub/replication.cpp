@@ -2793,7 +2793,7 @@ void HubReplication::SendMasterSkillSlots(ClientHandle clientHd, const HubReplic
 		packet.Write<SkillID>(SkillID::INVALID); // stageSkillIndex2
 		packet.Write<SkillID>(master.skillIDs[0]); // currentSkillSlot1
 		packet.Write<SkillID>(master.skillIDs[1]); // currentSkillSlot2
-		packet.Write<SkillID>(master.skillIDs.back()); // shirkSkillSlot
+		packet.Write<SkillID>(master.shirkSkill != SkillID::INVALID ? master.shirkSkill : master.skillIDs.back());
 
 		SendPacket(clientHd, packet);
 	}

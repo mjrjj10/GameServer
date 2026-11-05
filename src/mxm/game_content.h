@@ -661,6 +661,7 @@ struct GameXmlContent
 		ClassType classType;
 		eastl::fixed_string<char,64,false> className;
 		eastl::fixed_vector<SkillID,32,false> skillIDs;
+		SkillID shirkSkill = SkillID::INVALID;
 		eastl::fixed_vector<u8,32,false> skillUnlocked;
 		eastl::fixed_vector<u8,32,false> skillUnlockOrder;
 		eastl::fixed_vector<SkinIndex,20,false> skinIDs;

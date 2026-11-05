@@ -48,6 +48,8 @@ bool GameXmlContent::LoadMasterDefinitions()
 			i32 skillID;
 			pSkillElt->QueryAttribute("_Index", &skillID);
 			master.skillIDs.push_back((SkillID)skillID);
+			const char* skillSlot = pSkillElt->Attribute("_SkillSlot");
+			if(skillSlot && EA::StdC::Strcmp(skillSlot, "SKILL_SLOT_SHIRK") == 0) master.shirkSkill = (SkillID)skillID;
 			const char* unlock = pSkillElt->Attribute("_UnLock");
 			u8 unlocked = 1;
 			if(unlock && (unlock[0] == 'F' || unlock[0] == 'f')) unlocked = 0;
