@@ -307,6 +307,7 @@ void World::ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply)
 		ns.statusID = statusID;
 		ns.casterUID = npc.UID;
 		ns.until = TimeAdd(localTime, TimeMsToTime((f64)duration * 1000.0));
+		ns.appliedAt = localTime;
 		ns.linked = false;
 		if(info && info->type == StatusType::SHIELD) ns.shieldHP = GetGameXmlContent().StatusShieldAmount(*info);
 		npcStatuses.push_back(ns);

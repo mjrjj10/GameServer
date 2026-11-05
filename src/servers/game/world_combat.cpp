@@ -503,6 +503,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		RewardMasterKill(&attacker, target);
 		replication->SendDeadDamageInfo(target.clientHd, attacker.index, target.recentDamage.data(), (i32)target.recentDamage.size(), (i32)TimeDiffMs(TimeDiff(firstDamageAt, localTime)));
 		target.recentDamage.clear();
+		SyncPassivesOnDeath(target);
 		replication->SendDeathToAll(attacker.Main().UID, chara.UID, CreatureIndex(100000000 + (i32)attacker.Main().classType), proj ? proj->remoteID : remoteID, proj ? proj->remoteDoc : remoteDoc, target.userID, respawnMs);
 	}
 }
@@ -730,6 +731,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	target.killStreak = 0;
 	target.recentDamage.clear();
 	LOG("Death :: %ls killed by creature %d (respawn %d ms)", target.name.data(), (i32)attacker.docID, respawnMs);
+	SyncPassivesOnDeath(target);
 	replication->SendDeathToAll(attacker.UID, chara.UID, attacker.docID, 0, (RemoteIdx)remote, target.userID, respawnMs);
 	if(replication->titanMode && credited) {
 		credited->kills++;

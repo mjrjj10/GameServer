@@ -342,6 +342,7 @@ struct World
 		f32 dashDist = 0;
 		f32 dashDone = 0;
 		const GameXmlContent::MoveCurve* dashCurve = nullptr;
+		bool dashAwaitClientStart = false;
 		Time ccImmuneUntil = Time::ZERO;
 		Time dodgeRageReadyAt = Time::ZERO;
 		SkillID lastCastSkill = SkillID::INVALID;
@@ -498,6 +499,7 @@ struct World
 		i32 seed = 0;
 		i32 entityType = 1;
 		ActorUID ownerUID = ActorUID::INVALID;
+		ActorUID bushUID = ActorUID::INVALID;
 		Time despawnAt = Time::ZERO;
 		Time spawnedAt = Time::ZERO;
 		u8 extraMotion = 0;
@@ -1447,6 +1449,8 @@ public:
 	struct GroundItem { u32 uid = 0; i32 itemIndex = 0; vec3 pos = vec3(0); i32 tagID = -1; Time expireAt = Time::ZERO; i32 count = 1; i32 owner = -1; bool ron = false; i32 team = -1; };
 	void DropMasterSoul(const Player& dead);
 	void RefreshBushStates();
+	ActorUID BushAt(const vec3& at) const;
+	void UpdateSummonBushes();
 	bool TakeGroundItem(Player& player, u32 itemUID, GroundItem* taken = nullptr);
 	eastl::fixed_vector<GroundItem,256,false> groundItems;
 	struct LevelEventTimer { i32 node; Time at; i32 playerIndex; i32 fromNode; bool clientSeq = false; };
@@ -1535,6 +1539,7 @@ private:
 	void ApplyPassiveStatusRule(const PassiveStatusRule& rule, Player& owner, Player* hitTarget);
 	f32 PassiveWeaponDamageMul(Player& attacker, Player& target);
 	const ActiveStatus* FindPassiveOfType(const Player& p, StatusType type) const;
+	void SyncPassivesOnDeath(const Player& target);
 	bool PassiveBlocksCC(Player& target, const StatusInfo& info, f32 ccDuration, f32* ccScale);
 	void SendPassiveCounter(const ActiveStatus& st, i32 value);
 	void PassiveOnDamaged(Player& target);

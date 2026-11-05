@@ -2745,7 +2745,7 @@ void Replication::SendActionStateOnlyToAll(ActorUID actorUID, ActionStateID stat
 	}
 }
 
-void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap, f32 scale, f32 nominalDist, bool withGraph, bool refresh)
+void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap, f32 scale, f32 nominalDist, bool withGraph, bool refresh, u8 customValue)
 {
 	if(!frameCur->skillCastList.empty() || !frameCur->skillExecList.empty()) SendFrameSkillPackets();
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
@@ -2773,7 +2773,7 @@ void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID 
 		packet.Write<u32>(casterLocal != LocalActorID::INVALID ? (u32)casterLocal : 0);
 		packet.Write<u8>(refresh ? 1 : 0);
 		packet.Write<u8>((u8)MAX(overlap, 1));
-		packet.Write<u8>(0);
+		packet.Write<u8>(customValue);
 		packet.Write<f32>(durationSec);
 		packet.Write<f32>(0);
 		SendPacket(clientHd, packet);

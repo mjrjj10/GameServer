@@ -485,6 +485,7 @@ void World::TrackNpcSelfStatus(ActorUID npcUID, const StatusInfo& info)
 	foreach(ns, npcStatuses) {
 		if(ns->npcUID != npcUID || ns->statusID != info.ID || ns->linked) continue;
 		ns->until = until;
+		ns->appliedAt = localTime;
 		return;
 	}
 	if(npcStatuses.full()) return;
@@ -493,6 +494,7 @@ void World::TrackNpcSelfStatus(ActorUID npcUID, const StatusInfo& info)
 	ns.statusID = info.ID;
 	ns.casterUID = npcUID;
 	ns.until = until;
+	ns.appliedAt = localTime;
 	ns.linked = false;
 	npcStatuses.push_back(ns);
 }
@@ -1179,6 +1181,7 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			mover.dashDist = moveDist;
 			mover.dashDone = 0;
 			mover.dashCurve = curve;
+			mover.dashAwaitClientStart = mover.clientHd != ClientHandle::INVALID;
 			mover.dashUntil = TimeAdd(localTime, TimeMsToTime(moveDuration * 1000.0));
 			if(curve) LOG("Dash :: %ls follows move graph over %.2fs for %.0f", mover.name.data(), moveDuration, moveDist);
 		}
@@ -1498,6 +1501,59 @@ void World::UpdateDynamicFog()
 	}
 }
 
+ActorUID World::BushAt(const vec3& at) const
+{
+	const auto& content = GetGameXmlContent();
+	foreach_const(d, actorDynamicList) {
+		const vec2* size = content.FindBushSize((i32)d->docID);
+		if(!size) continue;
+		const vec2 rel = vec2(at) - vec2(d->pos);
+		const f32 c = cosf(-d->rot.z), s = sinf(-d->rot.z);
+		const vec2 local = vec2(rel.x * c - rel.y * s, rel.x * s + rel.y * c);
+		if(fabsf(local.x) <= size->x * 0.5f && fabsf(local.y) <= size->y * 0.5f) return d->UID;
+	}
+	return ActorUID::INVALID;
+}
+
+void World::UpdateSummonBushes()
+{
+	const auto& content = GetGameXmlContent();
+	foreach(npc, actorNpcList) {
+		if(npc->ownerUID == ActorUID::INVALID || content.CreatureBushPass((i32)npc->docID)) continue;
+		const bool alive = npc->hp > 0 && npc->removeAt == Time::ZERO;
+		const ActorUID bush = alive ? BushAt(npc->pos) : ActorUID::INVALID;
+		NpcStatus* hide = nullptr;
+		NpcStatus* reveal = nullptr;
+		foreach(ns, npcStatuses) {
+			if(ns->npcUID != npc->UID || localTime >= ns->until) continue;
+			if(ns->statusID == MEASURED_BUSH_HIDE_STATUS) hide = &*ns;
+			if(ns->statusID == MEASURED_BUSH_REVEAL_STATUS) reveal = &*ns;
+		}
+		if(bush != npc->bushUID) {
+			npc->bushUID = bush;
+			replication->SendBushStateToAll(npc->UID, bush);
+			if(bush == ActorUID::INVALID) {
+				if(hide) hide->until = localTime;
+				if(reveal) reveal->until = localTime;
+				continue;
+			}
+		}
+		if(bush == ActorUID::INVALID) continue;
+		if(hide && reveal && reveal->appliedAt > hide->appliedAt) hide->until = localTime;
+		if(!hide && !reveal && !npcStatuses.full()) {
+			replication->SendAddStatusToAll(MEASURED_BUSH_HIDE_STATUS, npc->UID, ActorUID::INVALID, STATUS_INFINITE_DURATION_SEC, npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false, false);
+			NpcStatus ns;
+			ns.npcUID = npc->UID;
+			ns.statusID = MEASURED_BUSH_HIDE_STATUS;
+			ns.casterUID = ActorUID::INVALID;
+			ns.until = TimeAdd(localTime, TimeMsToTime((f64)STATUS_INFINITE_DURATION_SEC * 1000.0));
+			ns.appliedAt = localTime;
+			ns.linked = false;
+			npcStatuses.push_back(ns);
+		}
+	}
+}
+
 void World::UpdateFog()
 {
 	if(!replication->titanMode) return;
@@ -1508,15 +1564,7 @@ void World::UpdateFog()
 	foreach(p, players) {
 		if(!p->body) continue;
 		const vec3 at = p->body->GetWorldPos();
-		ActorUID bush = ActorUID::INVALID;
-		foreach_const(d, actorDynamicList) {
-			const vec2* size = content.FindBushSize((i32)d->docID);
-			if(!size) continue;
-			const vec2 rel = vec2(at) - vec2(d->pos);
-			const f32 c = cosf(-d->rot.z), s = sinf(-d->rot.z);
-			const vec2 local = vec2(rel.x * c - rel.y * s, rel.x * s + rel.y * c);
-			if(fabsf(local.x) <= size->x * 0.5f && fabsf(local.y) <= size->y * 0.5f) { bush = d->UID; break; }
-		}
+		const ActorUID bush = BushAt(at);
 		if(bush != p->bushUID) {
 			p->bushUID = bush;
 			replication->SendBushStateToAll(p->Main().UID, bush);
@@ -1530,6 +1578,7 @@ void World::UpdateFog()
 			ApplyStatus(*p, *p, MEASURED_BUSH_HIDE_STATUS, 0, STATUS_INFINITE_DURATION_SEC);
 		}
 	}
+	UpdateSummonBushes();
 	RefreshBushStates();
 	UpdateNpcFog();
 	UpdateDynamicFog();

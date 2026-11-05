@@ -4900,6 +4900,8 @@ bool GameXmlContent::LoadSightData()
 		for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
 			if(XMLElement* pKfm = pInfo->FirstChildElement("Kfm_ComData")) if(pKfm->Attribute("KeyName")) creatureKfm[pInfo->IntAttribute("ID")] = pKfm->Attribute("KeyName");
 			XMLElement* pEntity = pInfo->FirstChildElement("EntityComData");
+			const char* bushPass = pEntity ? pEntity->Attribute("_bBushPass") : nullptr;
+			if(bushPass && EA::StdC::Stricmp(bushPass, "true") == 0) creatureBushPass.insert(pInfo->IntAttribute("ID"));
 			const char* sight = pEntity ? pEntity->Attribute("_SightRadiusType") : nullptr;
 			if(!sight) continue;
 			i32 meters = 0;

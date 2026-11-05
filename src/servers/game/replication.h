@@ -497,7 +497,7 @@ struct Replication
 	void RelayPlayerMove(ClientHandle fromHd, ActorUID actorUID, const Cl::CN_GameUpdatePosition& update);
 	void RelayPlayerTurn(ClientHandle fromHd, ActorUID actorUID, const Cl::CN_GameUpdateRotation& update);
 	void SendCooltimeReset(ClientHandle clientHd, ActorUID characterUID, Slice<const i32> coolTimeIDs, u32 leftMs = 1, u32 totalMs = 1);
-	void SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap = 1, f32 scale = 1.0f, f32 nominalDist = -1.0f, bool withGraph = true, bool refresh = false);
+	void SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap = 1, f32 scale = 1.0f, f32 nominalDist = -1.0f, bool withGraph = true, bool refresh = false, u8 customValue = 0);
 	void SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID);
 	struct RemoteDamage
 	{

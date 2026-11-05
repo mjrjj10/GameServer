@@ -1101,7 +1101,7 @@ void Game::OnPlayerGetCharacterInfo(ClientHandle clientHd, ActorUID actorUID)
 	WARN("Client sent an invalid actorUID (clientHd=%x actorUID=%u)", clientHd, (u32)actorUID);
 }
 
-void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, const vec2& dir, const RotationHumanoid& rot, f32 speed, ActionStateID action, f32 clientTime)
+void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, const vec2& dir, const RotationHumanoid& rot, f32 speed, ActionStateID action, f32 clientTime, bool force)
 {
 	ProfileFunction();
 
@@ -1170,7 +1170,15 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 	}
 	const vec3 bodyPos = player.body->GetWorldPos();
 	const bool drifted = glm::length(vec2(pos) - vec2(bodyPos)) > HYP_HUMAN_POSITION_SNAP || fabsf(pos.z - bodyPos.z) > HYP_HUMAN_POSITION_SNAP;
-	if(world.localTime < player.dashUntil || world.localTime < player.ccUntil || drifted) {
+	const bool awaitStart = player.dashAwaitClientStart && !force;
+	if(awaitStart) player.dashAwaitClientStart = false;
+	if(awaitStart && glm::length(vec2(pos) - vec2(player.dashOrigin)) <= HYP_HUMAN_POSITION_SNAP) {
+		const vec2 shift = vec2(pos) - vec2(player.dashOrigin);
+		player.dashOrigin += vec3(shift, 0);
+		player.body->collider->setFootPosition(PxExtendedVec3(bodyPos.x + shift.x, bodyPos.y + shift.y, bodyPos.z));
+		player.body->vel = vec3(0);
+	}
+	else if(force || world.localTime < player.ccUntil || (world.localTime >= player.dashUntil && drifted)) {
 		player.body->collider->setFootPosition(PxExtendedVec3(pos.x, pos.y, pos.z));
 		player.body->vel = vec3(0);
 		if(player.dashDone < player.dashDist) player.dashOrigin = pos - vec3(player.dashDir * player.dashDone, 0);
@@ -2122,7 +2130,7 @@ void Game::OnPlayerCastSkill(ClientHandle clientHd, ActorUID actorUID, const Pla
 
 	RotationHumanoid rot = { posInfo.rot.x, posInfo.rot.y, posInfo.rot.z };
 	// TODO: convert clientTime to localTime
-	OnPlayerUpdatePosition(clientHd, actorUID, f2v(posInfo.pos), f2v(posInfo.moveDir), rot, posInfo.speed, ActionStateID::INVALID, 0);
+	OnPlayerUpdatePosition(clientHd, actorUID, f2v(posInfo.pos), f2v(posInfo.moveDir), rot, posInfo.speed, ActionStateID::INVALID, 0, true);
 
 	LOG("OnPlayerCastSkill :: (%f, %f, %f) targets=%d rot=(%.3f, %.3f, %.3f) moveDir=(%.2f, %.2f)", cast.pos.x, cast.pos.y, cast.pos.z, (i32)cast.targetList.size(), posInfo.rot.x, posInfo.rot.y, posInfo.rot.z, posInfo.moveDir.x, posInfo.moveDir.y);
 }

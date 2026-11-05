@@ -202,6 +202,14 @@ void World::SendPassiveCounter(const ActiveStatus& st, i32 value)
 	replication->SendModifyStatusToAll(st.statusID, st.targetUID, st.casterUID, (u8)MAX(st.overlap, 1), (u8)MAX(value, 0));
 }
 
+void World::SyncPassivesOnDeath(const Player& target)
+{
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex != target.index || !it->info || !PassiveOfActiveMaster(target, it->statusID)) continue;
+		SendPassiveCounter(*it, it->info->type == StatusType::UNSHAKABLE && target.cleanseCharges >= 0 ? target.cleanseCharges : it->custom);
+	}
+}
+
 bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32 ccDuration, f32* ccScale)
 {
 	if(info.kind != StatusInfo::Kind::HARD_CC && info.kind != StatusInfo::Kind::ROOT) return false;
@@ -215,7 +223,6 @@ bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32 ccDurati
 		if(target.cleanseCharges < 0) target.cleanseCharges = st->info->customInit;
 		if(target.cleanseCharges > 0) {
 			target.cleanseCharges--;
-			if(target.cleanseRefillAt == Time::ZERO) target.cleanseRefillAt = TimeAdd(localTime, TimeMsToTime(st->info->Param("_RefillDuration")));
 			LOG("Passive :: %ls blocked status %d (charges left %d)", target.name.data(), info.ID, target.cleanseCharges);
 			SendPassiveCounter(*st, target.cleanseCharges);
 			const i32 defiance = (i32)st->info->ParamInt("_CustomAddStatusIndex");
@@ -380,16 +387,18 @@ void World::UpdatePassives()
 		if(it->cleanseCharges < 0 && !it->dead) {
 			if(const ActiveStatus* st = FindPassiveOfType(*it, StatusType::UNSHAKABLE)) {
 				it->cleanseCharges = st->info->customInit;
-				if(it->cleanseCharges < st->info->customMax) it->cleanseRefillAt = TimeAdd(localTime, TimeMsToTime(st->info->Param("_RefillDuration")));
+				it->cleanseRefillAt = TimeAdd(localTime, TimeMsToTime(st->info->Param("_RefillDuration")));
 			}
 		}
 		if(it->cleanseRefillAt != Time::ZERO && localTime >= it->cleanseRefillAt) {
 			const ActiveStatus* st = FindPassiveOfType(*it, StatusType::UNSHAKABLE);
-			it->cleanseRefillAt = Time::ZERO;
-			if(st && it->cleanseCharges < st->info->customMax) {
-				it->cleanseCharges++;
-				SendPassiveCounter(*st, it->cleanseCharges);
-				if(it->cleanseCharges < st->info->customMax) it->cleanseRefillAt = TimeAdd(localTime, TimeMsToTime(st->info->Param("_RefillDuration")));
+			if(!st) it->cleanseRefillAt = Time::ZERO;
+			else {
+				it->cleanseRefillAt = TimeAdd(it->cleanseRefillAt, TimeMsToTime(st->info->Param("_RefillDuration")));
+				if(it->cleanseCharges < st->info->customMax) {
+					it->cleanseCharges++;
+					SendPassiveCounter(*st, it->cleanseCharges);
+				}
 			}
 		}
 	}
@@ -970,7 +979,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	if(info && (info->attachToCaster || StatusGraphAnchorOnly(info))) sentTo = vec3(0);
 	const bool motionGraph = info && info->type == StatusType::MOTION;
 	if(motionGraph) sentTo = vec3(0);
-	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, motionGraph ? vec3(0) : from, sentTo, StatusGraphTimed(info) ? graphDuration : 0.0f, 1, ccScale, nominalDist, StatusSendsGraph(info));
+	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, motionGraph ? vec3(0) : from, sentTo, StatusGraphTimed(info) ? graphDuration : 0.0f, 1, ccScale, nominalDist, StatusSendsGraph(info), false, info && info->permanent ? (u8)MAX(info->customInit, 0) : (u8)0);
 	if(npcCasterStatus != 0) ApplyNpcOwnerStatus(npcCaster, target, npcCasterStatus);
 	if(info && info->motionAction != ActionStateID::INVALID && info->skillIndex != 0 && !target.dead && (info->skillIndex / 10000) % 100 == (i32)target.Main().classType && GetGameXmlContent().SkillActionKnown(target.Main().classType, info->motionAction, target.Main().stance)) {
 		LOG("Status :: %ls motion status %d plays action %d", target.name.data(), statusID, (i32)info->motionAction);

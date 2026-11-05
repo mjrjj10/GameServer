@@ -1654,6 +1654,8 @@ struct GameXmlContent
 	eastl::hash_map<i32, f32> stageTeleportDistance;
 	eastl::hash_map<i32, f32> statusShield;
 	eastl::hash_map<i32, f32> creatureSight;
+	eastl::hash_set<i32> creatureBushPass;
+	bool CreatureBushPass(i32 doc) const { return creatureBushPass.count(doc) != 0; }
 	eastl::fixed_vector<MasterGrouping,32,false> masterGroupings;
 	i32 respawnFlyRemote = 0;
 	const MasterGrouping* FindMasterGrouping(i32 id) const { foreach_const(g, masterGroupings) if(g->id == id) return &*g; return nullptr; }
