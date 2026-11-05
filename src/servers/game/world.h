@@ -572,6 +572,7 @@ struct World
 		Time dashStart = Time::ZERO;
 		Time dashEnd = Time::ZERO;
 		bool dashPush = false;
+		Time ccNextMove = Time::ZERO;
 		bool monsterWalking = false;
 		bool monsterChasing = false;
 		ActorUID monsterTarget = ActorUID::INVALID;
@@ -976,7 +977,6 @@ struct World
 	void BotKeepOutOfBlockers(const Player& bot, vec2* goal) const;
 	bool InsideBodyBlocker(const vec2& at, f32 margin) const;
 	void SetMonsterBattle(ActorNpc& npc, bool inBattle);
-	void StartNpcDrag(ActorNpc& npc, const StatusInfo* info, const vec2& center, f32 duration);
 	void UpdateNpcDrag(ActorNpc& npc, f32 delta);
 	struct PilotTour { u8 kind = 0; i32 localID = -1; ActorUID npc = ActorUID::INVALID; i32 doc = 0; Time since = Time::ZERO; bool hit = false; bool reacted = false; bool warped = false; };
 	PilotTour pilotTour;
@@ -1278,7 +1278,9 @@ public:
 	void ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply);
 	void UpdateMonsterAllyBuffs(ActorNpc& npc);
 	f32 NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info);
-	bool StartNpcPush(ActorNpc& npc, const StatusInfo* info, const vec3& source, vec3* to, f32* nominal, f32* graphSec);
+	struct NpcCcGraph { vec3 to = vec3(0); f32 duration = 0; f32 graphSec = 0; f32 nominal = -1.0f; bool graph = false; };
+	NpcCcGraph StartNpcCc(ActorNpc& npc, const StatusInfo* info, const vec3& source, const vec2& dragCenter, f32 hold);
+	void SendNpcCcMove(ActorNpc& npc, bool ended);
 	void ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 statusID);
 	void UpdateNpcDefeat(ActorNpc& npc);
 	void ApplyMonsterAllyStatus(ActorUID casterUID, const GameXmlContent::MonsterAttack& attack);

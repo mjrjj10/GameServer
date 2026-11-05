@@ -516,15 +516,11 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 		return;
 	}
 	if(npc.removeAt != Time::ZERO) return;
-	const bool reactsByState = reaction > 0 && info && info->type != StatusType::PUSH;
-	vec3 pushTo;
-	f32 pushNominal = -1.0f;
-	f32 pushSec = 0;
-	const bool push = StartNpcPush(npc, info, statusForceCenterSet ? statusForceCenter : caster.body->GetWorldPos(), &pushTo, &pushNominal, &pushSec);
-	const f32 duration = info && info->durationSec > 0 ? info->durationSec : (push ? pushSec : 0.0f);
-	StartNpcDrag(npc, info, statusForceCenterSet ? vec2(statusForceCenter) : vec2(caster.body->GetWorldPos()), duration);
-	const bool anchor = !push && StatusSendsGraph(info) && StatusGraphAnchorOnly(info);
-	if(!reactsByState) replication->SendAddStatusToAll(statusID, npc.UID, caster.Main().UID, duration, npc.pos, anchor ? vec3(0) : pushTo, pushSec, 1, 1.0f, pushNominal, push || anchor, false);
+	const vec3 from = npc.pos;
+	const vec3 center = statusForceCenterSet ? statusForceCenter : caster.body->GetWorldPos();
+	const NpcCcGraph cc = StartNpcCc(npc, info, center, vec2(center), 0.0f);
+	const f32 duration = cc.duration;
+	replication->SendAddStatusToAll(statusID, npc.UID, caster.Main().UID, duration, from, cc.to, cc.graphSec, 1, 1.0f, cc.nominal, cc.graph, false);
 	if(npcStatuses.full()) return;
 	NpcStatus ns;
 	ns.npcUID = npc.UID;

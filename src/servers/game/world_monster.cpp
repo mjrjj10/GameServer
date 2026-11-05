@@ -978,6 +978,7 @@ void World::UpdateMonsterDash(ActorNpc& npc)
 		blocked = true;
 	}
 	else npc.pos = vec3(next, npc.pos.z);
+	if(npc.dashPush) SendNpcCcMove(npc, t >= 1.0f || blocked);
 	if(t >= 1.0f || blocked) {
 		npc.dashEnd = Time::ZERO;
 		LOG("Monster :: creature=%d (local %d) dash ends at (%.0f, %.0f)%s", (i32)npc.docID, npc.localID, npc.pos.x, npc.pos.y, blocked ? " on a wall" : "");

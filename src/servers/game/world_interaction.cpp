@@ -315,7 +315,11 @@ void World::ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply)
 }
 
 static const f32 NPC_DEFEAT_PUSH_SEC = 1.0f;
-static const f32 NPC_DEFEAT_AIRBORNE_SEC = 1.2f;
+static const f32 MEASURED_NPC_DEFEAT_AIRBORNE_SEC = 1.5f;
+static const f32 MEASURED_NPC_AIRBORNE_GRAPH_SEC = 1.0f;
+static const f32 MEASURED_NPC_LIFT_BASE_HEIGHT = 400.0f;
+static const f64 MEASURED_NPC_CC_FIRST_MOVE_MS = 47.0;
+static const f64 MEASURED_NPC_CC_MOVE_MS = 93.0;
 static const f32 NPC_DEFEAT_KNOCKDOWN_SEC = 1.5f;
 static const f32 NPC_DEFEAT_FLY_SEC = 1.8f;
 static const f32 NPC_DEFEAT_SYNC_SEC = 1.0f;
@@ -342,10 +346,11 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 	ActionStateID state;
 	f32 sec = 0;
 	bool lie = false;
+	const f32 timeRatio = info->timeRatio > 0 ? info->timeRatio : 1.0f;
 	switch(info->type) {
-		case StatusType::PUSH: state = ActionStateID::DEFEAT_PUSH_BEHAVIORSTATE; sec = NPC_DEFEAT_PUSH_SEC; break;
-		case StatusType::AIRBORNE: state = ActionStateID::DEFEAT_AIRBORNE_BEHAVIORSTATE; sec = NPC_DEFEAT_AIRBORNE_SEC; lie = true; break;
-		case StatusType::KNOCKDOWN: state = ActionStateID::DEFEAT_KNOCKDOWN_BEHAVIORSTATE; sec = NPC_DEFEAT_KNOCKDOWN_SEC; lie = true; break;
+		case StatusType::PUSH: state = ActionStateID::DEFEAT_PUSH_BEHAVIORSTATE; sec = NPC_DEFEAT_PUSH_SEC * timeRatio; break;
+		case StatusType::AIRBORNE: state = ActionStateID::DEFEAT_AIRBORNE_BEHAVIORSTATE; sec = MEASURED_NPC_DEFEAT_AIRBORNE_SEC * timeRatio; lie = true; break;
+		case StatusType::KNOCKDOWN: state = ActionStateID::DEFEAT_KNOCKDOWN_BEHAVIORSTATE; sec = NPC_DEFEAT_KNOCKDOWN_SEC * timeRatio; lie = true; break;
 		case StatusType::FLY: state = ActionStateID::DEFEAT_FLY_BEHAVIORSTATE; sec = info->durationSec > 0 ? info->durationSec : NPC_DEFEAT_FLY_SEC; lie = true; break;
 		case StatusType::STUN:
 		case StatusType::SHOCKED:
@@ -377,30 +382,73 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 	return total;
 }
 
-bool World::StartNpcPush(ActorNpc& npc, const StatusInfo* info, const vec3& source, vec3* to, f32* nominal, f32* graphSec)
+World::NpcCcGraph World::StartNpcCc(ActorNpc& npc, const StatusInfo* info, const vec3& source, const vec2& dragCenter, f32 hold)
 {
-	*to = npc.pos;
-	if(!info || info->type != StatusType::PUSH) return false;
-	vec2 dir = vec2(npc.pos) - vec2(source);
-	const f32 len = glm::length(dir);
-	dir = len > 1.0f ? dir / len : vec2(cosf(npc.rot.z), sinf(npc.rot.z));
-	const f32 signedDist = MEASURED_NPC_PUSH_BASE_DISTANCE * (info->distanceRatio != 0 ? info->distanceRatio : 1.0f);
-	if(signedDist < 0) dir = -dir;
-	f32 dist = fabsf(signedDist);
-	*nominal = dist;
-	*graphSec = NPC_DEFEAT_PUSH_SEC * (info->timeRatio > 0 ? info->timeRatio : 1.0f);
-	const f32 radius = npc.monsterAi ? npc.monsterAi->radius : 0.0f;
-	f32 wall = 0;
-	const vec3 rayFrom = vec3(vec2(npc.pos), npc.pos.z + NPC_PUSH_RAY_HEIGHT);
-	if(dist > 1.0f && physics.RaycastStatic(rayFrom, rayFrom + vec3(dir * (dist + radius), 0), &wall)) dist = MAX(wall - radius, 0.0f);
-	*to = vec3(vec2(npc.pos) + dir * dist, npc.pos.z);
-	npc.dashFrom = vec2(npc.pos);
-	npc.dashDir = dir;
-	npc.dashDist = dist;
-	npc.dashStart = localTime;
-	npc.dashEnd = TimeAdd(localTime, TimeMsToTime(*graphSec * 1000.0));
-	npc.dashPush = true;
-	return true;
+	NpcCcGraph cc;
+	cc.to = npc.pos;
+	cc.duration = info && info->durationSec > 0 ? info->durationSec : hold;
+	if(!info) return cc;
+	const f32 timeRatio = info->timeRatio > 0 ? info->timeRatio : 1.0f;
+	const bool knockdown = info->type == StatusType::KNOCKDOWN && npc.monsterAi;
+	if(info->type == StatusType::PUSH || knockdown) {
+		vec2 dir = vec2(npc.pos) - vec2(source);
+		const f32 len = glm::length(dir);
+		dir = len > 1.0f ? dir / len : vec2(cosf(npc.rot.z), sinf(npc.rot.z));
+		const f32 signedDist = MEASURED_NPC_PUSH_BASE_DISTANCE * (info->distanceRatio != 0 ? info->distanceRatio : 1.0f);
+		if(signedDist < 0) dir = -dir;
+		f32 dist = fabsf(signedDist);
+		cc.nominal = dist;
+		cc.graphSec = (knockdown ? NPC_DEFEAT_KNOCKDOWN_SEC : NPC_DEFEAT_PUSH_SEC) * timeRatio;
+		cc.duration = cc.graphSec;
+		cc.graph = true;
+		const f32 radius = npc.monsterAi ? npc.monsterAi->radius : 0.0f;
+		f32 wall = 0;
+		const vec3 rayFrom = vec3(vec2(npc.pos), npc.pos.z + NPC_PUSH_RAY_HEIGHT);
+		if(dist > 1.0f && physics.RaycastStatic(rayFrom, rayFrom + vec3(dir * (dist + radius), 0), &wall)) dist = MAX(wall - radius, 0.0f);
+		cc.to = vec3(vec2(npc.pos) + dir * dist, npc.pos.z);
+		npc.dashFrom = vec2(npc.pos);
+		npc.dashDir = dir;
+		npc.dashDist = dist;
+		npc.dashStart = localTime;
+		npc.dashEnd = TimeAdd(localTime, TimeMsToTime(cc.graphSec * 1000.0));
+		npc.dashPush = true;
+		npc.ccNextMove = TimeAdd(localTime, TimeMsToTime(MEASURED_NPC_CC_FIRST_MOVE_MS));
+		return cc;
+	}
+	if(npc.monsterAi && (info->type == StatusType::AIRBORNE || info->type == StatusType::FLY)) {
+		cc.to = vec3(vec2(npc.pos), npc.pos.z + MEASURED_NPC_LIFT_BASE_HEIGHT * (info->heightRatio > 0 ? info->heightRatio : 1.0f));
+		cc.graphSec = MEASURED_NPC_AIRBORNE_GRAPH_SEC * timeRatio;
+		cc.nominal = 0.0f;
+		if(info->type == StatusType::AIRBORNE) cc.duration = MEASURED_NPC_DEFEAT_AIRBORNE_SEC * timeRatio;
+		cc.graph = true;
+		return cc;
+	}
+	if(info->type == StatusType::DRAGGEDBYFORCE && cc.duration > 0) {
+		npc.dragCenter = dragCenter;
+		npc.dragMin = info->dragForceMin;
+		npc.dragMax = info->dragForceMax;
+		npc.dragDuration = cc.duration;
+		npc.dragElapsed = 0;
+		npc.ccNextMove = TimeAdd(localTime, TimeMsToTime(MEASURED_NPC_CC_FIRST_MOVE_MS));
+		if(npc.monsterAi) {
+			cc.to = vec3(dragCenter, npc.pos.z);
+			cc.graphSec = cc.duration;
+			cc.graph = true;
+		}
+		return cc;
+	}
+	if(StatusSendsGraph(info) && StatusGraphAnchorOnly(info)) {
+		cc.to = vec3(0);
+		cc.graph = true;
+	}
+	return cc;
+}
+
+void World::SendNpcCcMove(ActorNpc& npc, bool ended)
+{
+	if(!ended && localTime < npc.ccNextMove) return;
+	replication->SendMonsterLiftToAll(npc.UID, npc.pos);
+	npc.ccNextMove = TimeAdd(localTime, TimeMsToTime(MEASURED_NPC_CC_MOVE_MS));
 }
 
 void World::UpdateNpcDefeat(ActorNpc& npc)
@@ -427,16 +475,6 @@ void World::UpdateNpcDefeat(ActorNpc& npc)
 	}
 }
 
-void World::StartNpcDrag(ActorNpc& npc, const StatusInfo* info, const vec2& center, f32 duration)
-{
-	if(!info || info->type != StatusType::DRAGGEDBYFORCE || duration <= 0) return;
-	npc.dragCenter = center;
-	npc.dragMin = info->dragForceMin;
-	npc.dragMax = info->dragForceMax;
-	npc.dragDuration = duration;
-	npc.dragElapsed = 0;
-}
-
 void World::UpdateNpcDrag(ActorNpc& npc, f32 delta)
 {
 	if(npc.dragElapsed >= npc.dragDuration) return;
@@ -448,12 +486,12 @@ void World::UpdateNpcDrag(ActorNpc& npc, f32 delta)
 	const vec2 rel = npc.dragCenter - vec2(npc.pos);
 	const f32 dist = glm::length(rel);
 	npc.dragElapsed = t1;
-	if(dist <= 0.001f) return;
-	if(dist <= step) {
+	if(dist > 0.001f && dist <= step) {
 		npc.pos = vec3(npc.dragCenter, npc.pos.z);
 		npc.dragElapsed = npc.dragDuration;
 	}
-	else npc.pos = vec3(vec2(npc.pos) + rel / dist * step, npc.pos.z);
+	else if(dist > 0.001f) npc.pos = vec3(vec2(npc.pos) + rel / dist * step, npc.pos.z);
+	SendNpcCcMove(npc, npc.dragElapsed >= npc.dragDuration);
 }
 
 void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 statusID)
@@ -465,19 +503,15 @@ void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 s
 		return;
 	}
 	if(npc.removeAt != Time::ZERO) return;
-	vec3 pushTo;
-	f32 pushNominal = -1.0f;
-	f32 pushSec = 0;
-	const bool push = StartNpcPush(npc, info, caster.pos, &pushTo, &pushNominal, &pushSec);
-	const f32 duration = info && info->durationSec > 0 ? info->durationSec : (push ? pushSec : hold);
+	const vec3 from = npc.pos;
+	const NpcCcGraph cc = StartNpcCc(npc, info, caster.pos, npcHitCenterSet ? vec2(npcHitCenter) : vec2(caster.pos), hold);
+	const f32 duration = cc.duration;
 	if(duration <= 0) return;
-	StartNpcDrag(npc, info, npcHitCenterSet ? vec2(npcHitCenter) : vec2(caster.pos), duration);
 	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
 		if(npcStatuses[i].npcUID == npc.UID && npcStatuses[i].statusID == statusID) npcStatuses.erase(npcStatuses.begin() + i);
 		else i++;
 	}
-	const bool anchor = !push && StatusSendsGraph(info) && StatusGraphAnchorOnly(info);
-	if(!(hold > 0 && info->type != StatusType::PUSH)) replication->SendAddStatusToAll(statusID, npc.UID, caster.UID, duration, npc.pos, anchor ? vec3(0) : pushTo, pushSec, 1, 1.0f, pushNominal, push || anchor, false);
+	replication->SendAddStatusToAll(statusID, npc.UID, caster.UID, duration, from, cc.to, cc.graphSec, 1, 1.0f, cc.nominal, cc.graph, false);
 	if(npcStatuses.full()) return;
 	NpcStatus ns;
 	ns.npcUID = npc.UID;
