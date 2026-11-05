@@ -9,7 +9,6 @@ static const f64 MONSTER_SEARCH_MS = 250.0;
 static const f64 MONSTER_SYNC_MS = 500.0;
 static const f64 HYP_MONSTER_TURN_RESYNC_MS = 150.0;
 static const f32 HYP_MONSTER_TURN_RESYNC_RAD = 0.5236f;
-static const f32 MEASURED_GOT_NEUTRAL_MAX_FIGHT_DIST = 3000.0f;
 
 static f32 YawGap(f32 a, f32 b)
 {
@@ -94,7 +93,7 @@ void World::MonsterAggroOnHit(ActorNpc& npc, Player& attacker)
 	const bool neutral = MonsterNeutral(npc, hostileMonsters);
 	if(!neutral && !MonsterHostile(npc, attacker)) return;
 	const bool titanMode = map && map->ingameLevels;
-	if(neutral && titanMode && npc.monsterReturning && glm::length(vec2(npc.pos) - vec2(npc.home)) > MEASURED_GOT_NEUTRAL_MAX_FIGHT_DIST) return;
+	if(neutral && titanMode && npc.monsterReturning && glm::length(vec2(npc.pos) - vec2(npc.home)) > npc.monsterAi->perception) return;
 	if(npc.monsterReturning && titanMode) ApplyMonsterStatus(npc, MEASURED_GOT_MOB_RETURN_SUPERARMOR, false);
 	npc.monsterTarget = attacker.Main().UID;
 	npc.monsterReturning = false;
@@ -102,6 +101,9 @@ void World::MonsterAggroOnHit(ActorNpc& npc, Player& attacker)
 	LOG("Monster :: creature=%d (local %d) attacked by %ls, targets the attacker", (i32)npc.docID, npc.localID, attacker.name.data());
 	SetMonsterBattle(npc, true);
 	replication->SendAiSetTargetToAll(npc.UID, npc.monsterTarget);
+	if(neutral && titanMode && npc.tagID >= 0) {
+		foreach(o, actorNpcList) if(&*o != &npc && o->tagID == npc.tagID && o->monsterAi && o->hp > 0 && o->removeAt == Time::ZERO && o->monsterTarget == ActorUID::INVALID) MonsterAggroOnHit(*o, attacker);
+	}
 }
 
 static const u32 MONSTER_REMOTE_ID_BASE = 0xC0000000u;
@@ -1409,13 +1411,31 @@ void World::UpdateMonsterAi(f32 delta)
 			SetMonsterBattle(npc, false);
 			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
 		}
-		const f32 leash = titanMode ? MEASURED_GOT_NEUTRAL_MAX_FIGHT_DIST : MAX(ai.lost, ai.perception);
+		const f32 leash = titanMode ? ai.perception : MAX(ai.lost, ai.perception);
 		const bool held = localTime < npc.monsterHoldUntil;
 		if(neutral && targetPos && !held && glm::length(vec2(npc.pos) - vec2(npc.home)) > leash) {
 			targetPos = nullptr;
 			npc.monsterTarget = ActorUID::INVALID;
 			npc.monsterReturning = true;
 			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
+		}
+		if(neutral && titanMode && targetPos && !held && taunt == ActorUID::INVALID && localTime >= npc.monsterNextSearch && FindMasterActor(npc.monsterTarget)) {
+			npc.monsterNextSearch = TimeAdd(localTime, TimeMsToTime(MONSTER_SEARCH_MS));
+			f32 best = MIN(glm::length(vec2(*targetPos) - vec2(npc.pos)), ai.perception);
+			Player* closer = nullptr;
+			foreach(p, players) {
+				if(p->dead || p->untargetable || !p->body || p->hiddenUID != ActorUID::INVALID) continue;
+				const f32 d = glm::length(vec2(p->body->GetWorldPos()) - vec2(npc.pos));
+				if(d < best) { best = d; closer = &*p; }
+			}
+			if(closer && closer->Main().UID != npc.monsterTarget) {
+				npc.monsterTarget = closer->Main().UID;
+				targetAt = closer->body->GetWorldPos();
+				targetPos = &targetAt;
+				attack = ai.byTarget[GameXmlContent::MonsterAttack::MASTER];
+				replication->SendAiSetTargetToAll(npc.UID, npc.monsterTarget);
+				LOG("Monster :: neutral creature=%d (local %d) switches to the nearest master %ls", (i32)npc.docID, npc.localID, closer->name.data());
+			}
 		}
 		if(neutral && !targetPos && held) continue;
 		if(neutral && !targetPos) {
