@@ -4234,6 +4234,7 @@ static StatusMod::Stat StatusModStatFromName(const char* stat)
 		{ "STAT_TYPE_HEALTHREGEN", StatusMod::HEALTHREGEN },
 		{ "SERVER_DAMAGE_TAKEN_RATIO", StatusMod::DAMAGE_TAKEN },
 		{ "STAT_TYPE_LIFESTEAL", StatusMod::LIFESTEAL },
+		{ "STAT_TYPE_RAGE", StatusMod::RAGE },
 	};
 	for(const auto& n : NAMES) {
 		if(EA::StdC::Strcmp(stat, n.name) == 0) return n.stat;
@@ -4255,7 +4256,7 @@ bool GameXmlContent::LoadStatusStatMods()
 		mod.value = pMod->FloatAttribute("value");
 		mod.mul = pMod->BoolAttribute("mul");
 		mod.count = pMod->FloatAttribute("count");
-		mod.regen = mod.stat == StatusMod::HEALTH;
+		mod.regen = mod.stat == StatusMod::HEALTH || (mod.stat == StatusMod::RAGE && mod.count > 1);
 		if(mod.stat == StatusMod::OTHER || mod.value == 0) continue;
 		found->second.mods.push_back(mod);
 		count++;

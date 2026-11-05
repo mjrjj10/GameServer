@@ -1109,7 +1109,7 @@ void World::GainResource(Player& player, i32 slot, f32 amount)
 {
 	const f32 resMax = MasterStat(player.Main().classType, RESOURCES[slot].maxStat);
 	if(resMax <= 0) return;
-	player.res[slot] = MIN(MAX(player.res[slot], 0.0f) + amount, resMax);
+	player.res[slot] = MIN(MAX(MAX(player.res[slot], 0.0f) + amount, 0.0f), resMax);
 	player.resDirty = true;
 	if(slot == 1 && amount > 0) player.rageGainAt = localTime;
 	LOG("Resource :: %ls slot %d +%.0f -> %.0f", player.name.data(), slot, amount, player.res[slot]);

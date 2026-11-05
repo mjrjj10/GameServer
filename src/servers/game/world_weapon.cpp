@@ -733,6 +733,11 @@ void World::OnWeaponState(Player& player, i32 state, u8 chargeLevel, u8 firingCo
 	if(state == WEAPON_STATE_CHARGE && player.weaponState != WEAPON_STATE_CHARGE) {
 		player.chargeStart = localTime;
 		player.chargeAnnounced = 0;
+		const GameXmlContent::Action* charge = GetGameXmlContent().FindSkillAction(ActionClass(player), ActionStateID::ATTACKCHARGE_BEHAVIORSTATE, player.Main().stance);
+		if(charge && !player.dead) foreach_const(cmd, charge->commands) {
+			if(cmd->type != ActionCommand::Type::STATUS || cmd->status.statusIndex == 0 || cmd->status.remove || cmd->status.removeAtEnd || cmd->delay > 0) continue;
+			if(cmd->status.targetPreset == ActionCommand::TargetPreset::SELF_FFF || cmd->status.targetPreset == ActionCommand::TargetPreset::SELF_TFF) ApplyStatus(player, player, cmd->status.statusIndex);
+		}
 	}
 	if(state == WEAPON_STATE_FIRE && player.weaponState == WEAPON_STATE_CHARGE) {
 		if(chargeLevel != player.chargeAnnounced) LOG("Shot :: %ls client charge level %d, announced %d", player.name.data(), (i32)chargeLevel, (i32)player.chargeAnnounced);
@@ -823,9 +828,14 @@ void World::RunWeaponActionStatuses(Player& player, i8 stance, const vec3* aimPo
 			pendingRemotes.push_back(pr);
 			continue;
 		}
-		if(cmd->type != ActionCommand::Type::STATUS || cmd->status.statusIndex == 0 || cmd->status.remove) continue;
+		if(cmd->type != ActionCommand::Type::STATUS || cmd->status.statusIndex == 0) continue;
 		const auto preset = cmd->status.targetPreset;
 		if(preset != ActionCommand::TargetPreset::SELF_FFF && preset != ActionCommand::TargetPreset::SELF_TFF) continue;
+		if(cmd->status.remove) {
+			if(cmd->delay > 0) continue;
+			foreach(st, activeStatuses) if(st->targetIndex == player.index && st->statusID == cmd->status.statusIndex && localTime < st->until) st->until = localTime;
+			continue;
+		}
 		f32 duration = -1.0f;
 		if(cmd->status.removeAtEnd) {
 			i32 animId = 0, loop = 1;

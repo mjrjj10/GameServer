@@ -752,6 +752,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		return;
 	}
 
+	if(info) foreach_const(m, info->mods) if(m->stat == StatusMod::RAGE && !m->regen) GainResource(target, 1, m->value);
 	foreach(it, activeStatuses) {
 		if(it->statusID == statusID && it->targetIndex == target.index) {
 			if(it->appliedAt == localTime && it->casterIndex == caster.index && (!info || info->maxOverlap <= 1)) return;
@@ -1102,6 +1103,12 @@ void World::UpdateStatuses()
 		}
 
 		if(it->info && !target.dead) {
+			foreach_const(m, it->info->mods) {
+				if(!m->regen || m->stat != StatusMod::RAGE || localTime < it->nextHealTick || it->healTicksDone >= (i32)m->count) continue;
+				it->nextHealTick = TimeAdd(localTime, TimeMsToTime(MAX(it->info->intervalSec, 0.1f) * 1000.0));
+				it->healTicksDone++;
+				GainResource(target, 1, m->value * it->overlap);
+			}
 			foreach_const(m, it->info->mods) {
 				if(!m->regen || m->stat != StatusMod::HEALTH) continue;
 				const f32 ticks = MAX(m->count, 1.0f);

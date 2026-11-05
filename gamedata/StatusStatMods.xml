@@ -117,4 +117,6 @@
   <MOD status="1230270055" stat="STAT_TYPE_ATTACK" value="0" source="STATUS_PC _Description: bind cast marker rank 2, no stat" />
   <MOD status="1230300033" stat="STAT_TYPE_ATTACK" value="0" source="STATUS_PC _Description: melee mode upgrade link status (강화용), no stat" />
   <MOD status="1230330013" stat="STAT_TYPE_DEFENCE" value="20" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP1_280331006: Shugo Enchantment Stone Bundle rank 6 adds +20% Defense Effect (1230330012 -> 1230330013)" />
+  <MOD status="1230200001" stat="STAT_TYPE_RAGE" value="5" count="20" source="MEASURED 7 official 5v5 captures: slime mass +5 every 0.5 s while charging (807 steps after the charge status)" />
+  <MOD status="1230200002" stat="STAT_TYPE_RAGE" value="-10" count="1" source="MEASURED 7 official 5v5 captures: slime mass -10 per basic fire (328 steps)" />
 </STATUS_STAT_MODS>
