@@ -2257,8 +2257,10 @@ void Replication::SendMonsterStateToAll(ActorUID actorUID, ActionStateID action,
 		packet.Write<u8>(MONSTER_STATE_NO_YAW);
 		packet.Write<LocalActorID>(localID);
 		packet.Write<i16>((i16)action);
-		packet.Write<u16>((u16)MIN(speed * MONSTER_SPEED_SCALE, 65535.0f));
-		playerLocalInfo[clientID].monsterSpeedSent.erase(actorUID);
+		const u16 stateSpeed = (u16)MIN(speed * MONSTER_SPEED_SCALE, 65535.0f);
+		packet.Write<u16>(stateSpeed);
+		if(stateSpeed > 0) playerLocalInfo[clientID].monsterSpeedSent[actorUID] = stateSpeed;
+		else playerLocalInfo[clientID].monsterSpeedSent.erase(actorUID);
 		packet.Write(pos);
 		SendPacket(clientHd, packet);
 	}
@@ -2472,6 +2474,27 @@ void Replication::SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const
 		packet.Write<float3>(v2f(pos));
 		packet.Write<float3>(v2f(goal));
 		packet.Write<u8>(stopped ? NPC_MOVE_FLAG_STOPPED : 0);
+		SendPacket(clientHd, packet);
+	}
+}
+
+void Replication::SendMonsterStopWithSpeedToAll(ActorUID actorUID, const vec3& pos, f32 speed)
+{
+	static const u8 NPC_MOVE_SPEED_AND_POSITIONS = 0x1e;
+	const u16 speedSent = (u16)MIN(speed * MONSTER_SPEED_SCALE, 65535.0f);
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+		playerLocalInfo[clientID].monsterSpeedSent[actorUID] = speedSent;
+		PacketWriter<Sv::SN_AIMonsterSyncMove,48> packet;
+		packet.Write<u8>(NPC_MOVE_SPEED_AND_POSITIONS);
+		packet.Write<u32>((u32)localID);
+		packet.Write<u16>(speedSent);
+		packet.Write<float3>(v2f(pos));
+		packet.Write<float3>(v2f(pos));
+		packet.Write<u8>(NPC_MOVE_FLAG_STOPPED);
 		SendPacket(clientHd, packet);
 	}
 }
@@ -2728,7 +2751,7 @@ void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID 
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID targetLocal = GetLocalActorID(clientHd, targetUID);
-		if(targetLocal == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(targetUID)) continue;
+		if(targetLocal == LocalActorID::INVALID) continue;
 		const LocalActorID casterLocal = GetLocalActorID(clientHd, casterUID);
 		TruthEvent("\"c\":%d,\"status\":%d,\"to\":%u,\"from\":%u,\"dur\":%.2f,\"refresh\":%d", clientID, statusID, (u32)targetLocal, (u32)casterLocal, durationSec, refresh ? 1 : 0);
 
@@ -2762,7 +2785,7 @@ void Replication::SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorU
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID targetLocal = GetLocalActorID(clientHd, targetUID);
-		if(targetLocal == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(targetUID)) continue;
+		if(targetLocal == LocalActorID::INVALID) continue;
 		const LocalActorID casterLocal = GetLocalActorID(clientHd, casterUID);
 
 		Sv::SN_RemoveStatus packet;
@@ -2928,7 +2951,7 @@ void Replication::SendEnterNpc(ClientHandle clientHd, ActorUID actorUID, Creatur
 	SendPacket(clientHd, stat);
 }
 
-void Replication::SendEnterDynamic(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, f32 yaw, ActionStateID action)
+void Replication::SendEnterDynamic(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, f32 yaw, ActionStateID action, bool jumpWall, f32 curHp, f32 maxHp)
 {
 	const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 	if(localID == LocalActorID::INVALID) return;
@@ -2946,8 +2969,31 @@ void Replication::SendEnterDynamic(ClientHandle clientHd, ActorUID actorUID, con
 	packet.Write<f32>(0);
 	packet.Write<ActionStateID>(action);
 	packet.Write<i32>(0);
-	packet.Write<u16>(0);
-	packet.Write<u16>(0);
+	static const f32 MEASURED_DYNAMIC_ENTER_HEALTH_CUR = -1.0f;
+	static const f32 MEASURED_DYNAMIC_ENTER_HEALTH_MAX = 1.0f;
+	static const f32 MEASURED_DYNAMIC_ENTER_DEFENCE_MAX = 113.33f;
+	static const f32 MEASURED_JUMPWALL_ENTER_ATTACK_MAX = 192.0f;
+	const u8 health = (u8)StatType::STAT_TYPE_HEALTH;
+	const u8 attack = (u8)StatType::STAT_TYPE_ATTACK;
+	const u8 defence = (u8)StatType::STAT_TYPE_DEFENCE;
+	packet.Write<u16>(jumpWall ? 3 : 2);
+	packet.Write<u8>(health);
+	packet.Write<f32>(jumpWall ? curHp : MEASURED_DYNAMIC_ENTER_HEALTH_CUR);
+	if(jumpWall) {
+		packet.Write<u8>(attack);
+		packet.Write<f32>(0);
+	}
+	packet.Write<u8>(defence);
+	packet.Write<f32>(0);
+	packet.Write<u16>(jumpWall ? 3 : 2);
+	packet.Write<u8>(health);
+	packet.Write<f32>(jumpWall ? maxHp : MEASURED_DYNAMIC_ENTER_HEALTH_MAX);
+	if(jumpWall) {
+		packet.Write<u8>(attack);
+		packet.Write<f32>(MEASURED_JUMPWALL_ENTER_ATTACK_MAX);
+	}
+	packet.Write<u8>(defence);
+	packet.Write<f32>(MEASURED_DYNAMIC_ENTER_DEFENCE_MAX);
 	packet.Write<u16>(0);
 	packet.Write<u16>(0);
 	SendPacket(clientHd, packet);

@@ -281,6 +281,7 @@ struct StatusInfo
 
 	i32 ID = 0;
 	f32 durationSec = 0;
+	bool instant = false;
 	f32 distanceRatio = 0;
 	f32 timeRatio = 0;
 	f32 heightRatio = 0;

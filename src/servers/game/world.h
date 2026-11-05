@@ -574,6 +574,7 @@ struct World
 		u8 dashCurve = 0;
 		Time ccNextMove = Time::ZERO;
 		Time monsterDashTurnAt = Time::ZERO;
+		f32 monsterStopSpeed = 0;
 		bool monsterWalking = false;
 		bool monsterChasing = false;
 		ActorUID monsterTarget = ActorUID::INVALID;
@@ -621,6 +622,7 @@ struct World
 		vec3 pos;
 		vec3 rot;
 		u32 fogHiddenFrom = 0;
+		bool fogInit = false;
 		PxRigidStatic* collider = nullptr;
 		eastl::fixed_vector<Time,16,false> hits;
 		i32 destroyHits = 0;
@@ -886,12 +888,14 @@ struct World
 		f32 power;
 		bool remove = false;
 		bool aniEnd = false;
+		bool cleanupOnly = false;
 		bool lastChild = false;
 		i32 childCreature = 0;
 		ActorUID sourceUID = ActorUID::INVALID;
 	};
 	eastl::fixed_vector<PendingStatus,256,false> pendingStatuses;
 	bool statusAniEnd = false;
+	bool statusCleanupOnly = false;
 	bool spreadingStatus = false;
 	bool hitActionOnly = false;
 	f32 schedulePassOffset = 0;
@@ -1284,6 +1288,7 @@ public:
 	enum : u8 { NPC_DASH_CURVE_LINEAR = 0, NPC_DASH_CURVE_PUSH = 1, NPC_DASH_CURVE_HOOK = 2 };
 	struct NpcCcGraph { vec3 to = vec3(0); f32 duration = 0; f32 graphSec = 0; f32 nominal = -1.0f; bool graph = false; };
 	NpcCcGraph StartNpcCc(ActorNpc& npc, const StatusInfo* info, const vec3& source, const vec2& dragCenter, const vec3& casterPos, f32 hold);
+	void MonsterStopIfHeld(ActorNpc& npc);
 	bool MonsterDashNeedsTurn(ActorNpc& npc, const GameXmlContent::MonsterAttack& attack, f32 yaw);
 	void SendNpcCcMove(ActorNpc& npc, bool ended);
 	void ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 statusID);
@@ -1461,7 +1466,7 @@ public:
 	bool stageCleared = false;
 	bool noRespawn = false;
 	bool NodeInDifficulty(const GameXmlContent::LevelEventNode& node) const { return difficultyBit == GameXmlContent::ALL_DIFFICULTIES || (node.difficultyMask & difficultyBit) != 0; }
-	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; f32 shieldMax = 0; u32 dotCaster = UINT32_MAX; f32 dotPower = 0; i32 dotOverlap = 1; Time dotNextTick = Time::ZERO; };
+	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; f32 shieldMax = 0; u32 dotCaster = UINT32_MAX; f32 dotPower = 0; i32 dotOverlap = 1; Time dotNextTick = Time::ZERO; Time appliedAt = Time::ZERO; };
 	void UpdateNpcDots();
 	void UpdateNpcSpeedMods();
 	void ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool remove);
@@ -1484,7 +1489,7 @@ public:
 	f32 GroupingDamageMul(const Player& attacker, const Player& target) const;
 	void GroupingSummonKill(Player& killer, const ActorNpc& summon);
 	bool TeamSees(i32 team, const Player& target);
-	bool TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack = 0);
+	bool TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack = 0, f32 sightMargin = 0);
 	void UpdateDynamicFog();
 	bool PlayerHasActiveStatus(const Player& player, i32 statusID) const;
 	void EndPlayerStatus(Player& player, i32 statusID);

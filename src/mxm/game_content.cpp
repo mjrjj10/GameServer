@@ -2768,7 +2768,7 @@ bool GameXmlContent::LoadAnimationData()
 				}
 				const char* Param2 = nullptr;
 				pActionBase->QueryStringAttribute("Param2", &Param2);
-				cmd.status.removeAtEnd = Param2 && (EA::StdC::Strstr(Param2, "RemoveWhenAniEnd") || EA::StdC::Strstr(Param2, "RemoveWhenActionEnd") || EA::StdC::Strstr(Param2, "CleanUpWhenActionEnd")) ? 1 : 0;
+				cmd.status.removeAtEnd = Param2 && EA::StdC::Strstr(Param2, "CleanUpWhenActionEnd") ? 2 : (Param2 && (EA::StdC::Strstr(Param2, "RemoveWhenAniEnd") || EA::StdC::Strstr(Param2, "RemoveWhenActionEnd")) ? 1 : 0);
 				cmd.status.remove = Param2 && EA::StdC::Strcmp(Param2, "Remove") == 0 ? 1 : 0;
 				if(cmd.status.remove || cmd.status.removeAtEnd) actionRemovedStatuses.insert(cmd.status.statusIndex);
 				const char* Param1 = nullptr;
@@ -4124,6 +4124,7 @@ bool GameXmlContent::LoadStatusData()
 				const char* pas = nullptr;
 				pCommon->QueryStringAttribute("_Passive", &pas);
 				st.permanent = durationMs <= 0 && pas && EA::StdC::Stricmp(pas, "true") == 0;
+				st.instant = pCommon->Attribute("_DurationTime") && durationMs == 0 && !(pas && EA::StdC::Stricmp(pas, "true") == 0);
 				pCommon->QueryAttribute("_InitCustomValue", &st.customInit);
 				pCommon->QueryAttribute("_MaxCustomValue", &st.customMax);
 				pCommon->QueryAttribute("_ShieldCount", &st.shieldCount);

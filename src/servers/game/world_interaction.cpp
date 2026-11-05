@@ -493,7 +493,9 @@ void World::UpdateNpcDefeat(ActorNpc& npc)
 	if(npc.stateEndAt != Time::ZERO && localTime >= npc.stateEndAt && npc.actionState != ActionStateID::SPAWN_BEHAVIORSTATE) {
 		npc.stateEndAt = Time::ZERO;
 		npc.actionState = ActionStateID::NONE_BEHAVIORSTATE;
-		replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, 0.0f);
+		const f32 endSpeed = npc.monsterStopSpeed > 0 ? npc.monsterStopSpeed : (npc.monsterAi ? npc.monsterAi->run * npc.speedMul : 0.0f);
+		npc.monsterStopSpeed = 0;
+		replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, endSpeed);
 	}
 }
 
@@ -1302,7 +1304,6 @@ void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle s
 	const auto& destroyHits = GetGameXmlContent().dynamicDestroyHits;
 	const auto destroyable = destroyHits.find((i32)hit->docID);
 	if(destroyable != destroyHits.end() && GetGameXmlContent().dynamicJumpable.count((i32)hit->docID)) {
-		static const f32 MEASURED_JUMPWALL_MAX_HP = 1491.0f;
 		const f32 left = MAX(1.0f - (f32)(hit->destroyHits + 1) / (f32)destroyable->second, 0.0f);
 		replication->SendStatToAll(hit->UID, (i32)StatType::STAT_TYPE_HEALTH, MEASURED_JUMPWALL_MAX_HP * left, MEASURED_JUMPWALL_MAX_HP);
 	}

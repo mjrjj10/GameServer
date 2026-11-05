@@ -643,7 +643,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	if(target.dead || target.untargetable) return;
 	if(caster.team != target.team) target.statusesTaken++;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
-	f32 duration = info && info->durationSec > 0 ? info->durationSec : (info && info->type == StatusType::MOTION ? 0.0f : 1.0f);
+	f32 duration = info && info->durationSec > 0 ? info->durationSec : (info && (info->type == StatusType::MOTION || info->instant) ? 0.0f : 1.0f);
 	if(info && info->durationSec < 0 && GetGameXmlContent().actionRemovedStatuses.count(statusID)) duration = STATUS_INFINITE_DURATION_SEC;
 	f32 graphDuration = duration * (info && info->timeRatio > 0 ? info->timeRatio : 1.0f);
 	DefeatGraphTimes(info, &duration, &graphDuration);
@@ -756,7 +756,19 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	foreach(it, activeStatuses) {
 		if(it->statusID == statusID && it->targetIndex == target.index) {
 			if(it->appliedAt == localTime && it->casterIndex == caster.index && (!info || info->maxOverlap <= 1)) return;
-			const Time until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
+			if(it->until <= localTime) {
+				replication->SendRemoveStatusToAll(it->statusID, it->targetUID, it->casterUID);
+				activeStatuses.erase_unsorted(it);
+				break;
+			}
+			if(statusCleanupOnly) {
+				it->aniEnd = true;
+				LOG("Status :: %ls status=%d already active, cleaned up at action end", target.name.data(), statusID);
+				return;
+			}
+			Time until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
+			const i32 ticks = info && info->dotDamage > 0 && info->intervalSec > 0 ? (i32)floorf(duration / info->intervalSec) : 0;
+			if(ticks >= 1 && it->nextTick > localTime) until = TimeAdd(it->nextTick, TimeMsToTime((f64)(ticks - 1) * info->intervalSec * 1000.0));
 			if(until > it->until) it->until = until;
 			const bool stacked = info && it->overlap < info->maxOverlap;
 			if(stacked) it->overlap++;
@@ -793,7 +805,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	st.targetUID = statusTargetOverride != ActorUID::INVALID ? statusTargetOverride : target.Main().UID;
 	st.casterUID = statusNoCaster ? ActorUID::INVALID : (statusCasterOverride != ActorUID::INVALID ? statusCasterOverride : caster.Main().UID);
 	st.damageAtStart = target.damageTaken;
-	st.until = TimeAdd(localTime, TimeMsToTime(MAX(duration, 0.1f) * 1000.0));
+	st.until = info && info->instant && durationOverride <= 0 ? localTime : TimeAdd(localTime, TimeMsToTime(MAX(duration, 0.1f) * 1000.0));
 	st.appliedAt = localTime;
 	st.aniEnd = statusAniEnd;
 	st.nextTick =TimeAdd(localTime, TimeMsToTime((info && info->intervalSec > 0 ? info->intervalSec : 1.0f) * 1000.0));
@@ -1065,8 +1077,10 @@ void World::UpdateStatuses()
 		else if(!caster.dead && targetMaster) {
 			statusCasterOverride = ps->sourceUID;
 			statusAniEnd = ps->aniEnd;
+			statusCleanupOnly = ps->cleanupOnly;
 			ApplyStatus(caster, *targetMaster->parent, ps->statusID, ps->power, ps->duration);
 			statusAniEnd = false;
+			statusCleanupOnly = false;
 			statusCasterOverride = ActorUID::INVALID;
 		}
 		ps = pendingStatuses.erase_unsorted(ps);

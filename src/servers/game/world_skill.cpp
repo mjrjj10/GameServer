@@ -501,8 +501,15 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 {
 	i32 prevOverlap = 0;
 	Time prevTick = Time::ZERO;
+	const StatusInfo* known = GetGameXmlContent().FindStatus(statusID);
 	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
 		if(npcStatuses[i].npcUID != npc.UID || npcStatuses[i].statusID != statusID || npcStatuses[i].linked) { i++; continue; }
+		if(!remove && npcStatuses[i].appliedAt == localTime && npcStatuses[i].casterUID == caster.Main().UID && (!known || known->maxOverlap <= 1)) return;
+		if(!remove && localTime >= npcStatuses[i].until) {
+			replication->SendRemoveStatusToAll(statusID, npc.UID, npcStatuses[i].casterUID);
+			npcStatuses.erase(npcStatuses.begin() + i);
+			continue;
+		}
 		if(localTime < npcStatuses[i].until) { prevOverlap = npcStatuses[i].dotOverlap; prevTick = npcStatuses[i].dotNextTick; }
 		if(remove) npcStatuses[i].until = localTime;
 		i++;
@@ -516,6 +523,14 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 		return;
 	}
 	if(npc.removeAt != Time::ZERO) return;
+	if(info && info->casterStatus != 0 && info->casterStatus != statusID && !caster.dead && !applyingCasterStatus && prevOverlap == 0) {
+		applyingCasterStatus = true;
+		const ActorUID prevCaster = statusCasterOverride;
+		statusCasterOverride = npc.UID;
+		ApplyStatus(caster, caster, info->casterStatus);
+		statusCasterOverride = prevCaster;
+		applyingCasterStatus = false;
+	}
 	const vec3 from = npc.pos;
 	const vec3 center = statusForceCenterSet ? statusForceCenter : caster.body->GetWorldPos();
 	const NpcCcGraph cc = StartNpcCc(npc, info, center, vec2(center), caster.body->GetWorldPos(), 0.0f);
@@ -527,6 +542,7 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	ns.statusID = statusID;
 	ns.casterUID = caster.Main().UID;
 	ns.until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
+	ns.appliedAt = localTime;
 	ns.linked = false;
 	if(info && info->type == StatusType::SHIELD) ns.shieldHP = GetGameXmlContent().StatusShieldAmount(*info);
 	ns.shieldMax = ns.shieldHP;
@@ -539,6 +555,8 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 		ns.dotPower = PlayerSkillPower(caster);
 		ns.dotOverlap = MIN(prevOverlap + 1, MAX(info->maxOverlap, 1));
 		ns.dotNextTick = prevTick != Time::ZERO ? prevTick : TimeAdd(localTime, TimeMsToTime((info->intervalSec > 0 ? info->intervalSec : 0.0f) * 1000.0));
+		const i32 ticks = info->intervalSec > 0 ? (i32)floorf(duration / info->intervalSec) : 0;
+		if(prevTick != Time::ZERO && ticks >= 1) ns.until = TimeAdd(prevTick, TimeMsToTime((f64)(ticks - 1) * info->intervalSec * 1000.0));
 	}
 	npcStatuses.push_back(ns);
 	if(ns.shieldMax > 0) SendNpcShieldStat(npc.UID);
@@ -670,6 +688,11 @@ void World::ReleaseCast(Player& player)
 				it->until = localTime;
 				LOG("Status :: %ls status=%d cleaned up at combo end", player.name.data(), it->statusID);
 			}
+			foreach(ns, npcStatuses) {
+				if((ns->statusID != *cs && (pair == 0 || ns->statusID != pair)) || ns->casterUID != player.Main().UID || ns->until <= localTime) continue;
+				ns->until = localTime;
+				LOG("Status :: %ls status=%d on creature cleaned up at combo end", player.name.data(), ns->statusID);
+			}
 		}
 	}
 	GroupTeleport(player, c.skillID, c.castPos);
@@ -766,9 +789,14 @@ void World::UpdateCasts()
 			const ActorUID comboTarget = it->hitComboTarget;
 			it->hitCombo = SkillID::INVALID;
 			const ActorMaster* tm = FindMasterActor(comboTarget);
+			const ActorNpc* tn = tm ? nullptr : FindNpcActor(comboTarget);
 			if(!it->dead && tm && !tm->parent->dead) {
 				LOG("Combo :: %ls hit auto-cast %d on %ls", it->name.data(), (i32)combo, tm->parent->name.data());
 				PlayerCastSkill(*it, combo, tm->parent->body->GetWorldPos(), Slice<const ActorUID>(&comboTarget, 1), 0);
+			}
+			else if(!it->dead && tn && tn->hp > 0 && tn->removeAt == Time::ZERO) {
+				LOG("Combo :: %ls hit auto-cast %d on creature=%d", it->name.data(), (i32)combo, (i32)tn->docID);
+				PlayerCastSkill(*it, combo, tn->pos, Slice<const ActorUID>(&comboTarget, 1), 0);
 			}
 		}
 		if(it->casting.skillID == SkillID::INVALID || !it->body) continue;
@@ -776,13 +804,15 @@ void World::UpdateCasts()
 		const bool bot = it->clientHd == ClientHandle::INVALID;
 		if(bot && (it->casting.lifted || it->casting.interruptByLostTarget)) {
 			const ActorMaster* tm = FindMasterActor(it->casting.target);
-			const bool lost = !tm || tm->parent->dead || tm->parent->untargetable;
+			const ActorNpc* tn = tm ? nullptr : FindNpcActor(it->casting.target);
+			const bool npcAlive = tn && tn->hp > 0 && tn->removeAt == Time::ZERO;
+			const bool lost = tm ? (tm->parent->dead || tm->parent->untargetable) : !npcAlive;
 			if(lost && it->casting.interruptByLostTarget) {
 				LOG("Cast :: %ls skill=%d target lost", it->name.data(), (i32)it->casting.skillID);
 				ReleaseCast(*it);
 				continue;
 			}
-			if(!lost && it->casting.lifted) TeleportPlayer(*it, tm->parent->body->GetWorldPos(), it->input.rot.upperYaw);
+			if(!lost && it->casting.lifted) TeleportPlayer(*it, tm ? tm->parent->body->GetWorldPos() : tn->pos, it->input.rot.upperYaw);
 		}
 		if(localTime < it->casting.executeAt) continue;
 		if(!bot && it->casting.type == GameXmlContent::SkillCast::LIMIT) CancelCast(*it, "window ended");
@@ -992,6 +1022,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			ps.power = (f32)damage;
 			ps.remove = cmd->status.remove != 0;
 			ps.aniEnd = cmd->status.removeAtEnd != 0;
+			ps.cleanupOnly = cmd->status.removeAtEnd == 2;
 			if(cmd->type == ActionCommand::Type::STATUS_SKILL_TARGET && targets.size() > 1) {
 				foreach_const(tg, targets) {
 					if(pendingStatuses.full()) break;
@@ -1407,7 +1438,7 @@ bool World::TeamSees(i32 team, const Player& target)
 	return TeamSeesAt(team, target.body->GetWorldPos(), target.bushUID);
 }
 
-bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack)
+bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack, f32 sightMargin)
 {
 	const auto& content = GetGameXmlContent();
 	const vec3 eye = at + vec3(0, 0, FOG_EYE_HEIGHT);
@@ -1417,7 +1448,7 @@ bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack)
 		if(bushUID != ActorUID::INVALID && p->bushUID != bushUID) continue;
 		const vec3 from = p->body->GetWorldPos();
 		const f32 sight = content.CreatureSight(100000000 + (i32)p->Main().classType);
-		if(glm::length(vec2(from) - vec2(at)) > (sight > 0 ? sight : FOG_DEFAULT_SIGHT)) continue;
+		if(glm::length(vec2(from) - vec2(at)) > (sight > 0 ? sight : FOG_DEFAULT_SIGHT) + sightMargin) continue;
 		if(!physics.RaycastStatic(from + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit) || hit >= glm::length(vec2(from) - vec2(at)) - slack) return true;
 	}
 	if(bushUID != ActorUID::INVALID) return false;
@@ -1431,7 +1462,7 @@ bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack)
 		const i32 npcTeam = npc->ownerUID != ActorUID::INVALID ? (i32)players[npc->ownerIndex].team : (npc->faction == Faction::RED ? 0 : npc->faction == Faction::BLUE ? 1 : -1);
 		if(npcTeam != team) continue;
 		const f32 sight = content.CreatureSight((i32)npc->docID);
-		if(sight <= 0 || glm::length(vec2(npc->pos) - vec2(at)) > sight) continue;
+		if(sight <= 0 || glm::length(vec2(npc->pos) - vec2(at)) > sight + sightMargin) continue;
 		if(!physics.RaycastStatic(npc->pos + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit) || hit >= glm::length(vec2(npc->pos) - vec2(at)) - slack) return true;
 	}
 	return false;
@@ -1440,19 +1471,26 @@ bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack)
 void World::UpdateDynamicFog()
 {
 	static const f32 DYNAMIC_FOG_SLACK = 250.0f;
+	static const f32 MEASURED_DYNAMIC_SIGHT_MARGIN = 400.0f;
+	const auto& content = GetGameXmlContent();
 	foreach(d, actorDynamicList) {
 		bool sees[2];
-		for(i32 team = 0; team < 2; team++) sees[team] = TeamSeesAt(team, d->pos, ActorUID::INVALID, DYNAMIC_FOG_SLACK);
+		for(i32 team = 0; team < 2; team++) sees[team] = TeamSeesAt(team, d->pos, ActorUID::INVALID, DYNAMIC_FOG_SLACK, MEASURED_DYNAMIC_SIGHT_MARGIN);
+		const bool silent = !d->fogInit;
+		d->fogInit = true;
+		const bool jumpWall = content.dynamicJumpable.count((i32)d->docID) != 0;
+		const auto destroyable = content.dynamicDestroyHits.find((i32)d->docID);
+		const f32 hpLeft = jumpWall && destroyable != content.dynamicDestroyHits.end() && destroyable->second > 0 ? MAX(1.0f - (f32)d->destroyHits / (f32)destroyable->second, 0.0f) : 1.0f;
 		foreach(viewer, players) {
 			if(viewer->clientHd == ClientHandle::INVALID || viewer->team > 1) continue;
 			const u32 bit = 1u << viewer->index;
 			const bool hidden = (d->fogHiddenFrom & bit) != 0;
 			if(!sees[viewer->team] && !hidden && !viewer->devVision) {
-				replication->SendLeaveActor(viewer->clientHd, d->UID);
+				if(!silent) replication->SendLeaveActor(viewer->clientHd, d->UID);
 				d->fogHiddenFrom |= bit;
 			}
 			else if((sees[viewer->team] || viewer->devVision) && hidden) {
-				replication->SendEnterDynamic(viewer->clientHd, d->UID, d->pos, d->rot.z, d->action);
+				replication->SendEnterDynamic(viewer->clientHd, d->UID, d->pos, d->rot.z, d->action, jumpWall, MEASURED_JUMPWALL_MAX_HP * hpLeft, MEASURED_JUMPWALL_MAX_HP);
 				d->fogHiddenFrom &= ~bit;
 			}
 		}

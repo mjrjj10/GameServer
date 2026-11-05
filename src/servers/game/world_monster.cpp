@@ -965,6 +965,13 @@ static f32 NpcDashProgress(u8 curve, f32 t)
 	return t;
 }
 
+void World::MonsterStopIfHeld(ActorNpc& npc)
+{
+	if(!npc.monsterAi || localTime >= npc.monsterHoldUntil || npc.monsterAi->walk <= 0) return;
+	npc.monsterStopSpeed = npc.monsterAi->walk * npc.speedMul;
+	replication->SendMonsterStopWithSpeedToAll(npc.UID, npc.pos, npc.monsterStopSpeed);
+}
+
 bool World::MonsterDashNeedsTurn(ActorNpc& npc, const GameXmlContent::MonsterAttack& attack, f32 yaw)
 {
 	if(attack.dashDist <= 0 || attack.dashPassAnims.empty()) return false;
@@ -1077,6 +1084,7 @@ void World::StartMonsterAttack(ActorNpc& npc, const GameXmlContent::MonsterAi& a
 {
 	npc.rot.z = yaw;
 	npc.actionState = attack->state;
+	npc.monsterStopSpeed = 0;
 	if(ai.masterMark != 0 && attack->target == GameXmlContent::MonsterAttack::MASTER) {
 		ActorMaster* marked = FindMasterActor(npc.monsterTarget);
 		if(marked && marked->parent) ApplyStatusFromNpc(npc, *marked->parent, ai.masterMark);
@@ -1475,6 +1483,7 @@ void World::UpdateMonsterAi(f32 delta)
 					targetPos = nullptr;
 					npc.monsterNextSearch = TimeAdd(localTime, TimeMsToTime(MEASURED_MINION_RETARGET_MS));
 					replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
+					MonsterStopIfHeld(npc);
 				}
 			}
 		}
@@ -1550,6 +1559,7 @@ void World::UpdateMonsterAi(f32 delta)
 		}
 		if(targetLost) {
 			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
+			MonsterStopIfHeld(npc);
 			SetMonsterBattle(npc, false);
 		}
 
