@@ -562,6 +562,16 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 		const i32 ticks = info->intervalSec > 0 ? (i32)floorf(duration / info->intervalSec) : 0;
 		if(prevTick != Time::ZERO && ticks >= 1) ns.until = TimeAdd(prevTick, TimeMsToTime((f64)(ticks - 1) * info->intervalSec * 1000.0));
 	}
+	if(info && info->type == StatusType::HEAL && info->intervalSec > 0) {
+		foreach_const(m, info->mods) {
+			if(m->stat != StatusMod::HEALTH) continue;
+			ns.dotCaster = caster.index;
+			ns.healValue = m->value;
+			ns.healPct = m->mul;
+			ns.dotNextTick = localTime;
+			break;
+		}
+	}
 	npcStatuses.push_back(ns);
 	if(ns.shieldMax > 0) SendNpcShieldStat(npc.UID);
 	LOG("Status :: %ls gives creature=%d status=%d for %.1fs shield=%.0f", caster.name.data(), (i32)npc.docID, statusID, duration, ns.shieldHP);
@@ -605,6 +615,15 @@ void World::UpdateNpcDots()
 		const f32 interval = info->intervalSec;
 		while(npcStatuses[i].dotNextTick != Time::ZERO && localTime >= npcStatuses[i].dotNextTick && npcStatuses[i].dotNextTick <= npcStatuses[i].until && npc->hp > 0 && npc->removeAt == Time::ZERO) {
 			npcStatuses[i].dotNextTick = interval > 0 ? TimeAdd(npcStatuses[i].dotNextTick, TimeMsToTime(interval * 1000.0)) : Time::ZERO;
+			if(npcStatuses[i].healValue > 0) {
+				if(npcStatuses[i].dotNextTick > npcStatuses[i].until) break;
+				const i32 amount = (i32)(npcStatuses[i].healPct ? npc->hpMax * npcStatuses[i].healValue / 100.0f : npcStatuses[i].healValue);
+				if(npc->hp >= npc->hpMax) continue;
+				npc->hp = MIN(npc->hp + amount, npc->hpMax);
+				replication->SendHpToAll(npc->UID, npc->hp, npc->hpMax);
+				LOG("Heal :: %ls -> creature=%d amount=%d hp=%d/%d", caster.name.data(), (i32)npc->docID, amount, npc->hp, npc->hpMax);
+				continue;
+			}
 			const f32 perStack = info->dotDamage + npcStatuses[i].dotPower * info->dotMul;
 			const i32 tick = MAX((i32)perStack, 1) * npcStatuses[i].dotOverlap;
 			damageStatusID = npcStatuses[i].statusID;

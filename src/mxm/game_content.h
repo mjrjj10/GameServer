@@ -328,6 +328,7 @@ struct StatusInfo
 	bool bigAggro = false;
 	eastl::fixed_vector<eastl::pair<i32,i32>,2,false> summonLimits;
 	bool targetsFriendlyPc = false;
+	bool targetsFriendlyNpc = false;
 	bool bothCharacters = false;
 	f32 explodeDamage = 0;
 	f32 additionalDamageByCaster = 0;

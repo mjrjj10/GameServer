@@ -665,6 +665,14 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			if(glm::length(vec2(it->body->GetWorldPos()) - vec2(caster.body->GetWorldPos())) > info->targetingRange) continue;
 			ApplyStatus(caster, *it, statusID, power, durationOverride);
 		}
+		if(info->targetsFriendlyNpc) {
+			const Faction ownFaction = caster.team == 0 ? Faction::RED : Faction::BLUE;
+			foreach(npc, actorNpcList) {
+				if(npc->faction != ownFaction || npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
+				if(glm::length(vec2(npc->pos) - vec2(caster.body->GetWorldPos())) > info->targetingRange + NpcHitRadius(*npc)) continue;
+				ApplyStatusToNpc(caster, *npc, statusID, false);
+			}
+		}
 		spreadingStatus = false;
 	}
 	if(caster.team != target.team && HasStatusType(target, StatusType::BURROW)) {

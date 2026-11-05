@@ -1482,7 +1482,7 @@ public:
 	bool stageCleared = false;
 	bool noRespawn = false;
 	bool NodeInDifficulty(const GameXmlContent::LevelEventNode& node) const { return difficultyBit == GameXmlContent::ALL_DIFFICULTIES || (node.difficultyMask & difficultyBit) != 0; }
-	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; f32 shieldMax = 0; u32 dotCaster = UINT32_MAX; f32 dotPower = 0; i32 dotOverlap = 1; Time dotNextTick = Time::ZERO; Time appliedAt = Time::ZERO; };
+	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; f32 shieldMax = 0; u32 dotCaster = UINT32_MAX; f32 dotPower = 0; f32 healValue = 0; bool healPct = false; i32 dotOverlap = 1; Time dotNextTick = Time::ZERO; Time appliedAt = Time::ZERO; };
 	void UpdateNpcDots();
 	void UpdateNpcSpeedMods();
 	void ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool remove);

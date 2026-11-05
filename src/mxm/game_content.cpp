@@ -4045,7 +4045,8 @@ bool GameXmlContent::LoadStatusData()
 			pCommon->QueryAttribute("_NextStatusIndex", &st.nextStatus);
 			pCommon->QueryFloatAttribute("_TargetingRange", &st.targetingRange);
 			if(const char* tt = pCommon->Attribute("_TargetingType")) {
-				st.targetsFriendlyPc = EA::StdC::Strcmp(tt, "FRIENDLY_PC") == 0 || EA::StdC::Strcmp(tt, "FRIENDLY") == 0;
+				st.targetsFriendlyNpc = EA::StdC::Strcmp(tt, "FRIENDLY") == 0;
+				st.targetsFriendlyPc = st.targetsFriendlyNpc || EA::StdC::Strcmp(tt, "FRIENDLY_PC") == 0;
 				st.bothCharacters = EA::StdC::Strcmp(tt, "BOTH_CHARACTER") == 0;
 			}
 			if(XMLElement* pDef = pCommon->FirstChildElement("_DEFENDER")) pDef->QueryFloatAttribute("_ExplodeDmg", &st.explodeDamage);
