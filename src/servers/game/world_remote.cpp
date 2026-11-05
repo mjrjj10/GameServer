@@ -828,7 +828,8 @@ void World::UpdateRemotes(f32 delta)
 			else {
 				const f32 yaw = inst.firePath ? inst.firePathYaw : instOwner.input.rot.upperYaw;
 				inst.dir = vec2(cosf(yaw), sinf(yaw));
-				inst.pos = instOwner.body->GetWorldPos() + vec3(inst.dir * (remote.forceTargetDir ? -remote.offsetY : remote.offsetY), FIRE_NODE_HEIGHT);
+				const f32 attachOffset = remote.forceTargetDir || inst.nodeName == SCENE_ROOT_NODE ? -remote.offsetY : remote.offsetY;
+				inst.pos = instOwner.body->GetWorldPos() + vec3(inst.dir * (attachOffset + inst.attachForward) + Perp(inst.dir) * inst.attachSide, FIRE_NODE_HEIGHT);
 			}
 		}
 
@@ -993,6 +994,14 @@ void World::SpawnPendingRemotes()
 			remoteTargetEntityOverride = ActorUID::INVALID;
 			remoteSendFromSet = false;
 			if(spawned) {
+				if(remote && remote->attachFireObject && measured) {
+					spawned->attachForward = measured->forward;
+					spawned->attachSide = measured->side;
+				}
+				else if(remote && remote->attachFireObject && fireNode) {
+					spawned->attachForward = fireNode->forward;
+					spawned->attachSide = fireNode->side;
+				}
 				spawned->sourceUID = pr->sourceUID;
 				if(pr->casterMasterUID != ActorUID::INVALID) spawned->casterMasterUID = pr->casterMasterUID;
 				spawned->costLevel = pr->costLevel;

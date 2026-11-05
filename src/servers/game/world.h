@@ -793,6 +793,8 @@ struct World
 		vec3 pos;
 		vec2 dir;
 		f32 dirZ = 0;
+		f32 attachForward = 0;
+		f32 attachSide = 0;
 		f32 travelled;
 		f32 range;
 		f32 speed;
