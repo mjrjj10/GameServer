@@ -1443,7 +1443,7 @@ bool World::TeamSees(i32 team, const Player& target)
 	return TeamSeesAt(team, target.body->GetWorldPos(), target.bushUID);
 }
 
-bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack, f32 sightMargin, const PxRigidActor* ignoreActor)
+bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack, f32 sightMargin, const void* ignoreActor)
 {
 	const auto& content = GetGameXmlContent();
 	const vec3 eye = at + vec3(0, 0, FOG_EYE_HEIGHT);
@@ -1455,7 +1455,7 @@ bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack, f3
 		const f32 sight = content.CreatureSight(100000000 + (i32)p->Main().classType);
 		if(glm::length(vec2(from) - vec2(at)) > (sight > 0 ? sight : FOG_DEFAULT_SIGHT) + sightMargin) continue;
 		const PxRigidActor* blocker = nullptr;
-		if(!physics.RaycastStatic(from + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit, -1, &blocker) || hit >= glm::length(vec2(from) - vec2(at)) - slack || (ignoreActor && blocker == ignoreActor)) return true;
+		if(!physics.RaycastStatic(from + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit, -1, &blocker) || hit >= glm::length(vec2(from) - vec2(at)) - slack || (ignoreActor && (const void*)blocker == ignoreActor)) return true;
 	}
 	if(bushUID != ActorUID::INVALID) return false;
 	foreach_const(lit, litCells) {
@@ -1470,7 +1470,7 @@ bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack, f3
 		const f32 sight = content.CreatureSight((i32)npc->docID);
 		if(sight <= 0 || glm::length(vec2(npc->pos) - vec2(at)) > sight + sightMargin) continue;
 		const PxRigidActor* npcBlocker = nullptr;
-		if(!physics.RaycastStatic(npc->pos + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit, -1, &npcBlocker) || hit >= glm::length(vec2(npc->pos) - vec2(at)) - slack || (ignoreActor && npcBlocker == ignoreActor)) return true;
+		if(!physics.RaycastStatic(npc->pos + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit, -1, &npcBlocker) || hit >= glm::length(vec2(npc->pos) - vec2(at)) - slack || (ignoreActor && (const void*)npcBlocker == ignoreActor)) return true;
 	}
 	return false;
 }

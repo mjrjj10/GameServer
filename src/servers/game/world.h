@@ -1504,7 +1504,7 @@ public:
 	f32 GroupingDamageMul(const Player& attacker, const Player& target) const;
 	void GroupingSummonKill(Player& killer, const ActorNpc& summon);
 	bool TeamSees(i32 team, const Player& target);
-	bool TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack = 0, f32 sightMargin = 0, const PxRigidActor* ignoreActor = nullptr);
+	bool TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack = 0, f32 sightMargin = 0, const void* ignoreActor = nullptr);
 	void UpdateDynamicFog();
 	bool PlayerHasActiveStatus(const Player& player, i32 statusID) const;
 	void EndPlayerStatus(Player& player, i32 statusID);
