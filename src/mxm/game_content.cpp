@@ -3084,6 +3084,7 @@ bool GameXmlContent::LoadRemoteData()
 					if(fdType && EA::StdC::Strcmp(fdType, "REMOTE_FORCE_DIRECTION_TYPE_FIXED_ANGLE") == 0) remote.forceFixedAngle = pFd->FloatAttribute("_Angle");
 				}
 				pComp->QueryFloatAttribute("_OffsetZ", &remote.offsetZ);
+				pComp->QueryFloatAttribute("_MultiHitTimeOut", &remote.multiHitTimeOut);
 				pComp->QueryFloatAttribute("_DistPenaltyRate", &remote.distPenaltyRate);
 				pComp->QueryFloatAttribute("_DamageDistStart", &remote.damageDistStart);
 				pComp->QueryFloatAttribute("_StatusTypeMultiplier", &remote.statusTypeMultiplier);

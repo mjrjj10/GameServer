@@ -282,6 +282,29 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	}
 }
 
+static const u32 VOLLEY_NPC_TARGET_BIT = 0x80000000u;
+
+f32 World::VolleyLockout(const Projectile& proj) const
+{
+	if(proj.volleyID == 0) return 0.0f;
+	const Remote* shot = GetGameXmlContent().FindRemote(proj.remoteDoc);
+	return shot ? shot->multiHitTimeOut : 0.0f;
+}
+
+bool World::VolleyHitLocked(const Projectile& proj, u32 target)
+{
+	const f32 lockout = VolleyLockout(proj);
+	if(lockout <= 0) return false;
+	foreach(r, repeatHits) {
+		if(r->castID != proj.volleyID || r->targetIndex != target) continue;
+		if(TimeDiffSec(TimeDiff(r->at, localTime)) < lockout) return true;
+		r->at = localTime;
+		return false;
+	}
+	if(!repeatHits.full()) repeatHits.push_back({ proj.volleyID, target, 1, localTime });
+	return false;
+}
+
 void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, const Projectile* source)
 {
 	Projectile hitInfo;
@@ -467,8 +490,9 @@ void World::UpdateProjectiles(f32 delta)
 				if(!LagSegmentHits(*it, from, to, proj->halfWidth + HitRadius(*it) + PROJECTILE_HIT_TOLERANCE, lastStep ? proj->forwardReach + HitRadius(*it) : HitRadius(*it))) continue;
 
 				if(!proj->hitList.full()) proj->hitList.push_back(it->index);
+				if(VolleyHitLocked(*proj, it->index)) continue;
 				f32 volleyMul = 1.0f;
-				if(proj->volleyID != 0) {
+				if(proj->volleyID != 0 && !VolleyLockout(*proj)) {
 					bool repeated = false;
 					foreach(r, repeatHits) if(r->castID == proj->volleyID && r->targetIndex == it->index) repeated = true;
 					if(repeated) volleyMul = MEASURED_RADIATE_REPEAT_HIT_RATIO;
@@ -504,6 +528,7 @@ void World::UpdateProjectiles(f32 delta)
 				if(eastl::find(proj->npcHitList.begin(), proj->npcHitList.end(), npc->UID) != proj->npcHitList.end()) continue;
 				if(SegmentPointDist2D(from, lastStep ? to + proj->dir * proj->forwardReach : to, vec2(npc->pos)) > proj->halfWidth + NpcHitRadius(*npc) + PROJECTILE_HIT_TOLERANCE) continue;
 				proj->npcHitList.push_back(npc->UID);
+				if(VolleyHitLocked(*proj, (u32)npc->UID | VOLLEY_NPC_TARGET_BIT)) continue;
 				Replication::RemoteDamage hit;
 				hit.remoteID = proj->remoteID;
 				hit.remoteDoc = proj->remoteDoc;

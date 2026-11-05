@@ -522,6 +522,7 @@ struct Remote
 	f32 boundOffsetY = 0;
 	f32 angle = 0;
 	f32 hitInvalidTime = 1;
+	f32 multiHitTimeOut = 0;
 	f32 fixedGraphLength = 0;
 	bool bezier = false;
 	f32 bezierUp[2] = { 0, 0 };

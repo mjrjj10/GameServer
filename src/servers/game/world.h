@@ -843,6 +843,8 @@ struct World
 	eastl::fixed_vector<CastHit,512,false> castHits;
 	struct RepeatHit { u32 castID; u32 targetIndex; i32 count; Time at; };
 	eastl::fixed_vector<RepeatHit,64,true> repeatHits;
+	f32 VolleyLockout(const Projectile& proj) const;
+	bool VolleyHitLocked(const Projectile& proj, u32 target);
 
 	struct ActiveStatus
 	{
