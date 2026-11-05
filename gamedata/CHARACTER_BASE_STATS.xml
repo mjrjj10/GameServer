@@ -968,6 +968,7 @@
     <STAT type="55" value="15" />
   </INFO>
   <INFO ID="100000037">
+    <STAT type="51" value="10" />
     <STAT type="0" value="1938" />
     <STAT type="36" value="100" />
     <STAT type="2" value="200" />
