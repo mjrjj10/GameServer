@@ -101,6 +101,8 @@ static const u32 PVP_ANNOUNCE_KILLED_BY_MONSTER = 8;
 
 static const f64 MULTI_KILL_WINDOW_MS = 15000.0;
 static const f64 DEAD_DAMAGE_WINDOW_MS = 15000.0;
+static const f64 MEASURED_MONSTER_KILL_CREDIT_MS = 10000.0;
+static const u32 PVP_ANNOUNCE_MONSTER_KILL_CREDITED = 11;
 static const f32 PENETRATION_CAP = 50.0f;
 static const f32 SKILLDAMAGE_REDUCE_CAP = 80.0f;
 static const f64 RESPAWN_BASE_UNTIL_SEC[] = { 50.0, 170.0 };
@@ -259,6 +261,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		return;
 	}
 
+	if(attacker.team != target.team) damage = (i32)(damage * GroupingDamageMul(attacker, target));
 	{
 		const RemoteIdx doc = proj ? proj->remoteDoc : remoteDoc;
 		const Remote* pr = doc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(doc) : nullptr;
@@ -584,6 +587,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 		}
 		npc.killerUID = attacker.Main().UID;
 		npc.despawnAt = localTime;
+		GroupingSummonKill(attacker, npc);
 	}
 }
 
@@ -701,10 +705,18 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	}
 	target.dead = true;
 	target.deaths++;
+	Player* credited = nullptr;
+	Time creditedAt = Time::ZERO;
+	foreach_const(d, target.recentDamage) {
+		if(d->attackerIndex >= players.size() || players[d->attackerIndex].team == target.team) continue;
+		if(localTime > TimeAdd(d->at, TimeMsToTime(MEASURED_MONSTER_KILL_CREDIT_MS)) || d->at < creditedAt) continue;
+		credited = &players[d->attackerIndex];
+		creditedAt = d->at;
+	}
 	if(!map || !map->ingameLevels) GrantSkillPoint(target);
 	DropTitanPieces(target);
 	DropMasterSoul(target);
-	RewardMasterKill(nullptr, target);
+	RewardMasterKill(credited, target);
 	RevertTitan(target);
 	target.occupyStreak = 0;
 	i32 teamKills = 0;
@@ -719,5 +731,11 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	target.recentDamage.clear();
 	LOG("Death :: %ls killed by creature %d (respawn %d ms)", target.name.data(), (i32)attacker.docID, respawnMs);
 	replication->SendDeathToAll(attacker.UID, chara.UID, attacker.docID, 0, (RemoteIdx)remote, target.userID, respawnMs);
-	if(replication->titanMode) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_KILLED_BY_MONSTER, 0, attacker.UID, chara.UID, KillPoints());
+	if(replication->titanMode && credited) {
+		credited->kills++;
+		replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_MONSTER_KILL_CREDITED, 0, credited->Main().UID, chara.UID, KillPoints());
+		AddPoints(*credited, (i32)KillPoints());
+		LOG("Death :: %ls kill credited to %ls", target.name.data(), credited->name.data());
+	}
+	else if(replication->titanMode) replication->SendPvpAnnouncementToAll(PVP_ANNOUNCE_KILLED_BY_MONSTER, 0, attacker.UID, chara.UID, KillPoints());
 }

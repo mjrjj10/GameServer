@@ -418,6 +418,16 @@ void World::ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID)
 	const vec3 pos = carrier.body->GetWorldPos();
 	replication->SendAddStatusToAll(statusID, npcUID, carrier.Main().UID, duration, pos, pos, 0, 1, 1.0f, -1.0f, false, false);
 	LOG("Status :: summon %u carries %ls status=%d duration=%.2f", (u32)npcUID, carrier.name.data(), statusID, duration);
+	if(ActorNpc* carried = info && info->npcMotion != ActionStateID::INVALID ? FindNpcActor(npcUID) : nullptr) {
+		if(carried->pendingMotion != ActionStateID::INVALID) {
+			const SummonInfo* motionInfo = GetGameXmlContent().FindSummon((i32)carried->docID);
+			replication->SendNpcBehaviorToAll(carried->UID, carried->pendingMotion, carried->pos, carried->motionTarget, carried->motionTargetUID, motionInfo ? motionInfo->moveSpeed : 0.0f);
+			carried->pendingMotion = ActionStateID::INVALID;
+		}
+		carried->actionState = info->npcMotion;
+		if(info->npcMotion == ActionStateID::LIFTED_BEHAVIORSTATE) RunSummonState(*carried, SUMMON_STATE_LIFTED);
+		replication->SendAiActionStateToAll(npcUID, info->npcMotion, carried->rot.z, pos, GetGameXmlContent().FindSummon((i32)carried->docID) && GetGameXmlContent().FindSummon((i32)carried->docID)->moveSpeed > 0);
+	}
 	if(npcStatuses.full()) return;
 	NpcStatus ns;
 	ns.npcUID = npcUID;
@@ -1312,7 +1322,7 @@ bool World::TeamSees(i32 team, const Player& target)
 	return TeamSeesAt(team, target.body->GetWorldPos(), target.bushUID);
 }
 
-bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID)
+bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack)
 {
 	const auto& content = GetGameXmlContent();
 	const vec3 eye = at + vec3(0, 0, FOG_EYE_HEIGHT);
@@ -1323,7 +1333,7 @@ bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID)
 		const vec3 from = p->body->GetWorldPos();
 		const f32 sight = content.CreatureSight(100000000 + (i32)p->Main().classType);
 		if(glm::length(vec2(from) - vec2(at)) > (sight > 0 ? sight : FOG_DEFAULT_SIGHT)) continue;
-		if(!physics.RaycastStatic(from + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit)) return true;
+		if(!physics.RaycastStatic(from + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit) || hit >= glm::length(vec2(from) - vec2(at)) - slack) return true;
 	}
 	if(bushUID != ActorUID::INVALID) return false;
 	foreach_const(lit, litCells) {
@@ -1337,9 +1347,31 @@ bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID)
 		if(npcTeam != team) continue;
 		const f32 sight = content.CreatureSight((i32)npc->docID);
 		if(sight <= 0 || glm::length(vec2(npc->pos) - vec2(at)) > sight) continue;
-		if(!physics.RaycastStatic(npc->pos + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit)) return true;
+		if(!physics.RaycastStatic(npc->pos + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit) || hit >= glm::length(vec2(npc->pos) - vec2(at)) - slack) return true;
 	}
 	return false;
+}
+
+void World::UpdateDynamicFog()
+{
+	static const f32 DYNAMIC_FOG_SLACK = 250.0f;
+	foreach(d, actorDynamicList) {
+		bool sees[2];
+		for(i32 team = 0; team < 2; team++) sees[team] = TeamSeesAt(team, d->pos, ActorUID::INVALID, DYNAMIC_FOG_SLACK);
+		foreach(viewer, players) {
+			if(viewer->clientHd == ClientHandle::INVALID || viewer->team > 1) continue;
+			const u32 bit = 1u << viewer->index;
+			const bool hidden = (d->fogHiddenFrom & bit) != 0;
+			if(!sees[viewer->team] && !hidden && !viewer->devVision) {
+				replication->SendLeaveActor(viewer->clientHd, d->UID);
+				d->fogHiddenFrom |= bit;
+			}
+			else if((sees[viewer->team] || viewer->devVision) && hidden) {
+				replication->SendEnterDynamic(viewer->clientHd, d->UID, d->pos, d->rot.z, d->action);
+				d->fogHiddenFrom &= ~bit;
+			}
+		}
+	}
 }
 
 void World::UpdateFog()
@@ -1376,6 +1408,7 @@ void World::UpdateFog()
 	}
 	RefreshBushStates();
 	UpdateNpcFog();
+	UpdateDynamicFog();
 	foreach(p, players) {
 		if(p->body && !p->dead && p->hiddenUID != ActorUID::INVALID) p->fogSeenBy = (u8)(p->team == 0 ? 1 : 2);
 		if(!p->body || p->dead || p->hiddenUID != ActorUID::INVALID) continue;
@@ -1475,7 +1508,7 @@ void World::UpdateSkillPoints()
 			it->nextSkillPointAt = TimeAdd(it->nextSkillPointAt, TimeMsToTime(SKILL_POINT_INTERVAL_MS));
 			GrantSkillPoint(*it);
 		}
-		if(!botUpgrades || (it->clientHd != ClientHandle::INVALID && Config().DevStartLevel <= 0) || it->skillPoints <= 0 || it->dead) continue;
+		if(!botUpgrades || (it->clientHd != ClientHandle::INVALID && Config().DevStartLevel <= 0 && Config().DevPilotUpgrades <= 0) || it->skillPoints <= 0 || it->dead) continue;
 		for(i32 tries = 0; tries < (i32)ARRAY_COUNT(BOT_UPGRADE_ORDER) && it->skillPoints > 0; tries++) {
 			const i32 turn = it->botUpgradeTurn++;
 			const i32 slot = turn < MEASURED_BOT_SKILL_FIRST_UPGRADES ? turn % 2 : BOT_UPGRADE_ORDER[(turn - MEASURED_BOT_SKILL_FIRST_UPGRADES) % ARRAY_COUNT(BOT_UPGRADE_ORDER)];

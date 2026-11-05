@@ -741,7 +741,7 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 				if(damage > 0) { npcHitCenter = vec3(origin, mr.pos.z); npcHitCenterSet = true; DamagePlayerFromNpc(owner, *p, damage, (i32)remote.ID, 0, remoteID); npcHitCenterSet = false; }
 				applyStatuses(remote.statuses, &*p, nullptr);
 			}
-			else applyStatuses(remote.friendlyStatuses, &*p, nullptr);
+			else applyStatuses(remote.damageGroup == Remote::DamageGroup::eFRIEND && remote.friendlyStatuses.empty() ? remote.statuses : remote.friendlyStatuses, &*p, nullptr);
 			mr.activations--;
 		}
 	}
@@ -757,7 +757,7 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 				if(damage > 0) { npcHitCenter = vec3(origin, mr.pos.z); npcHitCenterSet = true; DamageNpcFromNpc(owner, *o, damage, (i32)remote.ID, remoteID, 0); npcHitCenterSet = false; }
 				applyStatuses(remote.statuses, nullptr, &*o);
 			}
-			else applyStatuses(remote.friendlyStatuses, nullptr, &*o);
+			else applyStatuses(remote.damageGroup == Remote::DamageGroup::eFRIEND && remote.friendlyStatuses.empty() ? remote.statuses : remote.friendlyStatuses, nullptr, &*o);
 			mr.activations--;
 		}
 	}
@@ -772,6 +772,7 @@ void World::UpdateMonsterRemotes(f32 delta)
 		ActorNpc& owner = *ownerIt->second;
 		MonsterRemote& mr = monsterRemotes[i];
 		const Remote& remote = *mr.remote;
+		if(remote.attachFireObject && remote.maxSpeed <= 0) mr.dir = vec2(cosf(owner.rot.z), sinf(owner.rot.z));
 		if(remote.attachFireObject) mr.pos = vec3(vec2(owner.pos) + mr.dir * remote.offsetY, owner.pos.z);
 		bool expired = localTime >= mr.expire;
 		if(remote.maxSpeed > 0 && !mr.impacted) {
@@ -1294,6 +1295,7 @@ void World::UpdateMonsterAi(f32 delta)
 		const GameXmlContent::MonsterAi& ai = *npc.monsterAi;
 		const f32 walk = ai.walk * npc.speedMul;
 		const f32 run = ai.run * npc.speedMul;
+		UpdateMonsterAllyBuffs(npc);
 		UpdateNpcDefeat(npc);
 		UpdateNpcVictory(npc);
 		UpdateMonsterDash(npc);
@@ -1302,6 +1304,9 @@ void World::UpdateMonsterAi(f32 delta)
 			if(localTime < TimeAdd(npc.spawnedAt, TimeMsToTime(MAX(MONSTER_START_DELAY_MS, (f64)ai.spawnTime * 1000.0)))) continue;
 			npc.monsterStarted = true;
 			if(map && map->ingameLevels) foreach_const(st, ai.spawnStatuses) ApplyMonsterStatus(npc, *st, true);
+			if(map && map->ingameLevels) foreach_const(r, ai.spawnRemotes) {
+				if(const Remote* remote = GetGameXmlContent().FindRemote((RemoteIdx)*r)) SpawnMonsterRemote(npc, *remote, npc.pos, vec2(cosf(npc.rot.z), sinf(npc.rot.z)), ActorUID::INVALID, true);
+			}
 			npc.actionState = ActionStateID::NONE_BEHAVIORSTATE;
 			if(ai.idle != ActionStateID::INVALID) {
 				npc.actionState = ai.idle;
@@ -1555,6 +1560,10 @@ void World::UpdateMonsterAi(f32 delta)
 			npc.actionState = ai.lowHpState;
 			replication->SendMonsterStateToAll(npc.UID, ai.lowHpState, npc.pos, run);
 			foreach_const(st, ai.lowHpStatuses) ApplyMonsterStatus(npc, *st, true);
+			foreach(mr, monsterRemotes) {
+				if(mr->owner != npc.UID) continue;
+				foreach_const(r, ai.lowHpRemoveRemotes) if((i32)mr->remote->ID == *r) mr->expire = localTime;
+			}
 			npc.monsterHoldUntil = TimeAdd(localTime, TimeMsToTime(ai.lowHpTime * 1000.0));
 			LOG("Monster :: creature=%d (local %d) below %.0f%% hp plays %s", (i32)npc.docID, npc.localID, ai.lowHpRatio * 100.0f, ActionStateToString(ai.lowHpState));
 			continue;
@@ -1570,15 +1579,23 @@ void World::UpdateMonsterAi(f32 delta)
 				if(localTime >= npc.monsterNextAttack) {
 					const f32 hpNow = npc.hpMax > 0 ? (f32)npc.hp / (f32)npc.hpMax : 1.0f;
 					i32 farIndex = -1;
+					eastl::fixed_vector<i32,16,false> farReady;
+					f32 farShare = 0;
 					for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)npc.monsterSkillReady.size(); s++) {
 						const GameXmlContent::MonsterAttack& special = ai.attacks[s];
-						if(!special.special || special.minRange <= 0 || special.target != attack->target) continue;
+						if(!special.special || special.target != attack->target || special.range <= reach || (special.minRange <= 0 && (npc.path || ai.tagKey == StatusTypeKey("Minion") || ai.tagKey == StatusTypeKey("Titan")))) continue;
 						if(hpNow < special.hpMin || hpNow > special.hpMax || dist < special.minRange || dist > special.range) continue;
 						if(npc.monsterSkillReady[s] == Time::ZERO) npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime((special.firstAt >= 0 ? special.firstAt : special.cooldown) * 1000.0));
 						if(localTime < npc.monsterSkillReady[s]) continue;
-						farIndex = s;
-						break;
+						farReady.push_back(s);
+						farShare += special.share;
 					}
+					f32 farRoll = (f32)(RandUint() % 10000) / 10000.0f * farShare;
+					foreach_const(s, farReady) {
+						if(farRoll < ai.attacks[*s].share) { farIndex = *s; break; }
+						farRoll -= ai.attacks[*s].share;
+					}
+					if(farIndex < 0 && !farReady.empty()) farIndex = farReady.back();
 					if(farIndex >= 0) {
 						const GameXmlContent::MonsterAttack& farAttack = ai.attacks[farIndex];
 						MonsterStateCooldown(npc.monsterSkillReady, ai, farAttack.state, TimeAdd(localTime, TimeMsToTime(farAttack.cooldown * 1000.0)));
@@ -1682,6 +1699,7 @@ void World::UpdateMonsterAi(f32 delta)
 			}
 			npc.actionState = ActionStateID::NONE_BEHAVIORSTATE;
 			replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, walk);
+			npc.monsterNextSync = localTime;
 		}
 		StartMonsterWalkState(npc, ai, walk);
 		const i32 pointBefore = npc.pathPoint;
@@ -1701,4 +1719,20 @@ void World::UpdateMonsterAi(f32 delta)
 			replication->SendMonsterMoveToAll(npc.UID, npc.pos, (*npc.path)[npc.pathPoint], npc.rot.z, walk);
 		}
 	}
+}
+
+void World::UpdateMonsterAllyBuffs(ActorNpc& npc)
+{
+	const GameXmlContent::MonsterAi& ai = *npc.monsterAi;
+	if(ai.allyBuffs.empty() || ai.allyBuffInterval <= 0 || npc.hp <= 0 || localTime < npc.allyBuffAt) return;
+	npc.allyBuffAt = TimeAdd(localTime, TimeMsToTime((f64)ai.allyBuffInterval * 1000.0));
+	u32 count = 0;
+	foreach_const(p, players) {
+		if(p->dead || !p->body || (Faction)p->team != npc.faction) continue;
+		if(glm::length(vec2(p->body->GetWorldPos()) - vec2(npc.pos)) <= ai.allyBuffRadius) count++;
+	}
+	const u8 level = (u8)MIN(count, (u32)ai.allyBuffs.size());
+	if(npc.allyBuffLevel > 0 && npc.allyBuffLevel != level) ApplyMonsterStatus(npc, ai.allyBuffs[npc.allyBuffLevel - 1], false);
+	if(level > 0) ApplyMonsterStatus(npc, ai.allyBuffs[level - 1], true);
+	npc.allyBuffLevel = level;
 }

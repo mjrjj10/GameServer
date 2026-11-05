@@ -308,7 +308,17 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 		if(!NpcHittableBy(*npc, owner)) continue;
 		const f32 d = glm::length(vec2(npc->pos) - vec2(center));
 		if(d > radius + NpcHitRadius(*npc)) continue;
-		DamageNpc(owner, *npc, SkillID::INVALID, (i32)(damage * (bombRemote ? RemoteDistanceFalloff(*bombRemote, d) : 1.0f)));
+		Replication::RemoteDamage hit;
+		if(source) {
+			hit.remoteID = hitInfo.remoteID;
+			hit.remoteDoc = hitInfo.remoteDoc;
+			hit.remotePos = vec3(vec2(center), npc->pos.z);
+			hit.dir = hitInfo.dir;
+			hit.seedOwnerHd = hitInfo.seedOwnerHd;
+		}
+		DamageNpc(owner, *npc, SkillID::INVALID, (i32)(damage * (bombRemote ? RemoteDistanceFalloff(*bombRemote, d) : 1.0f)), source ? &hit : nullptr);
+		if(!bombRemote || npc->hp <= 0) continue;
+		foreach_const(st, bombRemote->statuses) if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(owner, *npc, StanceUpgradedStatus(owner, st->statusID), false);
 	}
 	if(bombRemote && !bombRemote->friendlyStatuses.empty()) {
 		foreach(it, players) {
@@ -322,14 +332,18 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 		}
 		const Faction ownFaction = owner.team == 0 ? Faction::RED : Faction::BLUE;
 		foreach(npc, actorNpcList) {
-			if(npc->ownerUID == ActorUID::INVALID || npc->faction != ownFaction || npc->hp <= 0 || npc->hp >= npc->hpMax) continue;
+			if(npc->faction != ownFaction || npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
 			if(glm::length(vec2(npc->pos) - vec2(center)) > radius + NpcHitRadius(*npc)) continue;
 			foreach_const(st, bombRemote->friendlyStatuses) {
+				if(st->rate < 100 && (i32)(RandUint() % 100) >= st->rate) continue;
 				const StatusInfo* flagged = GetGameXmlContent().FindStatus(st->statusID);
-				const StatusInfo* info = flagged && flagged->flagEffectStatus != 0 ? GetGameXmlContent().FindStatus(flagged->flagEffectStatus) : flagged;
-				if(!info || info->descHealPct <= 0) continue;
+				if(!flagged) continue;
+				replication->SendAddStatusToAll(flagged->ID, npc->UID, owner.Main().UID, StatusSentDuration(*flagged), npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false);
+				const StatusInfo* info = flagged->flagEffectStatus != 0 ? GetGameXmlContent().FindStatus(flagged->flagEffectStatus) : nullptr;
+				if(!info || npc->ownerUID == ActorUID::INVALID) continue;
+				replication->SendAddStatusToAll(info->ID, npc->UID, npc->UID, StatusSentDuration(*info), npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false);
+				if(info->descHealPct <= 0 || npc->hp >= npc->hpMax) continue;
 				npc->hp = MIN(npc->hp + (i32)(npc->hpMax * info->descHealPct / 100.0f), npc->hpMax);
-				replication->SendAddStatusToAll(info->ID, npc->UID, owner.Main().UID, StatusSentDuration(*info), npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false);
 				replication->SendHpToAll(npc->UID, npc->hp, npc->hpMax);
 				LOG("Summon :: creature=%d repaired %.0f%% by %ls (hp %d/%d)", (i32)npc->docID, info->descHealPct, owner.name.data(), npc->hp, npc->hpMax);
 			}
@@ -427,6 +441,13 @@ void World::UpdateProjectiles(f32 delta)
 			const Remote* shotRemote = GetGameXmlContent().FindRemote(proj->remoteDoc);
 			vec2 contact;
 			RemoteInst* reflector = shotRemote && shotRemote->canReflect ? FindProjectileReflector(*proj, from, to, &contact) : nullptr;
+			if(!reflector && shotRemote && shotRemote->canReflect) {
+				if(const MonsterRemote* blocker = FindMonsterProjectileBlocker(*proj, from, to)) {
+					LOG("Shot :: remote %d blocked by creature remote %d", (i32)proj->remoteDoc, (i32)blocker->remote->ID);
+					proj = projectileList.erase_unsorted(proj);
+					continue;
+				}
+			}
 			if(reflector) {
 				const Projectile src = *proj;
 				proj = projectileList.erase_unsorted(proj);
@@ -877,6 +898,33 @@ World::RemoteInst* World::FindProjectileReflector(const Projectile& proj, const 
 			if(!inside) continue;
 			*contact = p;
 			return &*inst;
+		}
+	}
+	return nullptr;
+}
+
+const World::MonsterRemote* World::FindMonsterProjectileBlocker(const Projectile& proj, const vec2& from, const vec2& to)
+{
+	const Player& shooter = players[proj.ownerIndex];
+	const f32 len = glm::length(to - from);
+	const i32 steps = MAX((i32)(len / REFLECT_SAMPLE_STEP), 1);
+	foreach_const(mr, monsterRemotes) {
+		if(!mr->remote || !mr->remote->vsRemote || localTime >= mr->expire) continue;
+		const ActorNpc* owner = FindNpcActor(mr->owner);
+		if(!owner || owner->hp <= 0 || (owner->faction != Faction::RED && owner->faction != Faction::BLUE) || owner->faction == (Faction)shooter.team) continue;
+		const Remote& r = *mr->remote;
+		for(i32 k = 0; k <= steps; k++) {
+			const vec2 p = from + (to - from) * ((f32)k / (f32)steps);
+			const vec2 rel = p - vec2(mr->pos) - mr->dir * RemoteBoundOffset(r);
+			bool inside;
+			if(r.boundType == Remote::BoundType::E_BOUND_SPHERE) inside = glm::length(rel) <= r.boundSize[0] * 0.5f + proj.halfWidth;
+			else {
+				const f32 length = r.boundSize[1];
+				const vec2 local = rel + mr->dir * (length * 0.5f);
+				const f32 along = glm::dot(local, mr->dir);
+				inside = along >= -proj.halfWidth && along <= length + proj.halfWidth && fabsf(glm::dot(local, Perp(mr->dir))) <= r.boundSize[0] * 0.5f + proj.halfWidth;
+			}
+			if(inside) return &*mr;
 		}
 	}
 	return nullptr;

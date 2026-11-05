@@ -46,7 +46,9 @@ static f32 SummonPassStart(const SummonInfo& info, i32 state, i32 pass)
 void World::RunSummonState(ActorNpc& npc, i32 state)
 {
 	const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc.docID);
-	if(!info || state < 0 || state > 20) return;
+	if(!info || state < 0 || state > SUMMON_STATE_LIFTED) return;
+	const bool lifted = state == SUMMON_STATE_LIFTED;
+	const auto& commands = lifted ? info->onLifted : info->skillStates[state];
 	Player& owner = players[npc.ownerIndex];
 	Player* current = &owner;
 	if(npc.ai == SummonInfo::AI_CHASE) {
@@ -67,7 +69,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 		const vec2 rel = vec2(targetNpc->pos) - vec2(npc.pos);
 		if(glm::length(rel) > 1.0f) yaw = atan2f(rel.y, rel.x);
 	}
-	{
+	if(!lifted) {
 		eastl::fixed_string<char,48,false> name;
 		name.sprintf("SKILL_%d_BEHAVIORSTATE", state);
 		const ActionStateID action = ActionStateFromString(name.c_str());
@@ -98,8 +100,8 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 	}
 	f32 t = 0;
 	i32 pass = 0;
-	foreach_const(c, info->skillStates[state]) {
-		if(c->animIndex > pass) {
+	foreach_const(c, commands) {
+		if(!lifted && c->animIndex > pass) {
 			pass = c->animIndex;
 			t = SummonPassStart(*info, state, pass);
 		}
@@ -415,6 +417,7 @@ void World::UpdateSummonAi(f32 delta)
 			}
 		}
 		else {
+			if(npc.standAt != Time::ZERO && localTime < npc.standAt) continue;
 			ActorMaster* tm = FindMasterActor(npc.chaseTarget);
 			Player* target = tm ? tm->parent : nullptr;
 			const ActorNpc* npcTarget = target ? nullptr : FindNpcActor(npc.chaseTarget);
@@ -422,7 +425,10 @@ void World::UpdateSummonAi(f32 delta)
 			if(npc.stuck) {
 				if((!target || target->dead) && !npcTarget) {
 					npc.stuck = false;
-					if(npc.chaseTarget != ActorUID::INVALID) replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
+					if(npc.chaseTarget != ActorUID::INVALID) {
+						replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
+						replication->SendBattleStateToAll(npc.UID, false, info->normalMoveSpeed);
+					}
 					npc.chaseTarget = ActorUID::INVALID;
 					continue;
 				}
@@ -454,6 +460,7 @@ void World::UpdateSummonAi(f32 delta)
 				}
 				if(chosen != npc.chaseTarget) {
 					replication->SendAiSetTargetToAll(npc.UID, chosen);
+					if((chosen != ActorUID::INVALID) != (npc.chaseTarget != ActorUID::INVALID)) replication->SendBattleStateToAll(npc.UID, chosen != ActorUID::INVALID, chosen != ActorUID::INVALID ? info->moveSpeed : info->normalMoveSpeed);
 					if(chosen != ActorUID::INVALID && (npc.extraMotion == 2 || npc.extraMotion == 3)) PlaySummonExtraMotion(npc, *info, 1);
 					else if(chosen == ActorUID::INVALID && npc.extraMotion == 1) PlaySummonExtraMotion(npc, *info, 3);
 				}
@@ -771,6 +778,11 @@ void World::UpdateSummons()
 			}
 			else ++it;
 			continue;
+		}
+		if(it->ownerUID == ActorUID::INVALID && it->actionState == ActionStateID::SPAWN_BEHAVIORSTATE && it->stateEndAt != Time::ZERO && localTime >= it->stateEndAt) {
+			it->stateEndAt = Time::ZERO;
+			it->actionState = ActionStateID::NONE_BEHAVIORSTATE;
+			replication->SendMonsterStateToAll(it->UID, ActionStateID::NONE_BEHAVIORSTATE, it->pos, it->monsterAi ? it->monsterAi->run * it->speedMul : 0.0f);
 		}
 		if(it->standAt != Time::ZERO && localTime >= it->standAt) {
 			it->standAt = Time::ZERO;

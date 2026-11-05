@@ -3869,6 +3869,20 @@ inline const char* PacketSerialize<Sv::SN_BushState>(const void* packetData, con
 }
 
 template<>
+inline const char* PacketSerialize<Sv::SN_UpdateMasterGroupingEffect>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	ConstBuffer buff(packetData, packetSize);
+	SER("SN_UpdateMasterGroupingEffect(%d, %d) :: {", Sv::SN_UpdateMasterGroupingEffect::NET_ID, packetSize);
+	SER("	instanceID=%u", buff.Read<u32>());
+	SER("	index=%d", buff.Read<i32>());
+	SER("	classType=%d", buff.Read<i32>());
+	SER("	activate=%d", buff.Read<u8>());
+	SER("}");
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<Sv::SN_DespawnMonster>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

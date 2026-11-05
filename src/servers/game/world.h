@@ -155,6 +155,8 @@ struct World
 		ActorUID bushUID = ActorUID::INVALID;
 		ActorUID fogHiddenUID = ActorUID::INVALID;
 		u8 fogSeenBy = 3;
+		eastl::fixed_vector<i32,8,false> groupings;
+		ActorUID groupingMaster = ActorUID::INVALID;
 		eastl::array<Time,2> fogRevealUntil = {{ Time::ZERO, Time::ZERO }};
 		eastl::array<u32,9> damageStats = {};
 		struct MasterScore { i32 kills = 0; i32 deaths = 0; i32 assists = 0; i64 damageDealt = 0; eastl::array<u32,9> damageStats = {}; f64 activeSec = 0; };
@@ -546,6 +548,8 @@ struct World
 		f32 speedMul = 1.0f;
 		u8 victoryStep = 0;
 		u8 hpBuffLevel = 0;
+		u8 allyBuffLevel = 0;
+		Time allyBuffAt = Time::ZERO;
 		Time victoryPendingAt = Time::ZERO;
 		Time victoryNext = Time::ZERO;
 		Time victoryHealAt = Time::ZERO;
@@ -610,6 +614,7 @@ struct World
 		Time tLastActionChange;
 		vec3 pos;
 		vec3 rot;
+		u32 fogHiddenFrom = 0;
 		PxRigidStatic* collider = nullptr;
 		eastl::fixed_vector<Time,16,false> hits;
 		i32 destroyHits = 0;
@@ -1216,6 +1221,7 @@ public:
 	f32 OwnerRemoteSpeedRatio(const Player& player) const;
 	u16 DefaultWeaponCreator(const Player& player, const WeaponFiring& wf) const;
 	RemoteInst* FindProjectileReflector(const Projectile& proj, const vec2& from, const vec2& to, vec2* contact);
+	const MonsterRemote* FindMonsterProjectileBlocker(const Projectile& proj, const vec2& from, const vec2& to);
 	void ReflectProjectile(const Projectile& src, RemoteInst& reflector, const vec2& contact);
 	void RecoverWeaponHeat(Player& player, f32 amount);
 	void DropPendingActions(Player& player);
@@ -1266,6 +1272,7 @@ public:
 	i32 LevelNodeOverride(const GameXmlContent::LevelEventNode& node) const;
 	i32 AreaOwnerTeam(const GameXmlContent::Map::Area& area) const;
 	void ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply);
+	void UpdateMonsterAllyBuffs(ActorNpc& npc);
 	f32 NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info);
 	bool StartNpcPush(ActorNpc& npc, const StatusInfo* info, const vec3& source, vec3* to, f32* nominal, f32* graphSec);
 	void ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 statusID);
@@ -1415,7 +1422,8 @@ public:
 	void RefreshBushStates();
 	bool TakeGroundItem(Player& player, u32 itemUID, GroundItem* taken = nullptr);
 	eastl::fixed_vector<GroundItem,256,false> groundItems;
-	struct LevelEventTimer { i32 node; Time at; i32 playerIndex; i32 fromNode; };
+	struct LevelEventTimer { i32 node; Time at; i32 playerIndex; i32 fromNode; bool clientSeq = false; };
+	bool levelClientSeq = false;
 	struct DialogEnd { Time at; i32 playerIndex; };
 	eastl::fixed_vector<DialogEnd,8,true> dialogEnds;
 	struct MonsterCall { i32 node; Time at; i32 remaining; i32 playerIndex; };
@@ -1446,7 +1454,7 @@ public:
 	void ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool remove);
 	i32 AbsorbNpcShield(const ActorNpc& npc, i32 dealt);
 	bool TeleportNextToTarget(Player& player, ActorUID target);
-	eastl::fixed_vector<NpcStatus,128,false> npcStatuses;
+	eastl::fixed_vector<NpcStatus,512,false> npcStatuses;
 	void ToggleOn(Player& player, SkillID skillID, const vec3& castPos);
 	void ToggleOff(Player& player);
 	void UpdateToggles();
@@ -1456,8 +1464,15 @@ public:
 	void BreakHide(Player& player);
 	void UpdateHideVisibility();
 	void UpdateFog();
+	void UpdateMasterGroupings();
+	void SpawnRespawnFlyRemote(Player& player);
+	bool GroupingPartnerPresent(const Player& p, const MasterGrouping& g, ClassType partner) const;
+	f32 GroupingStatMod(const Player& p, i32 stat, bool mul) const;
+	f32 GroupingDamageMul(const Player& attacker, const Player& target) const;
+	void GroupingSummonKill(Player& killer, const ActorNpc& summon);
 	bool TeamSees(i32 team, const Player& target);
-	bool TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID);
+	bool TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack = 0);
+	void UpdateDynamicFog();
 	bool PlayerHasActiveStatus(const Player& player, i32 statusID) const;
 	void EndPlayerStatus(Player& player, i32 statusID);
 	void BushRevealOnFire(Player& player);

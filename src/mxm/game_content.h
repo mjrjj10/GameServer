@@ -143,6 +143,7 @@ struct SummonInfo
 	i32 clearComboOnDeath = 0;
 	eastl::fixed_vector<SummonCommand,12,false> onSpawn;
 	eastl::fixed_vector<SummonCommand,12,false> onDie;
+	eastl::fixed_vector<SummonCommand,12,false> onLifted;
 	f32 lifeTime = 0;
 	f32 moveSpeed = 0;
 	f32 normalMoveSpeed = 0;
@@ -174,6 +175,19 @@ struct StatusMod
 	bool mul = false;
 	f32 value = 0;
 	f32 count = 0;
+};
+
+struct MasterGrouping
+{
+	enum Kind: u8 { FRIENDLY = 0, ENEMY, PAIR, ALL };
+	enum Apply: u8 { ALWAYS = 0, HIT, KILL_SUMMONEE, OTHER };
+	enum Effect: u8 { NONE = 0, STAT, DAMAGE_BONUS, DAMAGE_REDUCE, CONSUMABLE_STAT, EXP };
+	struct Mod { StatusMod::Stat stat = StatusMod::OTHER; i32 statType = -1; bool mul = false; f32 value = 0; };
+	struct Unit { ClassType classType = ClassType::NONE; Effect effect = NONE; f32 value = 0; eastl::fixed_vector<Mod,4,false> mods; };
+	i32 id = 0;
+	Kind kind = FRIENDLY;
+	Apply apply = ALWAYS;
+	eastl::fixed_vector<Unit,4,false> units;
 };
 
 enum class Element: u8 { NONE, RED, GREEN, BLUE };
@@ -279,6 +293,9 @@ struct StatusInfo
 	f32 drainMultiplier = 0;
 	i32 skillIndex = 0;
 	ActionStateID motionAction = ActionStateID::INVALID;
+	ActionStateID npcMotion = ActionStateID::INVALID;
+	enum TagMode: u8 { TAG_STAY, TAG_MOVE, TAG_DROP };
+	TagMode tagMode = TAG_STAY;
 	f32 intervalSec = 0;
 	f32 distance = 0;
 	f32 paramRatio = 0;
@@ -784,6 +801,7 @@ struct GameXmlContent
 		bool enter = false;
 		bool active = false;
 		bool dialogLine = false;
+		bool seqRoot = false;
 		f32 retrigger = 0;
 		i32 maxTriggers = 0;
 		i32 statusIndex = 0;
@@ -1284,6 +1302,8 @@ struct GameXmlContent
 		f32 bodyBlockHeight = 0;
 		eastl::fixed_vector<i32,8,false> spawnStatuses;
 		eastl::fixed_vector<i32,4,false> dieRemotes;
+		eastl::fixed_vector<i32,4,false> spawnRemotes;
+		eastl::fixed_vector<i32,4,false> lowHpRemoveRemotes;
 		u32 tagKey = 0;
 		ActionStateID idle = ActionStateID::INVALID;
 		ActionStateID awake = ActionStateID::INVALID;
@@ -1303,6 +1323,11 @@ struct GameXmlContent
 		f32 victoryStatusDelay = 0;
 		f32 victoryHeal = 0;
 		eastl::fixed_vector<eastl::pair<f32,i32>,8,false> hpBuffs;
+		f32 hpBuffSpeedStep = 0;
+		i32 ccArmorStatus = 0;
+		eastl::fixed_vector<i32,5,false> allyBuffs;
+		f32 allyBuffRadius = 0;
+		f32 allyBuffInterval = 0;
 		eastl::fixed_vector<i32,4,false> groggyStatuses;
 		eastl::fixed_vector<StatusType,8,false> ccTypes;
 		eastl::fixed_vector<u32,10,false> enemyTags;
@@ -1624,6 +1649,12 @@ struct GameXmlContent
 	eastl::hash_map<i32, f32> stageTeleportDistance;
 	eastl::hash_map<i32, f32> statusShield;
 	eastl::hash_map<i32, f32> creatureSight;
+	eastl::fixed_vector<MasterGrouping,32,false> masterGroupings;
+	i32 respawnFlyRemote = 0;
+	const MasterGrouping* FindMasterGrouping(i32 id) const { foreach_const(g, masterGroupings) if(g->id == id) return &*g; return nullptr; }
+	eastl::hash_map<i32, eastl::fixed_string<char,48,false>> creatureKfm;
+	eastl::hash_map<eastl::string, i32> monsterSpawnAnim;
+	f32 MonsterSpawnSec(i32 doc) const { auto k = creatureKfm.find(doc); if(k == creatureKfm.end()) return 0.0f; auto a = monsterSpawnAnim.find(eastl::string(k->second.c_str())); return a == monsterSpawnAnim.end() ? 0.0f : GetAniSeqTime(k->second.c_str(), a->second); }
 	eastl::hash_map<i32, vec2> bushSize;
 	eastl::hash_set<i32> teamGateDocs;
 	bool IsTeamGate(i32 doc) const { return teamGateDocs.find(doc) != teamGateDocs.end(); }
@@ -1794,6 +1825,9 @@ private:
 	bool LoadCharacterElements();
 	bool LoadSummons();
 	bool LoadSightData();
+	bool LoadMasterGroupings();
+	bool LoadFixedData();
+	bool LoadTagStatuses();
 	void LoadSummonInfo(tinyxml2::XMLElement* pInfo);
 	bool LoadStageTimeLimits();
 	bool LoadAnimationSequenceTimes();

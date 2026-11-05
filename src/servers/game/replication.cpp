@@ -693,6 +693,21 @@ void Replication::SendDestroyGroundItemToAll(u32 itemUID)
 	}
 }
 
+void Replication::SendClientLevelEventSeqToAll(i32 eventID, ActorUID caller)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		Sv::SN_RunClientLevelEventSeq seq;
+		seq.needCompleteTriggerAckID = -1;
+		seq.rootEventID = eventID;
+		const LocalActorID callerLocal = caller != ActorUID::INVALID ? GetLocalActorID(clientHd, caller) : LocalActorID::INVALID;
+		seq.caller = callerLocal != LocalActorID::INVALID ? (u32)callerLocal : 0;
+		seq.serverTime = (i64)TimeDiffMs(TimeRelNow());
+		SendPacket(clientHd, seq);
+	}
+}
+
 void Replication::SendClientLevelEventSeq(ClientHandle clientHd, i32 eventID)
 {
 	Sv::SN_RunClientLevelEventSeq seq;
@@ -2565,6 +2580,18 @@ void Replication::SendResistStatusToAll(ActorUID targetUID, ActorUID casterUID, 
 	}
 }
 
+void Replication::SendMasterGroupingEffect(ClientHandle clientHd, ActorUID masterUID, i32 index, ClassType classType, bool activate)
+{
+	const LocalActorID localID = GetLocalActorID(clientHd, masterUID);
+	if(localID == LocalActorID::INVALID) return;
+	Sv::SN_UpdateMasterGroupingEffect packet;
+	packet.instanceID = localID;
+	packet.index = index;
+	packet.classType = classType;
+	packet.activate = activate ? 1 : 0;
+	SendPacket(clientHd, packet);
+}
+
 void Replication::SendBattleStateToAll(ActorUID actorUID, bool inBattle, f32 baseMoveSpeed)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
@@ -2899,6 +2926,31 @@ void Replication::SendEnterNpc(ClientHandle clientHd, ActorUID actorUID, Creatur
 	stat._MAX = (f32)hpMax;
 	stat._ReasonCode = 0;
 	SendPacket(clientHd, stat);
+}
+
+void Replication::SendEnterDynamic(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, f32 yaw, ActionStateID action)
+{
+	const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+	if(localID == LocalActorID::INVALID) return;
+	auto found = playerMap.find(clientHd);
+	if(found != playerMap.end()) playerLocalInfo[found->second].hiddenActors.erase(actorUID);
+	PacketWriter<Sv::SN_GameEnterActor,512> packet;
+	packet.Write<u8>(1);
+	packet.Write<LocalActorID>(localID);
+	packet.Write<float3>(v2f(pos));
+	packet.Write<float3>(float3{ cosf(yaw), sinf(yaw), 0 });
+	packet.Write<float2>(float2{ 0, 0 });
+	packet.Write<float2>(float2{ 0, 0 });
+	packet.Write<float3>(float3{ 0, 0, 0 });
+	packet.Write<u8>(0);
+	packet.Write<f32>(0);
+	packet.Write<ActionStateID>(action);
+	packet.Write<i32>(0);
+	packet.Write<u16>(0);
+	packet.Write<u16>(0);
+	packet.Write<u16>(0);
+	packet.Write<u16>(0);
+	SendPacket(clientHd, packet);
 }
 
 void Replication::SendLeaveActor(ClientHandle clientHd, ActorUID actorUID)
@@ -3543,7 +3595,8 @@ void Replication::UpdatePlayersLocalState()
 
 			const auto prevNpc = framePrev->npcMap.find(actorUID);
 			const bool deadNpc = prevNpc != framePrev->npcMap.end() && (prevNpc->second->hp <= 0 || prevNpc->second->actionState == ActionStateID::DIE_BEHAVIORSTATE);
-			if(!deadNpc) SendActorDestroy(clientHd, actorUID);
+			const bool despawned = prevNpc != framePrev->npcMap.end() || framePrev->dynamicMap.find(actorUID) != framePrev->dynamicMap.end();
+			if(!deadNpc) SendActorDestroy(clientHd, actorUID, despawned);
 
 			// Remove LocalActorID link
 			DeleteLocalActorID(pi, actorUID);
@@ -4192,6 +4245,16 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 
 		SendPacket(clientHd, packet);
 	}
+	if(actor.ownerUID == ActorUID::INVALID && actor.actionState == ActionStateID::SPAWN_BEHAVIORSTATE) {
+		PacketWriter<Sv::SN_AiSetActionState,32> packet;
+		packet.Write<u8>(0);
+		packet.Write<LocalActorID>(localActorID);
+		packet.Write<i16>((i16)ActionStateID::SPAWN_BEHAVIORSTATE);
+		packet.Write<i16>(WorldYawToMonsterDeciDegrees(actor.dir.z));
+		packet.Write<u16>((u16)MIN(actor.stateSpeed * NPC_SPEED_SCALE, 65535.0f));
+		packet.Write(spawnPos);
+		SendPacket(clientHd, packet);
+	}
 	if(actor.ownerUID != ActorUID::INVALID) {
 		const SummonInfo* info = GetGameXmlContent().FindSummon((i32)actor.docID);
 		PacketWriter<Sv::SN_AiSetActionState,32> packet;
@@ -4280,13 +4343,20 @@ void Replication::SendActorDynamicSpawn(ClientHandle clientHd, const ActorDynami
 	}
 }
 
-void Replication::SendActorDestroy(ClientHandle clientHd, ActorUID actorUID)
+void Replication::SendActorDestroy(ClientHandle clientHd, ActorUID actorUID, bool despawned)
 {
 	const i32 clientID = playerMap.at(clientHd);
 	auto found = playerLocalInfo[clientID].localActorIDMap.find(actorUID);
 	ASSERT(found != playerLocalInfo[clientID].localActorIDMap.end());
 	const LocalActorID localActorID = found->second;
 
+	if(despawned) {
+		Sv::SN_DespawnMonster packet;
+		packet.objectID = (u32)localActorID;
+		LOG("[client%03d] Server :: SN_DespawnMonster :: actorUID=%u", clientID, (u32)actorUID);
+		SendPacket(clientHd, packet);
+		return;
+	}
 	Sv::SN_DestroyEntity packet;
 	packet.objectID = localActorID;
 	LOG("[client%03d] Server :: SN_DestroyEntity :: actorUID=%u", clientID, (u32)actorUID);

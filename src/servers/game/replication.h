@@ -143,6 +143,7 @@ struct Replication
 		i32 hp = 0;
 		i32 growthLevel = 0;
 		f32 statScale = 1.0f;
+		f32 stateSpeed = 0;
 
 
 		vec3 pos;
@@ -369,6 +370,7 @@ struct Replication
 
 	void SendClientLevelEvent(ClientHandle clientHd, i32 eventID, ActorUID caller = ActorUID::INVALID);
 	void SendClientLevelEventToAll(i32 eventID, ActorUID caller = ActorUID::INVALID);
+	void SendClientLevelEventSeqToAll(i32 eventID, ActorUID caller = ActorUID::INVALID);
 	void SendCreateGroundItemToAll(u32 itemUID, i32 itemIndex, const vec3& pos, i32 gettableType = 0, i32 factionType = -1);
 	void SendCreatePrivateGroundItem(ClientHandle clientHd, ActorUID ownerUID, u32 itemUID, bool ron, i32 itemIndex, i32 count, const vec3& pos);
 	void SendGroundItemTaken(ClientHandle clientHd, ActorUID takerUID, u32 itemUID, u32 itemISN);
@@ -407,6 +409,7 @@ struct Replication
 	void SendUltReady(ClientHandle clientHd, ActorUID actorUID, bool ready);
 	void SendTeamPointsToAll(u8 team, i32 teamPoints);
 	void SendEnterNpc(ClientHandle clientHd, ActorUID actorUID, CreatureIndex docID, const vec3& pos, f32 yaw, f32 speed, ActionStateID action, i32 hp, i32 hpMax, f32 growthLevel);
+	void SendEnterDynamic(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, f32 yaw, ActionStateID action);
 	void SendDoConnectChannel(ClientHandle clientHd, const wchar* nickname, const i32 hubIP[4], u16 hubPort);
 	struct EndPlayer
 	{
@@ -515,6 +518,7 @@ struct Replication
 	void SendRemoteActivatedToAll(u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, ActorUID targetUID, u32 penetration, const vec3& pos);
 	void SendResistStatusToAll(ActorUID targetUID, ActorUID casterUID, u32 event);
 	void SendBattleStateToAll(ActorUID actorUID, bool inBattle, f32 baseMoveSpeed);
+	void SendMasterGroupingEffect(ClientHandle clientHd, ActorUID masterUID, i32 index, ClassType classType, bool activate);
 	void SendTargetGraphMoveToAll(ActorUID casterUID, const vec3& casterPos, ActorUID targetUID, const vec3& targetPos, ActionStateID actionID);
 	void SendEvadeToAll(ActorUID attackerUID, ActorUID defenderUID, u32 remoteID, RemoteIdx remoteDoc, ClientHandle seedOwnerHd);
 	void SendModifyStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, u8 overlap, u8 customValue);
@@ -621,7 +625,7 @@ private:
 	void SendActorMasterSpawn(ClientHandle clientHd, const ActorMaster& actor, const Player& parent);
 	void SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor);
 	void SendActorDynamicSpawn(ClientHandle clientHd, const ActorDynamic& actor);
-	void SendActorDestroy(ClientHandle clientHd, ActorUID actorUID);
+	void SendActorDestroy(ClientHandle clientHd, ActorUID actorUID, bool despawned = false);
 
 	void SendMasterSkillSlots(ClientHandle clientHd, const ActorMaster& actor, const Player& player);
 

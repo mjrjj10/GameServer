@@ -150,11 +150,15 @@ static const i32 BOT_TITAN_PIECE_ITEM = 130100904;
 
 static const f32 BOT_FARM_RANGE = 4000.0f;
 
+static const i32 HYP_BOT_JUNGLE_ROLE_EVERY = 5;
+static const f32 HYP_BOT_JUNGLE_RANGE = 4000.0f;
+
 bool World::BotFarmTarget(const Player& bot, vec2* goal, f32 range)
 {
 	if(!map || !map->ingameLevels) return false;
 	const vec2 here = vec2(bot.body->GetWorldPos());
-	f32 bestMinion = range, bestNeutral = range;
+	const bool jungler = bot.clientHd == ClientHandle::INVALID && bot.index % HYP_BOT_JUNGLE_ROLE_EVERY == 2;
+	f32 bestMinion = range, bestNeutral = jungler ? MAX(range, HYP_BOT_JUNGLE_RANGE) : range;
 	vec2 minion, neutral;
 	foreach_const(npc, actorNpcList) {
 		if(!npc->monsterAi || npc->ownerUID != ActorUID::INVALID || IsStructure(*npc) || !NpcHittableBy(*npc, bot)) continue;
@@ -164,6 +168,7 @@ bool World::BotFarmTarget(const Player& bot, vec2* goal, f32 range)
 		}
 		else if((npc->faction == Faction::ORANGE || npc->faction == Faction::MONSTER) && d < bestNeutral) { bestNeutral = d; neutral = vec2(npc->pos); }
 	}
+	if(jungler && bestNeutral < MAX(range, HYP_BOT_JUNGLE_RANGE)) { *goal = neutral; return true; }
 	if(bestMinion < range) { *goal = minion; return true; }
 	if(bestNeutral < range) { *goal = neutral; return true; }
 	return false;
@@ -561,6 +566,8 @@ void World::UpdateBotMovement()
 		else {
 			goal = here + vec2(cosf(bot.input.rot.bodyYaw), sinf(bot.input.rot.bodyYaw)) * BOT_ROAM_STEP;
 		}
+		static const f32 MEASURED_PLAYER_JUMPS_PER_MIN = 0.43f;
+		if(titanNav && !fighting && (f32)(RandUint() % 1000000) < MEASURED_PLAYER_JUMPS_PER_MIN * (BOT_DECISION_MIN_MS + BOT_DECISION_SPAN_MS * 0.5f) / 60000.0f * 1000000.0f) bot.input.jump = 1;
 		if(titanNav && mode != bot.botMode) {
 			LOG("BotMode :: %ls %s at (%.0f, %.0f) hp %d/%d pieces %d", bot.name.data(), BOT_MODE_NAMES[mode], here.x, here.y, bot.Main().hp, bot.Main().hpMax, bot.titanPieces);
 			bot.botMode = mode;

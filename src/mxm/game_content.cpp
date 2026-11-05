@@ -1332,6 +1332,20 @@ bool GameXmlContent::LoadMonsterAi()
 			ai.lowHpRatio = pInfo->FloatAttribute("lowHp");
 			if(const char* lowHpState = pInfo->Attribute("lowHpState")) ai.lowHpState = ActionStateFromString(lowHpState);
 			ai.lowHpTime = pInfo->FloatAttribute("lowHpTime");
+			ai.hpBuffSpeedStep = pInfo->FloatAttribute("hpBuffSpeedStep");
+			ai.ccArmorStatus = pInfo->IntAttribute("ccArmorStatus");
+			ai.allyBuffRadius = pInfo->FloatAttribute("allyBuffRadius");
+			ai.allyBuffInterval = pInfo->FloatAttribute("allyBuffInterval");
+			if(const char* allyBuffs = pInfo->Attribute("allyBuffs")) {
+				const char* at = allyBuffs;
+				while(*at && !ai.allyBuffs.full()) {
+					char* end = nullptr;
+					const long v = strtol(at, &end, 10);
+					if(end == at) break;
+					ai.allyBuffs.push_back((i32)v);
+					at = end;
+				}
+			}
 			if(const char* hpBuffs = pInfo->Attribute("hpBuffs")) {
 				const char* at = hpBuffs;
 				while(*at && !ai.hpBuffs.full()) {
@@ -1451,10 +1465,25 @@ bool GameXmlContent::LoadMonsterAi()
 			const char* state = pA->Attribute("BehaviorState");
 			const char* type = pA->Attribute("CommandType");
 			const char* preset = pA->Attribute("TargetPreset");
-			if(!cls || !state || !type || pA->Attribute("VariationType") || pA->Attribute("Param2")) continue;
+			if(!cls || !state || !type || pA->Attribute("VariationType")) continue;
+			const char* param2 = pA->Attribute("Param2");
+			const bool remoteCmd = EA::StdC::Strcmp(type, "REMOTE") == 0 && preset && EA::StdC::Strncmp(preset, "TARGET_SELF", 11) == 0;
+			if(param2 && remoteCmd && EA::StdC::Strcmp(param2, "Remove") == 0) {
+				const i32 removed = pA->IntAttribute("RemoteIndex");
+				const ActionStateID removeState = ActionStateFromString(state);
+				foreach(it, monsterAi) if(it->second.className == cls && removeState != ActionStateID::INVALID && removeState == it->second.lowHpState && !it->second.lowHpRemoveRemotes.full()) it->second.lowHpRemoveRemotes.push_back(removed);
+				continue;
+			}
+			if(param2) continue;
 			const bool selfStatus = EA::StdC::Strcmp(type, "STATUS") == 0 && preset && EA::StdC::Strncmp(preset, "TARGET_SELF", 11) == 0;
 			const bool spawnStatus = selfStatus && EA::StdC::Strcmp(state, "SPAWN_BEHAVIORSTATE") == 0;
 			const bool dieRemote = EA::StdC::Strcmp(state, "DIE_BEHAVIORSTATE") == 0 && EA::StdC::Strcmp(type, "REMOTE") == 0;
+			const bool spawnRemote = remoteCmd && EA::StdC::Strcmp(state, "SPAWN_BEHAVIORSTATE") == 0;
+			if(spawnRemote) {
+				const i32 remoteIndex = pA->IntAttribute("RemoteIndex");
+				foreach(it, monsterAi) if(it->second.className == cls && remoteIndex != 0 && !it->second.spawnRemotes.full()) it->second.spawnRemotes.push_back(remoteIndex);
+				continue;
+			}
 			if(!selfStatus && !dieRemote) continue;
 			const i32 index = pA->IntAttribute(dieRemote ? "RemoteIndex" : "StatusIndex");
 			if(index == 0) continue;
@@ -3541,6 +3570,15 @@ bool GameXmlContent::Load()
 	r = LoadSightData();
 	if(!r) return false;
 
+	r = LoadMasterGroupings();
+	if(!r) return false;
+
+	r = LoadFixedData();
+	if(!r) return false;
+
+	r = LoadTagStatuses();
+	if(!r) return false;
+
 	r = LoadDeathRemotes();
 	if(!r) return false;
 
@@ -4077,6 +4115,7 @@ bool GameXmlContent::LoadStatusData()
 			}
 			if(const char* motion = pCommon->Attribute("_AnimationName")) {
 				if(st.type == StatusType::MOTION) st.motionAction = ActionStateFromString(motion);
+				st.npcMotion = ActionStateFromString(motion);
 			}
 
 			{
@@ -4850,6 +4889,7 @@ bool GameXmlContent::LoadSightData()
 		XMLDocument doc;
 		if(!LoadXMLFile(file, doc, true)) continue;
 		for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+			if(XMLElement* pKfm = pInfo->FirstChildElement("Kfm_ComData")) if(pKfm->Attribute("KeyName")) creatureKfm[pInfo->IntAttribute("ID")] = pKfm->Attribute("KeyName");
 			XMLElement* pEntity = pInfo->FirstChildElement("EntityComData");
 			const char* sight = pEntity ? pEntity->Attribute("_SightRadiusType") : nullptr;
 			if(!sight) continue;
@@ -5295,7 +5335,7 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		for(XMLElement* out = pNode->FirstChildElement("_OutputLink"); out; out = out->NextSiblingElement("_OutputLink")) node.outputs.push_back(out->IntAttribute("_ConvertedEventDataID"));
 		if(pNode->FirstChildElement("_LevelStartTriggerData")) node.kind = LevelEventNode::LEVEL_START;
 		else if(XMLElement* e = pNode->FirstChildElement("_TakeItemTriggerData")) { node.kind = LevelEventNode::TAKE_ITEM; node.tagID = e->IntAttribute("_TagID", -1); }
-		else if(XMLElement* e = pNode->FirstChildElement("_DelaySeqInfo")) { node.kind = LevelEventNode::DELAY; node.delay = e->FloatAttribute("_DelayTime"); node.variance = e->FloatAttribute("_RandomDelayTimeVariance"); }
+		else if(XMLElement* e = pNode->FirstChildElement("_DelaySeqInfo")) { node.kind = LevelEventNode::DELAY; node.seqRoot = true; node.delay = e->FloatAttribute("_DelayTime"); node.variance = e->FloatAttribute("_RandomDelayTimeVariance"); }
 		else if(pNode->FirstChildElement("_CallSFXInfo")) node.kind = LevelEventNode::CALL_SFX;
 		else if(XMLElement* e = pNode->FirstChildElement("_InitCoolTime")) { node.kind = LevelEventNode::CLIENT_EVENT; node.initTagCool = e->IntAttribute("_CharacterTag") != 0; }
 		else if(XMLElement* e = pNode->FirstChildElement("_CallItemInfo")) { node.kind = LevelEventNode::CALL_ITEM; node.dropIndex = e->IntAttribute("_Index"); node.areaID = e->IntAttribute("_SpawnAreaID"); node.tagID = e->IntAttribute("_TagID", -1); }
@@ -5398,7 +5438,7 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(XMLElement* e = pNode->FirstChildElement("_DialogTriggerData")) { node.kind = LevelEventNode::DIALOG_TRIGGER; node.aiIndex = e->IntAttribute("_ID"); }
 		else if(pNode->FirstChildElement("_EventPartyConditionInfo") || pNode->FirstChildElement("_EventBehaviorInfo") || pNode->FirstChildElement("_CallRemoteInfo")) node.kind = LevelEventNode::PASS_THROUGH;
 		else if(pNode->FirstChildElement("_UpdateObjectivePointInfo") || pNode->FirstChildElement("_ShowProgressMessageInfo") || pNode->FirstChildElement("_CameraWallInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
-		else if(pNode->FirstChildElement("_PrintMessageInfo") || pNode->FirstChildElement("_BGMEventInfo") || pNode->FirstChildElement("_ChangeCameraInfo") || pNode->FirstChildElement("_SetNameTagVisibillityInfo") || pNode->FirstChildElement("_InputLockInfo") || pNode->FirstChildElement("_ClientDrivenActionChangeInfo")) { node.kind = LevelEventNode::CLIENT_EVENT; node.dialogLine = pNode->FirstChildElement("_PrintMessageInfo") != nullptr; }
+		else if(pNode->FirstChildElement("_PrintMessageInfo") || pNode->FirstChildElement("_BGMEventInfo") || pNode->FirstChildElement("_ChangeCameraInfo") || pNode->FirstChildElement("_SetNameTagVisibillityInfo") || pNode->FirstChildElement("_InputLockInfo") || pNode->FirstChildElement("_ClientDrivenActionChangeInfo")) { node.kind = LevelEventNode::CLIENT_EVENT; node.dialogLine = pNode->FirstChildElement("_PrintMessageInfo") != nullptr; node.seqRoot = pNode->FirstChildElement("_InputLockInfo") != nullptr; }
 		else if(pNode->FirstChildElement("_PingBroadcastInfo") || pNode->FirstChildElement("_MaterialSetChange") || pNode->FirstChildElement("_EffectLightSwitch")) node.kind = LevelEventNode::CLIENT_EVENT;
 		else if(XMLElement* e = pNode->FirstChildElement("_ActiveEvents")) {
 			node.kind = LevelEventNode::ACTIVE_EVENTS;
@@ -5539,9 +5579,14 @@ bool GameXmlContent::LoadSummonBaseStats()
 
 bool GameXmlContent::LoadSummonActions()
 {
-	XMLDocument xmlMobActions;
-	if(!LoadXMLFile(L"/client/ActionBase_Monster_MOB_PvP.xml", xmlMobActions)) return false;
+	static const wchar* FILES[] = { L"/client/ActionBase_Monster_MOB_PvP.xml", L"/client/ActionBase_Monster_MOB_PUBLIC.xml" };
 	i32 count = 0;
+	for(const wchar* file : FILES) {
+	XMLDocument xmlMobActions;
+	if(!LoadXMLFile(file, xmlMobActions, file != FILES[0])) {
+		if(file == FILES[0]) return false;
+		continue;
+	}
 	for(XMLElement* pA = xmlMobActions.FirstChildElement()->FirstChildElement(); pA; pA = pA->NextSiblingElement()) {
 		const char* cls = nullptr; const char* state = nullptr; const char* type = nullptr;
 		pA->QueryStringAttribute("Class", &cls);
@@ -5568,14 +5613,16 @@ bool GameXmlContent::LoadSummonActions()
 			continue;
 		}
 		i32 skillState = 0;
-		if(!spawn && !die && !attack && EA::StdC::Sscanf(state, "SKILL_%d_BEHAVIORSTATE", &skillState) != 1) continue;
+		const bool lifted = EA::StdC::Strcmp(state, "LIFTED_BEHAVIORSTATE") == 0;
+		if(!spawn && !die && !attack && !lifted && EA::StdC::Sscanf(state, "SKILL_%d_BEHAVIORSTATE", &skillState) != 1) continue;
 		if(skillState < 0 || skillState > 20) continue;
 		i32 stateAnimId = 0;
 		pA->QueryAttribute("AnimationId", &stateAnimId);
 		if(spawn && stateAnimId != 0) {
 			foreach(it, summonMap) if(it->second.className == cls && it->second.spawnAnim == 0) it->second.spawnAnim = stateAnimId;
+			if(monsterSpawnAnim.find(eastl::string(cls)) == monsterSpawnAnim.end()) monsterSpawnAnim[eastl::string(cls)] = stateAnimId;
 		}
-		if(!spawn && !die && stateAnimId != 0) {
+		if(!spawn && !die && !lifted && stateAnimId != 0) {
 			foreach(it, summonMap) if(it->second.className == cls && it->second.stateAnim[skillState] == 0) it->second.stateAnim[skillState] = stateAnimId;
 		}
 		if(spawn && EA::StdC::Strcmp(type, "INTERACTION") == 0) {
@@ -5618,9 +5665,10 @@ bool GameXmlContent::LoadSummonActions()
 				else if(EA::StdC::Sscanf(var, "SPAWN_VARIATION_TYPE_%d", &v) == 1) { if(v != 0) continue; }
 				else if(EA::StdC::Strcmp(var, "STANCE_TYPE_DEFAULT") != 0) continue;
 			}
-			auto& list = spawn ? it->second.onSpawn : (die ? it->second.onDie : it->second.skillStates[skillState]);
+			auto& list = spawn ? it->second.onSpawn : (die ? it->second.onDie : (lifted ? it->second.onLifted : it->second.skillStates[skillState]));
 			if(!list.full()) { list.push_back(cmd); count++; }
 		}
+	}
 	}
 	LOG("Loaded %d summon spawn/die/skill commands", count);
 	return true;
@@ -6367,4 +6415,87 @@ const char* Remote::BehaviourTypeToString(BehaviorType t)
 	if(t == BehaviorType::TARGET_GROUNDPOSITION) { return "E_REMOTE_BEHAVIOR_TYPE_TARGET_GROUNDPOSITION"; }
 	if(t == BehaviorType::ORBIT) { return "E_REMOTE_BEHAVIOR_TYPE_ORBIT"; }
 	return "INVALID";
+}
+
+bool GameXmlContent::LoadMasterGroupings()
+{
+	static const struct { const char* name; StatusMod::Stat stat; StatType type; } STATS[] = {
+		{ "STAT_TYPE_HEALTH", StatusMod::HEALTH, StatType::STAT_TYPE_HEALTH },
+		{ "STAT_TYPE_ATTACK", StatusMod::ATTACK, StatType::STAT_TYPE_ATTACK },
+		{ "STAT_TYPE_DEFENCE", StatusMod::DEFENCE, StatType::STAT_TYPE_DEFENCE },
+		{ "STAT_TYPE_SKILLPOWER", StatusMod::SKILLPOWER, StatType::STAT_TYPE_SKILLPOWER },
+		{ "STAT_TYPE_CRITICALRATE", StatusMod::CRITICALRATE, StatType::STAT_TYPE_CRITICALRATE },
+		{ "STAT_TYPE_MOVESPEED", StatusMod::MOVESPEED, StatType::STAT_TYPE_MOVESPEED },
+		{ "STAT_TYPE_MANAREGEN", StatusMod::MANAREGEN, StatType::STAT_TYPE_MANAREGEN },
+		{ "STAT_TYPE_MANA", StatusMod::OTHER, StatType::STAT_TYPE_MANA },
+	};
+	static const struct { const char* name; u8 value; } KINDS[] = { { "FRIENDLY", MasterGrouping::FRIENDLY }, { "ENEMY", MasterGrouping::ENEMY }, { "PAIR", MasterGrouping::PAIR }, { "ALL", MasterGrouping::ALL } };
+	static const struct { const char* name; u8 value; } APPLIES[] = { { "ALWAYS", MasterGrouping::ALWAYS }, { "HIT", MasterGrouping::HIT }, { "KILL_SUMMONEE", MasterGrouping::KILL_SUMMONEE } };
+	static const struct { const char* name; u8 value; } EFFECTS[] = { { "STAT", MasterGrouping::STAT }, { "DAMAGE_BONUS", MasterGrouping::DAMAGE_BONUS }, { "DAMAGE_REDUCE", MasterGrouping::DAMAGE_REDUCE }, { "CONSUMABLE_STAT", MasterGrouping::CONSUMABLE_STAT }, { "EXP", MasterGrouping::EXP } };
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/client/MASTER_GROUPING.xml", doc, true)) return true;
+	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+		XMLElement* pG = pInfo->FirstChildElement("ST_MASTER_GROUPING");
+		if(!pG || masterGroupings.full()) continue;
+		MasterGrouping g;
+		g.id = pInfo->IntAttribute("ID");
+		g.apply = MasterGrouping::OTHER;
+		if(const char* k = pG->Attribute("_Type")) for(const auto& e : KINDS) if(EA::StdC::Strcmp(k, e.name) == 0) g.kind = (MasterGrouping::Kind)e.value;
+		if(const char* a = pG->Attribute("_ApplyEffectType")) for(const auto& e : APPLIES) if(EA::StdC::Strcmp(a, e.name) == 0) g.apply = (MasterGrouping::Apply)e.value;
+		for(XMLElement* pU = pG->FirstChildElement("_ST_UNIT_MASTER"); pU && !g.units.full(); pU = pU->NextSiblingElement("_ST_UNIT_MASTER")) {
+			MasterGrouping::Unit u;
+			if(const char* c = pU->Attribute("_ClassType")) u.classType = ClassTypeFromString(EA::StdC::Strncmp(c, "CLASS_TYPE_", 11) == 0 ? c + 11 : c);
+			if(const char* e = pU->Attribute("_EffectType")) for(const auto& x : EFFECTS) if(EA::StdC::Strcmp(e, x.name) == 0) u.effect = (MasterGrouping::Effect)x.value;
+			u.value = pU->FloatAttribute("_EffectValue");
+			for(XMLElement* pS = pU->FirstChildElement(); pS && !u.mods.full(); pS = pS->NextSiblingElement()) {
+				const bool add = EA::StdC::Strcmp(pS->Name(), "_STAT_ADD") == 0;
+				const bool mul = EA::StdC::Strcmp(pS->Name(), "_STAT_MUL") == 0;
+				const char* key = pS->Attribute("DATAKEY");
+				if((!add && !mul) || !key) continue;
+				for(const auto& s : STATS) {
+					if(EA::StdC::Strcmp(key, s.name) != 0) continue;
+					MasterGrouping::Mod m;
+					m.stat = s.stat;
+					m.statType = (i32)s.type;
+					m.mul = mul;
+					m.value = pS->FloatAttribute("DATA");
+					u.mods.push_back(m);
+				}
+			}
+			if(u.classType != ClassType::NONE) g.units.push_back(u);
+		}
+		if(g.units.size() >= 2) masterGroupings.push_back(g);
+	}
+	LOG("Loaded %d master groupings", (i32)masterGroupings.size());
+	return true;
+}
+
+bool GameXmlContent::LoadTagStatuses()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/TagStatus.xml", doc, true)) return true;
+	i32 moved = 0, dropped = 0;
+	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+		auto found = statusMap.find(pInfo->IntAttribute("ID"));
+		const char* mode = pInfo->Attribute("mode");
+		if(found == statusMap.end() || !mode) continue;
+		if(EA::StdC::Strcmp(mode, "MOVE") == 0) { found->second.tagMode = StatusInfo::TAG_MOVE; moved++; }
+		else if(EA::StdC::Strcmp(mode, "DROP") == 0) { found->second.tagMode = StatusInfo::TAG_DROP; dropped++; }
+	}
+	LOG("Loaded tag statuses (%d follow the active master, %d end at tag)", moved, dropped);
+	return true;
+}
+
+bool GameXmlContent::LoadFixedData()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/client/FixedData.xml", doc, true)) return true;
+	for(XMLElement* pBlock = doc.FirstChildElement()->FirstChildElement(); pBlock; pBlock = pBlock->NextSiblingElement()) {
+		for(XMLElement* pMap = pBlock->FirstChildElement("_IndexMap"); pMap; pMap = pMap->NextSiblingElement("_IndexMap")) {
+			const char* key = pMap->Attribute("DATAKEY");
+			if(key && EA::StdC::Strcmp(key, "E_FIXED_REMOTE_FLY_SPAWN") == 0) respawnFlyRemote = pMap->IntAttribute("DATA");
+		}
+	}
+	LOG("Loaded fixed data (respawn fly remote %d)", respawnFlyRemote);
+	return true;
 }

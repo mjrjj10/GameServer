@@ -163,7 +163,8 @@ void World::ApplyLevelStats(Player& player)
 
 void World::RefreshMasterHealth(Player& player, ActorMaster& chara)
 {
-	const i32 hpMax = (i32)(MasterStat(chara.classType, LEVEL_STAT_HEALTH) + LevelBonus(player, chara.classType, LEVEL_STAT_HEALTH) + GetGameXmlContent().MasterTraitBonus(chara.classType, chara.traits, LEVEL_STAT_HEALTH) + chara.GearBonus(LEVEL_STAT_HEALTH));
+	const f32 groupingMul = chara.UID == player.Main().UID ? 1.0f + GroupingStatMod(player, StatusMod::HEALTH, true) / 100.0f : 1.0f;
+	const i32 hpMax = (i32)((MasterStat(chara.classType, LEVEL_STAT_HEALTH) + LevelBonus(player, chara.classType, LEVEL_STAT_HEALTH) + GetGameXmlContent().MasterTraitBonus(chara.classType, chara.traits, LEVEL_STAT_HEALTH) + chara.GearBonus(LEVEL_STAT_HEALTH)) * groupingMul);
 	if(chara.hp > 0) chara.hp = MIN(chara.hp + MAX(hpMax - chara.hpMax, 0), hpMax);
 	chara.hpMax = hpMax;
 	replication->SendStatToAll(chara.UID, LEVEL_STAT_HEALTH, (f32)chara.hp, (f32)chara.hpMax);

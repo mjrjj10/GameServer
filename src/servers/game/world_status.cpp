@@ -310,13 +310,32 @@ void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& cente
 			ps.sourceUID = sourceUID;
 			pendingStatuses.push_back(ps);
 		}
-		if(!hostileMonsters || !child->isDebuff || bound) continue;
+		const Player& caster = players[casterIndex];
+		const Faction casterFaction = casterTeam == 0 ? Faction::RED : Faction::BLUE;
+		const bool towardEnemies = child->isDebuff || aura.auraEnemies;
 		foreach(npc, actorNpcList) {
-			if(npc->hp <= 0 || npc->ownerUID != ActorUID::INVALID || !NpcHittableBy(*npc, players[casterIndex])) continue;
-			if(glm::length(vec2(npc->pos) - center) > range + NpcHitRadius(*npc)) continue;
-			bool active = false;
-			foreach_const(ns, npcStatuses) if(ns->npcUID == npc->UID && ns->statusID == *id && localTime < ns->until) active = true;
-			if(active || pendingStatuses.full()) continue;
+			bool inside = npc->hp > 0 && npc->removeAt == Time::ZERO && (towardEnemies ? NpcHittableBy(*npc, caster) : npc->faction == casterFaction);
+			if(inside && glm::length(vec2(npc->pos) - center) > range + NpcHitRadius(*npc)) inside = false;
+			NpcStatus* cur = nullptr;
+			foreach(ns, npcStatuses) if(ns->npcUID == npc->UID && ns->statusID == *id && localTime < ns->until) cur = &*ns;
+			if(!inside) {
+				if(cur && bound && cur->casterUID == caster.Main().UID) cur->until = localTime;
+				continue;
+			}
+			if(cur) continue;
+			if(bound) {
+				if(npcStatuses.full()) continue;
+				replication->SendAddStatusToAll(*id, npc->UID, caster.Main().UID, STATUS_INFINITE_DURATION_SEC, npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false, false);
+				NpcStatus ns;
+				ns.npcUID = npc->UID;
+				ns.statusID = *id;
+				ns.casterUID = caster.Main().UID;
+				ns.until = TimeAdd(localTime, TimeMsToTime((f64)STATUS_INFINITE_DURATION_SEC * 1000.0));
+				ns.linked = false;
+				npcStatuses.push_back(ns);
+				continue;
+			}
+			if(pendingStatuses.full()) continue;
 			PendingStatus ps;
 			ps.time = localTime;
 			ps.statusID = *id;
@@ -336,6 +355,8 @@ void World::EndAura(u32 casterIndex, const StatusInfo& aura)
 		foreach(it, activeStatuses) {
 			if(it->statusID == *id && it->casterIndex == casterIndex && it->info && it->info->durationSec <= 0) it->until = localTime;
 		}
+		const StatusInfo* child = GetGameXmlContent().FindStatus(*id);
+		if(child && child->durationSec <= 0) foreach(ns, npcStatuses) if(ns->statusID == *id && ns->casterUID == players[casterIndex].Main().UID && !ns->linked) ns->until = localTime;
 	}
 }
 
@@ -977,7 +998,7 @@ f32 World::SlimeMassMod(const Player& p, i32 stat, bool mul) const
 
 f32 World::StatusModMulSum(const Player& p, i32 stat) const
 {
-	f32 sum = SlimeMassMod(p, stat, true);
+	f32 sum = SlimeMassMod(p, stat, true) + GroupingStatMod(p, stat, true);
 	foreach_const(it, activeStatuses) {
 		if(it->targetIndex != p.index || !it->info || localTime >= it->until) continue;
 		foreach_const(m, it->info->mods) {
@@ -1001,7 +1022,7 @@ f32 World::StatusRegenBonus(const Player& p, i32 stat, bool mul) const
 
 f32 World::StatusModSum(const Player& p, i32 stat) const
 {
-	f32 sum = SlimeMassMod(p, stat, false);
+	f32 sum = SlimeMassMod(p, stat, false) + GroupingStatMod(p, stat, false);
 	foreach_const(it, activeStatuses) {
 		if(it->targetIndex != p.index || !it->info) continue;
 		foreach_const(m, it->info->mods) {

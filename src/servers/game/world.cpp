@@ -163,7 +163,10 @@ void World::Update(Time localTime_)
 			p.input.tag = 0;
 			if(p.casting.skillID != SkillID::INVALID) CancelCast(p, "tag");
 			SwapMainMaster(p);
-			if(!p.dead) ApplyStatus(p, p, STATUS_PC_TAG_GODMODE);
+			if(!p.dead) {
+				ApplyStatus(p, p, STATUS_PC_TAG_GODMODE);
+				SpawnRespawnFlyRemote(p);
+			}
 			SendTagCooltimeToTeam(p, TagCooltimeMs(p));
 			if(p.clientHd == ClientHandle::INVALID) {
 				const Time ready = TimeAdd(localTime, TimeMsToTime(MEASURED_TAG_FIRST_ATTACK_MS));
@@ -241,6 +244,7 @@ void World::Update(Time localTime_)
 	UpdateStatuses();
 	UpdateHideVisibility();
 	UpdateFog();
+	UpdateMasterGroupings();
 	UpdateNpcStatuses();
 	UpdateLevelEvents();
 	UpdateToggles();
@@ -473,6 +477,7 @@ void World::Replicate()
 		rfl.hp = actor.hp;
 		rfl.growthLevel = actor.growthLevel;
 		rfl.statScale = actor.statScale;
+		rfl.stateSpeed = actor.monsterAi ? actor.monsterAi->run * actor.speedMul : 0.0f;
 
 
 		replication->FramePushNpcActor(rfl);
@@ -1178,6 +1183,27 @@ void World::WarpPlayer(Player& p, const vec3& pos, f32 yaw)
 	if(p.clientHd != ClientHandle::INVALID) replication->SendTeleportRequest(p.clientHd, p.Main().UID, pos);
 }
 
+void World::SpawnRespawnFlyRemote(Player& player)
+{
+	const i32 doc = GetGameXmlContent().respawnFlyRemote;
+	if(doc == 0 || pendingRemotes.full() || !GetGameXmlContent().FindRemote(RemoteIdx(doc))) return;
+	PendingRemote pr;
+	pr.casterMasterUID = player.Main().UID;
+	pr.time = localTime;
+	pr.idx = RemoteIdx(doc);
+	pr.preset = (i32)ActionCommand::TargetPreset::POS_TTT_1;
+	pr.offsetSide = 0;
+	pr.offsetFront = 0;
+	pr.ownerIndex = player.index;
+	pr.skillID = SkillID::INVALID;
+	pr.castID = nextCastID++;
+	pr.damage = 0;
+	pr.castPos = player.body->GetWorldPos();
+	pr.angle = player.input.rot.upperYaw;
+	pr.target = ActorUID::INVALID;
+	pendingRemotes.push_back(pr);
+}
+
 void World::SwapMainMaster(Player& p)
 {
 	AccumulateMasterScore(p);
@@ -1193,6 +1219,18 @@ void World::SwapMainMaster(Player& p)
 	p.ultDirty = true;
 	p.regenResend = true;
 	ShowTagToEnemies(p);
+	const ActorUID newMain = p.Main().UID;
+	foreach(st, activeStatuses) {
+		if(st->targetIndex != p.index || st->targetUID != oldMain || !st->info || localTime >= st->until) continue;
+		if(st->info->tagMode == StatusInfo::TAG_DROP) st->until = localTime;
+		else if(st->info->tagMode == StatusInfo::TAG_MOVE) {
+			replication->SendRemoveStatusToAll(st->statusID, oldMain, st->casterUID);
+			st->targetUID = newMain;
+			const f32 remain = MIN((f32)TimeDiffSec(TimeDiff(localTime, st->until)), STATUS_INFINITE_DURATION_SEC);
+			const vec3 at = p.body ? p.body->GetWorldPos() : vec3(0);
+			replication->SendAddStatusToAll(st->statusID, newMain, st->casterUID, remain, at, at, 0, st->overlap, 1.0f, -1.0f, false, false);
+		}
+	}
 }
 
 void World::RetargetMonsters(ActorUID from, ActorUID to)
@@ -1281,11 +1319,16 @@ void World::RespawnPlayer(Player& player)
 
 	LOG("Respawn :: %ls", player.name.data());
 	replication->SendReviveToAll(player.userID, player.Main().UID, player.Sub().UID, player.spawnPos);
+	SpawnRespawnFlyRemote(player);
 	foreach(c, player.characters) {
 		replication->SendHpToAll((*c)->UID, (*c)->hp, (*c)->hpMax);
 	}
 	if(player.passivesApplied) ApplyPassives(player);
 	ApplyStatus(player, player, STATUS_PC_RESPAWN_INVICIBLE_3S);
+	foreach(npc, actorNpcList) {
+		if(npc->hp <= 0 || npc->removeAt != Time::ZERO || !npc->monsterAi || npc->monsterAi->teamBuff == 0 || npc->faction != (Faction)player.team) continue;
+		ApplyStatusFromNpc(*npc, player, npc->monsterAi->teamBuff, STATUS_INFINITE_DURATION_SEC);
+	}
 }
 
 void World::ExecuteSkillProgram(SkillProgram& prog)

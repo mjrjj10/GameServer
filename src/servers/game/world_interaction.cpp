@@ -281,6 +281,12 @@ i32 World::LevelNodeOverride(const GameXmlContent::LevelEventNode& node) const
 	return -1;
 }
 
+static f32 LevelStatusDuration(i32 statusID)
+{
+	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
+	return info && info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f;
+}
+
 void World::ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply)
 {
 	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
@@ -347,6 +353,10 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 		default: return 0.0f;
 	}
 	if(eastl::find(npc.monsterAi->ccTypes.begin(), npc.monsterAi->ccTypes.end(), info->type) == npc.monsterAi->ccTypes.end() && !(hostileMonsters && HypPveMonsterTakesCc(npc))) return -1.0f;
+	if(const i32 armor = npc.monsterAi->ccArmorStatus) {
+		foreach_const(ns, npcStatuses) if(ns->npcUID == npc.UID && ns->statusID == armor && localTime < ns->until) return -1.0f;
+		ApplyMonsterStatus(npc, armor, true);
+	}
 	const f32 total = sec + (lie ? NPC_LIE_SEC : 0.0f);
 	npc.actionState = state;
 	replication->SendMonsterStateToAll(npc.UID, state, npc.pos, npc.monsterAi->run * npc.speedMul);
@@ -403,7 +413,7 @@ void World::UpdateNpcDefeat(ActorNpc& npc)
 		npc.actionState = ActionStateID::LIE_BEHAVIORSTATE;
 		replication->SendMonsterStateToAll(npc.UID, ActionStateID::LIE_BEHAVIORSTATE, npc.pos, npc.monsterAi ? npc.monsterAi->run * npc.speedMul : 0.0f);
 	}
-	if(npc.stateEndAt != Time::ZERO && localTime >= npc.stateEndAt) {
+	if(npc.stateEndAt != Time::ZERO && localTime >= npc.stateEndAt && npc.actionState != ActionStateID::SPAWN_BEHAVIORSTATE) {
 		npc.stateEndAt = Time::ZERO;
 		npc.actionState = ActionStateID::NONE_BEHAVIORSTATE;
 		replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, 0.0f);
@@ -548,7 +558,10 @@ void World::OnMonsterDamaged(ActorNpc& npc, i32 hpBefore)
 	if(npc.monsterAi && npc.hp > 0 && npc.hpMax > 0) {
 		const auto& buffs = npc.monsterAi->hpBuffs;
 		while(npc.hpBuffLevel < buffs.size() && (f32)npc.hp <= buffs[npc.hpBuffLevel].first * npc.hpMax) {
+			if(npc.hpBuffLevel > 0) ApplyMonsterStatus(npc, buffs[npc.hpBuffLevel - 1].second, false);
 			ApplyMonsterStatus(npc, buffs[npc.hpBuffLevel].second, true);
+			const f32 step = npc.monsterAi->hpBuffSpeedStep;
+			npc.speedMul *= (1.0f + step * (npc.hpBuffLevel + 1)) / (1.0f + step * npc.hpBuffLevel);
 			npc.hpBuffLevel++;
 		}
 	}
@@ -616,6 +629,9 @@ World::ActorNpc& World::SpawnMonster(CreatureIndex docID, i32 localID, const vec
 	npc.actionState = ActionStateID::SPAWN_BEHAVIORSTATE;
 	npc.seed = (i32)RandUint();
 	InitMonsterStats(npc);
+	const f32 spawnSec = GetGameXmlContent().MonsterSpawnSec((i32)docID);
+	npc.stateEndAt = TimeAdd(localTime, TimeMsToTime(spawnSec > 0 ? spawnSec * 1000.0 : MEASURED_MONSTER_SPAWN_STATE_MIN_MS));
+	if(npc.monsterHoldUntil < npc.stateEndAt) npc.monsterHoldUntil = npc.stateEndAt;
 	if(npc.monsterAi && npc.monsterAi->playerSide && (faction == Faction::MONSTER || faction == Faction::INVALID)) npc.faction = PlayerSideFaction();
 	if(npc.monsterAi && npc.monsterAi->teamBuff != 0 && (faction == Faction::RED || faction == Faction::BLUE)) {
 		foreach(p, players) {
@@ -835,6 +851,11 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 			foreach_const(in, node->inputs) if(in->first == fromNode && !(in->second & difficultyBit)) return;
 		}
 	}
+	struct SeqRestore { bool& flag; bool value; ~SeqRestore() { flag = value; } } seqRestore{ levelClientSeq, levelClientSeq };
+	if(node->seqRoot && !levelClientSeq && replication->titanMode) {
+		replication->SendClientLevelEventSeqToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID);
+		levelClientSeq = true;
+	}
 	switch(node->kind) {
 		case GameXmlContent::LevelEventNode::SET_ACTIVATION: SetLevelTriggerActive(node->targetKey, node->active); break;
 		case GameXmlContent::LevelEventNode::AND_CONDITION: {
@@ -865,7 +886,7 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 			}
 		} break;
 		case GameXmlContent::LevelEventNode::INVOKE_DIALOG: {
-			replication->SendClientLevelEventToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID);
+			if(!levelClientSeq) replication->SendClientLevelEventToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID);
 			FireDialogTrigger(node->aiIndex, playerIndex);
 		} break;
 		case GameXmlContent::LevelEventNode::DIALOG_TRIGGER: return;
@@ -873,26 +894,26 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 			const f32 jitter = node->variance > 0 ? ((f32)(RandUint() % 2001) / 1000.0f - 1.0f) * node->variance : 0.0f;
 			const Time at = TimeAdd(localTime, TimeMsToTime(MAX(node->delay + jitter, 0.0f) * 1000.0));
 			foreach_const(o, node->outputs) {
-				if(levelEventTimers.size() < LEVEL_EVENT_QUEUE_CAP) levelEventTimers.push_back({ *o, at, playerIndex, node->id });
+				if(levelEventTimers.size() < LEVEL_EVENT_QUEUE_CAP) levelEventTimers.push_back({ *o, at, playerIndex, node->id, levelClientSeq });
 				else LOG("LevelEvent :: timer queue full, node %d dropped", *o);
 			}
 			return;
 		}
-		case GameXmlContent::LevelEventNode::CALL_SFX: replication->SendClientLevelEventToAll(node->id); break;
+		case GameXmlContent::LevelEventNode::CALL_SFX: if(!levelClientSeq) replication->SendClientLevelEventToAll(node->id); break;
 		case GameXmlContent::LevelEventNode::CLIENT_EVENT:
-			if(!node->clientDriven) replication->SendClientLevelEventToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID);
+			if(!node->clientDriven && !levelClientSeq) replication->SendClientLevelEventToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID);
 			if(node->initTagCool && playerIndex >= 0) SendTagCooltimeToTeam(players[playerIndex], 0);
 			break;
 		case GameXmlContent::LevelEventNode::CALL_ITEM: SpawnGroundItems(node->dropIndex, node->areaID, node->tagID); break;
 		case GameXmlContent::LevelEventNode::STATUS_CHANGE: {
 			if(node->applyType == GameXmlContent::LevelEventNode::APPLY_MY_CHAR) {
-				if(node->apply && playerIndex >= 0 && node->statusIndex != 0 && !players[playerIndex].dead) ApplyStatus(players[playerIndex], players[playerIndex], node->statusIndex);
+				if(node->apply && playerIndex >= 0 && node->statusIndex != 0 && !players[playerIndex].dead) ApplyStatus(players[playerIndex], players[playerIndex], node->statusIndex, 0, LevelStatusDuration(node->statusIndex));
 				else if(!node->apply && playerIndex >= 0 && node->statusIndex != 0) ConsumeStatus((u32)playerIndex, node->statusIndex);
 			}
 			else if(node->applyType == GameXmlContent::LevelEventNode::APPLY_ALL_PARTY && node->statusIndex != 0) {
 				foreach(p, players) {
 					if(!p->body || p->removed || ((node->team == Faction::RED || node->team == Faction::BLUE) && (Faction)p->team != node->team)) continue;
-					if(node->apply) { if(!p->dead) ApplyStatus(*p, *p, node->statusIndex); }
+					if(node->apply) { if(!p->dead) ApplyStatus(*p, *p, node->statusIndex, 0, LevelStatusDuration(node->statusIndex)); }
 					else ConsumeStatus(p->index, node->statusIndex);
 				}
 			}
@@ -935,7 +956,7 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 			}
 		} break;
 		case GameXmlContent::LevelEventNode::ACTIVE_INTERACTION: {
-			replication->SendClientLevelEventToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID);
+			if(!levelClientSeq) replication->SendClientLevelEventToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID);
 			BuildMapInteractions();
 			foreach(m, mapInteractions) {
 				if(m->localID != node->localID) continue;
@@ -1445,8 +1466,13 @@ bool World::OccupyTarget(const Player& bot, vec2* point, ActorUID* object, f32* 
 	foreach_const(m, mapInteractions) {
 		const GameXmlContent::InteractionInfo* info = GetGameXmlContent().FindInteraction(m->interactionID);
 		if(!info || !m->active || m->occupiedTeam == (i32)PLAYER_FACTION_BASE + (i32)bot.team) continue;
-		if(occupyMode ? !info->pvpOccupy : (info->action != GameXmlContent::InteractionInfo::TOTEM || info->individual || m->creature)) continue;
+		if(occupyMode ? !info->pvpOccupy : ((info->action != GameXmlContent::InteractionInfo::TOTEM && info->action != GameXmlContent::InteractionInfo::OCCUPY) || info->individual || m->creature)) continue;
 		if(m->coolUntil != Time::ZERO && localTime < m->coolUntil) continue;
+		if(!(m->openMask & (1u << (PLAYER_FACTION_BASE + bot.team)))) continue;
+		if(m->occupiedTeam != INTERACTION_NOT_OCCUPIED && !info->pvpOccupy) continue;
+		bool busy = false;
+		if(!info->individual) foreach_const(p, players) if(p->interactSlot >= 0 && &mapInteractions[p->interactSlot] == &*m && &*p != &bot) busy = true;
+		if(busy) continue;
 		vec3 pos;
 		if(!MapInteractionPos(*m, &pos)) continue;
 		const f32 d = glm::length(vec2(pos) - here);
@@ -1606,8 +1632,11 @@ void World::UpdateLevelEvents()
 		const i32 node = levelEventTimers[i].node;
 		const i32 playerIndex = levelEventTimers[i].playerIndex;
 		const i32 fromNode = levelEventTimers[i].fromNode;
+		const bool clientSeq = levelEventTimers[i].clientSeq;
 		levelEventTimers.erase(levelEventTimers.begin() + i);
+		levelClientSeq = clientSeq;
 		FireLevelEvent(node, playerIndex, fromNode);
+		levelClientSeq = false;
 	}
 	for(i32 i = 0; i < (i32)dialogEnds.size(); ) {
 		if(localTime < dialogEnds[i].at) { i++; continue; }
