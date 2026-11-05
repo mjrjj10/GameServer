@@ -32,7 +32,7 @@
   </INFO>
   <INFO class="7">
     <STAT type="0" linear="85.0000" quadratic="0" increments="17" kept="13" />
-    <STAT type="6" linear="-5.5508" quadratic="0.67905" increments="17" kept="17" />
+    <STAT type="6" linear="3.3900" quadratic="0" increments="17" kept="17" />
     <STAT type="8" linear="18.0000" quadratic="0" increments="17" kept="17" />
   </INFO>
   <INFO class="8">
@@ -77,7 +77,7 @@
   </INFO>
   <INFO class="16">
     <STAT type="0" linear="5.4485" quadratic="2.31618" increments="17" kept="17" />
-    <STAT type="6" linear="-14.6525" quadratic="1.55541" increments="17" kept="17" />
+    <STAT type="6" linear="1.9775" quadratic="0.86750" increments="17" kept="17" />
     <STAT type="8" linear="23.7667" quadratic="1.74314" increments="17" kept="17" />
   </INFO>
   <INFO class="17">
@@ -97,7 +97,7 @@
   </INFO>
   <INFO class="20">
     <STAT type="0" linear="105.0000" quadratic="0" increments="17" kept="15" />
-    <STAT type="6" linear="7.6000" quadratic="0" increments="17" kept="17" />
+    <STAT type="6" linear="7.6100" quadratic="0" increments="17" kept="17" />
     <STAT type="8" linear="18.0000" quadratic="0" increments="17" kept="15" />
   </INFO>
   <INFO class="21">
@@ -113,7 +113,7 @@
   <INFO class="24">
     <STAT type="0" linear="4.9137" quadratic="2.09464" increments="15" kept="15" />
     <STAT type="6" linear="1.3812" quadratic="0.59205" increments="15" kept="15" />
-    <STAT type="8" linear="-6.8167" quadratic="3.03000" increments="15" kept="15" />
+    <STAT type="8" linear="4.3750" quadratic="1.87500" increments="15" kept="15" />
   </INFO>
   <INFO class="25">
     <STAT type="0" linear="105.0000" quadratic="0" increments="17" kept="17" />
@@ -173,6 +173,6 @@
   <INFO class="40">
     <STAT type="0" linear="5.2431" quadratic="2.34928" increments="17" kept="15" />
     <STAT type="6" linear="1.7211" quadratic="0.73614" increments="17" kept="6" />
-    <STAT type="8" linear="-29.7213" quadratic="5.13309" increments="17" kept="17" />
+    <STAT type="8" linear="4.3750" quadratic="1.87500" increments="17" kept="17" />
   </INFO>
 </MASTER_GROWTH>
