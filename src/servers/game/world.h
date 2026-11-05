@@ -571,8 +571,9 @@ struct World
 		f32 dashDist = 0;
 		Time dashStart = Time::ZERO;
 		Time dashEnd = Time::ZERO;
-		bool dashPush = false;
+		u8 dashCurve = 0;
 		Time ccNextMove = Time::ZERO;
+		Time monsterDashTurnAt = Time::ZERO;
 		bool monsterWalking = false;
 		bool monsterChasing = false;
 		ActorUID monsterTarget = ActorUID::INVALID;
@@ -1278,8 +1279,10 @@ public:
 	void ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply);
 	void UpdateMonsterAllyBuffs(ActorNpc& npc);
 	f32 NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info);
+	enum : u8 { NPC_DASH_CURVE_LINEAR = 0, NPC_DASH_CURVE_PUSH = 1, NPC_DASH_CURVE_HOOK = 2 };
 	struct NpcCcGraph { vec3 to = vec3(0); f32 duration = 0; f32 graphSec = 0; f32 nominal = -1.0f; bool graph = false; };
-	NpcCcGraph StartNpcCc(ActorNpc& npc, const StatusInfo* info, const vec3& source, const vec2& dragCenter, f32 hold);
+	NpcCcGraph StartNpcCc(ActorNpc& npc, const StatusInfo* info, const vec3& source, const vec2& dragCenter, const vec3& casterPos, f32 hold);
+	bool MonsterDashNeedsTurn(ActorNpc& npc, const GameXmlContent::MonsterAttack& attack, f32 yaw);
 	void SendNpcCcMove(ActorNpc& npc, bool ended);
 	void ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 statusID);
 	void UpdateNpcDefeat(ActorNpc& npc);

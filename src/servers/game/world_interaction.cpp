@@ -320,6 +320,7 @@ static const f32 MEASURED_NPC_AIRBORNE_GRAPH_SEC = 1.0f;
 static const f32 MEASURED_NPC_LIFT_BASE_HEIGHT = 400.0f;
 static const f64 MEASURED_NPC_CC_FIRST_MOVE_MS = 47.0;
 static const f64 MEASURED_NPC_CC_MOVE_MS = 93.0;
+static const f32 MEASURED_NPC_HOOK_OFFSET = 200.0f;
 static const f32 NPC_DEFEAT_KNOCKDOWN_SEC = 1.5f;
 static const f32 NPC_DEFEAT_FLY_SEC = 1.8f;
 static const f32 NPC_DEFEAT_SYNC_SEC = 1.0f;
@@ -382,7 +383,7 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 	return total;
 }
 
-World::NpcCcGraph World::StartNpcCc(ActorNpc& npc, const StatusInfo* info, const vec3& source, const vec2& dragCenter, f32 hold)
+World::NpcCcGraph World::StartNpcCc(ActorNpc& npc, const StatusInfo* info, const vec3& source, const vec2& dragCenter, const vec3& casterPos, f32 hold)
 {
 	NpcCcGraph cc;
 	cc.to = npc.pos;
@@ -411,8 +412,29 @@ World::NpcCcGraph World::StartNpcCc(ActorNpc& npc, const StatusInfo* info, const
 		npc.dashDist = dist;
 		npc.dashStart = localTime;
 		npc.dashEnd = TimeAdd(localTime, TimeMsToTime(cc.graphSec * 1000.0));
-		npc.dashPush = true;
+		npc.dashCurve = NPC_DASH_CURVE_PUSH;
 		npc.ccNextMove = TimeAdd(localTime, TimeMsToTime(MEASURED_NPC_CC_FIRST_MOVE_MS));
+		return cc;
+	}
+	if(npc.monsterAi && info->type == StatusType::DRAGGED && cc.duration > 0) {
+		const vec2 rel = vec2(npc.pos) - vec2(casterPos);
+		const f32 len = glm::length(rel);
+		const vec2 dir = len > 1.0f ? rel / len : vec2(cosf(npc.rot.z), sinf(npc.rot.z));
+		const vec2 goal = vec2(casterPos) + dir * (info->dragOffset > 0 ? info->dragOffset : MEASURED_NPC_HOOK_OFFSET);
+		const vec2 travel = goal - vec2(npc.pos);
+		const f32 dist = glm::length(travel);
+		cc.to = vec3(goal, npc.pos.z);
+		cc.graphSec = cc.duration;
+		cc.graph = true;
+		if(dist > 1.0f) {
+			npc.dashFrom = vec2(npc.pos);
+			npc.dashDir = travel / dist;
+			npc.dashDist = dist;
+			npc.dashStart = localTime;
+			npc.dashEnd = TimeAdd(localTime, TimeMsToTime(cc.graphSec * 1000.0));
+			npc.dashCurve = NPC_DASH_CURVE_HOOK;
+			npc.ccNextMove = TimeAdd(localTime, TimeMsToTime(MEASURED_NPC_CC_FIRST_MOVE_MS));
+		}
 		return cc;
 	}
 	if(npc.monsterAi && (info->type == StatusType::AIRBORNE || info->type == StatusType::FLY)) {
@@ -486,6 +508,16 @@ void World::UpdateNpcDrag(ActorNpc& npc, f32 delta)
 	const vec2 rel = npc.dragCenter - vec2(npc.pos);
 	const f32 dist = glm::length(rel);
 	npc.dragElapsed = t1;
+	const f32 selfRadius = npc.monsterAi ? npc.monsterAi->radius : 0.0f;
+	const vec2 next = dist > step ? vec2(npc.pos) + rel / MAX(dist, 0.001f) * step : npc.dragCenter;
+	foreach_const(o, actorNpcList) {
+		if(&*o == &npc || !o->monsterAi || o->hp <= 0 || o->removeAt != Time::ZERO) continue;
+		if(glm::length(vec2(o->pos) - npc.dragCenter) >= dist) continue;
+		if(glm::length(vec2(o->pos) - next) >= selfRadius + o->monsterAi->radius) continue;
+		npc.dragElapsed = npc.dragDuration;
+		SendNpcCcMove(npc, true);
+		return;
+	}
 	if(dist > 0.001f && dist <= step) {
 		npc.pos = vec3(npc.dragCenter, npc.pos.z);
 		npc.dragElapsed = npc.dragDuration;
@@ -504,7 +536,7 @@ void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 s
 	}
 	if(npc.removeAt != Time::ZERO) return;
 	const vec3 from = npc.pos;
-	const NpcCcGraph cc = StartNpcCc(npc, info, caster.pos, npcHitCenterSet ? vec2(npcHitCenter) : vec2(caster.pos), hold);
+	const NpcCcGraph cc = StartNpcCc(npc, info, caster.pos, npcHitCenterSet ? vec2(npcHitCenter) : vec2(caster.pos), caster.pos, hold);
 	const f32 duration = cc.duration;
 	if(duration <= 0) return;
 	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {

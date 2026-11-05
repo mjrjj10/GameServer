@@ -9,6 +9,7 @@ static const f64 MONSTER_SEARCH_MS = 250.0;
 static const f64 MONSTER_SYNC_MS = 500.0;
 static const f64 HYP_MONSTER_TURN_RESYNC_MS = 150.0;
 static const f32 HYP_MONSTER_TURN_RESYNC_RAD = 0.5236f;
+static const f32 MEASURED_GOT_NEUTRAL_MAX_FIGHT_DIST = 3000.0f;
 
 static f32 YawGap(f32 a, f32 b)
 {
@@ -93,6 +94,7 @@ void World::MonsterAggroOnHit(ActorNpc& npc, Player& attacker)
 	const bool neutral = MonsterNeutral(npc, hostileMonsters);
 	if(!neutral && !MonsterHostile(npc, attacker)) return;
 	const bool titanMode = map && map->ingameLevels;
+	if(neutral && titanMode && npc.monsterReturning && glm::length(vec2(npc.pos) - vec2(npc.home)) > MEASURED_GOT_NEUTRAL_MAX_FIGHT_DIST) return;
 	if(npc.monsterReturning && titanMode) ApplyMonsterStatus(npc, MEASURED_GOT_MOB_RETURN_SUPERARMOR, false);
 	npc.monsterTarget = attacker.Main().UID;
 	npc.monsterReturning = false;
@@ -945,12 +947,36 @@ void World::TowerCallForHelp(const Player& attacker, const vec3& victimPos, Fact
 
 static const f32 MEASURED_NPC_PUSH_CURVE[] = { 0.0f, 0.45f, 0.67f, 0.80f, 0.88f, 0.93f, 0.99f, 1.0f, 1.0f, 1.0f, 1.0f };
 
-static f32 NpcPushProgress(f32 t)
+static const f32 MEASURED_NPC_HOOK_CURVE[] = { 0.0f, 0.16f, 0.31f, 0.47f, 0.62f, 0.72f, 0.81f, 0.88f, 0.93f, 0.97f, 1.0f };
+static const f64 MEASURED_MONSTER_DASH_TURN_LEAD_MS = 270.0;
+
+static f32 NpcCurveProgress(const f32* curve, i32 count, f32 t)
 {
-	const i32 last = (i32)(sizeof(MEASURED_NPC_PUSH_CURVE) / sizeof(MEASURED_NPC_PUSH_CURVE[0])) - 1;
+	const i32 last = count - 1;
 	const f32 x = MAX(MIN(t, 1.0f), 0.0f) * (f32)last;
 	const i32 i = MIN((i32)x, last - 1);
-	return MEASURED_NPC_PUSH_CURVE[i] + (MEASURED_NPC_PUSH_CURVE[i + 1] - MEASURED_NPC_PUSH_CURVE[i]) * (x - (f32)i);
+	return curve[i] + (curve[i + 1] - curve[i]) * (x - (f32)i);
+}
+
+static f32 NpcDashProgress(u8 curve, f32 t)
+{
+	if(curve == World::NPC_DASH_CURVE_PUSH) return NpcCurveProgress(MEASURED_NPC_PUSH_CURVE, (i32)(sizeof(MEASURED_NPC_PUSH_CURVE) / sizeof(MEASURED_NPC_PUSH_CURVE[0])), t);
+	if(curve == World::NPC_DASH_CURVE_HOOK) return NpcCurveProgress(MEASURED_NPC_HOOK_CURVE, (i32)(sizeof(MEASURED_NPC_HOOK_CURVE) / sizeof(MEASURED_NPC_HOOK_CURVE[0])), t);
+	return t;
+}
+
+bool World::MonsterDashNeedsTurn(ActorNpc& npc, const GameXmlContent::MonsterAttack& attack, f32 yaw)
+{
+	if(attack.dashDist <= 0 || attack.dashPassAnims.empty()) return false;
+	if(YawGap(yaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD) {
+		npc.rot.z = yaw;
+		npc.monsterSyncYaw = yaw;
+		npc.monsterLastTurn = localTime;
+		npc.monsterDashTurnAt = TimeAdd(localTime, TimeMsToTime(MEASURED_MONSTER_DASH_TURN_LEAD_MS));
+		replication->SendNpcTurnToAll(npc.UID, yaw);
+		return true;
+	}
+	return localTime < npc.monsterDashTurnAt;
 }
 
 void World::SetMonsterBattle(ActorNpc& npc, bool inBattle)
@@ -966,7 +992,7 @@ void World::UpdateMonsterDash(ActorNpc& npc)
 	static const f32 MONSTER_DASH_RAY_HEIGHT = 100.0f;
 	const f32 total = (f32)TimeDiffSec(TimeDiff(npc.dashStart, npc.dashEnd));
 	const f32 t = total > 0 ? MIN((f32)TimeDiffSec(TimeDiff(npc.dashStart, localTime)) / total, 1.0f) : 1.0f;
-	const vec2 next = npc.dashFrom + npc.dashDir * npc.dashDist * (npc.dashPush ? NpcPushProgress(t) : t);
+	const vec2 next = npc.dashFrom + npc.dashDir * npc.dashDist * NpcDashProgress(npc.dashCurve, t);
 	const vec2 here = vec2(npc.pos);
 	f32 hit = 0;
 	const f32 radius = npc.monsterAi ? npc.monsterAi->radius : 0.0f;
@@ -978,7 +1004,7 @@ void World::UpdateMonsterDash(ActorNpc& npc)
 		blocked = true;
 	}
 	else npc.pos = vec3(next, npc.pos.z);
-	if(npc.dashPush) SendNpcCcMove(npc, t >= 1.0f || blocked);
+	if(npc.dashCurve != NPC_DASH_CURVE_LINEAR) SendNpcCcMove(npc, t >= 1.0f || blocked);
 	if(t >= 1.0f || blocked) {
 		npc.dashEnd = Time::ZERO;
 		LOG("Monster :: creature=%d (local %d) dash ends at (%.0f, %.0f)%s", (i32)npc.docID, npc.localID, npc.pos.x, npc.pos.y, blocked ? " on a wall" : "");
@@ -1093,7 +1119,7 @@ void World::StartMonsterAttack(ActorNpc& npc, const GameXmlContent::MonsterAi& a
 			npc.dashDist = attack->dashDist;
 			npc.dashStart = TimeAdd(localTime, TimeMsToTime(start * 1000.0));
 			npc.dashEnd = TimeAdd(npc.dashStart, TimeMsToTime(duration * 1000.0));
-			npc.dashPush = false;
+			npc.dashCurve = NPC_DASH_CURVE_LINEAR;
 			LOG("Monster :: creature=%d (local %d) dashes %.0f in %.2fs from %.2fs", (i32)npc.docID, npc.localID, attack->dashDist, duration, start);
 		}
 	}
@@ -1361,14 +1387,15 @@ void World::UpdateMonsterAi(f32 delta)
 			SetMonsterBattle(npc, false);
 			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
 		}
-		static const f32 MEASURED_GOT_NEUTRAL_MAX_FIGHT_DIST = 3000.0f;
 		const f32 leash = titanMode ? MEASURED_GOT_NEUTRAL_MAX_FIGHT_DIST : MAX(ai.lost, ai.perception);
-		if(neutral && targetPos && glm::length(vec2(npc.pos) - vec2(npc.home)) > leash) {
+		const bool held = localTime < npc.monsterHoldUntil;
+		if(neutral && targetPos && !held && glm::length(vec2(npc.pos) - vec2(npc.home)) > leash) {
 			targetPos = nullptr;
 			npc.monsterTarget = ActorUID::INVALID;
 			npc.monsterReturning = true;
 			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
 		}
+		if(neutral && !targetPos && held) continue;
 		if(neutral && !targetPos) {
 			const vec2 rel = vec2(npc.home) - vec2(npc.pos);
 			const f32 dist = glm::length(rel);
@@ -1591,6 +1618,7 @@ void World::UpdateMonsterAi(f32 delta)
 						if(hpNow < special.hpMin || hpNow > special.hpMax || dist < special.minRange || dist > special.range) continue;
 						if(npc.monsterSkillReady[s] == Time::ZERO) npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime((special.firstAt >= 0 ? special.firstAt : special.cooldown) * 1000.0));
 						if(localTime < npc.monsterSkillReady[s]) continue;
+						if(MonsterDashNeedsTurn(npc, special, yaw)) continue;
 						farReady.push_back(s);
 						farShare += special.share;
 					}
@@ -1675,6 +1703,7 @@ void World::UpdateMonsterAi(f32 delta)
 					if(localTime < npc.monsterSkillReady[s]) continue;
 				}
 				if(dist > special.range + (reach - attack->range) || dist < special.minRange) continue;
+				if(MonsterDashNeedsTurn(npc, special, yaw)) continue;
 				ready.push_back(s);
 				totalShare += special.share;
 			}

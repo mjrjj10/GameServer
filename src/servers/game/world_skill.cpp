@@ -518,7 +518,7 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	if(npc.removeAt != Time::ZERO) return;
 	const vec3 from = npc.pos;
 	const vec3 center = statusForceCenterSet ? statusForceCenter : caster.body->GetWorldPos();
-	const NpcCcGraph cc = StartNpcCc(npc, info, center, vec2(center), 0.0f);
+	const NpcCcGraph cc = StartNpcCc(npc, info, center, vec2(center), caster.body->GetWorldPos(), 0.0f);
 	const f32 duration = cc.duration;
 	replication->SendAddStatusToAll(statusID, npc.UID, caster.Main().UID, duration, from, cc.to, cc.graphSec, 1, 1.0f, cc.nominal, cc.graph, false);
 	if(npcStatuses.full()) return;
