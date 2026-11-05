@@ -511,8 +511,8 @@ void World::UpdateNpcDrag(ActorNpc& npc, f32 delta)
 	const f32 selfRadius = npc.monsterAi ? npc.monsterAi->radius : 0.0f;
 	const vec2 next = dist > step ? vec2(npc.pos) + rel / MAX(dist, 0.001f) * step : npc.dragCenter;
 	foreach_const(o, actorNpcList) {
-		if(&*o == &npc || !o->monsterAi || o->hp <= 0 || o->removeAt != Time::ZERO) continue;
-		if(glm::length(vec2(o->pos) - npc.dragCenter) >= dist) continue;
+		if(&*o == &npc || !o->monsterAi || o->hp <= 0 || o->removeAt != Time::ZERO || o->dragElapsed <= 0) continue;
+		if(glm::length(o->dragCenter - npc.dragCenter) >= 1.0f || glm::length(vec2(o->pos) - npc.dragCenter) >= dist) continue;
 		if(glm::length(vec2(o->pos) - next) >= selfRadius + o->monsterAi->radius) continue;
 		npc.dragElapsed = npc.dragDuration;
 		SendNpcCcMove(npc, true);
