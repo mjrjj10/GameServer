@@ -17,6 +17,7 @@ static const f32 STAGE_TIME_LIMIT_FALLBACK_SEC = 300.0f;
 static const f64 RETURN_TO_LOBBY_DELAY_SEC = 20.0;
 static const u32 MEASURED_PVE_FAIL_RETURN_MS = 15000;
 static const f32 HYP_HUMAN_POSITION_SNAP = 100.0f;
+static const f32 HYP_HUMAN_DASH_SNAP = 400.0f;
 static const f32 MEASURED_BOT_TAG_SHARE = 2.5f / 49.9f;
 static const u32 MEASURED_DEFENCE_RETURN_MS = 280;
 static const i32 MEASURED_DEFENCE_RESPAWN_MS = 12000;
@@ -1178,7 +1179,7 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 		player.body->collider->setFootPosition(PxExtendedVec3(bodyPos.x + shift.x, bodyPos.y + shift.y, bodyPos.z));
 		player.body->vel = vec3(0);
 	}
-	else if(force || world.localTime < player.ccUntil || (world.localTime >= player.dashUntil && drifted)) {
+	else if(force || world.localTime < player.ccUntil || (world.localTime >= player.dashUntil && drifted) || glm::length(vec2(pos) - vec2(bodyPos)) > HYP_HUMAN_DASH_SNAP) {
 		player.body->collider->setFootPosition(PxExtendedVec3(pos.x, pos.y, pos.z));
 		player.body->vel = vec3(0);
 		if(player.dashDone < player.dashDist) player.dashOrigin = pos - vec3(player.dashDir * player.dashDone, 0);

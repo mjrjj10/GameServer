@@ -1417,7 +1417,6 @@ void World::UpdateMonsterAi(f32 delta)
 		if(neutral && targetPos && !held && glm::length(vec2(npc.pos) - vec2(npc.home)) > leash) {
 			targetPos = nullptr;
 			npc.monsterTarget = ActorUID::INVALID;
-			npc.monsterReturning = true;
 			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
 		}
 		if(neutral && titanMode && targetPos && !held && taunt == ActorUID::INVALID && localTime >= npc.monsterNextSearch && FindMasterActor(npc.monsterTarget)) {
@@ -1451,6 +1450,9 @@ void World::UpdateMonsterAi(f32 delta)
 				if(!npc.monsterReturning || localTime >= npc.monsterNextSync) {
 					npc.monsterReturning = true;
 					npc.monsterNextSync = TimeAdd(localTime, TimeMsToTime(MONSTER_SYNC_MS));
+					npc.monsterSyncYaw = yaw;
+					npc.monsterLastTurn = localTime;
+					npc.monsterChasing = false;
 					replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.home, yaw, back);
 				}
 			}
