@@ -322,6 +322,7 @@ struct World
 		bool dead = false;
 		Time ccUntil = Time::ZERO;
 		vec3 pushTarget = vec3(0);
+		i32 pushPassWallTeam = -1;
 		f32 pushSpeed = 0;
 		Time pushUntil = Time::ZERO;
 		bool pushSilent = false;

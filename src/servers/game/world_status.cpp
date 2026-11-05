@@ -900,7 +900,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			nominalDist = fabsf(dist);
 			f32 wallDist = 0;
 			const vec3 mid = vec3(0, 0, BodyMidHeight(target));
-			if(nominalDist > 1.0f && physics.RaycastStatic(from + mid, to + mid, &wallDist, (i32)target.team)) to = from + vec3(glm::normalize(vec2(to - from)) * wallDist, 0);
+			if(nominalDist > 1.0f && physics.RaycastStatic(from + mid, to + mid, &wallDist, info->type == StatusType::FORCEBACK ? (i32)caster.team : (i32)target.team)) to = from + vec3(glm::normalize(vec2(to - from)) * wallDist, 0);
 		}
 		LOG("Push :: %ls -> %ls status=%d sep=%.0f dir=(%.2f, %.2f) to=(%.0f, %.0f)", caster.name.data(), target.name.data(), statusID, len, dir.x, dir.y, to.x, to.y);
 		if(dragForce && target.clientHd == ClientHandle::INVALID) {
@@ -932,6 +932,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			target.pushUntil = newUntil > prevUntil ? newUntil : prevUntil;
 			target.pushSilent = info && (info->type == StatusType::PUSH || info->type == StatusType::FLY || info->type == StatusType::AIRBORNE || info->type == StatusType::KNOCKDOWN);
 			target.pushTarget = to;
+			target.pushPassWallTeam = info && info->type == StatusType::FORCEBACK ? (i32)caster.team : -1;
 			target.pushSpeed = glm::length(vec2(to - target.body->GetWorldPos())) / MAX((f32)TimeDiffSec(TimeDiff(localTime, target.pushUntil)), 0.05f);
 			if(target.pushUntil > target.ccUntil) target.ccUntil = target.pushUntil;
 		}

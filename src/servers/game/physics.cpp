@@ -333,11 +333,27 @@ struct IgnoreOtherCharacters: PxControllerFilterCallback
 	bool filter(const PxController&, const PxController&) override { return false; }
 };
 
+struct PassTeamWalls: PxQueryFilterCallback
+{
+	u32 teamWord = 0;
+	PxQueryHitType::Enum preFilter(const PxFilterData&, const PxShape* shape, const PxRigidActor*, PxHitFlags&) override
+	{
+		return shape->getQueryFilterData().word0 == teamWord ? PxQueryHitType::eNONE : PxQueryHitType::eBLOCK;
+	}
+	PxQueryHitType::Enum postFilter(const PxFilterData&, const PxQueryHit&) override { return PxQueryHitType::eBLOCK; }
+};
+
 vec3 PhysicsScene::Move(PhysicsDynamicBody* body, const vec3& disp, f32 time)
 {
 	static IgnoreOtherCharacters ignoreCharacters;
+	static PassTeamWalls passWalls;
 	PxControllerFilters filter;
 	filter.mCCTFilterCallback = &ignoreCharacters;
+	if(body->passWallTeam >= 0) {
+		passWalls.teamWord = (u32)body->passWallTeam + 1;
+		filter.mFilterCallback = &passWalls;
+		filter.mFilterFlags = PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER;
+	}
 	//filter.mFilterFlags = PxQueryFlag::eSTATIC; // only collide with static colliders
 	PxControllerCollisionFlags collisionFlags = body->collider->move(PxVec3(disp.x, disp.y, disp.z), 0, time, filter, nullptr /* obstacles? */);
 	return body->GetWorldPos();

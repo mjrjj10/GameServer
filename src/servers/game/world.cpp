@@ -113,6 +113,7 @@ void World::Update(Time localTime_)
 			p.input.moveTo = body.GetWorldPos();
 		}
 
+		if(p.body) p.body->passWallTeam = !p.dead && p.clientHd == ClientHandle::INVALID && localTime < p.pushUntil && p.pushPassWallTeam >= 0 ? p.pushPassWallTeam : -1;
 		if(!p.dead && p.clientHd == ClientHandle::INVALID && localTime < p.ccUntil) {
 			const ActiveStatus* fear = nullptr;
 			foreach_const(st, activeStatuses) {

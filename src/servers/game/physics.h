@@ -81,6 +81,7 @@ struct PhysicsDynamicBody
 	vec3 vel = vec3(0); // actual velocity
 	bool grounded = false;
 	Time lockedMoveUntil = Time::ZERO;
+	i32 passWallTeam = -1;
 
 	inline vec3 GetWorldPos() const { return tov3(collider->getFootPosition()); }
 	inline vec2 GetBoundSize() const { return { radius, height + radius * 2 }; }
