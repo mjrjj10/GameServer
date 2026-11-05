@@ -55,6 +55,7 @@
   <MOD status="1230360011" stat="STAT_TYPE_MOVESPEED" value="-50" mul="1" source="SKILLTT_LEVEL" note="Tools/notes/specs/slows_measured.md" />
   <MOD status="1230380034" stat="STAT_TYPE_MOVESPEED" value="-40" mul="1" source="SKILLTT_LEVEL" note="Tools/notes/specs/slows_measured.md" />
   <MOD status="1230380036" stat="STAT_TYPE_MOVESPEED" value="-40" mul="1" source="SKILLTT_LEVEL" note="Tools/notes/specs/slows_measured.md" />
+  <MOD status="1230370003" stat="STAT_TYPE_RAGE" value="12" count="1000" interval="1" source="MEASURED 4 official games with Yuri: Sol Infusion toggle (STATUS_YURI_SHIRK_RPREGEN, no _Interval in data) gives +12 rage every 1.0 s (stat 36 reason 4, 40 steps)" />
   <MOD status="1230370001" stat="STAT_TYPE_HEALTH" value="5" mul="1" count="5" source="STR_SKILL_DESC_180370000 Triage: restores 5% max HP per second for the 5 s of STATUS_YURI_PASSIVE_HEAL (_DurationTime 5000, _Interval 1000); no official capture of the trigger" />
   <MOD status="1230120091" stat="STAT_TYPE_HEALTH" value="15" mul="1" count="1" source="MEASURED official Chi Pull empowered: +306 HP = 15% of 2040 max HP in one tick" />
   <MOD status="1230000141" stat="STAT_TYPE_MOVESPEED" value="15" mul="1" source="MEASURED official after-dodge speed status: x1.15 (362 cases)" />

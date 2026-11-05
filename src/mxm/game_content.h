@@ -175,6 +175,7 @@ struct StatusMod
 	bool mul = false;
 	f32 value = 0;
 	f32 count = 0;
+	f32 intervalSec = 0;
 };
 
 struct MasterGrouping

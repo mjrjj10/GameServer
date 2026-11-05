@@ -779,7 +779,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		AchieveLive(player, ev);
 	}
 	if(!followUp) DropPendingActions(player);
-	BreakHide(player);
+	if(!followUp) BreakHide(player);
 	BushRevealOnFire(player);
 
 	f32 angle = player.input.rot.upperYaw;

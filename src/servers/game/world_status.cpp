@@ -1129,7 +1129,7 @@ void World::UpdateStatuses()
 		if(it->info && !target.dead) {
 			foreach_const(m, it->info->mods) {
 				if(!m->regen || m->stat != StatusMod::RAGE || localTime < it->nextHealTick || it->healTicksDone >= (i32)m->count) continue;
-				it->nextHealTick = TimeAdd(localTime, TimeMsToTime(MAX(it->info->intervalSec, 0.1f) * 1000.0));
+				it->nextHealTick = TimeAdd(localTime, TimeMsToTime(MAX(m->intervalSec > 0 ? m->intervalSec : it->info->intervalSec, 0.1f) * 1000.0));
 				it->healTicksDone++;
 				GainResource(target, 1, m->value * it->overlap);
 			}

@@ -4264,6 +4264,7 @@ bool GameXmlContent::LoadStatusStatMods()
 		mod.value = pMod->FloatAttribute("value");
 		mod.mul = pMod->BoolAttribute("mul");
 		mod.count = pMod->FloatAttribute("count");
+		mod.intervalSec = pMod->FloatAttribute("interval");
 		mod.regen = mod.stat == StatusMod::HEALTH || (mod.stat == StatusMod::RAGE && mod.count > 1);
 		if(mod.stat == StatusMod::OTHER || mod.value == 0) continue;
 		found->second.mods.push_back(mod);
