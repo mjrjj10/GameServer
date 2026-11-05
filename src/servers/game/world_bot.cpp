@@ -882,6 +882,25 @@ void World::UpdateObserver()
 	LOG("Observer :: watches %ls at (%.0f, %.0f) last action %.1fs ago", best->name.data(), at.x, at.y, bestAge);
 }
 
+void World::BotIdleCharge(Player& bot)
+{
+	const WeaponFiring& wf = ActiveWeaponFiring(bot, bot.Main().stance);
+	if(wf.charge.empty() || wf.chargeTime.empty() || bot.weaponState == WEAPON_STATE_CHARGE) return;
+	const f32 resMax = MasterStat(bot.Main().classType, RESOURCES[1].maxStat);
+	if(resMax <= 0 || bot.res[1] >= resMax) return;
+	bool gains = FindResourceGainRule(bot.Main().classType, ResourceEvent::CHARGING_PER_SEC) != nullptr;
+	const GameXmlContent::Action* charge = GetGameXmlContent().FindSkillAction(ActionClass(bot), ActionStateID::ATTACKCHARGE_BEHAVIORSTATE, bot.Main().stance);
+	if(charge && !gains) foreach_const(cmd, charge->commands) {
+		if(cmd->type != ActionCommand::Type::STATUS || cmd->status.statusIndex == 0 || cmd->status.remove) continue;
+		const StatusInfo* info = GetGameXmlContent().FindStatus(cmd->status.statusIndex);
+		if(info) foreach_const(m, info->mods) if(m->regen && m->stat == StatusMod::RAGE) gains = true;
+	}
+	if(!gains) return;
+	bot.botChargeGoal = BotRollChargeLevel(bot, wf);
+	OnWeaponState(bot, WEAPON_STATE_CHARGE, 0, bot.firingCombo);
+	replication->RelayWeaponState(ClientHandle::INVALID, bot.Main().UID, MEASURED_WEAPON_STATE_WEAPON_ID, WEAPON_STATE_CHARGE, 0, bot.firingCombo);
+}
+
 void World::UpdateBotCombat()
 {
 	foreach(it, players) {
@@ -929,9 +948,9 @@ void World::UpdateBotCombat()
 				const f32 d = glm::length(vec2(npc->pos) - vec2(pos));
 				if(d < bestNpc) { bestNpc = d; best = d; aim = npc->pos; }
 			}
-			if(bestNpc >= range) continue;
+			if(bestNpc >= range) { BotIdleCharge(bot); continue; }
 		}
-		else if(!target) continue;
+		else if(!target) { BotIdleCharge(bot); continue; }
 
 		const WeaponFiring& chargeWf = ActiveWeaponFiring(bot, bot.Main().stance);
 		if(!chargeWf.charge.empty() && !chargeWf.chargeTime.empty()) {

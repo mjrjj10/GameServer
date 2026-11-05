@@ -995,7 +995,7 @@ bool World::IsBlocked(const Player& p, bool attack, bool skill, bool shirk) cons
 	return false;
 }
 
-static const f32 MEASURED_SLIME_MASS_BAND_START[4] = { 30.0f, 50.0f, 70.0f, 90.0f };
+static const f32 MEASURED_SLIME_MASS_BAND_START[4] = { 25.0f, 45.0f, 65.0f, 85.0f };
 static const f32 MEASURED_SLIME_POWER_PCT[5] = { -50.0f, -25.0f, 0.0f, 25.0f, 50.0f };
 static const f32 MEASURED_SLIME_SPEED_PCT[5] = { 25.0f, 10.0f, 0.0f, -10.0f, -25.0f };
 static const f32 MEASURED_SLIME_SKILLPOWER[5] = { -75.0f, -37.5f, 0.0f, 37.5f, 75.0f };

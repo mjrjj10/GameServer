@@ -979,6 +979,7 @@ struct World
 	void PlaySummonExtraMotion(ActorNpc& npc, const SummonInfo& info, i32 motion);
 	void EnforceSummonLimit(const Player& owner, u32 ownerIndex, i32 creature);
 	void UpdateBotCombat();
+	void BotIdleCharge(Player& bot);
 	void UpdateBotMovement();
 	void UpdateObserver();
 	void BuildTeamGates();
