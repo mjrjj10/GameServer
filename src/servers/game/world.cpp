@@ -155,7 +155,7 @@ void World::Update(Time localTime_)
 
 		// tag
 		if(p.input.tag && p.clientHd == ClientHandle::INVALID) {
-			if(p.casting.skillID != SkillID::INVALID) p.input.tag = 0;
+			if(p.casting.skillID != SkillID::INVALID || localTime < p.dashUntil) p.input.tag = 0;
 			foreach_const(pr, pendingRemotes) {
 				if(!pr->remove && pr->ownerIndex == p.index) { p.input.tag = 0; break; }
 			}

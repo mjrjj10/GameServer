@@ -992,7 +992,12 @@ void World::MonsterStopIfHeld(ActorNpc& npc)
 bool World::MonsterDashNeedsTurn(ActorNpc& npc, const GameXmlContent::MonsterAttack& attack, f32 yaw)
 {
 	if(attack.dashDist <= 0 || attack.dashPassAnims.empty()) return false;
-	if(YawGap(yaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD) {
+	if(npc.monsterChasing || npc.monsterWalking || YawGap(yaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD) {
+		if(npc.monsterChasing || npc.monsterWalking) {
+			npc.monsterChasing = false;
+			npc.monsterWalking = false;
+			replication->SendMonsterStopTurnToAll(npc.UID, npc.pos, npc.monsterSyncYaw, yaw, npc.monsterAi ? npc.monsterAi->run * npc.speedMul : 0.0f);
+		}
 		npc.rot.z = yaw;
 		npc.monsterSyncYaw = yaw;
 		npc.monsterLastTurn = localTime;
@@ -1653,6 +1658,7 @@ void World::UpdateMonsterAi(f32 delta)
 			const f32 dist = glm::length(rel);
 			const f32 yaw = dist > 1.0f ? atan2f(rel.y, rel.x) : npc.rot.z;
 			const f32 reach = attack->range;
+			if(localTime < npc.monsterDashTurnAt) continue;
 			if(dist > reach + MONSTER_REACH_TOLERANCE) {
 				if(localTime >= npc.monsterNextAttack) {
 					const f32 hpNow = npc.hpMax > 0 ? (f32)npc.hp / (f32)npc.hpMax : 1.0f;

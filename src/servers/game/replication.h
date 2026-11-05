@@ -544,6 +544,7 @@ struct Replication
 	void SendVote(ClientHandle clientHd, u32 type, u32 choice);
 	void SendVotingResult(ClientHandle clientHd, UserID candidate, u32 type, u32 state, u32 reason, u32 playerCool, u32 teamCool);
 	void SendMonsterStopWithSpeedToAll(ActorUID actorUID, const vec3& pos, f32 speed);
+	void SendMonsterStopTurnToAll(ActorUID actorUID, const vec3& pos, f32 fromYaw, f32 toYaw, f32 speed);
 	void SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed);
 	void SendMonsterLiftToAll(ActorUID actorUID, const vec3& pos);
 	void SendNpcLegStartToAll(ActorUID actorUID, const vec3& pos, const vec3& goal);

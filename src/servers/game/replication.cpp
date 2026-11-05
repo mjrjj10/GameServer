@@ -2500,6 +2500,28 @@ void Replication::SendMonsterStopWithSpeedToAll(ActorUID actorUID, const vec3& p
 	}
 }
 
+void Replication::SendMonsterStopTurnToAll(ActorUID actorUID, const vec3& pos, f32 fromYaw, f32 toYaw, f32 speed)
+{
+	const u16 speedSent = (u16)MIN(speed * MONSTER_SPEED_SCALE, 65535.0f);
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID) continue;
+		playerLocalInfo[clientID].monsterSpeedSent[actorUID] = speedSent;
+		PacketWriter<Sv::SN_AIMonsterSyncMove,48> packet;
+		packet.Write<u8>(NPC_MOVE_YAW_AND_SPEED);
+		packet.Write<u32>((u32)localID);
+		packet.Write<i16>(WorldYawToMonsterDeciDegrees(fromYaw));
+		packet.Write<i16>(WorldYawToMonsterDeciDegrees(toYaw));
+		packet.Write<u16>(speedSent);
+		packet.Write<float3>(v2f(pos));
+		packet.Write<float3>(v2f(pos));
+		packet.Write<u8>(NPC_MOVE_FLAG_STOPPED);
+		SendPacket(clientHd, packet);
+	}
+}
+
 void Replication::SendMonsterLiftToAll(ActorUID actorUID, const vec3& pos)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
