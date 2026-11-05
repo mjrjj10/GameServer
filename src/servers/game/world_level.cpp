@@ -548,7 +548,6 @@ void World::TransformTitan(Player& player, i32 formIndex, bool initial)
 	const f64 revealMs = reveal && reveal->durationSec > 0 ? reveal->durationSec * 1000.0 : 0.0;
 	foreach(e, players) {
 		if(e->team == player.team || e->dead || e->Main().classType == ClassType::NONE) continue;
-		ApplyStatus(player, *e, TITAN_SPAWN_REVEAL_STATUS);
 		if(revealMs > 0 && player.team < 2) {
 			const Time until = TimeAdd(localTime, TimeMsToTime(revealMs));
 			if(e->fogRevealUntil[player.team] < until) e->fogRevealUntil[player.team] = until;

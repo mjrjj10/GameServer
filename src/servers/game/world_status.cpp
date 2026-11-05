@@ -1171,7 +1171,7 @@ void World::UpdateStatuses()
 				if(sib != it && sib->targetIndex == it->targetIndex && sib->info && sib->info->skillIndex == it->info->skillIndex && sib->appliedAt == it->appliedAt && sib->until > localTime) sib->until = localTime;
 			}
 		}
-		if(timeOver || target.dead || shieldBroken || it->removeOnHit) {
+		if(timeOver || (target.dead && !(it->info && it->info->permanent)) || shieldBroken || it->removeOnHit) {
 			if(timeOver && !target.dead && it->info && it->info->type == StatusType::NEARLY_IMMORTAL && it->info->paramRatio > 0) {
 				const i32 taken = MAX(target.damageTaken - it->damageAtStart, 0);
 				const i32 extra = (i32)MIN(taken * it->info->Param("_RecoveryFactorHP") / 100.0f, it->info->Param("_MaxRecoverHP"));

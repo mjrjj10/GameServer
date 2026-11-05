@@ -535,7 +535,8 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	const vec3 center = statusForceCenterSet ? statusForceCenter : caster.body->GetWorldPos();
 	const NpcCcGraph cc = StartNpcCc(npc, info, center, vec2(center), caster.body->GetWorldPos(), 0.0f);
 	const f32 duration = cc.duration;
-	replication->SendAddStatusToAll(statusID, npc.UID, caster.Main().UID, duration, from, cc.to, cc.graphSec, 1, 1.0f, cc.nominal, cc.graph, false);
+	const i32 overlap = prevOverlap > 0 ? MIN(prevOverlap + 1, MAX(info ? info->maxOverlap : 1, 1)) : 1;
+	replication->SendAddStatusToAll(statusID, npc.UID, caster.Main().UID, duration, from, cc.to, cc.graphSec, overlap, 1.0f, cc.nominal, cc.graph, prevOverlap > 0);
 	if(npcStatuses.full()) return;
 	NpcStatus ns;
 	ns.npcUID = npc.UID;
@@ -543,6 +544,7 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	ns.casterUID = caster.Main().UID;
 	ns.until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
 	ns.appliedAt = localTime;
+	ns.dotOverlap = overlap;
 	ns.linked = false;
 	if(info && info->type == StatusType::SHIELD) ns.shieldHP = GetGameXmlContent().StatusShieldAmount(*info);
 	ns.shieldMax = ns.shieldHP;
@@ -1374,7 +1376,6 @@ void World::BushRevealOnFire(Player& player)
 {
 	if(!replication->titanMode || player.bushUID == ActorUID::INVALID) return;
 	EndPlayerStatus(player, MEASURED_BUSH_HIDE_STATUS);
-	EndPlayerStatus(player, MEASURED_BUSH_REVEAL_STATUS);
 	ApplyStatus(player, player, MEASURED_BUSH_REVEAL_STATUS);
 	RevealToTeam(player, player.team == 0 ? 1 : 0);
 	RefreshBushStates();

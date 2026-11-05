@@ -300,7 +300,7 @@ void World::ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply)
 	}
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
 	const f32 duration = info && info->durationSec > 0 ? info->durationSec : MONSTER_STATUS_FOREVER_SEC;
-	replication->SendAddStatusToAll(statusID, npc.UID, npc.UID, duration, npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false, false);
+	replication->SendAddStatusToAll(statusID, npc.UID, npc.UID, info && info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : duration, npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false, false);
 	if(!npcStatuses.full()) {
 		NpcStatus ns;
 		ns.npcUID = npc.UID;
@@ -550,6 +550,7 @@ void World::UpdateNpcDrag(ActorNpc& npc, f32 delta)
 void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 statusID)
 {
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
+	foreach_const(ns, npcStatuses) if(ns->npcUID == npc.UID && ns->statusID == statusID && ns->casterUID == caster.UID && ns->appliedAt == localTime && (!info || info->maxOverlap <= 1)) return;
 	const f32 hold = NpcDefeatReaction(npc, info);
 	if(hold < 0) {
 		replication->SendResistStatusToAll(npc.UID, caster.UID, STATUS_RESIST_EVENT_PASSIVE);
@@ -569,6 +570,7 @@ void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 s
 	NpcStatus ns;
 	ns.npcUID = npc.UID;
 	ns.statusID = statusID;
+	ns.appliedAt = localTime;
 	ns.casterUID = caster.UID;
 	ns.until = TimeAdd(localTime, TimeMsToTime((f64)duration * 1000.0));
 	ns.linked = false;
@@ -1002,13 +1004,17 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 		case GameXmlContent::LevelEventNode::CALL_ITEM: SpawnGroundItems(node->dropIndex, node->areaID, node->tagID); break;
 		case GameXmlContent::LevelEventNode::STATUS_CHANGE: {
 			if(node->applyType == GameXmlContent::LevelEventNode::APPLY_MY_CHAR) {
-				if(node->apply && playerIndex >= 0 && node->statusIndex != 0 && !players[playerIndex].dead) ApplyStatus(players[playerIndex], players[playerIndex], node->statusIndex, 0, LevelStatusDuration(node->statusIndex));
+				if(node->apply && playerIndex >= 0 && node->statusIndex != 0 && !players[playerIndex].dead) {
+					statusNoCaster = true;
+					ApplyStatus(players[playerIndex], players[playerIndex], node->statusIndex, 0, LevelStatusDuration(node->statusIndex));
+					statusNoCaster = false;
+				}
 				else if(!node->apply && playerIndex >= 0 && node->statusIndex != 0) ConsumeStatus((u32)playerIndex, node->statusIndex);
 			}
 			else if(node->applyType == GameXmlContent::LevelEventNode::APPLY_ALL_PARTY && node->statusIndex != 0) {
 				foreach(p, players) {
 					if(!p->body || p->removed || ((node->team == Faction::RED || node->team == Faction::BLUE) && (Faction)p->team != node->team)) continue;
-					if(node->apply) { if(!p->dead) ApplyStatus(*p, *p, node->statusIndex, 0, LevelStatusDuration(node->statusIndex)); }
+					if(node->apply) { if(!p->dead) { statusNoCaster = true; ApplyStatus(*p, *p, node->statusIndex, 0, LevelStatusDuration(node->statusIndex)); statusNoCaster = false; } }
 					else ConsumeStatus(p->index, node->statusIndex);
 				}
 			}
