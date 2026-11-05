@@ -3147,6 +3147,8 @@ bool GameXmlContent::LoadRemoteData()
 				remote.maxSpeed = _MaxSpeed;
 				remote.maxDistance = _MaxDistance;
 				pComp->QueryFloatAttribute("_AngularVel", &remote.angularVel);
+				pComp->QueryFloatAttribute("_InitSpeed", &remote.initSpeed);
+				pComp->QueryFloatAttribute("_ForceScale", &remote.forceScale);
 				pComp->QueryFloatAttribute("_ForceDelay", &remote.forceDelay);
 				if(pComp->Attribute("_GroundMoveType")) remote.groundMoveOffsetZ = pComp->FloatAttribute("_GroundMoveOffsetZ", 0.0f);
 			}
@@ -4290,6 +4292,7 @@ bool GameXmlContent::LoadMeasuredFireNodes()
 		node.childSide = pFire->FloatAttribute("childSide");
 		node.childUp = pFire->FloatAttribute("childUp");
 		node.childRot = pFire->FloatAttribute("childRot");
+		node.childDirZ = pFire->FloatAttribute("childDirZ");
 		measuredFireNodes[FireNodeKey(pFire->IntAttribute("skill"), pFire->IntAttribute("remote"), pFire->IntAttribute("index"))] = node;
 	}
 	LOG("Loaded %d measured fire nodes", (i32)measuredFireNodes.size());

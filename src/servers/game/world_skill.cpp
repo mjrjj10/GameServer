@@ -1048,7 +1048,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			if(cmd->type == ActionCommand::Type::MOVE && cmd->move.preset != ActionCommand::MovePreset::MOVE_NONE && cmd->move.preset != ActionCommand::MovePreset::SEE_TARGET &&
 				cmd->move.preset != ActionCommand::MovePreset::SEE_CURRENT_TARGET && cmd->move.preset != ActionCommand::MovePreset::SEE_MEMORIZED_TARGET) moves = true;
 		}
-		if(!moves) {
+		{
 			f32 still = 0;
 			bool blocked = false;
 			for(i32 pass = 0; pass < passes; pass++) {
@@ -1064,7 +1064,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			}
 			if(still > 0) {
 				player.botSkillStillUntil = TimeAdd(localTime, TimeMsToTime(still * 1000.0));
-				player.input.moveTo = player.body->GetWorldPos();
+				if(!moves) player.input.moveTo = player.body->GetWorldPos();
 			}
 		}
 	}

@@ -589,6 +589,8 @@ struct Remote
 	f32 homingTime = 0;
 	bool homingLockOn = false;
 	f32 angularVel = 0;
+	f32 initSpeed = 0;
+	f32 forceScale = 0;
 	f32 forceDelay = 0;
 	f32 criticalRate = 0;
 	i32 onHitOwnerStatus = 0;
@@ -1562,7 +1564,7 @@ struct GameXmlContent
 	f32 BotAfterSkillDelay() const { return botAfterSkillDelay; }
 	f32 BotConstant(const char* key) const { auto f = botConstants.find(StatusTypeKey(key)); return f == botConstants.end() ? 0 : f->second; }
 	i32 BotStageSkillKind(i32 skill) const { for(i32 i = 0; i < (i32)botStageSkills.size(); i++) if(botStageSkills[i] == skill) return i; return -1; }
-	struct MeasuredFireNode { f32 forward = 0; f32 side = 0; f32 up = 0; bool hasChild = false; f32 childForward = 0; f32 childSide = 0; f32 childUp = 0; f32 childRot = 0; };
+	struct MeasuredFireNode { f32 forward = 0; f32 side = 0; f32 up = 0; bool hasChild = false; f32 childForward = 0; f32 childSide = 0; f32 childUp = 0; f32 childRot = 0; f32 childDirZ = 0; };
 	struct FireNodePath { f32 step = 0; eastl::vector<vec3> points; };
 	eastl::vector<FireNodePath> fireNodePaths;
 	eastl::hash_map<i32, i32> fireNodePathByRemote;

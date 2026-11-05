@@ -10,11 +10,11 @@
   <FIRE skill="180020010" remote="1440020010" index="3" forward="-17" side="-35" up="296" rot="0.0" samples="94" />
   <FIRE skill="180020030" remote="1440020040" index="0" forward="0" side="0" up="0" rot="0.0" samples="19" />
   <FIRE skill="180020030" remote="1440020041" index="0" forward="0" side="0" up="0" rot="0.0" samples="19" />
-  <FIRE skill="180020040" remote="1440020030" index="0" forward="-36" side="4" up="223" rot="0.0" samples="10" childForward="-409" childSide="3" childUp="833" childRot="0" />
-  <FIRE skill="180020040" remote="1440020030" index="1" forward="-51" side="-18" up="159" rot="0.0" samples="10" childForward="134" childSide="526" childUp="587" childRot="-109" />
-  <FIRE skill="180020040" remote="1440020030" index="2" forward="-37" side="14" up="157" rot="0.0" samples="10" childForward="153" childSide="-517" childUp="588" childRot="111" />
-  <FIRE skill="180020040" remote="1440020030" index="3" forward="-34" side="-21" up="149" rot="0.0" samples="10" childForward="-350" childSide="417" childUp="613" childRot="-53" />
-  <FIRE skill="180020040" remote="1440020030" index="4" forward="-21" side="15" up="157" rot="0.0" samples="10" childForward="-409" childSide="-300" childUp="672" childRot="38" />
+  <FIRE skill="180020040" remote="1440020030" index="0" forward="-36" side="4" up="223" rot="0.0" samples="10" childForward="-409" childSide="3" childUp="833" childRot="0" childDirZ="0.12" />
+  <FIRE skill="180020040" remote="1440020030" index="1" forward="-51" side="-18" up="159" rot="0.0" samples="10" childForward="134" childSide="526" childUp="587" childRot="-109" childDirZ="0.52" />
+  <FIRE skill="180020040" remote="1440020030" index="2" forward="-37" side="14" up="157" rot="0.0" samples="10" childForward="153" childSide="-517" childUp="588" childRot="111" childDirZ="0.52" />
+  <FIRE skill="180020040" remote="1440020030" index="3" forward="-34" side="-21" up="149" rot="0.0" samples="10" childForward="-350" childSide="417" childUp="613" childRot="-53" childDirZ="0.44" />
+  <FIRE skill="180020040" remote="1440020030" index="4" forward="-21" side="15" up="157" rot="0.0" samples="10" childForward="-409" childSide="-300" childUp="672" childRot="38" childDirZ="0.38" />
   <FIRE skill="180040020" remote="1440040020" index="0" forward="73" side="2" up="-2" rot="0.0" samples="30" />
   <FIRE skill="180050010" remote="1440050050" index="0" forward="201" side="-1" up="212" rot="0.0" samples="58" />
   <FIRE skill="180050020" remote="1440050020" index="0" forward="582" side="2" up="12" rot="0.0" samples="31" />

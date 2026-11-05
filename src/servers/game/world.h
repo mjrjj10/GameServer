@@ -792,6 +792,7 @@ struct World
 		i32 damage;
 		vec3 pos;
 		vec2 dir;
+		f32 dirZ = 0;
 		f32 travelled;
 		f32 range;
 		f32 speed;
@@ -1147,6 +1148,7 @@ struct World
 	void SweepFireNodePath(RemoteInst& inst, Player& instOwner);
 	bool UpdateTargetRemote(RemoteInst& inst, f32 delta);
 	bool UpdateGraphRemote(RemoteInst& inst, f32 delta);
+	bool SteerRemote3D(RemoteInst& inst, const vec3& aim, f32 groundZ, f32 hitReach, f32 delta, bool* reached);
 	bool AdvanceSteeredRemote(RemoteInst& inst, f32 delta);
 	bool UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed);
 	void DestroyRemote(i32 index);

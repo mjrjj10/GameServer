@@ -68,7 +68,7 @@ void World::UpdateBotSkills()
 	foreach(it, players) {
 		Player& bot = *it;
 		if(bot.clientHd != ClientHandle::INVALID || bot.dead) continue;
-		if(localTime < bot.tNextBotSkill || localTime < bot.ccUntil) continue;
+		if(localTime < bot.tNextBotSkill || localTime < bot.ccUntil || localTime < bot.dashUntil || localTime < bot.botSkillStillUntil) continue;
 		if(IsBlocked(bot, false, true, false)) continue;
 		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500));
 		if(bot.casting.skillID != SkillID::INVALID || BotStageSkill(bot)) continue;
@@ -888,6 +888,7 @@ void World::UpdateBotCombat()
 		Player& bot = *it;
 		if(bot.clientHd != ClientHandle::INVALID || bot.dead) continue;
 		if(localTime < bot.tNextBotShot || localTime < bot.ccUntil) continue;
+		if(localTime < bot.dashUntil || localTime < bot.botSkillStillUntil || bot.casting.skillID != SkillID::INVALID) continue;
 		if(IsBlocked(bot, true, false, false)) continue;
 		if(WeaponIsMelee(bot) && Config().DevShowcase) continue;
 		if(WeaponIsMelee(bot)) {

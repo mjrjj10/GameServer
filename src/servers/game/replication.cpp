@@ -2077,13 +2077,14 @@ void Replication::RelayRemoteSyncCreateFromRemoteDoc(ClientHandle senderHd, cons
 static const u8 REMOTE_SYNC_NO_MOVE_DIR = 8;
 static const f32 MEASURED_SYNC_TURN_MIN_RAD = 0.087f;
 
-void Replication::SendRemoteSyncTargetToAll(u32 remoteID, ActorUID targetUID, const vec3& pos, const vec2* moveDir)
+void Replication::SendRemoteSyncTargetToAll(u32 remoteID, ActorUID targetUID, const vec3& pos, const vec2* moveDir, f32 moveDirZ)
 {
 	Sv::SN_RemoteSyncTarget packet;
 	packet.excludedFieldBits = moveDir ? 0 : REMOTE_SYNC_NO_MOVE_DIR;
 	packet.remoteID = remoteID;
 	packet.DestPos = v2f(pos);
-	packet.MoveDir = moveDir ? v2f(vec3(*moveDir, 0)) : v2f(vec3(0));
+	const f32 flat = sqrtf(MAX(1.0f - moveDirZ * moveDirZ, 0.0f));
+	packet.MoveDir = moveDir ? v2f(vec3(*moveDir * flat, moveDirZ)) : v2f(vec3(0));
 	const u16 size = moveDir ? (u16)sizeof(Sv::SN_RemoteSyncTarget) : (u16)offsetof(Sv::SN_RemoteSyncTarget, MoveDir);
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;

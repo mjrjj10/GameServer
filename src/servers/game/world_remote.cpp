@@ -130,6 +130,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	inst.range = remote->maxDistance;
 	if(remote->behaviorType == Remote::BehaviorType::GRAPH && remote->fixedGraphLength > 0) inst.range = remote->fixedGraphLength;
 	if(inst.range <= 0 && remote->lifeTime > 0 && inst.speed > 0) inst.range = remote->lifeTime * inst.speed;
+	if(remote->initSpeed > 0 && remote->angularVel > 0) inst.speed = remote->maxSpeed > 0 ? MIN(remote->initSpeed, remote->maxSpeed) : remote->initSpeed;
 	if(remote->useOwnerRemoteSpeedRatio) inst.speed *= OwnerRemoteSpeedRatio(players[ownerIndex]);
 	if(remote->behaviorType == Remote::BehaviorType::GRAPH && remote->fixedGraphLength <= 0 && aimPos && glm::length(vec2(*aimPos)) > 1.0f) {
 		const f32 aimDist = glm::length(vec2(*aimPos) - vec2(pos));
@@ -857,7 +858,7 @@ void World::UpdateRemotes(f32 delta)
 			if(retarget || inst.syncIn <= 0) {
 				inst.syncIn = retarget ? MEASURED_REMOTE_SYNC_PERIOD_SEC : inst.syncIn + MEASURED_REMOTE_SYNC_PERIOD_SEC;
 				inst.syncedTarget = inst.target;
-				replication->SendRemoteSyncTargetToAll(inst.clientRemoteID, inst.target, inst.pos, &inst.dir);
+				replication->SendRemoteSyncTargetToAll(inst.clientRemoteID, inst.target, inst.pos, &inst.dir, inst.dirZ);
 			}
 		}
 		const bool chainHop = remote.behaviorType == Remote::BehaviorType::CHAIN && remote.destroyCreateRemote != RemoteIdx::INVALID;
@@ -1167,9 +1168,49 @@ void World::ApplyAttachedRemote(RemoteInst& inst, Player& instOwner)
 	}
 }
 
+static const f32 HYP_NPC_REMOTE_AIM_HEIGHT = 100.0f;
+
+bool World::SteerRemote3D(RemoteInst& inst, const vec3& aim, f32 groundZ, f32 hitReach, f32 delta, bool* reached)
+{
+	const Remote& remote = *inst.remote;
+	const f32 flat = sqrtf(MAX(1.0f - inst.dirZ * inst.dirZ, 0.0f));
+	vec3 d = vec3(inst.dir * flat, inst.dirZ);
+	const vec3 rel = aim - inst.pos;
+	const f32 len = glm::length(rel);
+	const f32 step = inst.speed * delta;
+	*reached = len <= step + hitReach;
+	if(*reached) return true;
+	const vec3 want = rel / len;
+	const f32 angle = acosf(MAX(MIN(glm::dot(d, want), 1.0f), -1.0f));
+	const f32 turn = remote.angularVel * delta;
+	if(angle > 0.0001f) {
+		const f32 t = MIN(turn / angle, 1.0f);
+		const f32 s = sinf(angle);
+		d = s > 0.0001f ? (d * sinf((1.0f - t) * angle) + want * sinf(t * angle)) / s : want;
+		d = glm::normalize(d);
+	}
+	const vec2 h = vec2(d);
+	if(glm::length(h) > 0.001f) inst.dir = glm::normalize(h);
+	inst.dirZ = d.z;
+	f32 moved = step;
+	if(inst.range > 0) moved = MAX(MIN(moved, inst.range - inst.travelled), 0.0f);
+	inst.pos += d * moved;
+	inst.travelled += moved;
+	if(inst.pos.z <= groundZ) {
+		inst.pos.z = groundZ;
+		return true;
+	}
+	return inst.range > 0 && inst.travelled >= inst.range - 0.01f;
+}
+
 bool World::UpdateTargetRemote(RemoteInst& inst, f32 delta)
 {
 	const Remote& remote = *inst.remote;
+	const bool accelerating = remote.initSpeed > 0 && remote.angularVel > 0;
+	if(accelerating) {
+		const f32 grown = remote.initSpeed + remote.forceScale * (f32)TimeDiffSec(TimeDiff(inst.spawnTime, localTime));
+		inst.speed = remote.maxSpeed > 0 ? MIN(grown, remote.maxSpeed) : grown;
+	}
 	if(remote.behaviorType == Remote::BehaviorType::TARGET && remote.attachTargetObject && inst.target != ActorUID::INVALID) return false;
 	if(inst.target == ActorUID::INVALID && remote.behaviorType == Remote::BehaviorType::HOMING && remote.forceDelay > 0 && TimeDiffSec(TimeDiff(inst.spawnTime, localTime)) < remote.forceDelay) {
 		const f32 forced = (inst.speed > 0 ? inst.speed : 0.0f) * delta;
@@ -1217,6 +1258,12 @@ bool World::UpdateTargetRemote(RemoteInst& inst, f32 delta)
 			RemoteDamageNpc(inst, *targetNpc, 0.0f);
 			return true;
 		}
+		if(steered && accelerating) {
+			bool reached = false;
+			const bool done = SteerRemote3D(inst, targetNpc->pos + vec3(0, 0, HYP_NPC_REMOTE_AIM_HEIGHT), targetNpc->pos.z, remote.boundSize[0] * 0.5f + NpcHitRadius(*targetNpc), delta, &reached);
+			if(reached) RemoteDamageNpc(inst, *targetNpc, 0.0f);
+			return done;
+		}
 		if(steered) {
 			inst.dir = SteerToward(inst.dir, rel, remote.angularVel * delta);
 			return AdvanceSteeredRemote(inst, delta);
@@ -1232,6 +1279,12 @@ bool World::UpdateTargetRemote(RemoteInst& inst, f32 delta)
 	}
 	Player& target = *targetMaster->parent;
 	const vec3 tpos = target.body->GetWorldPos();
+	if(steered && accelerating) {
+		bool reached = false;
+		const bool done = SteerRemote3D(inst, tpos + vec3(0, 0, BodyMidHeight(target)), tpos.z, remote.boundSize[0] * 0.5f + HitRadius(target), delta, &reached);
+		if(reached) RemoteHit(inst, target);
+		return done;
+	}
 	const vec2 rel = vec2(tpos - inst.pos);
 	const f32 dist = glm::length(rel);
 	const f32 step = (inst.speed > 0 ? inst.speed : 3000.0f) * delta;
@@ -1404,6 +1457,7 @@ void World::DestroyRemote(i32 index)
 				remoteSendParentID = copy.clientRemoteID;
 				remoteSendParentSeedHd = copy.seedOwnerHd;
 				RemoteInst* child = SpawnRemote(copy.ownerIndex, CostReplacedRemote(copy.costLevel, next), childPos, childDir, copy.target, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, copy.nodeName, false, false, true);
+				if(child && copy.measuredNode && copy.measuredNode->hasChild) child->dirZ = copy.measuredNode->childDirZ;
 				remoteParentOverride = ActorUID::INVALID;
 				remoteSendParentID = 0;
 				remoteSendParentSeedHd = ClientHandle::INVALID;
