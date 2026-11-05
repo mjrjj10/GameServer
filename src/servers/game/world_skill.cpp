@@ -1603,7 +1603,18 @@ void World::UpdateNpcFog()
 			}
 			else if((sees[viewer->team] || viewer->devVision) && hidden) {
 				const f32 speed = npc->monsterAi ? (npc->monsterWalking ? npc->monsterAi->walk : npc->monsterAi->run) * npc->speedMul : 0.0f;
-				replication->SendEnterNpc(viewer->clientHd, npc->UID, npc->docID, npc->pos, npc->rot.z, speed, npc->actionState != ActionStateID::INVALID ? npc->actionState : ActionStateID::NONE_BEHAVIORSTATE, npc->hp, npc->hpMax, (f32)npc->growthLevel);
+				Replication::EnterGraph graph;
+				const bool dashing = npc->dashEnd != Time::ZERO && localTime >= npc->dashStart && npc->dashCurve == World::NPC_DASH_CURVE_LINEAR;
+				if(dashing) {
+					graph.start = vec3(npc->dashFrom, npc->pos.z);
+					graph.end = vec3(npc->dashFrom + npc->dashDir * npc->dashDist, npc->pos.z);
+					graph.dist = npc->dashDist;
+					graph.originDist = npc->dashOriginDist > 0 ? npc->dashOriginDist : npc->dashDist;
+					graph.totalSec = (f32)TimeDiffSec(TimeDiff(npc->dashStart, npc->dashEnd));
+					graph.curSec = (f32)TimeDiffSec(TimeDiff(npc->dashStart, localTime));
+				}
+				const f32 yaw = dashing ? atan2f(npc->dashDir.y, npc->dashDir.x) : npc->rot.z;
+				replication->SendEnterNpc(viewer->clientHd, npc->UID, npc->docID, npc->pos, yaw, speed, npc->actionState != ActionStateID::INVALID ? npc->actionState : ActionStateID::NONE_BEHAVIORSTATE, npc->hp, npc->hpMax, (f32)npc->growthLevel, dashing ? &graph : nullptr);
 				npc->fogHiddenFrom &= ~bit;
 			}
 		}

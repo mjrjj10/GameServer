@@ -483,6 +483,7 @@ struct World
 		bool battleSent = false;
 		vec2 dragCenter = vec2(0);
 		vec2 dragGoal = vec2(0);
+		bool dragTrailing = false;
 		f32 dragMin = 0;
 		f32 dragMax = 0;
 		f32 dragDuration = 0;
@@ -574,6 +575,7 @@ struct World
 		Time dashStart = Time::ZERO;
 		Time dashEnd = Time::ZERO;
 		u8 dashCurve = 0;
+		f32 dashOriginDist = 0;
 		Time ccNextMove = Time::ZERO;
 		Time monsterDashTurnAt = Time::ZERO;
 		f32 monsterStopSpeed = 0;

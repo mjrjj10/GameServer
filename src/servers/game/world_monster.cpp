@@ -963,6 +963,7 @@ void World::TowerCallForHelp(const Player& attacker, const vec3& victimPos, Fact
 
 static const f32 MEASURED_NPC_PUSH_CURVE[] = { 0.0f, 0.45f, 0.67f, 0.80f, 0.88f, 0.93f, 0.99f, 1.0f, 1.0f, 1.0f, 1.0f };
 
+static const f32 MEASURED_NPC_ATTACK_DASH_CURVE[] = { 0.0f, 0.05f, 0.10f, 0.17f, 0.24f, 0.33f, 0.43f, 0.56f, 0.70f, 0.84f, 1.0f };
 static const f32 MEASURED_NPC_HOOK_CURVE[] = { 0.0f, 0.16f, 0.31f, 0.47f, 0.62f, 0.72f, 0.81f, 0.88f, 0.93f, 0.97f, 1.0f };
 static const f64 MEASURED_MONSTER_DASH_TURN_LEAD_MS = 270.0;
 
@@ -978,7 +979,7 @@ static f32 NpcDashProgress(u8 curve, f32 t)
 {
 	if(curve == World::NPC_DASH_CURVE_PUSH) return NpcCurveProgress(MEASURED_NPC_PUSH_CURVE, (i32)(sizeof(MEASURED_NPC_PUSH_CURVE) / sizeof(MEASURED_NPC_PUSH_CURVE[0])), t);
 	if(curve == World::NPC_DASH_CURVE_HOOK) return NpcCurveProgress(MEASURED_NPC_HOOK_CURVE, (i32)(sizeof(MEASURED_NPC_HOOK_CURVE) / sizeof(MEASURED_NPC_HOOK_CURVE[0])), t);
-	return t;
+	return NpcCurveProgress(MEASURED_NPC_ATTACK_DASH_CURVE, (i32)(sizeof(MEASURED_NPC_ATTACK_DASH_CURVE) / sizeof(MEASURED_NPC_ATTACK_DASH_CURVE[0])), t);
 }
 
 void World::MonsterStopIfHeld(ActorNpc& npc)

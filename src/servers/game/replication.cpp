@@ -2912,22 +2912,37 @@ void Replication::SendBushStateToAll(ActorUID actorUID, ActorUID bushUID)
 	}
 }
 
-void Replication::SendEnterNpc(ClientHandle clientHd, ActorUID actorUID, CreatureIndex docID, const vec3& pos, f32 yaw, f32 speed, ActionStateID action, i32 hp, i32 hpMax, f32 growthLevel)
+void Replication::SendEnterNpc(ClientHandle clientHd, ActorUID actorUID, CreatureIndex docID, const vec3& pos, f32 yaw, f32 speed, ActionStateID action, i32 hp, i32 hpMax, f32 growthLevel, const EnterGraph* graph)
 {
 	const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 	if(localID == LocalActorID::INVALID) return;
 	auto found = playerMap.find(clientHd);
 	if(found != playerMap.end()) playerLocalInfo[found->second].hiddenActors.erase(actorUID);
+	static const f32 GRAPH_DISTANCE_UNIT = 100.0f;
 	PacketWriter<Sv::SN_GameEnterActor,512> packet;
-	packet.Write<u8>(1);
+	packet.Write<u8>(graph ? 0 : 1);
+	if(graph) {
+		packet.Write<u8>(1);
+		packet.Write<f32>(graph->dist / GRAPH_DISTANCE_UNIT);
+		packet.Write<f32>(graph->totalSec);
+		packet.Write<f32>(graph->curSec);
+		packet.Write<float3>(v2f(graph->start));
+		packet.Write<float3>(v2f(graph->end));
+		packet.Write<f32>(graph->originDist / GRAPH_DISTANCE_UNIT);
+		packet.Write<u8>(0);
+		packet.Write<float2>(float2{ 0, 0 });
+		packet.Write<f32>(0);
+		packet.Write<float2>(float2{ 0, 0 });
+		packet.Write<f32>(0);
+	}
 	packet.Write<LocalActorID>(localID);
 	packet.Write<float3>(v2f(pos));
 	packet.Write<float3>(float3{ cosf(yaw), sinf(yaw), 0 });
 	packet.Write<float2>(float2{ 0, 0 });
 	packet.Write<float2>(float2{ cosf(yaw), sinf(yaw) });
 	packet.Write<float3>(v2f(pos));
-	packet.Write<u8>(0);
-	packet.Write<f32>(speed);
+	packet.Write<u8>(graph ? 1 : 0);
+	packet.Write<f32>(graph ? 0.0f : speed);
 	packet.Write<ActionStateID>(action);
 	packet.Write<i32>(0);
 	const auto* stats = GetGameXmlContent().FindMonsterStats((i32)docID);

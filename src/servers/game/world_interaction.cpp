@@ -454,7 +454,7 @@ World::NpcCcGraph World::StartNpcCc(ActorNpc& npc, const StatusInfo* info, const
 		npc.dragElapsed = 0;
 		npc.ccNextMove = TimeAdd(localTime, TimeMsToTime(MEASURED_NPC_CC_FIRST_MOVE_MS));
 		if(npc.monsterAi) {
-			cc.to = vec3(npc.dragGoal, npc.pos.z);
+			cc.to = vec3(dragCenter, npc.pos.z);
 			cc.graphSec = cc.duration;
 			cc.graph = true;
 		}
@@ -525,7 +525,13 @@ vec2 World::NpcPullGoal(const ActorNpc& npc, const vec2& center) const
 
 void World::UpdateNpcDrag(ActorNpc& npc, f32 delta)
 {
-	if(npc.dragElapsed >= npc.dragDuration) return;
+	if(npc.dragElapsed >= npc.dragDuration) {
+		if(npc.dragTrailing && localTime >= npc.ccNextMove) {
+			npc.dragTrailing = false;
+			replication->SendMonsterLiftToAll(npc.UID, npc.pos);
+		}
+		return;
+	}
 	const f32 dt = MIN(delta, npc.dragDuration - npc.dragElapsed);
 	const f32 accel = (npc.dragMax - npc.dragMin) / npc.dragDuration;
 	const f32 t0 = npc.dragElapsed;
@@ -534,17 +540,10 @@ void World::UpdateNpcDrag(ActorNpc& npc, f32 delta)
 	const vec2 rel = npc.dragGoal - vec2(npc.pos);
 	const f32 dist = glm::length(rel);
 	npc.dragElapsed = t1;
-	if(dist <= 0.001f) {
-		npc.dragElapsed = npc.dragDuration;
-		SendNpcCcMove(npc, true);
-		return;
-	}
-	if(dist <= step) {
-		npc.pos = vec3(npc.dragGoal, npc.pos.z);
-		npc.dragElapsed = npc.dragDuration;
-	}
-	else npc.pos = vec3(vec2(npc.pos) + rel / dist * step, npc.pos.z);
-	SendNpcCcMove(npc, npc.dragElapsed >= npc.dragDuration);
+	if(dist > 0.001f && dist <= step) npc.pos = vec3(npc.dragGoal, npc.pos.z);
+	else if(dist > 0.001f) npc.pos = vec3(vec2(npc.pos) + rel / dist * step, npc.pos.z);
+	SendNpcCcMove(npc, false);
+	if(npc.dragElapsed >= npc.dragDuration) npc.dragTrailing = true;
 }
 
 void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 statusID)
