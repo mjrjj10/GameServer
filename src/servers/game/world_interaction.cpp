@@ -353,6 +353,13 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 		default: return 0.0f;
 	}
 	if(eastl::find(npc.monsterAi->ccTypes.begin(), npc.monsterAi->ccTypes.end(), info->type) == npc.monsterAi->ccTypes.end() && !(hostileMonsters && HypPveMonsterTakesCc(npc))) return -1.0f;
+	if(npc.removeAt != Time::ZERO) {
+		if(npc.diedAt == localTime) {
+			replication->SendMonsterStateToAll(npc.UID, state, npc.pos, npc.monsterAi->run * npc.speedMul);
+			replication->SendAiActionStateToAll(npc.UID, ActionStateID::DIE_BEHAVIORSTATE, npc.rot.z, npc.pos, false);
+		}
+		return 0.0f;
+	}
 	if(const i32 armor = npc.monsterAi->ccArmorStatus) {
 		foreach_const(ns, npcStatuses) if(ns->npcUID == npc.UID && ns->statusID == armor && localTime < ns->until) return -1.0f;
 		ApplyMonsterStatus(npc, armor, true);
@@ -457,6 +464,7 @@ void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 s
 		replication->SendResistStatusToAll(npc.UID, caster.UID, STATUS_RESIST_EVENT_PASSIVE);
 		return;
 	}
+	if(npc.removeAt != Time::ZERO) return;
 	vec3 pushTo;
 	f32 pushNominal = -1.0f;
 	f32 pushSec = 0;

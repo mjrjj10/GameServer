@@ -1325,6 +1325,7 @@ struct GameXmlContent
 		eastl::fixed_vector<eastl::pair<f32,i32>,8,false> hpBuffs;
 		f32 hpBuffSpeedStep = 0;
 		i32 ccArmorStatus = 0;
+		f32 dieStand = 0;
 		eastl::fixed_vector<i32,5,false> allyBuffs;
 		f32 allyBuffRadius = 0;
 		f32 allyBuffInterval = 0;

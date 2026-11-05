@@ -288,7 +288,8 @@ void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDo
 	npc.monsterTarget = ActorUID::INVALID;
 	const f32 destroy = npc.monsterAi ? npc.monsterAi->destroy : 0.0f;
 	npc.removeAt = TimeAdd(localTime, TimeMsToTime(MAX(destroy, 1.0f) * 1000.0));
-	npc.dieStandAt = TimeAdd(localTime, TimeMsToTime(MEASURED_NPC_DIE_STAND_MS));
+	npc.dieStandAt = TimeAdd(localTime, TimeMsToTime(npc.monsterAi && npc.monsterAi->dieStand > 0 ? (f64)npc.monsterAi->dieStand * 1000.0 : MEASURED_NPC_DIE_STAND_MS));
+	npc.diedAt = localTime;
 	LOG("Monster :: creature=%d (local %d) dies at (%.0f, %.0f) t=%.1f killer=%d", (i32)npc.docID, npc.localID, npc.pos.x, npc.pos.y, GameTimeSec(), (i32)killerDoc);
 	if(ActorMaster* killer = killerUID != ActorUID::INVALID ? FindMasterActor(killerUID) : nullptr) {
 		if(killer->parent) {
@@ -718,8 +719,9 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 			if(st->rate < 100 && (i32)(RandUint() % 100) >= st->rate) continue;
 			const StatusInfo* stInfo = GetGameXmlContent().FindStatus(st->statusID);
 			bool active = false;
-			if(p) { foreach_const(a, activeStatuses) if(a->targetIndex == p->index && a->statusID == st->statusID) { active = true; break; } }
-			else { foreach_const(a, npcStatuses) if(a->npcUID == n->UID && a->statusID == st->statusID && localTime < a->until) { active = true; break; } }
+			const Time rehitAt = TimeAdd(localTime, TimeMsToTime(MAX(remote.hitInvalidTime, MONSTER_REMOTE_MIN_LIFE_SEC) * 1000.0));
+			if(p) { foreach_const(a, activeStatuses) if(a->targetIndex == p->index && a->statusID == st->statusID && a->until > rehitAt) { active = true; break; } }
+			else { foreach_const(a, npcStatuses) if(a->npcUID == n->UID && a->statusID == st->statusID && a->until > rehitAt) { active = true; break; } }
 			if(active && (!stInfo || stInfo->maxOverlap <= 1)) continue;
 			if(p) ApplyStatusFromNpc(owner, *p, st->statusID);
 			else ApplyStatusToNpcFromNpc(owner, *n, st->statusID);
@@ -993,6 +995,7 @@ void World::StartMonsterWalkState(ActorNpc& npc, const GameXmlContent::MonsterAi
 	npc.monsterWalkStateOn = true;
 	npc.monsterNextSync = localTime;
 	replication->SendMonsterStateToAll(npc.UID, ai.walkState, npc.pos, speed);
+	replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, speed);
 	foreach_const(st, ai.walkStatuses) ApplyMonsterStatus(npc, *st, true);
 	const auto& content = GetGameXmlContent();
 	const vec2 dir = vec2(cosf(npc.rot.z), sinf(npc.rot.z));

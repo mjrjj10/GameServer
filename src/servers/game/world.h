@@ -499,6 +499,7 @@ struct World
 		Time selfDestructAt = Time::ZERO;
 		Time standAt = Time::ZERO;
 		Time dieStandAt = Time::ZERO;
+		Time diedAt = Time::ZERO;
 		Time removeAt = Time::ZERO;
 		const SummonAttackRule* attackRule = nullptr;
 		Time nextAttack = Time::ZERO;
@@ -1450,7 +1451,8 @@ public:
 	bool stageCleared = false;
 	bool noRespawn = false;
 	bool NodeInDifficulty(const GameXmlContent::LevelEventNode& node) const { return difficultyBit == GameXmlContent::ALL_DIFFICULTIES || (node.difficultyMask & difficultyBit) != 0; }
-	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; f32 shieldMax = 0; };
+	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; f32 shieldMax = 0; u32 dotCaster = UINT32_MAX; f32 dotPower = 0; i32 dotOverlap = 1; Time dotNextTick = Time::ZERO; };
+	void UpdateNpcDots();
 	void ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool remove);
 	i32 AbsorbNpcShield(const ActorNpc& npc, i32 dealt);
 	bool TeleportNextToTarget(Player& player, ActorUID target);

@@ -476,9 +476,13 @@ void World::TrackNpcSelfStatus(ActorUID npcUID, const StatusInfo& info)
 
 void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool remove)
 {
-	for(i32 i = 0; i < (i32)npcStatuses.size(); i++) {
-		if(npcStatuses[i].npcUID != npc.UID || npcStatuses[i].statusID != statusID || npcStatuses[i].linked) continue;
-		npcStatuses[i].until = localTime;
+	i32 prevOverlap = 0;
+	Time prevTick = Time::ZERO;
+	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
+		if(npcStatuses[i].npcUID != npc.UID || npcStatuses[i].statusID != statusID || npcStatuses[i].linked) { i++; continue; }
+		if(localTime < npcStatuses[i].until) { prevOverlap = npcStatuses[i].dotOverlap; prevTick = npcStatuses[i].dotNextTick; }
+		if(remove) npcStatuses[i].until = localTime;
+		i++;
 	}
 	if(remove) return;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
@@ -488,6 +492,7 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 		replication->SendResistStatusToAll(npc.UID, caster.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
 		return;
 	}
+	if(npc.removeAt != Time::ZERO) return;
 	const bool reactsByState = reaction > 0 && info && info->type != StatusType::PUSH;
 	vec3 pushTo;
 	f32 pushNominal = -1.0f;
@@ -506,6 +511,16 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	ns.linked = false;
 	if(info && info->type == StatusType::SHIELD) ns.shieldHP = GetGameXmlContent().StatusShieldAmount(*info);
 	ns.shieldMax = ns.shieldHP;
+	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
+		if(npcStatuses[i].npcUID == npc.UID && npcStatuses[i].statusID == statusID && !npcStatuses[i].linked) npcStatuses.erase(npcStatuses.begin() + i);
+		else i++;
+	}
+	if(info && info->dotDamage > 0) {
+		ns.dotCaster = caster.index;
+		ns.dotPower = PlayerSkillPower(caster);
+		ns.dotOverlap = MIN(prevOverlap + 1, MAX(info->maxOverlap, 1));
+		ns.dotNextTick = prevTick != Time::ZERO ? prevTick : TimeAdd(localTime, TimeMsToTime((info->intervalSec > 0 ? info->intervalSec : 0.0f) * 1000.0));
+	}
 	npcStatuses.push_back(ns);
 	if(ns.shieldMax > 0) SendNpcShieldStat(npc.UID);
 	LOG("Status :: %ls gives creature=%d status=%d for %.1fs shield=%.0f", caster.name.data(), (i32)npc.docID, statusID, duration, ns.shieldHP);
@@ -538,15 +553,38 @@ bool World::TeleportNextToTarget(Player& player, ActorUID target)
 	return true;
 }
 
+void World::UpdateNpcDots()
+{
+	for(i32 i = 0; i < (i32)npcStatuses.size(); i++) {
+		if(npcStatuses[i].dotCaster == UINT32_MAX || npcStatuses[i].dotNextTick == Time::ZERO || localTime < npcStatuses[i].dotNextTick) continue;
+		const StatusInfo* info = GetGameXmlContent().FindStatus(npcStatuses[i].statusID);
+		ActorNpc* npc = FindNpcActor(npcStatuses[i].npcUID);
+		if(!info || !npc || npcStatuses[i].dotCaster >= players.size()) { npcStatuses[i].dotNextTick = Time::ZERO; continue; }
+		Player& caster = players[npcStatuses[i].dotCaster];
+		const f32 interval = info->intervalSec;
+		while(npcStatuses[i].dotNextTick != Time::ZERO && localTime >= npcStatuses[i].dotNextTick && npcStatuses[i].dotNextTick <= npcStatuses[i].until && npc->hp > 0 && npc->removeAt == Time::ZERO) {
+			npcStatuses[i].dotNextTick = interval > 0 ? TimeAdd(npcStatuses[i].dotNextTick, TimeMsToTime(interval * 1000.0)) : Time::ZERO;
+			const f32 perStack = info->dotDamage + npcStatuses[i].dotPower * info->dotMul;
+			const i32 tick = MAX((i32)perStack, 1) * npcStatuses[i].dotOverlap;
+			damageStatusID = npcStatuses[i].statusID;
+			DamageNpc(caster, *npc, SkillID::INVALID, tick, nullptr);
+			damageStatusID = 0;
+		}
+		if(npcStatuses[i].dotNextTick != Time::ZERO && npcStatuses[i].dotNextTick > npcStatuses[i].until) npcStatuses[i].dotNextTick = Time::ZERO;
+	}
+}
+
 void World::UpdateNpcStatuses()
 {
+	UpdateNpcDots();
 	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
 		const NpcStatus& ns = npcStatuses[i];
 		bool linked = false;
 		foreach_const(st, activeStatuses) {
 			if(st->casterUID == ns.npcUID && st->targetUID == ns.casterUID && st->info && st->info->type == StatusType::TARGET && st->until > localTime) { linked = true; break; }
 		}
-		if((linked || !ns.linked) && localTime < ns.until && FindNpcActor(ns.npcUID)) { i++; continue; }
+		const ActorNpc* holder = FindNpcActor(ns.npcUID);
+		if((linked || !ns.linked) && localTime < ns.until && holder && (holder->hp > 0 || holder->hpMax <= 0)) { i++; continue; }
 		replication->SendRemoveStatusToAll(ns.statusID, ns.npcUID, ns.casterUID);
 		const ActorUID shieldedUID = ns.shieldMax > 0 ? ns.npcUID : ActorUID::INVALID;
 		npcStatuses.erase(npcStatuses.begin() + i);

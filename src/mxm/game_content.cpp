@@ -1334,6 +1334,7 @@ bool GameXmlContent::LoadMonsterAi()
 			ai.lowHpTime = pInfo->FloatAttribute("lowHpTime");
 			ai.hpBuffSpeedStep = pInfo->FloatAttribute("hpBuffSpeedStep");
 			ai.ccArmorStatus = pInfo->IntAttribute("ccArmorStatus");
+			ai.dieStand = pInfo->FloatAttribute("dieStand");
 			ai.allyBuffRadius = pInfo->FloatAttribute("allyBuffRadius");
 			ai.allyBuffInterval = pInfo->FloatAttribute("allyBuffInterval");
 			if(const char* allyBuffs = pInfo->Attribute("allyBuffs")) {

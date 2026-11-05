@@ -569,7 +569,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	if(npc.ownerUID == ActorUID::INVALID) MonsterAggroOnHit(npc, attacker);
 	if(remoteHit && remoteHit->remoteID != 0) {
 		Replication::RemoteDamage hit = *remoteHit;
-		hit.attackerUID = attacker.Main().UID;
+		hit.attackerUID = damageAttackerOverride != ActorUID::INVALID ? damageAttackerOverride : attacker.Main().UID;
 		hit.targetUID = npc.UID;
 		hit.targetPos = npc.pos;
 		hit.damage = MIN(dealt, hpBefore);
@@ -577,7 +577,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 		hit.hpMax = npc.hpMax;
 		replication->SendRemoteDamageToAll(hit);
 	}
-	else replication->SendDamageToAll(attacker.Main().UID, npc.UID, skillID, MIN(dealt, hpBefore), npc.hp, npc.hpMax);
+	else replication->SendDamageToAll(damageAttackerOverride != ActorUID::INVALID ? damageAttackerOverride : attacker.Main().UID, npc.UID, skillID, MIN(dealt, hpBefore), npc.hp, npc.hpMax, 0, damageStatusID);
 	if(skillID == SkillID::INVALID && remoteHit && damageAttackerOverride == ActorUID::INVALID) PassiveOnWeaponHit(attacker, true);
 	LOG("Summon :: creature=%d takes %d from %ls hp=%d/%d", (i32)npc.docID, dealt, attacker.name.data(), npc.hp, npc.hpMax);
 	if(npc.hp <= 0) {

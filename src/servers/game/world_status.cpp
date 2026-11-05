@@ -289,9 +289,9 @@ void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& cente
 		const bool bound = child->durationSec <= 0;
 		foreach(p, players) {
 			const bool casterAlly = p->team == casterTeam;
+			if((child->isDebuff || aura.auraEnemies) == casterAlly) continue;
+			if(child->isDebuff && (i32)p->index == skipDebuffIndex) continue;
 			bool inside = !p->dead;
-			if((child->isDebuff || aura.auraEnemies) == casterAlly) inside = false;
-			if(child->isDebuff && (i32)p->index == skipDebuffIndex) inside = false;
 			if(inside && glm::length(vec2(p->body->GetWorldPos()) - center) > range + HitRadius(*p)) inside = false;
 			ActiveStatus* cur = FindActiveStatus(p->index, *id);
 			if(!inside) {
@@ -314,12 +314,13 @@ void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& cente
 		const Faction casterFaction = casterTeam == 0 ? Faction::RED : Faction::BLUE;
 		const bool towardEnemies = child->isDebuff || aura.auraEnemies;
 		foreach(npc, actorNpcList) {
-			bool inside = npc->hp > 0 && npc->removeAt == Time::ZERO && (towardEnemies ? NpcHittableBy(*npc, caster) : npc->faction == casterFaction);
+			if(!(towardEnemies ? NpcHittableBy(*npc, caster) : npc->faction == casterFaction)) continue;
+			bool inside = npc->hp > 0 && npc->removeAt == Time::ZERO;
 			if(inside && glm::length(vec2(npc->pos) - center) > range + NpcHitRadius(*npc)) inside = false;
 			NpcStatus* cur = nullptr;
 			foreach(ns, npcStatuses) if(ns->npcUID == npc->UID && ns->statusID == *id && localTime < ns->until) cur = &*ns;
 			if(!inside) {
-				if(cur && bound && cur->casterUID == caster.Main().UID) cur->until = localTime;
+				if(cur && cur->casterUID == caster.Main().UID) cur->until = localTime;
 				continue;
 			}
 			if(cur) continue;
