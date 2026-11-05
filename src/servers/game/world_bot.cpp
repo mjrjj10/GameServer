@@ -86,7 +86,17 @@ void World::UpdateBotSkills()
 			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(pos));
 			if(d < best) { best = d; target = &*e; }
 		}
-		if(!target) continue;
+		ActorNpc* monster = nullptr;
+		if(Config().DevBotMonsterSkills) {
+			f32 bestMonster = best;
+			foreach(n, actorNpcList) {
+				if(!n->monsterAi || n->hp <= 0 || n->removeAt != Time::ZERO || !NpcHittableBy(*n, bot)) continue;
+				const f32 d = glm::length(vec2(n->pos) - vec2(pos));
+				if(d < bestMonster) { bestMonster = d; monster = &*n; }
+			}
+			if(monster) best = bestMonster;
+		}
+		if(!target && !monster) continue;
 
 		const i32 base = (i32)bot.mainCharaID * 2;
 		eastl::fixed_vector<i32,5,false> ready;
@@ -122,16 +132,18 @@ void World::UpdateBotSkills()
 			}
 			if(!ally) continue;
 			target = ally;
+			monster = nullptr;
 			best = glm::length(vec2(ally->body->GetWorldPos()) - vec2(pos));
 		}
-		const vec3 tpos = target->body->GetWorldPos();
+		const vec3 tpos = monster ? monster->pos : target->body->GetWorldPos();
 		const f32 yaw = atan2f(tpos.y - pos.y, tpos.x - pos.x);
 		bot.input.rot.upperYaw = yaw;
 		bot.input.rot.bodyYaw = yaw;
 		bot.weaponAimYaw = yaw;
-		const ActorUID targetUID = target->Main().UID;
+		const ActorUID targetUID = monster ? monster->UID : target->Main().UID;
 		bot.botAimTarget = targetUID;
-		LOG("BotSkill :: %ls casts %d at %ls (dist %.0f, cd %.0f)", bot.name.data(), skill, target->name.data(), best, cd);
+		if(monster) LOG("BotSkill :: %ls casts %d at creature=%d (dist %.0f, cd %.0f)", bot.name.data(), skill, (i32)monster->docID, best, cd);
+		else LOG("BotSkill :: %ls casts %d at %ls (dist %.0f, cd %.0f)", bot.name.data(), skill, target->name.data(), best, cd);
 		PlayerCastSkill(bot, SkillID(skill), tpos, Slice<const ActorUID>(&targetUID, in && in->takesTarget ? 1 : 0), 0);
 	}
 }

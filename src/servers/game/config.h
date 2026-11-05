@@ -30,6 +30,7 @@ struct CConfigGame
 	i32 DevGodPlayers = 0;
 	i32 DevStartLevel = 0;
 	i32 DevPilotUpgrades = 0;
+	i32 DevBotMonsterSkills = 0;
 	i32 HostIP[4] = { 0, 0, 0, 0 };
 	i32 TraceNetwork = false;
 	i32 TraceStream = false;
