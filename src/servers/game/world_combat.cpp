@@ -149,7 +149,7 @@ f32 World::DefenceMultiplier(const Player& attacker, const Player& target, bool 
 	const i32 penStat = skillHit ? STAT_SKILL_PENETRATION : STAT_DEFENCE_PENETRATION;
 	const f32 pen = MIN(MAX(MasterStat(attacker.Main().classType, penStat) + StatBonus(attacker, (u8)penStat), 0.0f), PENETRATION_CAP) / 100.0f;
 	f32 mul = DEFENCE_SCALE / (DEFENCE_SCALE + MAX(def * (1.0f - pen), 0.0f));
-	if(skillHit) mul *= 1.0f - MIN(MAX(MasterStat(target.Main().classType, STAT_SKILLDAMAGE_REDUCE_RATIO) + StatBonus(target, STAT_SKILLDAMAGE_REDUCE_RATIO), 0.0f), SKILLDAMAGE_REDUCE_CAP) / 100.0f;
+	if(skillHit) mul *= 1.0f - MIN(MAX(MasterStat(target.Main().classType, STAT_SKILLDAMAGE_REDUCE_RATIO) + StatBonus(target, STAT_SKILLDAMAGE_REDUCE_RATIO) + StatusModSum(target, StatusMod::SKILLDAMAGE_REDUCE), 0.0f), SKILLDAMAGE_REDUCE_CAP) / 100.0f;
 	mul *= MAX(1.0f + StatusModMulSum(target, StatusMod::DAMAGE_TAKEN) / 100.0f, 0.0f);
 	return mul;
 }

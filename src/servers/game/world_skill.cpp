@@ -15,6 +15,8 @@ static const i32 STAT_STAMINAREGEN = 5;
 static const i32 STAT_MANAREGEN = 39;
 static const i32 STAT_ULTIMATEREGEN = 42;
 static const u8 STAT_SKILL_COOLTIME_DISCOUNT = 53;
+static const u8 STAT_SKILLDAMAGE_REDUCE_RATIO = 58;
+static const f32 MEASURED_NPC_SPEED_MUL_MIN = 0.1f;
 static const f64 LAST_CHILD_STATUS_DELAY_MS = 50.0;
 static const i32 STAT_TAG_HEALTHREGEN_VALUE = 23;
 static const i32 STAT_TAG_COOLTIME = 31;
@@ -140,6 +142,27 @@ void World::UpdateUltimateGauges(f32 delta)
 					}
 				}
 			}
+		}
+
+		{
+			static const StatusMod::Stat STATUS_STAT_MODS[2] = { StatusMod::SKILL_COOLTIME_DISCOUNT, StatusMod::SKILLDAMAGE_REDUCE };
+			static const u8 STATUS_STAT_TYPES[2] = { STAT_SKILL_COOLTIME_DISCOUNT, STAT_SKILLDAMAGE_REDUCE_RATIO };
+			const ActorMaster& main = it->Main();
+			const bool mainChanged = it->statusStatMain != main.UID;
+			for(i32 k = 0; k < 2; k++) {
+				const f32 sum = StatusModSum(*it, STATUS_STAT_MODS[k]);
+				if(mainChanged && it->statusStatMain != ActorUID::INVALID && it->statusStatSent[k] != 0) {
+					for(u32 m = 0; m < it->characters.size(); m++) {
+						const ActorMaster& old = *it->characters[m];
+						if(old.UID != it->statusStatMain || old.classType == ClassType::NONE) continue;
+						replication->SendStatToAll(old.UID, STATUS_STAT_TYPES[k], 0.0f, MasterStat(old.classType, STATUS_STAT_TYPES[k]) + GetGameXmlContent().MasterTraitBonus(old.classType, old.traits, STATUS_STAT_TYPES[k]));
+					}
+				}
+				if(sum == it->statusStatSent[k] && !(mainChanged && sum != 0)) continue;
+				it->statusStatSent[k] = sum;
+				replication->SendStatToAll(main.UID, STATUS_STAT_TYPES[k], 0.0f, MasterStat(main.classType, STATUS_STAT_TYPES[k]) + StatBonus(*it, STATUS_STAT_TYPES[k]) + sum);
+			}
+			it->statusStatMain = main.UID;
 		}
 
 		if(localTime >= it->tNextRegen) {
@@ -574,6 +597,33 @@ void World::UpdateNpcDots()
 	}
 }
 
+void World::UpdateNpcSpeedMods()
+{
+	eastl::fixed_vector<eastl::pair<ActorUID,f32>,64,false> sums;
+	foreach_const(ns, npcStatuses) {
+		if(localTime >= ns->until) continue;
+		const StatusInfo* info = GetGameXmlContent().FindStatus(ns->statusID);
+		if(!info) continue;
+		foreach_const(m, info->mods) {
+			if(m->stat != StatusMod::MOVESPEED || !m->mul || m->regen) continue;
+			bool found = false;
+			foreach(s, sums) if(s->first == ns->npcUID) { s->second += m->value; found = true; break; }
+			if(!found && !sums.full()) sums.push_back({ ns->npcUID, m->value });
+		}
+	}
+	foreach(npc, actorNpcList) {
+		if(!npc->monsterAi) continue;
+		f32 sum = 0;
+		foreach_const(s, sums) if(s->first == npc->UID) { sum = s->second; break; }
+		const f32 mul = MAX(1.0f + sum / 100.0f, MEASURED_NPC_SPEED_MUL_MIN);
+		if(mul == npc->statusSpeedMul) continue;
+		npc->speedMul *= mul / npc->statusSpeedMul;
+		npc->statusSpeedMul = mul;
+		npc->monsterNextSync = localTime;
+		if(npc->hp > 0 && npc->removeAt == Time::ZERO) replication->SendStatToAll(npc->UID, (i32)StatType::STAT_TYPE_MOVESPEED, 0.0f, npc->speedMul * 100.0f);
+	}
+}
+
 void World::UpdateNpcStatuses()
 {
 	UpdateNpcDots();
@@ -590,6 +640,7 @@ void World::UpdateNpcStatuses()
 		npcStatuses.erase(npcStatuses.begin() + i);
 		if(shieldedUID != ActorUID::INVALID && FindNpcActor(shieldedUID)) SendNpcShieldStat(shieldedUID);
 	}
+	UpdateNpcSpeedMods();
 }
 
 bool World::IsCarrying(const Player& player) const
@@ -1752,7 +1803,7 @@ f32 World::SkillCoolTime(const Player& player, i32 skillID) const
 		if(chara.classType == ClassType::NONE) continue;
 		foreach_const(sid, content.GetMaster(chara.classType).skillIDs) {
 			if((i32)*sid != skillID) continue;
-			const f32 discount = content.MasterTraitBonus(chara.classType, chara.traits, STAT_SKILL_COOLTIME_DISCOUNT);
+			const f32 discount = content.MasterTraitBonus(chara.classType, chara.traits, STAT_SKILL_COOLTIME_DISCOUNT) + StatusModSum(player, StatusMod::SKILL_COOLTIME_DISCOUNT);
 			return base * MAX(1.0f - discount / 100.0f, 0.0f);
 		}
 	}

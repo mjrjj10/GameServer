@@ -295,6 +295,8 @@ struct World
 		bool ultDirty = false;
 		eastl::array<f32,4> regenSent = { -1, -1, -1, -1 };
 		eastl::array<f32,2> tagStatSent = { -1, -1 };
+		eastl::array<f32,2> statusStatSent = { 0, 0 };
+		ActorUID statusStatMain = ActorUID::INVALID;
 		bool regenResend = false;
 		f32 shotLeadSec = 0;
 		f32 weaponAimYaw = 0;
@@ -547,6 +549,7 @@ struct World
 		i32 airborneStep = 0;
 		Time stateEndAt = Time::ZERO;
 		f32 speedMul = 1.0f;
+		f32 statusSpeedMul = 1.0f;
 		u8 victoryStep = 0;
 		u8 hpBuffLevel = 0;
 		u8 allyBuffLevel = 0;
@@ -1453,6 +1456,7 @@ public:
 	bool NodeInDifficulty(const GameXmlContent::LevelEventNode& node) const { return difficultyBit == GameXmlContent::ALL_DIFFICULTIES || (node.difficultyMask & difficultyBit) != 0; }
 	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; f32 shieldMax = 0; u32 dotCaster = UINT32_MAX; f32 dotPower = 0; i32 dotOverlap = 1; Time dotNextTick = Time::ZERO; };
 	void UpdateNpcDots();
+	void UpdateNpcSpeedMods();
 	void ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool remove);
 	i32 AbsorbNpcShield(const ActorNpc& npc, i32 dealt);
 	bool TeleportNextToTarget(Player& player, ActorUID target);

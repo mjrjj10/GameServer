@@ -7,6 +7,10 @@
   <MOD status="1200100022" stat="STAT_TYPE_DEFENCE" value="30" mul="1" source="GAMETIP_TITAN_LAYOUT_2_DESC_02" />
   <MOD status="1200100021" stat="STAT_TYPE_MANAREGEN" value="10" source="GAMETIP_TITAN_LAYOUT_2_DESC_03" />
   <MOD status="1200100021" stat="STAT_TYPE_ENERGYREGEN" value="3" source="GAMETIP_TITAN_LAYOUT_2_DESC_03" />
+  <MOD status="1200100021" stat="STAT_TYPE_SKILL_COOLTIME_DISCOUNT" value="20" source="STR_STATUS_MOB_TOOLTIP_1200100021; MEASURED 7 official 5v5 captures: SN_UpdateStat 53 = 20 on add (157 of 356)" />
+  <MOD status="1200100022" stat="STAT_TYPE_SKILLDAMAGE_REDUCE_RATIO" value="15" source="STR_STATUS_MOB_TOOLTIP_1200100022; MEASURED 7 official 5v5 captures: SN_UpdateStat 58 = 15 on add (276 of 280)" />
+  <MOD status="1200100032" stat="STAT_TYPE_MOVESPEED" value="50" mul="1" source="STR_STATUS_MOB_TOOLTIP_1200100032; MEASURED 7 official 5v5 captures: +50% (45 of 77 adds, 57 of 89 removes)" />
+  <MOD status="1200100033" stat="STAT_TYPE_MOVESPEED" value="-30" mul="1" source="MEASURED 7 official 5v5 captures: -30% (107 of 170 adds, 132 of 201 removes); tooltip says -0%" />
   <MOD status="1200100003" stat="STAT_TYPE_TAG_HEALTHREGEN_VALUE" value="40" samples="6" />
   <MOD status="1200100006" stat="STAT_TYPE_STAMINAREGEN" value="3" samples="6" />
   <MOD status="1200100006" stat="STAT_TYPE_MANAREGEN" value="12" samples="6" />

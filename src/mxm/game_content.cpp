@@ -4235,6 +4235,8 @@ static StatusMod::Stat StatusModStatFromName(const char* stat)
 		{ "SERVER_DAMAGE_TAKEN_RATIO", StatusMod::DAMAGE_TAKEN },
 		{ "STAT_TYPE_LIFESTEAL", StatusMod::LIFESTEAL },
 		{ "STAT_TYPE_RAGE", StatusMod::RAGE },
+		{ "STAT_TYPE_SKILL_COOLTIME_DISCOUNT", StatusMod::SKILL_COOLTIME_DISCOUNT },
+		{ "STAT_TYPE_SKILLDAMAGE_REDUCE_RATIO", StatusMod::SKILLDAMAGE_REDUCE },
 	};
 	for(const auto& n : NAMES) {
 		if(EA::StdC::Strcmp(stat, n.name) == 0) return n.stat;
