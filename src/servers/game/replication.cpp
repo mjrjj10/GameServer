@@ -2194,7 +2194,7 @@ void Replication::SendAiActionStateToAll(ActorUID actorUID, ActionStateID action
 void Replication::SendAiSetTargetToAll(ActorUID actorUID, ActorUID targetUID)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
-		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;

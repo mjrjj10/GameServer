@@ -5,7 +5,7 @@
 
 static bool SummonStatusClientOnly(const StatusInfo& st)
 {
-	return st.type == StatusType::HIDE && st.instant;
+	return st.type == StatusType::HIDE && (st.instant || st.durationSec <= 0);
 }
 
 static const i32 RELAY_MODE_STATE_OFFSET = 9;
