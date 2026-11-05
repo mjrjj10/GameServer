@@ -646,7 +646,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	f32 duration = info && info->durationSec > 0 ? info->durationSec : (info && (info->type == StatusType::MOTION || info->instant) ? 0.0f : 1.0f);
 	if(info && info->durationSec < 0 && GetGameXmlContent().actionRemovedStatuses.count(statusID)) duration = STATUS_INFINITE_DURATION_SEC;
 	f32 graphDuration = duration * (info && info->timeRatio > 0 ? info->timeRatio : 1.0f);
-	DefeatGraphTimes(info, &duration, &graphDuration);
+	const bool defeatTimed = DefeatGraphTimes(info, &duration, &graphDuration);
 	if(durationOverride > 0) duration = durationOverride;
 	if(caster.team != target.team) MarkInBattle(target);
 	if(info && info->targetsFriendlyPc && info->targetingRange > 0 && caster.index == target.index && !spreadingStatus) {
@@ -702,7 +702,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	ShowcaseOnStatus(caster, target, statusID);
 	const bool permanent = info && info->permanent && durationOverride <= 0;
 	if(permanent) duration = 1000000.0f;
-	const f32 sentDuration = statusAniEnd && info ? (info->durationSec > 0 ? info->durationSec : info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f) : durationOverride > 0 || !info || info->durationSec > 0 ? duration : (info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f);
+	const f32 sentDuration = statusAniEnd && info ? (info->durationSec > 0 ? info->durationSec : info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f) : durationOverride > 0 || !info || info->durationSec > 0 || defeatTimed ? duration : (info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f);
 	if(info && info->type == StatusType::TOGGLE && info->durationSec <= 0 && info->skillIndex != 0) {
 		foreach(it, activeStatuses) {
 			if(it->targetIndex != target.index || !it->info || it->info->type != StatusType::TARGET || it->info->skillIndex != info->skillIndex || it->until <= localTime) continue;
