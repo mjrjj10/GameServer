@@ -658,6 +658,20 @@ bool World::MonsterAttackUsesRemotes(const GameXmlContent::MonsterAttack& attack
 	return false;
 }
 
+void World::SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, const Remote::SpawnRule& rule, const vec3& pos, const vec2& dir, ActorUID target)
+{
+	if(rule.kind != Remote::SPAWN_RADIATE || rule.maxNum <= 1) {
+		SpawnMonsterRemote(npc, child, pos, dir, target, rule.kind != Remote::SPAWN_RADIATE);
+		return;
+	}
+	for(i32 n = 0; n < rule.maxNum; n++) {
+		const f32 deg = ((f32)n - (f32)(rule.maxNum - 1) * 0.5f) * rule.maxAngle / (f32)rule.maxNum;
+		const f32 a = deg * PI / 180.0f;
+		const vec2 d = vec2(dir.x * cosf(a) - dir.y * sinf(a), dir.x * sinf(a) + dir.y * cosf(a));
+		SpawnMonsterRemote(npc, child, pos, d, target, false);
+	}
+}
+
 void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed)
 {
 	if(send) {
@@ -822,7 +836,7 @@ void World::UpdateMonsterRemotes(f32 delta)
 			const ActorUID target = mr.target;
 			mr.nextTime = remote.timeEventRecycle ? TimeAdd(mr.nextTime, TimeMsToTime(MAX(remote.timeEventDelay, MONSTER_REMOTE_MIN_LIFE_SEC) * 1000.0)) : Time::ZERO;
 			const eastl::fixed_vector<Remote::SpawnRule,4,false> rules = remote.onTime;
-			foreach_const(r, rules) if(const Remote* child = content.FindRemote(r->idx)) SpawnMonsterRemote(owner, *child, at, dir, target, true);
+			foreach_const(r, rules) if(const Remote* child = content.FindRemote(r->idx)) SpawnMonsterChildRemotes(owner, *child, *r, at, dir, target);
 		}
 		if(expired) {
 			const vec3 at = monsterRemotes[i].pos;
@@ -830,7 +844,7 @@ void World::UpdateMonsterRemotes(f32 delta)
 			const ActorUID target = monsterRemotes[i].target;
 			const eastl::fixed_vector<Remote::SpawnRule,4,false> rules = monsterRemotes[i].remote->onDestroy;
 			monsterRemotes.erase(monsterRemotes.begin() + i);
-			foreach_const(r, rules) if(const Remote* child = content.FindRemote(r->idx)) SpawnMonsterRemote(owner, *child, at, dir, target, true);
+			foreach_const(r, rules) if(const Remote* child = content.FindRemote(r->idx)) SpawnMonsterChildRemotes(owner, *child, *r, at, dir, target);
 			continue;
 		}
 		i++;

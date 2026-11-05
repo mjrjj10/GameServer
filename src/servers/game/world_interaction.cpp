@@ -447,13 +447,14 @@ World::NpcCcGraph World::StartNpcCc(ActorNpc& npc, const StatusInfo* info, const
 	}
 	if(info->type == StatusType::DRAGGEDBYFORCE && cc.duration > 0) {
 		npc.dragCenter = dragCenter;
+		npc.dragGoal = NpcPullGoal(npc, dragCenter);
 		npc.dragMin = info->dragForceMin;
 		npc.dragMax = info->dragForceMax;
 		npc.dragDuration = cc.duration;
 		npc.dragElapsed = 0;
 		npc.ccNextMove = TimeAdd(localTime, TimeMsToTime(MEASURED_NPC_CC_FIRST_MOVE_MS));
 		if(npc.monsterAi) {
-			cc.to = vec3(dragCenter, npc.pos.z);
+			cc.to = vec3(npc.dragGoal, npc.pos.z);
 			cc.graphSec = cc.duration;
 			cc.graph = true;
 		}
@@ -499,6 +500,29 @@ void World::UpdateNpcDefeat(ActorNpc& npc)
 	}
 }
 
+vec2 World::NpcPullGoal(const ActorNpc& npc, const vec2& center) const
+{
+	const vec2 from = vec2(npc.pos);
+	const vec2 rel = center - from;
+	const f32 len = glm::length(rel);
+	if(len <= 1.0f) return center;
+	const vec2 dir = rel / len;
+	const f32 selfRadius = npc.monsterAi ? npc.monsterAi->radius : 0.0f;
+	f32 stop = len;
+	foreach_const(o, actorNpcList) {
+		if(&*o == &npc || !o->monsterAi || o->hp <= 0 || o->removeAt != Time::ZERO || o->dragDuration <= 0) continue;
+		if(glm::length(o->dragCenter - center) >= 1.0f) continue;
+		const f32 reach = selfRadius + o->monsterAi->radius;
+		const vec2 toOther = (o->dragElapsed < o->dragDuration ? o->dragGoal : vec2(o->pos)) - from;
+		const f32 along = glm::dot(toOther, dir);
+		const f32 side2 = glm::dot(toOther, toOther) - along * along;
+		if(side2 >= reach * reach) continue;
+		const f32 t = along - sqrtf(reach * reach - side2);
+		if(t < stop) stop = MAX(t, 0.0f);
+	}
+	return from + dir * stop;
+}
+
 void World::UpdateNpcDrag(ActorNpc& npc, f32 delta)
 {
 	if(npc.dragElapsed >= npc.dragDuration) return;
@@ -507,24 +531,19 @@ void World::UpdateNpcDrag(ActorNpc& npc, f32 delta)
 	const f32 t0 = npc.dragElapsed;
 	const f32 t1 = t0 + dt;
 	const f32 step = (t1 * t1 - t0 * t0) * accel * 0.5f + npc.dragMin * dt;
-	const vec2 rel = npc.dragCenter - vec2(npc.pos);
+	const vec2 rel = npc.dragGoal - vec2(npc.pos);
 	const f32 dist = glm::length(rel);
 	npc.dragElapsed = t1;
-	const f32 selfRadius = npc.monsterAi ? npc.monsterAi->radius : 0.0f;
-	const vec2 next = dist > step ? vec2(npc.pos) + rel / MAX(dist, 0.001f) * step : npc.dragCenter;
-	foreach_const(o, actorNpcList) {
-		if(&*o == &npc || !o->monsterAi || o->hp <= 0 || o->removeAt != Time::ZERO || o->dragElapsed <= 0) continue;
-		if(glm::length(o->dragCenter - npc.dragCenter) >= 1.0f || glm::length(vec2(o->pos) - npc.dragCenter) >= dist) continue;
-		if(glm::length(vec2(o->pos) - next) >= selfRadius + o->monsterAi->radius) continue;
+	if(dist <= 0.001f) {
 		npc.dragElapsed = npc.dragDuration;
 		SendNpcCcMove(npc, true);
 		return;
 	}
-	if(dist > 0.001f && dist <= step) {
-		npc.pos = vec3(npc.dragCenter, npc.pos.z);
+	if(dist <= step) {
+		npc.pos = vec3(npc.dragGoal, npc.pos.z);
 		npc.dragElapsed = npc.dragDuration;
 	}
-	else if(dist > 0.001f) npc.pos = vec3(vec2(npc.pos) + rel / dist * step, npc.pos.z);
+	else npc.pos = vec3(vec2(npc.pos) + rel / dist * step, npc.pos.z);
 	SendNpcCcMove(npc, npc.dragElapsed >= npc.dragDuration);
 }
 

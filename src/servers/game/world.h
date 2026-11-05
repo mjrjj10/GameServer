@@ -481,6 +481,7 @@ struct World
 		PxRigidStatic* bodyBlocker = nullptr;
 		bool battleSent = false;
 		vec2 dragCenter = vec2(0);
+		vec2 dragGoal = vec2(0);
 		f32 dragMin = 0;
 		f32 dragMax = 0;
 		f32 dragDuration = 0;
@@ -1062,6 +1063,7 @@ struct World
 	struct MonsterRemote { ActorUID owner; ActorUID target; const Remote* remote; vec3 pos; vec2 dir; Time expire; Time nextTime; i32 activations; f32 travelled; bool impacted; u32 seed = 0; f32 syncIn = MEASURED_REMOTE_SYNC_FIRST_SEC; eastl::fixed_vector<eastl::pair<ActorUID,Time>,24,true> hitUntil; };
 	eastl::fixed_vector<MonsterRemote,128,true> monsterRemotes;
 	void SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed = 0);
+	void SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, const Remote::SpawnRule& rule, const vec3& pos, const vec2& dir, ActorUID target);
 	void RetargetMonsters(ActorUID from, ActorUID to);
 	u32 SendRemoteCreator(const RemoteInst& parent, u16 creator, const vec3& pos, u32 childCount, ActorUID spawnerActor, const vec3& aimPos, bool hitInvalidParent);
 	vec3 npcHitCenter = vec3(0);
@@ -1291,6 +1293,7 @@ public:
 	void MonsterStopIfHeld(ActorNpc& npc);
 	bool MonsterDashNeedsTurn(ActorNpc& npc, const GameXmlContent::MonsterAttack& attack, f32 yaw);
 	void SendNpcCcMove(ActorNpc& npc, bool ended);
+	vec2 NpcPullGoal(const ActorNpc& npc, const vec2& center) const;
 	void ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 statusID);
 	void UpdateNpcDefeat(ActorNpc& npc);
 	void ApplyMonsterAllyStatus(ActorUID casterUID, const GameXmlContent::MonsterAttack& attack);
