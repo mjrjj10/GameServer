@@ -154,6 +154,16 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 			if(packetSize < 1) break;
 			game->OnMasterTrainingEvent(clientHd, packetData, packetSize);
 		} break;
+		case Cl::CN_Ping::NET_ID: {
+			if(packetSize != sizeof(Cl::CN_Ping)) break;
+			LOG("[client%x] Network :: client RTT %u ms", clientHd, ((const Cl::CN_Ping*)packetData)->rttMs);
+		} break;
+		case Cl::CN_CommunityChat::NET_ID: {
+			NT_LOG("[client%x] Client :: CN_CommunityChat size=%d (no community server)", clientHd, packetSize);
+		} break;
+		case Cl::CA_UNKNOWN_60212::NET_ID: {
+			NT_LOG("[client%x] Client :: CA_UNKNOWN_60212 size=%d", clientHd, packetSize);
+		} break;
 		CASE(CQ_SkillUpgradeIngame);
 		CASE(CQ_GetGroundItem);
 		CASE(CQ_PlayerCastSkill);
