@@ -878,7 +878,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		const f32 len = glm::length(dir);
 		dir = len > 1.0f ? dir / len : vec2(cosf(caster.input.rot.upperYaw), sinf(caster.input.rot.upperYaw));
 		if((info->type == StatusType::PUSH || info->type == StatusType::FLY) && statusPushDirSet) dir = glm::normalize(statusPushDir);
-		if(info->type == StatusType::KNOCKDOWN && statusForceCenterSet) {
+		if(statusForceCenterSet && (info->type == StatusType::KNOCKDOWN || (&caster == &target && !statusPushDirSet && info->type != StatusType::DRAGGED))) {
 			const vec2 radial = vec2(from) - vec2(statusForceCenter);
 			if(glm::length(radial) > 1.0f) dir = glm::normalize(radial);
 		}
