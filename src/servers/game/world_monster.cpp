@@ -1445,7 +1445,12 @@ void World::UpdateMonsterAi(f32 delta)
 			}
 		}
 		if(neutral && !targetPos && held) continue;
-		if(neutral && !targetPos) {
+		const bool roamer = neutral && npc.pathRoundTrip && walk > 0;
+		if(roamer && !targetPos && npc.monsterReturning) {
+			npc.monsterReturning = false;
+			if(titanMode) ApplyMonsterStatus(npc, MEASURED_GOT_MOB_RETURN_SUPERARMOR, false);
+		}
+		if(neutral && !targetPos && !roamer) {
 			const vec2 rel = vec2(npc.home) - vec2(npc.pos);
 			const f32 dist = glm::length(rel);
 			if(dist > MONSTER_WAYPOINT_REACHED && run > 0) {
@@ -1467,15 +1472,15 @@ void World::UpdateMonsterAi(f32 delta)
 				npc.monsterReturning = false;
 				if(titanMode) ApplyMonsterStatus(npc, MEASURED_GOT_MOB_RETURN_SUPERARMOR, false);
 				npc.monsterChasing = false;
-				npc.hp = npc.hpMax;
+				if(!titanMode) npc.hp = npc.hpMax;
 				if(ai.idle != ActionStateID::INVALID) {
 					npc.monsterAwake = false;
 					npc.actionState = ai.idle;
 					replication->SendMonsterStateToAll(npc.UID, ai.idle, npc.pos, 0.0f);
 				}
-				replication->SendHpToAll(npc.UID, npc.hp, npc.hpMax);
+				if(!titanMode) replication->SendHpToAll(npc.UID, npc.hp, npc.hpMax);
 				npc.monsterSkillReady.fill(Time::ZERO);
-				LOG("Monster :: neutral creature=%d (local %d) back home, healed", (i32)npc.docID, npc.localID);
+				LOG("Monster :: neutral creature=%d (local %d) back home%s", (i32)npc.docID, npc.localID, titanMode ? "" : ", healed");
 				replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, npc.rot.z, 0.0f);
 			}
 			continue;
@@ -1777,11 +1782,12 @@ void World::UpdateMonsterAi(f32 delta)
 		}
 
 		if(!npc.path || walk <= 0 || npc.pathPoint >= (i32)npc.path->size()) continue;
+		if(roamer) npc.home = npc.pos;
 		if(!npc.monsterWalking) {
 			npc.monsterWalking = true;
 			npc.monsterChasing = false;
 			f32 best = FLT_MAX;
-			for(i32 i = npc.pathPoint; i < (i32)npc.path->size(); i++) {
+			for(i32 i = npc.pathRoundTrip ? 0 : npc.pathPoint; i < (i32)npc.path->size(); i++) {
 				const f32 d = glm::length(vec2((*npc.path)[i]) - vec2(npc.pos));
 				if(d < best) { best = d; npc.pathPoint = i; }
 			}
@@ -1796,7 +1802,14 @@ void World::UpdateMonsterAi(f32 delta)
 			const vec3 goal = (*npc.path)[npc.pathPoint];
 			const vec2 rel = vec2(goal) - vec2(npc.pos);
 			const f32 dist = glm::length(rel);
-			if(dist <= MONSTER_WAYPOINT_REACHED) { npc.pathPoint++; continue; }
+			if(dist <= MONSTER_WAYPOINT_REACHED) {
+				if(npc.pathRoundTrip && npc.path->size() > 1) {
+					if(npc.pathBackward ? npc.pathPoint == 0 : npc.pathPoint == (i32)npc.path->size() - 1) npc.pathBackward = !npc.pathBackward;
+					npc.pathPoint += npc.pathBackward ? -1 : 1;
+				}
+				else npc.pathPoint++;
+				continue;
+			}
 			const f32 step = MIN(budget, dist);
 			npc.pos = vec3(vec2(npc.pos) + rel / dist * step, goal.z);
 			npc.rot.z = atan2f(rel.y, rel.x);

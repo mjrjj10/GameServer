@@ -944,6 +944,7 @@ bool GameXmlContent::LoadMapByID(Map* map, MapIndex index)
 			auto& points = map->paths[pPath->IntAttribute("DATAKEY")];
 			for(XMLElement* pPoint = pPath->FirstChildElement("_PathList"); pPoint; pPoint = pPoint->NextSiblingElement("_PathList")) {
 				points.push_back(vec3(pPoint->FloatAttribute("kTranslate_x"), pPoint->FloatAttribute("kTranslate_y"), pPoint->FloatAttribute("kTranslate_z")));
+				if(pPoint->IntAttribute("RoundTrip") == 1) map->roundTripPaths.insert(pPath->IntAttribute("DATAKEY"));
 			}
 		}
 	}

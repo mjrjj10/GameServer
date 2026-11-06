@@ -899,6 +899,7 @@ struct GameXmlContent
 		eastl::fixed_vector<Area,512> areas;
 		eastl::vector<LevelEventNode> levelEvents;
 		eastl::hash_map<i32, eastl::fixed_vector<vec3,48,true>> paths;
+		eastl::hash_set<i32> roundTripPaths;
 
 		const Area* FindArea(i32 id) const { foreach_const(a, areas) if(a->ID == id) return &*a; return nullptr; }
 		const LevelEventNode* FindLevelEvent(i32 id) const { foreach_const(n, levelEvents) if(n->id == id) return &*n; return nullptr; }

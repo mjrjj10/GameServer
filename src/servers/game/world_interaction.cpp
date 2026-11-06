@@ -700,6 +700,7 @@ void World::InitMonsterStats(ActorNpc& npc)
 	npc.statScale = monsterStatScale;
 	auto path = map->paths.find(npc.localID);
 	npc.path = path != map->paths.end() && !path->second.empty() ? &path->second : nullptr;
+	npc.pathRoundTrip = npc.path && map->roundTripPaths.count(npc.localID) > 0;
 	const GameXmlContent& content = GetGameXmlContent();
 	const auto* stats = content.FindMonsterStats((i32)npc.docID);
 	if(!stats) return;
