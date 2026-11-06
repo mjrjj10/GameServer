@@ -1322,6 +1322,8 @@ struct GameXmlContent
 		f32 spawnTime = 0;
 		f32 chaseRing = 0;
 		f32 chaseArc = 0;
+		bool turnLock = false;
+		f32 turnEvery = 0;
 		i32 masterMark = 0;
 		i32 teamBuff = 0;
 		bool playerSide = false;

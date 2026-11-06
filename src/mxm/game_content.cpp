@@ -1326,6 +1326,8 @@ bool GameXmlContent::LoadMonsterAi()
 			ai.spawnTime = pInfo->FloatAttribute("spawnTime");
 			ai.chaseRing = pInfo->FloatAttribute("chaseRing");
 			ai.chaseArc = pInfo->FloatAttribute("chaseArc") * PI / 180.0f;
+			ai.turnLock = pInfo->BoolAttribute("turnLock");
+			ai.turnEvery = pInfo->FloatAttribute("turnEvery");
 			ai.masterMark = pInfo->IntAttribute("masterMark");
 			ai.teamBuff = pInfo->IntAttribute("teamBuff");
 			if(const char* team = pInfo->Attribute("team")) ai.playerSide = EA::StdC::Strcmp(team, "player") == 0;

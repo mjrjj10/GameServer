@@ -1104,7 +1104,15 @@ bool World::UpdateMonsterMasterSpecial(ActorNpc& npc, const GameXmlContent::Mons
 	return false;
 }
 
-void World::StartMonsterAttack(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const GameXmlContent::MonsterAttack* attack, const vec3* targetPos, f32 dist, f32 yaw, f32 run)
+void World::TurnMonster(ActorNpc& npc, f32 yaw)
+{
+	npc.rot.z = yaw;
+	npc.monsterSyncYaw = yaw;
+	npc.monsterLastTurn = localTime;
+	if(!npc.monsterAi || !npc.monsterAi->turnLock) replication->SendNpcTurnToAll(npc.UID, yaw);
+}
+
+void World::StartMonsterAttack(ActorNpc& npc,const GameXmlContent::MonsterAi& ai, const GameXmlContent::MonsterAttack* attack, const vec3* targetPos, f32 dist, f32 yaw, f32 run)
 {
 	npc.rot.z = yaw;
 	npc.actionState = attack->state;
@@ -1113,9 +1121,7 @@ void World::StartMonsterAttack(ActorNpc& npc, const GameXmlContent::MonsterAi& a
 		ActorMaster* marked = FindMasterActor(npc.monsterTarget);
 		if(marked && marked->parent) ApplyStatusFromNpc(npc, *marked->parent, ai.masterMark);
 	}
-	npc.monsterSyncYaw = yaw;
-	npc.monsterLastTurn = localTime;
-	replication->SendNpcTurnToAll(npc.UID, yaw);
+	TurnMonster(npc, yaw);
 	if(ai.preAttack != ActionStateID::INVALID) {
 		replication->SendMonsterStateToAll(npc.UID, ai.preAttack, npc.pos, run);
 		foreach_const(st, ai.walkStatuses) {
@@ -1202,12 +1208,7 @@ bool World::UpdateMonsterScript(ActorNpc& npc, const GameXmlContent::MonsterAi& 
 		npc.monsterScriptStep = 0;
 		LOG("Monster :: creature=%d (local %d) starts its script in %.1fs", (i32)npc.docID, npc.localID, ai.scriptStart);
 	}
-	if(YawGap(yaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD && TimeDurationMs(npc.monsterLastTurn, localTime) >= HYP_MONSTER_TURN_RESYNC_MS) {
-		npc.rot.z = yaw;
-		npc.monsterSyncYaw = yaw;
-		npc.monsterLastTurn = localTime;
-		replication->SendNpcTurnToAll(npc.UID, yaw);
-	}
+	if(YawGap(yaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD && TimeDurationMs(npc.monsterLastTurn, localTime) >= HYP_MONSTER_TURN_RESYNC_MS) TurnMonster(npc, yaw);
 	if(localTime < npc.monsterScriptStart) return true;
 	f32 t = (f32)TimeDiffSec(TimeDiff(npc.monsterScriptStart, localTime));
 	if(t >= ai.scriptPeriod) {
@@ -1251,12 +1252,9 @@ bool World::UpdateMonsterAllyBuff(ActorNpc& npc, const GameXmlContent::MonsterAi
 		npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime(buff.cooldown * 1000.0));
 		const vec2 rel = vec2(ally->body->GetWorldPos()) - vec2(npc.pos);
 		const f32 yaw = glm::length(rel) > 1.0f ? atan2f(rel.y, rel.x) : npc.rot.z;
-		npc.rot.z = yaw;
-		npc.monsterSyncYaw = yaw;
-		npc.monsterLastTurn = localTime;
 		npc.actionState = buff.state;
 		replication->SendAiSetTargetToAll(npc.UID, ally->Main().UID);
-		replication->SendNpcTurnToAll(npc.UID, yaw);
+		TurnMonster(npc, yaw);
 		replication->SendMonsterStateToAll(npc.UID, buff.state, npc.pos, 0.0f);
 		replication->SendAiSetTargetToAll(npc.UID, npc.monsterTarget);
 		if(buff.anim > 0) {
@@ -1742,12 +1740,8 @@ void World::UpdateMonsterAi(f32 delta)
 			}
 			npc.monsterWalking = false;
 			if(localTime < npc.monsterNextAttack) {
-				if(YawGap(yaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD && TimeDurationMs(npc.monsterLastTurn, localTime) >= HYP_MONSTER_TURN_RESYNC_MS) {
-					npc.rot.z = yaw;
-					npc.monsterSyncYaw = yaw;
-					npc.monsterLastTurn = localTime;
-					replication->SendNpcTurnToAll(npc.UID, yaw);
-				}
+				const f64 sinceTurn = TimeDurationMs(npc.monsterLastTurn, localTime);
+				if((ai.turnEvery > 0 && sinceTurn >= ai.turnEvery * 1000.0) || (YawGap(yaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD && sinceTurn >= HYP_MONSTER_TURN_RESYNC_MS)) TurnMonster(npc, yaw);
 				continue;
 			}
 			npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime(attack->cooldown * 1000.0));
