@@ -663,7 +663,7 @@ bool World::PilotTourStep(Player& p, PilotDecision* out, vec2* goal)
 		foreach_const(npc, actorNpcList) {
 			if(!npc->monsterAi || npc->hp <= 0 || npc->ownerUID != ActorUID::INVALID || IsStructure(*npc) || !(npc->faction == Faction::ORANGE || (npc->faction == Faction::MONSTER && !hostileMonsters)) || !NpcHittableBy(*npc, p)) continue;
 			if(eastl::find(pilotTourNpcs.begin(), pilotTourNpcs.end(), npc->UID) != pilotTourNpcs.end()) continue;
-			const f32 d = glm::length(vec2(npc->pos) - here);
+			const f32 d = Config().DevPilotTourFirst == (i32)npc->docID ? 0.0f : glm::length(vec2(npc->pos) - here);
 			if(d < best) { best = d; pilotTour = PilotTour(); pilotTour.kind = 2; pilotTour.npc = npc->UID; pilotTour.doc = (i32)npc->docID; }
 		}
 		if(!pilotTour.kind) return false;

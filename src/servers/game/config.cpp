@@ -16,6 +16,7 @@ bool CConfigGame::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "DevTruth=%d", &DevTruth) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevScenario=%d", &DevScenario) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevObserver=%d", &DevObserver) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevPilotTourFirst=%d", &DevPilotTourFirst) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevPilotTour=%d", &DevPilotTour) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevGodPlayers=%d", &DevGodPlayers) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevStartLevel=%d", &DevStartLevel) == 1) return true;
@@ -143,6 +144,7 @@ void CConfigGame::Print() const
 	LOG("	DevTruth=%d", DevTruth);
 	LOG("	DevObserver=%d", DevObserver);
 	LOG("	DevPilotTour=%d", DevPilotTour);
+	LOG("	DevPilotTourFirst=%d", DevPilotTourFirst);
 	LOG("	DevBotMonsterSkills=%d", DevBotMonsterSkills);
 	LOG("	HostIP=%d.%d.%d.%d", HostIP[0], HostIP[1], HostIP[2], HostIP[3]);
 	LOG("	TraceNetwork=%d", TraceNetwork);
