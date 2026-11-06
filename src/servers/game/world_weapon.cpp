@@ -546,6 +546,10 @@ void World::UpdateProjectiles(f32 delta)
 				hit.dir = proj->dir;
 				hit.seedOwnerHd = proj->seedOwnerHd;
 				if(proj->damage > 0) DamageNpc(owner, *npc, SkillID::INVALID, proj->damage, &hit);
+				if(proj->remoteID != 0) {
+					proj->npcActivation += NpcDensity(*npc);
+					replication->SendRemoteActivatedToAll(proj->remoteID, proj->seedOwnerHd, ClientHandle::INVALID, npc->UID, proj->npcActivation, proj->pos);
+				}
 				if(const Remote* shot = GetGameXmlContent().FindRemote(proj->remoteDoc)) {
 					if(npc->hp > 0 && npc->ownerUID == ActorUID::INVALID) {
 						foreach_const(st, shot->statuses) if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(owner, *npc, StanceUpgradedStatus(owner, st->statusID), false);

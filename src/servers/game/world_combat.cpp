@@ -527,6 +527,13 @@ f32 World::NpcHitRadius(const ActorNpc& npc) const
 	return npc.monsterAi ? npc.monsterAi->radius : 0.0f;
 }
 
+u32 World::NpcDensity(const ActorNpc& npc) const
+{
+	const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc.docID);
+	if(info) return (u32)info->density;
+	return npc.monsterAi ? (u32)npc.monsterAi->density : 0;
+}
+
 void World::WeaponLifesteal(Player& attacker, i32 damage)
 {
 	const f32 ratio = StatusRegenBonus(attacker, StatusMod::LIFESTEAL, false);

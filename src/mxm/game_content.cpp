@@ -4687,6 +4687,7 @@ void GameXmlContent::LoadSummonInfo(XMLElement* pInfo)
 			p->QueryFloatAttribute("_MoveSpeed", &si.moveSpeed);
 			si.normalMoveSpeed = p->FloatAttribute("_NormalMoveSpeed", si.moveSpeed);
 			p->QueryFloatAttribute("_RotateSpeed", &si.rotateSpeed);
+			p->QueryIntAttribute("_DensityCount", &si.density);
 			const char* t = nullptr;
 			p->QueryStringAttribute("_IsTargetable", &t);
 			si.targetable = t && EA::StdC::Stricmp(t, "true") == 0;

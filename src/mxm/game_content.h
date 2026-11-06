@@ -140,6 +140,7 @@ struct SummonInfo
 	eastl::fixed_string<char,48,false> className;
 	eastl::fixed_vector<StatValue,24,false> baseStats;
 	f32 colliderRadius = 0;
+	i32 density = 0;
 	i32 clearComboOnDeath = 0;
 	eastl::fixed_vector<SummonCommand,12,false> onSpawn;
 	eastl::fixed_vector<SummonCommand,12,false> onDie;

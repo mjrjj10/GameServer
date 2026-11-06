@@ -721,6 +721,7 @@ struct World
 		f32 speed;
 		f32 halfWidth;
 		u32 remoteID = 0;
+		u32 npcActivation = 0;
 		ClientHandle seedOwnerHd = ClientHandle::INVALID;
 		i32 penetrationLeft = 0;
 		f32 pendingAdvance = 0;
@@ -812,6 +813,7 @@ struct World
 		bool areaDone;
 		bool wallHitDone = false;
 		u32 clientRemoteID = 0;
+		u32 npcActivation = 0;
 		f32 syncIn = MEASURED_REMOTE_SYNC_FIRST_SEC;
 		ActorUID syncedTarget = ActorUID::INVALID;
 		bool syncedInit = false;
@@ -1039,6 +1041,7 @@ struct World
 	void ApplyDynamicTrapHit(const PendingTrapHit& hit);
 	bool BotDangerAt(const Player& bot, const vec2& at, vec2* towerPos, f32* towerRange) const;
 	f32 NpcHitRadius(const ActorNpc& npc) const;
+	u32 NpcDensity(const ActorNpc& npc) const;
 	bool TargetBody(ActorUID uid, vec2* pos, f32* radius) const;
 	void SendShieldStat(const Player& p);
 	void SendNpcShieldStat(ActorUID npcUID);

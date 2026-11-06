@@ -781,6 +781,10 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 		DamageNpc(players[inst.ownerIndex], npc, inst.skillID, (i32)(base * RemoteDistanceFalloff(remote, dist)), &hit);
 	}
 	Player& owner = players[inst.ownerIndex];
+	if(inst.clientRemoteID != 0) {
+		inst.npcActivation += NpcDensity(npc);
+		replication->SendRemoteActivatedToAll(inst.clientRemoteID, inst.seedOwnerHd, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, npc.UID, inst.npcActivation, inst.pos);
+	}
 	if(remote.onHitOwnerStatus != 0 && !owner.dead && (inst.sourceUID == ActorUID::INVALID || !FindNpcActor(inst.sourceUID))) {
 		const ActorUID prevCaster = statusCasterOverride;
 		statusCasterOverride = npc.UID;
