@@ -93,7 +93,7 @@ void World::MonsterAggroOnHit(ActorNpc& npc, Player& attacker)
 	const bool neutral = MonsterNeutral(npc, hostileMonsters);
 	if(!neutral && !MonsterHostile(npc, attacker)) return;
 	const bool titanMode = map && map->ingameLevels;
-	if(neutral && titanMode && npc.monsterReturning && glm::length(vec2(npc.pos) - vec2(npc.home)) > npc.monsterAi->perception) return;
+	if(neutral && titanMode && npc.monsterReturning) return;
 	if(npc.monsterReturning && titanMode) ApplyMonsterStatus(npc, MEASURED_GOT_MOB_RETURN_SUPERARMOR, false);
 	npc.monsterTarget = attacker.Main().UID;
 	npc.monsterReturning = false;
@@ -1455,7 +1455,7 @@ void World::UpdateMonsterAi(f32 delta)
 			const f32 dist = glm::length(rel);
 			if(dist > MONSTER_WAYPOINT_REACHED && run > 0) {
 				const f32 yaw = atan2f(rel.y, rel.x);
-				const f32 back = run * ai.returnSpeedRate;
+				const f32 back = titanMode && walk > 0 ? walk : run * ai.returnSpeedRate;
 				npc.pos = vec3(vec2(npc.pos) + rel / dist * MIN(back * delta, dist), npc.pos.z);
 				npc.rot.z = yaw;
 				if(!npc.monsterReturning && titanMode) ApplyMonsterStatus(npc, MEASURED_GOT_MOB_RETURN_SUPERARMOR, true);
