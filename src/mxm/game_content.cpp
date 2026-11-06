@@ -3554,6 +3554,7 @@ bool GameXmlContent::Load()
 	r = LoadStatusStatMods();
 	if(!r) return false;
 	r = LoadMeasuredFireNodes();
+	if(r) r = LoadMeasuredSwingNodes();
 	if(r) r = LoadMeasuredWalkCells();
 	if(!r) return false;
 	r = LoadFireNodePaths();
@@ -4301,6 +4302,20 @@ bool GameXmlContent::LoadMeasuredFireNodes()
 		measuredFireNodes[FireNodeKey(pFire->IntAttribute("skill"), pFire->IntAttribute("remote"), pFire->IntAttribute("index"))] = node;
 	}
 	LOG("Loaded %d measured fire nodes", (i32)measuredFireNodes.size());
+	return true;
+}
+
+bool GameXmlContent::LoadMeasuredSwingNodes()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/MeasuredSwingNodes.xml", doc)) return true;
+	for(XMLElement* pSwing = doc.FirstChildElement()->FirstChildElement("SWING"); pSwing; pSwing = pSwing->NextSiblingElement("SWING")) {
+		MeasuredSwingNode node;
+		node.forward = pSwing->FloatAttribute("forward");
+		node.side = pSwing->FloatAttribute("side");
+		measuredSwingNodes[pSwing->IntAttribute("remote")] = node;
+	}
+	LOG("Loaded %d measured swing nodes", (i32)measuredSwingNodes.size());
 	return true;
 }
 

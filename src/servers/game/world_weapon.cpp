@@ -31,6 +31,12 @@ static f32 SegmentPointDist2D(const vec2& a, const vec2& b, const vec2& p)
 	return glm::length(p - (a + ab * t));
 }
 
+static vec3 ProjectileContact(const World::Projectile& proj, const vec2& target, f32 radius)
+{
+	const vec2 contact = target - proj.dir * radius;
+	return vec3(glm::dot(contact - vec2(proj.start), proj.dir) < 0 ? vec2(proj.start) : contact, proj.pos.z);
+}
+
 static ActionStateID WeaponAttackState(const World::Player& player, const WeaponFiring& wf)
 {
 	return wf.AttackState(player.firingCombo, player.chargeLevel);
@@ -66,7 +72,9 @@ void World::PlayerWeaponFire(Player& player)
 		const Remote* swingRemote = GetGameXmlContent().FindRemote(swing);
 		ASSERT(swingRemote);
 		LOG("Shot :: %ls melee swing remote %d (stance %d)", player.name.data(), (i32)swing, (i32)swingStance);
-		SpawnRemote(player.index, swing, origin + vec3(dir * swingRemote->offsetY, 0), dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), true, nullptr, 0, player.clientHd != ClientHandle::INVALID);
+		const GameXmlContent::MeasuredSwingNode* node = GetGameXmlContent().FindMeasuredSwingNode(swing);
+		const vec2 at = dir * (swingRemote->offsetY + (node ? node->forward : 0)) + Perp(dir) * (node ? node->side : 0);
+		SpawnRemote(player.index, swing, origin + vec3(at, 0), dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), true, nullptr, 0, player.clientHd != ClientHandle::INVALID);
 	}
 }
 
@@ -316,20 +324,22 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 	LOG("Explosion :: at (%.0f, %.0f) radius=%.0f", center.x, center.y, radius);
 	const Remote* bombRemote = source && source->bombDoc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(source->bombDoc) : nullptr;
 	const bool bombHit = source && source->damage <= 0 && source->bombDoc != RemoteIdx::INVALID;
+	const vec2 zone = vec2(center) + (bombRemote ? source->dir * RemoteBoundOffset(*bombRemote) : vec2(0));
 	i32 mastersHit = 0;
 	foreach(it, players) {
 		if(it->team == owner.team || it->dead || it->untargetable) continue;
 		const vec3 pos = it->body->GetWorldPos();
 		if(fabsf(pos.z - center.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
-		if(LagDistToPoint(*it, vec2(center)) > radius + HitRadius(*it) + WEAPON_HIT_TOLERANCE) continue;
-		const f32 falloff = bombRemote ? RemoteDistanceFalloff(*bombRemote, glm::length(vec2(pos) - vec2(center))) : 1.0f;
-		DamagePlayer(owner, *it, SkillID::INVALID, (i32)(damage * falloff), source ? &hitInfo : nullptr);
+		if(LagDistToPoint(*it, zone) > radius + HitRadius(*it) + WEAPON_HIT_TOLERANCE) continue;
+		const f32 falloff = bombRemote ? RemoteDistanceFalloff(*bombRemote, glm::length(vec2(pos) - zone)) : 1.0f;
+		const f32 passive = bombHit ? PassiveWeaponDamageMul(owner, *it) : 1.0f;
+		DamagePlayer(owner, *it, SkillID::INVALID, (i32)(damage * falloff * passive), source ? &hitInfo : nullptr);
 		if(bombHit) PassiveOnWeaponHit(owner, *it, hitInfo);
 		mastersHit++;
 	}
 	foreach(npc, actorNpcList) {
 		if(!NpcHittableBy(*npc, owner)) continue;
-		const f32 d = glm::length(vec2(npc->pos) - vec2(center));
+		const f32 d = glm::length(vec2(npc->pos) - zone);
 		if(d > radius + NpcHitRadius(*npc)) continue;
 		Replication::RemoteDamage hit;
 		if(source) {
@@ -348,7 +358,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 			if(it->team != owner.team || it->dead) continue;
 			const vec3 pos = it->body->GetWorldPos();
 			if(fabsf(pos.z - center.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
-			if(glm::length(vec2(pos) - vec2(center)) > radius + HitRadius(*it)) continue;
+			if(glm::length(vec2(pos) - zone) > radius + HitRadius(*it)) continue;
 			foreach_const(st, bombRemote->friendlyStatuses) {
 				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(owner, *it, st->statusID);
 			}
@@ -356,7 +366,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 		const Faction ownFaction = owner.team == 0 ? Faction::RED : Faction::BLUE;
 		foreach(npc, actorNpcList) {
 			if(npc->faction != ownFaction || npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
-			if(glm::length(vec2(npc->pos) - vec2(center)) > radius + NpcHitRadius(*npc)) continue;
+			if(glm::length(vec2(npc->pos) - zone) > radius + NpcHitRadius(*npc)) continue;
 			foreach_const(st, bombRemote->friendlyStatuses) {
 				if(st->rate < 100 && (i32)(RandUint() % 100) >= st->rate) continue;
 				const StatusInfo* flagged = GetGameXmlContent().FindStatus(st->statusID);
@@ -519,7 +529,7 @@ void World::UpdateProjectiles(f32 delta)
 				}
 				proj->hitsLeft--;
 				if(proj->hitsLeft <= 0 || proj->penetrationLeft <= 0) {
-					proj->pos = hitPos;
+					proj->pos = ProjectileContact(*proj, vec2(hitPos), HitRadius(*activationTarget));
 					destroyed = true;
 				}
 			}
@@ -548,7 +558,7 @@ void World::UpdateProjectiles(f32 delta)
 				}
 				proj->hitsLeft--;
 				if(proj->hitsLeft <= 0) {
-					proj->pos = vec3(vec2(npc->pos), proj->pos.z);
+					proj->pos = ProjectileContact(*proj, vec2(npc->pos), NpcHitRadius(*npc));
 					destroyed = true;
 				}
 			}

@@ -1262,6 +1262,7 @@ public:
 	f32 PlayerSkillConsume(const Player& player, i32 skillID, i32 index) const;
 	const GameXmlContent::CostLevel* UpgradeCastMods(Player& player, SkillID skillID, const GameXmlContent::CostLevel* costLevel);
 	void ReleaseCast(Player& player);
+	void EndCastStatuses(Player& player, const Player::Casting& c);
 	void CancelCast(Player& player, const char* reason, ClientHandle skipHd = ClientHandle::INVALID);
 	void SyncNpcLeg(ActorNpc& npc, const vec3& goal);
 	void StopNpcLeg(ActorNpc& npc);

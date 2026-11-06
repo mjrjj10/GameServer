@@ -695,6 +695,33 @@ void World::ReleaseCast(Player& player)
 	auto f = GetGameXmlContent().skillMap.find(c.skillID);
 	if(f == GetGameXmlContent().skillMap.end() || player.dead) return;
 	LOG("Cast :: %ls skill=%d release", player.name.data(), (i32)c.skillID);
+	EndCastStatuses(player, c);
+	GroupTeleport(player, c.skillID, c.castPos);
+	if(f->second.action == ActionStateID::INVALID) return;
+	const GameXmlContent::SkillCast* sc = GetGameXmlContent().FindSkillCast((i32)c.skillID);
+	if(sc && sc->type == GameXmlContent::SkillCast::CHARGING && sc->maxChargingTime > 0 && sc->maxChargeRatio != sc->minChargeRatio) {
+		const f32 held = MIN((f32)TimeDiffSec(TimeDiff(c.startedAt, localTime)) / sc->maxChargingTime, 1.0f);
+		player.castChargeRatio = sc->minChargeRatio + (sc->maxChargeRatio - sc->minChargeRatio) * held;
+		LOG("Cast :: %ls skill=%d charge ratio %.2f", player.name.data(), (i32)c.skillID, player.castChargeRatio);
+	}
+	vec3 releasePos = c.castPos;
+	if(player.clientHd == ClientHandle::INVALID && c.type != GameXmlContent::SkillCast::DELAY && !c.lifted && glm::length(vec2(c.castPos)) > 1.0f) {
+		const ActorUID aim = c.target != ActorUID::INVALID ? c.target : player.botAimTarget;
+		const ActorMaster* tm = aim != ActorUID::INVALID ? FindMasterActor(aim) : nullptr;
+		if(tm && !tm->parent->dead && !tm->parent->untargetable) {
+			releasePos = tm->parent->body->GetWorldPos();
+			const f32 yaw = atan2f(releasePos.y - player.body->GetWorldPos().y, releasePos.x - player.body->GetWorldPos().x);
+			player.input.rot.upperYaw = yaw;
+			player.input.rot.bodyYaw = yaw;
+			player.weaponAimYaw = yaw;
+		}
+	}
+	PlayerCastSkill(player, c.skillID, releasePos, Slice<const ActorUID>(&c.target, c.target != ActorUID::INVALID ? 1 : 0), 0, f->second.action);
+	player.castChargeRatio = 1.0f;
+}
+
+void World::EndCastStatuses(Player& player, const Player::Casting& c)
+{
 	foreach(it, activeStatuses) {
 		if(it->targetIndex != player.index || it->casterIndex != player.index || !it->aniEnd || it->appliedAt < c.startedAt || it->until <= localTime) continue;
 		it->until = localTime;
@@ -718,28 +745,6 @@ void World::ReleaseCast(Player& player)
 			}
 		}
 	}
-	GroupTeleport(player, c.skillID, c.castPos);
-	if(f->second.action == ActionStateID::INVALID) return;
-	const GameXmlContent::SkillCast* sc = GetGameXmlContent().FindSkillCast((i32)c.skillID);
-	if(sc && sc->type == GameXmlContent::SkillCast::CHARGING && sc->maxChargingTime > 0 && sc->maxChargeRatio != sc->minChargeRatio) {
-		const f32 held = MIN((f32)TimeDiffSec(TimeDiff(c.startedAt, localTime)) / sc->maxChargingTime, 1.0f);
-		player.castChargeRatio = sc->minChargeRatio + (sc->maxChargeRatio - sc->minChargeRatio) * held;
-		LOG("Cast :: %ls skill=%d charge ratio %.2f", player.name.data(), (i32)c.skillID, player.castChargeRatio);
-	}
-	vec3 releasePos = c.castPos;
-	if(player.clientHd == ClientHandle::INVALID && c.type != GameXmlContent::SkillCast::DELAY && !c.lifted && glm::length(vec2(c.castPos)) > 1.0f) {
-		const ActorUID aim = c.target != ActorUID::INVALID ? c.target : player.botAimTarget;
-		const ActorMaster* tm = aim != ActorUID::INVALID ? FindMasterActor(aim) : nullptr;
-		if(tm && !tm->parent->dead && !tm->parent->untargetable) {
-			releasePos = tm->parent->body->GetWorldPos();
-			const f32 yaw = atan2f(releasePos.y - player.body->GetWorldPos().y, releasePos.x - player.body->GetWorldPos().x);
-			player.input.rot.upperYaw = yaw;
-			player.input.rot.bodyYaw = yaw;
-			player.weaponAimYaw = yaw;
-		}
-	}
-	PlayerCastSkill(player, c.skillID, releasePos, Slice<const ActorUID>(&c.target, c.target != ActorUID::INVALID ? 1 : 0), 0, f->second.action);
-	player.castChargeRatio = 1.0f;
 }
 
 void World::DropPendingActions(Player& player)
@@ -780,7 +785,9 @@ void World::CancelCast(Player& player, const char* reason, ClientHandle skipHd)
 {
 	LOG("Cast :: %ls skill=%d cancelled (%s)", player.name.data(), (i32)player.casting.skillID, reason);
 	replication->SendCancelSkillToAll(player.Main().UID, player.casting.skillID, skipHd);
+	const Player::Casting c = player.casting;
 	player.casting.skillID = SkillID::INVALID;
+	if(!player.dead) EndCastStatuses(player, c);
 }
 
 void World::UpdateCasts()

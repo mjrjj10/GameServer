@@ -1576,6 +1576,9 @@ struct GameXmlContent
 	eastl::hash_map<u64, MeasuredFireNode> measuredFireNodes;
 	static u64 FireNodeKey(i32 skill, i32 remote, i32 index) { return ((u64)(u32)skill << 32) ^ ((u64)(u32)remote << 4) ^ (u64)(u32)index; }
 	const MeasuredFireNode* FindMeasuredFireNode(i32 skill, i32 remote, i32 index) const { auto f = measuredFireNodes.find(FireNodeKey(skill, remote, index)); return f == measuredFireNodes.end() ? nullptr : &f->second; }
+	struct MeasuredSwingNode { f32 forward = 0; f32 side = 0; };
+	eastl::hash_map<i32, MeasuredSwingNode> measuredSwingNodes;
+	const MeasuredSwingNode* FindMeasuredSwingNode(RemoteIdx remote) const { auto f = measuredSwingNodes.find((i32)remote); return f == measuredSwingNodes.end() ? nullptr : &f->second; }
 	const eastl::array<i32,5>* FindBotSkills(i32 creature) const { auto f = botSkills.find(creature); return f == botSkills.end() ? nullptr : &f->second; }
 	bool IsChildOnExisting(ClassType c, ActionStateID a) const { return childOnExisting.find(((u32)c << 16) | ((u32)a & 0xFFFF)) != childOnExisting.end(); }
 	i32 GetChildSkill(ClassType c, ActionStateID a) const { auto f = childSkill.find(((u32)c << 16) | ((u32)a & 0xFFFF)); return f == childSkill.end() ? 0 : f->second; }
@@ -1827,6 +1830,7 @@ private:
 	bool LoadSkillTooltips();
 	bool LoadStatusStatMods();
 	bool LoadMeasuredFireNodes();
+	bool LoadMeasuredSwingNodes();
 	bool LoadMeasuredWalkCells();
 	bool LoadFireNodePaths();
 	bool LoadClientRemoteCreators();
