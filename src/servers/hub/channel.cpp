@@ -262,6 +262,11 @@ void HubPacketHandler::OnMatchmakerPacket(const NetHeader& header, const u8* pac
 			const In::MN_MatchingPartyFound resp = SafeCast<In::MN_MatchingPartyFound>(packetData, packetSize);
 			game->MmOnMatchFound(resp);
 		} break;
+
+		case In::MN_GameEnded::NET_ID: {
+			const In::MN_GameEnded resp = SafeCast<In::MN_GameEnded>(packetData, packetSize);
+			game->MmOnGameEnded(resp.sortieUID);
+		} break;
 	}
 }
 

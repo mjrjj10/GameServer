@@ -476,6 +476,16 @@ struct Matchmaker
 	void OnPacketGame(Connection& conn, const NetHeader& header, const u8* packetData, const i32 packetSize)
 	{
 		switch(header.netID) {
+			case In::GN_GameEnded::NET_ID: {
+				const In::GN_GameEnded& packet = SafeCast<In::GN_GameEnded>(packetData, packetSize);
+				LOG("[game%x] Game ended (sortieUID=%llu)", conn.clientHd, (u64)packet.sortieUID);
+				In::MN_GameEnded notify;
+				notify.sortieUID = packet.sortieUID;
+				foreach_const(c, connList) {
+					if(c->type == Connection::Type::HubServer) SendPacket(c->clientHd, notify);
+				}
+			} break;
+
 			case In::GR_GameCreated::NET_ID: {
 				NT_LOG("[game%x] %s", conn.clientHd, PacketSerialize<In::GR_GameCreated>(packetData, packetSize));
 				const In::GR_GameCreated& packet = SafeCast<In::GR_GameCreated>(packetData, packetSize);

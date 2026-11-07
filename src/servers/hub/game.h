@@ -91,6 +91,7 @@ struct HubGame
 	eastl::array<StageIndex,MAX_PLAYERS> pendingPartyStageIndex;
 	eastl::array<bool,MAX_PLAYERS> pendingRegame = {};
 	i32 autoQueued = 0;
+	eastl::fixed_vector<SortieUID,64,true> endedSorties;
 	struct SortieMember { AccountUID accountUID; u8 row; u32 teamType; bool bot; WideString nick; u8 team = 0; bool stayJoined = false; };
 	struct SortieRoster { SortieUID sortieUID; eastl::fixed_vector<SortieMember,16,false> members; EntrySystemID entry; StageType stageType; StageIndex stage; GameType gameType; GameDefinition gameDefinition; Time stayEndAt = Time::ZERO; bool stayDone = false; };
 	struct StayInvite { WideString leader; WideString invitee; };
@@ -232,6 +233,7 @@ struct HubGame
 	void MmOnPartyCreated(PartyUID partyUID, AccountUID leader);
 	void MmOnPartyEnqueued(PartyUID partyUID);
 	void MmOnMatchFound(const In::MN_MatchingPartyFound& matchingParty);
+	void MmOnGameEnded(SortieUID sortieUID);
 
 	bool ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 len);
 	void SendDbgMsg(ClientHandle clientHd, const wchar* msg);

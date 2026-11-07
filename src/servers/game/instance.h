@@ -20,6 +20,7 @@ struct PvpInstance
 	Time localTime;
 
 	Phase phase = Phase::PlayerConnecting;
+	bool endReported = false;
 	eastl::array<ClientHandle, Game::MAX_PLAYERS> clientAccountLink;
 	i32 remainingLinks;
 

@@ -195,6 +195,13 @@ struct GR_GameCreated
 	SortieUID sortieUID;
 };
 
+struct GN_GameEnded
+{
+	enum { NET_ID = 2003 };
+
+	SortieUID sortieUID;
+};
+
 struct MR_Handshake
 {
 	enum { NET_ID = 3002 };
@@ -288,6 +295,13 @@ struct MN_MatchCreated
 	SortieUID sortieUID;
 	eastl::array<u8,4> serverIp;
 	u16 serverPort;
+};
+
+struct MN_GameEnded
+{
+	enum { NET_ID = 3009 };
+
+	SortieUID sortieUID;
 };
 POP_PACKED
 

@@ -2632,6 +2632,32 @@ inline const char* PacketSerialize<In::GR_GameCreated>(const void* packetData, c
 }
 
 template<>
+inline const char* PacketSerialize<In::GN_GameEnded>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	const In::GN_GameEnded& packet = SafeCast<In::GN_GameEnded>(packetData, packetSize);
+
+	SER("GN_GameEnded(%d, %d) :: {", In::GN_GameEnded::NET_ID, packetSize);
+	SER("	sortieUID=%llu", packet.sortieUID);
+	SER("}");
+
+	return str.data();
+}
+
+template<>
+inline const char* PacketSerialize<In::MN_GameEnded>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	const In::MN_GameEnded& packet = SafeCast<In::MN_GameEnded>(packetData, packetSize);
+
+	SER("MN_GameEnded(%d, %d) :: {", In::MN_GameEnded::NET_ID, packetSize);
+	SER("	sortieUID=%llu", packet.sortieUID);
+	SER("}");
+
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<In::MN_MatchCreated>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

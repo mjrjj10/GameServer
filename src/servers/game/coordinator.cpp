@@ -260,6 +260,10 @@ void InstancePool::Lane::Update()
 		Logger::gameTag = (i32)((u64)room->sortieUID & 0xffff);
 		room->Update(localTime);
 		Logger::gameTag = 0;
+		if(room->game.gameEnded && !room->endReported) {
+			room->endReported = true;
+			Matchmaker().QueryGameEnded(room->sortieUID);
+		}
 	}
 
 	for(auto room = instancePvpList.begin(); room != instancePvpList.end();) {
@@ -268,6 +272,7 @@ void InstancePool::Lane::Update()
 		const bool abandoned = room->phase == PvpInstance::Phase::PlayingGame;
 		if(linked || (!room->game.Finished() && !abandoned)) { ++room; continue; }
 		LOG("[Lane_%d] Destroyed game (sortieUID=%llu)%s", laneIndex, room->sortieUID, room->game.Finished() ? "" : " abandoned by every client");
+		if(!room->endReported) Matchmaker().QueryGameEnded(room->sortieUID);
 		room->game.Cleanup();
 		instancePvpMap.erase(room->sortieUID);
 		room = instancePvpList.erase(room);

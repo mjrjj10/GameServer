@@ -209,7 +209,9 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 
 	LOG("[client%x] HubGame :: account %llu connected (%ls)", clientHd, (u64)accountData->UID, accountData->nickname.data());
 	SortieUID resultSortieUID = SortieUID::INVALID;
-	if(TakeAccountReturningFromGame(accountData->nickname, &resultSortieUID)) {
+	const bool returning = TakeAccountReturningFromGame(accountData->nickname, &resultSortieUID);
+	if(returning && eastl::find(endedSorties.begin(), endedSorties.end(), resultSortieUID) == endedSorties.end()) LOG("[client%x] HubGame :: back while game %llu is still running, normal lobby", clientHd, (u64)resultSortieUID);
+	else if(returning) {
 		auto pveAccount = GetAccountManager().accountMap.find(accountData->UID);
 		if(pveAccount != GetAccountManager().accountMap.end() && pveAccount->second->pveFailedReturn) {
 			pveAccount->second->pveFailedReturn = false;
@@ -1814,6 +1816,12 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 		s = stayInvites.erase(s);
 	}
 	pendingRegame[userID] = false;
+}
+
+void HubGame::MmOnGameEnded(SortieUID sortieUID)
+{
+	if(eastl::find(endedSorties.begin(), endedSorties.end(), sortieUID) == endedSorties.end()) endedSorties.push_back(sortieUID);
+	LOG("HubGame :: game %llu ended", (u64)sortieUID);
 }
 
 void HubGame::MmOnPartyEnqueued(PartyUID partyUID)
