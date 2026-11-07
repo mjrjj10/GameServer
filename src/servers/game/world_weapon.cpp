@@ -332,6 +332,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 	const Remote* statusRemote = bombRemote ? bombRemote : (shotExplodes ? GetGameXmlContent().FindRemote(source->remoteDoc) : nullptr);
 	const vec2 zone = vec2(center) + (bombRemote ? source->dir * RemoteBoundOffset(*bombRemote) : vec2(0));
 	i32 mastersHit = 0;
+	i32 npcsHit = 0;
 	foreach(it, players) {
 		if(it->team == owner.team || it->dead || it->untargetable) continue;
 		const vec3 pos = it->body->GetWorldPos();
@@ -356,6 +357,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 			hit.seedOwnerHd = hitInfo.seedOwnerHd;
 		}
 		DamageNpc(owner, *npc, SkillID::INVALID, (i32)(damage * (bombRemote ? RemoteDistanceFalloff(*bombRemote, d) : 1.0f)), source ? &hit : nullptr);
+		npcsHit++;
 		if(bombHit || shotExplodes) WeaponHitPlagueNpc(owner, *npc);
 		if(!statusRemote || npc->hp <= 0) continue;
 		foreach_const(st, statusRemote->statuses) if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(owner, *npc, StanceUpgradedStatus(owner, st->statusID), false);
@@ -375,11 +377,12 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 			ApplyFriendlyRemoteStatuses(owner, *bombRemote, nullptr, &*npc);
 		}
 	}
-	if(mastersHit >= 2 && owner.mana >= 0) {
+	if(mastersHit + npcsHit >= 2 && owner.mana >= 0 && localTime >= owner.multiHitPassiveReady) {
 		if(const ActiveStatus* st = FindPassiveOfType(owner, StatusType::ARTILLERY)) {
-			owner.mana = MIN(owner.mana + st->info->Param("_AddValuePC"), MasterStat(owner.Main().classType, STAT_MANA));
+			owner.mana = MIN(owner.mana + st->info->Param(mastersHit > 0 ? "_AddValuePC" : "_AddValueNPC"), MasterStat(owner.Main().classType, STAT_MANA));
 			owner.manaDirty = true;
-			LOG("Passive :: %ls hit %d masters -> mana %.0f", owner.name.data(), mastersHit, owner.mana);
+			owner.multiHitPassiveReady = TimeAdd(localTime, TimeMsToTime(st->info->Param("_Duration")));
+			LOG("Passive :: %ls hit %d masters %d creatures -> mana %.0f", owner.name.data(), mastersHit, npcsHit, owner.mana);
 		}
 	}
 }

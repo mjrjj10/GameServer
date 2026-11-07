@@ -259,6 +259,7 @@ struct World
 		eastl::array<Time,5> botSkillReady = { Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO, Time::ZERO };
 		Time tNextBotSkill = Time::ZERO;
 		Time botEvadeReady = Time::ZERO;
+		Time multiHitPassiveReady = Time::ZERO;
 		Time botStageSkillReady = Time::ZERO;
 		ActorUID botAimTarget = ActorUID::INVALID;
 		f32 ultGauge = -1.0f;
