@@ -540,6 +540,7 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	const f32 duration = cc.duration;
 	const i32 overlap = prevOverlap > 0 ? MIN(prevOverlap + 1, MAX(info ? info->maxOverlap : 1, 1)) : 1;
 	replication->SendAddStatusToAll(statusID, npc.UID, casterField, duration, from, cc.to, cc.graphSec, overlap, 1.0f, cc.nominal, cc.graph, prevOverlap > 0);
+	if(info && info->raiseStunByPush && cc.graphSec > 0) AddPushBound(caster, npc.UID, *info, cc.graphSec);
 	if(npcStatuses.full()) return;
 	NpcStatus ns;
 	ns.npcUID = npc.UID;

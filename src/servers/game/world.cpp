@@ -264,6 +264,7 @@ void World::Update(Time localTime_)
 	UpdateIngameLevels();
 	if(!frozen) UpdatePassives();
 	if(!frozen) UpdateStances();
+	if(!frozen) UpdatePushBounds();
 	if(!frozen) UpdateCasts();
 	if(!frozen) UpdateInteractions();
 	if(Config().DevShowcase) { if(!frozen) UpdateShowcase(); }

@@ -293,6 +293,7 @@ struct StatusInfo
 	f32 healMul = 0;
 	f32 shieldMul = 0;
 	bool attachToCaster = false;
+	bool raiseStunByPush = false;
 	f32 drainMultiplier = 0;
 	i32 skillIndex = 0;
 	ActionStateID motionAction = ActionStateID::INVALID;
@@ -1555,6 +1556,7 @@ struct GameXmlContent
 	static i8 StanceFromString(const char* str);
 	const Remote& GetRemote(RemoteIdx remoteID) const;
 	const Remote* FindRemote(RemoteIdx remoteID) const;
+	const Remote* FindCasterMoveBoundRemote(i32 skillIndex) const;
 	eastl::fixed_vector<eastl::fixed_string<wchar,48,false>,512,true> nodeNames;
 	u16 InternNodeName(const char* name);
 	u16 FindNodeName(const char* name) const;

@@ -4037,6 +4037,7 @@ bool GameXmlContent::LoadStatusData()
 			st.attachToCaster = pCommon->Attribute("_AttachNodeName") != nullptr;
 			pCommon->QueryFloatAttribute("_DotDrainMultiplier", &st.drainMultiplier);
 			pCommon->QueryIntAttribute("_SkillIndex", &st.skillIndex);
+			if(const char* rs = pCommon->Attribute("_RaiseStunByPush")) st.raiseStunByPush = rs[0] == 'T' || rs[0] == 't' || rs[0] == '1';
 			f32 intervalMs = 0;
 			pCommon->QueryFloatAttribute("_Interval", &intervalMs);
 			st.intervalSec = intervalMs / 1000.0f;
@@ -6120,6 +6121,14 @@ const Remote* GameXmlContent::FindRemote(RemoteIdx remoteID) const
 	auto found = remoteMap.find(remoteID);
 	if(found == remoteMap.end()) return nullptr;
 	return &found->second;
+}
+
+const Remote* GameXmlContent::FindCasterMoveBoundRemote(i32 skillIndex) const
+{
+	foreach_const(it, remoteMap) {
+		if(it->second.skillIndex == skillIndex && it->second.boundType == Remote::BoundType::E_BOUND_CASTER_MOVE_BOUND) return &it->second;
+	}
+	return nullptr;
 }
 
 const Remote& GameXmlContent::GetRemote(RemoteIdx remoteID) const

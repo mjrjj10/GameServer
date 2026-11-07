@@ -961,6 +961,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			if(nominalDist > 1.0f && physics.RaycastStatic(from + mid, to + mid, &wallDist, info->type == StatusType::FORCEBACK ? (i32)caster.team : (i32)target.team)) to = from + vec3(glm::normalize(vec2(to - from)) * wallDist, 0);
 		}
 		LOG("Push :: %ls -> %ls status=%d sep=%.0f dir=(%.2f, %.2f) to=(%.0f, %.0f)", caster.name.data(), target.name.data(), statusID, len, dir.x, dir.y, to.x, to.y);
+		if(info->raiseStunByPush && graphDuration > 0) AddPushBound(caster, target.Main().UID, *info, graphDuration);
 		if(dragForce && target.clientHd == ClientHandle::INVALID) {
 			target.dragCenter = vec2(forceCenter);
 			target.dragMin = info->dragForceMin;
@@ -1284,6 +1285,64 @@ void World::UpdateStatuses()
 		}
 		else {
 			++it;
+		}
+	}
+}
+
+void World::AddPushBound(Player& caster, ActorUID pushed, const StatusInfo& info, f32 duration)
+{
+	const Remote* remote = GetGameXmlContent().FindCasterMoveBoundRemote(info.skillIndex);
+	if(!remote || pushBounds.full()) return;
+	foreach(b, pushBounds) {
+		if(b->pushed != pushed) continue;
+		b->until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
+		b->remote = remote;
+		b->casterIndex = caster.index;
+		return;
+	}
+	PushBound b;
+	b.pushed = pushed;
+	b.casterIndex = caster.index;
+	b.until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
+	b.remote = remote;
+	pushBounds.push_back(b);
+}
+
+void World::UpdatePushBounds()
+{
+	for(i32 i = 0; i < (i32)pushBounds.size(); ) {
+		if(localTime >= pushBounds[i].until) { pushBounds.erase(pushBounds.begin() + i); continue; }
+		PushBound& b = pushBounds[i];
+		i++;
+		vec3 at;
+		Faction faction;
+		const ActorMaster* pm = FindMasterActor(b.pushed);
+		const ActorNpc* pn = pm ? nullptr : FindNpcActor(b.pushed);
+		if(pm && !pm->parent->dead && pm->parent->body) { at = pm->parent->body->GetWorldPos(); faction = (Faction)pm->parent->team; }
+		else if(pn && pn->hp > 0) { at = pn->pos; faction = pn->faction; }
+		else continue;
+		Player& caster = players[b.casterIndex];
+		const f32 bound = (f32)b.remote->boundSize[0];
+		const ActorUID prevCaster = statusCasterOverride;
+		foreach(p, players) {
+			if(p->removed || p->dead || !p->body || (Faction)p->team != faction || p->Main().UID == b.pushed || b.hit.full()) continue;
+			if(eastl::find(b.hit.begin(), b.hit.end(), p->Main().UID) != b.hit.end()) continue;
+			if(glm::length(vec2(p->body->GetWorldPos() - at)) > bound + HitRadius(*p)) continue;
+			b.hit.push_back(p->Main().UID);
+			LOG("PushBound :: %ls hit by pushed actor %u", p->name.data(), (u32)b.pushed);
+			statusCasterOverride = b.pushed;
+			foreach_const(s, b.remote->friendlyStatuses) ApplyStatus(caster, *p, s->statusID);
+			statusCasterOverride = prevCaster;
+		}
+		foreach(n, actorNpcList) {
+			if(n->hp <= 0 || n->removeAt != Time::ZERO || n->faction != faction || n->UID == b.pushed || b.hit.full()) continue;
+			if(eastl::find(b.hit.begin(), b.hit.end(), n->UID) != b.hit.end()) continue;
+			if(glm::length(vec2(n->pos - at)) > bound + NpcHitRadius(*n)) continue;
+			b.hit.push_back(n->UID);
+			LOG("PushBound :: creature=%d hit by pushed actor %u", (i32)n->docID, (u32)b.pushed);
+			statusCasterOverride = b.pushed;
+			foreach_const(s, b.remote->friendlyStatuses) ApplyStatusToNpc(caster, *n, s->statusID, false);
+			statusCasterOverride = prevCaster;
 		}
 	}
 }

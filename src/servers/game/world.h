@@ -912,6 +912,8 @@ struct World
 		ActorUID sourceUID = ActorUID::INVALID;
 	};
 	eastl::fixed_vector<PendingStatus,256,false> pendingStatuses;
+	struct PushBound { ActorUID pushed; u32 casterIndex; Time until; const Remote* remote; eastl::fixed_vector<ActorUID,16,false> hit; };
+	eastl::fixed_vector<PushBound,32,false> pushBounds;
 	bool statusAniEnd = false;
 	bool statusCleanupOnly = false;
 	bool spreadingStatus = false;
@@ -1568,6 +1570,8 @@ private:
 	i32 StanceUpgradedStatus(Player& player, i32 statusID);
 	void StanceWeaponUse(Player& player);
 	void UpdateStances();
+	void AddPushBound(Player& caster, ActorUID pushed, const StatusInfo& info, f32 duration);
+	void UpdatePushBounds();
 	void InterruptSkills(Player& player);
 	void UpdateCasts();
 	bool HasStatusType(const Player& p, StatusType type) const;
