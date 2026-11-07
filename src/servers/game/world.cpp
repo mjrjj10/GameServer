@@ -165,7 +165,9 @@ void World::Update(Time localTime_)
 			if(p.casting.skillID != SkillID::INVALID) CancelCast(p, "tag");
 			SwapMainMaster(p);
 			if(!p.dead) {
+				statusNoCaster = true;
 				ApplyStatus(p, p, STATUS_PC_TAG_GODMODE);
+				statusNoCaster = false;
 				SpawnRespawnFlyRemote(p);
 			}
 			SendTagCooltimeToTeam(p, TagCooltimeMs(p));

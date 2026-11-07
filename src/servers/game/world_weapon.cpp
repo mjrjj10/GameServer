@@ -362,7 +362,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 	}
 	if(bombRemote && !bombRemote->friendlyStatuses.empty()) {
 		foreach(it, players) {
-			if(it->team != owner.team || it->dead) continue;
+			if(it->team != owner.team || it->dead || (it->index == owner.index && !bombRemote->vsOwner)) continue;
 			const vec3 pos = it->body->GetWorldPos();
 			if(fabsf(pos.z - center.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 			if(glm::length(vec2(pos) - zone) > radius + HitRadius(*it)) continue;
