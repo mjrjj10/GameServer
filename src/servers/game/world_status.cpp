@@ -567,11 +567,30 @@ void World::PassiveOnWeaponStatusHit(Player& attacker, Player& target)
 void World::WeaponHitPlagueNpc(Player& attacker, ActorNpc& npc)
 {
 	if(npc.hp <= 0 || npc.ownerUID != ActorUID::INVALID) return;
+	bool controlled = false;
+	foreach_const(ns, npcStatuses) {
+		if(ns->npcUID != npc.UID || localTime >= ns->until) continue;
+		const StatusInfo* held = GetGameXmlContent().FindStatus(ns->statusID);
+		if(held && (held->type == StatusType::STUN || held->type == StatusType::ROOT || held->type == StatusType::SHOCKED)) controlled = true;
+	}
 	eastl::fixed_vector<i32,4,false> toApply;
-	foreach_const(it, activeStatuses) {
+	foreach(it, activeStatuses) {
 		if(it->targetIndex != attacker.index || !it->info || it->until <= localTime) continue;
 		const StatusInfo& info = *it->info;
-		if(info.type == StatusType::HIT_PLAGUE && info.customMax <= 0 && !info.permanent && info.hitEffectStatus && !toApply.full()) toApply.push_back(info.hitEffectStatus);
+		if(info.type == StatusType::HIT_PLAGUE && info.customMax <= 0 && !info.permanent) {
+			if(info.hitEffectStatus && !toApply.full()) toApply.push_back(info.hitEffectStatus);
+			continue;
+		}
+		if(!PassiveOfActiveMaster(attacker, it->statusID)) continue;
+		if(info.type == StatusType::HIT_PLAGUE && info.customMax > 0) {
+			it->custom++;
+			if(it->custom >= info.customMax) {
+				it->custom = info.customInit;
+				if(info.hitEffectStatus && !toApply.full()) toApply.push_back(info.hitEffectStatus);
+			}
+			SendPassiveCounter(*it, it->custom);
+		}
+		else if(info.type == StatusType::KROMEDE && info.hitEffectStatus && controlled && !toApply.full()) toApply.push_back(info.hitEffectStatus);
 	}
 	foreach_const(id, toApply) ApplyStatusToNpc(attacker, npc, *id, false);
 }

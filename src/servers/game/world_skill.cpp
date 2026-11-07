@@ -575,6 +575,25 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	}
 	npcStatuses.push_back(ns);
 	if(ns.shieldMax > 0) SendNpcShieldStat(npc.UID);
+	if(info && info->maxOverlap > 1 && overlap >= info->maxOverlap) {
+		i32 full = 0;
+		foreach_const(ps, activeStatuses) {
+			if(ps->targetIndex != caster.index || !ps->info || ps->info->stackStatus != statusID || ps->info->stackFullStatus == 0) continue;
+			full = ps->info->stackFullStatus;
+			break;
+		}
+		if(full != 0) {
+			LOG("Passive :: %ls full stack of %d on creature=%d -> %d", caster.name.data(), statusID, (i32)npc.docID, full);
+			for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
+				if(npcStatuses[i].npcUID == npc.UID && npcStatuses[i].statusID == statusID) {
+					replication->SendRemoveStatusToAll(statusID, npc.UID, npcStatuses[i].casterUID);
+					npcStatuses.erase(npcStatuses.begin() + i);
+				}
+				else i++;
+			}
+			ApplyStatusToNpc(caster, npc, full, false);
+		}
+	}
 	LOG("Status :: %ls gives creature=%d status=%d for %.1fs shield=%.0f", caster.name.data(), (i32)npc.docID, statusID, duration, ns.shieldHP);
 }
 
