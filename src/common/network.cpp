@@ -412,6 +412,8 @@ void Listener::Listen()
 			}
 		}
 
+		const int noDelay = 1;
+		setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY, (const char*)&noDelay, sizeof(noDelay));
 		LOG("[%d] New connection (%s)", listenPort, GetIpString(clientAddr));
 		server.ListenerAddClient(clientSocket, clientAddr);
 	}
