@@ -224,6 +224,9 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		LOG("Shot :: %ls class=%d remote=%d swings along its fire node path", player.name.data(), (i32)classType, (i32)remote->ID);
 		return;
 	}
+	if(remote && !remote->timeEventRecycle && remote->timeEventDelay == 0.0f) {
+		foreach_const(r, remote->onTime) if(r->idx != RemoteIdx::INVALID) SpawnRemote(player.index, r->idx, proj.pos, proj.dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, 0, true);
+	}
 	LOG("Shot :: %ls class=%d remote=%d graph=%d reliable=%d dist=%.0f range=%.0f speed=%.0f width=%.0f hits=%d aoe=%.0f", player.name.data(), (i32)classType, remote ? (i32)remote->ID : -1, graph, reliable, distance, proj.range, proj.speed, proj.halfWidth, proj.hitsLeft, proj.aoeRadius);
 	if(!wf.extraRemotes.empty()) {
 		const u32 firstID = proj.remoteID;
@@ -324,6 +327,8 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 	LOG("Explosion :: at (%.0f, %.0f) radius=%.0f", center.x, center.y, radius);
 	const Remote* bombRemote = source && source->bombDoc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(source->bombDoc) : nullptr;
 	const bool bombHit = source && source->damage <= 0 && source->bombDoc != RemoteIdx::INVALID;
+	const bool shotExplodes = source && source->bombDoc == RemoteIdx::INVALID;
+	const Remote* statusRemote = bombRemote ? bombRemote : (shotExplodes ? GetGameXmlContent().FindRemote(source->remoteDoc) : nullptr);
 	const vec2 zone = vec2(center) + (bombRemote ? source->dir * RemoteBoundOffset(*bombRemote) : vec2(0));
 	i32 mastersHit = 0;
 	foreach(it, players) {
@@ -334,7 +339,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 		const f32 falloff = bombRemote ? RemoteDistanceFalloff(*bombRemote, glm::length(vec2(pos) - zone)) : 1.0f;
 		const f32 passive = bombHit ? PassiveWeaponDamageMul(owner, *it) : 1.0f;
 		DamagePlayer(owner, *it, SkillID::INVALID, (i32)(damage * falloff * passive), source ? &hitInfo : nullptr);
-		if(bombHit) PassiveOnWeaponHit(owner, *it, hitInfo);
+		if(bombHit || shotExplodes) PassiveOnWeaponHit(owner, *it, hitInfo);
 		mastersHit++;
 	}
 	foreach(npc, actorNpcList) {
@@ -350,8 +355,8 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 			hit.seedOwnerHd = hitInfo.seedOwnerHd;
 		}
 		DamageNpc(owner, *npc, SkillID::INVALID, (i32)(damage * (bombRemote ? RemoteDistanceFalloff(*bombRemote, d) : 1.0f)), source ? &hit : nullptr);
-		if(!bombRemote || npc->hp <= 0) continue;
-		foreach_const(st, bombRemote->statuses) if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(owner, *npc, StanceUpgradedStatus(owner, st->statusID), false);
+		if(!statusRemote || npc->hp <= 0) continue;
+		foreach_const(st, statusRemote->statuses) if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(owner, *npc, StanceUpgradedStatus(owner, st->statusID), false);
 	}
 	if(bombRemote && !bombRemote->friendlyStatuses.empty()) {
 		foreach(it, players) {

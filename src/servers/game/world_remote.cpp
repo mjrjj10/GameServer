@@ -399,7 +399,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	const i32 amount = (i32)(inst.damage * remote.attackMultiplier);
 	if(enemy && remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;
 	if(enemy) ChangeCasterActionOnHit(inst, owner, target.Main().UID, target.body->GetWorldPos());
-	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty()) {
+	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty() && remote.onHitOwnerStatus == 0) {
 		AddRemoteActivation(target, inst.pos.z);
 		if(enemy) TriggerSkillHitEvent(inst, owner, target.Main().UID, target.body->GetWorldPos());
 		return true;
@@ -472,7 +472,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	inst.lastHitIndex = (i32)target.index;
 	if(enemy && HasStatusType(target, StatusType::EVADE)) return true;
 	const bool npcOwnerStatus = enemy && remote.onHitOwnerStatus != 0 && inst.sourceUID != ActorUID::INVALID && FindNpcActor(inst.sourceUID);
-	if(enemy && remote.onHitOwnerStatus != 0 && !owner.dead && !npcOwnerStatus) {
+	if(remote.onHitOwnerStatus != 0 && !owner.dead && !npcOwnerStatus) {
 		const ActorUID prevCaster = statusCasterOverride;
 		statusCasterOverride = target.Main().UID;
 		ApplyStatus(owner, owner, remote.onHitOwnerStatus);
@@ -1117,8 +1117,10 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 				if(d < bestDist) { bestDist = d; best = &*it; }
 			}
 			if(pass < 2) {
+				const Faction ownFaction = ownerTeam == 0 ? Faction::RED : Faction::BLUE;
 				foreach(npc, actorNpcList) {
-					if(npc->hp <= 0 || !NpcHittableBy(*npc, players[inst.ownerIndex]) || npc->UID == inst.chainNpcHit || !inCone(vec2(npc->pos))) continue;
+					const bool ally = friendChain && npc->faction == ownFaction && npc->removeAt == Time::ZERO;
+					if(npc->hp <= 0 || !(ally || NpcHittableBy(*npc, players[inst.ownerIndex])) || npc->UID == inst.chainNpcHit || !inCone(vec2(npc->pos))) continue;
 					const f32 d = glm::length(vec2(npc->pos) - vec2(inst.pos));
 					if(d < bestDist) { bestDist = d; bestNpc = &*npc; best = nullptr; }
 				}
@@ -1127,7 +1129,8 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 		if(bestNpc) {
 			inst.dir = glm::length(vec2(bestNpc->pos - inst.pos)) > 1.0f ? glm::normalize(vec2(bestNpc->pos - inst.pos)) : inst.dir;
 			inst.pos = vec3(vec2(bestNpc->pos), inst.pos.z);
-			RemoteDamageNpc(inst, *bestNpc, 0.0f);
+			if(NpcHittableBy(*bestNpc, players[inst.ownerIndex])) RemoteDamageNpc(inst, *bestNpc, 0.0f);
+			else RemoteFriendNpc(inst, *bestNpc);
 			inst.chainNpcHit = bestNpc->UID;
 			if(friendChain) inst.excludeIndex = -1;
 		}

@@ -728,6 +728,15 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			foreach(w, activeStatuses) if(w->targetIndex == target.index && w->appliedAt == applied && w->until > release) w->until = release;
 			LOG("Status :: %ls released from %d by %d", target.name.data(), it->statusID, statusID);
 		}
+		eastl::fixed_vector<i32,8,false> toggled;
+		foreach_const(it, activeStatuses) {
+			if(it->targetIndex != target.index || !it->info || it->statusID == statusID || it->info->permanent || it->info->durationSec >= 0 || it->info->skillIndex != info->skillIndex || toggled.full()) continue;
+			if(eastl::find(toggled.begin(), toggled.end(), it->statusID) == toggled.end()) toggled.push_back(it->statusID);
+		}
+		foreach_const(t, toggled) {
+			LOG("Status :: %ls toggle %d removes %d", target.name.data(), statusID, *t);
+			ConsumeStatus(target.index, *t);
+		}
 	}
 	const ActorUID npcCaster = statusCasterOverride != ActorUID::INVALID && FindNpcActor(statusCasterOverride) ? statusCasterOverride : ActorUID::INVALID;
 	i32 npcCasterStatus = 0;
