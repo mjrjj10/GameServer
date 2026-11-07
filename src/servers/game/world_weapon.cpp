@@ -118,8 +118,9 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	LOG("Shot :: %ls firing remote %d (combo %d charge %d count %d)", player.name.data(), (i32)idx, player.firingCombo, player.chargeLevel, player.shotCount[player.mainCharaID & 1]);
 
 	const Remote* bomb = remote ? content.FindRemote(remote->destroyCreateRemote) : nullptr;
-	if(spawnAtAim && remote) {
-		f32 reach = MAX(MIN(distance > 1.0f ? distance : WeaponReach(*remote, wf), aimMax), aimMin);
+	const bool friendChainShot = remote && remote->behaviorType == Remote::BehaviorType::CHAIN && remote->includeParty && !remote->friendlyStatuses.empty();
+	if((spawnAtAim || friendChainShot) && remote) {
+		f32 reach = friendChainShot ? 0.0f : MAX(MIN(distance > 1.0f ? distance : WeaponReach(*remote, wf), aimMax), aimMin);
 		const vec3 aimPos = vec3(vec2(origin) + dir * reach, player.body->GetWorldPos().z);
 		const bool bot = player.clientHd == ClientHandle::INVALID;
 		if(!bot) replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(dir.y, dir.x)), WeaponAttackState(player, wf));

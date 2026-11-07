@@ -356,7 +356,8 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 		case StatusType::FLY: state = ActionStateID::DEFEAT_FLY_BEHAVIORSTATE; sec = info->durationSec > 0 ? info->durationSec : NPC_DEFEAT_FLY_SEC; lie = true; break;
 		case StatusType::STUN:
 		case StatusType::SHOCKED:
-		case StatusType::FREEZE: state = ActionStateID::DEFEAT_SYNC_BEHAVIORSTATE; sec = info->durationSec > 0 ? info->durationSec : NPC_DEFEAT_SYNC_SEC; break;
+		case StatusType::FREEZE:
+		case StatusType::DANCE: state = ActionStateID::DEFEAT_SYNC_BEHAVIORSTATE; sec = info->durationSec > 0 ? info->durationSec : NPC_DEFEAT_SYNC_SEC; break;
 		default: return 0.0f;
 	}
 	if(eastl::find(npc.monsterAi->ccTypes.begin(), npc.monsterAi->ccTypes.end(), info->type) == npc.monsterAi->ccTypes.end() && !(hostileMonsters && HypPveMonsterTakesCc(npc))) return -1.0f;
@@ -374,6 +375,10 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 	const f32 total = sec + (lie ? NPC_LIE_SEC : 0.0f);
 	npc.actionState = state;
 	replication->SendMonsterStateToAll(npc.UID, state, npc.pos, npc.monsterAi->run * npc.speedMul);
+	if(info->type == StatusType::DANCE) {
+		npc.actionState = ActionStateID::NONE_BEHAVIORSTATE;
+		replication->SendMonsterStateToAll(npc.UID, npc.actionState, npc.pos, npc.monsterAi->run * npc.speedMul);
+	}
 	npc.defeatLieAt = lie ? TimeAdd(localTime, TimeMsToTime(sec * 1000.0)) : Time::ZERO;
 	npc.airborneAt = info->type == StatusType::AIRBORNE ? localTime : Time::ZERO;
 	npc.airborneStep = 0;
