@@ -10,7 +10,6 @@
 #include <EASTL/algorithm.h>
 #include "config.h"
 
-static const f64 MATCHING_WAIT_SEC = 10.0;
 static const i32 MAX_TEAM_SIZE = 5;
 
 Server* g_Server = nullptr;
@@ -546,7 +545,7 @@ struct Matchmaker
 		const In::CustomTeams frontCustom = partyMap.at(matchingPartyList.front())->custom;
 		const bool custom = frontCustom.count > 0;
 		const bool soloRoom = Config().SoloRooms || pve || custom;
-		if(!soloRoom && humanCount < teamSize * 2 && TimeDiffSec(TimeDiff(matchingStartTime, now)) < MATCHING_WAIT_SEC) return;
+		if(!soloRoom && humanCount < teamSize * 2 && TimeDiffSec(TimeDiff(matchingStartTime, now)) < (f64)Config().MatchingWaitSec) return;
 		matchingStartTime = Time::ZERO;
 		decltype(matchingPartyList) laterParties;
 		if(soloRoom) {
