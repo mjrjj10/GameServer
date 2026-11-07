@@ -620,13 +620,15 @@ void World::RemoteApplyShape(RemoteInst& inst)
 	}
 	Player& owner = players[inst.ownerIndex];
 	foreach(npc, actorNpcList) {
-		if(!NpcHittableBy(*npc, owner)) continue;
+		const bool hittable = NpcHittableBy(*npc, owner);
+		if(!hittable && remote.friendlyStatuses.empty()) continue;
 		const f32 r = NpcHitRadius(*npc);
 		const vec2 rel = vec2(npc->pos) - vec2(inst.pos);
 		const f32 along = glm::dot(rel, inst.dir);
 		const f32 side = fabsf(glm::dot(rel, Perp(inst.dir)));
 		if(along < start - r || along > start + length + r || side > halfWidth + r) continue;
-		RemoteDamageNpc(inst, *npc, along);
+		if(hittable) RemoteDamageNpc(inst, *npc, along);
+		else RemoteFriendNpc(inst, *npc);
 	}
 }
 
@@ -719,11 +721,13 @@ void World::RemoteHitNpcs(RemoteInst& inst)
 {
 	const Remote& remote = *inst.remote;
 	const i32 base = (i32)(inst.damage * remote.attackMultiplier);
-	if((base <= 0 && remote.statuses.empty()) || (remote.damageGroup != Remote::DamageGroup::eENEMY && remote.damageGroup != Remote::DamageGroup::eALL)) return;
+	const bool enemies = !(base <= 0 && remote.statuses.empty()) && (remote.damageGroup == Remote::DamageGroup::eENEMY || remote.damageGroup == Remote::DamageGroup::eALL);
+	if(!enemies && remote.friendlyStatuses.empty()) return;
 	Player& owner = players[inst.ownerIndex];
 	const bool sphere = remote.boundType == Remote::BoundType::E_BOUND_SPHERE || remote.angle > 0;
 	foreach(npc, actorNpcList) {
-		if(!NpcHittableBy(*npc, owner)) continue;
+		const bool hittable = NpcHittableBy(*npc, owner);
+		if(hittable ? !enemies : remote.friendlyStatuses.empty()) continue;
 		const f32 r = NpcHitRadius(*npc);
 		const vec2 rel = vec2(npc->pos) - vec2(inst.pos) - inst.dir * RemoteBoundOffset(remote);
 		const f32 dist = glm::length(rel);
@@ -737,8 +741,30 @@ void World::RemoteHitNpcs(RemoteInst& inst)
 			const f32 along = glm::dot(local, inst.dir);
 			if(along < -r || along > length + r || fabsf(glm::dot(local, Perp(inst.dir))) > remote.boundSize[0] * 0.5f + r) continue;
 		}
-		RemoteDamageNpc(inst, *npc, dist);
+		if(hittable) RemoteDamageNpc(inst, *npc, dist);
+		else RemoteFriendNpc(inst, *npc);
 	}
+}
+
+bool World::RemoteFriendNpc(RemoteInst& inst, ActorNpc& npc)
+{
+	const Remote& remote = *inst.remote;
+	if(remote.friendlyStatuses.empty() || !(remote.includeParty || remote.contactFriend)) return false;
+	Player& owner = players[inst.ownerIndex];
+	const Faction ownFaction = owner.team == 0 ? Faction::RED : Faction::BLUE;
+	if(npc.faction != ownFaction || npc.hp <= 0 || npc.removeAt != Time::ZERO || npc.UID == inst.sourceUID) return false;
+	const Time until = TimeAdd(localTime, TimeMsToTime(MAX(remote.hitInvalidTime, 0.1f) * 1000.0));
+	bool recorded = false;
+	foreach(h, inst.npcHits) {
+		if(h->uid != npc.UID) continue;
+		if(localTime < h->until) return false;
+		h->until = until;
+		recorded = true;
+		break;
+	}
+	if(!recorded) inst.npcHits.push_back({ npc.UID, until });
+	ApplyFriendlyRemoteStatuses(owner, remote, nullptr, &npc);
+	return true;
 }
 
 void World::ChangeCasterActionOnHit(RemoteInst& inst, Player& owner, ActorUID targetUID, const vec3& targetPos)
@@ -759,6 +785,7 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 	const Remote& remote = *inst.remote;
 	const i32 base = (i32)(inst.damage * remote.attackMultiplier);
 	if(remote.damageGroup != Remote::DamageGroup::eENEMY && remote.damageGroup != Remote::DamageGroup::eALL) return false;
+	if((remote.vs & (1u << Remote::VS_PLAYER_CHARACTER)) && !(remote.vs & (1u << Remote::VS_NPC_MONSTER))) return false;
 	if(remote.targetOnly && inst.target != ActorUID::INVALID && inst.target != npc.UID) return false;
 	const Time until = TimeAdd(localTime, TimeMsToTime(MAX(remote.hitInvalidTime, 0.1f) * 1000.0));
 	bool recorded = false;

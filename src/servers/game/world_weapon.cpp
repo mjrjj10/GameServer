@@ -359,27 +359,13 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 			const vec3 pos = it->body->GetWorldPos();
 			if(fabsf(pos.z - center.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 			if(glm::length(vec2(pos) - zone) > radius + HitRadius(*it)) continue;
-			foreach_const(st, bombRemote->friendlyStatuses) {
-				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatus(owner, *it, st->statusID);
-			}
+			ApplyFriendlyRemoteStatuses(owner, *bombRemote, &*it, nullptr);
 		}
 		const Faction ownFaction = owner.team == 0 ? Faction::RED : Faction::BLUE;
 		foreach(npc, actorNpcList) {
 			if(npc->faction != ownFaction || npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
 			if(glm::length(vec2(npc->pos) - zone) > radius + NpcHitRadius(*npc)) continue;
-			foreach_const(st, bombRemote->friendlyStatuses) {
-				if(st->rate < 100 && (i32)(RandUint() % 100) >= st->rate) continue;
-				const StatusInfo* flagged = GetGameXmlContent().FindStatus(st->statusID);
-				if(!flagged) continue;
-				replication->SendAddStatusToAll(flagged->ID, npc->UID, owner.Main().UID, StatusSentDuration(*flagged), npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false);
-				const StatusInfo* info = flagged->flagEffectStatus != 0 ? GetGameXmlContent().FindStatus(flagged->flagEffectStatus) : nullptr;
-				if(!info || npc->ownerUID == ActorUID::INVALID) continue;
-				replication->SendAddStatusToAll(info->ID, npc->UID, npc->UID, StatusSentDuration(*info), npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false);
-				if(info->descHealPct <= 0 || npc->hp >= npc->hpMax) continue;
-				npc->hp = MIN(npc->hp + (i32)(npc->hpMax * info->descHealPct / 100.0f), npc->hpMax);
-				replication->SendHpToAll(npc->UID, npc->hp, npc->hpMax);
-				LOG("Summon :: creature=%d repaired %.0f%% by %ls (hp %d/%d)", (i32)npc->docID, info->descHealPct, owner.name.data(), npc->hp, npc->hpMax);
-			}
+			ApplyFriendlyRemoteStatuses(owner, *bombRemote, nullptr, &*npc);
 		}
 	}
 	if(mastersHit >= 2 && owner.mana >= 0) {
@@ -437,6 +423,27 @@ void World::SteerProjectile(Projectile& proj, f32 delta)
 	proj.dir = SteerToward(proj.dir, rel, proj.angularVel * delta);
 }
 
+void World::ApplyFriendlyRemoteStatuses(Player& owner, const Remote& remote, Player* target, ActorNpc* npc)
+{
+	foreach_const(st, remote.friendlyStatuses) {
+		if(st->rate < 100 && (i32)(RandUint() % 100) >= st->rate) continue;
+		if(target) {
+			ApplyStatus(owner, *target, st->statusID);
+			continue;
+		}
+		const StatusInfo* flagged = GetGameXmlContent().FindStatus(st->statusID);
+		if(!flagged) continue;
+		replication->SendAddStatusToAll(flagged->ID, npc->UID, owner.Main().UID, StatusSentDuration(*flagged), npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false);
+		const StatusInfo* info = flagged->flagEffectStatus != 0 ? GetGameXmlContent().FindStatus(flagged->flagEffectStatus) : nullptr;
+		if(!info || npc->ownerUID == ActorUID::INVALID) continue;
+		replication->SendAddStatusToAll(info->ID, npc->UID, npc->UID, StatusSentDuration(*info), npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false);
+		if(info->descHealPct <= 0 || npc->hp >= npc->hpMax) continue;
+		npc->hp = MIN(npc->hp + (i32)(npc->hpMax * info->descHealPct / 100.0f), npc->hpMax);
+		replication->SendHpToAll(npc->UID, npc->hp, npc->hpMax);
+		LOG("Summon :: creature=%d repaired %.0f%% by %ls (hp %d/%d)", (i32)npc->docID, info->descHealPct, owner.name.data(), npc->hp, npc->hpMax);
+	}
+}
+
 void World::UpdateProjectiles(f32 delta)
 {
 	for(auto proj = projectileList.begin(); proj != projectileList.end(); ) {
@@ -490,7 +497,25 @@ void World::UpdateProjectiles(f32 delta)
 			}
 			u32 activationCost = 0;
 			const Player* activationTarget = nullptr;
-			foreach(it, players) {
+			if(shotRemote && !shotRemote->friendlyStatuses.empty() && (shotRemote->contactFriend || shotRemote->includeParty)) {
+				foreach(it, players) {
+					if(it->team != owner.team || it->dead || it->index == owner.index || proj->friendHitList.full()) continue;
+					if(eastl::find(proj->friendHitList.begin(), proj->friendHitList.end(), it->index) != proj->friendHitList.end()) continue;
+					const vec3 pos = it->body->GetWorldPos();
+					if(fabsf(pos.z - proj->pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
+					if(SegmentPointDist2D(from, to, vec2(pos)) > proj->halfWidth + HitRadius(*it)) continue;
+					proj->friendHitList.push_back(it->index);
+					ApplyFriendlyRemoteStatuses(owner, *shotRemote, &*it, nullptr);
+				}
+				const Faction ownFaction = owner.team == 0 ? Faction::RED : Faction::BLUE;
+				foreach(npc, actorNpcList) {
+					if(npc->faction != ownFaction || npc->hp <= 0 || npc->removeAt != Time::ZERO || proj->friendNpcHitList.full()) continue;
+					if(eastl::find(proj->friendNpcHitList.begin(), proj->friendNpcHitList.end(), npc->UID) != proj->friendNpcHitList.end()) continue;
+					if(SegmentPointDist2D(from, to, vec2(npc->pos)) > proj->halfWidth + NpcHitRadius(*npc)) continue;
+					proj->friendNpcHitList.push_back(npc->UID);
+					ApplyFriendlyRemoteStatuses(owner, *shotRemote, nullptr, &*npc);
+				}
+			}			foreach(it, players) {
 				if(it->team == owner.team || it->dead || it->untargetable) continue;
 				if(eastl::find(proj->hitList.begin(), proj->hitList.end(), it->index) != proj->hitList.end()) continue;
 				const vec3 pos = it->body->GetWorldPos();

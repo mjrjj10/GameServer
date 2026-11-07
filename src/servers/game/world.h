@@ -747,6 +747,8 @@ struct World
 		u32 volleyID = 0;
 		eastl::fixed_vector<u32,16,false> hitList;
 		eastl::fixed_vector<ActorUID,4,false> npcHitList;
+		eastl::fixed_vector<u32,8,false> friendHitList;
+		eastl::fixed_vector<ActorUID,8,false> friendNpcHitList;
 	};
 
 	eastl::fixed_vector<Projectile,256,false> projectileList;
@@ -1215,6 +1217,7 @@ private:
 	void UpdateProjectiles(f32 delta);
 	void SteerProjectile(Projectile& proj, f32 delta);
 	void Explode(Player& owner, const vec3& center, f32 radius, i32 damage, const Projectile* source = nullptr);
+	void ApplyFriendlyRemoteStatuses(Player& owner, const Remote& remote, Player* target, ActorNpc* npc);
 	bool ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 angle, i32 forceAnim = -1, ActionStateID forcedAction = ActionStateID::INVALID);
 	RemoteInst* SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3& pos, const vec2& dir, ActorUID target, SkillID skillID, u32 castID, i32 damage, bool broadcast = false, const vec3* aimPos = nullptr, u16 nodeName = 0, bool casterCreatesLocally = false, bool stopAtTarget = false, bool child = false, bool sendEntity = true);
 	void UpdateRemotes(f32 delta);
@@ -1282,6 +1285,7 @@ public:
 	void GainRageOnDamage(Player& target, i32 damage);
 	void RemoteHitNpcs(RemoteInst& inst);
 	bool RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist);
+	bool RemoteFriendNpc(RemoteInst& inst, ActorNpc& npc);
 	void ChangeCasterActionOnHit(RemoteInst& inst, Player& owner, ActorUID targetUID, const vec3& targetPos);
 	void StartLevelEvents();
 	void StartTimeRecord();
