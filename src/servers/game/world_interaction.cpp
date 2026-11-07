@@ -397,15 +397,16 @@ World::NpcCcGraph World::StartNpcCc(ActorNpc& npc, const StatusInfo* info, const
 	if(!info) return cc;
 	const f32 timeRatio = info->timeRatio > 0 ? info->timeRatio : 1.0f;
 	const bool knockdown = info->type == StatusType::KNOCKDOWN && npc.monsterAi;
-	if(info->type == StatusType::PUSH || knockdown) {
+	const bool forceBack = info->type == StatusType::FORCEBACK && info->distance > 0 && info->durationSec > 0;
+	if(info->type == StatusType::PUSH || knockdown || forceBack) {
 		vec2 dir = vec2(npc.pos) - vec2(source);
 		const f32 len = glm::length(dir);
 		dir = len > 1.0f ? dir / len : vec2(cosf(npc.rot.z), sinf(npc.rot.z));
-		const f32 signedDist = MEASURED_NPC_PUSH_BASE_DISTANCE * (info->distanceRatio != 0 ? info->distanceRatio : 1.0f);
+		const f32 signedDist = forceBack ? info->distance : MEASURED_NPC_PUSH_BASE_DISTANCE * (info->distanceRatio != 0 ? info->distanceRatio : 1.0f);
 		if(signedDist < 0) dir = -dir;
 		f32 dist = fabsf(signedDist);
 		cc.nominal = dist;
-		cc.graphSec = (knockdown ? NPC_DEFEAT_KNOCKDOWN_SEC : NPC_DEFEAT_PUSH_SEC) * timeRatio;
+		cc.graphSec = forceBack ? info->durationSec : (knockdown ? NPC_DEFEAT_KNOCKDOWN_SEC : NPC_DEFEAT_PUSH_SEC) * timeRatio;
 		cc.duration = cc.graphSec;
 		cc.graph = true;
 		const f32 radius = npc.monsterAi ? npc.monsterAi->radius : 0.0f;
