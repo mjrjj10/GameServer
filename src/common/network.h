@@ -198,7 +198,9 @@ struct Server
 		if(clientConnectedList.size() > 0) {
 			LOCK_MUTEX(mutexClientConnectedList);
 			foreach_const(cl, clientConnectedList) {
-				eastl::pair<ClientHandle,ClientInfo> pair(*cl, clientInfo[clientHandle2IDMap.at(*cl)]);
+				const auto id = clientHandle2IDMap.find(*cl);
+				if(id == clientHandle2IDMap.end()) continue;
+				eastl::pair<ClientHandle,ClientInfo> pair(*cl, clientInfo[id->second]);
 				out->push_back(pair);
 			}
 			clientConnectedList.clear();

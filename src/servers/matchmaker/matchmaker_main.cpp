@@ -185,9 +185,11 @@ struct Matchmaker
 
 		foreach_const(cl, clientDisconnectedList) {
 			const ClientHandle clientHd = *cl;
+			const auto found = connMap.find(clientHd);
+			if(found == connMap.end()) continue;
 
-			connList.erase(connMap.at(clientHd));
-			connMap.erase(clientHd);
+			connList.erase(found->second);
+			connMap.erase(found);
 		}
 
 		server.TransferAllReceivedData(&recvDataBuff);
@@ -235,7 +237,9 @@ struct Matchmaker
 	{
 		const i32 packetSize = header.size - sizeof(NetHeader);
 
-		Connection& conn = *connMap.at(clientHd);
+		const auto found = connMap.find(clientHd);
+		if(found == connMap.end()) return;
+		Connection& conn = *found->second;
 
 		switch(conn.type) {
 			case Connection::Type::Undecided: OnPacketUndecided(conn, header, packetData, packetSize); break;
@@ -283,7 +287,6 @@ struct Matchmaker
 			} break;
 
 			default: {
-				ASSERT_MSG(0, "case not handled");
 				WARN("[client%x] Unhandled packet (netID=%u size=%u)", conn.clientHd, header.netID, header.size);
 				server.DisconnectClient(conn.clientHd);
 			}
