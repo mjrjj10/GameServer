@@ -62,6 +62,52 @@ bool World::BotStageSkill(Player& bot)
 	return true;
 }
 
+static const f32 HYP_BOT_EVADE_AIM_DISTANCE = 500.0f;
+
+bool World::BotEvade(Player& bot)
+{
+	const auto& content = GetGameXmlContent();
+	if(localTime < bot.botEvadeReady || bot.titanForm >= 0) return false;
+	const f32 nearby = content.BotConstant("BOTLOGIC_CONSTANT_KEY_NEARBY_REMOTE_DISTANCE_FOR_GOOD_EVADE_STATE_IN_BOTHELPER");
+	const f32 cooltime = content.BotConstant("BOTLOGIC_CONSTANT_KEY_EVADE_COOLTIME_IN_PVP_AI_ENTITY_BASE");
+	if(nearby <= 0 || cooltime <= 0) return false;
+	const vec2 at = vec2(bot.body->GetWorldPos());
+	vec2 incoming = vec2(0);
+	foreach_const(pr, projectileList) {
+		if(players[pr->ownerIndex].team == bot.team || pr->damage <= 0) continue;
+		if(glm::length(vec2(pr->pos) - at) > nearby) continue;
+		incoming = pr->dir;
+		break;
+	}
+	if(glm::length(incoming) < 0.5f) {
+		foreach_const(ri, remoteInsts) {
+			if(!ri->remote || players[ri->ownerIndex].team == bot.team || ri->remote->attackMultiplier <= 0) continue;
+			if(ri->remote->damageGroup != Remote::DamageGroup::eENEMY && ri->remote->damageGroup != Remote::DamageGroup::eALL) continue;
+			if(glm::length(vec2(ri->pos) - at) > nearby) continue;
+			incoming = glm::length(ri->dir) > 0.5f ? ri->dir : glm::normalize(at - vec2(ri->pos) + vec2(0.01f, 0.0f));
+			break;
+		}
+	}
+	if(glm::length(incoming) < 0.5f) return false;
+	const GameXmlContent::Master& master = content.GetMaster(bot.Main().classType);
+	SkillID shirk = master.shirkSkill;
+	if(shirk == SkillID::INVALID) foreach_const(sid, master.skillIDs) {
+		auto f = content.skillMap.find(*sid);
+		if(f != content.skillMap.end() && f->second.type == SkillType::SHIRK) { shirk = *sid; break; }
+	}
+	if(shirk == SkillID::INVALID || !SkillCostAffordable(bot, (i32)shirk, PlayerSkillConsumeMP(bot, (i32)shirk))) return false;
+	bot.botEvadeReady = TimeAdd(localTime, TimeMsToTime(cooltime * 1000.0));
+	const vec2 side = (RandUint() & 1) ? vec2(-incoming.y, incoming.x) : vec2(incoming.y, -incoming.x);
+	const vec3 to = vec3(at + side * HYP_BOT_EVADE_AIM_DISTANCE, bot.body->GetWorldPos().z);
+	const f32 yaw = atan2f(side.y, side.x);
+	bot.input.rot.upperYaw = yaw;
+	bot.input.rot.bodyYaw = yaw;
+	LOG("BotEvade :: %ls evades with %d", bot.name.data(), (i32)shirk);
+	const ActorUID none = ActorUID::INVALID;
+	PlayerCastSkill(bot, shirk, to, Slice<const ActorUID>(&none, (size_t)0), 0);
+	return true;
+}
+
 void World::UpdateBotSkills()
 {
 	const auto& content = GetGameXmlContent();
@@ -69,6 +115,10 @@ void World::UpdateBotSkills()
 		Player& bot = *it;
 		if(bot.clientHd != ClientHandle::INVALID || bot.dead) continue;
 		if(localTime < bot.tNextBotSkill || localTime < bot.ccUntil || localTime < bot.dashUntil || localTime < bot.botSkillStillUntil) continue;
+		if(bot.casting.skillID == SkillID::INVALID && !Config().DevShowcase && !IsBlocked(bot, false, false, true) && BotEvade(bot)) {
+			bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500));
+			continue;
+		}
 		if(IsBlocked(bot, false, true, false)) continue;
 		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500));
 		if(bot.casting.skillID != SkillID::INVALID || BotStageSkill(bot)) continue;

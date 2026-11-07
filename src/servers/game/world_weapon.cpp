@@ -914,6 +914,8 @@ void World::RunWeaponActionStatuses(Player& player, i8 stance, const vec3* aimPo
 			foreach_const(st, action->anims) if(st->index == MAX(cmd->animIndex, 0)) { animId = st->animationId; loop = MAX(st->loop, 1); }
 			duration = animId != 0 ? content.GetAniSeqTime(ActionClassName(player), animId) * (f32)loop : action->seqLength;
 			if(duration <= 0) continue;
+			const StatusInfo* capInfo = content.FindStatus(cmd->status.statusIndex);
+			if(capInfo && capInfo->durationSec > 0) duration = MIN(duration, capInfo->durationSec);
 		}
 		if(!player.dead) ApplyStatus(player, player, cmd->status.statusIndex, 0, duration);
 	}

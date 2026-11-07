@@ -1067,6 +1067,8 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 				foreach_const(st, action.anims) if(st->index == curAnim) { animId = st->animationId; loop = MAX(st->loop, 1); }
 				const f32 passLen = animId != 0 ? content.GetAniSeqTime(ActionClassName(player), animId) * (f32)loop : action.seqLength;
 				ps.duration = MAX(animPasses[pass].start + passLen - t, 0.3f);
+				const StatusInfo* capInfo = content.FindStatus(cmd->status.statusIndex);
+				if(capInfo && capInfo->durationSec > 0) ps.duration = MIN(ps.duration, capInfo->durationSec);
 			}
 			ps.power = (f32)damage;
 			ps.remove = cmd->status.remove != 0;
