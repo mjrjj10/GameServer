@@ -667,6 +667,7 @@ void World::UpdateSummons()
 						pc.source = actor.UID;
 						pc.skill = info->skills.empty() ? 0 : info->skills[0];
 						pc.until = actor.despawnAt;
+						pc.aniEnd = c->aniEnd;
 						pendingSummonCommands.push_back(pc);
 					}
 					t += c->delay;
@@ -723,6 +724,7 @@ void World::UpdateSummons()
 				pr.target = pc->target;
 				pr.sourceUID = pc->source;
 				pr.nodeName = pc->nodeName;
+				pr.endWithSource = pc->aniEnd && pc->source != ActorUID::INVALID;
 				pendingRemotes.push_back(pr);
 			}
 		}

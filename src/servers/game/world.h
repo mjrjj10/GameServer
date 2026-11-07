@@ -780,6 +780,7 @@ struct World
 		u16 nodeName = 0;
 		bool rootDummyDir = false;
 		Time aniEndAt = Time::ZERO;
+		bool endWithSource = false;
 	};
 
 	struct RemoteInst
@@ -846,6 +847,7 @@ struct World
 		f32 wallZ = 0;
 		bool actionChanged = false;
 		Time aniEndAt = Time::ZERO;
+		bool endWithSource = false;
 	};
 
 	struct CastHit
@@ -947,6 +949,7 @@ struct World
 		Time until;
 		u16 nodeName = 0;
 		bool remove = false;
+		bool aniEnd = false;
 	};
 	eastl::fixed_vector<PendingSummonCommand,128,false> pendingSummonCommands;
 

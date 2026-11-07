@@ -869,6 +869,10 @@ void World::UpdateRemotes(f32 delta)
 		}
 
 		if(!destroyed && inst.aniEndAt != Time::ZERO && localTime >= inst.aniEndAt) destroyed = true;
+		if(!destroyed && inst.endWithSource) {
+			const ActorNpc* source = FindNpcActor(inst.sourceUID);
+			if(!source || source->removeAt != Time::ZERO || (source->despawnAt != Time::ZERO && localTime >= source->despawnAt) || (source->hpMax > 0 && source->hp <= 0)) destroyed = true;
+		}
 		if(!destroyed && inst.timeEventActive && localTime >= inst.nextTimeEvent) RunRemoteTimeEvent(inst, elapsed);
 
 		if(!destroyed) {
@@ -1043,6 +1047,7 @@ void World::SpawnPendingRemotes()
 				spawned->centeredBox = atAimedPoint;
 				if(remote && remote->offsetZ != 0 && (measured || fabsf(pos.z - (ownerZ + remote->offsetZ)) < 1.0f)) spawned->hitZOffset = remote->offsetZ;
 				spawned->aniEndAt = pr->aniEndAt;
+				spawned->endWithSource = pr->endWithSource;
 				if(measured) {
 					spawned->measuredNode = measured;
 					spawned->castOrigin = owner.body->GetWorldPos();

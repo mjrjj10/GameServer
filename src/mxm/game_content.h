@@ -127,6 +127,7 @@ struct SummonCommand
 	Kind kind = REMOTE;
 	bool onCurrent = false;
 	bool remove = false;
+	bool aniEnd = false;
 	u8 dieMode = 0;
 	i8 animIndex = -1;
 	i32 animId = 0;

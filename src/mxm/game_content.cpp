@@ -5669,6 +5669,7 @@ bool GameXmlContent::LoadSummonActions()
 		pA->QueryStringAttribute("Param2", &p2);
 		if(p2 && EA::StdC::Strcmp(p2, "Remove") == 0) continue;
 		SummonCommand cmd;
+		cmd.aniEnd = p2 && EA::StdC::Strcmp(p2, "RemoveWhenAniEnd") == 0;
 		if(EA::StdC::Strcmp(type, "REMOTE") == 0) { cmd.kind = SummonCommand::REMOTE; pA->QueryAttribute("RemoteIndex", &cmd.index); cmd.nodeName = InternNodeName(pA->Attribute("NodeName")); }
 		else if(EA::StdC::Strcmp(type, "STATUS") == 0) { cmd.kind = SummonCommand::STATUS; pA->QueryAttribute("StatusIndex", &cmd.index); }
 		else if(EA::StdC::Strcmp(type, "DIE_MODE") == 0) {
