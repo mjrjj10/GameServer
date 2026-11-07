@@ -33,6 +33,7 @@ struct CConfigGame
 	i32 DevPilotUpgrades = 0;
 	i32 DevBotMonsterSkills = 0;
 	i32 HostIP[4] = { 0, 0, 0, 0 };
+	char DevPilotName[32] = {};
 	i32 TraceNetwork = false;
 	i32 TraceStream = false;
 	i32 BotSyncCadence = 0;

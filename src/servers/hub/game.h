@@ -119,6 +119,10 @@ struct HubGame
 	void OnPlayerChatWhisper(ClientHandle clientHd, const wchar* destNick, const wchar* msg);
 	void OnPlayerEnterCity(ClientHandle clientHd);
 	bool AutoQueueActive() const;
+	bool JoinDevAutoParty(ClientHandle clientHd);
+	void DevAutoPartyAdd(ClientHandle leaderHd, ClientHandle memberHd);
+	AccountUID devAutoPartyLeader = AccountUID::INVALID;
+	eastl::fixed_vector<AccountUID,8,false> devAutoPartyWaiting;
 	void StartNextSweepStage(ClientHandle clientHd);
 	i32 stageSweepDone = 0;
 	void OnReturnToCity(ClientHandle clientHd);

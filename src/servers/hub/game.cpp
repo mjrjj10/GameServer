@@ -343,14 +343,55 @@ bool HubGame::AutoQueueActive() const
 	return Config().DevAutoQueue && (Config().DevAutoQueueGames <= 0 || autoQueued < Config().DevAutoQueueGames);
 }
 
+static const StageType MEASURED_PVE_STAGE_TYPE = StageType(1);
+
+bool HubGame::JoinDevAutoParty(ClientHandle clientHd)
+{
+	if(Config().DevAutoParty <= 1) return false;
+	const i32 userID = plidMap->Get(clientHd);
+	if(devAutoPartyLeader == AccountUID::INVALID || devAutoPartyLeader == playerAccountData[userID]->UID) return false;
+	auto leader = accountClientHandleMap.find(devAutoPartyLeader);
+	if(leader == accountClientHandleMap.end()) return false;
+	if(!FindPlayerParty(plidMap->Get(leader->second))) {
+		if(!devAutoPartyWaiting.full()) devAutoPartyWaiting.push_back(playerAccountData[userID]->UID);
+		LOG("[client%x] HubGame :: dev auto party, waiting for the leader's party", clientHd);
+		return true;
+	}
+	DevAutoPartyAdd(leader->second, clientHd);
+	return true;
+}
+
+void HubGame::DevAutoPartyAdd(ClientHandle leaderHd, ClientHandle memberHd)
+{
+	const i32 memberID = plidMap->Get(memberHd);
+	const Party* party = FindPlayerParty(plidMap->Get(leaderHd));
+	if(!party || !playerAccountData[memberID]) return;
+	const PartyUID partyUID = party->UID;
+	LOG("[client%x] HubGame :: dev auto party, joining party %u", memberHd, (u32)partyUID);
+	OnPartyInvite(leaderHd, playerAccountData[memberID]->nickname.data(), (i32)playerAccountData[memberID]->nickname.size());
+	OnPartyInviteAccept(memberHd, (i32)partyUID);
+	auto f = partyMap.find(partyUID);
+	if(f != partyMap.end() && (i32)f->second->memberList.size() >= Config().DevAutoParty) OnEnqueueGame(leaderHd);
+}
+
 void HubGame::OnPlayerEnterCity(ClientHandle clientHd)
 {
 	const i32 userID = plidMap->Get(clientHd);
 	if(Config().DevStageSweep > 0 && playerAccountData[userID] && playerMap[userID]->partyUID == PartyUID::INVALID) StartNextSweepStage(clientHd);
+	else if(playerAccountData[userID] && playerMap[userID]->partyUID == PartyUID::INVALID && JoinDevAutoParty(clientHd)) {}
 	else if((Config().DevShowcase || AutoQueueActive()) && playerAccountData[userID] && playerMap[userID]->partyUID == PartyUID::INVALID) {
 		LOG("[client%x] HubGame :: showcase, auto dispatch (stage %d)", clientHd, Config().DevAutoQueueStage);
-		OnCreateParty(clientHd, EntrySystemID::ARENA_3v3, StageType::PVP_GAME);
-		if(Config().DevAutoQueueStage > 0) pendingPartyStageIndex[userID] = StageIndex(Config().DevAutoQueueStage);
+		{
+			EntrySystemID entry = EntrySystemID::ARENA_3v3;
+			bool pve = false;
+			foreach_const(e, GetGameXmlContent().stageEntries) {
+				foreach_const(a, e->areas) foreach_const(s, a->stages) if((i32)s->stage == Config().DevAutoQueueStage) { entry = (EntrySystemID)e->ID; pve = true; }
+			}
+			if(Config().DevAutoParty > 1 && devAutoPartyLeader == AccountUID::INVALID) devAutoPartyLeader = playerAccountData[userID]->UID;
+			OnCreateParty(clientHd, entry, pve ? MEASURED_PVE_STAGE_TYPE : StageType::PVP_GAME);
+			if(pve) pendingPartyGameType[userID] = GameType::PVE_NORMAL;
+			if(Config().DevAutoQueueStage > 0) pendingPartyStageIndex[userID] = StageIndex(Config().DevAutoQueueStage);
+		}
 	}
 	if(playerActorUID[userID] != ActorUID::INVALID || !playerAccountData[userID]) return;
 	LocalActorID characterID = LocalActorID((u32)LocalActorID::FIRST_SELF_MASTER + (u32)DEFAULT_LEADER_CLASS);
@@ -364,7 +405,6 @@ void HubGame::OnPlayerEnterCity(ClientHandle clientHd)
 
 void HubGame::StartNextSweepStage(ClientHandle clientHd)
 {
-	static const StageType MEASURED_PVE_STAGE_TYPE = StageType(1);
 	const i32 userID = plidMap->Get(clientHd);
 	const i32 wanted = Config().DevStageSweep - 1 + stageSweepDone;
 	i32 index = 0;
@@ -1809,7 +1849,15 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_IN_CREATION);
 	const bool autoQueue = AutoQueueActive();
 	if(autoQueue && !Config().DevShowcase && !pendingRegame[userID]) autoQueued++;
-	if(Config().DevShowcase || autoQueue || pendingRegame[userID]) OnEnqueueGame(clientHd);
+	const bool waitPartner = Config().DevAutoParty > 1 && autoQueue && !pendingRegame[userID];
+	if((Config().DevShowcase || autoQueue || pendingRegame[userID]) && !waitPartner) OnEnqueueGame(clientHd);
+	if(Config().DevAutoParty > 1 && playerAccountData[userID]->UID == devAutoPartyLeader) {
+		foreach_const(w, devAutoPartyWaiting) {
+			auto h = accountClientHandleMap.find(*w);
+			if(h != accountClientHandleMap.end()) DevAutoPartyAdd(clientHd, h->second);
+		}
+		devAutoPartyWaiting.clear();
+	}
 	for(auto s = stayInvites.begin(); s != stayInvites.end();) {
 		if(s->leader != playerAccountData[userID]->nickname) { ++s; continue; }
 		OnPartyInvite(clientHd, s->invitee.data(), (i32)s->invitee.size());

@@ -414,8 +414,9 @@ void Game::Update(Time localTime_)
 					}
 				}
 
-				foreach_const(p, playerList) {
+				foreach(p, playerList) {
 					replication.SendGameStart(p->clientHd);
+					p->gameStartSent = p->ready;
 				}
 				tGameStarted = localTime;
 				gameStartUnix = (i64)time(nullptr);
@@ -748,7 +749,7 @@ void Game::WriteTrail()
 void Game::WriteTruth()
 {
 	ClientHandle viewer = ClientHandle::INVALID;
-	foreach_const(p, world.players) if(p->clientHd != ClientHandle::INVALID && !p->removed) { viewer = p->clientHd; break; }
+	foreach_const(p, world.players) if(p->clientHd != ClientHandle::INVALID && !p->removed && IsDevPilot(*p)) { viewer = p->clientHd; break; }
 	if(viewer == ClientHandle::INVALID) return;
 	FILE* f = fopen("truth.jsonl", "ab");
 	if(!f) return;
@@ -807,7 +808,7 @@ void Game::RunScenario()
 		LOG("Scenario :: %d steps loaded", (i32)scenario.size());
 	}
 	ClientHandle human = ClientHandle::INVALID;
-	foreach_const(p, world.players) if(p->clientHd != ClientHandle::INVALID && !p->removed) { human = p->clientHd; break; }
+	foreach_const(p, world.players) if(p->clientHd != ClientHandle::INVALID && !p->removed && IsDevPilot(*p)) { human = p->clientHd; break; }
 	if(human == ClientHandle::INVALID) return;
 	const f32 elapsed = (f32)TimeDiffSec(TimeDiff(tGameStarted, localTime));
 	while(scenarioNext < (i32)scenario.size() && elapsed >= scenario[scenarioNext].at) {
@@ -825,7 +826,7 @@ void Game::WriteTelemetry()
 	fprintf(f, "{\"t\":%.3f,\"map\":%d,\"started\":%d,\"ended\":%d,\"locked\":%d,\"zone\":%d,\"pve\":%d,\"players\":[", TimeDiffSec(TimeRelNow()), (i32)replication.mapIndex, tGameStarted != Time::ZERO ? 1 : 0, gameEnded ? 1 : 0, world.combatLocked ? 1 : 0, zoneIndex, pveStage ? 1 : 0);
 	bool first = true;
 	foreach_const(p, world.players) {
-		if(p->clientHd == ClientHandle::INVALID || p->removed || !p->body) continue;
+		if(p->clientHd == ClientHandle::INVALID || p->removed || !p->body || !IsDevPilot(*p)) continue;
 		const vec3 pos = p->body->GetWorldPos();
 		const World::ActorMaster& m = p->Main();
 		fprintf(f, "%s{\"name\":\"%ls\",\"x\":%.0f,\"y\":%.0f,\"z\":%.0f,\"cx\":%.0f,\"cy\":%.0f,\"cz\":%.0f,\"yaw\":%.3f,\"hp\":%d,\"hpMax\":%d,\"dead\":%d,\"class\":%d}", first ? "" : ",", p->name.data(), pos.x, pos.y, pos.z, p->lastClientPos.x, p->lastClientPos.y, p->lastClientPos.z, p->input.rot.bodyYaw, m.hp, m.hpMax, p->dead ? 1 : 0, (i32)m.classType);
@@ -833,7 +834,7 @@ void Game::WriteTelemetry()
 	}
 	fprintf(f, "],\"pilot\":");
 	World::Player* pilotPlayer = nullptr;
-	foreach(p, world.players) if(p->clientHd != ClientHandle::INVALID && !p->removed && p->body) { pilotPlayer = &*p; break; }
+	foreach(p, world.players) if(p->clientHd != ClientHandle::INVALID && !p->removed && p->body && IsDevPilot(*p)) { pilotPlayer = &*p; break; }
 	World::PilotDecision pilot;
 	if(pilotPlayer && world.Pilot(*pilotPlayer, &pilot)) {
 		fprintf(f, "{\"gx\":%.0f,\"gy\":%.0f,\"gz\":%.0f,\"fx\":%.0f,\"fy\":%.0f,\"target\":", pilot.goal.x, pilot.goal.y, pilot.goal.z, pilot.finalGoal.x, pilot.finalGoal.y);
@@ -2163,6 +2164,15 @@ void Game::OnPlayerCancelCast(ClientHandle clientHd, SkillID skillID)
 	}
 }
 
+bool Game::IsDevPilot(const World::Player& p) const
+{
+	const char* name = Config().DevPilotName;
+	if(!name[0]) return true;
+	i32 i = 0;
+	for(; name[i] && i < (i32)p.name.size(); i++) if((wchar)name[i] != p.name[i]) return false;
+	return !name[i] && i == (i32)p.name.size();
+}
+
 void Game::OnPlayerGameIsReady(ClientHandle clientHd)
 {
 	const i32 READY_WAIT = 3000;
@@ -2170,6 +2180,7 @@ void Game::OnPlayerGameIsReady(ClientHandle clientHd)
 	Player& p = *playerMap.at(clientHd);
 	World::Player& player = world.GetPlayer(p.playerIndex);
 	ASSERT(player.clientHd == clientHd);
+	p.ready = true;
 
 	if(pveStage) {
 		i32 humans = 0;
@@ -2189,6 +2200,12 @@ void Game::OnPlayerGameIsReady(ClientHandle clientHd)
 	}
 	else {
 		replication.SendGameReady(clientHd, READY_WAIT, MAX(0, READY_WAIT - (i32)TimeDurationMs(localTime, phaseTime)), player.userID);
+		if(phase == Phase::Game && !p.gameStartSent) {
+			LOG("[client%x] Game :: %ls ready after the start, sending the game start", clientHd, player.name.data());
+			replication.SendPreGameLevelEvents(clientHd);
+			replication.SendGameStart(clientHd);
+			p.gameStartSent = true;
+		}
 	}
 }
 

@@ -29,6 +29,8 @@ struct Game
 		const AccountUID accountUID;
 		const WideString& name;
 		const u32 playerIndex;
+		bool ready = false;
+		bool gameStartSent = false;
 
 		Player(ClientHandle clientHd_, AccountUID accountUID_, const WideString& name_, u32 playerIndex_):
 			clientHd(clientHd_),
@@ -72,6 +74,7 @@ struct Game
 	Time tGameEnded = Time::ZERO;
 	bool sentBackToLobby = false;
 	bool Finished() const { return gameEnded && sentBackToLobby; }
+	bool IsDevPilot(const World::Player& p) const;
 	void EndGame();
 	f64 LevelStartLeadMs() const;
 	Time localTime;
