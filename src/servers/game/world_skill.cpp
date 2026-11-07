@@ -504,9 +504,10 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	i32 prevOverlap = 0;
 	Time prevTick = Time::ZERO;
 	const StatusInfo* known = GetGameXmlContent().FindStatus(statusID);
+	const ActorUID casterField = statusCasterOverride != ActorUID::INVALID ? statusCasterOverride : caster.Main().UID;
 	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
 		if(npcStatuses[i].npcUID != npc.UID || npcStatuses[i].statusID != statusID || npcStatuses[i].linked) { i++; continue; }
-		if(!remove && npcStatuses[i].appliedAt == localTime && npcStatuses[i].casterUID == caster.Main().UID && (!known || known->maxOverlap <= 1)) return;
+		if(!remove && npcStatuses[i].appliedAt == localTime && npcStatuses[i].casterUID == casterField && (!known || known->maxOverlap <= 1)) return;
 		if(!remove && localTime >= npcStatuses[i].until) {
 			replication->SendRemoveStatusToAll(statusID, npc.UID, npcStatuses[i].casterUID);
 			npcStatuses.erase(npcStatuses.begin() + i);
@@ -538,12 +539,12 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	const NpcCcGraph cc = StartNpcCc(npc, info, center, vec2(center), caster.body->GetWorldPos(), 0.0f);
 	const f32 duration = cc.duration;
 	const i32 overlap = prevOverlap > 0 ? MIN(prevOverlap + 1, MAX(info ? info->maxOverlap : 1, 1)) : 1;
-	replication->SendAddStatusToAll(statusID, npc.UID, caster.Main().UID, duration, from, cc.to, cc.graphSec, overlap, 1.0f, cc.nominal, cc.graph, prevOverlap > 0);
+	replication->SendAddStatusToAll(statusID, npc.UID, casterField, duration, from, cc.to, cc.graphSec, overlap, 1.0f, cc.nominal, cc.graph, prevOverlap > 0);
 	if(npcStatuses.full()) return;
 	NpcStatus ns;
 	ns.npcUID = npc.UID;
 	ns.statusID = statusID;
-	ns.casterUID = caster.Main().UID;
+	ns.casterUID = casterField;
 	ns.until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
 	ns.appliedAt = localTime;
 	ns.dotOverlap = overlap;

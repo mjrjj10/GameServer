@@ -318,6 +318,7 @@ void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& cente
 			pendingStatuses.push_back(ps);
 		}
 		const Player& caster = players[casterIndex];
+		const ActorUID npcCaster = sourceUID != ActorUID::INVALID ? sourceUID : caster.Main().UID;
 		const Faction casterFaction = casterTeam == 0 ? Faction::RED : Faction::BLUE;
 		const bool towardEnemies = child->isDebuff || aura.auraEnemies;
 		foreach(npc, actorNpcList) {
@@ -327,17 +328,17 @@ void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& cente
 			NpcStatus* cur = nullptr;
 			foreach(ns, npcStatuses) if(ns->npcUID == npc->UID && ns->statusID == *id && localTime < ns->until) cur = &*ns;
 			if(!inside) {
-				if(cur && cur->casterUID == caster.Main().UID) cur->until = localTime;
+				if(cur && cur->casterUID == npcCaster) cur->until = localTime;
 				continue;
 			}
 			if(cur) continue;
 			if(bound) {
 				if(npcStatuses.full()) continue;
-				replication->SendAddStatusToAll(*id, npc->UID, caster.Main().UID, STATUS_INFINITE_DURATION_SEC, npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false, false);
+				replication->SendAddStatusToAll(*id, npc->UID, npcCaster, STATUS_INFINITE_DURATION_SEC, npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false, false);
 				NpcStatus ns;
 				ns.npcUID = npc->UID;
 				ns.statusID = *id;
-				ns.casterUID = caster.Main().UID;
+				ns.casterUID = npcCaster;
 				ns.until = TimeAdd(localTime, TimeMsToTime((f64)STATUS_INFINITE_DURATION_SEC * 1000.0));
 				ns.linked = false;
 				npcStatuses.push_back(ns);
