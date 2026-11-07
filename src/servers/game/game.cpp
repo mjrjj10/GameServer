@@ -1167,6 +1167,7 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 	player.clientPosCount++;
 	if(player.carriedBy >= 0) return;
 	if(action != ActionStateID::INVALID && action != player.lastClientAction) {
+		if(player.lastClientAction == player.lastCastAction && player.lastCastAction != ActionStateID::INVALID) world.EndActionStatuses(player);
 		player.lastClientAction = action;
 		player.lastClientActionSince = world.localTime;
 	}

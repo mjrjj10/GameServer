@@ -740,6 +740,15 @@ void World::ReleaseCast(Player& player)
 	player.castChargeRatio = 1.0f;
 }
 
+void World::EndActionStatuses(Player& player)
+{
+	foreach(it, activeStatuses) {
+		if(it->targetIndex != player.index || it->casterIndex != player.index || !it->aniEnd || it->appliedAt < player.lastCastStart || it->until <= localTime) continue;
+		it->until = localTime;
+		LOG("Status :: %ls status=%d removed at client action end", player.name.data(), it->statusID);
+	}
+}
+
 void World::EndCastStatuses(Player& player, const Player::Casting& c)
 {
 	foreach(it, activeStatuses) {
