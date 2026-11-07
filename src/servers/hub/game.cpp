@@ -216,7 +216,7 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 			LOG("[client%x] HubGame :: back from a failed stage, loading the lobby", clientHd);
 			replication.SendLoadLobby(clientHd, MapIndex::LOBBY_NORMAL, true);
 		}
-		else if(Config().DevShowcase || Config().DevAutoQueue) {
+		else if(Config().DevShowcase || AutoQueueActive()) {
 			LOG("[client%x] HubGame :: back from a game, loading the lobby", clientHd);
 			replication.SendLoadLobby(clientHd, MapIndex::LOBBY_NORMAL, true);
 		}
@@ -336,11 +336,16 @@ void HubGame::OnPlayerChatWhisper(ClientHandle clientHd, const wchar* destNick, 
 	replication.SendChatWhisperToClient(playerMap[destClientID]->clientHd, playerAccountData[userID]->nickname.data(), msg);
 }
 
+bool HubGame::AutoQueueActive() const
+{
+	return Config().DevAutoQueue && (Config().DevAutoQueueGames <= 0 || autoQueued < Config().DevAutoQueueGames);
+}
+
 void HubGame::OnPlayerEnterCity(ClientHandle clientHd)
 {
 	const i32 userID = plidMap->Get(clientHd);
 	if(Config().DevStageSweep > 0 && playerAccountData[userID] && playerMap[userID]->partyUID == PartyUID::INVALID) StartNextSweepStage(clientHd);
-	else if((Config().DevShowcase || Config().DevAutoQueue) && playerAccountData[userID] && playerMap[userID]->partyUID == PartyUID::INVALID) {
+	else if((Config().DevShowcase || AutoQueueActive()) && playerAccountData[userID] && playerMap[userID]->partyUID == PartyUID::INVALID) {
 		LOG("[client%x] HubGame :: showcase, auto dispatch (stage %d)", clientHd, Config().DevAutoQueueStage);
 		OnCreateParty(clientHd, EntrySystemID::ARENA_3v3, StageType::PVP_GAME);
 		if(Config().DevAutoQueueStage > 0) pendingPartyStageIndex[userID] = StageIndex(Config().DevAutoQueueStage);
@@ -1800,8 +1805,7 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 
 	replication.SendPartyCreateSucess(clientHd, UserID(1), party.stageType);
 	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_IN_CREATION);
-	static i32 autoQueued = 0;
-	const bool autoQueue = Config().DevAutoQueue && (Config().DevAutoQueueGames <= 0 || autoQueued < Config().DevAutoQueueGames);
+	const bool autoQueue = AutoQueueActive();
 	if(autoQueue && !Config().DevShowcase && !pendingRegame[userID]) autoQueued++;
 	if(Config().DevShowcase || autoQueue || pendingRegame[userID]) OnEnqueueGame(clientHd);
 	for(auto s = stayInvites.begin(); s != stayInvites.end();) {
