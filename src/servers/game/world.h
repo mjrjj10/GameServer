@@ -1542,6 +1542,7 @@ public:
 private:
 	void PassiveOnSkillCast(Player& player, i32 skillID);
 	void OnEvade(Player& target);
+	void WeaponHitPlagueNpc(Player& attacker, ActorNpc& npc);
 	void PassiveStackOnHit(Player& attacker, Player& target, i32 remoteID, SkillID skillID);
 	void PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj);
 	void PassiveOnWeaponStatusHit(Player& attacker, Player& target);

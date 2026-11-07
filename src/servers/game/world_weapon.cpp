@@ -356,6 +356,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 			hit.seedOwnerHd = hitInfo.seedOwnerHd;
 		}
 		DamageNpc(owner, *npc, SkillID::INVALID, (i32)(damage * (bombRemote ? RemoteDistanceFalloff(*bombRemote, d) : 1.0f)), source ? &hit : nullptr);
+		if(bombHit || shotExplodes) WeaponHitPlagueNpc(owner, *npc);
 		if(!statusRemote || npc->hp <= 0) continue;
 		foreach_const(st, statusRemote->statuses) if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(owner, *npc, StanceUpgradedStatus(owner, st->statusID), false);
 	}
@@ -585,6 +586,7 @@ void World::UpdateProjectiles(f32 delta)
 					if(npc->hp > 0 && npc->ownerUID == ActorUID::INVALID) {
 						foreach_const(st, shot->statuses) if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(owner, *npc, StanceUpgradedStatus(owner, st->statusID), false);
 					}
+					WeaponHitPlagueNpc(owner, *npc);
 				}
 				if(proj->chainRemote != RemoteIdx::INVALID && !proj->chained) {
 					proj->chained = true;

@@ -563,6 +563,18 @@ void World::PassiveOnWeaponStatusHit(Player& attacker, Player& target)
 	}
 }
 
+void World::WeaponHitPlagueNpc(Player& attacker, ActorNpc& npc)
+{
+	if(npc.hp <= 0 || npc.ownerUID != ActorUID::INVALID) return;
+	eastl::fixed_vector<i32,4,false> toApply;
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex != attacker.index || !it->info || it->until <= localTime) continue;
+		const StatusInfo& info = *it->info;
+		if(info.type == StatusType::HIT_PLAGUE && info.customMax <= 0 && !info.permanent && info.hitEffectStatus && !toApply.full()) toApply.push_back(info.hitEffectStatus);
+	}
+	foreach_const(id, toApply) ApplyStatusToNpc(attacker, npc, *id, false);
+}
+
 i32 World::StanceUpgradedStatus(Player& player, i32 statusID)
 {
 	const ActorMaster& m = player.Main();

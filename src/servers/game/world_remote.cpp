@@ -819,6 +819,7 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 		statusCasterOverride = prevCaster;
 	}
 	if(npc.hp > 0 && !owner.dead) TriggerSkillHitEvent(inst, owner, npc.UID, npc.pos);
+	if(inst.skillID == SkillID::INVALID && base > 0) WeaponHitPlagueNpc(owner, npc);
 	if(npc.hp > 0) ChangeCasterActionOnHit(inst, owner, npc.UID, npc.pos);
 	if(npc.hp <= 0 || npc.ownerUID != ActorUID::INVALID) return true;
 	foreach_const(st, remote.statuses) {
