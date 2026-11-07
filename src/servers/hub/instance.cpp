@@ -884,6 +884,19 @@ void RoomInstance::OnClientPacket(ClientHandle clientHd, const NetHeader& header
 	const i32 packetSize = header.size - sizeof(header);
 
 	switch(header.netID) {
+		case Cl::CQ_RTT_Time::NET_ID: {
+			if(!ValidatePacket<Cl::CQ_RTT_Time>(packetData, packetSize)) {
+				WARN("[client%x] WARNING: invalid CQ_RTT_Time (size=%d)", clientHd, packetSize);
+				break;
+			}
+			NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_RTT_Time>(packetData, packetSize));
+			const Cl::CQ_RTT_Time& rtt = SafeCast<Cl::CQ_RTT_Time>(packetData, packetSize);
+			Sv::SA_RTT_Time answer;
+			answer.clientTimestamp = rtt.time;
+			answer.serverTimestamp = (i64)TimeDiffMs(TimeRelNow());
+			SendPacket(clientHd, answer);
+		} break;
+
 		case Cl::CQ_MasterPick::NET_ID: {
 			if(!ValidatePacket<Cl::CQ_MasterPick>(packetData, packetSize)) {
 				WARN("[client%x] WARNING: invalid CQ_MasterPick (size=%d)", clientHd, packetSize);
