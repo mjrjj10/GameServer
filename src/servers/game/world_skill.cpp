@@ -537,7 +537,8 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	const vec3 from = npc.pos;
 	const vec3 center = statusForceCenterSet ? statusForceCenter : caster.body->GetWorldPos();
 	const NpcCcGraph cc = StartNpcCc(npc, info, center, vec2(center), caster.body->GetWorldPos(), 0.0f);
-	const f32 duration = cc.duration;
+	const bool summonBound = info && info->durationSec < 0 && cc.graphSec <= 0 && npc.ownerUID != ActorUID::INVALID && info->dotDamage <= 0 && info->intervalSec <= 0;
+	const f32 duration = summonBound ? STATUS_INFINITE_DURATION_SEC : cc.duration;
 	const i32 overlap = prevOverlap > 0 ? MIN(prevOverlap + 1, MAX(info ? info->maxOverlap : 1, 1)) : 1;
 	replication->SendAddStatusToAll(statusID, npc.UID, casterField, duration, from, cc.to, cc.graphSec, overlap, 1.0f, cc.nominal, cc.graph, prevOverlap > 0);
 	if(info && info->raiseStunByPush && cc.graphSec > 0) AddPushBound(caster, npc.UID, *info, cc.graphSec);
