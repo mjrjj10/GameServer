@@ -1132,7 +1132,11 @@ void World::UpdateStatuses()
 			}
 		}
 		else if(!targetMaster && ps->targetUID != ActorUID::INVALID) {
-			if(ActorNpc* npc = FindNpcActor(ps->targetUID)) ApplyStatusToNpc(caster, *npc, ps->statusID, ps->remove);
+			if(ActorNpc* npc = FindNpcActor(ps->targetUID)) {
+				statusCasterOverride = ps->sourceUID;
+				ApplyStatusToNpc(caster, *npc, ps->statusID, ps->remove);
+				statusCasterOverride = ActorUID::INVALID;
+			}
 		}
 		else if(!caster.dead && targetMaster) {
 			statusCasterOverride = ps->sourceUID;
