@@ -726,7 +726,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	if(frozen || combatLocked || !SkillTargetsAllowed(player, skillID, targets)) {
 		if(forcedAction == ActionStateID::INVALID && player.clientHd != ClientHandle::INVALID) {
 			LOG("Skill :: %ls cast %d refused (frozen %d, locked %d)", player.name.data(), (i32)skillID, (i32)frozen, (i32)combatLocked);
-			replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_SKILL_INVALID_STATE_BLOCK);
+			replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_SKILL_INVALID_STATE_BLOCK, player.body->GetWorldPos(), player.input.rot.upperYaw, player.input.speed, clientTime);
 		}
 		return;
 	}
@@ -782,7 +782,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		if(pick > 0) { actionState = (*randomActions)[pick - 1]; remoteAction = actionState; }
 	}
 
-	if(!followUp && !CheckAndPayCast(player, skillID, castPos, targets)) return;
+	if(!followUp && !CheckAndPayCast(player, skillID, castPos, targets, clientTime)) return;
 	if(!followUp) {
 		AchieveEvent ev;
 		ev.sub = GameXmlContent::AchieveSub::COMMON_USE_SKILL;
@@ -1025,13 +1025,13 @@ const GameXmlContent::CostLevel* World::PickCostLevel(const Player& player, Skil
 }
 
 
-bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets)
+bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos, Slice<const ActorUID> targets, f32 clientTime)
 {
 	const auto& content = GetGameXmlContent();
 	const bool shirk = GetGameXmlContent().GetSkillConsumeStamina((i32)skillID) > 0;
 	if(IsBlocked(player, false, !shirk, shirk)) {
 		LOG("Blocked :: %ls skill=%d (input blocked by a status)", player.name.data(), (i32)skillID);
-		if(player.clientHd != ClientHandle::INVALID) replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_SKILL_INVALID_STATE_BLOCK);
+		if(player.clientHd != ClientHandle::INVALID) replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_SKILL_INVALID_STATE_BLOCK, player.body->GetWorldPos(), player.input.rot.upperYaw, player.input.speed, clientTime);
 		return false;
 	}
 	if(player.clientHd == ClientHandle::INVALID) {
@@ -1058,7 +1058,7 @@ bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos
 		}
 	}
 	if(const u32 costError = PlayerPaySkillCost(player, (i32)skillID)) {
-		if(player.clientHd != ClientHandle::INVALID) replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, costError);
+		if(player.clientHd != ClientHandle::INVALID) replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, costError, player.body->GetWorldPos(), player.input.rot.upperYaw, player.input.speed, clientTime);
 		return false;
 	}
 	player.castLockUntil = TimeAdd(localTime, TimeMsToTime(CAST_LOCK_MS));

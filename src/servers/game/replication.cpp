@@ -3273,7 +3273,7 @@ void Replication::SendCancelSkillToAll(ActorUID casterUID, SkillID skillID, Clie
 	}
 }
 
-void Replication::SendCastSkillRefused(ClientHandle clientHd, ActorUID casterUID, SkillID skillID, u32 ret)
+void Replication::SendCastSkillRefused(ClientHandle clientHd, ActorUID casterUID, SkillID skillID, u32 ret, const vec3& casterPos, f32 angle, f32 speed, f32 clientTime)
 {
 	const LocalActorID localActorID = GetLocalActorID(clientHd, casterUID);
 	if(localActorID == LocalActorID::INVALID) return;
@@ -3282,6 +3282,23 @@ void Replication::SendCastSkillRefused(ClientHandle clientHd, ActorUID casterUID
 	refuse.ret = ret;
 	refuse.skillIndex = skillID;
 	SendPacket(clientHd, refuse);
+
+	PacketWriter<Sv::SN_CastSkill,512> packet;
+	packet.Write<LocalActorID>(localActorID);
+	packet.Write<i32>((i32)ret);
+	packet.Write<SkillID>(skillID);
+	packet.Write<i8>(0);
+	packet.Write<ActionStateID>(ActionStateID::INVALID);
+	packet.Write<float3>(v2f(vec3(0)));
+	packet.Write<u16>(0);
+	packet.Write<u8>(1);
+	packet.Write<float3>(v2f(casterPos));
+	packet.Write<float3>(v2f(casterPos));
+	packet.Write<float2>(v2f(vec2(cosf(angle), sinf(angle))));
+	packet.Write<RotationHumanoid>(RotConvertToMxm(RotationHumanoid{ angle, 0, angle }));
+	packet.Write<f32>(speed);
+	packet.Write<f32>(clientTime);
+	SendPacket(clientHd, packet);
 }
 
 void Replication::SendInteractionCastingToAll(ActorUID casterUID, ActorUID objectUID, u32 actionState, u32 castingTimeMS)

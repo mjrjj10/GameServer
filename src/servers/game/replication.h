@@ -478,7 +478,7 @@ struct Replication
 	void SendExecuteSkillAck(ClientHandle clientHd, ActorUID casterUID, SkillID skillID);
 	void SendCancelSkillToAll(ActorUID casterUID, SkillID skillID, ClientHandle skipHd = ClientHandle::INVALID);
 	void SendInteractionStatusToAll(ActorUID objectUID, u32 allowedTeamMask, i32 interactionID, i32 occupiedTeam, ClientHandle exclude = ClientHandle::INVALID, f32 coolTime = 0);
-	void SendCastSkillRefused(ClientHandle clientHd, ActorUID casterUID, SkillID skillID, u32 ret);
+	void SendCastSkillRefused(ClientHandle clientHd, ActorUID casterUID, SkillID skillID, u32 ret, const vec3& casterPos, f32 angle, f32 speed, f32 clientTime);
 	void SendFrameSkillPackets();
 	void SendInteractionCastingToAll(ActorUID casterUID, ActorUID objectUID, u32 actionState, u32 castingTimeMS);
 	void SendInteractionExecuteOnlyToAll(ActorUID casterUID, ActorUID objectUID, u32 actionState);
