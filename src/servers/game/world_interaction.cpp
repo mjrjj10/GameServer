@@ -317,6 +317,8 @@ void World::ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply)
 
 static const f32 NPC_DEFEAT_PUSH_SEC = 1.0f;
 static const f64 MEASURED_NPC_PUSH_RECOVER_MS = 270.0;
+static const f64 MEASURED_NPC_LIE_RECOVER_MS = 300.0;
+static const f64 MEASURED_NPC_STUN_RECOVER_MS = 140.0;
 static const f32 MEASURED_NPC_DEFEAT_AIRBORNE_SEC = 1.5f;
 static const f32 MEASURED_NPC_AIRBORNE_GRAPH_SEC = 1.0f;
 static const f32 MEASURED_NPC_LIFT_BASE_HEIGHT = 400.0f;
@@ -384,7 +386,8 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 	npc.airborneAt = info->type == StatusType::AIRBORNE ? localTime : Time::ZERO;
 	npc.airborneStep = 0;
 	npc.stateEndAt = TimeAdd(localTime, TimeMsToTime(total * 1000.0));
-	const Time holdEnd = info->type == StatusType::PUSH ? TimeAdd(npc.stateEndAt, TimeMsToTime(MEASURED_NPC_PUSH_RECOVER_MS)) : npc.stateEndAt;
+	const f64 recoverMs = info->type == StatusType::PUSH ? MEASURED_NPC_PUSH_RECOVER_MS : (info->type == StatusType::AIRBORNE || info->type == StatusType::KNOCKDOWN) ? MEASURED_NPC_LIE_RECOVER_MS : info->type == StatusType::STUN ? MEASURED_NPC_STUN_RECOVER_MS : 0.0;
+	const Time holdEnd = npc.monsterAi->tagKey == StatusTypeKey("Minion") ? TimeAdd(npc.stateEndAt, TimeMsToTime(recoverMs)) : npc.stateEndAt;
 	if(npc.monsterHoldUntil < holdEnd) npc.monsterHoldUntil = holdEnd;
 	npc.monsterChasing = false;
 	npc.monsterWalking = false;
