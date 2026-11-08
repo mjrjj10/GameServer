@@ -1285,6 +1285,7 @@ public:
 	void WanderNpc(ActorNpc& npc, f32 moveSpeed, f32 delta);
 	bool IsCarrying(const Player& player) const;
 	void ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID);
+	void ApplyNpcCarrierStatus(ActorUID npcUID, ActorUID carrierUID, const vec3& pos, i32 statusID);
 	void UpdateNpcStatuses();
 	void TrackNpcSelfStatus(ActorUID npcUID, const StatusInfo& info);
 	void ApplySummonDrainLife(ActorNpc& npc, const StatusInfo& info);

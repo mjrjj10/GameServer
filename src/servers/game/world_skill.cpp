@@ -436,11 +436,15 @@ void World::UpdateToggles()
 
 void World::ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID)
 {
+	ApplyNpcCarrierStatus(npcUID, carrier.Main().UID, carrier.body->GetWorldPos(), statusID);
+}
+
+void World::ApplyNpcCarrierStatus(ActorUID npcUID, ActorUID carrierUID, const vec3& pos, i32 statusID)
+{
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
 	const f32 duration = info && info->durationSec > 0 ? info->durationSec : 0.0f;
-	const vec3 pos = carrier.body->GetWorldPos();
-	replication->SendAddStatusToAll(statusID, npcUID, carrier.Main().UID, duration, pos, pos, 0, 1, 1.0f, -1.0f, false, false);
-	LOG("Status :: summon %u carries %ls status=%d duration=%.2f", (u32)npcUID, carrier.name.data(), statusID, duration);
+	replication->SendAddStatusToAll(statusID, npcUID, carrierUID, duration, pos, pos, 0, 1, 1.0f, -1.0f, false, false);
+	LOG("Status :: summon %u carried by %u status=%d duration=%.2f", (u32)npcUID, (u32)carrierUID, statusID, duration);
 	if(ActorNpc* carried = info && info->npcMotion != ActionStateID::INVALID ? FindNpcActor(npcUID) : nullptr) {
 		if(carried->pendingMotion != ActionStateID::INVALID) {
 			const SummonInfo* motionInfo = GetGameXmlContent().FindSummon((i32)carried->docID);
@@ -455,7 +459,7 @@ void World::ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID)
 	NpcStatus ns;
 	ns.npcUID = npcUID;
 	ns.statusID = statusID;
-	ns.casterUID = carrier.Main().UID;
+	ns.casterUID = carrierUID;
 	ns.until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
 	npcStatuses.push_back(ns);
 }
@@ -526,7 +530,9 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 		return;
 	}
 	if(npc.removeAt != Time::ZERO) return;
-	if(info && info->casterStatus != 0 && info->casterStatus != statusID && !caster.dead && !applyingCasterStatus && prevOverlap == 0) {
+	const ActorUID summonSource = statusCasterOverride != ActorUID::INVALID && FindNpcActor(statusCasterOverride) ? statusCasterOverride : ActorUID::INVALID;
+	if(info && info->casterStatus != 0 && info->casterStatus != statusID && summonSource != ActorUID::INVALID && prevOverlap == 0) ApplyNpcCarrierStatus(summonSource, npc.UID, npc.pos, info->casterStatus);
+	else if(info && info->casterStatus != 0 && info->casterStatus != statusID && !caster.dead && !applyingCasterStatus && prevOverlap == 0) {
 		applyingCasterStatus = true;
 		const ActorUID prevCaster = statusCasterOverride;
 		statusCasterOverride = npc.UID;
