@@ -141,6 +141,15 @@ void World::Update(Time localTime_)
 			p.input.tag = 0;
 			p.input.jump = 0;
 		}
+		if(!p.dead && p.clientHd != ClientHandle::INVALID && p.clientPushSnap && localTime < p.clientPushUntil && p.clientPosCount == p.clientPushPosCount) {
+			const f32 total = (f32)TimeDiffSec(TimeDiff(p.clientPushStart, p.clientPushUntil));
+			const f32 k = total > 0.001f ? MIN((f32)TimeDiffSec(TimeDiff(p.clientPushStart, localTime)) / total, 1.0f) : 1.0f;
+			const vec2 at2 = glm::mix(vec2(p.clientPushFrom), vec2(p.pushTarget), k);
+			const vec3 at = vec3(at2, body.GetWorldPos().z);
+			body.collider->setFootPosition(PxExtendedVec3(at.x, at.y, at.z));
+			body.vel = vec3(0);
+			p.input.moveTo = at;
+		}
 		if(!p.dead && p.clientHd != ClientHandle::INVALID && p.clientPushSnap && localTime >= p.clientPushUntil) {
 			p.clientPushSnap = false;
 			if(p.clientPosCount == p.clientPushPosCount) {

@@ -343,6 +343,8 @@ struct World
 		Time clientPushUntil = Time::ZERO;
 		i32 clientPushPosCount = 0;
 		bool clientPushSnap = false;
+		vec3 clientPushFrom = vec3(0);
+		Time clientPushStart = Time::ZERO;
 		f32 dashDist = 0;
 		f32 dashDone = 0;
 		const GameXmlContent::MoveCurve* dashCurve = nullptr;

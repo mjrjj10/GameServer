@@ -1000,6 +1000,8 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			target.pushTarget = to;
 			target.clientPushPosCount = target.clientPosCount;
 			target.clientPushSnap = info->type == StatusType::PUSH;
+			target.clientPushFrom = target.body->GetWorldPos();
+			target.clientPushStart = localTime;
 			const Time followUntil = TimeAdd(localTime, TimeMsToTime((graphDuration + 2.0f) * 1000.0));
 			if(followUntil > target.ccUntil) target.ccUntil = followUntil;
 		}
