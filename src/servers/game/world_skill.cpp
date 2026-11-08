@@ -1731,7 +1731,7 @@ void World::ShowTagToEnemies(Player& p)
 void World::UpdateNpcFog()
 {
 	foreach(npc, actorNpcList) {
-		if(npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
+		if(npc->hp <= 0 || npc->removeAt != Time::ZERO || npc->wall) continue;
 		const bool summon = npc->ownerUID != ActorUID::INVALID;
 		if(!summon && (!npc->monsterAi || IsStructure(*npc))) continue;
 		const i32 npcTeam = summon ? (i32)players[npc->ownerIndex].team : (npc->faction == Faction::RED ? 0 : npc->faction == Faction::BLUE ? 1 : -1);

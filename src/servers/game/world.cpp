@@ -1003,6 +1003,7 @@ vec3 World::ResolveCastPos(const Player& player, SkillID skillID, const vec3& ca
 			if(maxDistance > 0) clamped = MIN(clamped, maxDistance);
 			if(clamped != len) castPos = vec3(from + rel / len * clamped, castPos.z);
 		}
+		else if(in && in->minDistance > 0) castPos = vec3(from + vec2(cosf(player.input.rot.upperYaw), sinf(player.input.rot.upperYaw)) * in->minDistance, castPos.z);
 	}
 	return castPos;
 }

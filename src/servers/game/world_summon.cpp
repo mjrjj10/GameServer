@@ -653,11 +653,14 @@ void World::UpdateSummons()
 				owner.pendingChildSkill = 0;
 			}
 			if(info && !reuse) {
-				f32 t = 0;
 				foreach_const(c, info->onSpawn) {
+					if(c->kind == SummonCommand::DIE) {
+						actor.dieMode = c->dieMode;
+						continue;
+					}
 					if(!pendingSummonCommands.full()) {
 						PendingSummonCommand pc;
-						pc.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
+						pc.time = TimeAdd(localTime, TimeMsToTime(c->delay * 1000.0));
 						pc.ownerIndex = ps->ownerIndex;
 						pc.kind = c->kind;
 						pc.index = c->index;
@@ -670,7 +673,6 @@ void World::UpdateSummons()
 						pc.aniEnd = c->aniEnd;
 						pendingSummonCommands.push_back(pc);
 					}
-					t += c->delay;
 				}
 			}
 			LOG("Summon :: %ls creature=%d at (%.0f, %.0f) life=%.1fs known=%d", owner.name.data(), ps->creature, ps->pos.x, ps->pos.y, life, info != nullptr);
@@ -739,7 +741,7 @@ void World::UpdateSummons()
 		else {
 			const StatusInfo* st = GetGameXmlContent().FindStatus(pc->index);
 			const ActorNpc* source = pc->source != ActorUID::INVALID ? FindNpcActor(pc->source) : nullptr;
-			if(st && source && localTime < source->despawnAt && !SummonStatusClientOnly(*st)) {
+			if(st && source && (localTime < source->despawnAt || source->removeAt != Time::ZERO) && !SummonStatusClientOnly(*st)) {
 				replication->SendAddStatusToAll(pc->index, source->UID, source->UID, StatusSentDuration(*st), source->pos, source->pos, 0, 1, 1.0f, -1.0f, false);
 				TrackNpcSelfStatus(source->UID, *st);
 			}
@@ -823,6 +825,7 @@ void World::UpdateSummons()
 				f32 t = 0;
 				u8 wanted = 0;
 				foreach_const(c, info->onDie) if(c->dieMode == it->dieMode) wanted = it->dieMode;
+				if(!info->onDie.empty()) LOG("Summon :: creature=%d dies in mode %d (own %d) with %d die commands", (i32)it->docID, (i32)wanted, (i32)it->dieMode, (i32)info->onDie.size());
 				foreach_const(c, info->onDie) {
 					if(c->dieMode != wanted) continue;
 					if(!pendingSummonCommands.full()) {
