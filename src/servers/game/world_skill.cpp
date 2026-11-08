@@ -1052,6 +1052,10 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			   preset == ActionCommand::TargetPreset::POS_TTT_1 || preset == ActionCommand::TargetPreset::POS_TFF_1_800_1000) {
 				if(glm::length(vec2(castPos)) > 1.0f) pos = vec3(vec2(castPos), pos.z);
 			}
+			if(cmd->entity.offsetFront != 0 || cmd->entity.offsetSide != 0) {
+				const vec2 face = vec2(cosf(angle), sinf(angle));
+				pos += vec3(face * cmd->entity.offsetFront + Perp(face) * cmd->entity.offsetSide, 0);
+			}
 			ps.pos = pos;
 			ps.rot = vec3(0, 0, angle);
 			if(preset == ActionCommand::TargetPreset::CURRENT_FFF) ps.target = currentTarget;

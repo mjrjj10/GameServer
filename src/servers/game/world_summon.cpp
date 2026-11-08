@@ -724,7 +724,8 @@ void World::UpdateSummons()
 				pr.target = pc->target;
 				pr.sourceUID = pc->source;
 				pr.nodeName = pc->nodeName;
-				pr.endWithSource = pc->aniEnd && pc->source != ActorUID::INVALID;
+				const bool dieRemoved = sourceInfo && sourceNpc->hp > 0 && sourceNpc->removeAt == Time::ZERO && eastl::find(sourceInfo->dieRemovedRemotes.begin(), sourceInfo->dieRemovedRemotes.end(), pc->index) != sourceInfo->dieRemovedRemotes.end();
+				pr.endWithSource = (pc->aniEnd || dieRemoved) && pc->source != ActorUID::INVALID;
 				pendingRemotes.push_back(pr);
 			}
 		}

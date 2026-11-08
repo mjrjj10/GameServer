@@ -146,6 +146,7 @@ struct SummonInfo
 	eastl::fixed_vector<SummonCommand,12,false> onSpawn;
 	eastl::fixed_vector<SummonCommand,12,false> onDie;
 	eastl::fixed_vector<SummonCommand,12,false> onLifted;
+	eastl::fixed_vector<i32,6,false> dieRemovedRemotes;
 	f32 lifeTime = 0;
 	f32 moveSpeed = 0;
 	f32 normalMoveSpeed = 0;
@@ -975,6 +976,8 @@ struct GameXmlContent
 					i32 entityIndex;
 					ActionCommand::TargetPreset targetPreset;
 					u8 remove;
+					f32 offsetFront;
+					f32 offsetSide;
 				} entity;
 
 				struct {

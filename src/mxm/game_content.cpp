@@ -2753,6 +2753,9 @@ bool GameXmlContent::LoadAnimationData()
 				const char* Param2 = nullptr;
 				pActionBase->QueryStringAttribute("Param2", &Param2);
 				cmd.entity.remove = Param2 && EA::StdC::Strcmp(Param2, "Remove") == 0 ? 1 : 0;
+				cmd.entity.offsetFront = 0;
+				cmd.entity.offsetSide = 0;
+				if(Param2 && EA::StdC::Strchr(Param2, '|')) EA::StdC::Sscanf(Param2, "%f|%f", &cmd.entity.offsetFront, &cmd.entity.offsetSide);
 			} break;
 
 			case ActionCommand::Type::STATUS:
@@ -5667,7 +5670,13 @@ bool GameXmlContent::LoadSummonActions()
 		}
 		const char* p2 = nullptr;
 		pA->QueryStringAttribute("Param2", &p2);
-		if(p2 && EA::StdC::Strcmp(p2, "Remove") == 0) continue;
+		if(p2 && EA::StdC::Strcmp(p2, "Remove") == 0) {
+			i32 removed = 0;
+			if(die && EA::StdC::Strcmp(type, "REMOTE") == 0 && pA->QueryAttribute("RemoteIndex", &removed) == XML_SUCCESS && removed != 0) {
+				foreach(it, summonMap) if(it->second.className == cls && !it->second.dieRemovedRemotes.full() && eastl::find(it->second.dieRemovedRemotes.begin(), it->second.dieRemovedRemotes.end(), removed) == it->second.dieRemovedRemotes.end()) it->second.dieRemovedRemotes.push_back(removed);
+			}
+			continue;
+		}
 		SummonCommand cmd;
 		cmd.aniEnd = p2 && EA::StdC::Strcmp(p2, "RemoveWhenAniEnd") == 0;
 		if(EA::StdC::Strcmp(type, "REMOTE") == 0) { cmd.kind = SummonCommand::REMOTE; pA->QueryAttribute("RemoteIndex", &cmd.index); cmd.nodeName = InternNodeName(pA->Attribute("NodeName")); }
