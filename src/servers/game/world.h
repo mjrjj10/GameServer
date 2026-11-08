@@ -910,6 +910,7 @@ struct World
 		bool aniEnd = false;
 		bool cleanupOnly = false;
 		bool lastChild = false;
+		bool noCaster = false;
 		i32 childCreature = 0;
 		ActorUID sourceUID = ActorUID::INVALID;
 	};

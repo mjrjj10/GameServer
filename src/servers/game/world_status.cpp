@@ -1142,7 +1142,9 @@ void World::UpdateStatuses()
 			statusCasterOverride = ps->sourceUID;
 			statusAniEnd = ps->aniEnd;
 			statusCleanupOnly = ps->cleanupOnly;
+			statusNoCaster = ps->noCaster;
 			ApplyStatus(caster, *targetMaster->parent, ps->statusID, ps->power, ps->duration);
+			statusNoCaster = false;
 			statusAniEnd = false;
 			statusCleanupOnly = false;
 			statusCasterOverride = ActorUID::INVALID;
@@ -1262,6 +1264,7 @@ void World::UpdateStatuses()
 				   (cond == StatusInfo::NextCondition::REMOVE_ONHIT && it->removeOnHit)) next = it->info->nextStatus;
 			}
 			const u32 casterIndex = it->casterIndex;
+			const bool noCaster = it->casterUID == ActorUID::INVALID;
 			if(it->info && it->info->auraStatus != 0) EndAura(casterIndex, *it->info);
 			if(it->ccEnd != Time::ZERO && localTime < it->ccStatusEnd && target.ccUntil == it->ccEnd) {
 				Time cc = TimeAdd(localTime, TimeDiff(it->ccStatusEnd, it->ccEnd));
@@ -1284,6 +1287,7 @@ void World::UpdateStatuses()
 				ps.targetUID = target.Main().UID;
 				ps.duration = -1.0f;
 				ps.power = 0;
+				ps.noCaster = noCaster;
 				pendingStatuses.push_back(ps);
 			}
 		}
