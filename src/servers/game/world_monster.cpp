@@ -1426,8 +1426,12 @@ void World::UpdateMonsterAi(f32 delta)
 					attack = ai.byTarget[GameXmlContent::MonsterAttack::MASTER];
 				}
 			}
-			if(targetPos && npc.monsterTarget != taunt && glm::length(vec2(*targetPos) - vec2(npc.pos)) > MAX(ai.lost, ai.perception)) targetPos = nullptr;
+			const bool tooFar = targetPos && npc.monsterTarget != taunt && glm::length(vec2(*targetPos) - vec2(npc.pos)) > MAX(ai.lost, ai.perception);
+			if(tooFar) targetPos = nullptr;
 			if(!targetPos || !attack) {
+				const ActorMaster* lostMaster = FindMasterActor(npc.monsterTarget);
+				const bool fogLost = lostMaster && lostMaster->parent && (npc.faction == Faction::RED || npc.faction == Faction::BLUE) && !(lostMaster->parent->fogSeenBy & (1u << (npc.faction == Faction::RED ? 0 : 1)));
+				LOG("Monster :: creature=%d (local %d) loses target %u (%s)", (i32)npc.docID, npc.localID, (u32)npc.monsterTarget, tooFar ? "too far" : (targetPos ? "no attack" : (fogLost ? "master not seen by its team" : "gone or not hostile")));
 				targetPos = nullptr;
 				npc.monsterTarget = ActorUID::INVALID;
 				npc.monsterNextSearch = localTime;
