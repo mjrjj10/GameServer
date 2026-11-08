@@ -1256,7 +1256,7 @@ bool World::UpdateMonsterAllyBuff(ActorNpc& npc, const GameXmlContent::MonsterAi
 		replication->SendAiSetTargetToAll(npc.UID, ally->Main().UID);
 		TurnMonster(npc, yaw);
 		replication->SendMonsterStateToAll(npc.UID, buff.state, npc.pos, 0.0f);
-		replication->SendAiSetTargetToAll(npc.UID, npc.monsterTarget);
+		if(npc.monsterTarget != ActorUID::INVALID) replication->SendAiSetTargetToAll(npc.UID, npc.monsterTarget);
 		if(buff.anim > 0) {
 			npc.stateEndAt = TimeAdd(localTime, TimeMsToTime(buff.anim * 1000.0));
 			if(npc.monsterHoldUntil < npc.stateEndAt) npc.monsterHoldUntil = npc.stateEndAt;
