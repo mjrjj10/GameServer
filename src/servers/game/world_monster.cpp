@@ -1681,6 +1681,7 @@ void World::UpdateMonsterAi(f32 delta)
 			const f32 dist = glm::length(rel);
 			const f32 yaw = dist > 1.0f ? atan2f(rel.y, rel.x) : npc.rot.z;
 			const f32 reach = attack->range;
+			const bool laneWalk = npc.path && ai.tagKey == StatusTypeKey("Titan") && npc.pathPoint < (i32)npc.path->size() && walk > 0 && (attack->target == GameXmlContent::MonsterAttack::MASTER || attack->target == GameXmlContent::MonsterAttack::MINION);
 			if(npc.monsterDashHold && localTime < npc.monsterDashTurnAt) continue;
 			if(dist > reach + MONSTER_REACH_TOLERANCE) {
 				if(localTime >= npc.monsterNextAttack) {
@@ -1720,83 +1721,87 @@ void World::UpdateMonsterAi(f32 delta)
 					}
 				}
 				if(run <= 0 || (npc.monsterDashHold && localTime < npc.monsterDashTurnAt)) continue;
+				if(!laneWalk) {
+					npc.monsterWalking = false;
+					StartMonsterWalkState(npc, ai, run);
+					const f32 stepMax = run * delta;
+					const bool legDone = npc.monsterChasing && glm::length(npc.monsterLegGoal - vec2(npc.pos)) <= stepMax;
+					const bool resync = !npc.monsterChasing || localTime >= npc.monsterNextSync || legDone;
+					if(ai.chaseRing > 0 && resync) {
+						const f32 turn = ((f32)(RandUint() % 20001) / 10000.0f - 1.0f) * ai.chaseArc;
+						const vec2 back = -rel / dist;
+						npc.monsterChaseOffset = vec2(back.x * cosf(turn) - back.y * sinf(turn), back.x * sinf(turn) + back.y * cosf(turn)) * ai.chaseRing;
+					}
+					vec2 freshGoal = ai.chaseRing > 0 ? vec2(*targetPos) + npc.monsterChaseOffset : vec2(*targetPos) - rel / dist * reach;
+					if(ai.chaseRing <= 0 && glm::length(freshGoal - vec2(npc.pos)) <= run * (f32)MONSTER_SYNC_MS / 1000.0f) freshGoal = vec2(*targetPos);
+					if(npc.path && ai.tagKey == StatusTypeKey("Titan")) {
+						const vec2 lane = ClosestOnPath(*npc.path, vec2(*targetPos));
+						const vec2 side = vec2(*targetPos) - lane;
+						const f32 sideLen = glm::length(side);
+						freshGoal = sideLen > MEASURED_TITAN_CHASE_GOAL_OFFSET ? lane + side / sideLen * MEASURED_TITAN_CHASE_GOAL_OFFSET : vec2(*targetPos);
+					}
+					const vec2 toFresh = freshGoal - vec2(npc.pos);
+					const f32 freshYaw = glm::length(toFresh) > 1.0f ? atan2f(toFresh.y, toFresh.x) : yaw;
+					const bool turned = npc.monsterChasing && YawGap(freshYaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD && TimeDurationMs(npc.monsterLastTurn, localTime) >= HYP_MONSTER_TURN_RESYNC_MS;
+					if(resync || turned) {
+						npc.monsterChasing = true;
+						npc.monsterLegGoal = freshGoal;
+						npc.monsterSyncYaw = freshYaw;
+						npc.monsterLastTurn = localTime;
+						npc.monsterNextSync = TimeAdd(localTime, TimeMsToTime(MONSTER_SYNC_MS));
+						replication->SendMonsterMoveToAll(npc.UID, npc.pos, vec3(npc.monsterLegGoal, npc.pos.z), freshYaw, run);
+					}
+					const vec2 toLeg = npc.monsterLegGoal - vec2(npc.pos);
+					const f32 legDist = glm::length(toLeg);
+					const vec2 heading = legDist > 1.0f ? toLeg / legDist : rel / dist;
+					const f32 step = MIN(MIN(stepMax, dist - reach), legDist);
+					npc.pos = vec3(vec2(npc.pos) + heading * step, npc.pos.z);
+					npc.rot.z = atan2f(heading.y, heading.x);
+					continue;
+				}
+			}
+			else {
+				if(npc.monsterChasing || npc.monsterWalking) {
+					npc.monsterChasing = false;
+					if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, yaw);
+					else replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, yaw, 0.0f);
+				}
 				npc.monsterWalking = false;
-				StartMonsterWalkState(npc, ai, run);
-				const f32 stepMax = run * delta;
-				const bool legDone = npc.monsterChasing && glm::length(npc.monsterLegGoal - vec2(npc.pos)) <= stepMax;
-				const bool resync = !npc.monsterChasing || localTime >= npc.monsterNextSync || legDone;
-				if(ai.chaseRing > 0 && resync) {
-					const f32 turn = ((f32)(RandUint() % 20001) / 10000.0f - 1.0f) * ai.chaseArc;
-					const vec2 back = -rel / dist;
-					npc.monsterChaseOffset = vec2(back.x * cosf(turn) - back.y * sinf(turn), back.x * sinf(turn) + back.y * cosf(turn)) * ai.chaseRing;
+				if(localTime < npc.monsterNextAttack) {
+					const f64 sinceTurn = TimeDurationMs(npc.monsterLastTurn, localTime);
+					if((ai.turnEvery > 0 && sinceTurn >= ai.turnEvery * 1000.0) || (YawGap(yaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD && sinceTurn >= HYP_MONSTER_TURN_RESYNC_MS)) TurnMonster(npc, yaw);
+					continue;
 				}
-				vec2 freshGoal = ai.chaseRing > 0 ? vec2(*targetPos) + npc.monsterChaseOffset : vec2(*targetPos) - rel / dist * reach;
-				if(ai.chaseRing <= 0 && glm::length(freshGoal - vec2(npc.pos)) <= run * (f32)MONSTER_SYNC_MS / 1000.0f) freshGoal = vec2(*targetPos);
-				if(npc.path && ai.tagKey == StatusTypeKey("Titan")) {
-					const vec2 lane = ClosestOnPath(*npc.path, vec2(*targetPos));
-					const vec2 side = vec2(*targetPos) - lane;
-					const f32 sideLen = glm::length(side);
-					freshGoal = sideLen > MEASURED_TITAN_CHASE_GOAL_OFFSET ? lane + side / sideLen * MEASURED_TITAN_CHASE_GOAL_OFFSET : vec2(*targetPos);
+				npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime(attack->cooldown * 1000.0));
+				eastl::fixed_vector<i32,16,false> ready;
+				f32 totalShare = attack->share;
+				const f32 hpRatio = npc.hpMax > 0 ? (f32)npc.hp / (f32)npc.hpMax : 1.0f;
+				for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)npc.monsterSkillReady.size(); s++) {
+					const GameXmlContent::MonsterAttack& special = ai.attacks[s];
+					if(!special.special || special.target != attack->target || localTime < npc.monsterSkillReady[s]) continue;
+					if(hpRatio < special.hpMin || hpRatio > special.hpMax) continue;
+					if(npc.monsterSkillReady[s] == Time::ZERO) {
+						npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime((special.firstAt >= 0 ? special.firstAt : special.cooldown) * 1000.0));
+						if(localTime < npc.monsterSkillReady[s]) continue;
+					}
+					if(dist > special.range + (reach - attack->range) || dist < special.minRange) continue;
+					if(MonsterDashNeedsTurn(npc, special, yaw)) continue;
+					ready.push_back(s);
+					totalShare += special.share;
 				}
-				const vec2 toFresh = freshGoal - vec2(npc.pos);
-				const f32 freshYaw = glm::length(toFresh) > 1.0f ? atan2f(toFresh.y, toFresh.x) : yaw;
-				const bool turned = npc.monsterChasing && YawGap(freshYaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD && TimeDurationMs(npc.monsterLastTurn, localTime) >= HYP_MONSTER_TURN_RESYNC_MS;
-				if(resync || turned) {
-					npc.monsterChasing = true;
-					npc.monsterLegGoal = freshGoal;
-					npc.monsterSyncYaw = freshYaw;
-					npc.monsterLastTurn = localTime;
-					npc.monsterNextSync = TimeAdd(localTime, TimeMsToTime(MONSTER_SYNC_MS));
-					replication->SendMonsterMoveToAll(npc.UID, npc.pos, vec3(npc.monsterLegGoal, npc.pos.z), freshYaw, run);
+				f32 roll = (f32)(RandUint() % 10000) / 10000.0f * totalShare - attack->share;
+				foreach_const(s, ready) {
+					const GameXmlContent::MonsterAttack& special = ai.attacks[*s];
+					if(roll >= special.share) { roll -= special.share; continue; }
+					if(roll < 0) break;
+					MonsterStateCooldown(npc.monsterSkillReady, ai, special.state, TimeAdd(localTime, TimeMsToTime(special.cooldown * 1000.0)));
+					attack = &special;
+					LOG("Monster :: creature=%d (local %d) uses %s", (i32)npc.docID, npc.localID, ActionStateToString(special.state));
+					break;
 				}
-				const vec2 toLeg = npc.monsterLegGoal - vec2(npc.pos);
-				const f32 legDist = glm::length(toLeg);
-				const vec2 heading = legDist > 1.0f ? toLeg / legDist : rel / dist;
-				const f32 step = MIN(MIN(stepMax, dist - reach), legDist);
-				npc.pos = vec3(vec2(npc.pos) + heading * step, npc.pos.z);
-				npc.rot.z = atan2f(heading.y, heading.x);
+				StartMonsterAttack(npc, ai, attack, targetPos, dist, yaw, run);
 				continue;
 			}
-			if(npc.monsterChasing || npc.monsterWalking) {
-				npc.monsterChasing = false;
-				if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, yaw);
-				else replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, yaw, 0.0f);
-			}
-			npc.monsterWalking = false;
-			if(localTime < npc.monsterNextAttack) {
-				const f64 sinceTurn = TimeDurationMs(npc.monsterLastTurn, localTime);
-				if((ai.turnEvery > 0 && sinceTurn >= ai.turnEvery * 1000.0) || (YawGap(yaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD && sinceTurn >= HYP_MONSTER_TURN_RESYNC_MS)) TurnMonster(npc, yaw);
-				continue;
-			}
-			npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime(attack->cooldown * 1000.0));
-			eastl::fixed_vector<i32,16,false> ready;
-			f32 totalShare = attack->share;
-			const f32 hpRatio = npc.hpMax > 0 ? (f32)npc.hp / (f32)npc.hpMax : 1.0f;
-			for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)npc.monsterSkillReady.size(); s++) {
-				const GameXmlContent::MonsterAttack& special = ai.attacks[s];
-				if(!special.special || special.target != attack->target || localTime < npc.monsterSkillReady[s]) continue;
-				if(hpRatio < special.hpMin || hpRatio > special.hpMax) continue;
-				if(npc.monsterSkillReady[s] == Time::ZERO) {
-					npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime((special.firstAt >= 0 ? special.firstAt : special.cooldown) * 1000.0));
-					if(localTime < npc.monsterSkillReady[s]) continue;
-				}
-				if(dist > special.range + (reach - attack->range) || dist < special.minRange) continue;
-				if(MonsterDashNeedsTurn(npc, special, yaw)) continue;
-				ready.push_back(s);
-				totalShare += special.share;
-			}
-			f32 roll = (f32)(RandUint() % 10000) / 10000.0f * totalShare - attack->share;
-			foreach_const(s, ready) {
-				const GameXmlContent::MonsterAttack& special = ai.attacks[*s];
-				if(roll >= special.share) { roll -= special.share; continue; }
-				if(roll < 0) break;
-				MonsterStateCooldown(npc.monsterSkillReady, ai, special.state, TimeAdd(localTime, TimeMsToTime(special.cooldown * 1000.0)));
-				attack = &special;
-				LOG("Monster :: creature=%d (local %d) uses %s", (i32)npc.docID, npc.localID, ActionStateToString(special.state));
-				break;
-			}
-			StartMonsterAttack(npc, ai, attack, targetPos, dist, yaw, run);
-			continue;
 		}
 
 		if(!npc.path || walk <= 0 || npc.pathPoint >= (i32)npc.path->size()) continue;
