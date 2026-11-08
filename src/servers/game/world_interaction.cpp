@@ -316,6 +316,7 @@ void World::ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply)
 }
 
 static const f32 NPC_DEFEAT_PUSH_SEC = 1.0f;
+static const f64 MEASURED_NPC_PUSH_RECOVER_MS = 270.0;
 static const f32 MEASURED_NPC_DEFEAT_AIRBORNE_SEC = 1.5f;
 static const f32 MEASURED_NPC_AIRBORNE_GRAPH_SEC = 1.0f;
 static const f32 MEASURED_NPC_LIFT_BASE_HEIGHT = 400.0f;
@@ -383,7 +384,8 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 	npc.airborneAt = info->type == StatusType::AIRBORNE ? localTime : Time::ZERO;
 	npc.airborneStep = 0;
 	npc.stateEndAt = TimeAdd(localTime, TimeMsToTime(total * 1000.0));
-	if(npc.monsterHoldUntil < npc.stateEndAt) npc.monsterHoldUntil = npc.stateEndAt;
+	const Time holdEnd = info->type == StatusType::PUSH ? TimeAdd(npc.stateEndAt, TimeMsToTime(MEASURED_NPC_PUSH_RECOVER_MS)) : npc.stateEndAt;
+	if(npc.monsterHoldUntil < holdEnd) npc.monsterHoldUntil = holdEnd;
 	npc.monsterChasing = false;
 	npc.monsterWalking = false;
 	return total;
