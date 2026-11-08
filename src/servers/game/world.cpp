@@ -141,6 +141,16 @@ void World::Update(Time localTime_)
 			p.input.tag = 0;
 			p.input.jump = 0;
 		}
+		if(!p.dead && p.clientHd != ClientHandle::INVALID && p.clientPushSnap && localTime >= p.clientPushUntil) {
+			p.clientPushSnap = false;
+			if(p.clientPosCount == p.clientPushPosCount) {
+				const vec3 at = vec3(vec2(p.pushTarget), body.GetWorldPos().z);
+				body.collider->setFootPosition(PxExtendedVec3(at.x, at.y, at.z));
+				body.vel = vec3(0);
+				p.input.moveTo = at;
+				LOG("Push :: %ls silent client, body set to push end (%.0f, %.0f)", p.name.data(), at.x, at.y);
+			}
+		}
 
 		if(p.dead) {
 			p.input.moveTo = body.GetWorldPos();
