@@ -26,6 +26,23 @@ static const f32 MONSTER_REMOTE_MIN_LIFE_SEC = 0.05f;
 static const u32 MEASURED_MONSTER_REMOTE_SEED_STEP = 4;
 static const i32 MEASURED_GOT_MOB_RETURN_SUPERARMOR = 1264070082;
 static const f32 MONSTER_REACH_TOLERANCE = 1.0f;
+static const f32 MEASURED_TITAN_CHASE_GOAL_OFFSET = 278.0f;
+
+static vec2 ClosestOnPath(const eastl::fixed_vector<vec3,48,true>& path, const vec2& at)
+{
+	vec2 closest = path.empty() ? at : vec2(path[0]);
+	f32 best = glm::length(at - closest);
+	for(i32 i = 0; i + 1 < (i32)path.size(); i++) {
+		const vec2 a = vec2(path[i]);
+		const vec2 ab = vec2(path[i + 1]) - a;
+		const f32 len2 = glm::dot(ab, ab);
+		const f32 k = len2 > 0.001f ? glm::clamp(glm::dot(at - a, ab) / len2, 0.0f, 1.0f) : 0.0f;
+		const vec2 c = a + ab * k;
+		const f32 d = glm::length(at - c);
+		if(d < best) { best = d; closest = c; }
+	}
+	return closest;
+}
 static const u8 MONSTER_ATTACK_STAT = 6;
 static const u32 NPC_DEAD_NO_KILLER_DOC = 0;
 
@@ -1658,7 +1675,8 @@ void World::UpdateMonsterAi(f32 delta)
 		}
 		if(UpdateMonsterAllyBuff(npc, ai)) continue;
 		if(targetPos && attack && UpdateMonsterMasterSpecial(npc, ai, *attack, run)) continue;
-		if(targetPos && attack) {
+		const bool offLane = targetPos && attack && npc.path && ai.tagKey == StatusTypeKey("Titan") && glm::length(vec2(*targetPos) - vec2(npc.pos)) > attack->range + MONSTER_REACH_TOLERANCE && glm::length(vec2(*targetPos) - ClosestOnPath(*npc.path, vec2(*targetPos))) > attack->range + MEASURED_TITAN_CHASE_GOAL_OFFSET;
+		if(targetPos && attack && !offLane) {
 			const vec2 rel = vec2(*targetPos) - vec2(npc.pos);
 			const f32 dist = glm::length(rel);
 			const f32 yaw = dist > 1.0f ? atan2f(rel.y, rel.x) : npc.rot.z;
@@ -1714,6 +1732,12 @@ void World::UpdateMonsterAi(f32 delta)
 				}
 				vec2 freshGoal = ai.chaseRing > 0 ? vec2(*targetPos) + npc.monsterChaseOffset : vec2(*targetPos) - rel / dist * reach;
 				if(ai.chaseRing <= 0 && glm::length(freshGoal - vec2(npc.pos)) <= run * (f32)MONSTER_SYNC_MS / 1000.0f) freshGoal = vec2(*targetPos);
+				if(npc.path && ai.tagKey == StatusTypeKey("Titan")) {
+					const vec2 lane = ClosestOnPath(*npc.path, vec2(*targetPos));
+					const vec2 side = vec2(*targetPos) - lane;
+					const f32 sideLen = glm::length(side);
+					freshGoal = sideLen > MEASURED_TITAN_CHASE_GOAL_OFFSET ? lane + side / sideLen * MEASURED_TITAN_CHASE_GOAL_OFFSET : vec2(*targetPos);
+				}
 				const vec2 toFresh = freshGoal - vec2(npc.pos);
 				const f32 freshYaw = glm::length(toFresh) > 1.0f ? atan2f(toFresh.y, toFresh.x) : yaw;
 				const bool turned = npc.monsterChasing && YawGap(freshYaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD && TimeDurationMs(npc.monsterLastTurn, localTime) >= HYP_MONSTER_TURN_RESYNC_MS;
