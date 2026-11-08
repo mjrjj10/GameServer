@@ -696,16 +696,40 @@ void World::UpdateNpcStatuses()
 		const NpcStatus& ns = npcStatuses[i];
 		bool linked = false;
 		foreach_const(st, activeStatuses) {
-			if(st->casterUID == ns.npcUID && st->targetUID == ns.casterUID && st->info && st->info->type == StatusType::TARGET && st->until > localTime) { linked = true; break; }
+			if(st->casterUID == ns.npcUID && st->targetUID == ns.casterUID && st->info && (st->info->type == StatusType::TARGET || st->info->casterStatus == ns.statusID) && st->until > localTime) { linked = true; break; }
+		}
+		if(!linked && ns.linked) {
+			foreach_const(other, npcStatuses) {
+				if(other->npcUID != ns.casterUID || other->casterUID != ns.npcUID || localTime >= other->until) continue;
+				const StatusInfo* pair = GetGameXmlContent().FindStatus(other->statusID);
+				if(pair && pair->casterStatus == ns.statusID) { linked = true; break; }
+			}
+		}
+		bool pairCasterGone = false;
+		if(!ns.linked) {
+			const StatusInfo* own = GetGameXmlContent().FindStatus(ns.statusID);
+			if(own && own->type == StatusType::CASTER && own->casterStatus != 0 && !FindMasterActor(ns.casterUID)) pairCasterGone = NpcPairCasterGone(ns.casterUID);
 		}
 		const ActorNpc* holder = FindNpcActor(ns.npcUID);
-		if((linked || !ns.linked) && localTime < ns.until && holder && (holder->hp > 0 || holder->hpMax <= 0)) { i++; continue; }
+		if((linked || !ns.linked) && !pairCasterGone && localTime < ns.until && holder && (holder->hp > 0 || holder->hpMax <= 0)) { i++; continue; }
 		replication->SendRemoveStatusToAll(ns.statusID, ns.npcUID, ns.casterUID);
 		const ActorUID shieldedUID = ns.shieldMax > 0 ? ns.npcUID : ActorUID::INVALID;
 		npcStatuses.erase(npcStatuses.begin() + i);
 		if(shieldedUID != ActorUID::INVALID && FindNpcActor(shieldedUID)) SendNpcShieldStat(shieldedUID);
 	}
+	foreach(st, activeStatuses) {
+		if(!st->info || st->info->type != StatusType::CASTER || st->info->casterStatus == 0 || st->until <= localTime || FindMasterActor(st->casterUID) || !NpcPairCasterGone(st->casterUID)) continue;
+		st->until = localTime;
+		LOG("Status :: status=%d ended with its creature caster %u", st->statusID, (u32)st->casterUID);
+	}
 	UpdateNpcSpeedMods();
+}
+
+bool World::NpcPairCasterGone(ActorUID casterUID) const
+{
+	if(casterUID == ActorUID::INVALID) return false;
+	const ActorNpc* npc = FindNpcActor(casterUID);
+	return !npc || npc->removeAt != Time::ZERO || (npc->hp <= 0 && npc->hpMax > 0);
 }
 
 bool World::IsCarrying(const Player& player) const

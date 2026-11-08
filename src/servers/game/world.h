@@ -1289,6 +1289,7 @@ public:
 	void ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID);
 	void ApplyNpcCarrierStatus(ActorUID npcUID, ActorUID carrierUID, const vec3& pos, i32 statusID);
 	void UpdateNpcStatuses();
+	bool NpcPairCasterGone(ActorUID casterUID) const;
 	void TrackNpcSelfStatus(ActorUID npcUID, const StatusInfo& info);
 	void ApplySummonDrainLife(ActorNpc& npc, const StatusInfo& info);
 	bool NpcHittableBy(const ActorNpc& npc, const Player& attacker) const;

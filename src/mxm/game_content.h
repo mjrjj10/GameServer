@@ -211,6 +211,7 @@ enum class StatusType: u8
 	AIRBORNE,
 	ARTILLERY,
 	BURROW,
+	CASTER,
 	COMA,
 	COUNTERSTATUS,
 	DANCE,
