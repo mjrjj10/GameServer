@@ -607,6 +607,7 @@ struct World
 		vec2 monsterLegGoal = vec2(0);
 		bool monsterReturning = false;
 		bool monsterWalkStateOn = false;
+		Time monsterWalkStateAt = Time::ZERO;
 		bool monsterLowHpDone = false;
 		ActorUID monsterReturnTarget = ActorUID::INVALID;
 		bool monsterReturnPending = false;

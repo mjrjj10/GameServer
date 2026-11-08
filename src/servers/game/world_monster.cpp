@@ -1066,8 +1066,15 @@ static void MonsterStateCooldown(eastl::array<Time,24>& ready, const GameXmlCont
 
 void World::StartMonsterWalkState(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, f32 speed)
 {
-	if(ai.walkState == ActionStateID::INVALID || npc.monsterWalkStateOn || localTime < npc.monsterHoldUntil) return;
+	if(ai.walkState == ActionStateID::INVALID || localTime < npc.monsterHoldUntil) return;
+	if(npc.monsterWalkStateOn) {
+		if(ai.walkStatuses.empty()) return;
+		const StatusInfo* flag = GetGameXmlContent().FindStatus(ai.walkStatuses.front());
+		if(!flag || flag->durationSec <= 0 || TimeDiffSec(TimeDiff(npc.monsterWalkStateAt, localTime)) < flag->durationSec) return;
+		foreach_const(a, npcStatuses) if(a->npcUID == npc.UID && a->statusID == ai.walkStatuses.front() && localTime < a->until) return;
+	}
 	npc.monsterWalkStateOn = true;
+	npc.monsterWalkStateAt = localTime;
 	npc.monsterNextSync = localTime;
 	replication->SendMonsterStateToAll(npc.UID, ai.walkState, npc.pos, speed);
 	replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, speed);
