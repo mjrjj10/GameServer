@@ -993,6 +993,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 				target.dashDir = rel / rl;
 				target.dashSpeed = rl / graphDuration;
 				target.dashStartAt = localTime;
+				target.dashBlockUntil = Time::ZERO;
 				target.dashOrigin = target.body->GetWorldPos();
 				target.dashDist = rl;
 				target.dashDone = 0;

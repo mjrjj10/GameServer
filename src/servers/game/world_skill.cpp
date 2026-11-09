@@ -1290,6 +1290,9 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			mover.dashCurve = curve;
 			mover.dashAwaitClientStart = mover.clientHd != ClientHandle::INVALID;
 			mover.dashUntil = TimeAdd(localTime, TimeMsToTime(moveDuration * 1000.0));
+			f32 block = 0;
+			foreach_const(c2, action.commands) if(c2->type == ActionCommand::Type::STATE_BLOCK && c2->animIndex == cmd.animIndex) block = MAX(block, c2->delay);
+			mover.dashBlockUntil = block > 0 && block < moveDuration ? TimeAdd(localTime, TimeMsToTime(block * 1000.0)) : mover.dashUntil;
 			if(curve) LOG("Dash :: %ls follows move graph over %.2fs for %.0f", mover.name.data(), moveDuration, moveDist);
 		}
 	}

@@ -343,6 +343,7 @@ struct World
 		vec2 dashDir = vec2(1, 0);
 		f32 dashSpeed = 0;
 		Time dashStartAt = Time::ZERO;
+		Time dashBlockUntil = Time::ZERO;
 		vec3 dashOrigin = vec3(0);
 		Time clientPushUntil = Time::ZERO;
 		i32 clientPushPosCount = 0;

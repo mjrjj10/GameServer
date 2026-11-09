@@ -434,7 +434,8 @@ void World::Replicate()
 			rch.skillMoving = localTime < player.dashUntil || AttachedToCaster(player);
 			rch.graphMoving = (localTime < player.dashUntil && !AttachedToCaster(player)) || localTime < player.pushUntil || player.dragElapsed < player.dragDuration;
 			rch.statusGraph = localTime < player.pushUntil && player.pushSilent;
-			rch.graphHold = player.clientHd == ClientHandle::INVALID && player.dashUntil != Time::ZERO && TimeDiffSec(TimeDiff(player.dashStartAt, player.dashUntil)) <= MEASURED_UNSYNCED_GRAPH_MAX_SEC && localTime < TimeAdd(player.dashUntil, TimeMsToTime(MEASURED_GRAPH_END_SYNC_DELAY_MS)) && !AttachedToCaster(player);
+			const Time holdEnd = TimeDiffSec(TimeDiff(player.dashStartAt, player.dashUntil)) <= MEASURED_UNSYNCED_GRAPH_MAX_SEC || player.dashBlockUntil >= player.dashUntil ? TimeAdd(player.dashUntil, TimeMsToTime(MEASURED_GRAPH_END_SYNC_DELAY_MS)) : player.dashBlockUntil;
+			rch.graphHold = player.clientHd == ClientHandle::INVALID && player.dashUntil != Time::ZERO && localTime < holdEnd && !AttachedToCaster(player);
 
 			const bool idle = chara.actionState == ActionStateID::INVALID || chara.actionState == ActionStateID::NONE_BEHAVIORSTATE;
 			const bool walking = player.movement.moveSpeed > 0 && localTime >= player.dashUntil;
