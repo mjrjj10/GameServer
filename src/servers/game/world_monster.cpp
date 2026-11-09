@@ -27,6 +27,7 @@ static const u32 MEASURED_MONSTER_REMOTE_SEED_STEP = 4;
 static const i32 MEASURED_GOT_MOB_RETURN_SUPERARMOR = 1264070082;
 static const f32 MONSTER_REACH_TOLERANCE = 1.0f;
 static const f32 MEASURED_TITAN_CHASE_GOAL_OFFSET = 278.0f;
+static const f64 MEASURED_MONSTER_WALK_STATE_START_MS = 153.0;
 
 static vec2 ClosestOnPath(const eastl::fixed_vector<vec3,48,true>& path, const vec2& at)
 {
@@ -1084,18 +1085,19 @@ static void MonsterStateCooldown(eastl::array<Time,24>& ready, const GameXmlCont
 	for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)ready.size(); s++) if(ai.attacks[s].special && ai.attacks[s].state == state) ready[s] = until;
 }
 
-void World::StartMonsterWalkState(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, f32 speed)
+bool World::StartMonsterWalkState(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, f32 speed)
 {
-	if(ai.walkState == ActionStateID::INVALID || localTime < npc.monsterHoldUntil) return;
+	if(ai.walkState == ActionStateID::INVALID || localTime < npc.monsterHoldUntil) return false;
 	if(npc.monsterWalkStateOn) {
-		if(ai.walkStatuses.empty()) return;
+		if(ai.walkStatuses.empty()) return false;
 		const StatusInfo* flag = GetGameXmlContent().FindStatus(ai.walkStatuses.front());
-		if(!flag || flag->durationSec <= 0 || TimeDiffSec(TimeDiff(npc.monsterWalkStateAt, localTime)) < flag->durationSec) return;
-		foreach_const(a, npcStatuses) if(a->npcUID == npc.UID && a->statusID == ai.walkStatuses.front() && localTime < a->until) return;
+		if(!flag || flag->durationSec <= 0 || TimeDiffSec(TimeDiff(npc.monsterWalkStateAt, localTime)) < flag->durationSec) return false;
+		foreach_const(a, npcStatuses) if(a->npcUID == npc.UID && a->statusID == ai.walkStatuses.front() && localTime < a->until) return false;
 	}
 	npc.monsterWalkStateOn = true;
 	npc.monsterWalkStateAt = localTime;
 	npc.monsterNextSync = localTime;
+	npc.monsterHoldUntil = TimeAdd(localTime, TimeMsToTime(MEASURED_MONSTER_WALK_STATE_START_MS));
 	replication->SendMonsterStateToAll(npc.UID, ai.walkState, npc.pos, speed);
 	replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, speed);
 	foreach_const(st, ai.walkStatuses) ApplyMonsterStatus(npc, *st, true);
@@ -1103,6 +1105,7 @@ void World::StartMonsterWalkState(ActorNpc& npc, const GameXmlContent::MonsterAi
 	const vec2 dir = vec2(cosf(npc.rot.z), sinf(npc.rot.z));
 	foreach_const(f, ai.walkFires) if(const Remote* remote = content.FindRemote((RemoteIdx)f->remote)) SpawnMonsterRemote(npc, *remote, npc.pos, dir, ActorUID::INVALID, true);
 	LOG("Monster :: creature=%d (local %d) starts %s while moving", (i32)npc.docID, npc.localID, ActionStateToString(ai.walkState));
+	return true;
 }
 
 bool World::UpdateMonsterMasterSpecial(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const GameXmlContent::MonsterAttack& current, f32 run)
@@ -1749,7 +1752,7 @@ void World::UpdateMonsterAi(f32 delta)
 				if(run <= 0 || (npc.monsterDashHold && localTime < npc.monsterDashTurnAt)) continue;
 				if(!laneWalk) {
 					npc.monsterWalking = false;
-					StartMonsterWalkState(npc, ai, run);
+					if(StartMonsterWalkState(npc, ai, run)) continue;
 					const f32 stepMax = run * delta;
 					const bool legDone = npc.monsterChasing && glm::length(npc.monsterLegGoal - vec2(npc.pos)) <= stepMax;
 					const bool resync = !npc.monsterChasing || localTime >= npc.monsterNextSync || legDone;
@@ -1844,7 +1847,7 @@ void World::UpdateMonsterAi(f32 delta)
 			replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, walk);
 			npc.monsterNextSync = localTime;
 		}
-		StartMonsterWalkState(npc, ai, walk);
+		if(StartMonsterWalkState(npc, ai, walk)) continue;
 		const i32 pointBefore = npc.pathPoint;
 		f32 budget = walk * delta;
 		while(budget > 0 && npc.pathPoint < (i32)npc.path->size()) {
