@@ -629,7 +629,12 @@ void World::UpdateBotMovement()
 			goal = here + vec2(cosf(bot.input.rot.bodyYaw), sinf(bot.input.rot.bodyYaw)) * BOT_ROAM_STEP;
 		}
 		static const f32 MEASURED_PLAYER_JUMPS_PER_MIN = 0.43f;
-		if(titanNav && !fighting && (f32)(RandUint() % 1000000) < MEASURED_PLAYER_JUMPS_PER_MIN * (BOT_DECISION_MIN_MS + BOT_DECISION_SPAN_MS * 0.5f) / 60000.0f * 1000000.0f) bot.input.jump = 1;
+		if(bot.botJumpRollAt == Time::ZERO) bot.botJumpRollAt = localTime;
+		if(titanNav && bot.body->grounded) {
+			const f32 sinceRollSec = (f32)TimeDiffSec(TimeDiff(bot.botJumpRollAt, localTime));
+			bot.botJumpRollAt = localTime;
+			if((f32)Randf01() < MEASURED_PLAYER_JUMPS_PER_MIN * sinceRollSec / 60.0f) bot.input.jump = 1;
+		}
 		if(titanNav && mode != bot.botMode) {
 			LOG("BotMode :: %ls %s at (%.0f, %.0f) hp %d/%d pieces %d", bot.name.data(), BOT_MODE_NAMES[mode], here.x, here.y, bot.Main().hp, bot.Main().hpMax, bot.titanPieces);
 			bot.botMode = mode;

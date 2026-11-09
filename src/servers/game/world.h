@@ -273,6 +273,7 @@ struct World
 		f32 mana = -1.0f;
 		Time tNextBotShot = Time::ZERO;
 		Time botMoveAt = Time::ZERO;
+		Time botJumpRollAt = Time::ZERO;
 		Time botSkillStillUntil = Time::ZERO;
 		Time botStuckCheck = Time::ZERO;
 		vec2 botLastPos = vec2(0);
