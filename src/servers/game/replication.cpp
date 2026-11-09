@@ -2173,7 +2173,7 @@ void Replication::SendWeaponCreatorShotToAll(ActorUID ownerUID, u32 seed, Remote
 	remote.firingCount = firingCount;
 	SendRemoteCreate(remote, ClientHandle::INVALID);
 }
-void Replication::SendAiActionStateToAll(ActorUID actorUID, ActionStateID action, f32 worldYaw, const vec3& pos, bool keepSpeed)
+void Replication::SendAiActionStateToAll(ActorUID actorUID, ActionStateID action, f32 worldYaw, const vec3& pos, bool keepSpeed, f32 speed)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
@@ -2185,7 +2185,7 @@ void Replication::SendAiActionStateToAll(ActorUID actorUID, ActionStateID action
 		packet.Write<LocalActorID>(localID);
 		packet.Write<i16>((i16)action);
 		packet.Write<i16>(WorldYawToMonsterDeciDegrees(worldYaw));
-		if(!keepSpeed) packet.Write<u16>(0);
+		if(!keepSpeed) packet.Write<u16>((u16)MIN(speed * NPC_SPEED_SCALE, 65535.0f));
 		packet.Write(pos);
 		SendPacket(clientHd, packet);
 	}

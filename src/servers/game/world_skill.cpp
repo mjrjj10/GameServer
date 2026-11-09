@@ -713,6 +713,13 @@ void World::UpdateNpcStatuses()
 		const ActorNpc* holder = FindNpcActor(ns.npcUID);
 		if((linked || !ns.linked) && !pairCasterGone && localTime < ns.until && holder && (holder->hp > 0 || holder->hpMax <= 0)) { i++; continue; }
 		replication->SendRemoveStatusToAll(ns.statusID, ns.npcUID, ns.casterUID);
+		const StatusInfo* motionStatus = GetGameXmlContent().FindStatus(ns.statusID);
+		ActorNpc* released = motionStatus && motionStatus->npcMotion != ActionStateID::INVALID ? FindNpcActor(ns.npcUID) : nullptr;
+		if(released && released->ownerUID != ActorUID::INVALID && released->actionState == motionStatus->npcMotion && (released->hp > 0 || released->hpMax <= 0) && released->removeAt == Time::ZERO) {
+			const SummonInfo* releasedInfo = GetGameXmlContent().FindSummon((i32)released->docID);
+			released->actionState = ActionStateID::NONE_BEHAVIORSTATE;
+			replication->SendAiActionStateToAll(released->UID, ActionStateID::NONE_BEHAVIORSTATE, released->rot.z, released->pos, false, releasedInfo ? releasedInfo->moveSpeed : 0.0f);
+		}
 		const ActorUID shieldedUID = ns.shieldMax > 0 ? ns.npcUID : ActorUID::INVALID;
 		npcStatuses.erase(npcStatuses.begin() + i);
 		if(shieldedUID != ActorUID::INVALID && FindNpcActor(shieldedUID)) SendNpcShieldStat(shieldedUID);
