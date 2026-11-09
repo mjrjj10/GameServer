@@ -1054,9 +1054,14 @@ void World::UpdateMonsterDash(ActorNpc& npc)
 	bool blocked = false;
 	if(len > 1.0f && physics.RaycastStatic(vec3(here, npc.pos.z + MONSTER_DASH_RAY_HEIGHT), vec3(next + step / len * radius, npc.pos.z + MONSTER_DASH_RAY_HEIGHT), &hit)) {
 		const vec3 probe = vec3(next, npc.pos.z + NPC_GROUND_PROBE_UP);
+		const vec3 under = vec3(here, npc.pos.z + NPC_GROUND_PROBE_UP);
 		f32 down = 0;
-		if(physics.RaycastStatic(probe, probe - vec3(0, 0, NPC_GROUND_PROBE_UP + NPC_GROUND_PROBE_DOWN), &down) && fabsf(probe.z - down - npc.pos.z) <= len * NPC_GROUND_MAX_SLOPE) npc.pos = vec3(next, probe.z - down);
+		f32 hereDown = 0;
+		const f32 hereGround = physics.RaycastStatic(under, under - vec3(0, 0, NPC_GROUND_PROBE_UP + NPC_GROUND_PROBE_DOWN), &hereDown) ? under.z - hereDown : npc.pos.z;
+		const bool ground = physics.RaycastStatic(probe, probe - vec3(0, 0, NPC_GROUND_PROBE_UP + NPC_GROUND_PROBE_DOWN), &down);
+		if(ground && fabsf(probe.z - down - hereGround) <= len * NPC_GROUND_MAX_SLOPE) npc.pos = vec3(next, probe.z - down);
 		else {
+			LOG("Monster :: creature=%d dash blocked, ground %.0f -> %.0f over %.0f (z %.0f)", (i32)npc.docID, hereGround, ground ? probe.z - down : -99999.0f, len, npc.pos.z);
 			npc.pos = vec3(here + step / len * MAX(hit - radius, 0.0f), npc.pos.z);
 			blocked = true;
 		}
