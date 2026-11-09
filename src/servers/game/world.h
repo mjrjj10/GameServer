@@ -1015,6 +1015,7 @@ struct World
 	struct TeamGate { i32 localID; vec2 a; vec2 b; i32 team; bool open; };
 	eastl::fixed_vector<TeamGate,32,false> teamGates;
 	bool BotGateBlocks(const Player& bot, const vec2& from, vec2* goal) const;
+	bool RaycastShot(const vec3& from, const vec3& to, i32 team, f32* dist, const PxRigidActor** wallActor, ActorDynamic** gate);
 	void BotKeepOutOfBlockers(const Player& bot, vec2* goal) const;
 	bool InsideBodyBlocker(const vec2& at, f32 margin) const;
 	void SetMonsterBattle(ActorNpc& npc, bool inBattle);
@@ -1418,7 +1419,7 @@ public:
 	void TitanOnCast(Player& player, SkillID skill);
 	void UpdateBoundTriggers();
 	void UpdateCreatureEnterTrigger(const GameXmlContent::LevelEventNode& node, i32 slot, const GameXmlContent::Map::Area& area);
-	void OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos);
+	void OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos, ActorDynamic* known = nullptr);
 	bool LevelTriggerActive(const GameXmlContent::LevelEventNode& node) const;
 	void SpawnGroundItems(i32 dropIndex, i32 areaID, i32 tagID);
 	void SpawnDropGroupAt(i32 dropIndex, const vec3& pos, i32 tagID);

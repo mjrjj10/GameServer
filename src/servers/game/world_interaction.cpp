@@ -1330,11 +1330,10 @@ bool World::TakeGroundItem(Player& player, u32 itemUID, GroundItem* taken)
 	return true;
 }
 
-void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos)
+void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos, ActorDynamic* known)
 {
-	if(!actor) return;
-	ActorDynamic* hit = nullptr;
-	foreach(d, actorDynamicList) {
+	ActorDynamic* hit = known;
+	if(!hit && actor) foreach(d, actorDynamicList) {
 		if(d->collider && (const void*)d->collider == (const void*)actor) { hit = &*d; break; }
 	}
 	if(!hit || hit->destroyed) return;

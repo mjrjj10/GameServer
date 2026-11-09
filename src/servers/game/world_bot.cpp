@@ -903,6 +903,33 @@ bool World::BotGateBlocks(const Player& bot, const vec2& from, vec2* goal) const
 	return false;
 }
 
+bool World::RaycastShot(const vec3& from, const vec3& to, i32 team, f32* dist, const PxRigidActor** wallActor, ActorDynamic** gate)
+{
+	*gate = nullptr;
+	bool blocked = physics.RaycastStatic(from, to, dist, team, wallActor);
+	const vec2 d = vec2(to) - vec2(from);
+	const f32 len = glm::length(to - from);
+	foreach_const(g, teamGates) {
+		if(g->open || g->team == team) continue;
+		const vec2 s = g->b - g->a;
+		const f32 denom = Vec2Cross(d, s);
+		if(fabsf(denom) < 1e-3f) continue;
+		const f32 t = Vec2Cross(g->a - vec2(from), s) / denom;
+		const f32 u = Vec2Cross(g->a - vec2(from), d) / denom;
+		if(t < 0.0f || t > 1.0f || u < 0.0f || u > 1.0f) continue;
+		if(blocked && t * len >= *dist) continue;
+		foreach(a, actorDynamicList) {
+			if(a->localID != g->localID) continue;
+			*gate = &*a;
+			*dist = t * len;
+			*wallActor = nullptr;
+			blocked = true;
+			break;
+		}
+	}
+	return blocked;
+}
+
 void World::UpdateObserver()
 {
 	static const f64 OBSERVER_MOVE_MS = 4000.0;

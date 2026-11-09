@@ -480,10 +480,11 @@ void World::UpdateProjectiles(f32 delta)
 		proj->pendingAdvance = 0;
 		bool hitWall = false;
 		const PxRigidActor* wallActor = nullptr;
+		ActorDynamic* wallGate = nullptr;
 		if(!proj->graph && !proj->ignoreWalls && step > 0) {
 			f32 wallDist = 0;
 			const vec2 a = vec2(proj->pos);
-			if(physics.RaycastStatic(vec3(a, proj->wallZ), vec3(a + proj->dir * step, proj->wallZ), &wallDist, (i32)players[proj->ownerIndex].team, &wallActor)) {
+			if(RaycastShot(vec3(a, proj->wallZ), vec3(a + proj->dir * step, proj->wallZ), (i32)players[proj->ownerIndex].team, &wallDist, &wallActor, &wallGate)) {
 				step = wallDist;
 				hitWall = true;
 			}
@@ -616,7 +617,7 @@ void World::UpdateProjectiles(f32 delta)
 			destroyed = hitWall || proj->travelled >= proj->range - 0.01f;
 			if(hitWall) {
 				LOG("Shot :: projectile stopped by a wall after %.0f", proj->travelled);
-				OnDynamicHit(wallActor, proj->remoteID, proj->seedOwnerHd, ClientHandle::INVALID, proj->pos);
+				OnDynamicHit(wallActor, proj->remoteID, proj->seedOwnerHd, ClientHandle::INVALID, proj->pos, wallGate);
 				ActorNpc* wallNpc = nullptr;
 				f32 best = WALL_HIT_SEARCH_RADIUS;
 				foreach(npc, actorNpcList) {
