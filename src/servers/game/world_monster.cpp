@@ -1034,6 +1034,11 @@ void World::SetMonsterBattle(ActorNpc& npc, bool inBattle)
 	replication->SendBattleStateToAll(npc.UID, inBattle, inBattle ? npc.monsterAi->run : npc.monsterAi->walk);
 }
 
+static const f32 NPC_GROUND_RECHECK_DIST = 50.0f;
+static const f32 NPC_GROUND_PROBE_UP = 400.0f;
+static const f32 NPC_GROUND_PROBE_DOWN = 1500.0f;
+static const f32 NPC_GROUND_MAX_SLOPE = 1.0f;
+
 void World::UpdateMonsterDash(ActorNpc& npc)
 {
 	if(npc.dashEnd == Time::ZERO || localTime < npc.dashStart) return;
@@ -1048,8 +1053,13 @@ void World::UpdateMonsterDash(ActorNpc& npc)
 	const f32 len = glm::length(step);
 	bool blocked = false;
 	if(len > 1.0f && physics.RaycastStatic(vec3(here, npc.pos.z + MONSTER_DASH_RAY_HEIGHT), vec3(next + step / len * radius, npc.pos.z + MONSTER_DASH_RAY_HEIGHT), &hit)) {
-		npc.pos = vec3(here + step / len * MAX(hit - radius, 0.0f), npc.pos.z);
-		blocked = true;
+		const vec3 probe = vec3(next, npc.pos.z + NPC_GROUND_PROBE_UP);
+		f32 down = 0;
+		if(physics.RaycastStatic(probe, probe - vec3(0, 0, NPC_GROUND_PROBE_UP + NPC_GROUND_PROBE_DOWN), &down) && fabsf(probe.z - down - npc.pos.z) <= len * NPC_GROUND_MAX_SLOPE) npc.pos = vec3(next, probe.z - down);
+		else {
+			npc.pos = vec3(here + step / len * MAX(hit - radius, 0.0f), npc.pos.z);
+			blocked = true;
+		}
 	}
 	else npc.pos = vec3(next, npc.pos.z);
 	if(npc.dashCurve != NPC_DASH_CURVE_LINEAR) SendNpcCcMove(npc, t >= 1.0f || blocked);
@@ -1328,11 +1338,6 @@ bool World::UpdateMonsterSeek(ActorNpc& npc, const GameXmlContent::MonsterAi& ai
 	}
 	return true;
 }
-
-static const f32 NPC_GROUND_RECHECK_DIST = 50.0f;
-static const f32 NPC_GROUND_PROBE_UP = 400.0f;
-static const f32 NPC_GROUND_PROBE_DOWN = 1500.0f;
-static const f32 NPC_GROUND_MAX_SLOPE = 1.0f;
 
 void World::SnapNpcToGround(ActorNpc& npc)
 {
