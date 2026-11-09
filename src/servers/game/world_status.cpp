@@ -986,6 +986,10 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			}
 		}
 		else if(target.clientHd == ClientHandle::INVALID && graphDuration > 0) {
+			if(localTime < target.dashUntil) {
+				target.dashDone = target.dashDist;
+				target.dashUntil = localTime;
+			}
 			const Time prevUntil = chainedPush ? target.pushUntil : localTime;
 			const Time newUntil = TimeAdd(localTime, TimeMsToTime(graphDuration * 1000.0));
 			target.pushUntil = newUntil > prevUntil ? newUntil : prevUntil;
