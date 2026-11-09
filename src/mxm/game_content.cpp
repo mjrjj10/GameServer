@@ -839,6 +839,7 @@ bool GameXmlContent::LoadMapByID(Map* map, MapIndex index)
 		pSpawnElt->QueryAttribute("kRotation_x", &spawn.rot.x);
 		pSpawnElt->QueryAttribute("kRotation_y", &spawn.rot.y);
 		pSpawnElt->QueryAttribute("kRotation_z", &spawn.rot.z);
+		pSpawnElt->QueryAttribute("fScale", &spawn.scale);
 
 		spawn.type = Map::Spawn::Type::NORMAL;
 		bool returnPoint;
@@ -877,6 +878,7 @@ bool GameXmlContent::LoadMapByID(Map* map, MapIndex index)
 		pSpawnElt->QueryAttribute("kRotation_x", &spawn.rot.x);
 		pSpawnElt->QueryAttribute("kRotation_y", &spawn.rot.y);
 		pSpawnElt->QueryAttribute("kRotation_z", &spawn.rot.z);
+		pSpawnElt->QueryAttribute("fScale", &spawn.scale);
 
 		spawn.type = Map::Spawn::Type::NORMAL;
 
@@ -6035,6 +6037,7 @@ bool GameXmlContent::LoadInteractionReceivers()
 			const char* dynType = pDyn->Attribute("_Type");
 			XMLElement* pBalance = pDyn->FirstChildElement("_RankDetailBalanceData");
 			const bool jumpable = pDyn->BoolAttribute("_Jumpable");
+			if(id && pDyn->BoolAttribute("_IsBlockSight")) dynamicBlockSight.insert(id);
 			if(id && ((dynType && EA::StdC::Strcmp(dynType, "DYNAMIC_TYPE_DESTROY") == 0) || jumpable) && pBalance && pBalance->IntAttribute("_BaseHitCount") > 0) {
 				dynamicDestroyHits[id] = pBalance->IntAttribute("_BaseHitCount");
 				if(jumpable) dynamicJumpable.insert(id);

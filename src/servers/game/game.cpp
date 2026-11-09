@@ -684,7 +684,7 @@ bool Game::LoadMap()
 		if(map->ingameLevels && meshKey != GetGameXmlContent().dynamicMeshKey.end()) {
 			eastl::fixed_string<char,100,false> meshName;
 			meshName.sprintf("%s/%s", meshKey->second.c_str(), meshKey->second.c_str());
-			if(world.physics.HasStaticMesh(meshName.c_str())) actor.collider = world.physics.CreateStaticCollider(meshName.c_str(), actor.pos, actor.rot);
+			if(world.physics.HasStaticMesh(meshName.c_str())) actor.collider = world.physics.CreateStaticCollider(meshName.c_str(), actor.pos, actor.rot, it->scale, GetGameXmlContent().dynamicBlockSight.count((i32)it->docID) > 0);
 		}
 	}
 

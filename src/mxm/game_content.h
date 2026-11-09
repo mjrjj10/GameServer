@@ -862,6 +862,7 @@ struct GameXmlContent
 			Faction faction;
 			vec3 pos;
 			vec3 rot;
+			f32 scale = 1.0f;
 			i32 entityType = 1;
 			i32 spawnAnim = 0;
 			i32 wanderDist = -1;
@@ -1702,6 +1703,7 @@ struct GameXmlContent
 	eastl::hash_map<i32, i32> dynamicDestroyHits;
 	eastl::hash_map<i32, f32> dynamicRespawnSec;
 	eastl::hash_set<i32> dynamicJumpable;
+	eastl::hash_set<i32> dynamicBlockSight;
 	eastl::hash_set<i32> actionRemovedStatuses;
 	eastl::hash_map<i32, eastl::vector<vec3>> measuredWalkCells;
 	eastl::hash_map<i32, eastl::fixed_string<char,48,false>> dynamicMeshKey;

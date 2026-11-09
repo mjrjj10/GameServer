@@ -9,6 +9,9 @@
   </_Map>
   <_Map _Index="160000050" _IngameLevel="1" _LevelStartLead="15">
     <_File _Path="collision/PvP_GoT_Jumpable.physx_static" />
+    <_File _Path="collision/PvP_GoT_Statue_Ruak.physx_static" />
+    <_File _Path="collision/PvP_GoT_SightWard_TC.physx_static" />
+    <_File _Path="collision/PvP_GoT_SightWard_Small.physx_static" />
     <_File _Path="PVP_Titan_Ruins_ENV_01.physx_static" />
     <_File _Path="PVP_Titan_Ruins_ENV_02.physx_static" />
     <_File _Path="PVP_GOT_ENV_Boss_01.physx_static" />

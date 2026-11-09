@@ -261,7 +261,9 @@ void PhysicsScene::Destroy()
     }
 }
 
-PxRigidStatic* PhysicsScene::CreateStaticCollider(const char* meshName, const vec3& pos, const vec3& rot, f32 scale)
+static const u32 NO_SIGHT_WORD = 1;
+
+PxRigidStatic* PhysicsScene::CreateStaticCollider(const char* meshName, const vec3& pos, const vec3& rot, f32 scale, bool blocksSight)
 {
 	auto& ctx = PhysContext();
 
@@ -269,6 +271,7 @@ PxRigidStatic* PhysicsScene::CreateStaticCollider(const char* meshName, const ve
 
 	PxShape* shape = ctx.physics->createShape(geometry, *ctx.matMapSurface);
 	ASSERT(shape); // createShape failed
+	if(!blocksSight) shape->setQueryFilterData(PxFilterData(0, 0, NO_SIGHT_WORD, 0));
 
 	PxRigidStatic* ground = ctx.physics->createRigidStatic(PxTransform{PxIdentity});
 	ground->attachShape(*shape);
@@ -372,10 +375,11 @@ static const u32 BODY_BLOCKER_WORD = 1;
 struct IgnoreTeamWalls: PxQueryFilterCallback
 {
 	u32 teamWord = 0;
+	bool sight = false;
 	PxQueryHitType::Enum preFilter(const PxFilterData&, const PxShape* shape, const PxRigidActor*, PxHitFlags&) override
 	{
 		const PxFilterData data = shape->getQueryFilterData();
-		return data.word1 == BODY_BLOCKER_WORD || (teamWord != 0 && data.word0 == teamWord) ? PxQueryHitType::eNONE : PxQueryHitType::eBLOCK;
+		return data.word1 == BODY_BLOCKER_WORD || (teamWord != 0 && data.word0 == teamWord) || (sight && data.word2 == NO_SIGHT_WORD) ? PxQueryHitType::eNONE : PxQueryHitType::eBLOCK;
 	}
 	PxQueryHitType::Enum postFilter(const PxFilterData&, const PxQueryHit&) override { return PxQueryHitType::eBLOCK; }
 };
@@ -390,6 +394,22 @@ bool PhysicsScene::RaycastStatic(const vec3& from, const vec3& to, f32* hitDist,
 	teamFilter.teamWord = ignoreTeam >= 0 ? (u32)ignoreTeam + 1 : 0;
 	const PxQueryFilterData filter(PxQueryFlag::eSTATIC | PxQueryFlag::ePREFILTER);
 	if(!scene->raycast(PxVec3(from.x, from.y, from.z), PxVec3(d.x / len, d.y / len, d.z / len), len, hit, PxHitFlag::eDEFAULT, filter, &teamFilter)) return false;
+	if(!hit.hasBlock) return false;
+	if(hitDist) *hitDist = hit.block.distance;
+	if(hitActor) *hitActor = hit.block.actor;
+	return true;
+}
+
+bool PhysicsScene::RaycastSight(const vec3& from, const vec3& to, f32* hitDist, const PxRigidActor** hitActor)
+{
+	const vec3 d = to - from;
+	const f32 len = glm::length(d);
+	if(len < 0.001f) return false;
+	PxRaycastBuffer hit;
+	IgnoreTeamWalls sightFilter;
+	sightFilter.sight = true;
+	const PxQueryFilterData filter(PxQueryFlag::eSTATIC | PxQueryFlag::ePREFILTER);
+	if(!scene->raycast(PxVec3(from.x, from.y, from.z), PxVec3(d.x / len, d.y / len, d.z / len), len, hit, PxHitFlag::eDEFAULT, filter, &sightFilter)) return false;
 	if(!hit.hasBlock) return false;
 	if(hitDist) *hitDist = hit.block.distance;
 	if(hitActor) *hitActor = hit.block.actor;
