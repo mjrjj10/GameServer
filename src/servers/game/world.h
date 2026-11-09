@@ -144,6 +144,8 @@ struct World
 		Time skillStacksUntil = Time::ZERO;
 		Time botComboShotAt = Time::ZERO;
 		ActionStateID botAttackState = ActionStateID::INVALID;
+		bool botAttackStateSkill = false;
+		Time botShotAt = Time::ZERO;
 		i32 killStreak = 0;
 		i32 bestKillStreak = 0;
 		i32 multiKill = 0;

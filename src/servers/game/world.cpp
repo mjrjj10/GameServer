@@ -8,6 +8,8 @@ static const f64 REMOVED_PLAYER_RESPAWN_MS = 1.0e12;
 static const i32 STATUS_PC_RESPAWN_INVICIBLE_3S = 1230000010;
 static const i32 STATUS_PC_TAG_GODMODE = 1230000020;
 static const f64 MEASURED_TAG_FIRST_ATTACK_MS = 110.0;
+static const f64 MEASURED_GRAPH_END_SYNC_DELAY_MS = 190.0;
+static const f64 MEASURED_CLIENT_GRAPH_START_LAG_SEC = 0.146;
 static const f64 WEAPON_HIT_INTERVAL_MS = 80.0;
 static const i32 MEASURED_COMBO_SLOT_FIRST = 0;
 static const f32 OBSTRUCT_LOW_HEIGHT = 30.0f;
@@ -209,7 +211,7 @@ void World::Update(Time localTime_)
 		if(p.weaponFired) {
 			p.weaponFired = false;
 			if(p.clientHd != ClientHandle::INVALID && p.casting.skillID != SkillID::INVALID && p.casting.type == GameXmlContent::SkillCast::LIMIT) ReleaseCast(p);
-			else if(WeaponIsMelee(p) && localTime > p.tNextWeaponHit) {
+			else if(WeaponIsMelee(p) && localTime > p.tNextWeaponHit && !(p.clientHd == ClientHandle::INVALID && (p.lastCastStart == localTime || localTime < p.dashUntil || p.casting.skillID != SkillID::INVALID))) {
 				p.tNextWeaponHit = TimeAdd(localTime, TimeMsToTime(WEAPON_HIT_INTERVAL_MS));
 				PlayerWeaponFire(p);
 			}
@@ -424,9 +426,12 @@ void World::Replicate()
 			rch.skillMoving = localTime < player.dashUntil || AttachedToCaster(player);
 			rch.graphMoving = (localTime < player.dashUntil && !AttachedToCaster(player)) || localTime < player.pushUntil || player.dragElapsed < player.dragDuration;
 			rch.statusGraph = localTime < player.pushUntil && player.pushSilent;
+			rch.graphHold = player.clientHd == ClientHandle::INVALID && player.dashUntil != Time::ZERO && TimeDiffSec(TimeDiff(player.dashStartAt, player.dashUntil)) <= MEASURED_CLIENT_GRAPH_START_LAG_SEC && localTime < TimeAdd(player.dashUntil, TimeMsToTime(MEASURED_GRAPH_END_SYNC_DELAY_MS)) && !AttachedToCaster(player);
 
 			const bool idle = chara.actionState == ActionStateID::INVALID || chara.actionState == ActionStateID::NONE_BEHAVIORSTATE;
-			rch.actionState = idle && player.clientHd == ClientHandle::INVALID && localTime < player.botAttackStateUntil ? player.botAttackState : chara.actionState;
+			const bool walking = player.movement.moveSpeed > 0 && localTime >= player.dashUntil;
+			const bool holdState = localTime < player.botAttackStateUntil && !(player.botAttackStateSkill && walking);
+			rch.actionState = idle && player.clientHd == ClientHandle::INVALID && holdState ? player.botAttackState : chara.actionState;
 			rch.actionParam1 = chara.actionParam1;
 			rch.actionParam2 = chara.actionParam2;
 
@@ -882,6 +887,15 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	f32 gotoDistance = -1.0f;
 
 	const auto& action = content.GetSkillAction(ActionClass(player), actionState, player.Main().stance);
+
+	if(player.clientHd == ClientHandle::INVALID) {
+		f32 actionLen = 0;
+		foreach_const(st, action.anims) actionLen += content.GetAniSeqTime(ActionClassName(player), st->animationId) * (f32)MAX(st->loop, 1);
+		if(actionLen <= 0) actionLen = action.seqLength;
+		player.botAttackState = actionState;
+		player.botAttackStateSkill = true;
+		player.botAttackStateUntil = TimeAdd(localTime, TimeMsToTime(actionLen * 1000.0));
+	}
 
 	foreach_const(cmd, action.commands) {
 		switch(cmd->type) {

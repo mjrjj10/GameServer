@@ -123,6 +123,7 @@ struct Replication
 		bool skillMoving = false;
 		bool graphMoving = false;
 		bool statusGraph = false;
+		bool graphHold = false;
 	};
 
 	struct ActorNpc: Actor<ActorType::Npc>

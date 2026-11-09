@@ -109,6 +109,8 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	}
 	if(player.clientHd == ClientHandle::INVALID) {
 		player.botAttackState = WeaponAttackState(player, wf);
+		player.botAttackStateSkill = false;
+		player.botShotAt = localTime;
 		player.botAttackStateUntil = TimeAdd(localTime, TimeMsToTime(BOT_ATTACK_STATE_MS));
 	}
 	const vec3 shotAim = vec3(vec2(origin) + dir * MAX(MIN(distance > 1.0f ? distance : aimMax, aimMax), aimMin), player.body->GetWorldPos().z);
