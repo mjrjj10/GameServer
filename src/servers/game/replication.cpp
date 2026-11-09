@@ -1862,12 +1862,13 @@ bool Replication::SendRemoteCreateToClient(i32 clientID, const RemoteCreate& rem
 	const ClientHandle clientHd = clientHandle[clientID];
 
 	const LocalActorID ownerLocal = GetLocalActorID(clientHd, remote.ownerUID);
-	if(ownerLocal == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(remote.ownerUID)) return false;
+	const bool throughFog = remote.doc != RemoteIdx::INVALID && (i32)remote.doc == GetGameXmlContent().respawnFlyRemote;
+	if(ownerLocal == LocalActorID::INVALID || (!throughFog && playerLocalInfo[clientID].hiddenActors.count(remote.ownerUID))) return false;
 	u32 parentField = 0;
 	if(remote.parentRemoteID != 0) parentField = clientHd == remote.parentSeedOwnerHd ? remote.parentRemoteID - 1 : remote.parentRemoteID;
 	else {
 		const LocalActorID parentLocal = GetLocalActorID(clientHd, remote.parentUID);
-		if(parentLocal == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(remote.parentUID)) return false;
+		if(parentLocal == LocalActorID::INVALID || (!throughFog && playerLocalInfo[clientID].hiddenActors.count(remote.parentUID))) return false;
 		parentField = (u32)parentLocal;
 	}
 	const LocalActorID hitLocal = remote.hitInvalidUID != ActorUID::INVALID ? GetLocalActorID(clientHd, remote.hitInvalidUID) : LocalActorID::INVALID;
@@ -3096,20 +3097,6 @@ void Replication::SendEnterActor(ClientHandle clientHd, ActorUID actorUID, Class
 	stat._MAX = (f32)hpMax;
 	stat._ReasonCode = 0;
 	SendPacket(clientHd, stat);
-
-	if(found == playerMap.end()) return;
-	auto& pending = pendingRevives[found->second];
-	for(auto it = pending.begin(); it != pending.end(); ++it) {
-		if(it->a != actorUID && it->b != actorUID) continue;
-		SendRevive(clientHd, it->userID, actorUID, it->a == actorUID ? it->b : it->a, pos);
-		Sv::SN_PlayerSyncTeleport teleport;
-		teleport.objectID = (u32)localID;
-		teleport.pos = v2f(pos);
-		SendPacketData<Sv::SN_PlayerSyncTeleport>(clientHd, sizeof(teleport), &teleport);
-		LOG("Fog :: revive re-sent with the enter of actor %u, then teleported to (%.0f, %.0f)", (u32)actorUID, pos.x, pos.y);
-		pending.erase(it);
-		break;
-	}
 }
 
 void Replication::SendChangeSkillSlot(ClientHandle clientHd, ActorUID actorUID, i32 slot, SkillID skill, i32 resetCooltimeID)
@@ -3567,11 +3554,6 @@ void Replication::SendReviveToAll(UserID userID, ActorUID activeUID, ActorUID in
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		SendRevive(clientHandle[clientID], userID, activeUID, inactiveUID, pos);
-		if(playerLocalInfo[clientID].hiddenActors.count(activeUID)) {
-			auto& pending = pendingRevives[clientID];
-			for(auto it = pending.begin(); it != pending.end(); ) it = it->userID == userID ? pending.erase(it) : it + 1;
-			pending.push_back({ userID, activeUID, inactiveUID });
-		}
 	}
 }
 

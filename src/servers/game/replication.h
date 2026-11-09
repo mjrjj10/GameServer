@@ -284,8 +284,6 @@ struct Replication
 	eastl::array<ClientHandle,MAX_PLAYERS> clientHandle;
 	eastl::array<PlayerStatePair,MAX_PLAYERS> playerState;
 	eastl::array<PlayerLocalInfo,MAX_PLAYERS> playerLocalInfo;
-	struct PendingRevive { UserID userID; ActorUID a; ActorUID b; };
-	eastl::array<eastl::fixed_vector<PendingRevive,10,true>,MAX_PLAYERS> pendingRevives;
 
 	struct SentMove
 	{

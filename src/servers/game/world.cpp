@@ -198,7 +198,6 @@ void World::Update(Time localTime_)
 				statusNoCaster = true;
 				ApplyStatus(p, p, STATUS_PC_TAG_GODMODE);
 				statusNoCaster = false;
-				SpawnRespawnFlyRemote(p);
 			}
 			SendTagCooltimeToTeam(p, TagCooltimeMs(p));
 			if(p.clientHd == ClientHandle::INVALID) {
