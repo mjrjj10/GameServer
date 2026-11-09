@@ -992,6 +992,11 @@ static f32 NpcCurveProgress(const f32* curve, i32 count, f32 t)
 	return curve[i] + (curve[i + 1] - curve[i]) * (x - (f32)i);
 }
 
+f32 World::PushCurveProgress(f32 t) const
+{
+	return NpcCurveProgress(MEASURED_NPC_PUSH_CURVE, (i32)(sizeof(MEASURED_NPC_PUSH_CURVE) / sizeof(MEASURED_NPC_PUSH_CURVE[0])), t);
+}
+
 static f32 NpcDashProgress(u8 curve, f32 t)
 {
 	if(curve == World::NPC_DASH_CURVE_PUSH) return NpcCurveProgress(MEASURED_NPC_PUSH_CURVE, (i32)(sizeof(MEASURED_NPC_PUSH_CURVE) / sizeof(MEASURED_NPC_PUSH_CURVE[0])), t);

@@ -1272,7 +1272,7 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 		if(moveDuration > 0.02f && moveDist > 0) {
 			const vec3 reach = physics.FindMovePos(mover.body, vec3(moveDir * moveDist, 0), moveDuration);
 			const f32 along = glm::dot(vec2(reach) - from, moveDir);
-			if(along >= 0 && along < moveDist) {
+			if(along >= 0 && along < moveDist - 1.0f) {
 				LOG("Dash :: %ls blocked after %.0f of %.0f", mover.name.data(), along, moveDist);
 				moveDist = along;
 			}

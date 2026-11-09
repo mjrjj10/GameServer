@@ -330,6 +330,8 @@ struct World
 		f32 pushSpeed = 0;
 		Time pushUntil = Time::ZERO;
 		bool pushSilent = false;
+		vec3 pushFrom = vec3(0);
+		Time pushStart = Time::ZERO;
 		Time carryReleaseAt = Time::ZERO;
 		vec2 dragCenter = vec2(0);
 		f32 dragMin = 0;
@@ -1291,6 +1293,7 @@ public:
 	void StopNpcLeg(ActorNpc& npc);
 	void WanderNpc(ActorNpc& npc, f32 moveSpeed, f32 delta);
 	bool IsCarrying(const Player& player) const;
+	f32 PushCurveProgress(f32 t) const;
 	void PassiveCooldownsOnKill(Player& killer);
 	void ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID);
 	void ApplyNpcCarrierStatus(ActorUID npcUID, ActorUID carrierUID, const vec3& pos, i32 statusID);

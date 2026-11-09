@@ -124,6 +124,15 @@ void World::Update(Time localTime_)
 			if(localTime < p.pushUntil) {
 				p.input.moveTo = p.pushTarget;
 				p.input.speed = p.pushSpeed;
+				const f32 total = (f32)TimeDiffSec(TimeDiff(p.pushStart, p.pushUntil));
+				if(p.pushSilent && total > 0) {
+					const f32 next = PushCurveProgress(((f32)TimeDiffSec(TimeDiff(p.pushStart, localTime)) + (f32)UPDATE_RATE) / total);
+					const vec2 want = vec2(p.pushFrom) + (vec2(p.pushTarget) - vec2(p.pushFrom)) * next;
+					const vec2 line = vec2(p.pushTarget) - vec2(p.pushFrom);
+					const f32 lineLen = glm::length(line);
+					const f32 step = lineLen > 1.0f ? glm::dot(want - vec2(body.GetWorldPos()), line / lineLen) : 0.0f;
+					p.input.speed = MAX(step, 0.0f) / (f32)UPDATE_RATE;
+				}
 			}
 			else if(fear) {
 				if(localTime >= p.fearNextTurn) {

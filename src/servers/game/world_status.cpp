@@ -1010,6 +1010,8 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			target.pushUntil = newUntil > prevUntil ? newUntil : prevUntil;
 			target.pushSilent = info && (info->type == StatusType::PUSH || info->type == StatusType::FLY || info->type == StatusType::AIRBORNE || info->type == StatusType::KNOCKDOWN);
 			target.pushTarget = to;
+			target.pushFrom = target.body->GetWorldPos();
+			target.pushStart = localTime;
 			target.pushPassWallTeam = info && info->type == StatusType::FORCEBACK ? (i32)caster.team : -1;
 			target.pushSpeed = glm::length(vec2(to - target.body->GetWorldPos())) / MAX((f32)TimeDiffSec(TimeDiff(localTime, target.pushUntil)), 0.05f);
 			if(target.pushUntil > target.ccUntil) target.ccUntil = target.pushUntil;
