@@ -1291,6 +1291,7 @@ public:
 	void StopNpcLeg(ActorNpc& npc);
 	void WanderNpc(ActorNpc& npc, f32 moveSpeed, f32 delta);
 	bool IsCarrying(const Player& player) const;
+	void PassiveCooldownsOnKill(Player& killer);
 	void ApplyNpcOwnerStatus(ActorUID npcUID, Player& carrier, i32 statusID);
 	void ApplyNpcCarrierStatus(ActorUID npcUID, ActorUID carrierUID, const vec3& pos, i32 statusID);
 	void UpdateNpcStatuses();

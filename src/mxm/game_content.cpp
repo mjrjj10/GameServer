@@ -4123,6 +4123,7 @@ bool GameXmlContent::LoadStatusData()
 			}
 			st.bigAggro = type && EA::StdC::Strcmp(type, "STATUS_TYPE_BIGAGGRO") == 0;
 			for(XMLElement* pGroup = pCommon->FirstChildElement(); pGroup; pGroup = pGroup->NextSiblingElement()) {
+				if(pGroup->FirstChildElement("_CoolTimeRecovery")) st.coolTimeRecovery = true;
 				for(XMLElement* pLimit = pGroup->FirstChildElement("_SummonLimit"); pLimit && !st.summonLimits.full(); pLimit = pLimit->NextSiblingElement("_SummonLimit")) {
 					const i32 creature = pLimit->IntAttribute("DATAKEY");
 					const i32 limit = pLimit->IntAttribute("DATA");

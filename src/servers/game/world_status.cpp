@@ -164,6 +164,21 @@ static bool PassiveOfActiveMaster(const World::Player& player, i32 statusID)
 	return list && eastl::find(list->begin(), list->end(), statusID) != list->end();
 }
 
+void World::PassiveCooldownsOnKill(Player& killer)
+{
+	const auto& content = GetGameXmlContent();
+	const auto* list = content.FindPassiveStatuses(killer.Main().classType);
+	if(!list) return;
+	for(i32 id : *list) {
+		const StatusInfo* info = content.FindStatus(id);
+		if(!info || !info->coolTimeRecovery) continue;
+		foreach(t, killer.botSkillReady) *t = Time::ZERO;
+		killer.ultCooldownUntil = Time::ZERO;
+		LOG("Passive :: %ls master kill resets cooldowns (status %d)", killer.name.data(), id);
+		return;
+	}
+}
+
 const World::ActiveStatus* World::FindPassiveOfType(const Player& p, StatusType type) const
 {
 	foreach_const(it, activeStatuses) {

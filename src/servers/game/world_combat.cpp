@@ -501,6 +501,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			replication->SendAssistScoreToAll(it->userID, it->team, it->assists, pointsMode ? it->points : it->kills, teamScore);
 		}
 		RewardMasterKill(&attacker, target);
+		if(attacker.team != target.team) PassiveCooldownsOnKill(attacker);
 		replication->SendDeadDamageInfo(target.clientHd, attacker.index, target.recentDamage.data(), (i32)target.recentDamage.size(), (i32)TimeDiffMs(TimeDiff(firstDamageAt, localTime)));
 		target.recentDamage.clear();
 		SyncPassivesOnDeath(target);
