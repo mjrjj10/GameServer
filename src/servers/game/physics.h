@@ -80,6 +80,7 @@ struct PhysicsDynamicBody
 	PxCapsuleController* collider = nullptr;
 	vec3 vel = vec3(0); // actual velocity
 	bool grounded = false;
+	f32 stepOffset = 0;
 	Time lockedMoveUntil = Time::ZERO;
 	i32 passWallTeam = -1;
 

@@ -233,6 +233,7 @@ void PhysicsScene::Step()
 		PxControllerFilters filter;
 		filter.mCCTFilterCallback = &g_cctCollisionFilterCallback; // cct filter callback
 
+		c->collider->setStepOffset(c->grounded ? c->stepOffset : 0.0f);
 		c->vel += vec3(0, 0, -GRAVITY) * (f32)UPDATE_RATE;
 		const vec3 disp = c->vel * (f32)UPDATE_RATE;
 		PxControllerCollisionFlags collisionFlags = c->collider->move(PxVec3(disp.x, disp.y, disp.z), 0, (f32)UPDATE_RATE, filter, nullptr /* obstacles? */);
@@ -324,6 +325,7 @@ PhysicsDynamicBody* PhysicsScene::CreateDynamicBody(f32 radius, f32 height, cons
 
 	PhysicsDynamicBody collider;
 	collider.collider = ctrl;
+	collider.stepOffset = ctrl->getStepOffset();
 	collider.height = height;
 	collider.radius = radius;
 

@@ -1378,7 +1378,10 @@ void World::UpdateMonsterAi(f32 delta)
 			continue;
 		}
 		if(!npc.monsterAi || npc.hp <= 0 || npc.removeAt != Time::ZERO) continue;
-		if(!npc.bodyBlocker && npc.monsterAi->bodyBlockRadius > 0 && npc.monsterAi->walk <= 0 && npc.monsterAi->run <= 0) npc.bodyBlocker = physics.CreateBodyBlocker(npc.pos, npc.monsterAi->bodyBlockRadius, npc.monsterAi->bodyBlockHeight);
+		if(!npc.bodyBlocker && npc.monsterAi->bodyBlockRadius > 0 && npc.monsterAi->walk <= 0 && npc.monsterAi->run <= 0) {
+			const f32 jumpReach = GetGlobalTweakableVars().jumpForce * GetGlobalTweakableVars().jumpForce / (2.0f * GetGlobalTweakableVars().gravity);
+			npc.bodyBlocker = physics.CreateBodyBlocker(npc.pos, npc.monsterAi->bodyBlockRadius, npc.monsterAi->bodyBlockHeight + jumpReach);
+		}
 		if(npc.monsterReturnPending && localTime >= npc.stateEndAt) {
 			npc.monsterReturnPending = false;
 			const ActorUID back = npc.monsterReturnTarget;
