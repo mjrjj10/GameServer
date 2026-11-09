@@ -1269,6 +1269,14 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			}
 		}
 		if(moveDist > 999990.0f) moveDist = 0;
+		if(moveDuration > 0.02f && moveDist > 0) {
+			const vec3 reach = physics.FindMovePos(mover.body, vec3(moveDir * moveDist, 0), moveDuration);
+			const f32 along = glm::dot(vec2(reach) - from, moveDir);
+			if(along >= 0 && along < moveDist) {
+				LOG("Dash :: %ls blocked after %.0f of %.0f", mover.name.data(), along, moveDist);
+				moveDist = along;
+			}
+		}
 		mover.input.moveTo = mover.body->GetWorldPos();
 		mover.body->vel = vec3(0);
 		if(moveDuration <= 0.02f) physics.Move(mover.body, vec3(moveDir * moveDist, 0), moveDuration);
