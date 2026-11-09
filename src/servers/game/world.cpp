@@ -9,7 +9,7 @@ static const i32 STATUS_PC_RESPAWN_INVICIBLE_3S = 1230000010;
 static const i32 STATUS_PC_TAG_GODMODE = 1230000020;
 static const f64 MEASURED_TAG_FIRST_ATTACK_MS = 110.0;
 static const f64 MEASURED_GRAPH_END_SYNC_DELAY_MS = 190.0;
-static const f64 MEASURED_CLIENT_GRAPH_START_LAG_SEC = 0.146;
+static const f64 MEASURED_UNSYNCED_GRAPH_MAX_SEC = 0.5;
 static const f64 WEAPON_HIT_INTERVAL_MS = 80.0;
 static const i32 MEASURED_COMBO_SLOT_FIRST = 0;
 static const f32 OBSTRUCT_LOW_HEIGHT = 30.0f;
@@ -426,7 +426,7 @@ void World::Replicate()
 			rch.skillMoving = localTime < player.dashUntil || AttachedToCaster(player);
 			rch.graphMoving = (localTime < player.dashUntil && !AttachedToCaster(player)) || localTime < player.pushUntil || player.dragElapsed < player.dragDuration;
 			rch.statusGraph = localTime < player.pushUntil && player.pushSilent;
-			rch.graphHold = player.clientHd == ClientHandle::INVALID && player.dashUntil != Time::ZERO && TimeDiffSec(TimeDiff(player.dashStartAt, player.dashUntil)) <= MEASURED_CLIENT_GRAPH_START_LAG_SEC && localTime < TimeAdd(player.dashUntil, TimeMsToTime(MEASURED_GRAPH_END_SYNC_DELAY_MS)) && !AttachedToCaster(player);
+			rch.graphHold = player.clientHd == ClientHandle::INVALID && player.dashUntil != Time::ZERO && TimeDiffSec(TimeDiff(player.dashStartAt, player.dashUntil)) <= MEASURED_UNSYNCED_GRAPH_MAX_SEC && localTime < TimeAdd(player.dashUntil, TimeMsToTime(MEASURED_GRAPH_END_SYNC_DELAY_MS)) && !AttachedToCaster(player);
 
 			const bool idle = chara.actionState == ActionStateID::INVALID || chara.actionState == ActionStateID::NONE_BEHAVIORSTATE;
 			const bool walking = player.movement.moveSpeed > 0 && localTime >= player.dashUntil;
