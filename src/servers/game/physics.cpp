@@ -307,6 +307,13 @@ void PhysicsScene::SetStaticEnabled(PxRigidStatic* actor, bool enabled)
 
 static const f32 HYP_CONTROLLER_STEP_OFFSET = 30.0f;
 
+f32 PhysicsScene::MaxWalkRise(f32 horizontal) const
+{
+	const f32 slope = PxCapsuleControllerDesc().slopeLimit;
+	ASSERT(slope > 0.0f);
+	return horizontal * sqrtf(MAX(1.0f - slope * slope, 0.0f)) / slope + HYP_CONTROLLER_STEP_OFFSET;
+}
+
 PhysicsDynamicBody* PhysicsScene::CreateDynamicBody(f32 radius, f32 height, const vec3& pos)
 {
 	auto& ctx = PhysContext();

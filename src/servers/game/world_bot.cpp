@@ -324,10 +324,31 @@ bool World::BotSees(const vec3& from, const vec3& to)
 	return true;
 }
 
+bool World::BotWalkable(const vec3& from, const vec3& to)
+{
+	static const f32 HYP_BOT_NAV_WALK_SAMPLE = 50.0f;
+	static const f32 HYP_BOT_NAV_GROUND_UP = 200.0f;
+	static const f32 HYP_BOT_NAV_GROUND_DOWN = 600.0f;
+	const f32 len = glm::length(vec2(to) - vec2(from));
+	const i32 steps = MAX((i32)ceilf(len / HYP_BOT_NAV_WALK_SAMPLE), 1);
+	const f32 rise = physics.MaxWalkRise(len / (f32)steps);
+	f32 prevZ = 0;
+	for(i32 k = 0; k <= steps; k++) {
+		const vec3 at = glm::mix(from, to, (f32)k / (f32)steps);
+		f32 down;
+		if(!physics.RaycastStatic(at + vec3(0, 0, HYP_BOT_NAV_GROUND_UP), at - vec3(0, 0, HYP_BOT_NAV_GROUND_DOWN), &down)) return false;
+		const f32 z = at.z + HYP_BOT_NAV_GROUND_UP - down;
+		if(k > 0 && fabsf(z - prevZ) > rise) return false;
+		prevZ = z;
+	}
+	return true;
+}
+
 void World::BuildBotNav()
 {
 	botNavBuilt = true;
 	if(!map) return;
+	const auto buildStart = std::chrono::steady_clock::now();
 	BuildTitanSaveAreas();
 	foreach_const(path, map->paths) {
 		i32 prev = -1;
@@ -361,6 +382,7 @@ void World::BuildBotNav()
 			if(glm::length(vec2(botNav[a].pos) - vec2(botNav[b].pos)) > BOT_NAV_LINK_RANGE) continue;
 			if(eastl::find(botNav[a].links.begin(), botNav[a].links.end(), (u16)b) != botNav[a].links.end()) continue;
 			if(!BotSees(botNav[a].pos, botNav[b].pos)) continue;
+			if(fabsf(botNav[a].pos.z - botNav[b].pos.z) > physics.MaxWalkRise(0) && !BotWalkable(botNav[a].pos, botNav[b].pos)) continue;
 			botNav[a].links.push_back((u16)b);
 			botNav[b].links.push_back((u16)a);
 		}
@@ -381,7 +403,9 @@ void World::BuildBotNav()
 			foreach_const(pt, pts) botLanes[team].back().push_back(vec2(*pt));
 		}
 	}
-	LOG("Bot :: nav %d nodes, lanes %d/%d", (i32)botNav.size(), (i32)botLanes[0].size(), (i32)botLanes[1].size());
+	i32 links = 0;
+	foreach_const(n, botNav) links += (i32)n->links.size();
+	LOG("Bot :: nav %d nodes, %d links, lanes %d/%d, built in %lld ms", (i32)botNav.size(), links / 2, (i32)botLanes[0].size(), (i32)botLanes[1].size(), (long long)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - buildStart).count());
 }
 
 void World::BotPlanRoute(Player& bot, const vec2& goal)
@@ -885,6 +909,21 @@ void World::BotKeepOutOfBlockers(const Player& bot, vec2* goal) const
 		if(len >= keep) continue;
 		const vec2 out = len > 1.0f ? d / len : glm::normalize(vec2(bot.body->GetWorldPos()) - center + vec2(0.001f, 0));
 		*goal = center + out * keep;
+	}
+	const vec2 here = vec2(bot.body->GetWorldPos());
+	foreach_const(it, actorNpcList) {
+		if(!it->bodyBlocker || !it->monsterAi) continue;
+		const vec2 center = vec2(it->pos);
+		const f32 keep = it->monsterAi->bodyBlockRadius + bot.body->GetBoundSize().x + HYP_BOT_BLOCKER_MARGIN;
+		const vec2 d = *goal - here;
+		const f32 len = glm::length(d);
+		if(len < 1.0f) continue;
+		const f32 along = glm::dot(center - here, d) / (len * len);
+		if(along <= 0.0f || along >= 1.0f) continue;
+		const vec2 side = vec2(-d.y, d.x) / len;
+		const f32 offset = glm::dot(here - center, side);
+		if(fabsf(offset) >= it->monsterAi->bodyBlockRadius + bot.body->GetBoundSize().x) continue;
+		*goal = center + side * (offset >= 0.0f ? keep : -keep);
 	}
 }
 

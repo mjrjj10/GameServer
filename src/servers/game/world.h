@@ -1478,6 +1478,7 @@ public:
 	void BuildTitanSaveAreas();
 	void BuildBotNav();
 	bool BotSees(const vec3& from, const vec3& to);
+	bool BotWalkable(const vec3& from, const vec3& to);
 	void BotPlanRoute(Player& bot, const vec2& goal);
 	vec2 BotNavStep(Player& bot, const vec2& goal);
 	bool BotLaneGoal(Player& bot, vec2* goal);
