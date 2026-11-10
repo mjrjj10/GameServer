@@ -960,7 +960,7 @@ void World::SpawnPendingRemotes()
 			} break;
 			case ActionCommand::TargetPreset::CURRENT_FFF: {
 				const ActorMaster* targetMaster = pr->target != ActorUID::INVALID ? FindMasterActor(pr->target) : nullptr;
-				if(targetMaster && (!remote || remote->maxSpeed <= 0)) pos = targetMaster->parent->body->GetWorldPos();
+				if(targetMaster && (!remote || (remote->maxSpeed <= 0 && !remote->attachFireObject))) pos = targetMaster->parent->body->GetWorldPos();
 			} break;
 			case ActionCommand::TargetPreset::LAST_CHILD_FFF:
 			case ActionCommand::TargetPreset::LAST_CHILD_TFF: {
