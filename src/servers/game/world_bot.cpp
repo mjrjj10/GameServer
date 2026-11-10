@@ -119,7 +119,7 @@ void World::UpdateBotSkills()
 			bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500));
 			continue;
 		}
-		if(IsBlocked(bot, false, true, false) || BotHoldsShirkHide(bot)) continue;
+		if(IsBlocked(bot, false, true, false) || BotHoldsHide(bot)) continue;
 		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500));
 		if(bot.casting.skillID != SkillID::INVALID || BotStageSkill(bot)) continue;
 
@@ -1038,16 +1038,23 @@ void World::BotIdleCharge(Player& bot)
 	replication->RelayWeaponState(ClientHandle::INVALID, bot.Main().UID, MEASURED_WEAPON_STATE_WEAPON_ID, WEAPON_STATE_CHARGE, 0, bot.firingCombo);
 }
 
-static const f64 MEASURED_SHIRK_HIDE_HOLD_MS = 1420.0;
+struct HideHold { i32 status; f64 ms; };
+static const HideHold MEASURED_HIDE_HOLDS[] = {
+	{ 1230030030, 2450.0 },
+	{ 1230060030, 1010.0 },
+	{ 1230100060, 1420.0 },
+	{ 1230200028, 1080.0 },
+	{ 1230210030, 3980.0 },
+	{ 1230240000, 460.0 },
+};
 
-bool World::BotHoldsShirkHide(const Player& bot) const
+bool World::BotHoldsHide(const Player& bot) const
 {
-	const auto& content = GetGameXmlContent();
 	foreach_const(st, activeStatuses) {
-		if(st->targetIndex != bot.index || !st->info || st->info->type != StatusType::HIDE || st->until <= localTime || st->info->skillIndex == 0) continue;
-		if(localTime >= TimeAdd(st->appliedAt, TimeMsToTime(MEASURED_SHIRK_HIDE_HOLD_MS))) continue;
-		auto f = content.skillMap.find(SkillID(st->info->skillIndex));
-		if(f != content.skillMap.end() && f->second.type == SkillType::SHIRK) return true;
+		if(st->targetIndex != bot.index || !st->info || st->info->type != StatusType::HIDE || st->until <= localTime) continue;
+		for(const HideHold& h : MEASURED_HIDE_HOLDS) {
+			if(h.status == st->statusID && localTime < TimeAdd(st->appliedAt, TimeMsToTime(h.ms))) return true;
+		}
 	}
 	return false;
 }
@@ -1075,7 +1082,7 @@ void World::UpdateBotCombat()
 		Player& bot = *it;
 		if(bot.clientHd != ClientHandle::INVALID || bot.dead) continue;
 		if(localTime < bot.tNextBotShot || localTime < bot.ccUntil) continue;
-		if(BotHoldsShirkHide(bot)) continue;
+		if(BotHoldsHide(bot)) continue;
 		if(localTime < bot.dashUntil || localTime < bot.botSkillStillUntil || bot.casting.skillID != SkillID::INVALID) continue;
 		if(IsBlocked(bot, true, false, false)) continue;
 		if(WeaponIsMelee(bot) && Config().DevShowcase) continue;

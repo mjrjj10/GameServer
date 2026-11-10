@@ -1608,7 +1608,7 @@ private:
 	f32 SlimeMassMod(const Player& p, i32 stat, bool mul) const;
 	f32 StatusRegenBonus(const Player& p, i32 stat, bool mul) const;
 	bool IsBlocked(const Player& p, bool attack, bool skill, bool shirk) const;
-	bool BotHoldsShirkHide(const Player& bot) const;
+	bool BotHoldsHide(const Player& bot) const;
 	const ActorNpc* BotRepairTarget(const Player& bot, f32 range) const;
 	void HealPlayer(Player& healer, Player& target, i32 amount);
 	bool RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const;
