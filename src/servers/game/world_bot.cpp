@@ -119,7 +119,7 @@ void World::UpdateBotSkills()
 			bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500));
 			continue;
 		}
-		if(IsBlocked(bot, false, true, false)) continue;
+		if(IsBlocked(bot, false, true, false) || BotHoldsShirkHide(bot)) continue;
 		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500));
 		if(bot.casting.skillID != SkillID::INVALID || BotStageSkill(bot)) continue;
 
@@ -148,25 +148,35 @@ void World::UpdateBotSkills()
 		}
 		if(!target && !monster) continue;
 
-		const i32 base = (i32)bot.mainCharaID * 2;
-		eastl::fixed_vector<i32,5,false> ready;
-		for(i32 i = 0; i < 5; i++) {
-			const i32 skill = (*skills)[i];
-			if(skill == 0 || localTime < bot.botSkillReady[i]) continue;
-			if(!titan && i != 4 && !Config().DevShowcase && (i32)bot.skills[base] != skill && (i32)bot.skills[base + 1] != skill) continue;
-			if(titan && i == 4) continue;
-			const f32 maxDist = titan ? BotTitanSkillDistance(skill) : content.GetBotSkillMaxDistance(skill);
-			if(maxDist <= 0 || best > maxDist) continue;
-			if(!Config().DevShowcase && !Config().DevMirror && !SkillCostAffordable(bot, skill, PlayerSkillConsumeMP(bot, skill))) continue;
-			ready.push_back(i);
+		i32 skill = 0;
+		f32 cd = 0;
+		if(bot.botComboSkill != SkillID::INVALID) {
+			const i32 combo = (i32)bot.botComboSkill;
+			const f32 comboDist = content.GetBotSkillMaxDistance(combo);
+			if(localTime >= bot.botComboUntil) bot.botComboSkill = SkillID::INVALID;
+			else if((comboDist <= 0 || best <= comboDist) && (Config().DevShowcase || Config().DevMirror || SkillCostAffordable(bot, combo, PlayerSkillConsumeMP(bot, combo)))) skill = combo;
 		}
-		if(ready.empty()) continue;
-		const i32 slot = ready[RandUint() % ready.size()];
-		const i32 skill = (*skills)[slot];
+		if(skill == 0) {
+			const i32 base = (i32)bot.mainCharaID * 2;
+			eastl::fixed_vector<i32,5,false> ready;
+			for(i32 i = 0; i < 5; i++) {
+				const i32 skill = (*skills)[i];
+				if(skill == 0 || localTime < bot.botSkillReady[i]) continue;
+				if(!titan && i != 4 && !Config().DevShowcase && (i32)bot.skills[base] != skill && (i32)bot.skills[base + 1] != skill) continue;
+				if(titan && i == 4) continue;
+				const f32 maxDist = titan ? BotTitanSkillDistance(skill) : content.GetBotSkillMaxDistance(skill);
+				if(maxDist <= 0 || best > maxDist) continue;
+				if(!Config().DevShowcase && !Config().DevMirror && !SkillCostAffordable(bot, skill, PlayerSkillConsumeMP(bot, skill))) continue;
+				ready.push_back(i);
+			}
+			if(ready.empty()) continue;
+			const i32 slot = ready[RandUint() % ready.size()];
+			skill = (*skills)[slot];
 
-		const f32 botCd = slot == 4 ? content.BotUgSkillCoolTime() : content.BotNormalSkillCoolTime();
-		const f32 cd = MAX(SkillCoolTime(bot, skill), botCd);
-		bot.botSkillReady[slot] = TimeAdd(localTime, TimeMsToTime(cd * 1000.0));
+			const f32 botCd = slot == 4 ? content.BotUgSkillCoolTime() : content.BotNormalSkillCoolTime();
+			cd = MAX(SkillCoolTime(bot, skill), botCd);
+			bot.botSkillReady[slot] = TimeAdd(localTime, TimeMsToTime(cd * 1000.0));
+		}
 		const GameXmlContent::SkillInput* in = content.FindSkillInput(skill);
 		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(MAX(MAX(content.BotAfterSkillDelay(), 0.5f), in ? in->globalCoolTime : 0.0f) * 1000.0));
 
@@ -195,6 +205,10 @@ void World::UpdateBotSkills()
 		if(monster) LOG("BotSkill :: %ls casts %d at creature=%d (dist %.0f, cd %.0f)", bot.name.data(), skill, (i32)monster->docID, best, cd);
 		else LOG("BotSkill :: %ls casts %d at %ls (dist %.0f, cd %.0f)", bot.name.data(), skill, target->name.data(), best, cd);
 		PlayerCastSkill(bot, SkillID(skill), tpos, Slice<const ActorUID>(&targetUID, in && in->takesTarget ? 1 : 0), 0);
+		const i32 next = ComboSkillFor(bot, skill);
+		const i32 windowMs = next != 0 && next != skill ? content.GetComboDurationMs(next) : 0;
+		bot.botComboSkill = windowMs > 0 ? SkillID(next) : SkillID::INVALID;
+		bot.botComboUntil = windowMs > 0 ? TimeAdd(localTime, TimeMsToTime((f64)windowMs)) : Time::ZERO;
 	}
 }
 
@@ -1022,12 +1036,44 @@ void World::BotIdleCharge(Player& bot)
 	replication->RelayWeaponState(ClientHandle::INVALID, bot.Main().UID, MEASURED_WEAPON_STATE_WEAPON_ID, WEAPON_STATE_CHARGE, 0, bot.firingCombo);
 }
 
+static const f64 MEASURED_SHIRK_HIDE_HOLD_MS = 1420.0;
+
+bool World::BotHoldsShirkHide(const Player& bot) const
+{
+	const auto& content = GetGameXmlContent();
+	foreach_const(st, activeStatuses) {
+		if(st->targetIndex != bot.index || !st->info || st->info->type != StatusType::HIDE || st->until <= localTime || st->info->skillIndex == 0) continue;
+		if(localTime >= TimeAdd(st->appliedAt, TimeMsToTime(MEASURED_SHIRK_HIDE_HOLD_MS))) continue;
+		auto f = content.skillMap.find(SkillID(st->info->skillIndex));
+		if(f != content.skillMap.end() && f->second.type == SkillType::SHIRK) return true;
+	}
+	return false;
+}
+
+const World::ActorNpc* World::BotRepairTarget(const Player& bot, f32 range) const
+{
+	const WeaponFiring& wf = ActiveWeaponFiring(bot, bot.Main().stance);
+	const Remote* weapon = GetGameXmlContent().FindRemote(wf.base);
+	if(!weapon || weapon->friendlyStatuses.empty()) return nullptr;
+	const ActorNpc* best = nullptr;
+	f32 bestRatio = 1.0f;
+	foreach_const(npc, actorNpcList) {
+		if(npc->ownerIndex != bot.index || npc->ownerUID == ActorUID::INVALID || npc->hpMax <= 0 || npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
+		if(npc->despawnAt != Time::ZERO && localTime >= npc->despawnAt) continue;
+		if(glm::length(vec2(npc->pos) - vec2(bot.body->GetWorldPos())) > range) continue;
+		const f32 ratio = (f32)npc->hp / (f32)npc->hpMax;
+		if(ratio < bestRatio) { bestRatio = ratio; best = &*npc; }
+	}
+	return best;
+}
+
 void World::UpdateBotCombat()
 {
 	foreach(it, players) {
 		Player& bot = *it;
 		if(bot.clientHd != ClientHandle::INVALID || bot.dead) continue;
 		if(localTime < bot.tNextBotShot || localTime < bot.ccUntil) continue;
+		if(BotHoldsShirkHide(bot)) continue;
 		if(localTime < bot.dashUntil || localTime < bot.botSkillStillUntil || bot.casting.skillID != SkillID::INVALID) continue;
 		if(IsBlocked(bot, true, false, false)) continue;
 		if(WeaponIsMelee(bot) && Config().DevShowcase) continue;
@@ -1062,7 +1108,13 @@ void World::UpdateBotCombat()
 		}
 		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot) * 1000.0));
 		vec3 aim = target ? target->body->GetWorldPos() : vec3(0);
-		if(!target && !Config().DevShowcase) {
+		const ActorNpc* repair = !Config().DevShowcase ? BotRepairTarget(bot, range) : nullptr;
+		if(repair) {
+			target = nullptr;
+			aim = repair->pos;
+			best = glm::length(vec2(repair->pos) - vec2(pos));
+		}
+		if(!target && !repair && !Config().DevShowcase) {
 			f32 bestNpc = range;
 			foreach_const(npc, actorNpcList) {
 				if(!NpcHittableBy(*npc, bot)) continue;
@@ -1071,7 +1123,7 @@ void World::UpdateBotCombat()
 			}
 			if(bestNpc >= range) { BotIdleCharge(bot); continue; }
 		}
-		else if(!target) { BotIdleCharge(bot); continue; }
+		else if(!target && !repair) { BotIdleCharge(bot); continue; }
 
 		const WeaponFiring& chargeWf = ActiveWeaponFiring(bot, bot.Main().stance);
 		if(!chargeWf.charge.empty() && !chargeWf.chargeTime.empty()) {
