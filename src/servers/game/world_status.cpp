@@ -1029,7 +1029,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			target.clientPushUntil = TimeAdd(localTime, TimeMsToTime(graphDuration * 1000.0));
 			target.pushTarget = to;
 			target.clientPushPosCount = target.clientPosCount;
-			target.clientPushSnap = info->type == StatusType::PUSH || info->type == StatusType::FLY || info->type == StatusType::AIRBORNE || info->type == StatusType::KNOCKDOWN;
+			target.clientPushSnap = info->type == StatusType::PUSH || info->type == StatusType::FLY || info->type == StatusType::AIRBORNE || info->type == StatusType::KNOCKDOWN || info->type == StatusType::DRAGGED || dragForce;
 			target.clientPushFrom = target.body->GetWorldPos();
 			target.clientPushStart = localTime;
 			const Time followUntil = TimeAdd(localTime, TimeMsToTime((graphDuration + 2.0f) * 1000.0));
