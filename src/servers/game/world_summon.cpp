@@ -764,7 +764,7 @@ void World::UpdateSummons()
 
 	for(auto ga = groundAuras.begin(); ga != groundAuras.end(); ) {
 		if(localTime >= ga->until) {
-			if(const StatusInfo* aura = GetGameXmlContent().FindStatus(ga->auraStatus)) EndAura(ga->ownerIndex, *aura);
+			if(const StatusInfo* aura = GetGameXmlContent().FindStatus(ga->auraStatus)) EndAura(ga->ownerIndex, *aura, ga->sourceUID);
 			ga = groundAuras.erase_unsorted(ga);
 			continue;
 		}

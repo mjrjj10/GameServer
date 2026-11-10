@@ -343,7 +343,7 @@ void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& cente
 			NpcStatus* cur = nullptr;
 			foreach(ns, npcStatuses) if(ns->npcUID == npc->UID && ns->statusID == *id && localTime < ns->until) cur = &*ns;
 			if(!inside) {
-				if(cur && cur->casterUID == npcCaster) cur->until = localTime;
+				if(cur && (cur->casterUID == npcCaster || (sourceUID == ActorUID::INVALID && cur->casterUID == caster.Sub().UID))) cur->until = localTime;
 				continue;
 			}
 			if(cur) continue;
@@ -373,14 +373,14 @@ void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& cente
 	}
 }
 
-void World::EndAura(u32 casterIndex, const StatusInfo& aura)
+void World::EndAura(u32 casterIndex, const StatusInfo& aura, ActorUID sourceUID)
 {
 	foreach_const(id, aura.auraStatuses) {
 		foreach(it, activeStatuses) {
 			if(it->statusID == *id && it->casterIndex == casterIndex && it->info && it->info->durationSec <= 0) it->until = localTime;
 		}
 		const StatusInfo* child = GetGameXmlContent().FindStatus(*id);
-		if(child && child->durationSec <= 0) foreach(ns, npcStatuses) if(ns->statusID == *id && ns->casterUID == players[casterIndex].Main().UID && !ns->linked) ns->until = localTime;
+		if(child && child->durationSec <= 0) foreach(ns, npcStatuses) if(ns->statusID == *id && (ns->casterUID == players[casterIndex].Main().UID || ns->casterUID == players[casterIndex].Sub().UID || (sourceUID != ActorUID::INVALID && ns->casterUID == sourceUID)) && !ns->linked) ns->until = localTime;
 	}
 }
 

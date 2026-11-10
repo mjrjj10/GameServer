@@ -1565,7 +1565,7 @@ public:
 	f32 WeaponHitDamage(const Player& player, const Remote* remote) const;
 	f32 AugmentedWeaponAttack(WeaponIndex weapon) const;
 	void PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& center, f32 range, i32 skipDebuffIndex, ActorUID sourceUID = ActorUID::INVALID);
-	void EndAura(u32 casterIndex, const StatusInfo& aura);
+	void EndAura(u32 casterIndex, const StatusInfo& aura, ActorUID sourceUID = ActorUID::INVALID);
 private:
 	void PassiveOnSkillCast(Player& player, i32 skillID);
 	void OnEvade(Player& target);
