@@ -145,6 +145,7 @@ struct World
 		Time botComboShotAt = Time::ZERO;
 		SkillID botComboSkill = SkillID::INVALID;
 		Time botComboUntil = Time::ZERO;
+		ClassType botComboClass = ClassType::NONE;
 		ActionStateID botAttackState = ActionStateID::INVALID;
 		bool botAttackStateSkill = false;
 		Time botShotAt = Time::ZERO;

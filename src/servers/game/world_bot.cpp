@@ -153,7 +153,7 @@ void World::UpdateBotSkills()
 		if(bot.botComboSkill != SkillID::INVALID) {
 			const i32 combo = (i32)bot.botComboSkill;
 			const f32 comboDist = content.GetBotSkillMaxDistance(combo);
-			if(localTime >= bot.botComboUntil) bot.botComboSkill = SkillID::INVALID;
+			if(localTime >= bot.botComboUntil || bot.botComboClass != bot.Main().classType) bot.botComboSkill = SkillID::INVALID;
 			else if((comboDist <= 0 || best <= comboDist) && (Config().DevShowcase || Config().DevMirror || SkillCostAffordable(bot, combo, PlayerSkillConsumeMP(bot, combo)))) skill = combo;
 		}
 		if(skill == 0) {
@@ -205,10 +205,12 @@ void World::UpdateBotSkills()
 		if(monster) LOG("BotSkill :: %ls casts %d at creature=%d (dist %.0f, cd %.0f)", bot.name.data(), skill, (i32)monster->docID, best, cd);
 		else LOG("BotSkill :: %ls casts %d at %ls (dist %.0f, cd %.0f)", bot.name.data(), skill, target->name.data(), best, cd);
 		PlayerCastSkill(bot, SkillID(skill), tpos, Slice<const ActorUID>(&targetUID, in && in->takesTarget ? 1 : 0), 0);
-		const i32 next = ComboSkillFor(bot, skill);
+		i32 next = ComboSkillFor(bot, skill);
+		if(next == 0) next = content.GetNextComboSkill(skill);
 		const i32 windowMs = next != 0 && next != skill ? content.GetComboDurationMs(next) : 0;
 		bot.botComboSkill = windowMs > 0 ? SkillID(next) : SkillID::INVALID;
 		bot.botComboUntil = windowMs > 0 ? TimeAdd(localTime, TimeMsToTime((f64)windowMs)) : Time::ZERO;
+		bot.botComboClass = bot.Main().classType;
 	}
 }
 

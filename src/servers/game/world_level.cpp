@@ -530,6 +530,8 @@ void World::TransformTitan(Player& player, i32 formIndex, bool initial)
 	if(formIndex < 0 || formIndex >= (i32)titan.forms.size()) return;
 	const GameXmlContent::TitanForm& form = titan.forms[formIndex];
 	ActorMaster& chara = player.Main();
+	if(player.casting.skillID != SkillID::INVALID) CancelCast(player, "titan form");
+	player.botComboSkill = SkillID::INVALID;
 	if(initial) {
 		AddTeamPieces((i32)player.team, -titan.cost);
 		player.titanSavedHp = chara.hp;
