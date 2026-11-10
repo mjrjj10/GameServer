@@ -609,7 +609,6 @@ i32 World::AbsorbNpcShield(const ActorNpc& npc, i32 dealt)
 		const f32 absorbed = MIN(ns->shieldHP, (f32)left);
 		ns->shieldHP -= absorbed;
 		left -= (i32)absorbed;
-		if(ns->shieldHP <= 0) ns->until = localTime;
 		LOG("Status :: creature=%d shield %d absorbs %.0f (%.0f left)", (i32)npc.docID, ns->statusID, absorbed, ns->shieldHP);
 	}
 	if(left != dealt) SendNpcShieldStat(npc.UID);
