@@ -694,6 +694,15 @@ f32 World::PassiveWeaponDamageMul(Player& attacker, Player& target)
 	return mul;
 }
 
+static f32 StatusShieldLayer(const StatusInfo& info, f32 skillPower, f32 power)
+{
+	f32 dataShield = 0;
+	foreach_const(m, info.mods) {
+		if(m->stat == StatusMod::SHIELD_DEFENCE && !m->mul) dataShield += m->value;
+	}
+	return dataShield > 0 ? (f32)(i32)(dataShield + skillPower * info.shieldMul) : MAX(power, 100.0f) * (info.paramRatio > 0 ? info.paramRatio : 1.0f);
+}
+
 void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power, f32 durationOverride)
 {
 	if(target.dead || target.untargetable) return;
@@ -848,6 +857,11 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			it->skillPower = PlayerSkillPower(caster);
 			if(!statusNoCaster) it->casterUID = statusCasterOverride != ActorUID::INVALID ? statusCasterOverride : caster.Main().UID;
 			if(info && info->dotDamage > 0 && info->intervalSec <= 0) it->dotDone = false;
+			if(info && info->type == StatusType::SHIELD && info->shieldCount <= 0) {
+				it->shieldMax = StatusShieldLayer(*info, it->skillPower, power) * (f32)it->overlap;
+				it->shieldHP = it->shieldMax;
+				SendShieldStat(target);
+			}
 			LOG("Status :: %ls -> %ls status=%d refreshed overlap=%d", caster.name.data(), target.name.data(), statusID, it->overlap);
 			const vec3 pos = target.body->GetWorldPos();
 			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, sentDuration, pos, StatusGraphAnchorOnly(info) ? vec3(0) : pos, 0, it->overlap, 1.0f, -1.0f, StatusGraphAnchorOnly(info), true);
@@ -887,13 +901,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	st.healTicksDone = 0;
 	st.shieldHP = 0;
 	st.skillPower = PlayerSkillPower(caster);
-	if(info && (info->type == StatusType::SHIELD || info->type == StatusType::SHIELDBOMB)) {
-		f32 dataShield = 0;
-		foreach_const(m, info->mods) {
-			if(m->stat == StatusMod::SHIELD_DEFENCE && !m->mul) dataShield += m->value;
-		}
-		st.shieldHP = dataShield > 0 ? (f32)(i32)(dataShield + st.skillPower * info->shieldMul) : MAX(power, 100.0f) * (info->paramRatio > 0 ? info->paramRatio : 1.0f);
-	}
+	if(info && (info->type == StatusType::SHIELD || info->type == StatusType::SHIELDBOMB)) st.shieldHP = StatusShieldLayer(*info, st.skillPower, power);
 	st.shieldHits = info ? info->shieldCount : 0;
 	if(st.shieldHits > 0) st.shieldHP = 0;
 	st.shieldMax = st.shieldHP;
@@ -1255,7 +1263,7 @@ void World::UpdateStatuses()
 		}
 		const bool shieldBomb = it->info && it->info->type == StatusType::SHIELDBOMB;
 		const bool countShield = it->info && it->info->shieldCount > 0;
-		const bool shieldBroken = it->info && (countShield ? it->shieldHits <= 0 : ((it->info->type == StatusType::SHIELD && it->shieldHP <= 0) || (shieldBomb && it->shieldHP <= 0 && it->absorbed > 0)));
+		const bool shieldBroken = it->info && (countShield ? it->shieldHits <= 0 : (shieldBomb && it->shieldHP <= 0 && it->absorbed > 0));
 		const bool timeOver = localTime >= it->until;
 		if(shieldBroken && it->info->skillIndex != 0) {
 			foreach(sib, activeStatuses) {
