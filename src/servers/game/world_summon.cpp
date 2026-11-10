@@ -91,6 +91,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 				replication->SendNpcMoveToAll(npc.UID, npc.pos, goal, yaw, speed);
 				LOG("Summon :: creature=%d moves to its target at %.0f", (i32)npc.docID, speed);
 				npc.pos = goal;
+				npc.holdForSkill = true;
 			}
 		}
 		if(action != ActionStateID::INVALID) {
@@ -100,7 +101,10 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			npc.motionTarget = targetPos;
 			npc.motionTargetUID = targetNpc ? targetNpc->UID : (current ? current->Main().UID : ActorUID::INVALID);
 			npc.motionYaw = yaw;
+			const f32 skillSec = MAX(GetGameXmlContent().GetAniSeqTime(info->className.c_str(), info->stateAnim[state]), SummonPassStart(*info, state, 8));
+			npc.skillEndAt = skillSec > 0 ? TimeAdd(npc.motionAt, TimeMsToTime(skillSec * 1000.0)) : Time::ZERO;
 		}
+		else npc.holdForSkill = false;
 		LOG("Summon :: creature=%d plays %s", (i32)npc.docID, name.c_str());
 	}
 	f32 t = 0;
@@ -413,6 +417,11 @@ void World::UpdateSummonAi(f32 delta)
 				npc.despawnAt = localTime;
 				continue;
 			}
+			if(npc.holdForSkill && npc.skillEndAt != Time::ZERO && localTime < npc.skillEndAt) {
+				StopNpcLeg(npc);
+				continue;
+			}
+			npc.holdForSkill = false;
 			goal = owner.body->GetWorldPos();
 			stopDist = info->aiDistance;
 			if(info->perception > 0 && glm::length(vec2(goal) - vec2(npc.pos)) > info->perception) RelayWarp(npc, goal);
@@ -794,6 +803,13 @@ void World::UpdateSummons()
 			it->stateEndAt = Time::ZERO;
 			it->actionState = ActionStateID::NONE_BEHAVIORSTATE;
 			replication->SendMonsterStateToAll(it->UID, ActionStateID::NONE_BEHAVIORSTATE, it->pos, it->monsterAi ? it->monsterAi->run * it->speedMul : 0.0f);
+		}
+		if(it->skillEndAt != Time::ZERO && localTime >= it->skillEndAt) {
+			it->skillEndAt = Time::ZERO;
+			if(it->actionState >= ActionStateID::SKILL_1_BEHAVIORSTATE && it->actionState <= ActionStateID::SKILL_30_BEHAVIORSTATE && (it->hp > 0 || it->hpMax <= 0)) {
+				it->actionState = ActionStateID::NONE_BEHAVIORSTATE;
+				replication->SendAiActionStateToAll(it->UID, ActionStateID::NONE_BEHAVIORSTATE, it->rot.z, it->pos, NpcKeepsSpeed(*it));
+			}
 		}
 		if(it->standAt != Time::ZERO && localTime >= it->standAt) {
 			it->standAt = Time::ZERO;

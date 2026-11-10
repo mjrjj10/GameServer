@@ -517,6 +517,8 @@ struct World
 		u8 extraMotion = 0;
 		Time selfDestructAt = Time::ZERO;
 		Time standAt = Time::ZERO;
+		Time skillEndAt = Time::ZERO;
+		bool holdForSkill = false;
 		Time dieStandAt = Time::ZERO;
 		Time diedAt = Time::ZERO;
 		Time removeAt = Time::ZERO;
