@@ -114,6 +114,7 @@ void World::UpdateBotSkills()
 	foreach(it, players) {
 		Player& bot = *it;
 		if(bot.clientHd != ClientHandle::INVALID || bot.dead) continue;
+		if(localTime >= bot.tNextBotSkill && BotReleaseHold(bot)) continue;
 		if(localTime < bot.tNextBotSkill || localTime < bot.ccUntil || localTime < bot.dashUntil || localTime < bot.botSkillStillUntil || bot.botShotAt == localTime) continue;
 		if(bot.casting.skillID == SkillID::INVALID && !Config().DevShowcase && !IsBlocked(bot, false, false, true) && BotEvade(bot)) {
 			bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500));
@@ -1036,6 +1037,26 @@ void World::BotIdleCharge(Player& bot)
 	bot.botChargeGoal = BotRollChargeLevel(bot, wf);
 	OnWeaponState(bot, WEAPON_STATE_CHARGE, 0, bot.firingCombo);
 	replication->RelayWeaponState(ClientHandle::INVALID, bot.Main().UID, MEASURED_WEAPON_STATE_WEAPON_ID, WEAPON_STATE_CHARGE, 0, bot.firingCombo);
+}
+
+struct BotRelease { i32 status; f64 ms; i32 skill; };
+static const BotRelease MEASURED_BOT_RELEASES[] = {
+	{ 1230200021, 2130.0, 180200011 },
+};
+
+bool World::BotReleaseHold(Player& bot)
+{
+	foreach_const(st, activeStatuses) {
+		if(st->targetIndex != bot.index || st->until <= localTime) continue;
+		for(const BotRelease& r : MEASURED_BOT_RELEASES) {
+			if(r.status != st->statusID || localTime < TimeAdd(st->appliedAt, TimeMsToTime(r.ms))) continue;
+			LOG("BotSkill :: %ls releases %d after %.1fs", bot.name.data(), r.status, TimeDiffSec(TimeDiff(st->appliedAt, localTime)));
+			PlayerCastSkill(bot, SkillID(r.skill), bot.body->GetWorldPos(), Slice<const ActorUID>(), 0);
+			bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500.0));
+			return true;
+		}
+	}
+	return false;
 }
 
 struct HideHold { i32 status; f64 ms; };
