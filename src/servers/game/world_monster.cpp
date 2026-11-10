@@ -792,8 +792,10 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 			const bool ally = !enemy && o->monsterAi && o->faction == owner.faction;
 			if(!((enemy && hitsEnemies) || (ally && hitsAllies)) || !inside(vec2(o->pos), NpcHitRadius(*o)) || !ready(o->UID)) continue;
 			if(enemy) {
-				if(damage > 0) { npcHitCenter = vec3(origin, mr.pos.z); npcHitCenterSet = true; DamageNpcFromNpc(owner, *o, damage, (i32)remote.ID, remoteID, 0); npcHitCenterSet = false; }
-				applyStatuses(remote.statuses, nullptr, &*o);
+				const bool execute = o->monsterAi && MonsterTargetKind(*o->monsterAi) == GameXmlContent::MonsterAttack::MINION && GetGameXmlContent().executeMinionRemotes.count((i32)remote.ID);
+				if(execute) applyStatuses(remote.statuses, nullptr, &*o);
+				if(damage > 0 || execute) { npcHitCenter = vec3(origin, mr.pos.z); npcHitCenterSet = true; DamageNpcFromNpc(owner, *o, execute ? o->hpMax : damage, (i32)remote.ID, remoteID, 0, execute); npcHitCenterSet = false; }
+				if(!execute) applyStatuses(remote.statuses, nullptr, &*o);
 			}
 			else applyStatuses(remote.damageGroup == Remote::DamageGroup::eFRIEND && remote.friendlyStatuses.empty() ? remote.statuses : remote.friendlyStatuses, nullptr, &*o);
 			mr.activations--;

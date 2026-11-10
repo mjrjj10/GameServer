@@ -1414,6 +1414,8 @@ bool GameXmlContent::LoadMonsterAi()
 				attack.remote = pAttack->IntAttribute("remote");
 				attack.hitRemote = pAttack->IntAttribute("hitRemote", attack.remote);
 				attack.executeMinion = pAttack->BoolAttribute("executeMinion");
+				if(attack.executeMinion && attack.remote > 0) executeMinionRemotes.insert(attack.remote);
+				if(attack.executeMinion && attack.hitRemote > 0) executeMinionRemotes.insert(attack.hitRemote);
 				attack.anim = pAttack->FloatAttribute("anim");
 				attack.noDamage = pAttack->BoolAttribute("noDamage");
 				attack.selfDie = pAttack->BoolAttribute("selfDie");

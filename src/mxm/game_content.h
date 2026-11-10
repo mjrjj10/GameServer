@@ -1683,6 +1683,7 @@ struct GameXmlContent
 	f32 MonsterSpawnSec(i32 doc) const { auto k = creatureKfm.find(doc); if(k == creatureKfm.end()) return 0.0f; auto a = monsterSpawnAnim.find(eastl::string(k->second.c_str())); return a == monsterSpawnAnim.end() ? 0.0f : GetAniSeqTime(k->second.c_str(), a->second); }
 	eastl::hash_map<i32, vec2> bushSize;
 	eastl::hash_set<i32> teamGateDocs;
+	eastl::hash_set<i32> executeMinionRemotes;
 	bool IsTeamGate(i32 doc) const { return teamGateDocs.find(doc) != teamGateDocs.end(); }
 	f32 CreatureSight(i32 doc) const { auto f = creatureSight.find(doc); return f == creatureSight.end() ? 0.0f : f->second; }
 	const vec2* FindBushSize(i32 doc) const { auto f = bushSize.find(doc); return f == bushSize.end() ? nullptr : &f->second; }
