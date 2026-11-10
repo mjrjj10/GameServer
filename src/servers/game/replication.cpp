@@ -3814,6 +3814,8 @@ void Replication::FrameDifference()
 		}
 	}
 
+	if(!frameCur->skillCastList.empty() || !frameCur->skillExecList.empty()) SendFrameSkillPackets();
+
 	// TODO: don't update everything here if tagged out (such as position)
 	// find if the position has changed since last frame
 	foreach_const(it, frameCur->masterList) {
