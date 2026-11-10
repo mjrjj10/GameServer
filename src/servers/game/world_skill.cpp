@@ -373,11 +373,15 @@ void World::ToggleOn(Player& player, SkillID skillID, const vec3& castPos)
 		if(mods) foreach_const(rr, mods->remoteReplace) if(rr->first == rid) rid = rr->second;
 		SpawnRemote(player.index, RemoteIdx(rid), pos, vec2(cosf(yaw), sinf(yaw)), ActorUID::INVALID, skillID, player.toggleCastID, (i32)SkillDamage(skillID), true, nullptr, 0, player.clientHd != ClientHandle::INVALID);
 	}
+	player.toggleStatuses.clear();
 	foreach_const(id, tg->statuses) {
 		i32 sid = *id;
 		f32 duration = -1.0f;
 		if(mods) foreach_const(sr, mods->statusReplace) if(sr->statusID == sid) { sid = sr->replaceID; if(sr->durationSec > 0) duration = sr->durationSec; }
+		const StatusInfo* info = GetGameXmlContent().FindStatus(sid);
+		if(duration <= 0 && info && info->durationSec < 0) duration = STATUS_INFINITE_DURATION_SEC;
 		ApplyStatus(player, player, sid, 0, duration);
+		if(!player.toggleStatuses.full()) player.toggleStatuses.push_back(sid);
 	}
 	LOG("Toggle :: %ls skill=%d on (%d remotes, %d statuses)", player.name.data(), (i32)skillID, (i32)tg->remotes.size(), (i32)tg->statuses.size());
 	auto sk = GetGameXmlContent().skillMap.find(skillID);
@@ -400,7 +404,8 @@ void World::ToggleOff(Player& player)
 		const GameXmlContent::CostLevel* mods = UpgradeCastMods(player, player.toggleSkill, nullptr);
 		foreach(it, activeStatuses) {
 			if(it->targetIndex != player.index) continue;
-			bool own = eastl::find(tg->statuses.begin(), tg->statuses.end(), it->statusID) != tg->statuses.end();
+			bool own = eastl::find(tg->statuses.begin(), tg->statuses.end(), it->statusID) != tg->statuses.end() ||
+				eastl::find(player.toggleStatuses.begin(), player.toggleStatuses.end(), it->statusID) != player.toggleStatuses.end();
 			if(mods) foreach_const(sr, mods->statusReplace) if(sr->replaceID == it->statusID && eastl::find(tg->statuses.begin(), tg->statuses.end(), sr->statusID) != tg->statuses.end()) own = true;
 			if(own) it->until = localTime;
 		}
@@ -408,6 +413,7 @@ void World::ToggleOff(Player& player)
 	LOG("Toggle :: %ls skill=%d off", player.name.data(), (i32)player.toggleSkill);
 	replication->SendToggleSkill(player.Main().UID, player.clientHd, player.toggleSkill, false, ActionStateID::INVALID);
 	player.toggleSkill = SkillID::INVALID;
+	player.toggleStatuses.clear();
 }
 
 void World::UpdateToggles()

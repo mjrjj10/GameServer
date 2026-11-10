@@ -255,6 +255,7 @@ struct World
 		Time hitComboAt = Time::ZERO;
 		f32 castChargeRatio = 1.0f;
 		SkillID toggleSkill = SkillID::INVALID;
+		eastl::fixed_vector<i32,8,false> toggleStatuses;
 		u32 toggleCastID = 0;
 		Time toggleNext = Time::ZERO;
 		i32 pendingChildSkill = 0;
