@@ -538,7 +538,7 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	}
 	if(info && info->type == StatusType::TOGGLE && info->durationSec <= 0 && info->skillIndex != 0) {
 		foreach(ns, npcStatuses) {
-			if(ns->npcUID != npc.UID || ns->statusID == statusID || localTime >= ns->until) continue;
+			if(ns->npcUID != npc.UID || ns->statusID == statusID || localTime >= ns->until || ns->appliedAt >= localTime) continue;
 			const StatusInfo* other = GetGameXmlContent().FindStatus(ns->statusID);
 			if(!other || other->permanent || other->skillIndex != info->skillIndex) continue;
 			ns->until = localTime;
