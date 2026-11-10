@@ -4145,7 +4145,7 @@ bool GameXmlContent::LoadStatusData()
 				const char* pas = nullptr;
 				pCommon->QueryStringAttribute("_Passive", &pas);
 				st.permanent = durationMs <= 0 && pas && EA::StdC::Stricmp(pas, "true") == 0;
-				st.instant = pCommon->Attribute("_DurationTime") && durationMs == 0 && !(pas && EA::StdC::Stricmp(pas, "true") == 0);
+				st.instant = (pCommon->Attribute("_DurationTime") || st.type == StatusType::TOGGLE) && durationMs == 0 && !(pas && EA::StdC::Stricmp(pas, "true") == 0);
 				pCommon->QueryAttribute("_InitCustomValue", &st.customInit);
 				pCommon->QueryAttribute("_MaxCustomValue", &st.customMax);
 				pCommon->QueryAttribute("_ShieldCount", &st.shieldCount);

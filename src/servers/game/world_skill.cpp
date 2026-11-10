@@ -536,6 +536,15 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 		if(npc.despawnAt == Time::ZERO || localTime < npc.despawnAt) npc.despawnAt = localTime;
 		return;
 	}
+	if(info && info->type == StatusType::TOGGLE && info->durationSec <= 0 && info->skillIndex != 0) {
+		foreach(ns, npcStatuses) {
+			if(ns->npcUID != npc.UID || ns->statusID == statusID || localTime >= ns->until) continue;
+			const StatusInfo* other = GetGameXmlContent().FindStatus(ns->statusID);
+			if(!other || other->permanent || other->skillIndex != info->skillIndex) continue;
+			ns->until = localTime;
+			LOG("Status :: creature=%d toggle %d removes %d", (i32)npc.docID, statusID, ns->statusID);
+		}
+	}
 	if(info) ApplySummonDrainLife(npc, *info);
 	const f32 reaction = NpcDefeatReaction(npc, info);
 	if(reaction < 0) {
