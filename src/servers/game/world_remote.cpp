@@ -205,7 +205,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		const f32 sendYaw = atan2f(dir.y, dir.x) + (remoteSendRootDir ? PI : 0.0f);
 		vec3 sendPos = vec3(vec2(pos), inst.pos.z) - vec3(0, 0, remote->offsetZ);
 		const bool atAimedPoint = aimPos && glm::length(vec2(*aimPos)) > 1.0f && glm::length(vec2(pos) - vec2(*aimPos)) < 1.0f;
-		if(plainStaticBox && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY) + Perp(dir) * remote->offsetX, 0);
+		if(plainStaticBox && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY) - Perp(dir) * remote->offsetX, 0);
 		if(remoteTargetEntityOverride != ActorUID::INVALID) targetPos = pos;
 		const ActorUID sendOwner = remoteParentOverride != ActorUID::INVALID ? remoteParentOverride : players[ownerIndex].Main().UID;
 		const ActorUID sendTarget = remoteTargetEntityOverride != ActorUID::INVALID ? remoteTargetEntityOverride : (targetMaster ? target : ActorUID::INVALID);
@@ -1003,7 +1003,7 @@ void World::SpawnPendingRemotes()
 			pos.z = owner.body->GetWorldPos().z + fireNode->up;
 		}
 
-		if(remote && remote->offsetX != 0) pos += vec3(Perp(dir) * remote->offsetX, 0);
+		if(remote && remote->offsetX != 0) pos -= vec3(Perp(dir) * remote->offsetX, 0);
 		if(remote && IsChainedZoneRemote(remote->ID)) {
 			const f32 length = (f32)remote->boundSize[1];
 			foreach_const(ri, remoteInsts) {
