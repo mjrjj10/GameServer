@@ -523,6 +523,13 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	}
 	if(remove) return;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
+	if(info && (info->type == StatusType::SUICIDE || info->type == StatusType::COMA) && npc.ownerIndex == caster.index && npc.ownerUID != ActorUID::INVALID) {
+		LOG("Status :: %ls ends its creature=%d with status %d", caster.name.data(), (i32)npc.docID, statusID);
+		replication->SendAddStatusToAll(statusID, npc.UID, caster.Main().UID, 0.0f, npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false);
+		replication->SendRemoveStatusToAll(statusID, npc.UID, caster.Main().UID);
+		if(npc.despawnAt == Time::ZERO || localTime < npc.despawnAt) npc.despawnAt = localTime;
+		return;
+	}
 	if(info) ApplySummonDrainLife(npc, *info);
 	const f32 reaction = NpcDefeatReaction(npc, info);
 	if(reaction < 0) {
@@ -1118,14 +1125,20 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 				i32 animId = 0, loop = 1;
 				foreach_const(st, action.anims) if(st->index == curAnim) { animId = st->animationId; loop = MAX(st->loop, 1); }
 				const f32 passLen = animId != 0 ? content.GetAniSeqTime(ActionClassName(player), animId) * (f32)loop : action.seqLength;
-				ps.duration = MAX(animPasses[pass].start + passLen - t, 0.3f);
+				f32 endAt = animPasses[pass].start + passLen;
+				if(cmd->status.removeAtEnd == (u8)ActionCommand::StatusEnd::ACTION) {
+					f32 total = 0;
+					foreach_const(st, action.anims) total += content.GetAniSeqTime(ActionClassName(player), st->animationId) * (f32)MAX(st->loop, 1);
+					endAt = MAX(endAt, total);
+				}
+				ps.duration = MAX(endAt - t, 0.3f);
 				const StatusInfo* capInfo = content.FindStatus(cmd->status.statusIndex);
 				if(capInfo && capInfo->durationSec > 0) ps.duration = MIN(ps.duration, capInfo->durationSec);
 			}
 			ps.power = (f32)damage;
 			ps.remove = cmd->status.remove != 0;
 			ps.aniEnd = cmd->status.removeAtEnd != 0;
-			ps.cleanupOnly = cmd->status.removeAtEnd == 2;
+			ps.cleanupOnly = cmd->status.removeAtEnd == (u8)ActionCommand::StatusEnd::CLEANUP;
 			if(cmd->type == ActionCommand::Type::STATUS_SKILL_TARGET && targets.size() > 1) {
 				foreach_const(tg, targets) {
 					if(pendingStatuses.full()) break;

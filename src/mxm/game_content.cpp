@@ -2780,7 +2780,8 @@ bool GameXmlContent::LoadAnimationData()
 				}
 				const char* Param2 = nullptr;
 				pActionBase->QueryStringAttribute("Param2", &Param2);
-				cmd.status.removeAtEnd = Param2 && EA::StdC::Strstr(Param2, "CleanUpWhenActionEnd") ? 2 : (Param2 && (EA::StdC::Strstr(Param2, "RemoveWhenAniEnd") || EA::StdC::Strstr(Param2, "RemoveWhenActionEnd")) ? 1 : 0);
+				cmd.status.removeAtEnd = (u8)(!Param2 ? ActionCommand::StatusEnd::NONE : EA::StdC::Strstr(Param2, "CleanUpWhenActionEnd") ? ActionCommand::StatusEnd::CLEANUP :
+					EA::StdC::Strstr(Param2, "RemoveWhenActionEnd") ? ActionCommand::StatusEnd::ACTION : EA::StdC::Strstr(Param2, "RemoveWhenAniEnd") ? ActionCommand::StatusEnd::ANIMATION : ActionCommand::StatusEnd::NONE);
 				cmd.status.remove = Param2 && EA::StdC::Strcmp(Param2, "Remove") == 0 ? 1 : 0;
 				if(cmd.status.remove || cmd.status.removeAtEnd) actionRemovedStatuses.insert(cmd.status.statusIndex);
 				const char* Param1 = nullptr;
@@ -4061,6 +4062,7 @@ bool GameXmlContent::LoadStatusData()
 				st.targetsFriendlyNpc = EA::StdC::Strcmp(tt, "FRIENDLY") == 0;
 				st.targetsFriendlyPc = st.targetsFriendlyNpc || EA::StdC::Strcmp(tt, "FRIENDLY_PC") == 0;
 				st.bothCharacters = EA::StdC::Strcmp(tt, "BOTH_CHARACTER") == 0;
+				st.targetsLastChild = EA::StdC::Strcmp(tt, "LAST_CHILD") == 0;
 			}
 			if(XMLElement* pDef = pCommon->FirstChildElement("_DEFENDER")) pDef->QueryFloatAttribute("_ExplodeDmg", &st.explodeDamage);
 			pCommon->QueryFloatAttribute("_AdditionalDamageByCaster", &st.additionalDamageByCaster);

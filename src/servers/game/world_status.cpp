@@ -1322,6 +1322,8 @@ void World::UpdateStatuses()
 				ps.duration = -1.0f;
 				ps.power = 0;
 				ps.noCaster = noCaster;
+				const StatusInfo* nextInfo = GetGameXmlContent().FindStatus(next);
+				ps.lastChild = nextInfo && nextInfo->targetsLastChild;
 				pendingStatuses.push_back(ps);
 			}
 		}

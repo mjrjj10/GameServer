@@ -119,6 +119,14 @@ enum class StatusCondition: u8
 
 StatusCondition StatusConditionFromString(const char* str);
 
+enum class StatusEnd: u8
+{
+	NONE = 0,
+	ANIMATION,
+	CLEANUP,
+	ACTION,
+};
+
 }
 
 struct SummonCommand
@@ -336,6 +344,7 @@ struct StatusInfo
 	bool targetsFriendlyPc = false;
 	bool targetsFriendlyNpc = false;
 	bool bothCharacters = false;
+	bool targetsLastChild = false;
 	f32 explodeDamage = 0;
 	f32 additionalDamageByCaster = 0;
 	NextCondition nextCondition = NextCondition::NONE;
