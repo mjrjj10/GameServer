@@ -449,7 +449,7 @@ void World::ApplyFriendlyRemoteStatuses(Player& owner, const Remote& remote, Pla
 			ApplyStatusToNpc(owner, *npc, flagged->ID, false);
 			continue;
 		}
-		replication->SendAddStatusToAll(flagged->ID, npc->UID, owner.Main().UID, StatusSentDuration(*flagged), npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false);
+		ApplyStatusToNpc(owner, *npc, flagged->ID, false);
 		const StatusInfo* info = flagged->flagEffectStatus != 0 ? GetGameXmlContent().FindStatus(flagged->flagEffectStatus) : nullptr;
 		if(!info || npc->ownerUID == ActorUID::INVALID) continue;
 		replication->SendAddStatusToAll(info->ID, npc->UID, npc->UID, StatusSentDuration(*info), npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false);
