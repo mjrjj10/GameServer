@@ -12,6 +12,7 @@ static f32 MovespeedMul(f32 percentSum, f32 statPercent)
 }
 
 static const i32 STAT_STAMINAREGEN = 5;
+static const i32 ACTION_FULL_MOVESPEED_PERCENT = 100;
 static const i32 STAT_MANAREGEN = 39;
 static const i32 STAT_ULTIMATEREGEN = 42;
 static const u8 STAT_SKILL_COOLTIME_DISCOUNT = 53;
@@ -1174,7 +1175,9 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 
 	if(player.clientHd == ClientHandle::INVALID && !player.dead) {
 		bool moves = false;
+		bool freeMove = false;
 		foreach_const(cmd, action.commands) {
+			if(cmd->type == ActionCommand::Type::MOVESPEED && cmd->moveSpeed.percent >= ACTION_FULL_MOVESPEED_PERCENT) freeMove = true;
 			if(cmd->type == ActionCommand::Type::GRAPH_MOVE_HORZ || cmd->type == ActionCommand::Type::TELEPORT) moves = true;
 			if(cmd->type == ActionCommand::Type::MOVE && cmd->move.preset != ActionCommand::MovePreset::MOVE_NONE && cmd->move.preset != ActionCommand::MovePreset::SEE_TARGET &&
 				cmd->move.preset != ActionCommand::MovePreset::SEE_CURRENT_TARGET && cmd->move.preset != ActionCommand::MovePreset::SEE_MEMORIZED_TARGET) moves = true;
@@ -1193,7 +1196,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 				}
 				if(!blocked) still = MAX(still, passEnd);
 			}
-			if(still > 0) {
+			if(still > 0 && !freeMove) {
 				player.botSkillStillUntil = TimeAdd(localTime, TimeMsToTime(still * 1000.0));
 				if(!moves) player.input.moveTo = player.body->GetWorldPos();
 			}
@@ -1229,9 +1232,10 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 
 	switch(cmd.type) {
 		case ActionCommand::Type::STATE_BLOCK: {
-			bool clientMoves = false;
-			if(caster->parent->clientHd != ClientHandle::INVALID) foreach_const(c2, action.commands) if(c2->type == ActionCommand::Type::MOVESPEED && c2->moveSpeed.percent > 0) clientMoves = true;
-			if(!clientMoves) caster->parent->body->lockedMoveUntil = TimeAddSec(localTime, cmd.delay);
+			i32 movePercent = -1;
+			foreach_const(c2, action.commands) if(c2->type == ActionCommand::Type::MOVESPEED) movePercent = MAX(movePercent, c2->moveSpeed.percent);
+			const bool freeMove = caster->parent->clientHd != ClientHandle::INVALID ? movePercent > 0 : movePercent >= ACTION_FULL_MOVESPEED_PERCENT;
+			if(!freeMove) caster->parent->body->lockedMoveUntil = TimeAddSec(localTime, cmd.delay);
 		} break
 			;
 		case ActionCommand::Type::GRAPH_MOVE_HORZ: {
