@@ -156,8 +156,9 @@ void World::ApplyLevelStats(Player& player)
 		ActorMaster& chara = i == 0 ? player.Main() : player.Sub();
 		RefreshMasterHealth(player, chara);
 		const WeaponIndex weapon = (chara.UID == player.Main().UID) == ((player.mainCharaID & 1) == 0) ? player.mainWeapon : player.subWeapon;
-		replication->SendStatToAll(chara.UID, LEVEL_STAT_ATTACK, 0, GetGameXmlContent().GetWeaponAttack((i32)weapon) + LevelBonus(player, chara.classType, LEVEL_STAT_ATTACK) + chara.GearBonus(LEVEL_STAT_ATTACK));
-		replication->SendStatToAll(chara.UID, LEVEL_STAT_SKILLPOWER, 0, MasterStat(chara.classType, LEVEL_STAT_SKILLPOWER) + LevelBonus(player, chara.classType, LEVEL_STAT_SKILLPOWER) + chara.GearBonus(LEVEL_STAT_SKILLPOWER));
+		const auto& content = GetGameXmlContent();
+		replication->SendStatToAll(chara.UID, LEVEL_STAT_ATTACK, 0, content.GetWeaponAttack((i32)weapon) + LevelBonus(player, chara.classType, LEVEL_STAT_ATTACK) + content.MasterTraitBonus(chara.classType, chara.traits, LEVEL_STAT_ATTACK) + chara.GearBonus(LEVEL_STAT_ATTACK));
+		replication->SendStatToAll(chara.UID, LEVEL_STAT_SKILLPOWER, 0, MasterStat(chara.classType, LEVEL_STAT_SKILLPOWER) + LevelBonus(player, chara.classType, LEVEL_STAT_SKILLPOWER) + content.MasterTraitBonus(chara.classType, chara.traits, LEVEL_STAT_SKILLPOWER) + chara.GearBonus(LEVEL_STAT_SKILLPOWER));
 	}
 }
 
@@ -187,7 +188,9 @@ void World::SendTraitStats(Player& player, ActorMaster& chara)
 				RefreshMasterHealth(player, chara);
 				continue;
 			}
-			const f32 value = MasterStat(chara.classType, st.type) + LevelBonus(player, chara.classType, st.type) + content.MasterTraitBonus(chara.classType, chara.traits, st.type) + chara.GearBonus(st.type);
+			const WeaponIndex weapon = (chara.UID == player.Main().UID) == ((player.mainCharaID & 1) == 0) ? player.mainWeapon : player.subWeapon;
+			const f32 base = st.type == LEVEL_STAT_ATTACK ? content.GetWeaponAttack((i32)weapon) : MasterStat(chara.classType, st.type);
+			const f32 value = base + LevelBonus(player, chara.classType, st.type) + content.MasterTraitBonus(chara.classType, chara.traits, st.type) + chara.GearBonus(st.type);
 			replication->SendStatToAll(chara.UID, st.type, 0, value);
 		}
 	}
