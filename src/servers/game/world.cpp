@@ -1211,7 +1211,7 @@ void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType
 	}
 	if(content.FindSkillHitEventRemote((i32)skillID) != 0 && !onHit) return;
 	i32 combo = ComboSkillFor(player, (i32)skillID);
-	if(combo == 0 && onHit) combo = content.GetNextComboSkill((i32)skillID);
+	if(combo == 0 && (onHit || skillType == SkillType::COMBO)) combo = content.GetNextComboSkill((i32)skillID);
 	if(combo != 0) {
 		const i32 base = (i32)player.mainCharaID * 2;
 		i32 slot = -1;
