@@ -1161,6 +1161,11 @@ void World::TurnMonster(ActorNpc& npc, f32 yaw)
 	if(!npc.monsterAi || !npc.monsterAi->turnLock) replication->SendNpcTurnToAll(npc.UID, yaw);
 }
 
+struct MeasuredDashLag { const char* className; f32 sec; };
+static const MeasuredDashLag MEASURED_MONSTER_DASH_CLIENT_LAG[] = {
+	{ "PVP_TITAN_ROBOT_GUARD", 0.25f },
+};
+
 void World::StartMonsterAttack(ActorNpc& npc,const GameXmlContent::MonsterAi& ai, const GameXmlContent::MonsterAttack* attack, const vec3* targetPos, f32 dist, f32 yaw, f32 run)
 {
 	npc.rot.z = yaw;
@@ -1198,6 +1203,7 @@ void World::StartMonsterAttack(ActorNpc& npc,const GameXmlContent::MonsterAi& ai
 		const auto& content = GetGameXmlContent();
 		f32 start = 0;
 		for(i32 p = 0; p + 1 < (i32)attack->dashPassAnims.size(); p++) start += content.GetAniSeqTime(ai.className.c_str(), attack->dashPassAnims[p]);
+		for(const MeasuredDashLag& lag : MEASURED_MONSTER_DASH_CLIENT_LAG) if(ai.className == lag.className) start += lag.sec;
 		const f32 pass = content.GetAniSeqTime(ai.className.c_str(), attack->dashPassAnims.back());
 		const f32 duration = attack->dashTime > 0 ? attack->dashTime : pass;
 		if(duration > 0) {
