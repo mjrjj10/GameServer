@@ -467,6 +467,7 @@ struct World
 		Time traitResetAt = Time::ZERO;
 		i32 seed;
 		eastl::fixed_vector<eastl::pair<u8,f32>,12,false> gearBonus;
+		eastl::fixed_vector<StatValue,40,false> initStats;
 		f32 GearBonus(u8 statType) const { f32 sum = 0; foreach_const(g, gearBonus) if(g->first == statType) sum += g->second; return sum; }
 		i32 spawnAnim = -1;
 		i32 ownerID = 0;

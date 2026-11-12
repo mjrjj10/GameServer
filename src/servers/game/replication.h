@@ -97,6 +97,8 @@ struct Replication
 		i32 hp;
 		i32 hpMax;
 		i32 seed;
+		const StatValue* initStats = nullptr;
+		u16 initStatCount = 0;
 		i32 spawnAnim = -1;
 		i32 ownerID = 0;
 		u8 dirToNearPC = 0;

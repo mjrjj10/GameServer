@@ -4118,7 +4118,8 @@ void Replication::SendActorMasterSpawn(ClientHandle clientHd, const ActorMaster&
 			packet.Write<i32>(actor.seed);
 
 
-			WriteInitStat(packet, GetGameXmlContent().GetMaster(actor.classType).baseStats);
+			if(actor.initStatCount > 0) WriteInitStat(packet, actor.initStats, actor.initStatCount);
+			else WriteInitStat(packet, GetGameXmlContent().GetMaster(actor.classType).baseStats);
 
 
 
@@ -4162,7 +4163,8 @@ void Replication::SendActorMasterSpawn(ClientHandle clientHd, const ActorMaster&
 			packet.Write<i32>(actor.seed);
 
 
-			WriteInitStat(packet, GetGameXmlContent().GetMaster(actor.classType).baseStats);
+			if(actor.initStatCount > 0) WriteInitStat(packet, actor.initStats, actor.initStatCount);
+			else WriteInitStat(packet, GetGameXmlContent().GetMaster(actor.classType).baseStats);
 
 
 

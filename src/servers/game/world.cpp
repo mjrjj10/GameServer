@@ -69,6 +69,20 @@ static void AddMeasuredBotGear(World::ActorMaster& chara, WeaponIndex weapon, i3
 	}
 }
 
+static void BuildInitStats(World::ActorMaster& chara, WeaponIndex weapon)
+{
+	chara.initStats.clear();
+	bool hasAttack = false;
+	foreach_const(st, GetGameXmlContent().GetMaster(chara.classType).baseStats) {
+		if(chara.initStats.full()) break;
+		const f32 value = st->type == (u8)StatType::STAT_TYPE_HEALTH ? (f32)chara.hpMax : st->value + chara.GearBonus(st->type);
+		hasAttack |= st->type == (u8)StatType::STAT_TYPE_ATTACK;
+		chara.initStats.push_back({ st->type, value });
+	}
+	const f32 attack = GetGameXmlContent().GetWeaponAttack((i32)weapon);
+	if(!hasAttack && attack > 0 && !chara.initStats.full()) chara.initStats.push_back({ (u8)StatType::STAT_TYPE_ATTACK, attack + chara.GearBonus((u8)StatType::STAT_TYPE_ATTACK) });
+}
+
 void World::Init(Replication* replication_)
 {
 	replication = replication_;
@@ -447,6 +461,8 @@ void World::Replicate()
 			rch.hp = chara.hp;
 			rch.hpMax = chara.hpMax;
 			rch.seed = chara.seed;
+			rch.initStats = chara.initStats.data();
+			rch.initStatCount = (u16)chara.initStats.size();
 			rch.spawnAnim = chara.spawnAnim;
 			rch.ownerID = chara.ownerID;
 			rch.dirToNearPC = chara.dirToNearPC;
@@ -488,6 +504,8 @@ void World::Replicate()
 			rch.hp = chara.hp;
 			rch.hpMax = chara.hpMax;
 			rch.seed = chara.seed;
+			rch.initStats = chara.initStats.data();
+			rch.initStatCount = (u16)chara.initStats.size();
 			rch.spawnAnim = chara.spawnAnim;
 			rch.ownerID = chara.ownerID;
 			rch.dirToNearPC = chara.dirToNearPC;
@@ -658,6 +676,8 @@ void World::CreatePlayerMasters(Player& player)
 	sub.hp = sub.hpMax;
 	ASSERT(main.hpMax > 0 && sub.hpMax > 0);
 	sub.seed = (i32)RandUint();
+	BuildInitStats(main, player.mainWeapon);
+	BuildInitStats(sub, player.subWeapon);
 }
 
 void World::ReplacePlayerMasters(Player& player, const PlayerDescription& desc)
