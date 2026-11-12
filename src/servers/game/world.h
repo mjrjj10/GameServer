@@ -285,6 +285,10 @@ struct World
 		Time botStuckCheck = Time::ZERO;
 		vec2 botLastPos = vec2(0);
 		f32 botStrafe = 1.0f;
+		ActorUID botFarmUID = ActorUID::INVALID;
+		Time botFarmCheckAt = Time::ZERO;
+		f32 botFarmCheckDist = 0;
+		eastl::fixed_vector<eastl::pair<ActorUID,Time>,4,false> botFarmSkips;
 		i8 botLane = -1;
 		u8 botMode = 0xff;
 		bool botRetreat = false;
@@ -1450,7 +1454,7 @@ public:
 	eastl::array<Time,2> teamTitanReadyAt = {{ Time::ZERO, Time::ZERO }};
 	void UpdateBotTitanVotes();
 	f32 BotTitanSkillDistance(i32 skill) const;
-	bool BotFarmTarget(const Player& bot, vec2* goal, f32 range);
+	bool BotFarmTarget(Player& bot, vec2* goal, f32 range);
 	bool BotStageSkill(Player& bot);
 	bool BotEvade(Player& bot);
 	void SetCarriedPieces(Player& player, i32 count);

@@ -242,25 +242,64 @@ static const f32 BOT_FARM_RANGE = 4000.0f;
 static const i32 HYP_BOT_JUNGLE_ROLE_EVERY = 5;
 static const f32 HYP_BOT_JUNGLE_RANGE = 4000.0f;
 
-bool World::BotFarmTarget(const Player& bot, vec2* goal, f32 range)
+bool World::BotFarmTarget(Player& bot, vec2* goal, f32 range)
 {
+	static const f32 HYP_BOT_FARM_PROGRESS_SEC = 8.0f;
+	static const f32 HYP_BOT_FARM_PROGRESS_DIST = 300.0f;
+	static const f32 HYP_BOT_FARM_SKIP_SEC = 30.0f;
+	static const f32 HYP_BOT_FARM_KEEP_RANGE_MUL = 1.5f;
 	if(!map || !map->ingameLevels) return false;
 	const vec2 here = vec2(bot.body->GetWorldPos());
 	const bool jungler = bot.clientHd == ClientHandle::INVALID && bot.index % HYP_BOT_JUNGLE_ROLE_EVERY == 2;
-	f32 bestMinion = range, bestNeutral = jungler ? MAX(range, HYP_BOT_JUNGLE_RANGE) : range;
-	vec2 minion, neutral;
+	const f32 neutralRange = jungler ? MAX(range, HYP_BOT_JUNGLE_RANGE) : range;
+	f32 bestMinion = range, bestNeutral = neutralRange;
+	const ActorNpc* minion = nullptr;
+	const ActorNpc* neutral = nullptr;
+	const ActorNpc* kept = nullptr;
+	for(i32 s = (i32)bot.botFarmSkips.size() - 1; s >= 0; s--) if(localTime >= bot.botFarmSkips[s].second) bot.botFarmSkips.erase(bot.botFarmSkips.begin() + s);
 	foreach_const(npc, actorNpcList) {
 		if(!npc->monsterAi || npc->ownerUID != ActorUID::INVALID || IsStructure(*npc) || !NpcHittableBy(*npc, bot)) continue;
+		bool skipped = false;
+		foreach_const(s, bot.botFarmSkips) if(s->first == npc->UID) skipped = true;
+		if(skipped) continue;
 		const f32 d = glm::length(vec2(npc->pos) - here);
 		if(npc->faction == Faction::RED || npc->faction == Faction::BLUE) {
-			if(d < bestMinion && !BotDangerAt(bot, vec2(npc->pos), nullptr, nullptr)) { bestMinion = d; minion = vec2(npc->pos); }
+			if(d < range * HYP_BOT_FARM_KEEP_RANGE_MUL && !BotDangerAt(bot, vec2(npc->pos), nullptr, nullptr)) {
+				if(npc->UID == bot.botFarmUID) kept = &*npc;
+				if(d < bestMinion) { bestMinion = d; minion = &*npc; }
+			}
 		}
-		else if((npc->faction == Faction::ORANGE || npc->faction == Faction::MONSTER) && d < bestNeutral) { bestNeutral = d; neutral = vec2(npc->pos); }
+		else if((npc->faction == Faction::ORANGE || npc->faction == Faction::MONSTER) && d < neutralRange * HYP_BOT_FARM_KEEP_RANGE_MUL) {
+			if(npc->UID == bot.botFarmUID) kept = &*npc;
+			if(d < bestNeutral) { bestNeutral = d; neutral = &*npc; }
+		}
 	}
-	if(jungler && bestNeutral < MAX(range, HYP_BOT_JUNGLE_RANGE)) { *goal = neutral; return true; }
-	if(bestMinion < range) { *goal = minion; return true; }
-	if(bestNeutral < range) { *goal = neutral; return true; }
-	return false;
+	if(bestMinion >= range) minion = nullptr;
+	if(bestNeutral >= neutralRange) neutral = nullptr;
+	const ActorNpc* chosen = kept ? kept : (jungler && neutral) ? neutral : minion ? minion : (neutral && bestNeutral < range) ? neutral : nullptr;
+	if(!chosen) {
+		bot.botFarmUID = ActorUID::INVALID;
+		return false;
+	}
+	const f32 dist = glm::length(vec2(chosen->pos) - here);
+	if(chosen->UID != bot.botFarmUID) {
+		bot.botFarmUID = chosen->UID;
+		bot.botFarmCheckAt = TimeAdd(localTime, TimeMsToTime(HYP_BOT_FARM_PROGRESS_SEC * 1000.0));
+		bot.botFarmCheckDist = dist;
+	}
+	else if(localTime >= bot.botFarmCheckAt) {
+		if(dist > BOT_RANGED_MAX + HYP_BOT_FARM_PROGRESS_DIST && dist > bot.botFarmCheckDist - HYP_BOT_FARM_PROGRESS_DIST) {
+			LOG("BotFarm :: %ls gives up creature=%d at %.0f (was %.0f %.0f s ago)", bot.name.data(), (i32)chosen->docID, dist, bot.botFarmCheckDist, HYP_BOT_FARM_PROGRESS_SEC);
+			if(bot.botFarmSkips.full()) bot.botFarmSkips.erase(bot.botFarmSkips.begin());
+			bot.botFarmSkips.push_back(eastl::make_pair(chosen->UID, TimeAdd(localTime, TimeMsToTime(HYP_BOT_FARM_SKIP_SEC * 1000.0))));
+			bot.botFarmUID = ActorUID::INVALID;
+			return false;
+		}
+		bot.botFarmCheckAt = TimeAdd(localTime, TimeMsToTime(HYP_BOT_FARM_PROGRESS_SEC * 1000.0));
+		bot.botFarmCheckDist = dist;
+	}
+	*goal = vec2(chosen->pos);
+	return true;
 }
 
 void World::BuildTitanSaveAreas()
