@@ -47,9 +47,8 @@ static void ComputeGearBonus(World::ActorMaster& chara, const eastl::fixed_vecto
 	}
 }
 
-static void AddMeasuredBotGear(World::ActorMaster& chara, WeaponIndex weapon, i32 powerPercent, u32 roll)
+static void AddMeasuredBotGear(World::ActorMaster& chara, WeaponIndex weapon, i32 powerPercent, const GameXmlContent::MeasuredBotGear* gear)
 {
-	const GameXmlContent::MeasuredBotGear* gear = GetGameXmlContent().PickMeasuredBotGear(chara.classType, roll);
 	if(!gear || powerPercent <= 0) return;
 	const f32 k = (f32)powerPercent / 100.0f;
 	const i32 doc = (i32)weapon;
@@ -655,8 +654,8 @@ void World::CreatePlayerMasters(Player& player)
 	main.skinIndex = player.mainSkin;
 	ComputeGearBonus(main, player.gearDocs[0], player.mainWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType));
 	AddTitleBonus(main, player.statTitle, player.mainWeapon);
-	const bool botGear = player.clientHd == ClientHandle::INVALID && !Config().DevShowcase && player.gearDocs[0].empty() && player.gearDocs[1].empty();
-	if(botGear) AddMeasuredBotGear(main, player.mainWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType), RandUint());
+	const bool botGear = player.botGear[0] || player.botGear[1];
+	AddMeasuredBotGear(main, player.mainWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType), player.botGear[0]);
 	if(!player.gearDocs[0].empty()) LOG("Gear :: %ls power %d%% attack +%.1f skill power +%.1f health +%.1f defence +%.1f", player.name.data(), GetGameXmlContent().GearPowerPercent(replication->gameType), main.GearBonus(STAT_ATTACK), main.GearBonus(STAT_SKILLPOWER), main.GearBonus(STAT_HEALTH), main.GearBonus((u8)StatType::STAT_TYPE_DEFENCE));
 	main.hpMax = (i32)(MasterStat(main.classType, STAT_HEALTH) + main.GearBonus(STAT_HEALTH));
 	main.hp = main.hpMax;
@@ -670,7 +669,7 @@ void World::CreatePlayerMasters(Player& player)
 	sub.skinIndex = player.subSkin;
 	ComputeGearBonus(sub, player.gearDocs[1], player.subWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType));
 	AddTitleBonus(sub, player.statTitle, player.subWeapon);
-	if(botGear) AddMeasuredBotGear(sub, player.subWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType), RandUint());
+	AddMeasuredBotGear(sub, player.subWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType), player.botGear[1]);
 	if(botGear) LOG("Gear :: bot %ls measured gear attack +%.1f/+%.1f defence +%.1f/+%.1f health +%.0f/+%.0f", player.name.data(), main.GearBonus(STAT_ATTACK), sub.GearBonus(STAT_ATTACK), main.GearBonus((u8)StatType::STAT_TYPE_DEFENCE), sub.GearBonus((u8)StatType::STAT_TYPE_DEFENCE), main.GearBonus(STAT_HEALTH), sub.GearBonus(STAT_HEALTH));
 	sub.hpMax = (i32)(MasterStat(sub.classType, STAT_HEALTH) + sub.GearBonus(STAT_HEALTH));
 	sub.hp = sub.hpMax;
@@ -1452,6 +1451,7 @@ void World::ExecuteSkillProgram(SkillProgram& prog)
 		if(prog.passes.empty() && (cmd.animIndex == 0 || cmd.animIndex == -1)) start = 0;
 		if(start < 0) {
 			prog.done |= 1ull << i;
+			if(cmd.type == ActionCommand::Type::MOVE || cmd.type == ActionCommand::Type::GRAPH_MOVE_HORZ) LOG("SkillProgram :: action %d anim %d not played, move command skipped", (i32)prog.actionID, (i32)cmd.animIndex);
 			continue;
 		}
 		if(elapsed < start + (cmd.type == ActionCommand::Type::STATE_BLOCK ? 0.0f : cmd.delay)) {

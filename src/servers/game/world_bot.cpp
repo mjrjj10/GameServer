@@ -1030,12 +1030,28 @@ void World::UpdateObserver()
 	LOG("Observer :: watches %ls at (%.0f, %.0f) last action %.1fs ago", best->name.data(), at.x, at.y, bestAge);
 }
 
+static const f32 MEASURED_SLIME_FIGHT_START_MASS[11] = { 0.0f, 0.0f, 0.0f, 5.0f, 20.0f, 35.0f, 60.0f, 70.0f, 80.0f, 90.0f, 90.0f };
+
 void World::BotIdleCharge(Player& bot)
 {
 	const WeaponFiring& wf = ActiveWeaponFiring(bot, bot.Main().stance);
-	if(wf.charge.empty() || wf.chargeTime.empty() || bot.weaponState == WEAPON_STATE_CHARGE) return;
+	if(wf.charge.empty() || wf.chargeTime.empty()) return;
 	const f32 resMax = MasterStat(bot.Main().classType, RESOURCES[1].maxStat);
-	if(resMax <= 0 || bot.res[1] >= resMax) return;
+	if(resMax <= 0) return;
+	f32 goal = resMax;
+	if(FindPassiveOfType(bot, StatusType::SLIME)) {
+		if(bot.botIdleResourceGoal < 0) {
+			const f32 r = (f32)Randf01() * 10.0f;
+			const i32 i = MIN((i32)r, 9);
+			bot.botIdleResourceGoal = MEASURED_SLIME_FIGHT_START_MASS[i] + (MEASURED_SLIME_FIGHT_START_MASS[i + 1] - MEASURED_SLIME_FIGHT_START_MASS[i]) * (r - (f32)i);
+		}
+		goal = MIN(bot.botIdleResourceGoal, resMax);
+	}
+	if(bot.weaponState == WEAPON_STATE_CHARGE) {
+		if(goal < resMax && bot.res[1] >= goal) OnWeaponState(bot, 0, 0, bot.firingCombo);
+		return;
+	}
+	if(bot.res[1] >= goal) return;
 	bool gains = FindResourceGainRule(bot.Main().classType, ResourceEvent::CHARGING_PER_SEC) != nullptr;
 	const GameXmlContent::Action* charge = GetGameXmlContent().FindSkillAction(ActionClass(bot), ActionStateID::ATTACKCHARGE_BEHAVIORSTATE, bot.Main().stance);
 	if(charge && !gains) foreach_const(cmd, charge->commands) {
@@ -1180,6 +1196,7 @@ void World::UpdateBotCombat()
 		const vec2 dir = glm::length(rel) > 1.0f ? glm::normalize(rel) : vec2(1, 0);
 		bot.weaponAimYaw = atan2f(dir.y, dir.x);
 		PlayerWeaponShot(bot, pos, dir, best);
+		bot.botIdleResourceGoal = -1;
 		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot) * 1000.0));
 	}
 }

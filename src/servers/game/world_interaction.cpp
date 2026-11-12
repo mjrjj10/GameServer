@@ -200,6 +200,15 @@ void World::UpdateInteractions()
 			replication->SendSelfMove(it->clientHd, it->Main().UID, carrier.body->GetWorldPos(), carrier.movement.moveDir, carrier.movement.moveSpeed, carrier.input.rot.upperYaw);
 		}
 	}
+	foreach(it, players) {
+		if(it->dead || it->clientHd != ClientHandle::INVALID || !it->body) continue;
+		const Player* holder = AttachHolder(*it);
+		if(!holder || holder->dead || !holder->body) continue;
+		const vec3 at = holder->body->GetWorldPos();
+		it->body->collider->setFootPosition(PxExtendedVec3(at.x, at.y, at.z));
+		it->body->vel = vec3(0);
+		it->input.moveTo = at;
+	}
 }
 
 static const u32 STAT_REASON_ITEM = 3;

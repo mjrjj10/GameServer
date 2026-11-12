@@ -17,6 +17,7 @@ static const f32 STAGE_TIME_LIMIT_FALLBACK_SEC = 300.0f;
 static const f64 RETURN_TO_LOBBY_DELAY_SEC = 20.0;
 static const u32 MEASURED_PVE_FAIL_RETURN_MS = 15000;
 static const f32 HYP_HUMAN_POSITION_SNAP = 100.0f;
+static const f32 HYP_CLIENT_BLOCKED_STEP = 5.0f;
 static const f64 HYP_CLIENT_PUSH_INFLIGHT_SEC = 0.3;
 static const f32 HYP_HUMAN_DASH_SNAP = 400.0f;
 static const f32 MEASURED_BOT_TAG_SHARE = 2.5f / 49.9f;
@@ -35,6 +36,28 @@ static u8 GuildMembersInTeam(World& world, const World::Player& player)
 	}
 	return members;
 }
+static bool BotWeaponUsable(const GameXmlContent& xml, WeaponIndex current, i32 doc)
+{
+	const WeaponFiring* base = xml.FindWeaponFiring((i32)current);
+	const WeaponFiring* variant = xml.FindWeaponFiring(doc);
+	if(!base || !variant || xml.GetWeaponAttack(doc) <= 0) return false;
+	for(i8 stance = 1; stance < 16; stance++) {
+		if(xml.FindWeaponFiring((i32)current, stance) != base && xml.FindWeaponFiring(doc, stance) == variant) return false;
+	}
+	return true;
+}
+
+static void RollBotGear(World::PlayerDescription& desc)
+{
+	if(Config().DevShowcase || !desc.gearDocs[0].empty() || !desc.gearDocs[1].empty()) return;
+	const GameXmlContent& xml = GetGameXmlContent();
+	for(i32 i = 0; i < 2; i++) {
+		const GameXmlContent::MeasuredBotGear* gear = xml.PickMeasuredBotGear(desc.masters[i], RandUint());
+		desc.botGear[i] = gear;
+		if(gear && gear->classType == (i32)desc.masters[i] && gear->weapon != 0 && BotWeaponUsable(xml, desc.weapons[i], gear->weapon)) desc.weapons[i] = (WeaponIndex)gear->weapon;
+	}
+}
+
 static const f64 PVE_REWARD_TIMEOUT_SEC = 60.0;
 static const u32 MEASURED_REWARD_WAIT_MS = 30000;
 static const u8 MEASURED_REWARD_VIP_SLOTS = 1;
@@ -309,6 +332,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 		const SpawnPoint& spawnPoint = spawnPoints.empty() ? fallback : spawnPoints[spawnPointIndex[p.team]++ % spawnPoints.size()];
 		if(spawnPoints.empty()) WARN("Spawn :: map %d has no spawn point", (i32)replication.mapIndex);
 
+		if(desc.clientHd == ClientHandle::INVALID) RollBotGear(desc);
 		LOG("Spawn :: %ls team=%d masters=(%d, %d) skins=(%d, %d) weapons=(%d, %d)", desc.name.data(), (i32)desc.team, (i32)desc.masters[0], (i32)desc.masters[1], (i32)desc.skins[0], (i32)desc.skins[1], (i32)desc.weapons[0], (i32)desc.weapons[1]);
 		World::Player& worldPlayer = world.CreatePlayer(desc, spawnPoint.pos, RotationHumanoid{0.f, 0.f, MxmYawToWorldYaw(spawnPoint.rot.z)});
 
@@ -1164,7 +1188,9 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 	prevBodyPos = player.body->GetWorldPos();
 
 
+	const bool clientBlocked = dir != vec2(0) && player.lastClientDir != vec2(0) && player.clientPosCount > 0 && glm::length(vec2(pos) - vec2(player.lastClientPos)) < HYP_CLIENT_BLOCKED_STEP;
 	player.lastClientPos = pos;
+	player.lastClientDir = dir;
 	player.clientPosCount++;
 	if(player.clientPushSnap && world.localTime < player.clientPushUntil && TimeDiffSec(TimeDiff(player.clientPushStart, world.localTime)) < HYP_CLIENT_PUSH_INFLIGHT_SEC) player.clientPushPosCount = player.clientPosCount;
 	if(player.carriedBy >= 0) return;
@@ -1190,7 +1216,7 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 	}
 
 	// TODO: check for movement hacking
-	if(dir.x == 0 && dir.y == 0) {
+	if((dir.x == 0 && dir.y == 0) || clientBlocked) {
 		player.input.moveTo = pos;
 	}
 	else {
@@ -1518,6 +1544,7 @@ void Game::SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team)
 		desc.colliderSize[mi] = { (u16)master.character.getColliderRadius(), (u16)master.character.getColliderHeight() };
 	}
 	desc.stageSkills = { SkillID::INVALID, SkillID::INVALID };
+	RollBotGear(desc);
 	const auto& spawnPoints = mapSpawnPoints[team];
 	const vec3 pos = spawnPoints.empty() ? world.GetPlayer(0).spawnPos : spawnPoints[0].pos;
 	const f32 yaw = spawnPoints.empty() ? 0.f : MxmYawToWorldYaw(spawnPoints[0].rot.z);

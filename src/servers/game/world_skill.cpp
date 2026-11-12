@@ -1019,7 +1019,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		}
 		const char* className = ActionClassName(player);
 		i32 lastActing = -1;
-		for(i32 i = 0; i < 8; i++) if(acts[i]) lastActing = i;
+		for(i32 i = 0; i < 8; i++) if(acts[i] || moves[i]) lastActing = i;
 		if(!hitEventCombo || !acts[0]) {
 			f32 start = 0;
 			for(i32 i = 0; i <= lastActing && (!regCombo || acts[0] || i <= 1); i++) {
@@ -1307,7 +1307,11 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 		}
 		mover.input.moveTo = mover.body->GetWorldPos();
 		mover.body->vel = vec3(0);
-		if(moveDuration <= 0.02f) physics.Move(mover.body, vec3(moveDir * moveDist, 0), moveDuration);
+		if(moveDuration <= 0.02f) {
+			physics.Move(mover.body, vec3(moveDir * moveDist, 0), moveDuration);
+			mover.input.moveTo = mover.body->GetWorldPos();
+			LOG("Warp :: %ls warps %.0f, moved %.0f", mover.name.data(), moveDist, glm::length(vec2(mover.body->GetWorldPos()) - from));
+		}
 		else {
 			mover.dashDir = moveDir;
 			mover.dashSpeed = moveDist / moveDuration;

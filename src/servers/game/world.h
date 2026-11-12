@@ -80,6 +80,7 @@ struct World
 		u8 badgeTier = 0;
 		i32 supportKit = -1;
 		i32 supportKitCount = 0;
+		eastl::array<const GameXmlContent::MeasuredBotGear*,2> botGear = { nullptr, nullptr };
 	};
 
 	struct Player
@@ -121,6 +122,7 @@ struct World
 		const i32 subWeaponGrade;
 		const u8 mainMasterGearNo;
 		const eastl::array<eastl::fixed_vector<i32,6,false>,2> gearDocs;
+		const eastl::array<const GameXmlContent::MeasuredBotGear*,2> botGear;
 		const i32 statTitle;
 		const i32 displayTitle;
 		const u8 badgeType;
@@ -180,6 +182,7 @@ struct World
 		Time chargeStart = Time::ZERO;
 		u8 chargeAnnounced = 0;
 		u8 botChargeGoal = 0;
+		f32 botIdleResourceGoal = -1;
 		eastl::fixed_map<i32,u8,12,false> skillLevels;
 		eastl::fixed_map<u32,GameXmlContent::CostLevel,12,false> castMods;
 		i32 skillPoints = 1;
@@ -310,6 +313,7 @@ struct World
 		f32 shotLeadSec = 0;
 		f32 weaponAimYaw = 0;
 		vec3 lastClientPos = vec3(0);
+		vec2 lastClientDir = vec2(0);
 		ActionStateID lastClientAction = ActionStateID::INVALID;
 		i32 lastHitTargetIndex = -1;
 		Time lastHitAt = Time::ZERO;
@@ -440,6 +444,7 @@ struct World
 			mainCharacterType(desc.characterType[0]),
 			subCharacterType(desc.characterType[1]),
 			gearDocs(desc.gearDocs),
+			botGear(desc.botGear),
 			statTitle(desc.statTitle),
 			displayTitle(desc.displayTitle),
 			badgeType(desc.badgeType),
@@ -1301,7 +1306,7 @@ public:
 	void EndCastStatuses(Player& player, const Player::Casting& c);
 	void EndActionStatuses(Player& player);
 	void CancelCast(Player& player, const char* reason, ClientHandle skipHd = ClientHandle::INVALID);
-	void SyncNpcLeg(ActorNpc& npc, const vec3& goal);
+	void SyncNpcLeg(ActorNpc& npc, const vec3& goal, f32 speed);
 	void StopNpcLeg(ActorNpc& npc);
 	void WanderNpc(ActorNpc& npc, f32 moveSpeed, f32 delta);
 	bool IsCarrying(const Player& player) const;
@@ -1606,6 +1611,7 @@ private:
 	void UpdateCasts();
 	bool HasStatusType(const Player& p, StatusType type) const;
 	bool AttachedToCaster(const Player& p) const;
+	const Player* AttachHolder(const Player& p) const;
 	f32 StatusModSum(const Player& p, i32 stat) const;
 	f32 StatusModMulSum(const Player& p, i32 stat) const;
 	f32 SlimeMassMod(const Player& p, i32 stat, bool mul) const;

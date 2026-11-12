@@ -1597,7 +1597,7 @@ struct GameXmlContent
 	eastl::hash_map<u64, MeasuredFireNode> measuredFireNodes;
 	static u64 FireNodeKey(i32 skill, i32 remote, i32 index) { return ((u64)(u32)skill << 32) ^ ((u64)(u32)remote << 4) ^ (u64)(u32)index; }
 	const MeasuredFireNode* FindMeasuredFireNode(i32 skill, i32 remote, i32 index) const { auto f = measuredFireNodes.find(FireNodeKey(skill, remote, index)); return f == measuredFireNodes.end() ? nullptr : &f->second; }
-	struct MeasuredBotGear { i32 classType = 0; f32 attack = 0; f32 defence = 0; f32 health = 0; i32 weaponTier = 1; };
+	struct MeasuredBotGear { i32 classType = 0; f32 attack = 0; f32 defence = 0; f32 health = 0; i32 weaponTier = 1; i32 weapon = 0; };
 	eastl::vector<MeasuredBotGear> measuredBotGear;
 	const MeasuredBotGear* PickMeasuredBotGear(ClassType classType, u32 roll) const
 	{

@@ -278,7 +278,7 @@ static const f32 NPC_WANDER_MAX_RADIUS = 300.0f;
 static const f32 NPC_WANDER_MIN_PAUSE_MS = 250.0f;
 static const f32 NPC_WANDER_MAX_PAUSE_MS = 900.0f;
 
-void World::SyncNpcLeg(ActorNpc& npc, const vec3& goal)
+void World::SyncNpcLeg(ActorNpc& npc, const vec3& goal, f32 speed)
 {
 	const i32 minInterval = npc.ai == SummonInfo::AI_RELAY ? NPC_FOLLOW_LEG_MIN_INTERVAL_MS : NPC_LEG_MIN_INTERVAL_MS;
 	const bool retarget = npc.legMoving && glm::length(vec2(goal) - vec2(npc.legGoal)) > NPC_LEG_RETARGET_DIST && localTime >= TimeAdd(npc.legAt, TimeMsToTime(minInterval));
@@ -286,7 +286,7 @@ void World::SyncNpcLeg(ActorNpc& npc, const vec3& goal)
 	npc.legMoving = true;
 	npc.legGoal = goal;
 	npc.legAt = localTime;
-	replication->SendNpcLegStartToAll(npc.UID, npc.pos, goal);
+	replication->SendNpcLegStartToAll(npc.UID, npc.pos, goal, speed);
 	replication->SendNpcTurnToAll(npc.UID, atan2f(goal.y - npc.pos.y, goal.x - npc.pos.x));
 }
 
@@ -296,7 +296,7 @@ void World::WanderNpc(ActorNpc& npc, f32 moveSpeed, f32 delta)
 		if(localTime < npc.wanderResumeAt) return;
 		const f32 angle = (f32)(RandUint() % 3600) * PI / 1800.0f;
 		const f32 radius = NPC_WANDER_MIN_RADIUS + (f32)(RandUint() % 1000) / 1000.0f * (NPC_WANDER_MAX_RADIUS - NPC_WANDER_MIN_RADIUS);
-		SyncNpcLeg(npc, vec3(vec2(npc.home) + vec2(cosf(angle), sinf(angle)) * radius, npc.pos.z));
+		SyncNpcLeg(npc, vec3(vec2(npc.home) + vec2(cosf(angle), sinf(angle)) * radius, npc.pos.z), moveSpeed);
 		return;
 	}
 	const vec2 rel = vec2(npc.legGoal) - vec2(npc.pos);
@@ -360,7 +360,7 @@ void World::UpdateSummonAttack(ActorNpc& npc, f32 delta)
 	if(dist > npc.attackRule->attackRange) {
 		if(info->moveSpeed <= 0) return;
 		const f32 step = MIN(info->moveSpeed * delta, dist - npc.attackRule->attackRange);
-		SyncNpcLeg(npc, vec3(vec2(goal) - rel / dist * npc.attackRule->attackRange, goal.z));
+		SyncNpcLeg(npc, vec3(vec2(goal) - rel / dist * npc.attackRule->attackRange, goal.z), info->moveSpeed);
 		npc.pos = vec3(vec2(npc.pos) + rel / dist * step, npc.pos.z);
 		npc.rot.z = yaw;
 		return;
@@ -482,7 +482,7 @@ void World::UpdateSummonAi(f32 delta)
 			}
 			if(!target && !npcTarget) {
 				if(npc.extraMotion == 0 && localTime >= npc.spawnedAt) PlaySummonExtraMotion(npc, *info, 2);
-				if(info->moveSpeed > 0 && info->normalMoveSpeed > 0) WanderNpc(npc, info->moveSpeed, delta);
+				if(info->moveSpeed > 0 && info->normalMoveSpeed > 0) WanderNpc(npc, info->normalMoveSpeed, delta);
 				else StopNpcLeg(npc);
 				continue;
 			}
@@ -501,7 +501,7 @@ void World::UpdateSummonAi(f32 delta)
 		const f32 dist = glm::length(rel);
 		if(dist <= stopDist + 1.0f) { StopNpcLeg(npc); continue; }
 		const vec2 dir = rel / dist;
-		SyncNpcLeg(npc, vec3(vec2(goal) - dir * stopDist, goal.z));
+		SyncNpcLeg(npc, vec3(vec2(goal) - dir * stopDist, goal.z), info->moveSpeed);
 		const vec2 legRel = vec2(npc.legGoal) - vec2(npc.pos);
 		const f32 legDist = glm::length(legRel);
 		if(legDist > 1.0f) {

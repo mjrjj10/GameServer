@@ -100,6 +100,16 @@ static bool DefeatGraphTimes(const StatusInfo* info, f32* duration, f32* graph)
 	}
 }
 
+const World::Player* World::AttachHolder(const Player& p) const
+{
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex != p.index || !it->info || !it->info->attachToCaster || it->until <= localTime) continue;
+		const ActorMaster* caster = FindMasterActor(it->casterUID);
+		if(caster && caster->parent && caster->parent != &p) return caster->parent;
+	}
+	return nullptr;
+}
+
 bool World::AttachedToCaster(const Player& p) const
 {
 	foreach_const(it, activeStatuses) {
@@ -1074,7 +1084,16 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	if(motionGraph) sentTo = vec3(0);
 	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, motionGraph ? vec3(0) : from, sentTo, StatusGraphTimed(info) ? graphDuration : 0.0f, 1, ccScale, nominalDist, StatusSendsGraph(info), false, info && info->permanent ? (u8)MAX(info->customInit, 0) : (u8)0);
 	if(npcCasterStatus != 0) ApplyNpcOwnerStatus(npcCaster, target, npcCasterStatus);
-	if(info && info->motionAction != ActionStateID::INVALID && info->skillIndex != 0 && !target.dead && (info->skillIndex / 10000) % 100 == (i32)target.Main().classType && GetGameXmlContent().SkillActionKnown(target.Main().classType, info->motionAction, target.Main().stance)) {
+	bool motionPlaying = false;
+	if(info && info->motionAction != ActionStateID::INVALID) {
+		foreach_const(pr, skillProgramList) if(pr->casterUID == target.Main().UID && pr->actionID == info->motionAction) motionPlaying = true;
+		if(target.lastCastAction == info->motionAction && target.lastCastStart != Time::ZERO) {
+			const f32 seq = GetGameXmlContent().GetSkillAction(ActionClass(target), info->motionAction, target.lastCastStance).seqLength;
+			if(TimeDiffSec(TimeDiff(target.lastCastStart, localTime)) < seq) motionPlaying = true;
+		}
+	}
+	if(motionPlaying) LOG("Status :: %ls motion status %d: action %d already playing", target.name.data(), statusID, (i32)info->motionAction);
+	if(info && !motionPlaying && info->motionAction != ActionStateID::INVALID && info->skillIndex != 0 && !target.dead && (info->skillIndex / 10000) % 100 == (i32)target.Main().classType && GetGameXmlContent().SkillActionKnown(target.Main().classType, info->motionAction, target.Main().stance)) {
 		LOG("Status :: %ls motion status %d plays action %d", target.name.data(), statusID, (i32)info->motionAction);
 		PlayerCastSkill(target, SkillID(info->skillIndex), target.body->GetWorldPos(), Slice<const ActorUID>(), 0, info->motionAction);
 	}

@@ -548,7 +548,7 @@ struct Replication
 	void SendMonsterStopTurnToAll(ActorUID actorUID, const vec3& pos, f32 fromYaw, f32 toYaw, f32 speed);
 	void SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed);
 	void SendMonsterLiftToAll(ActorUID actorUID, const vec3& pos);
-	void SendNpcLegStartToAll(ActorUID actorUID, const vec3& pos, const vec3& goal);
+	void SendNpcLegStartToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 speed);
 	void SendNpcLegStopToAll(ActorUID actorUID, const vec3& pos, f32 worldYaw);
 	void SendAiMoveTargetToAll(ActorUID actorUID, const vec3& goal, u32 movePreset);
 	void SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject = L"Scene Root", ClientHandle exclude = ClientHandle::INVALID);

@@ -2557,19 +2557,26 @@ void Replication::SendNpcTurnToAll(ActorUID actorUID, f32 worldYaw)
 	}
 }
 
-void Replication::SendNpcLegStartToAll(ActorUID actorUID, const vec3& pos, const vec3& goal)
+void Replication::SendNpcLegStartToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 speed)
 {
+	static const u8 NPC_MOVE_SPEED_AND_POSITIONS = 0x1e;
+	const u16 speedSent = (u16)MIN(MAX(speed, 0.0f) * MONSTER_SPEED_SCALE, 65535.0f);
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
+		auto& told = playerLocalInfo[clientID].monsterSpeedSent;
+		auto known = told.find(actorUID);
+		const bool withSpeed = speedSent > 0 && (known == told.end() || known->second != speedSent);
+		if(withSpeed) told[actorUID] = speedSent;
 		PacketWriter<Sv::SN_AIMonsterSyncMove,48> packet;
-		packet.Write<u8>(NPC_MOVE_POSITIONS_ONLY);
+		packet.Write<u8>(withSpeed ? NPC_MOVE_SPEED_AND_POSITIONS : NPC_MOVE_POSITIONS_ONLY);
 		packet.Write<u32>((u32)localID);
+		if(withSpeed) packet.Write<u16>(speedSent);
 		packet.Write<float3>(v2f(pos));
 		packet.Write<float3>(v2f(goal));
-		packet.Write<u8>(NPC_MOVE_FLAG_MOVING);
+		packet.Write<u8>(withSpeed ? 0 : NPC_MOVE_FLAG_MOVING);
 		SendPacket(clientHd, packet);
 	}
 }
@@ -2651,6 +2658,7 @@ void Replication::SendBattleStateToAll(ActorUID actorUID, bool inBattle, f32 bas
 		packet.Write<u8>(inBattle ? 1 : 0);
 		packet.Write<f32>(baseMoveSpeed);
 		SendPacket(clientHd, packet);
+		playerLocalInfo[clientID].monsterSpeedSent.erase(actorUID);
 	}
 }
 
@@ -3114,6 +3122,7 @@ static const f32 CLIENT_SELF_SNAP_DIST = 180.0f;
 static const i32 SYNC_STOP_STILL_FRAMES = 4;
 static const f32 SYNC_TURN_COS = 0.985f;
 static const f32 SYNC_HEARTBEAT_SEC = 0.67f;
+static const f32 HYP_SYNC_DRIFT_RESEND = 100.0f;
 static const f32 MEASURED_SYNC_SKILL_MOVE_MIN_SEC = 0.1f;
 
 void Replication::SendTeleportRequest(ClientHandle clientHd, ActorUID actorUID, const vec3& pos)
@@ -3864,8 +3873,11 @@ void Replication::FrameDifference()
 		const bool skillSend = cur.skillMoving && (!prev.skillMoving || (moved && sinceSent >= MEASURED_SYNC_SKILL_MOVE_MIN_SEC));
 		const bool landed = prev.statusGraph && !cur.statusGraph;
 		const bool graphReleased = prev.graphHold && !cur.graphHold;
+		const vec2 drawnGuess = vec2(sent.pos) + sent.moveDir * sent.speed * sinceSent;
+		const bool drifted = cur.clientHd == ClientHandle::INVALID && !cur.skillMoving && glm::length(vec2(cur.pos) - drawnGuess) > HYP_SYNC_DRIFT_RESEND && sinceSent >= SYNC_HEARTBEAT_SEC;
+		if(drifted && !positionUpdated && !cur.statusGraph && !(cur.graphHold && prev.graphHold)) LOG("Sync :: bot actor %u drifted %.0f from its last sync (%.2fs ago, blocked %d moved %d)", (u32)cur.actorUID, glm::length(vec2(cur.pos) - drawnGuess), sinceSent, sent.blocked ? 1 : 0, moved ? 1 : 0);
 		if(cur.clientHd == ClientHandle::INVALID && !positionUpdated && !cur.statusGraph && !(cur.graphHold && prev.graphHold) &&
-		   (graphReleased || landed || cur.skillMoving ? (graphReleased || landed || skillSend || (stopped && glm::length(sent.moveDir) > 0.01f)) : (cadenceSend || blockedChanged || (!sent.blocked && fabs(sendSpeed - sent.speed) > speedEpsilon))))
+		   (drifted || (graphReleased || landed || cur.skillMoving ? (graphReleased || landed || skillSend || (stopped && glm::length(sent.moveDir) > 0.01f)) : (cadenceSend || blockedChanged || (!sent.blocked && fabs(sendSpeed - sent.speed) > speedEpsilon)))))
 		{
 			vec2 syncDir = sendDir;
 			f32 syncSpeed = sendSpeed;
