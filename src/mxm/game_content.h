@@ -1009,6 +1009,10 @@ struct GameXmlContent
 				struct {
 					i32 speed;
 				} rotateSpeed;
+
+				struct {
+					i32 percent;
+				} moveSpeed;
 			};
 		};
 

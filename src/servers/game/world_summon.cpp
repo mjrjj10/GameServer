@@ -286,6 +286,7 @@ void World::SyncNpcLeg(ActorNpc& npc, const vec3& goal, f32 speed)
 	npc.legMoving = true;
 	npc.legGoal = goal;
 	npc.legAt = localTime;
+	npc.legSpeed = speed;
 	replication->SendNpcLegStartToAll(npc.UID, npc.pos, goal, speed);
 	replication->SendNpcTurnToAll(npc.UID, atan2f(goal.y - npc.pos.y, goal.x - npc.pos.x));
 }
@@ -473,6 +474,7 @@ void World::UpdateSummonAi(f32 delta)
 					if(d < best) { best = d; npcTarget = &*o; chosen = o->UID; }
 				}
 				if(chosen != npc.chaseTarget) {
+					if(chosen != ActorUID::INVALID) StopNpcLeg(npc);
 					replication->SendAiSetTargetToAll(npc.UID, chosen);
 					if((chosen != ActorUID::INVALID) != (npc.chaseTarget != ActorUID::INVALID)) replication->SendBattleStateToAll(npc.UID, chosen != ActorUID::INVALID, chosen != ActorUID::INVALID ? info->moveSpeed : info->normalMoveSpeed);
 					if(chosen != ActorUID::INVALID && (npc.extraMotion == 2 || npc.extraMotion == 3)) PlaySummonExtraMotion(npc, *info, 1);
@@ -501,12 +503,17 @@ void World::UpdateSummonAi(f32 delta)
 		const f32 dist = glm::length(rel);
 		if(dist <= stopDist + 1.0f) { StopNpcLeg(npc); continue; }
 		const vec2 dir = rel / dist;
-		SyncNpcLeg(npc, vec3(vec2(goal) - dir * stopDist, goal.z), info->moveSpeed);
+		f32 chaseSpeed = info->moveSpeed;
+		if(const SummonChaseSpeedRule* chase = npc.ai == SummonInfo::AI_RELAY ? nullptr : FindSummonChaseSpeedRule((i32)npc.docID)) {
+			const bool fresh = TimeDiffSec(TimeDiff(npc.spawnedAt, localTime)) < chase->spawnSec;
+			chaseSpeed = fresh || dist - stopDist >= chase->nearDist ? chase->farSpeed : chase->nearSpeed;
+		}
+		SyncNpcLeg(npc, vec3(vec2(goal) - dir * stopDist, goal.z), chaseSpeed);
 		const vec2 legRel = vec2(npc.legGoal) - vec2(npc.pos);
 		const f32 legDist = glm::length(legRel);
 		if(legDist > 1.0f) {
 			const vec2 legDir = legRel / legDist;
-			npc.pos = vec3(vec2(npc.pos) + legDir * MIN(info->moveSpeed * delta, legDist), goal.z);
+			npc.pos = vec3(vec2(npc.pos) + legDir * MIN((npc.legSpeed > 0 ? npc.legSpeed : info->moveSpeed) * delta, legDist), goal.z);
 			npc.rot.z = atan2f(legDir.y, legDir.x);
 		}
 	}

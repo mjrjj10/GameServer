@@ -1762,6 +1762,7 @@ void World::UpdateMonsterAi(f32 delta)
 				}
 				if(run <= 0 || (npc.monsterDashHold && localTime < npc.monsterDashTurnAt)) continue;
 				if(!laneWalk) {
+					if(ai.walkState != ActionStateID::INVALID && !npc.monsterWalkStateOn && localTime < npc.monsterNextAttack) continue;
 					npc.monsterWalking = false;
 					if(StartMonsterWalkState(npc, ai, run)) continue;
 					const f32 stepMax = run * delta;

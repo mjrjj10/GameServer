@@ -1229,7 +1229,9 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 
 	switch(cmd.type) {
 		case ActionCommand::Type::STATE_BLOCK: {
-			caster->parent->body->lockedMoveUntil = TimeAddSec(localTime, cmd.delay);
+			bool clientMoves = false;
+			if(caster->parent->clientHd != ClientHandle::INVALID) foreach_const(c2, action.commands) if(c2->type == ActionCommand::Type::MOVESPEED && c2->moveSpeed.percent > 0) clientMoves = true;
+			if(!clientMoves) caster->parent->body->lockedMoveUntil = TimeAddSec(localTime, cmd.delay);
 		} break
 			;
 		case ActionCommand::Type::GRAPH_MOVE_HORZ: {

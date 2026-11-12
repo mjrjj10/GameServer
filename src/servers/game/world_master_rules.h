@@ -332,6 +332,28 @@ static const SummonGroupLimitRule MEASURED_SUMMON_GROUP_LIMITS[] = {
 	{ ClassType::MECHANIC, 100033800, 100033839, 3 },
 };
 
+struct SummonChaseSpeedRule
+{
+	i32 creature;
+	f32 farSpeed;
+	f32 nearSpeed;
+	f32 nearDist;
+	f32 spawnSec;
+};
+
+static const SummonChaseSpeedRule MEASURED_SUMMON_CHASE_SPEEDS[] = {
+	{ 100033841, 600.0f, 750.0f, 450.0f, 0.58f },
+	{ 100033842, 600.0f, 750.0f, 450.0f, 0.58f },
+};
+
+static inline const SummonChaseSpeedRule* FindSummonChaseSpeedRule(i32 creature)
+{
+	for(const SummonChaseSpeedRule& rule : MEASURED_SUMMON_CHASE_SPEEDS) {
+		if(rule.creature == creature) return &rule;
+	}
+	return nullptr;
+}
+
 struct StatusDrainRule
 {
 	i32 status;

@@ -2792,6 +2792,11 @@ bool GameXmlContent::LoadAnimationData()
 			case ActionCommand::Type::ROTATESPEED: {
 				pActionBase->QueryAttribute("Param1", &cmd.rotateSpeed.speed);
 			} break;
+
+			case ActionCommand::Type::MOVESPEED: {
+				cmd.moveSpeed.percent = 0;
+				pActionBase->QueryAttribute("Param1", &cmd.moveSpeed.percent);
+			} break;
 		}
 
 		curAction->commands.push_back(cmd);

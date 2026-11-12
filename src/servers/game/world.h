@@ -551,6 +551,7 @@ struct World
 		Time wanderResumeAt = Time::ZERO;
 		vec3 legGoal = vec3(0);
 		Time legAt = Time::ZERO;
+		f32 legSpeed = 0;
 		ActionStateID pendingMotion = ActionStateID::INVALID;
 		vec3 aimPos = vec3(0);
 		Time motionAt = Time::ZERO;
