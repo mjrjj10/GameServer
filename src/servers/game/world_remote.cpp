@@ -774,6 +774,7 @@ void World::ChangeCasterActionOnHit(RemoteInst& inst, Player& owner, ActorUID ta
 	if(remote.changeCasterAction == ActionStateID::INVALID || inst.actionChanged || owner.dead || owner.Main().UID != inst.casterMasterUID) return;
 	inst.actionChanged = true;
 	LOG("Remote :: %ls hit -> caster action %d", owner.name.data(), (i32)remote.changeCasterAction);
+	foreach(pg, skillProgramList) if(pg->casterUID == owner.Main().UID && pg->skillID == inst.skillID && pg->actionID != remote.changeCasterAction) pg->Finish();
 	owner.dashDone = owner.dashDist;
 	owner.dashUntil = localTime;
 	hitActionOnly = true;
