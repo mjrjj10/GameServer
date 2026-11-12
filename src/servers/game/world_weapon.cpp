@@ -251,7 +251,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 				pr.ownerIndex = player.index;
 				pr.skillID = SkillID::INVALID;
 				pr.castID = nextCastID++;
-				pr.damage = (i32)WeaponHitDamage(player, delayedChild);
+				pr.damage = (i32)WeaponHitDamage(player, nullptr);
 				pr.castPos = proj.pos + vec3(proj.dir * proj.range, 0);
 				pr.angle = atan2f(proj.dir.y, proj.dir.x);
 				pr.target = ActorUID::INVALID;
