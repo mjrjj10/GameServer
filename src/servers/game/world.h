@@ -468,6 +468,8 @@ struct World
 		i32 hp;
 		i32 hpMax;
 		eastl::array<u8,4> traits = {};
+		eastl::array<u8,4> botTraitPlan = {};
+		bool botTraitPlanSet = false;
 		i32 traitPoints = 0;
 		Time traitResetAt = Time::ZERO;
 		i32 seed;

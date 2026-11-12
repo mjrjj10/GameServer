@@ -232,9 +232,21 @@ void World::BotSpendTraits(Player& player)
 		ActorMaster& chara = m == 0 ? player.Main() : player.Sub();
 		eastl::fixed_vector<u8,64,false> picks;
 		eastl::array<u8,4> levels = chara.traits;
+		if(!chara.botTraitPlanSet) {
+			chara.botTraitPlanSet = true;
+			const GameXmlContent::MeasuredBotTraits* plan = GetGameXmlContent().PickMeasuredBotTraits(chara.classType, RandUint());
+			if(plan) chara.botTraitPlan = plan->levels;
+		}
 		for(i32 k = 0; k < chara.traitPoints && !picks.full(); k++) {
-			i32 idx = 0;
-			while(idx < 4 && levels[idx] >= maxPoints) idx++;
+			i32 idx = -1;
+			for(i32 i = 0; i < 4; i++) {
+				if(levels[i] >= maxPoints || levels[i] >= chara.botTraitPlan[i]) continue;
+				if(idx < 0 || chara.botTraitPlan[i] > chara.botTraitPlan[idx]) idx = i;
+			}
+			if(idx < 0) {
+				idx = 0;
+				while(idx < 4 && levels[idx] >= maxPoints) idx++;
+			}
 			if(idx >= 4) break;
 			levels[idx]++;
 			picks.push_back((u8)idx);

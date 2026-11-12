@@ -3566,6 +3566,7 @@ bool GameXmlContent::Load()
 	r = LoadMeasuredFireNodes();
 	if(r) r = LoadMeasuredSwingNodes();
 	if(r) r = LoadMeasuredBotGear();
+	if(r) r = LoadMeasuredBotTraits();
 	if(r) r = LoadMeasuredWalkCells();
 	if(!r) return false;
 	r = LoadFireNodePaths();
@@ -4349,6 +4350,20 @@ bool GameXmlContent::LoadMeasuredBotGear()
 		measuredBotGear.push_back(gear);
 	}
 	LOG("Loaded %d measured bot gear profiles", (i32)measuredBotGear.size());
+	return true;
+}
+
+bool GameXmlContent::LoadMeasuredBotTraits()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/MeasuredBotTraits.xml", doc, true) || !doc.FirstChildElement()) return true;
+	for(XMLElement* p = doc.FirstChildElement()->FirstChildElement("TRAITS"); p; p = p->NextSiblingElement("TRAITS")) {
+		MeasuredBotTraits t;
+		t.classType = p->IntAttribute("class");
+		t.levels = { (u8)p->IntAttribute("t0"), (u8)p->IntAttribute("t1"), (u8)p->IntAttribute("t2"), (u8)p->IntAttribute("t3") };
+		measuredBotTraits.push_back(t);
+	}
+	LOG("Loaded %d measured bot trait profiles", (i32)measuredBotTraits.size());
 	return true;
 }
 

@@ -1599,6 +1599,17 @@ struct GameXmlContent
 	const MeasuredFireNode* FindMeasuredFireNode(i32 skill, i32 remote, i32 index) const { auto f = measuredFireNodes.find(FireNodeKey(skill, remote, index)); return f == measuredFireNodes.end() ? nullptr : &f->second; }
 	struct MeasuredBotGear { i32 classType = 0; f32 attack = 0; f32 defence = 0; f32 health = 0; i32 weaponTier = 1; i32 weapon = 0; };
 	eastl::vector<MeasuredBotGear> measuredBotGear;
+	struct MeasuredBotTraits { i32 classType = 0; eastl::array<u8,4> levels = {}; };
+	eastl::vector<MeasuredBotTraits> measuredBotTraits;
+	const MeasuredBotTraits* PickMeasuredBotTraits(ClassType classType, u32 roll) const
+	{
+		u32 count = 0;
+		foreach_const(t, measuredBotTraits) if(t->classType == (i32)classType) count++;
+		if(count == 0) return nullptr;
+		u32 pick = roll % count;
+		foreach_const(t, measuredBotTraits) if(t->classType == (i32)classType && pick-- == 0) return &*t;
+		return nullptr;
+	}
 	const MeasuredBotGear* PickMeasuredBotGear(ClassType classType, u32 roll) const
 	{
 		u32 count = 0;
@@ -1866,6 +1877,7 @@ private:
 	bool LoadMeasuredFireNodes();
 	bool LoadMeasuredSwingNodes();
 	bool LoadMeasuredBotGear();
+	bool LoadMeasuredBotTraits();
 	bool LoadMeasuredWalkCells();
 	bool LoadFireNodePaths();
 	bool LoadClientRemoteCreators();
