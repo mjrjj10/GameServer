@@ -928,6 +928,13 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			break;
 		}
 		if(ccEnd > target.ccUntil) target.ccUntil = ccEnd;
+		const ActorNpc* npcCaster = &caster == &target && statusCasterOverride != ActorUID::INVALID ? FindNpcActor(statusCasterOverride) : nullptr;
+		const bool hostile = &caster != &target ? caster.team != target.team : npcCaster && NpcHittableBy(*npcCaster, target);
+		if(info->kind == StatusInfo::Kind::HARD_CC && hostile && localTime < target.dashUntil && target.dashDone < target.dashDist) {
+			target.dashDone = target.dashDist;
+			target.dashUntil = localTime;
+			LOG("Status :: %ls dash stopped by cc %d", target.name.data(), statusID);
+		}
 	}
 
 	const bool chainedPush = target.clientHd == ClientHandle::INVALID ? localTime < target.pushUntil : localTime < target.clientPushUntil;
@@ -1032,6 +1039,8 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			target.clientPushSnap = info->type == StatusType::PUSH || info->type == StatusType::FLY || info->type == StatusType::AIRBORNE || info->type == StatusType::KNOCKDOWN || info->type == StatusType::DRAGGED || dragForce;
 			target.clientPushFrom = target.body->GetWorldPos();
 			target.clientPushStart = localTime;
+			target.clientPushDragMin = dragForce ? info->dragForceMin : 0.0f;
+			target.clientPushDragMax = dragForce ? info->dragForceMax : 0.0f;
 			const Time followUntil = TimeAdd(localTime, TimeMsToTime((graphDuration + 2.0f) * 1000.0));
 			if(followUntil > target.ccUntil) target.ccUntil = followUntil;
 		}

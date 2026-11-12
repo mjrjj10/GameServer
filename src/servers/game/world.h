@@ -355,6 +355,8 @@ struct World
 		bool clientPushSnap = false;
 		vec3 clientPushFrom = vec3(0);
 		Time clientPushStart = Time::ZERO;
+		f32 clientPushDragMin = 0;
+		f32 clientPushDragMax = 0;
 		f32 dashDist = 0;
 		f32 dashDone = 0;
 		const GameXmlContent::MoveCurve* dashCurve = nullptr;

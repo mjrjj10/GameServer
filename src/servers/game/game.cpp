@@ -17,6 +17,7 @@ static const f32 STAGE_TIME_LIMIT_FALLBACK_SEC = 300.0f;
 static const f64 RETURN_TO_LOBBY_DELAY_SEC = 20.0;
 static const u32 MEASURED_PVE_FAIL_RETURN_MS = 15000;
 static const f32 HYP_HUMAN_POSITION_SNAP = 100.0f;
+static const f64 HYP_CLIENT_PUSH_INFLIGHT_SEC = 0.3;
 static const f32 HYP_HUMAN_DASH_SNAP = 400.0f;
 static const f32 MEASURED_BOT_TAG_SHARE = 2.5f / 49.9f;
 static const u32 MEASURED_DEFENCE_RETURN_MS = 280;
@@ -1165,6 +1166,7 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 
 	player.lastClientPos = pos;
 	player.clientPosCount++;
+	if(player.clientPushSnap && world.localTime < player.clientPushUntil && TimeDiffSec(TimeDiff(player.clientPushStart, world.localTime)) < HYP_CLIENT_PUSH_INFLIGHT_SEC) player.clientPushPosCount = player.clientPosCount;
 	if(player.carriedBy >= 0) return;
 	if(action != ActionStateID::INVALID && action != player.lastClientAction) {
 		if(player.lastClientAction == player.lastCastAction && player.lastCastAction != ActionStateID::INVALID) world.EndActionStatuses(player);

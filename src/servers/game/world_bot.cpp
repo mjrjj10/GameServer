@@ -63,6 +63,7 @@ bool World::BotStageSkill(Player& bot)
 }
 
 static const f32 HYP_BOT_EVADE_AIM_DISTANCE = 500.0f;
+static const f32 MEASURED_BOT_EVADE_CONTACT_DIST = 306.0f;
 
 bool World::BotEvade(Player& bot)
 {
@@ -85,6 +86,15 @@ bool World::BotEvade(Player& bot)
 			if(ri->remote->damageGroup != Remote::DamageGroup::eENEMY && ri->remote->damageGroup != Remote::DamageGroup::eALL) continue;
 			if(glm::length(vec2(ri->pos) - at) > nearby) continue;
 			incoming = glm::length(ri->dir) > 0.5f ? ri->dir : glm::normalize(at - vec2(ri->pos) + vec2(0.01f, 0.0f));
+			break;
+		}
+	}
+	if(glm::length(incoming) < 0.5f && FindPassiveOfType(bot, StatusType::STATUS_ON_EVADE)) {
+		foreach_const(e, players) {
+			if(e->dead || e->untargetable || e->team == bot.team || !(e->fogSeenBy & (1u << bot.team))) continue;
+			const vec2 rel = at - vec2(e->body->GetWorldPos());
+			if(glm::length(rel) > MEASURED_BOT_EVADE_CONTACT_DIST) continue;
+			incoming = glm::normalize(rel + vec2(0.01f, 0.0f));
 			break;
 		}
 	}

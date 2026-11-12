@@ -155,7 +155,14 @@ void World::Update(Time localTime_)
 		if(!p.dead && p.clientHd != ClientHandle::INVALID && p.clientPushSnap && localTime < p.clientPushUntil && p.clientPosCount == p.clientPushPosCount) {
 			const f32 total = (f32)TimeDiffSec(TimeDiff(p.clientPushStart, p.clientPushUntil));
 			const f32 k = total > 0.001f ? MIN((f32)TimeDiffSec(TimeDiff(p.clientPushStart, localTime)) / total, 1.0f) : 1.0f;
-			const vec2 at2 = glm::mix(vec2(p.clientPushFrom), vec2(p.pushTarget), PushCurveProgress(k));
+			f32 progress = PushCurveProgress(k);
+			if(p.clientPushDragMax > 0) {
+				const f32 len = glm::length(vec2(p.pushTarget) - vec2(p.clientPushFrom));
+				const f32 t = (f32)TimeDiffSec(TimeDiff(p.clientPushStart, localTime));
+				const f32 accel = total > 0.001f ? (p.clientPushDragMax - p.clientPushDragMin) / total : 0.0f;
+				progress = len > 1.0f ? MIN((p.clientPushDragMin * t + 0.5f * accel * t * t) / len, 1.0f) : 1.0f;
+			}
+			const vec2 at2 = glm::mix(vec2(p.clientPushFrom), vec2(p.pushTarget), progress);
 			const vec3 at = vec3(at2, body.GetWorldPos().z);
 			body.collider->setFootPosition(PxExtendedVec3(at.x, at.y, at.z));
 			body.vel = vec3(0);
