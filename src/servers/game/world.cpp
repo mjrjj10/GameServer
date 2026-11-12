@@ -47,6 +47,28 @@ static void ComputeGearBonus(World::ActorMaster& chara, const eastl::fixed_vecto
 	}
 }
 
+static void AddMeasuredBotGear(World::ActorMaster& chara, WeaponIndex weapon, i32 powerPercent, u32 roll)
+{
+	const GameXmlContent::MeasuredBotGear* gear = GetGameXmlContent().PickMeasuredBotGear(chara.classType, roll);
+	if(!gear || powerPercent <= 0) return;
+	const f32 k = (f32)powerPercent / 100.0f;
+	const i32 doc = (i32)weapon;
+	const f32 tierAttack = GetGameXmlContent().GetWeaponAttack(doc - doc % 10 + gear->weaponTier);
+	const f32 weaponAttack = GetGameXmlContent().GetWeaponAttack(doc);
+	const f32 tierBonus = doc % 10 == 1 && tierAttack > weaponAttack ? tierAttack - weaponAttack : 0.0f;
+	const eastl::pair<u8,f32> adds[3] = {
+		eastl::make_pair((u8)STAT_ATTACK, (weaponAttack + tierBonus) * gear->attack * k + tierBonus),
+		eastl::make_pair((u8)StatType::STAT_TYPE_DEFENCE, MasterStat(chara.classType, (i32)StatType::STAT_TYPE_DEFENCE) * gear->defence * k),
+		eastl::make_pair((u8)STAT_HEALTH, gear->health * k),
+	};
+	for(const auto& a : adds) {
+		if(a.second <= 0) continue;
+		bool merged = false;
+		foreach(g, chara.gearBonus) if(g->first == a.first) { g->second += a.second; merged = true; break; }
+		if(!merged && !chara.gearBonus.full()) chara.gearBonus.push_back(a);
+	}
+}
+
 void World::Init(Replication* replication_)
 {
 	replication = replication_;
@@ -615,6 +637,8 @@ void World::CreatePlayerMasters(Player& player)
 	main.skinIndex = player.mainSkin;
 	ComputeGearBonus(main, player.gearDocs[0], player.mainWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType));
 	AddTitleBonus(main, player.statTitle, player.mainWeapon);
+	const bool botGear = player.clientHd == ClientHandle::INVALID && !Config().DevShowcase && player.gearDocs[0].empty() && player.gearDocs[1].empty();
+	if(botGear) AddMeasuredBotGear(main, player.mainWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType), RandUint());
 	if(!player.gearDocs[0].empty()) LOG("Gear :: %ls power %d%% attack +%.1f skill power +%.1f health +%.1f defence +%.1f", player.name.data(), GetGameXmlContent().GearPowerPercent(replication->gameType), main.GearBonus(STAT_ATTACK), main.GearBonus(STAT_SKILLPOWER), main.GearBonus(STAT_HEALTH), main.GearBonus((u8)StatType::STAT_TYPE_DEFENCE));
 	main.hpMax = (i32)(MasterStat(main.classType, STAT_HEALTH) + main.GearBonus(STAT_HEALTH));
 	main.hp = main.hpMax;
@@ -628,6 +652,8 @@ void World::CreatePlayerMasters(Player& player)
 	sub.skinIndex = player.subSkin;
 	ComputeGearBonus(sub, player.gearDocs[1], player.subWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType));
 	AddTitleBonus(sub, player.statTitle, player.subWeapon);
+	if(botGear) AddMeasuredBotGear(sub, player.subWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType), RandUint());
+	if(botGear) LOG("Gear :: bot %ls measured gear attack +%.1f/+%.1f defence +%.1f/+%.1f health +%.0f/+%.0f", player.name.data(), main.GearBonus(STAT_ATTACK), sub.GearBonus(STAT_ATTACK), main.GearBonus((u8)StatType::STAT_TYPE_DEFENCE), sub.GearBonus((u8)StatType::STAT_TYPE_DEFENCE), main.GearBonus(STAT_HEALTH), sub.GearBonus(STAT_HEALTH));
 	sub.hpMax = (i32)(MasterStat(sub.classType, STAT_HEALTH) + sub.GearBonus(STAT_HEALTH));
 	sub.hp = sub.hpMax;
 	ASSERT(main.hpMax > 0 && sub.hpMax > 0);

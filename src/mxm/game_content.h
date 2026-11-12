@@ -1597,6 +1597,17 @@ struct GameXmlContent
 	eastl::hash_map<u64, MeasuredFireNode> measuredFireNodes;
 	static u64 FireNodeKey(i32 skill, i32 remote, i32 index) { return ((u64)(u32)skill << 32) ^ ((u64)(u32)remote << 4) ^ (u64)(u32)index; }
 	const MeasuredFireNode* FindMeasuredFireNode(i32 skill, i32 remote, i32 index) const { auto f = measuredFireNodes.find(FireNodeKey(skill, remote, index)); return f == measuredFireNodes.end() ? nullptr : &f->second; }
+	struct MeasuredBotGear { i32 classType = 0; f32 attack = 0; f32 defence = 0; f32 health = 0; i32 weaponTier = 1; };
+	eastl::vector<MeasuredBotGear> measuredBotGear;
+	const MeasuredBotGear* PickMeasuredBotGear(ClassType classType, u32 roll) const
+	{
+		u32 count = 0;
+		foreach_const(g, measuredBotGear) if(g->classType == (i32)classType) count++;
+		if(count == 0) return measuredBotGear.empty() ? nullptr : &measuredBotGear[roll % measuredBotGear.size()];
+		u32 pick = roll % count;
+		foreach_const(g, measuredBotGear) if(g->classType == (i32)classType && pick-- == 0) return &*g;
+		return nullptr;
+	}
 	struct MeasuredSwingNode { f32 forward = 0; f32 side = 0; };
 	eastl::hash_map<i32, MeasuredSwingNode> measuredSwingNodes;
 	const MeasuredSwingNode* FindMeasuredSwingNode(RemoteIdx remote) const { auto f = measuredSwingNodes.find((i32)remote); return f == measuredSwingNodes.end() ? nullptr : &f->second; }
@@ -1854,6 +1865,7 @@ private:
 	bool LoadStatusStatMods();
 	bool LoadMeasuredFireNodes();
 	bool LoadMeasuredSwingNodes();
+	bool LoadMeasuredBotGear();
 	bool LoadMeasuredWalkCells();
 	bool LoadFireNodePaths();
 	bool LoadClientRemoteCreators();

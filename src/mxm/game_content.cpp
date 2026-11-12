@@ -3565,6 +3565,7 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 	r = LoadMeasuredFireNodes();
 	if(r) r = LoadMeasuredSwingNodes();
+	if(r) r = LoadMeasuredBotGear();
 	if(r) r = LoadMeasuredWalkCells();
 	if(!r) return false;
 	r = LoadFireNodePaths();
@@ -4330,6 +4331,23 @@ bool GameXmlContent::LoadMeasuredSwingNodes()
 		measuredSwingNodes[pSwing->IntAttribute("remote")] = node;
 	}
 	LOG("Loaded %d measured swing nodes", (i32)measuredSwingNodes.size());
+	return true;
+}
+
+bool GameXmlContent::LoadMeasuredBotGear()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/MeasuredBotGear.xml", doc, true) || !doc.FirstChildElement()) return true;
+	for(XMLElement* pGear = doc.FirstChildElement()->FirstChildElement("GEAR"); pGear; pGear = pGear->NextSiblingElement("GEAR")) {
+		MeasuredBotGear gear;
+		gear.classType = pGear->IntAttribute("class");
+		gear.attack = pGear->FloatAttribute("attack");
+		gear.defence = pGear->FloatAttribute("defence");
+		gear.health = pGear->FloatAttribute("health");
+		gear.weaponTier = pGear->IntAttribute("weaponTier", 1);
+		measuredBotGear.push_back(gear);
+	}
+	LOG("Loaded %d measured bot gear profiles", (i32)measuredBotGear.size());
 	return true;
 }
 
