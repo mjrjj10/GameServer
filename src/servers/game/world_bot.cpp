@@ -286,9 +286,10 @@ bool World::BotFarmTarget(Player& bot, vec2* goal, f32 range)
 		bot.botFarmUID = chosen->UID;
 		bot.botFarmCheckAt = TimeAdd(localTime, TimeMsToTime(HYP_BOT_FARM_PROGRESS_SEC * 1000.0));
 		bot.botFarmCheckDist = dist;
+		bot.botFarmCheckHp = chosen->hp;
 	}
 	else if(localTime >= bot.botFarmCheckAt) {
-		if(dist > BOT_RANGED_MAX + HYP_BOT_FARM_PROGRESS_DIST && dist > bot.botFarmCheckDist - HYP_BOT_FARM_PROGRESS_DIST) {
+		if(dist > bot.botFarmCheckDist - HYP_BOT_FARM_PROGRESS_DIST && (dist > BOT_RANGED_MAX + HYP_BOT_FARM_PROGRESS_DIST || chosen->hp >= bot.botFarmCheckHp)) {
 			LOG("BotFarm :: %ls gives up creature=%d at %.0f (was %.0f %.0f s ago)", bot.name.data(), (i32)chosen->docID, dist, bot.botFarmCheckDist, HYP_BOT_FARM_PROGRESS_SEC);
 			if(bot.botFarmSkips.full()) bot.botFarmSkips.erase(bot.botFarmSkips.begin());
 			bot.botFarmSkips.push_back(eastl::make_pair(chosen->UID, TimeAdd(localTime, TimeMsToTime(HYP_BOT_FARM_SKIP_SEC * 1000.0))));
@@ -297,6 +298,7 @@ bool World::BotFarmTarget(Player& bot, vec2* goal, f32 range)
 		}
 		bot.botFarmCheckAt = TimeAdd(localTime, TimeMsToTime(HYP_BOT_FARM_PROGRESS_SEC * 1000.0));
 		bot.botFarmCheckDist = dist;
+		bot.botFarmCheckHp = chosen->hp;
 	}
 	*goal = vec2(chosen->pos);
 	return true;
@@ -491,7 +493,7 @@ void World::BotPlanRoute(Player& bot, const vec2& goal)
 	for(i32 n = 0; n < count; n++) {
 		const f32 d = glm::length(vec2(botNav[n].pos) - vec2(pos));
 		if(d < nearestDist) { nearestDist = d; nearest = n; }
-		if(d <= BOT_NAV_LINK_RANGE && BotSees(pos, botNav[n].pos)) { dist[n] = d; seen = true; }
+		if(d <= BOT_NAV_LINK_RANGE && BotSees(pos, botNav[n].pos) && BotWalkable(pos, botNav[n].pos)) { dist[n] = d; seen = true; }
 	}
 	if(!seen) dist[nearest] = nearestDist;
 	for(;;) {
@@ -514,7 +516,7 @@ void World::BotPlanRoute(Player& bot, const vec2& goal)
 		if(dist[n] >= 1e29f) continue;
 		const f32 d = glm::length(vec2(botNav[n].pos) - goal);
 		if(d < fallbackDist) { fallbackDist = d; fallback = n; }
-		if(d > BOT_NAV_LINK_RANGE || dist[n] + d >= lastCost || !BotSees(botNav[n].pos, goal3)) continue;
+		if(d > BOT_NAV_LINK_RANGE || dist[n] + d >= lastCost || !BotSees(botNav[n].pos, goal3) || !BotWalkable(botNav[n].pos, goal3)) continue;
 		lastCost = dist[n] + d;
 		last = n;
 	}
@@ -529,11 +531,14 @@ vec2 World::BotNavStep(Player& bot, const vec2& goal)
 	if(!botNavBuilt) BuildBotNav();
 	const vec3 pos = bot.body->GetWorldPos();
 	const vec2 here = vec2(pos);
-	if(botNav.empty() || BotSees(pos, vec3(goal, pos.z))) {
+	if(botNav.empty() || (localTime >= bot.botRouteForceUntil && BotSees(pos, vec3(goal, pos.z)) && BotWalkable(pos, vec3(goal, pos.z)))) {
 		bot.botRoute.clear();
 		return goal;
 	}
-	if(bot.botRoute.empty() || glm::length(goal - bot.botRouteGoal) > BOT_NAV_REROUTE_DIST) BotPlanRoute(bot, goal);
+	if(bot.botRoute.empty() || glm::length(goal - bot.botRouteGoal) > BOT_NAV_REROUTE_DIST) {
+		BotPlanRoute(bot, goal);
+		if(localTime < bot.botRouteForceUntil) LOG("BotNav :: %ls forced route to (%.0f, %.0f): %d nodes, first (%.0f, %.0f)", bot.name.data(), goal.x, goal.y, (i32)bot.botRoute.size(), bot.botRoute.empty() ? 0.0f : botNav[bot.botRoute.front()].pos.x, bot.botRoute.empty() ? 0.0f : botNav[bot.botRoute.front()].pos.y);
+	}
 	while(!bot.botRoute.empty() && (glm::length(vec2(botNav[bot.botRoute.front()].pos) - here) < BOT_NAV_REACHED || InsideBodyBlocker(vec2(botNav[bot.botRoute.front()].pos), PLAYER_BODY_RADIUS))) bot.botRoute.erase(bot.botRoute.begin());
 	if(bot.botRoute.size() > 1 && BotSees(pos, botNav[bot.botRoute[1]].pos)) bot.botRoute.erase(bot.botRoute.begin());
 	if(bot.botRoute.empty()) return goal;
@@ -632,13 +637,28 @@ void World::UpdateBotMovement()
 	foreach(it, players) {
 		Player& bot = *it;
 		if(bot.clientHd != ClientHandle::INVALID || bot.dead || bot.Main().classType == ClassType::NONE) continue;
-		if(localTime < bot.ccUntil || localTime < bot.dashUntil || bot.casting.skillID != SkillID::INVALID || AttachedToCaster(bot)) continue;
-		if(bot.interactSlot >= 0 || localTime < bot.botSkillStillUntil) continue;
+		const char* held = localTime < bot.ccUntil ? "cc" : localTime < bot.dashUntil ? "dash" : bot.casting.skillID != SkillID::INVALID ? "casting" : AttachedToCaster(bot) ? "attached" : bot.interactSlot >= 0 ? "interaction" : localTime < bot.botSkillStillUntil ? "skill still" : nullptr;
+		if(held) {
+			if(bot.botHeldSince == Time::ZERO) bot.botHeldSince = localTime;
+			if(TimeDiffSec(TimeDiff(bot.botHeldSince, localTime)) > 10.0 && localTime >= bot.botIdleLogAt) {
+				bot.botIdleLogAt = TimeAdd(localTime, TimeMsToTime(10000.0));
+				LOG("BotHeld :: %ls held by %s for %.0fs (skill %d, slot %d, cc %.1fs, dash %.1fs, still %.1fs)", bot.name.data(), held, TimeDiffSec(TimeDiff(bot.botHeldSince, localTime)), (i32)bot.casting.skillID, (i32)bot.interactSlot,
+					localTime < bot.ccUntil ? TimeDiffSec(TimeDiff(localTime, bot.ccUntil)) : 0.0, localTime < bot.dashUntil ? TimeDiffSec(TimeDiff(localTime, bot.dashUntil)) : 0.0, localTime < bot.botSkillStillUntil ? TimeDiffSec(TimeDiff(localTime, bot.botSkillStillUntil)) : 0.0);
+			}
+			continue;
+		}
+		bot.botHeldSince = Time::ZERO;
 		const vec3 pos = bot.body->GetWorldPos();
 		const vec2 here = vec2(pos);
 		bool stuck = false;
 		if(localTime >= bot.botStuckCheck) {
 			stuck = bot.botStuckCheck != Time::ZERO && glm::length(here - bot.botLastPos) < BOT_STUCK_DIST && glm::length(vec2(bot.input.moveTo) - here) > BOT_REPATH_DIST;
+			bot.botStillChecks = bot.botStuckCheck != Time::ZERO && glm::length(here - bot.botLastPos) < BOT_STUCK_DIST ? bot.botStillChecks + 1 : 0;
+			if((f64)bot.botStillChecks * BOT_STUCK_CHECK_MS > 15000.0 && localTime >= bot.botIdleLogAt && localTime >= bot.botAttackStateUntil) {
+				bot.botIdleLogAt = TimeAdd(localTime, TimeMsToTime(10000.0));
+				LOG("BotStill :: %ls at (%.0f, %.0f, %.0f) mode %s moveTo %.0f away speed %.0f lock %.1fs stuck %d grounded %d", bot.name.data(), pos.x, pos.y, pos.z, bot.botMode < 6 ? BOT_MODE_NAMES[bot.botMode] : "-", glm::length(vec2(bot.input.moveTo) - here), bot.input.speed,
+					bot.body->lockedMoveUntil > localTime ? TimeDiffSec(TimeDiff(localTime, bot.body->lockedMoveUntil)) : 0.0, stuck ? 1 : 0, bot.body->grounded ? 1 : 0);
+			}
 			bot.botLastPos = here;
 			bot.botStuckCheck = TimeAdd(localTime, TimeMsToTime(BOT_STUCK_CHECK_MS));
 		}
@@ -663,6 +683,10 @@ void World::UpdateBotMovement()
 		if(occupyGoal && glm::length(occupyPoint - here) <= occupyReach && (!target || best > HYP_BOT_OCCUPY_FIGHT_RANGE)) {
 			bot.input.moveTo = pos;
 			StartMapInteraction(bot, occupyObject);
+			if(bot.interactSlot < 0 && localTime >= bot.botIdleLogAt) {
+				bot.botIdleLogAt = TimeAdd(localTime, TimeMsToTime(10000.0));
+				LOG("BotIdle :: %ls at (%.0f, %.0f) %.0f from occupy point (%.0f, %.0f), interaction not started", bot.name.data(), here.x, here.y, glm::length(occupyPoint - here), occupyPoint.x, occupyPoint.y);
+			}
 			continue;
 		}
 		const bool titanNav = map && map->ingameLevels;
@@ -736,6 +760,18 @@ void World::UpdateBotMovement()
 			if(len > BOT_ROAM_STEP) goal = here + d / len * BOT_ROAM_STEP;
 		}
 		if(stuck) {
+			static const i32 HYP_BOT_STUCK_ROUTE_CHECKS = 6;
+			static const f64 HYP_BOT_STUCK_ROUTE_MS = 5000.0;
+			if(titanNav && bot.botStillChecks >= HYP_BOT_STUCK_ROUTE_CHECKS && localTime >= bot.botRouteForceUntil) {
+				bot.botRouteForceUntil = TimeAdd(localTime, TimeMsToTime(HYP_BOT_STUCK_ROUTE_MS));
+				eastl::fixed_string<char,128,false> free;
+				for(i32 k = 0; k < 8; k++) {
+					const vec2 d8 = vec2(cosf((f32)k * PI / 4.0f), sinf((f32)k * PI / 4.0f));
+					const vec3 reach = physics.FindMovePos(bot.body, vec3(d8 * 200.0f, 0), 0.3f);
+					free.append_sprintf(" %.0f", glm::dot(vec2(reach) - here, d8));
+				}
+				LOG("BotNav :: %ls stuck at (%.0f, %.0f, %.0f), follows the walk graph, free%s, route %d", bot.name.data(), here.x, here.y, pos.z, free.c_str(), (i32)bot.botRoute.size());
+			}
 			bot.botRoute.clear();
 			const vec2 d = goal - here;
 			const f32 len = glm::length(d);
@@ -750,6 +786,10 @@ void World::UpdateBotMovement()
 		}
 		BotGateBlocks(bot, here, &goal);
 		BotKeepOutOfBlockers(bot, &goal);
+		if(glm::length(goal - here) < BOT_REPATH_DIST && !fighting && localTime >= bot.botIdleLogAt) {
+			bot.botIdleLogAt = TimeAdd(localTime, TimeMsToTime(10000.0));
+			LOG("BotIdle :: %ls at (%.0f, %.0f) mode %s goal (%.0f, %.0f)", bot.name.data(), here.x, here.y, BOT_MODE_NAMES[mode], goal.x, goal.y);
+		}
 		bot.input.moveTo = vec3(goal, pos.z);
 		bot.input.speed = PlayerMoveSpeed(bot);
 	}

@@ -289,6 +289,10 @@ struct World
 		Time botFarmCheckAt = Time::ZERO;
 		f32 botFarmCheckDist = 0;
 		i32 botFarmCheckHp = 0;
+		Time botIdleLogAt = Time::ZERO;
+		Time botHeldSince = Time::ZERO;
+		i32 botStillChecks = 0;
+		Time botRouteForceUntil = Time::ZERO;
 		eastl::fixed_vector<eastl::pair<ActorUID,Time>,4,false> botFarmSkips;
 		i8 botLane = -1;
 		u8 botMode = 0xff;
