@@ -880,18 +880,49 @@ bool World::Pilot(Player& p, PilotDecision* out)
 		out->doc = 100000000 + (i32)e->Main().classType;
 	}
 	if(!out->hasTarget) {
+		static const f32 HYP_PILOT_TARGET_PROGRESS_SEC = 8.0f;
+		static const f32 HYP_PILOT_TARGET_PROGRESS_DIST = 300.0f;
+		static const f32 HYP_PILOT_TARGET_SKIP_SEC = 30.0f;
+		for(i32 s = (i32)p.botFarmSkips.size() - 1; s >= 0; s--) if(localTime >= p.botFarmSkips[s].second) p.botFarmSkips.erase(p.botFarmSkips.begin() + s);
+		const ActorNpc* chosen = nullptr;
 		foreach_const(npc, actorNpcList) {
 			if(!npc->monsterAi || !NpcHittableBy(*npc, p) || NpcHasStatusType(*npc, StatusType::GODMODE)) continue;
 			if(IsStructure(*npc) && !BotSiegeOk(p, *npc)) continue;
 			if(!IsStructure(*npc) && BotDangerAt(p, vec2(npc->pos), nullptr, nullptr)) continue;
+			bool skipped = false;
+			foreach_const(s, p.botFarmSkips) if(s->first == npc->UID) skipped = true;
+			if(skipped) continue;
 			const f32 d = glm::length(vec2(npc->pos) - here);
 			if(d >= best) continue;
 			best = d;
+			chosen = &*npc;
+		}
+		if(chosen && chosen->UID != p.botFarmUID) {
+			p.botFarmUID = chosen->UID;
+			p.botFarmCheckAt = TimeAdd(localTime, TimeMsToTime(HYP_PILOT_TARGET_PROGRESS_SEC * 1000.0));
+			p.botFarmCheckDist = best;
+			p.botFarmCheckHp = chosen->hp;
+		}
+		else if(chosen && localTime >= p.botFarmCheckAt) {
+			if(best > p.botFarmCheckDist - HYP_PILOT_TARGET_PROGRESS_DIST && chosen->hp >= p.botFarmCheckHp) {
+				LOG("Pilot :: gives up creature=%d at %.0f (no progress, hp %d)", (i32)chosen->docID, best, chosen->hp);
+				if(p.botFarmSkips.full()) p.botFarmSkips.erase(p.botFarmSkips.begin());
+				p.botFarmSkips.push_back(eastl::make_pair(chosen->UID, TimeAdd(localTime, TimeMsToTime(HYP_PILOT_TARGET_SKIP_SEC * 1000.0))));
+				p.botFarmUID = ActorUID::INVALID;
+				chosen = nullptr;
+			}
+			else {
+				p.botFarmCheckAt = TimeAdd(localTime, TimeMsToTime(HYP_PILOT_TARGET_PROGRESS_SEC * 1000.0));
+				p.botFarmCheckDist = best;
+				p.botFarmCheckHp = chosen->hp;
+			}
+		}
+		if(chosen) {
 			out->hasTarget = true;
-			out->target = npc->pos;
-			out->hp = npc->hp;
-			out->hpMax = npc->hpMax;
-			out->doc = (i32)npc->docID;
+			out->target = chosen->pos;
+			out->hp = chosen->hp;
+			out->hpMax = chosen->hpMax;
+			out->doc = (i32)chosen->docID;
 		}
 	}
 	vec2 occupyPoint;

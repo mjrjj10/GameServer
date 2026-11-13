@@ -288,6 +288,7 @@ struct World
 		ActorUID botFarmUID = ActorUID::INVALID;
 		Time botFarmCheckAt = Time::ZERO;
 		f32 botFarmCheckDist = 0;
+		i32 botFarmCheckHp = 0;
 		eastl::fixed_vector<eastl::pair<ActorUID,Time>,4,false> botFarmSkips;
 		i8 botLane = -1;
 		u8 botMode = 0xff;
