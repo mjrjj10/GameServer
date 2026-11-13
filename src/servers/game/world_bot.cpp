@@ -539,8 +539,10 @@ vec2 World::BotNavStep(Player& bot, const vec2& goal)
 		BotPlanRoute(bot, goal);
 		if(localTime < bot.botRouteForceUntil) LOG("BotNav :: %ls forced route to (%.0f, %.0f): %d nodes, first (%.0f, %.0f)", bot.name.data(), goal.x, goal.y, (i32)bot.botRoute.size(), bot.botRoute.empty() ? 0.0f : botNav[bot.botRoute.front()].pos.x, bot.botRoute.empty() ? 0.0f : botNav[bot.botRoute.front()].pos.y);
 	}
-	while(!bot.botRoute.empty() && (glm::length(vec2(botNav[bot.botRoute.front()].pos) - here) < BOT_NAV_REACHED || InsideBodyBlocker(vec2(botNav[bot.botRoute.front()].pos), PLAYER_BODY_RADIUS))) bot.botRoute.erase(bot.botRoute.begin());
-	if(bot.botRoute.size() > 1 && BotSees(pos, botNav[bot.botRoute[1]].pos)) bot.botRoute.erase(bot.botRoute.begin());
+	static const f32 HYP_BOT_NAV_REACHED_STUCK = 60.0f;
+	const f32 reached = localTime < bot.botRouteForceUntil ? HYP_BOT_NAV_REACHED_STUCK : BOT_NAV_REACHED;
+	while(!bot.botRoute.empty() && (glm::length(vec2(botNav[bot.botRoute.front()].pos) - here) < reached || InsideBodyBlocker(vec2(botNav[bot.botRoute.front()].pos), PLAYER_BODY_RADIUS))) bot.botRoute.erase(bot.botRoute.begin());
+	if(bot.botRoute.size() > 1 && BotSees(pos, botNav[bot.botRoute[1]].pos) && BotWalkable(pos, botNav[bot.botRoute[1]].pos)) bot.botRoute.erase(bot.botRoute.begin());
 	if(bot.botRoute.empty()) return goal;
 	return vec2(botNav[bot.botRoute.front()].pos);
 }
