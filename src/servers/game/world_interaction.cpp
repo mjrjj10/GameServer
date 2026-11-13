@@ -209,6 +209,38 @@ void World::UpdateInteractions()
 		it->body->vel = vec3(0);
 		it->input.moveTo = at;
 	}
+	foreach(it, players) {
+		if(it->dead || !it->body || !HasStatusType(*it, StatusType::BURROW) || !HasStatusType(*it, StatusType::TARGET)) continue;
+		bool found = false;
+		vec3 at = vec3(0);
+		Time latest = Time::ZERO;
+		foreach_const(st, activeStatuses) {
+			if(st->casterIndex != it->index || st->targetIndex == it->index || !st->info || st->info->type != StatusType::CASTER || st->until <= localTime || (found && st->appliedAt <= latest)) continue;
+			const Player& victim = players[st->targetIndex];
+			if(victim.dead || !victim.body) continue;
+			at = victim.body->GetWorldPos();
+			latest = st->appliedAt;
+			found = true;
+		}
+		foreach_const(ns, npcStatuses) {
+			if(ns->casterUID != it->Main().UID || ns->until <= localTime || (found && ns->appliedAt <= latest)) continue;
+			const StatusInfo* info = GetGameXmlContent().FindStatus(ns->statusID);
+			if(!info || info->type != StatusType::CASTER) continue;
+			const ActorNpc* npc = FindNpcActor(ns->npcUID);
+			if(!npc || npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
+			at = npc->pos;
+			latest = ns->appliedAt;
+			found = true;
+		}
+		if(!found) continue;
+		if(localTime < it->dashUntil) {
+			it->dashDone = it->dashDist;
+			it->dashUntil = localTime;
+		}
+		it->body->collider->setFootPosition(PxExtendedVec3(at.x, at.y, at.z));
+		it->body->vel = vec3(0);
+		it->input.moveTo = at;
+	}
 }
 
 static const u32 STAT_REASON_ITEM = 3;
