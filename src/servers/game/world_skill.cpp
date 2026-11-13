@@ -1234,7 +1234,7 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 		case ActionCommand::Type::STATE_BLOCK: {
 			i32 movePercent = -1;
 			foreach_const(c2, action.commands) if(c2->type == ActionCommand::Type::MOVESPEED) movePercent = MAX(movePercent, c2->moveSpeed.percent);
-			const bool freeMove = caster->parent->clientHd != ClientHandle::INVALID ? movePercent > 0 : movePercent >= ACTION_FULL_MOVESPEED_PERCENT;
+			const bool freeMove = caster->parent->clientHd != ClientHandle::INVALID || movePercent >= ACTION_FULL_MOVESPEED_PERCENT;
 			if(!freeMove) caster->parent->body->lockedMoveUntil = TimeAddSec(localTime, cmd.delay);
 		} break
 			;

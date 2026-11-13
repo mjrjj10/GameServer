@@ -1199,6 +1199,11 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 		player.lastClientAction = action;
 		player.lastClientActionSince = world.localTime;
 	}
+	if(world.localTime < player.dashUntil && player.dashBlockUntil != Time::ZERO && world.localTime >= player.dashBlockUntil && world.localTime >= player.ccUntil && dir != vec2(0)) {
+		player.dashDone = player.dashDist;
+		player.dashUntil = world.localTime;
+		LOG("Dash :: %ls moves again after the state block, server dash ended", player.name.data());
+	}
 	const vec3 bodyPos = player.body->GetWorldPos();
 	const bool drifted = glm::length(vec2(pos) - vec2(bodyPos)) > HYP_HUMAN_POSITION_SNAP || fabsf(pos.z - bodyPos.z) > HYP_HUMAN_POSITION_SNAP;
 	const bool awaitStart = player.dashAwaitClientStart && !force;
