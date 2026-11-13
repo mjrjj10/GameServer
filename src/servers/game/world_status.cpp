@@ -794,7 +794,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	ShowcaseOnStatus(caster, target, statusID);
 	const bool permanent = info && info->permanent && durationOverride <= 0;
 	if(permanent) duration = 1000000.0f;
-	const f32 sentDuration = statusAniEnd && info ? (info->durationSec > 0 ? info->durationSec : info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f) : durationOverride > 0 || !info || info->durationSec > 0 || defeatTimed ? duration : (info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f);
+	const f32 sentDuration = info && info->permanent ? StatusSentDuration(*info) : statusAniEnd && info ? (info->durationSec > 0 ? info->durationSec : info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f) : durationOverride > 0 || !info || info->durationSec > 0 || defeatTimed ? duration : (info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : 0.0f);
 	if(info && info->type == StatusType::TOGGLE && info->durationSec <= 0 && info->skillIndex != 0) {
 		foreach(it, activeStatuses) {
 			if(it->targetIndex != target.index || !it->info || it->info->type != StatusType::TARGET || it->info->skillIndex != info->skillIndex || it->until <= localTime) continue;
@@ -806,11 +806,22 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		eastl::fixed_vector<i32,8,false> toggled;
 		foreach_const(it, activeStatuses) {
 			if(it->targetIndex != target.index || !it->info || it->statusID == statusID || it->info->permanent || it->info->skillIndex != info->skillIndex || it->until <= localTime || it->appliedAt >= localTime || toggled.full()) continue;
+			if(info->toggleRemoves != 0 && it->statusID != info->toggleRemoves) continue;
 			if(eastl::find(toggled.begin(), toggled.end(), it->statusID) == toggled.end()) toggled.push_back(it->statusID);
 		}
 		foreach_const(t, toggled) {
 			LOG("Status :: %ls toggle %d removes %d", target.name.data(), statusID, *t);
 			ConsumeStatus(target.index, *t);
+		}
+	}
+	if(info && info->endsGrab) {
+		foreach(it, activeStatuses) {
+			if(!it->info || it->info->skillIndex != info->skillIndex || it->until <= localTime) continue;
+			const bool own = it->targetIndex == target.index && it->info->type == StatusType::CASTER;
+			const bool held = it->casterIndex == target.index && it->targetIndex != target.index && it->info->type == StatusType::TARGET;
+			if(!own && !held) continue;
+			it->until = localTime;
+			LOG("Status :: %ls grab remove %d ends %d on %ls", target.name.data(), statusID, it->statusID, players[it->targetIndex].name.data());
 		}
 	}
 	const ActorUID npcCaster = statusCasterOverride != ActorUID::INVALID && FindNpcActor(statusCasterOverride) ? statusCasterOverride : ActorUID::INVALID;
@@ -1336,6 +1347,17 @@ void World::UpdateStatuses()
 				}
 			}
 			replication->SendRemoveStatusToAll(it->statusID, it->targetUID, it->casterUID);
+			if(it->info && it->info->casterStatus != 0 && it->info->casterStatus != it->statusID) {
+				foreach(o, activeStatuses) {
+					if(o == it || o->statusID != it->info->casterStatus || o->until <= localTime) continue;
+					const Player& holder = players[o->targetIndex];
+					const bool own = o->targetIndex == it->casterIndex && (o->casterUID == target.Main().UID || o->casterUID == target.Sub().UID || o->casterIndex == o->targetIndex);
+					const bool held = o->casterIndex == it->targetIndex && (it->casterUID == holder.Main().UID || it->casterUID == holder.Sub().UID || it->casterIndex == it->targetIndex);
+					if(!own && !held) continue;
+					o->until = localTime;
+					LOG("Status :: %ls status %d ends with %d", holder.name.data(), o->statusID, it->statusID);
+				}
+			}
 			i32 next = 0;
 			if(it->info && it->info->nextStatus != 0 && !target.dead) {
 				const auto cond = it->info->nextCondition;

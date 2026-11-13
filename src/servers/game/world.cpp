@@ -1328,7 +1328,7 @@ void World::SwapMainMaster(Player& p)
 		else if(st->info->tagMode == StatusInfo::TAG_MOVE) {
 			replication->SendRemoveStatusToAll(st->statusID, oldMain, st->casterUID);
 			st->targetUID = newMain;
-			const f32 remain = MIN((f32)TimeDiffSec(TimeDiff(localTime, st->until)), STATUS_INFINITE_DURATION_SEC);
+			const f32 remain = st->info->permanent ? StatusSentDuration(*st->info) : MIN((f32)TimeDiffSec(TimeDiff(localTime, st->until)), STATUS_INFINITE_DURATION_SEC);
 			const vec3 at = p.body ? p.body->GetWorldPos() : vec3(0);
 			replication->SendAddStatusToAll(st->statusID, newMain, st->casterUID, remain, at, at, 0, st->overlap, 1.0f, -1.0f, false, false);
 		}

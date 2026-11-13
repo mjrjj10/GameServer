@@ -341,7 +341,7 @@ void World::ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply)
 	}
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
 	const f32 duration = info && info->durationSec > 0 ? info->durationSec : MONSTER_STATUS_FOREVER_SEC;
-	replication->SendAddStatusToAll(statusID, npc.UID, npc.UID, info && info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : duration, npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false, false);
+	replication->SendAddStatusToAll(statusID, npc.UID, npc.UID, info && info->permanent ? StatusSentDuration(*info) : info && info->durationSec < 0 ? STATUS_INFINITE_DURATION_SEC : duration, npc.pos, npc.pos, 0, 1, 1.0f, -1.0f, false, false);
 	if(!npcStatuses.full()) {
 		NpcStatus ns;
 		ns.npcUID = npc.UID;

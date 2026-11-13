@@ -394,6 +394,8 @@ struct StatusInfo
 	f32 descHeal = 0;
 	eastl::fixed_string<char,64,true> keyName;
 	i32 flagEffectStatus = 0;
+	i32 toggleRemoves = 0;
+	bool endsGrab = false;
 	f32 descHealPct = 0;
 };
 

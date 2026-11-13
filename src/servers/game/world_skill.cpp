@@ -542,6 +542,7 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 			if(ns->npcUID != npc.UID || ns->statusID == statusID || localTime >= ns->until || ns->appliedAt >= localTime) continue;
 			const StatusInfo* other = GetGameXmlContent().FindStatus(ns->statusID);
 			if(!other || other->permanent || other->skillIndex != info->skillIndex) continue;
+			if(info->toggleRemoves != 0 && ns->statusID != info->toggleRemoves) continue;
 			ns->until = localTime;
 			LOG("Status :: creature=%d toggle %d removes %d", (i32)npc.docID, statusID, ns->statusID);
 		}

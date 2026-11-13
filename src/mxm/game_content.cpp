@@ -4558,6 +4558,14 @@ bool GameXmlContent::LoadSkillTooltips()
 			auto found = statusByKey.find(effect);
 			if(found != statusByKey.end()) st.flagEffectStatus = found->second;
 		}
+		foreach(it, statusMap) {
+			StatusInfo& st = it->second;
+			const eastl_size_t len = st.keyName.size();
+			if(st.type != StatusType::TOGGLE || len <= 7 || EA::StdC::Strcmp(st.keyName.c_str() + len - 7, "_REMOVE") != 0) continue;
+			st.endsGrab = len > 12 && EA::StdC::Strcmp(st.keyName.c_str() + len - 12, "_GRAB_REMOVE") == 0;
+			auto found = statusByKey.find(eastl::string(st.keyName.c_str(), st.keyName.c_str() + len - 7));
+			if(found != statusByKey.end()) st.toggleRemoves = found->second;
+		}
 	}
 	static const f32 MEASURED_DESC_HEAL_SKILLPOWER_RATIO = 8.0f / 37.0f;
 	foreach(it, statusMap) {
@@ -4584,6 +4592,28 @@ bool GameXmlContent::LoadSkillTooltips()
 			pS->QueryStringAttribute("data", &text);
 			if(!key || !text || EA::StdC::Strncmp(key, "STR_SKILL_DESC_", 15) != 0) continue;
 			if(EA::StdC::Stristr(text, "can be struck multiple times") || EA::StdC::Stristr(text, "can hit the same target") || EA::StdC::Stristr(text, "strike the same target")) repeatHitReduced.insert(EA::StdC::AtoI32(key + 15));
+			if(const char* restores = EA::StdC::Stristr(text, "restores ")) {
+				const char* digits = restores + 9;
+				const char* end = digits;
+				while(*end >= '0' && *end <= '9') end++;
+				const char* maxHp = EA::StdC::Stristr(end, "maximum HP");
+				const char* sentence = EA::StdC::Strchr(end, '.');
+				if(end > digits && *end == '%' && maxHp && (!sentence || maxHp < sentence)) {
+					const i32 skillID = EA::StdC::AtoI32(key + 15);
+					foreach(it, statusMap) {
+						StatusInfo& st = it->second;
+						if(st.skillIndex != skillID || st.type != StatusType::HEAL || !st.mods.empty()) continue;
+						StatusMod mod;
+						mod.stat = StatusMod::HEALTH;
+						mod.regen = true;
+						mod.mul = true;
+						mod.value = (f32)EA::StdC::AtoI32(digits);
+						mod.count = 1;
+						st.mods.push_back(mod);
+						LOG("Status %d heals %.0f%% of maximum HP (skill description %d)", st.ID, mod.value, skillID);
+					}
+				}
+			}
 			if(!EA::StdC::Stristr(text, "movespeed") && !EA::StdC::Stristr(text, "movement speed")) continue;
 			const char* ph = EA::StdC::Strstr(text, ":status:stat:mul:");
 			if(!ph) continue;
