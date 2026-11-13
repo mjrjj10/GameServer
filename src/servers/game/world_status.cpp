@@ -716,6 +716,8 @@ static f32 StatusShieldLayer(const StatusInfo& info, f32 skillPower, f32 power)
 void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power, f32 durationOverride)
 {
 	if(target.dead || target.untargetable) return;
+	const ActorNpc* npcSource = &caster == &target && statusCasterOverride != ActorUID::INVALID ? FindNpcActor(statusCasterOverride) : nullptr;
+	const bool hostileSource = &caster != &target ? caster.team != target.team : npcSource && NpcHittableBy(*npcSource, target);
 	if(caster.team != target.team) target.statusesTaken++;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
 	f32 duration = info && info->durationSec > 0 ? info->durationSec : (info && (info->type == StatusType::MOTION || info->instant) ? 0.0f : 1.0f);
@@ -741,11 +743,11 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		}
 		spreadingStatus = false;
 	}
-	if(caster.team != target.team && HasStatusType(target, StatusType::BURROW)) {
+	if(hostileSource && HasStatusType(target, StatusType::BURROW)) {
 		LOG("Status :: %ls ignored %d (burrow)", target.name.data(), statusID);
 		return;
 	}
-	if(info && info->isDebuff && caster.team != target.team && HasStatusType(target, StatusType::GODMODE)) {
+	if(info && info->isDebuff && hostileSource && HasStatusType(target, StatusType::GODMODE)) {
 		LOG("Status :: %ls resisted %d (godmode)", target.name.data(), statusID);
 		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
 		return;
@@ -767,12 +769,12 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		}
 	}
 	f32 ccScale = 1.0f;
-	if(info && caster.team != target.team && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT) && HasStatusType(target, StatusType::DEFIANCE)) {
+	if(info && hostileSource && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT) && HasStatusType(target, StatusType::DEFIANCE)) {
 		LOG("Status :: %ls resisted %d (defiance)", target.name.data(), statusID);
 		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
 		return;
 	}
-	if(info && caster.team != target.team && PassiveBlocksCC(target, *info, duration, &ccScale)) return;
+	if(info && hostileSource && PassiveBlocksCC(target, *info, duration, &ccScale)) return;
 	if(info && caster.team != target.team && target.defeatGuardSource == statusID && localTime < target.defeatGuardUntil) {
 		LOG("Status :: %ls resisted %d (defeat guard)", target.name.data(), statusID);
 		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
@@ -853,9 +855,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	const bool dragForce = info && info->type == StatusType::DRAGGEDBYFORCE;
 	const bool displacement = info && (info->type == StatusType::PUSH || info->type == StatusType::FORCEBACK ||
 		info->type == StatusType::KNOCKDOWN || info->type == StatusType::AIRBORNE || info->type == StatusType::FLY || info->type == StatusType::DRAGGED || dragForce);
-	const ActorNpc* npcSource = &caster == &target && npcCaster != ActorUID::INVALID ? FindNpcActor(npcCaster) : nullptr;
-	const bool hostileSource = &caster != &target ? caster.team != target.team : npcSource && NpcHittableBy(*npcSource, target);
-	const bool hostileHardCc = info && hostileSource && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT) && info->type != StatusType::ACTIONBLOCK;
+	const bool hostileHardCc = info && hostileSource && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT || info->type == StatusType::SILENCE) && info->type != StatusType::ACTIONBLOCK;
 	if((displacement || hostileHardCc) && HasStatusType(target, StatusType::SUPERARMOR)) {
 		LOG("Status :: %ls resisted %d (superarmor)", target.name.data(), statusID);
 		replication->SendResistStatusToAll(target.Main().UID, npcSource ? npcSource->UID : caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
