@@ -853,10 +853,12 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	const bool dragForce = info && info->type == StatusType::DRAGGEDBYFORCE;
 	const bool displacement = info && (info->type == StatusType::PUSH || info->type == StatusType::FORCEBACK ||
 		info->type == StatusType::KNOCKDOWN || info->type == StatusType::AIRBORNE || info->type == StatusType::FLY || info->type == StatusType::DRAGGED || dragForce);
-	const bool hostileHardCc = info && caster.team != target.team && info->kind == StatusInfo::Kind::HARD_CC && info->type != StatusType::ACTIONBLOCK;
+	const ActorNpc* npcSource = &caster == &target && npcCaster != ActorUID::INVALID ? FindNpcActor(npcCaster) : nullptr;
+	const bool hostileSource = &caster != &target ? caster.team != target.team : npcSource && NpcHittableBy(*npcSource, target);
+	const bool hostileHardCc = info && hostileSource && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT) && info->type != StatusType::ACTIONBLOCK;
 	if((displacement || hostileHardCc) && HasStatusType(target, StatusType::SUPERARMOR)) {
 		LOG("Status :: %ls resisted %d (superarmor)", target.name.data(), statusID);
-		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
+		replication->SendResistStatusToAll(target.Main().UID, npcSource ? npcSource->UID : caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
 		return;
 	}
 
@@ -1113,8 +1115,6 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		LOG("Status :: %ls motion status %d plays action %d", target.name.data(), statusID, (i32)info->motionAction);
 		PlayerCastSkill(target, SkillID(info->skillIndex), target.body->GetWorldPos(), Slice<const ActorUID>(), 0, info->motionAction);
 	}
-	const ActorNpc* npcSource = &caster == &target && npcCaster != ActorUID::INVALID ? FindNpcActor(npcCaster) : nullptr;
-	const bool hostileSource = &caster != &target ? caster.team != target.team : npcSource && NpcHittableBy(*npcSource, target);
 	if(info && info->blockSkill && hostileSource && !target.dead) InterruptSkills(target);
 	const i32 guard = DefeatGuardStatus(info);
 	if(guard != 0 && caster.team != target.team && !target.dead) {
