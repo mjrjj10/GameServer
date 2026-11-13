@@ -868,7 +868,15 @@ void World::InterruptSkills(Player& player)
 		}
 		else ++pr;
 	}
-	if(dropped > 0) LOG("Skill :: %ls interrupted, %d pending remotes dropped", player.name.data(), dropped);
+	i32 programs = 0;
+	foreach(sp, skillProgramList) {
+		if(sp->IsDoneExecuting()) continue;
+		const ActorMaster* owner = FindMasterActor(sp->casterUID);
+		if(!owner || owner->parent != &player) continue;
+		sp->Finish();
+		programs++;
+	}
+	if(dropped > 0 || programs > 0) LOG("Skill :: %ls interrupted, %d pending remotes and %d skill programs dropped", player.name.data(), dropped, programs);
 	if(player.casting.skillID != SkillID::INVALID) CancelCast(player, "interrupted");
 }
 
