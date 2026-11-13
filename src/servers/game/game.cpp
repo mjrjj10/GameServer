@@ -22,6 +22,7 @@ static const f32 HYP_CLIENT_SLIDE_RATIO = 0.5f;
 static const f32 HYP_CLIENT_SLIDE_MIN_SEC = 0.1f;
 static const f32 HYP_CLIENT_SLIDE_MAX_SEC = 2.0f;
 static const f32 HYP_CLIENT_SAME_DIR_DOT = 0.95f;
+static const f32 HYP_CLIENT_SLIDE_DIR_DOT = 0.985f;
 static const f64 HYP_CLIENT_PUSH_INFLIGHT_SEC = 0.3;
 static const f32 HYP_HUMAN_DASH_SNAP = 400.0f;
 static const f32 MEASURED_BOT_TAG_SHARE = 2.5f / 49.9f;
@@ -1198,7 +1199,8 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 	const f32 stepDt = player.lastClientPosAt != Time::ZERO ? (f32)TimeDiffSec(TimeDiff(player.lastClientPosAt, world.localTime)) : 0.0f;
 	if(!clientBlocked && dir != vec2(0) && player.lastClientDir != vec2(0) && player.clientPosCount > 0 && speed > 0 && stepDt >= HYP_CLIENT_SLIDE_MIN_SEC && stepDt <= HYP_CLIENT_SLIDE_MAX_SEC && glm::dot(glm::normalize(vec2(dir)), glm::normalize(vec2(player.lastClientDir))) > HYP_CLIENT_SAME_DIR_DOT) {
 		const vec2 step = vec2(pos) - vec2(player.lastClientPos);
-		if(glm::dot(step, glm::normalize(vec2(dir))) < speed * stepDt * HYP_CLIENT_SLIDE_RATIO) {
+		const f32 stepLen = glm::length(step);
+		if(glm::dot(step, glm::normalize(vec2(dir))) < speed * stepDt * HYP_CLIENT_SLIDE_RATIO || (stepLen > 1.0f && glm::dot(glm::normalize(vec2(dir)), glm::normalize(vec2(player.lastClientDir))) > HYP_CLIENT_SLIDE_DIR_DOT && glm::dot(step / stepLen, glm::normalize(vec2(player.lastClientDir))) < HYP_CLIENT_SLIDE_DIR_DOT)) {
 			sliding = true;
 			slideVel = step / stepDt;
 		}

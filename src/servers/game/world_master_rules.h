@@ -372,6 +372,25 @@ static inline const StatusDrainRule* FindStatusDrainRule(i32 status)
 	return nullptr;
 }
 
+struct StatusStaminaRule
+{
+	i32 status;
+	f32 amount;
+};
+
+static const StatusStaminaRule MEASURED_STATUS_STAMINA_RULES[] = {
+	{ 1230090002, 15.0f },
+	{ 1230090003, 30.0f },
+};
+
+static inline const StatusStaminaRule* FindStatusStaminaRule(i32 status)
+{
+	for(const StatusStaminaRule& rule : MEASURED_STATUS_STAMINA_RULES) {
+		if(rule.status == status) return &rule;
+	}
+	return nullptr;
+}
+
 struct PushToEdgeRule
 {
 	i32 status;

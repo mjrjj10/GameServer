@@ -840,6 +840,15 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		target.stamina = 0;
 		target.staminaDirty = true;
 	}
+	if(const StatusStaminaRule* gain = FindStatusStaminaRule(statusID)) {
+		const f32 staminaMax = MasterStat(target.Main().classType, STAT_STAMINA);
+		if(caster.team == target.team && staminaMax > 0 && target.stamina < staminaMax) {
+			const f32 before = target.stamina;
+			target.stamina = MIN(target.stamina + gain->amount, staminaMax);
+			target.staminaDirty = true;
+			LOG("Status :: %ls stamina +%.0f by %d (%.0f -> %.0f)", target.name.data(), gain->amount, statusID, before, target.stamina);
+		}
+	}
 
 	const bool dragForce = info && info->type == StatusType::DRAGGEDBYFORCE;
 	const bool displacement = info && (info->type == StatusType::PUSH || info->type == StatusType::FORCEBACK ||
