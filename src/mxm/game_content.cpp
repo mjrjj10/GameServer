@@ -2936,6 +2936,21 @@ static void ParseStatusReplaceList(XMLElement* pLevel, GameXmlContent::StatusRep
 	}
 }
 
+void GameXmlContent::ParseUpgradeLists(XMLElement* pLevel, eastl::fixed_vector<eastl::pair<i32,i32>,8,false>& remoteReplace, StatusReplaceList& statusReplace, eastl::fixed_vector<eastl::pair<i32,const Remote*>,4,false>& remoteResize)
+{
+	ParseReplaceList(pLevel, "_REMOTELIST", "_RemoteIndex", remoteReplace);
+	for(XMLElement* p = pLevel->FirstChildElement("_REMOTELIST"); p && !remoteResize.full(); p = p->NextSiblingElement("_REMOTELIST")) {
+		const i32 id = p->IntAttribute("_RemoteIndex");
+		const Remote* base = id != 0 && !p->Attribute("_ReplaceIndex") && p->Attribute("_LengthX") ? FindRemote(RemoteIdx(id)) : nullptr;
+		if(!base) continue;
+		Remote& variant = remoteVariants[(i32)remoteVariants.size()];
+		variant = *base;
+		variant.boundSize = { (u16)p->IntAttribute("_LengthX"), (u16)p->IntAttribute("_LengthY", base->boundSize[1]), (u16)p->IntAttribute("_LengthZ", base->boundSize[2]) };
+		remoteResize.push_back({ id, &variant });
+	}
+	ParseStatusReplaceList(pLevel, statusReplace);
+}
+
 bool GameXmlContent::LoadSkillUpgrades()
 {
 	eastl::hash_map<i32, eastl::fixed_vector<eastl::pair<i32,SkillUpgrade>,8,false>> byPriority;
@@ -2967,21 +2982,13 @@ bool GameXmlContent::LoadSkillUpgrades()
 			pLevel->QueryFloatAttribute("_TargetMaxDistance", &up.targetMaxDistance);
 			pLevel->QueryFloatAttribute("_CoolTime", &up.coolTime);
 			pLevel->QueryIntAttribute("_WeaponFireCount", &up.weaponFireCount);
-			ParseReplaceList(pLevel, "_REMOTELIST", "_RemoteIndex", up.remoteReplace);
-			for(XMLElement* p = pLevel->FirstChildElement("_REMOTELIST"); p && !up.remoteResize.full(); p = p->NextSiblingElement("_REMOTELIST")) {
-				const i32 id = p->IntAttribute("_RemoteIndex");
-				const Remote* base = id != 0 && !p->Attribute("_ReplaceIndex") && p->Attribute("_LengthX") ? FindRemote(RemoteIdx(id)) : nullptr;
-				if(!base) continue;
-				Remote& variant = remoteVariants[(i32)remoteVariants.size()];
-				variant = *base;
-				variant.boundSize = { (u16)p->IntAttribute("_LengthX"), (u16)p->IntAttribute("_LengthY", base->boundSize[1]), (u16)p->IntAttribute("_LengthZ", base->boundSize[2]) };
-				up.remoteResize.push_back({ id, &variant });
-			}
-			ParseStatusReplaceList(pLevel, up.statusReplace);
+			ParseUpgradeLists(pLevel, up.remoteReplace, up.statusReplace, up.remoteResize);
 		}
-		for(XMLElement* pCost = pSP->FirstChildElement("_COST_LEVEL"); pCost && !up.costLevelDamage.full(); pCost = pCost->NextSiblingElement("_COST_LEVEL")) {
+		for(XMLElement* pCost = pSP->FirstChildElement("_COST_LEVEL"); pCost && !up.costLevelLists.full(); pCost = pCost->NextSiblingElement("_COST_LEVEL")) {
 			XMLElement* pLevel = pCost->FirstChildElement("_PROPERTY_LEVEL");
-			if(pLevel) up.costLevelDamage.push_back({ pLevel->FloatAttribute("_BaseDamage", -1.0f), pLevel->FloatAttribute("_AttackMultiplier") });
+			if(pLevel && !up.costLevelDamage.full()) up.costLevelDamage.push_back({ pLevel->FloatAttribute("_BaseDamage", -1.0f), pLevel->FloatAttribute("_AttackMultiplier") });
+			SkillUpgrade::CostLists& lists = up.costLevelLists.push_back();
+			if(pLevel) ParseUpgradeLists(pLevel, lists.remoteReplace, lists.statusReplace, lists.remoteResize);
 		}
 		auto& list = byPriority[pSP->IntAttribute("_SkillIndex")];
 		if(!list.full()) list.push_back({ pSP->IntAttribute("_Priority"), up });

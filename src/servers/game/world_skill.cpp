@@ -2164,9 +2164,10 @@ const GameXmlContent::CostLevel* World::UpgradeCastMods(Player& player, SkillID 
 	mods = costLevel ? *costLevel : GameXmlContent::CostLevel();
 	for(u8 i = 0; i < f->second && i < ups->size(); i++) {
 		const GameXmlContent::SkillUpgrade& up = (*ups)[i];
-		MergeReplace(mods.remoteReplace, up.remoteReplace);
-		MergeReplace(mods.statusReplace, up.statusReplace);
-		MergeReplace(mods.remoteResize, up.remoteResize);
+		const GameXmlContent::SkillUpgrade::CostLists* cost = costIndex >= 0 && costIndex < (i32)up.costLevelLists.size() ? &up.costLevelLists[costIndex] : nullptr;
+		MergeReplace(mods.remoteReplace, cost ? cost->remoteReplace : up.remoteReplace);
+		MergeReplace(mods.statusReplace, cost ? cost->statusReplace : up.statusReplace);
+		MergeReplace(mods.remoteResize, cost ? cost->remoteResize : up.remoteResize);
 	}
 	const GameXmlContent::SkillUpgrade* dmg = LatestUpgrade(player, (i32)skillID, GameXmlContent::SkillUpgrade::Type::DAMAGE);
 	if(dmg && costIndex >= 0 && costIndex < (i32)dmg->costLevelDamage.size() && dmg->baseDamage > 0 && dmg->costLevelDamage[costIndex].first >= 0) {

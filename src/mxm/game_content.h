@@ -1663,6 +1663,12 @@ struct GameXmlContent
 		f32 baseDamage = -1;
 		f32 attackMultiplier = 0;
 		eastl::fixed_vector<eastl::pair<f32,f32>,4,false> costLevelDamage;
+		struct CostLists {
+			eastl::fixed_vector<eastl::pair<i32,i32>,8,false> remoteReplace;
+			StatusReplaceList statusReplace;
+			eastl::fixed_vector<eastl::pair<i32,const Remote*>,4,false> remoteResize;
+		};
+		eastl::fixed_vector<CostLists,4,false> costLevelLists;
 		f32 consumeMP = -1;
 		eastl::fixed_vector<eastl::pair<i32,i32>,8,false> remoteReplace;
 		StatusReplaceList statusReplace;
@@ -1890,6 +1896,7 @@ private:
 	bool LoadBalanceMultipliers();
 	bool LoadSkillCosts();
 	bool LoadSkillUpgrades();
+	void ParseUpgradeLists(tinyxml2::XMLElement* pLevel, eastl::fixed_vector<eastl::pair<i32,i32>,8,false>& remoteReplace, StatusReplaceList& statusReplace, eastl::fixed_vector<eastl::pair<i32,const Remote*>,4,false>& remoteResize);
 	bool LoadCharacterElements();
 	bool LoadSummons();
 	bool LoadSightData();
