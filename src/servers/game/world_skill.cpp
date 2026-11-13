@@ -1222,6 +1222,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			const vec3 to = vec3(vec2(child->pos), player.body->GetWorldPos().z);
 			LOG("Teleport :: %ls to its last entity %d at (%.0f, %.0f)", player.name.data(), (i32)child->docID, to.x, to.y);
 			TeleportPlayer(player, to, player.input.rot.upperYaw);
+			replication->SendPlayerSyncTeleportToAll(player.Main().UID, to);
 		}
 		else LOG("Teleport :: %ls has no live entity to teleport to", player.name.data());
 	}

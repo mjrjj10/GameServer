@@ -218,6 +218,20 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		proj.zoneRemote = bomb->ID;
 		proj.zoneDamage = (i32)WeaponHitDamage(player, nullptr);
 	}
+	if(remote && remote->behaviorType == Remote::BehaviorType::BEAM) {
+		foreach(ri, remoteInsts) {
+			if(ri->ownerIndex == player.index && ri->remote == remote && !ri->killNow) ri->killNow = true;
+		}
+		const SkillID beamSkill = remote->skillIndex != 0 ? SkillID(remote->skillIndex) : SkillID::INVALID;
+		const i32 beamDamage = beamSkill != SkillID::INVALID ? (i32)PlayerSkillDamage(player, beamSkill) : proj.damage;
+		RemoteInst* beam = SpawnRemote(player.index, remote->ID, player.body->GetWorldPos(), proj.dir, ActorUID::INVALID, beamSkill, nextCastID++, beamDamage, false);
+		if(beam) {
+			beam->clientRemoteID = proj.remoteID;
+			beam->seedOwnerHd = proj.seedOwnerHd;
+		}
+		LOG("Shot :: %ls class=%d remote=%d beam held for %.1fs over %.0f", player.name.data(), (i32)classType, (i32)remote->ID, remote->lifeTime, beam ? beam->range : 0.0f);
+		return;
+	}
 	if(remote && content.FindFireNodePath(remote->ID)) {
 		RemoteInst* swing = SpawnRemote(player.index, remote->ID, player.body->GetWorldPos(), proj.dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), false);
 		if(swing) {

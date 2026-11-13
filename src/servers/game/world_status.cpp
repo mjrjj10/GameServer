@@ -1113,7 +1113,9 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		LOG("Status :: %ls motion status %d plays action %d", target.name.data(), statusID, (i32)info->motionAction);
 		PlayerCastSkill(target, SkillID(info->skillIndex), target.body->GetWorldPos(), Slice<const ActorUID>(), 0, info->motionAction);
 	}
-	if(info && info->blockSkill && caster.team != target.team && !target.dead) InterruptSkills(target);
+	const ActorNpc* npcSource = &caster == &target && npcCaster != ActorUID::INVALID ? FindNpcActor(npcCaster) : nullptr;
+	const bool hostileSource = &caster != &target ? caster.team != target.team : npcSource && NpcHittableBy(*npcSource, target);
+	if(info && info->blockSkill && hostileSource && !target.dead) InterruptSkills(target);
 	const i32 guard = DefeatGuardStatus(info);
 	if(guard != 0 && caster.team != target.team && !target.dead) {
 		const StatusInfo* guardInfo = GetGameXmlContent().FindStatus(guard);
