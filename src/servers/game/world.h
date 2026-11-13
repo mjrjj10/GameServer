@@ -323,6 +323,7 @@ struct World
 		f32 weaponAimYaw = 0;
 		vec3 lastClientPos = vec3(0);
 		vec2 lastClientDir = vec2(0);
+		Time lastClientPosAt = Time::ZERO;
 		ActionStateID lastClientAction = ActionStateID::INVALID;
 		i32 lastHitTargetIndex = -1;
 		Time lastHitAt = Time::ZERO;

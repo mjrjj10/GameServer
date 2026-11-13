@@ -1461,6 +1461,10 @@ bool GameXmlContent::LoadMonsterAi()
 			if(sizeType) found->second.sizeRank = EA::StdC::Strstr(sizeType, "BIG") ? 3 : EA::StdC::Strstr(sizeType, "MEDIUM") ? 2 : EA::StdC::Strstr(sizeType, "SMALL") ? 1 : 0;
 			const XMLElement* mesh = pInfo->FirstChildElement("PhysXMeshComData");
 			const char* group = mesh ? mesh->Attribute("_ActorGroup") : nullptr;
+			if(entity && group && EA::StdC::Strcmp(group, "GROUP_BODY_BOSSNPC") == 0 && entity->FloatAttribute("_MoveSpeed") > 0) {
+				found->second.movingBodyRadius = mesh->FloatAttribute("_ColliderRadius");
+				found->second.movingBodyHeight = mesh->FloatAttribute("_ColliderHeight");
+			}
 			if(entity && group && EA::StdC::Strcmp(group, "GROUP_BODY_BOSSNPC") == 0 && entity->FloatAttribute("_MoveSpeed") <= 0) {
 				found->second.bodyBlockRadius = mesh->FloatAttribute("_ColliderRadius");
 				found->second.bodyBlockHeight = mesh->FloatAttribute("_ColliderHeight");

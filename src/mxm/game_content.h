@@ -1330,6 +1330,8 @@ struct GameXmlContent
 		u8 sizeRank = 0;
 		i32 density = 0;
 		f32 bodyBlockHeight = 0;
+		f32 movingBodyRadius = 0;
+		f32 movingBodyHeight = 0;
 		eastl::fixed_vector<i32,8,false> spawnStatuses;
 		eastl::fixed_vector<i32,4,false> dieRemotes;
 		eastl::fixed_vector<i32,4,false> spawnRemotes;

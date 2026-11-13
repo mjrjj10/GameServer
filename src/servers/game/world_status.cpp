@@ -759,6 +759,13 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			return;
 		}
 	}
+	if(info && info->type == StatusType::FORCEBACK && info->skillIndex != 0) {
+		foreach_const(it, activeStatuses) {
+			if(it->targetIndex != target.index || it->casterIndex != caster.index || !it->info || it->info->type != StatusType::FLY || it->info->skillIndex != info->skillIndex || it->until <= localTime) continue;
+			LOG("Status :: %ls ignores %d (already thrown by %d)", target.name.data(), statusID, it->statusID);
+			return;
+		}
+	}
 	f32 ccScale = 1.0f;
 	if(info && caster.team != target.team && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT) && HasStatusType(target, StatusType::DEFIANCE)) {
 		LOG("Status :: %ls resisted %d (defiance)", target.name.data(), statusID);
@@ -1046,7 +1053,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			target.clientPushUntil = TimeAdd(localTime, TimeMsToTime(graphDuration * 1000.0));
 			target.pushTarget = to;
 			target.clientPushPosCount = target.clientPosCount;
-			target.clientPushSnap = info->type == StatusType::PUSH || info->type == StatusType::FLY || info->type == StatusType::AIRBORNE || info->type == StatusType::KNOCKDOWN || info->type == StatusType::DRAGGED || dragForce;
+			target.clientPushSnap = info->type == StatusType::PUSH || info->type == StatusType::FORCEBACK || info->type == StatusType::FLY || info->type == StatusType::AIRBORNE || info->type == StatusType::KNOCKDOWN || info->type == StatusType::DRAGGED || dragForce;
 			target.clientPushFrom = target.body->GetWorldPos();
 			target.clientPushStart = localTime;
 			target.clientPushDragMin = dragForce ? info->dragForceMin : 0.0f;

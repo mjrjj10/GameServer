@@ -1281,6 +1281,7 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 		const vec2 from = vec2(mover.body->GetWorldPos());
 		vec2 moveDir = distance < 0 ? -dir : dir;
 		f32 moveDist = fabsf(distance);
+		bool throughMove = false;
 		foreach_const(c2, action.commands) {
 			if(c2->type != ActionCommand::Type::MOVE) continue;
 			const auto preset = c2->move.preset;
@@ -1297,6 +1298,7 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 					const f32 len = glm::length(rel);
 					if(len > 1.0f) moveDir = rel / len;
 					const bool through = preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH || preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_THROUGH_CHASE;
+					if(through) throughMove = true;
 					if(!through) moveDist = MIN(moveDist, MAX(len - targetRadius - HitRadius(mover), 0.0f));
 					else if(moveDist > 999990.0f) moveDist = len + targetRadius + HitRadius(mover);
 				}
@@ -1309,6 +1311,23 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			if(along >= 0 && along < moveDist - 1.0f) {
 				LOG("Dash :: %ls blocked after %.0f of %.0f", mover.name.data(), along, moveDist);
 				moveDist = along;
+			}
+			if(!throughMove && mover.clientHd != ClientHandle::INVALID) {
+				const f32 fromZ = mover.body->GetWorldPos().z;
+				foreach_const(it, actorNpcList) {
+					if(!it->monsterAi || it->monsterAi->movingBodyRadius <= 0 || it->hp <= 0 || it->removeAt != Time::ZERO) continue;
+					if(fromZ < it->pos.z - HitRadius(mover) || fromZ > it->pos.z + it->monsterAi->movingBodyHeight) continue;
+					const vec2 rel = vec2(it->pos) - from;
+					const f32 reach = it->monsterAi->movingBodyRadius + HitRadius(mover);
+					const f32 ahead = glm::dot(rel, moveDir);
+					if(ahead <= 0) continue;
+					const f32 side2 = glm::dot(rel, rel) - ahead * ahead;
+					if(side2 >= reach * reach) continue;
+					const f32 stop = MAX(ahead - sqrtf(reach * reach - side2), 0.0f);
+					if(stop >= moveDist) continue;
+					LOG("Dash :: %ls stopped by the body of creature %d after %.0f of %.0f", mover.name.data(), (i32)it->docID, stop, moveDist);
+					moveDist = stop;
+				}
 			}
 		}
 		mover.input.moveTo = mover.body->GetWorldPos();

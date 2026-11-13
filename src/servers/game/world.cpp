@@ -260,7 +260,10 @@ void World::Update(Time localTime_)
 
 		if(p.weaponFired) {
 			p.weaponFired = false;
-			if(p.clientHd != ClientHandle::INVALID && p.casting.skillID != SkillID::INVALID && p.casting.type == GameXmlContent::SkillCast::LIMIT) ReleaseCast(p);
+			if(p.clientHd != ClientHandle::INVALID && p.casting.skillID != SkillID::INVALID && p.casting.type == GameXmlContent::SkillCast::LIMIT) {
+				if(p.lastCastStart != localTime) ReleaseCast(p);
+				else LOG("Cast :: %ls weapon fire sent before skill=%d, not a release", p.name.data(), (i32)p.casting.skillID);
+			}
 			else if(WeaponIsMelee(p) && localTime > p.tNextWeaponHit && !(p.clientHd == ClientHandle::INVALID && (p.lastCastStart == localTime || localTime < p.dashUntil || p.casting.skillID != SkillID::INVALID))) {
 				p.tNextWeaponHit = TimeAdd(localTime, TimeMsToTime(WEAPON_HIT_INTERVAL_MS));
 				PlayerWeaponFire(p);

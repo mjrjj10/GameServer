@@ -18,6 +18,10 @@ static const f64 RETURN_TO_LOBBY_DELAY_SEC = 20.0;
 static const u32 MEASURED_PVE_FAIL_RETURN_MS = 15000;
 static const f32 HYP_HUMAN_POSITION_SNAP = 100.0f;
 static const f32 HYP_CLIENT_BLOCKED_STEP = 5.0f;
+static const f32 HYP_CLIENT_SLIDE_RATIO = 0.5f;
+static const f32 HYP_CLIENT_SLIDE_MIN_SEC = 0.1f;
+static const f32 HYP_CLIENT_SLIDE_MAX_SEC = 2.0f;
+static const f32 HYP_CLIENT_SAME_DIR_DOT = 0.95f;
 static const f64 HYP_CLIENT_PUSH_INFLIGHT_SEC = 0.3;
 static const f32 HYP_HUMAN_DASH_SNAP = 400.0f;
 static const f32 MEASURED_BOT_TAG_SHARE = 2.5f / 49.9f;
@@ -1189,8 +1193,19 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 
 
 	const bool clientBlocked = dir != vec2(0) && player.lastClientDir != vec2(0) && player.clientPosCount > 0 && glm::length(vec2(pos) - vec2(player.lastClientPos)) < HYP_CLIENT_BLOCKED_STEP;
+	vec2 slideVel = vec2(0);
+	bool sliding = false;
+	const f32 stepDt = player.lastClientPosAt != Time::ZERO ? (f32)TimeDiffSec(TimeDiff(player.lastClientPosAt, world.localTime)) : 0.0f;
+	if(!clientBlocked && dir != vec2(0) && player.lastClientDir != vec2(0) && player.clientPosCount > 0 && speed > 0 && stepDt >= HYP_CLIENT_SLIDE_MIN_SEC && stepDt <= HYP_CLIENT_SLIDE_MAX_SEC && glm::dot(glm::normalize(vec2(dir)), glm::normalize(vec2(player.lastClientDir))) > HYP_CLIENT_SAME_DIR_DOT) {
+		const vec2 step = vec2(pos) - vec2(player.lastClientPos);
+		if(glm::dot(step, glm::normalize(vec2(dir))) < speed * stepDt * HYP_CLIENT_SLIDE_RATIO) {
+			sliding = true;
+			slideVel = step / stepDt;
+		}
+	}
 	player.lastClientPos = pos;
 	player.lastClientDir = dir;
+	player.lastClientPosAt = world.localTime;
 	player.clientPosCount++;
 	if(player.clientPushSnap && world.localTime < player.clientPushUntil && TimeDiffSec(TimeDiff(player.clientPushStart, world.localTime)) < HYP_CLIENT_PUSH_INFLIGHT_SEC) player.clientPushPosCount = player.clientPosCount;
 	if(player.carriedBy >= 0) return;
@@ -1224,11 +1239,14 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 	if((dir.x == 0 && dir.y == 0) || clientBlocked) {
 		player.input.moveTo = pos;
 	}
+	else if(sliding) {
+		player.input.moveTo = pos + vec3(slideVel, 0);
+	}
 	else {
 		player.input.moveTo = pos + vec3(glm::normalize(vec2(dir)) * speed, 0);
 	}
 	player.input.rot = rot;
-	player.input.speed = speed;
+	player.input.speed = sliding ? MIN(glm::length(slideVel), speed) : speed;
 	if(Config().DevMirror) LOG("Aim :: yaw=%.4f pitch=%.4f", rot.upperYaw, rot.upperPitch);
 }
 
