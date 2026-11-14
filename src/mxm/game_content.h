@@ -1691,6 +1691,13 @@ struct GameXmlContent
 	eastl::hash_map<i32, Remote> remoteVariants;
 	eastl::hash_map<i32, SkillUpgradeList> skillUpgrades;
 	const SkillUpgradeList* FindSkillUpgrades(i32 skillID) const { auto f = skillUpgrades.find(skillID); return f == skillUpgrades.end() ? nullptr : &f->second; }
+	eastl::hash_map<i32, eastl::vector<StatusReplaceList>> propertyStatusChain;
+	i32 LevelStatus(i32 skillID, i32 level, i32 statusID) const {
+		auto f = propertyStatusChain.find(skillID);
+		if(f == propertyStatusChain.end() || f->second.empty() || level < 2) return statusID;
+		foreach_const(sr, f->second[MIN(level - 2, (i32)f->second.size() - 1)]) if(sr->statusID == statusID) return sr->replaceID;
+		return statusID;
+	}
 	const eastl::fixed_vector<CostLevel,4,false>* FindSkillCostLevels(i32 skillID) const { auto f = skillCostLevels.find(skillID); return f == skillCostLevels.end() ? nullptr : &f->second; }
 	f32 GetSkillConsume(i32 skillID, i32 index) const { auto f = skillConsumeRes.find(skillID); return f == skillConsumeRes.end() ? 0 : f->second[index]; }
 	eastl::hash_map<i32, i32> comboAutoCastMs;

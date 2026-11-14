@@ -2954,6 +2954,7 @@ void GameXmlContent::ParseUpgradeLists(XMLElement* pLevel, eastl::fixed_vector<e
 bool GameXmlContent::LoadSkillUpgrades()
 {
 	eastl::hash_map<i32, eastl::fixed_vector<eastl::pair<i32,SkillUpgrade>,8,false>> byPriority;
+	eastl::hash_map<i32, eastl::vector<eastl::pair<i32,StatusReplaceList>>> chains;
 	for(XMLElement* pInfo = xmlSKILLPROPERTY.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
 		XMLElement* pSP = pInfo->FirstChildElement("ST_SKILL_PROPERTY");
 		if(!pSP) continue;
@@ -2990,12 +2991,18 @@ bool GameXmlContent::LoadSkillUpgrades()
 			SkillUpgrade::CostLists& lists = up.costLevelLists.push_back();
 			if(pLevel) ParseUpgradeLists(pLevel, lists.remoteReplace, lists.statusReplace, lists.remoteResize);
 		}
+		if(up.type == SkillUpgrade::Type::EFFECT && !up.statusReplace.empty()) chains[pSP->IntAttribute("_SkillIndex")].push_back({ pSP->IntAttribute("_Priority"), up.statusReplace });
 		auto& list = byPriority[pSP->IntAttribute("_SkillIndex")];
 		if(!list.full()) list.push_back({ pSP->IntAttribute("_Priority"), up });
 	}
 	foreach(it, byPriority) {
 		eastl::sort(it->second.begin(), it->second.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
 		SkillUpgradeList& out = skillUpgrades[it->first];
+		foreach_const(p, it->second) out.push_back(p->second);
+	}
+	foreach(it, chains) {
+		eastl::sort(it->second.begin(), it->second.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+		auto& out = propertyStatusChain[it->first];
 		foreach_const(p, it->second) out.push_back(p->second);
 	}
 	LOG("Loaded in-game upgrades for %d skills", (i32)skillUpgrades.size());

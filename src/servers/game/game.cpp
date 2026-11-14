@@ -208,6 +208,22 @@ const CreatureIndex CI_WALL = CreatureIndex(110042602);
 static const f64 LEVEL_START_BEFORE_GAME_MS = 5000.0;
 static const f64 PRE_GAME_MIN_MS = 10000.0;
 
+static const eastl::pair<i32,i32> MEASURED_STAGE_SKILL_PICKS[] = { { 180000100, 14 }, { 180000110, 100 }, { 180000120, 14 }, { 180000130, 12 }, { 180000140, 14 } };
+
+static SkillID MeasuredBotStageSkill(const GameXmlContent::StageMaps& stage, SkillID fallback)
+{
+	i32 total = 0;
+	foreach_const(c, stage.stageSkillCandidates) for(const auto& m : MEASURED_STAGE_SKILL_PICKS) if(m.first == (i32)*c) total += m.second;
+	if(total <= 0) return fallback;
+	i32 roll = (i32)(RandUint() % (u32)total);
+	foreach_const(c, stage.stageSkillCandidates) for(const auto& m : MEASURED_STAGE_SKILL_PICKS) {
+		if(m.first != (i32)*c) continue;
+		if(roll < m.second) return *c;
+		roll -= m.second;
+	}
+	return fallback;
+}
+
 void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl::array<ClientHandle, MAX_PLAYERS>& playerClientHdList)
 {
 	replication.Init(server_);
@@ -279,6 +295,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 			desc.stageSkills[0] = stage->stageSkill;
 			if(!stage->stageSkillCandidates.empty()) desc.stageSkills[1] = stage->stageSkillCandidates[0];
 			foreach_const(c, stage->stageSkillCandidates) if(*c == p.stageSkill) desc.stageSkills[1] = p.stageSkill;
+			if(desc.clientHd == ClientHandle::INVALID) desc.stageSkills[1] = MeasuredBotStageSkill(*stage, desc.stageSkills[1]);
 		}
 		desc.weapons = p.weapons;
 		desc.weaponGrades = p.weaponGrades;
@@ -1211,6 +1228,7 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 	player.clientPosCount++;
 	if(player.clientPushSnap && world.localTime < player.clientPushUntil && TimeDiffSec(TimeDiff(player.clientPushStart, world.localTime)) < HYP_CLIENT_PUSH_INFLIGHT_SEC) player.clientPushPosCount = player.clientPosCount;
 	if(player.carriedBy >= 0) return;
+	if(world.localTime < player.dashUntil) LOG("Dash :: %ls client position during dash action=%d cast=%d dir=(%.2f, %.2f) gap=%.0f", player.name.data(), (i32)action, (i32)player.lastCastAction, dir.x, dir.y, glm::length(vec2(pos) - vec2(player.body->GetWorldPos())));
 	if(action != ActionStateID::INVALID && action != player.lastClientAction) {
 		if(player.lastClientAction == player.lastCastAction && player.lastCastAction != ActionStateID::INVALID) world.EndActionStatuses(player);
 		player.lastClientAction = action;

@@ -1139,6 +1139,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 				}
 			}
 			if(ps.statusID == cmd->status.statusIndex) ps.statusID = PlayerUpgradedStatus(player, ps.statusID, &replaceDuration);
+			if(skillID == player.stageSkills[0] || skillID == player.stageSkills[1]) ps.statusID = content.LevelStatus((i32)skillID, player.ingameLevel, ps.statusID);
 			ps.casterIndex = player.index;
 			const auto preset = cmd->status.targetPreset;
 			const bool self = preset == ActionCommand::TargetPreset::SELF_FFF || preset == ActionCommand::TargetPreset::SELF_FFF_1 ||
