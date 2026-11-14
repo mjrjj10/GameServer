@@ -631,7 +631,7 @@ void World::UpdateProjectiles(f32 delta)
 			destroyed = hitWall || proj->travelled >= proj->range - 0.01f;
 			if(hitWall) {
 				LOG("Shot :: projectile stopped by a wall after %.0f", proj->travelled);
-				OnDynamicHit(wallActor, proj->remoteID, proj->seedOwnerHd, ClientHandle::INVALID, proj->pos, wallGate);
+				OnDynamicHit(wallActor, proj->remoteID, proj->seedOwnerHd, ClientHandle::INVALID, proj->pos, wallGate, (i32)proj->ownerIndex, proj->damage, proj->remoteDoc);
 				ActorNpc* wallNpc = nullptr;
 				f32 best = WALL_HIT_SEARCH_RADIUS;
 				foreach(npc, actorNpcList) {

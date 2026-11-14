@@ -162,6 +162,14 @@ void World::ApplyDeathHit(const DeathHit& hit)
 			else if(firstStatus != 0) ApplyStatusToNpcFromNpc(*helper, *o, firstStatus);
 			for(i32 s = 1; s < (i32)d.statuses.size(); s++) if(o->hp > 0) ApplyStatusToNpcFromNpc(*helper, *o, d.statuses[s]);
 		}
+		if(damage > 0 && !d.ally) {
+			foreach(w, actorDynamicList) {
+				if(w->destroyed || !w->collider || !GetGameXmlContent().dynamicJumpable.count((i32)w->docID)) continue;
+				const vec2 at = WallContactPoint(*w, vec2(helper->pos));
+				if(glm::length(at - vec2(helper->pos)) > d.radius) continue;
+				DamageJumpWall(*w, damage, false, helper->UID, -1, hit.remoteID, (RemoteIdx)d.remote, vec3(at, w->pos.z), ClientHandle::INVALID);
+			}
+		}
 	}
 	LOG("Monster :: creature=%d death remote %d (%s, radius %.0f, damage %d)", (i32)helper->docID, d.remote, d.ally ? "allies" : "enemies", d.radius, damage);
 }
@@ -719,6 +727,24 @@ void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const 
 	}
 }
 
+vec2 World::WallContactPoint(const ActorDynamic& wall, const vec2& from)
+{
+	const f32 z = wall.pos.z + OBSTRUCT_JUMPABLE_HEIGHT * 0.5f;
+	f32 dist = 0;
+	const PxRigidActor* hitActor = nullptr;
+	if(glm::length(vec2(wall.pos) - from) > 1.0f && physics.RaycastStatic(vec3(from, z), vec3(vec2(wall.pos), z), &dist, -1, &hitActor) && hitActor == (const PxRigidActor*)wall.collider) return from + glm::normalize(vec2(wall.pos) - from) * dist;
+	return vec2(wall.pos);
+}
+
+f32 World::LaneMinionDefence() const
+{
+	foreach_const(o, actorNpcList) {
+		if(o->hp <= 0 || o->ownerUID != ActorUID::INVALID || !o->monsterAi || (o->faction != Faction::RED && o->faction != Faction::BLUE)) continue;
+		if(MonsterTargetKind(*o->monsterAi) == GameXmlContent::MonsterAttack::MINION) return o->defence;
+	}
+	return 0.0f;
+}
+
 void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 {
 	const Remote& remote = *mr.remote;
@@ -799,6 +825,15 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 			}
 			else applyStatuses(remote.damageGroup == Remote::DamageGroup::eFRIEND && remote.friendlyStatuses.empty() ? remote.statuses : remote.friendlyStatuses, nullptr, &*o);
 			mr.activations--;
+		}
+		const bool executes = GetGameXmlContent().executeMinionRemotes.count((i32)remote.ID) != 0;
+		if(hitsEnemies && !targetOnly && (damage > 0 || executes)) {
+			foreach(d, actorDynamicList) {
+				if(d->destroyed || !d->collider || !GetGameXmlContent().dynamicJumpable.count((i32)d->docID)) continue;
+				const vec2 at = WallContactPoint(*d, origin);
+				if(!inside(at, 0.0f) || !ready(d->UID)) continue;
+				DamageJumpWall(*d, executes ? (i32)MEASURED_JUMPWALL_MAX_HP : damage, executes, owner.UID, -1, remoteID, remote.ID, vec3(at, d->pos.z), ClientHandle::INVALID);
+			}
 		}
 	}
 }

@@ -89,7 +89,6 @@ static const i32 STAT_DEFENCE = 7;
 static const i32 STAT_DEFENCE_PENETRATION = 20;
 static const i32 STAT_SKILL_PENETRATION = 21;
 static const i32 STAT_SKILLDAMAGE_REDUCE_RATIO = 58;
-static const f32 DEFENCE_SCALE = 100.0f;
 static const u32 PVP_ANNOUNCE_PLAIN_KILL = 0;
 static const u32 PVP_ANNOUNCE_KILL = 1;
 static const u32 PVP_ANNOUNCE_FIRST_BLOOD = 2;

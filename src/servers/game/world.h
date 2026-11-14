@@ -675,6 +675,7 @@ struct World
 		PxRigidStatic* collider = nullptr;
 		eastl::fixed_vector<Time,16,false> hits;
 		i32 destroyHits = 0;
+		i32 damageTaken = 0;
 		bool destroyed = false;
 		Time respawnAt = Time::ZERO;
 
@@ -1448,7 +1449,10 @@ public:
 	void TitanOnCast(Player& player, SkillID skill);
 	void UpdateBoundTriggers();
 	void UpdateCreatureEnterTrigger(const GameXmlContent::LevelEventNode& node, i32 slot, const GameXmlContent::Map::Area& area);
-	void OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos, ActorDynamic* known = nullptr);
+	void OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos, ActorDynamic* known = nullptr, i32 ownerIndex = -1, i32 damage = 0, RemoteIdx remoteDoc = RemoteIdx::INVALID);
+	void DamageJumpWall(ActorDynamic& wall, i32 damage, bool exact, ActorUID attackerUID, i32 killerIndex, u32 remoteID, RemoteIdx remoteDoc, const vec3& pos, ClientHandle seedOwnerHd);
+	f32 LaneMinionDefence() const;
+	vec2 WallContactPoint(const ActorDynamic& wall, const vec2& from);
 	bool LevelTriggerActive(const GameXmlContent::LevelEventNode& node) const;
 	void SpawnGroundItems(i32 dropIndex, i32 areaID, i32 tagID);
 	void SpawnDropGroupAt(i32 dropIndex, const vec3& pos, i32 tagID);

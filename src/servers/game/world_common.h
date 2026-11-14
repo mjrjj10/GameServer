@@ -8,6 +8,7 @@ enum EndDamageStat: u8 { END_DMG_MAX_DEALT = 0, END_DMG_NORMAL_DEALT, END_DMG_SK
 
 static const f32 FIRE_NODE_HEIGHT = 158.0f;
 static const f32 MEASURED_JUMPWALL_MAX_HP = 1491.0f;
+static const f32 DEFENCE_SCALE = 100.0f;
 static const f32 COMBAT_ATTACK_STAT = 0.0f;
 static const f32 WEAPON_TARGET_RADIUS = 110.0f;
 static const f32 PROJECTILE_HIT_TOLERANCE = 20.0f;

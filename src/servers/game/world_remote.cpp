@@ -647,7 +647,7 @@ void World::RemoteHitWalls(RemoteInst& inst, f32 farEdge)
 	ActorDynamic* wallGate = nullptr;
 	if(!RaycastShot(vec3(from, inst.wallZ), vec3(to, inst.wallZ), (i32)owner.team, &wallDist, &wallActor, &wallGate) || (!wallActor && !wallGate)) return;
 	inst.wallHitDone = true;
-	OnDynamicHit(wallActor, inst.clientRemoteID, ClientHandle::INVALID, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, vec3(from + glm::normalize(to - from) * wallDist, inst.wallZ), wallGate);
+	OnDynamicHit(wallActor, inst.clientRemoteID, ClientHandle::INVALID, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, vec3(from + glm::normalize(to - from) * wallDist, inst.wallZ), wallGate, (i32)inst.ownerIndex, (i32)(inst.damage * remote.attackMultiplier), remote.ID);
 }
 
 static const f32 MEASURED_POLYGON_BLADE_RADIUS = 470.0f;
@@ -1467,7 +1467,7 @@ bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
 			if(hitWall || (inst.range > 0 && inst.travelled >= inst.range - 0.01f)) destroyed = true;
 			if(hitWall) {
 				LOG("Remote :: %d stopped by a wall after %.0f", (i32)remote.ID, inst.travelled);
-				OnDynamicHit(wallActor, inst.clientRemoteID, ClientHandle::INVALID, inst.casterLocal ? players[inst.ownerIndex].clientHd : ClientHandle::INVALID, inst.pos, wallGate);
+				OnDynamicHit(wallActor, inst.clientRemoteID, ClientHandle::INVALID, inst.casterLocal ? players[inst.ownerIndex].clientHd : ClientHandle::INVALID, inst.pos, wallGate, (i32)inst.ownerIndex, (i32)(inst.damage * remote.attackMultiplier), remote.ID);
 			}
 		}
 	}

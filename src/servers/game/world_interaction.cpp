@@ -1371,7 +1371,7 @@ bool World::TakeGroundItem(Player& player, u32 itemUID, GroundItem* taken)
 	return true;
 }
 
-void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos, ActorDynamic* known)
+void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos, ActorDynamic* known, i32 ownerIndex, i32 damage, RemoteIdx remoteDoc)
 {
 	ActorDynamic* hit = known;
 	if(!hit && actor) foreach(d, actorDynamicList) {
@@ -1381,10 +1381,10 @@ void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle s
 	const auto& destroyHits = GetGameXmlContent().dynamicDestroyHits;
 	const auto destroyable = destroyHits.find((i32)hit->docID);
 	if(destroyable != destroyHits.end() && GetGameXmlContent().dynamicJumpable.count((i32)hit->docID)) {
-		const f32 left = MAX(1.0f - (f32)(hit->destroyHits + 1) / (f32)destroyable->second, 0.0f);
-		replication->SendStatToAll(hit->UID, (i32)StatType::STAT_TYPE_HEALTH, MEASURED_JUMPWALL_MAX_HP * left, MEASURED_JUMPWALL_MAX_HP);
+		const bool byPlayer = ownerIndex >= 0 && ownerIndex < (i32)players.size();
+		if(damage > 0) DamageJumpWall(*hit, damage, false, byPlayer ? players[ownerIndex].Main().UID : ActorUID::INVALID, byPlayer ? ownerIndex : -1, remoteID, remoteDoc, pos, seedOwnerHd);
 	}
-	if(destroyable != destroyHits.end() && ++hit->destroyHits >= destroyable->second) {
+	else if(destroyable != destroyHits.end() && ++hit->destroyHits >= destroyable->second) {
 		i32 killerIndex = -1;
 		foreach_const(p, players) if(p->clientHd == seedOwnerHd && seedOwnerHd != ClientHandle::INVALID) killerIndex = (i32)p->index;
 		DestroyDynamic(*hit, killerIndex);
@@ -1405,6 +1405,33 @@ void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle s
 		foreach_const(o, n->outputs) FireLevelEvent(*o, -1, n->id);
 		return;
 	}
+}
+
+void World::DamageJumpWall(ActorDynamic& wall, i32 rawDamage, bool exact, ActorUID attackerUID, i32 killerIndex, u32 remoteID, RemoteIdx remoteDoc, const vec3& pos, ClientHandle seedOwnerHd)
+{
+	if(wall.destroyed || rawDamage <= 0) return;
+	const i32 damage = exact ? rawDamage : MAX((i32)(rawDamage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(LaneMinionDefence(), 0.0f)) + 0.5f), 1);
+	const i32 hpBefore = MAX((i32)MEASURED_JUMPWALL_MAX_HP - wall.damageTaken, 0);
+	const i32 hp = MAX(hpBefore - damage, 0);
+	wall.damageTaken += damage;
+	wall.destroyHits++;
+	replication->SendStatToAll(wall.UID, (i32)StatType::STAT_TYPE_HEALTH, (f32)hp, MEASURED_JUMPWALL_MAX_HP);
+	if(attackerUID != ActorUID::INVALID && remoteID != 0) {
+		Replication::RemoteDamage dealt;
+		dealt.remoteID = remoteID;
+		dealt.remoteDoc = remoteDoc;
+		dealt.attackerUID = attackerUID;
+		dealt.targetUID = wall.UID;
+		dealt.remotePos = pos;
+		dealt.targetPos = wall.pos;
+		dealt.damage = MIN(damage, hpBefore);
+		dealt.hp = hp;
+		dealt.hpMax = (i32)MEASURED_JUMPWALL_MAX_HP;
+		dealt.seedOwnerHd = seedOwnerHd;
+		replication->SendRemoteDamageToAll(dealt);
+	}
+	LOG("LevelEvent :: dynamic %d (doc %d) wall takes %d hp=%d", wall.localID, (i32)wall.docID, MIN(damage, hpBefore), hp);
+	if(hp <= 0) DestroyDynamic(wall, killerIndex);
 }
 
 bool World::LevelTriggerActive(const GameXmlContent::LevelEventNode& node) const
