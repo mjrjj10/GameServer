@@ -1286,6 +1286,8 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 		} break;
 	}
 
+	bool longJump = false;
+	foreach_const(c2, action.commands) if(c2->type == ActionCommand::Type::LONG_JUMP) longJump = true;
 	if(distance != 0) {
 		Player& mover = *caster->parent;
 		const vec2 from = vec2(mover.body->GetWorldPos());
@@ -1315,7 +1317,8 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			}
 		}
 		if(moveDist > 999990.0f) moveDist = 0;
-		if(moveDuration > 0.02f && moveDist > 0) {
+		const bool fly = longJump && mover.clientHd != ClientHandle::INVALID;
+		if(moveDuration > 0.02f && moveDist > 0 && !fly) {
 			const vec3 reach = physics.FindMovePos(mover.body, vec3(moveDir * moveDist, 0), moveDuration);
 			const f32 along = glm::dot(vec2(reach) - from, moveDir);
 			if(along >= 0 && along < moveDist - 1.0f) {
@@ -1355,6 +1358,8 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			mover.dashDist = moveDist;
 			mover.dashDone = 0;
 			mover.dashCurve = curve;
+			mover.dashFly = fly;
+			if(fly) LOG("Dash :: %ls long jump flies %.0f over obstacles", mover.name.data(), moveDist);
 			mover.dashAwaitClientStart = mover.clientHd != ClientHandle::INVALID;
 			mover.dashUntil = TimeAdd(localTime, TimeMsToTime(moveDuration * 1000.0));
 			f32 block = 0;

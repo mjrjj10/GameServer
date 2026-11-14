@@ -235,7 +235,7 @@ void World::SyncPassivesOnDeath(const Player& target)
 	}
 }
 
-bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32 ccDuration, f32* ccScale)
+bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* ccScale)
 {
 	if(info.kind != StatusInfo::Kind::HARD_CC && info.kind != StatusInfo::Kind::ROOT) return false;
 	if(ShowcaseIsDummy(target)) return false;
@@ -244,24 +244,33 @@ bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32 ccDurati
 		replication->SendResistStatusToAll(target.Main().UID, target.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
 		return true;
 	}
-	if(const ActiveStatus* st = FindPassiveOfType(target, StatusType::UNSHAKABLE)) {
-		if(target.cleanseCharges < 0) target.cleanseCharges = st->info->customInit;
-		if(target.cleanseCharges > 0) {
-			target.cleanseCharges--;
-			LOG("Passive :: %ls blocked status %d (charges left %d)", target.name.data(), info.ID, target.cleanseCharges);
-			SendPassiveCounter(*st, target.cleanseCharges);
-			const i32 defiance = (i32)st->info->ParamInt("_CustomAddStatusIndex");
-			if(defiance != 0) {
-				ApplyStatus(target, target, defiance, 1.0f, ccDuration);
-				target.defianceEndAt = TimeAdd(localTime, TimeMsToTime(ccDuration * 1000.0));
-			}
-			else replication->SendResistStatusToAll(target.Main().UID, target.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
-			return true;
-		}
-	}
 	const f32 toughness = MasterStat(target.Main().classType, STAT_TOUGHNESS);
 	if(toughness > 0 && ccScale) *ccScale = MAX(1.0f - toughness / 100.0f, 0.0f);
 	return false;
+}
+
+void World::PassiveOnCC(Player& target, const StatusInfo& info)
+{
+	if(info.kind != StatusInfo::Kind::HARD_CC && info.kind != StatusInfo::Kind::ROOT) return;
+	if(ShowcaseIsDummy(target)) return;
+	const ActiveStatus* st = FindPassiveOfType(target, StatusType::UNSHAKABLE);
+	if(!st) return;
+	if(target.cleanseCharges < 0) target.cleanseCharges = st->info->customInit;
+	const i32 defiance = (i32)st->info->ParamInt("_CustomAddStatusIndex");
+	if(target.cleanseCharges <= 0 || defiance == 0) return;
+	target.cleanseCharges--;
+	SendPassiveCounter(*st, target.cleanseCharges);
+	ActiveStatus* held = FindActiveStatus(target.index, defiance);
+	if(held && held->until > localTime) {
+		held->custom = MIN(held->custom + 1, MAX(held->info->customMax, 1));
+		SendPassiveCounter(*held, held->custom);
+	}
+	else {
+		ApplyStatus(target, target, defiance, 0, STATUS_INFINITE_DURATION_SEC);
+		held = FindActiveStatus(target.index, defiance);
+		if(held && held->info) held->custom = MAX(held->info->customInit, 1);
+	}
+	LOG("Passive :: %ls struck by status %d gains defiance %d (charges left %d)", target.name.data(), info.ID, defiance, target.cleanseCharges);
 }
 
 bool World::PassiveOnLethal(Player& target)
@@ -405,10 +414,6 @@ void World::UpdatePassives()
 				replication->SendHpToAll(chara.UID, chara.hp, chara.hpMax);
 				LOG("Passive :: %ls revived at %d hp", it->name.data(), chara.hp);
 			}
-		}
-		if(it->defianceEndAt != Time::ZERO && localTime >= it->defianceEndAt) {
-			it->defianceEndAt = Time::ZERO;
-			if(!it->dead) replication->SendResistStatusToAll(it->Main().UID, it->Main().UID, STATUS_RESIST_EVENT_PASSIVE);
 		}
 		if(it->cleanseCharges < 0 && !it->dead) {
 			if(const ActiveStatus* st = FindPassiveOfType(*it, StatusType::UNSHAKABLE)) {
@@ -769,12 +774,20 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		}
 	}
 	f32 ccScale = 1.0f;
-	if(info && hostileSource && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT) && HasStatusType(target, StatusType::DEFIANCE)) {
-		LOG("Status :: %ls resisted %d (defiance)", target.name.data(), statusID);
-		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
-		return;
+	if(info && hostileSource && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT)) {
+		foreach(it, activeStatuses) {
+			if(it->targetIndex != target.index || !it->info || it->info->type != StatusType::DEFIANCE || it->until <= localTime || it->appliedAt >= localTime) continue;
+			if(it->custom > 1) {
+				it->custom--;
+				SendPassiveCounter(*it, it->custom);
+			}
+			else it->until = localTime;
+			LOG("Status :: %ls resisted %d (defiance %d left)", target.name.data(), statusID, it->until > localTime ? it->custom : 0);
+			replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
+			return;
+		}
 	}
-	if(info && hostileSource && PassiveBlocksCC(target, *info, duration, &ccScale)) return;
+	if(info && hostileSource && PassiveBlocksCC(target, *info, &ccScale)) return;
 	if(info && caster.team != target.team && target.defeatGuardSource == statusID && localTime < target.defeatGuardUntil) {
 		LOG("Status :: %ls resisted %d (defeat guard)", target.name.data(), statusID);
 		replication->SendResistStatusToAll(target.Main().UID, caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
@@ -807,6 +820,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		foreach_const(it, activeStatuses) {
 			if(it->targetIndex != target.index || !it->info || it->statusID == statusID || it->info->permanent || it->info->skillIndex != info->skillIndex || it->until <= localTime || it->appliedAt >= localTime || toggled.full()) continue;
 			if(info->toggleRemoves != 0 && it->statusID != info->toggleRemoves) continue;
+			if(info->toggleRemoves == 0 && it->info->type == StatusType::TARGET) continue;
 			if(eastl::find(toggled.begin(), toggled.end(), it->statusID) == toggled.end()) toggled.push_back(it->statusID);
 		}
 		foreach_const(t, toggled) {
@@ -872,6 +886,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		replication->SendResistStatusToAll(target.Main().UID, npcSource ? npcSource->UID : caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
 		return;
 	}
+	if(info && hostileSource) PassiveOnCC(target, *info);
 
 	if(info) foreach_const(m, info->mods) if(m->stat == StatusMod::RAGE && !m->regen) GainResource(target, 1, m->value);
 	foreach(it, activeStatuses) {
@@ -1052,6 +1067,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 				target.dashDist = rl;
 				target.dashDone = 0;
 				target.dashCurve = nullptr;
+				target.dashFly = false;
 				target.dashUntil = TimeAdd(localTime, TimeMsToTime(graphDuration * 1000.0));
 			}
 		}
@@ -1327,7 +1343,7 @@ void World::UpdateStatuses()
 				if(sib != it && sib->targetIndex == it->targetIndex && sib->info && sib->info->skillIndex == it->info->skillIndex && sib->appliedAt == it->appliedAt && sib->until > localTime) sib->until = localTime;
 			}
 		}
-		if(timeOver || (target.dead && !(it->info && it->info->permanent)) || shieldBroken || it->removeOnHit) {
+		if(timeOver || (target.dead && !(it->info && it->info->permanent && it->info->type != StatusType::DEFIANCE)) || shieldBroken || it->removeOnHit) {
 			if(timeOver && !target.dead && it->info && it->info->type == StatusType::NEARLY_IMMORTAL && it->info->paramRatio > 0) {
 				const i32 taken = MAX(target.damageTaken - it->damageAtStart, 0);
 				const i32 extra = (i32)MIN(taken * it->info->Param("_RecoveryFactorHP") / 100.0f, it->info->Param("_MaxRecoverHP"));

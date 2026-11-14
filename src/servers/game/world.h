@@ -374,6 +374,7 @@ struct World
 		f32 dashDist = 0;
 		f32 dashDone = 0;
 		const GameXmlContent::MoveCurve* dashCurve = nullptr;
+		bool dashFly = false;
 		bool dashAwaitClientStart = false;
 		Time ccImmuneUntil = Time::ZERO;
 		Time dodgeRageReadyAt = Time::ZERO;
@@ -396,7 +397,6 @@ struct World
 		Time hitRecoverReadyAt = Time::ZERO;
 		i32 cleanseCharges = -1;
 		Time cleanseRefillAt = Time::ZERO;
-		Time defianceEndAt = Time::ZERO;
 		Time firingStatUntil = Time::ZERO;
 		f32 firingMoveSpeedMul = 0;
 		Time reviveReadyAt = Time::ZERO;
@@ -1608,7 +1608,8 @@ private:
 	const ActiveStatus* FindPassiveOfType(const Player& p, StatusType type) const;
 	void SyncPassivesOnDeath(const Player& target);
 	i32 PlayerUpgradedStatus(const Player& player, i32 statusID, f32* duration) const;
-	bool PassiveBlocksCC(Player& target, const StatusInfo& info, f32 ccDuration, f32* ccScale);
+	bool PassiveBlocksCC(Player& target, const StatusInfo& info, f32* ccScale);
+	void PassiveOnCC(Player& target, const StatusInfo& info);
 	void SendPassiveCounter(const ActiveStatus& st, i32 value);
 	void PassiveOnDamaged(Player& target);
 	bool PassiveOnLethal(Player& target);

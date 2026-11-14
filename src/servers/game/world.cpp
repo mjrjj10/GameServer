@@ -126,7 +126,11 @@ void World::Update(Time localTime_)
 			const f32 frac = total > 0 ? MIN((f32)TimeDiffSec(TimeDiff(p.dashStartAt, localTime)) / total, 1.0f) : 1.0f;
 			const f32 target = p.dashCurve ? p.dashDist * p.dashCurve->Eval(frac) : p.dashDist * frac * frac;
 			const f32 ahead = glm::dot(vec2(p.dashOrigin) + p.dashDir * target - vec2(body.GetWorldPos()), p.dashDir);
-			if(p.dashCurve ? fabsf(ahead) > 0.01f : ahead > 0) physics.Move(&body, vec3(p.dashDir * ahead, 0), (f32)tdelta);
+			if(p.dashFly && (p.dashCurve ? fabsf(ahead) > 0.01f : ahead > 0)) {
+				const vec3 at = body.GetWorldPos() + vec3(p.dashDir * ahead, 0);
+				body.collider->setFootPosition(PxExtendedVec3(at.x, at.y, at.z));
+			}
+			else if(p.dashCurve ? fabsf(ahead) > 0.01f : ahead > 0) physics.Move(&body, vec3(p.dashDir * ahead, 0), (f32)tdelta);
 			p.dashDone = frac >= 1.0f ? p.dashDist : (p.dashCurve ? MIN(fabsf(target), p.dashDist - 0.01f) : target);
 			p.input.moveTo = body.GetWorldPos();
 		}
