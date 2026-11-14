@@ -1869,8 +1869,11 @@ void World::UpdateMonsterAi(f32 delta)
 					continue;
 				}
 				npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime(attack->cooldown * 1000.0));
+				const GameXmlContent::MonsterAttack* basic = attack;
+				const bool paced = basic->after > 0;
+				const bool basicReady = !paced || localTime >= npc.monsterBasicReady;
 				eastl::fixed_vector<i32,16,false> ready;
-				f32 totalShare = attack->share;
+				f32 totalShare = basicReady ? attack->share : 0.0f;
 				const f32 hpRatio = npc.hpMax > 0 ? (f32)npc.hp / (f32)npc.hpMax : 1.0f;
 				for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)npc.monsterSkillReady.size(); s++) {
 					const GameXmlContent::MonsterAttack& special = ai.attacks[s];
@@ -1885,7 +1888,11 @@ void World::UpdateMonsterAi(f32 delta)
 					ready.push_back(s);
 					totalShare += special.share;
 				}
-				f32 roll = (f32)(RandUint() % 10000) / 10000.0f * totalShare - attack->share;
+				if(!basicReady && ready.empty()) {
+					npc.monsterNextAttack = npc.monsterBasicReady;
+					continue;
+				}
+				f32 roll = (f32)(RandUint() % 10000) / 10000.0f * totalShare - (basicReady ? attack->share : 0.0f);
 				foreach_const(s, ready) {
 					const GameXmlContent::MonsterAttack& special = ai.attacks[*s];
 					if(roll >= special.share) { roll -= special.share; continue; }
@@ -1894,6 +1901,10 @@ void World::UpdateMonsterAi(f32 delta)
 					attack = &special;
 					LOG("Monster :: creature=%d (local %d) uses %s", (i32)npc.docID, npc.localID, ActionStateToString(special.state));
 					break;
+				}
+				if(paced) {
+					npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime((attack->after > 0 ? attack->after : basic->after) * 1000.0));
+					if(attack == basic) npc.monsterBasicReady = TimeAdd(localTime, TimeMsToTime(basic->cooldown * 1000.0));
 				}
 				StartMonsterAttack(npc, ai, attack, targetPos, dist, yaw, run);
 				continue;

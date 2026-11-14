@@ -1436,6 +1436,7 @@ bool GameXmlContent::LoadMonsterAi()
 				attack.weakTime = pAttack->FloatAttribute("weakTime");
 				attack.weakAt = pAttack->FloatAttribute("weakAt");
 				attack.firstAt = pAttack->FloatAttribute("firstAt", -1.0f);
+				attack.after = pAttack->FloatAttribute("after", 0.0f);
 				attack.minRange = pAttack->FloatAttribute("minRange");
 				attack.weakStatus = pAttack->IntAttribute("weakStatus");
 				attack.evade = pAttack->FloatAttribute("evade");

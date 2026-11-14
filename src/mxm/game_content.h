@@ -1305,6 +1305,7 @@ struct GameXmlContent
 		f32 weakAt = 0;
 		f32 hitAt = -1.0f;
 		f32 firstAt = -1.0f;
+		f32 after = 0;
 		f32 minRange = 0;
 		i32 weakStatus = 0;
 		f32 evade = 0;

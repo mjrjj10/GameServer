@@ -627,6 +627,7 @@ struct World
 		bool monsterChasing = false;
 		ActorUID monsterTarget = ActorUID::INVALID;
 		Time monsterNextAttack = Time::ZERO;
+		Time monsterBasicReady = Time::ZERO;
 		eastl::array<Time,24> monsterSkillReady = {};
 		Time monsterNextSearch = Time::ZERO;
 		Time monsterRetargetAt = Time::ZERO;
