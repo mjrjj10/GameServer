@@ -49,7 +49,7 @@ bool World::BotStageSkill(Player& bot)
 			const f32 radius = content.BotConstant("BOTLOGIC_CONSTANT_KEY_TOWER_CHECK_RADIUS_FOR_SHIELD_STAGE_SKILL");
 			const f32 ratio = content.BotConstant("BOTLOGIC_CONSTANT_KEY_TOWER_HP_RATIO_FOR_SHIELD_STAGE_SKILL");
 			foreach_const(npc, actorNpcList) {
-				if(!npc->monsterAi || (npc->monsterAi->tagKey != towerCenterTag && npc->monsterAi->tagKey != towerSideTag) || npc->hp <= 0) continue;
+				if(!npc->monsterAi || (npc->monsterAi->tagKey != towerCenterTag && npc->monsterAi->tagKey != towerSideTag) || !npc->monsterAi->byTarget[GameXmlContent::MonsterAttack::MASTER] || npc->hp <= 0) continue;
 				if((i32)npc->faction != (i32)bot.team || glm::length(vec2(npc->pos) - vec2(pos)) > radius || HpRatio(npc->hp, npc->hpMax) >= ratio) continue;
 				target = npc->UID;
 				at = npc->pos;
@@ -67,7 +67,7 @@ bool World::BotStageSkill(Player& bot)
 			const f32 enemyRadius = content.BotConstant("BOTLOGIC_CONSTANT_KEY_ENEMY_CHECK_RADIUS_FOR_TELEPORT_STAGE_SKILL");
 			f32 farthest = HYP_BOT_TELEPORT_FROM_BASE;
 			foreach_const(npc, actorNpcList) {
-				if(!npc->monsterAi || (npc->monsterAi->tagKey != towerCenterTag && npc->monsterAi->tagKey != towerSideTag) || npc->hp <= 0 || (i32)npc->faction != (i32)bot.team) continue;
+				if(!npc->monsterAi || (npc->monsterAi->tagKey != towerCenterTag && npc->monsterAi->tagKey != towerSideTag) || !npc->monsterAi->byTarget[GameXmlContent::MonsterAttack::MASTER] || npc->hp <= 0 || (i32)npc->faction != (i32)bot.team) continue;
 				f32 laneDist = 1e30f;
 				foreach_const(pt, lane) laneDist = MIN(laneDist, glm::length(*pt - vec2(npc->pos)));
 				const f32 fromBase = glm::length(vec2(npc->pos) - vec2(bot.spawnPos));
