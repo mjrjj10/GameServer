@@ -354,7 +354,7 @@ bool World::BotObjective(const Player& bot, vec2* goal)
 }
 static const u32 BOT_DECISION_MIN_MS = 400;
 static const f32 HYP_BOT_OCCUPY_FIGHT_RANGE = 600.0f;
-static const f32 HYP_BOT_TITAN_ENGAGE_RANGE = 1500.0f;
+static const f32 HYP_BOT_TITAN_ENGAGE_RANGE = 1000.0f;
 enum BotMode: u8 { BOT_MODE_FIGHT = 0, BOT_MODE_OCCUPY, BOT_MODE_OBJECTIVE, BOT_MODE_FARM, BOT_MODE_LANE, BOT_MODE_ROAM };
 static const char* const BOT_MODE_NAMES[] = { "fight", "occupy", "objective", "farm", "lane", "roam" };
 static const f32 HYP_BOT_LANE_FARM_RANGE = 1500.0f;
