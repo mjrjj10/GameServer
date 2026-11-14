@@ -14,6 +14,9 @@ f32 World::BotTitanSkillDistance(i32 skill) const
 
 static const i32 BOT_STAGE_RECOVERY = 0;
 static const i32 BOT_STAGE_SHIELD = 1;
+static const i32 BOT_STAGE_TELEPORT = 2;
+static const f32 HYP_BOT_TELEPORT_FROM_BASE = 2500.0f;
+static const f32 HYP_BOT_TELEPORT_LANE_DIST = 1500.0f;
 
 static f32 HpRatio(i32 hp, i32 hpMax)
 {
@@ -51,6 +54,30 @@ bool World::BotStageSkill(Player& bot)
 				target = npc->UID;
 				at = npc->pos;
 				break;
+			}
+			if(target == ActorUID::INVALID) return false;
+		} break;
+		case BOT_STAGE_TELEPORT: {
+			if(glm::length(vec2(pos) - vec2(bot.spawnPos)) > HYP_BOT_TELEPORT_FROM_BASE) return false;
+			vec2 laneGoal;
+			if(!BotLaneGoal(bot, &laneGoal) || bot.botLane < 0 || botLanes[bot.team].empty()) return false;
+			const auto& lane = botLanes[bot.team][bot.botLane % (i32)botLanes[bot.team].size()];
+			static const u32 towerCenterTag = StatusTypeKey("Tower_Center");
+			static const u32 towerSideTag = StatusTypeKey("Tower_Side");
+			const f32 enemyRadius = content.BotConstant("BOTLOGIC_CONSTANT_KEY_ENEMY_CHECK_RADIUS_FOR_TELEPORT_STAGE_SKILL");
+			f32 farthest = HYP_BOT_TELEPORT_FROM_BASE;
+			foreach_const(npc, actorNpcList) {
+				if(!npc->monsterAi || (npc->monsterAi->tagKey != towerCenterTag && npc->monsterAi->tagKey != towerSideTag) || npc->hp <= 0 || (i32)npc->faction != (i32)bot.team) continue;
+				f32 laneDist = 1e30f;
+				foreach_const(pt, lane) laneDist = MIN(laneDist, glm::length(*pt - vec2(npc->pos)));
+				const f32 fromBase = glm::length(vec2(npc->pos) - vec2(bot.spawnPos));
+				if(laneDist > HYP_BOT_TELEPORT_LANE_DIST || fromBase <= farthest) continue;
+				bool enemyNear = false;
+				foreach_const(p, players) if(p->team != bot.team && !p->dead && glm::length(vec2(p->body->GetWorldPos()) - vec2(npc->pos)) < enemyRadius) enemyNear = true;
+				if(enemyNear) continue;
+				farthest = fromBase;
+				target = npc->UID;
+				at = npc->pos;
 			}
 			if(target == ActorUID::INVALID) return false;
 		} break;

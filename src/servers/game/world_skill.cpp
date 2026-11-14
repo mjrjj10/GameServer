@@ -648,7 +648,12 @@ bool World::TeleportNextToTarget(Player& player, ActorUID target)
 	const vec3 probe = vec3(vec2(targetPos) + dir * TELEPORT_PROBE_DIST, targetPos.z + TELEPORT_PROBE_HEIGHT);
 	f32 hit = 0;
 	vec3 dest = targetPos;
-	const f32 measured = GetGameXmlContent().FindStageTeleportDistance(targetDoc);
+	f32 measured = GetGameXmlContent().FindStageTeleportDistance(targetDoc);
+	const GameXmlContent::MonsterAi* targetAi = measured < 0 ? GetGameXmlContent().FindMonsterAi(targetDoc) : nullptr;
+	if(targetAi && targetAi->radius > 0) foreach_const(m, GetGameXmlContent().stageTeleportDistance) {
+		const GameXmlContent::MonsterAi* same = GetGameXmlContent().FindMonsterAi(m->first);
+		if(same && m->second > 0 && same->radius == targetAi->radius && same->sizeRank == targetAi->sizeRank && same->tagKey != 0 && targetAi->tagKey != 0) { measured = m->second; break; }
+	}
 	if(measured >= 0) dest = vec3(vec2(targetPos) + dir * measured, targetPos.z);
 	else if(physics.RaycastStatic(probe, vec3(vec2(targetPos), targetPos.z + TELEPORT_PROBE_HEIGHT), &hit)) dest = vec3(vec2(targetPos) + dir * (TELEPORT_PROBE_DIST - hit + HitRadius(player)), targetPos.z);
 	LOG("Teleport :: %ls next to target %u at (%.0f, %.0f), %.0f from it", player.name.data(), (u32)target, dest.x, dest.y, glm::length(vec2(dest) - vec2(targetPos)));
