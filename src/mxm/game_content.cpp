@@ -1251,6 +1251,8 @@ void GameXmlContent::LoadMonsterFires()
 			auto& list = fires[((u64)StatusTypeKey(cls) << 32) | (u32)ActionStateFromString(state)];
 			MonsterFire fire;
 			fire.remote = e->IntAttribute("RemoteIndex");
+			const char* preset = e->Attribute("TargetPreset");
+			fire.atTarget = preset && EA::StdC::Strncmp(preset, "TARGET_POS", 10) == 0;
 			fire.pass = (u8)MAX(MIN(e->IntAttribute("AnimationIndex"), 3), 0);
 			const char* node = e->Attribute("NodeName");
 			for(const char* c = node ? node : "Scene Root"; *c && !fire.node.full(); c++) fire.node.push_back((wchar)*c);
@@ -1330,6 +1332,8 @@ bool GameXmlContent::LoadMonsterAi()
 			ai.chaseArc = pInfo->FloatAttribute("chaseArc") * PI / 180.0f;
 			ai.turnLock = pInfo->BoolAttribute("turnLock");
 			ai.turnEvery = pInfo->FloatAttribute("turnEvery");
+			ai.retargetGain = pInfo->FloatAttribute("retargetGain");
+			ai.retargetRate = pInfo->FloatAttribute("retargetRate");
 			ai.masterMark = pInfo->IntAttribute("masterMark");
 			ai.teamBuff = pInfo->IntAttribute("teamBuff");
 			if(const char* team = pInfo->Attribute("team")) ai.playerSide = EA::StdC::Strcmp(team, "player") == 0;

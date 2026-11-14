@@ -656,7 +656,7 @@ void World::FireMonsterRemote(const MonsterFireEvent& fire)
 	const ActorNpc& npc = *it->second;
 	const vec3 targetPos = MonsterFireTargetPos(npc, fire.target);
 	static const i32 MEASURED_MONSTER_REMOTES_AT_TARGET[] = { 1480012051, 1480012052 };
-	bool atTarget = false;
+	bool atTarget = fire.fire->atTarget && fire.target != ActorUID::INVALID;
 	for(i32 r : MEASURED_MONSTER_REMOTES_AT_TARGET) if(r == fire.fire->remote && fire.target != ActorUID::INVALID) atTarget = true;
 	const vec3 firePos = atTarget ? vec3(vec2(targetPos), npc.pos.z) : npc.pos;
 	replication->SendRemoteCreateToAll(npc.UID, fire.seed, (RemoteIdx)fire.fire->remote, firePos, npc.rot.z, vec3(vec2(targetPos), npc.pos.z), fire.target, fire.fire->node.c_str());
@@ -893,9 +893,11 @@ void World::UpdateMonsterRemotes(f32 delta)
 				expired = true;
 			}
 			else {
-				mr.pos += vec3(mr.dir * step, 0);
-				mr.travelled += step;
-				if(remote.maxDistance > 0 && mr.travelled >= remote.maxDistance) expired = true;
+				const f32 limit = remote.maxDistance > 0 ? remote.maxDistance : (remote.behaviorType == Remote::BehaviorType::GRAPH ? remote.fixedGraphLength : 0.0f);
+				const f32 move = limit > 0 ? MIN(step, MAX(limit - mr.travelled, 0.0f)) : step;
+				mr.pos += vec3(mr.dir * move, 0);
+				mr.travelled += move;
+				if(limit > 0 && mr.travelled >= limit) expired = true;
 			}
 			if(mr.seed != 0 && remote.homingLength > 0 && !expired) {
 				mr.syncIn -= delta;
@@ -1536,16 +1538,17 @@ void World::UpdateMonsterAi(f32 delta)
 			npc.monsterTarget = ActorUID::INVALID;
 			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
 		}
-		if(neutral && titanMode && targetPos && !held && taunt == ActorUID::INVALID && localTime >= npc.monsterNextSearch && FindMasterActor(npc.monsterTarget)) {
-			npc.monsterNextSearch = TimeAdd(localTime, TimeMsToTime(MONSTER_SEARCH_MS));
-			f32 best = MIN(glm::length(vec2(*targetPos) - vec2(npc.pos)), ai.perception);
+		static const f64 MEASURED_NEUTRAL_RETARGET_STEP_MS = 500.0;
+		if(neutral && titanMode && ai.retargetRate > 0 && targetPos && !held && taunt == ActorUID::INVALID && localTime >= npc.monsterNextSearch && FindMasterActor(npc.monsterTarget)) {
+			npc.monsterNextSearch = TimeAdd(localTime, TimeMsToTime(MEASURED_NEUTRAL_RETARGET_STEP_MS));
+			f32 best = MIN(glm::length(vec2(*targetPos) - vec2(npc.pos)), ai.perception) - ai.retargetGain;
 			Player* closer = nullptr;
 			foreach(p, players) {
 				if(p->dead || p->untargetable || !p->body || p->hiddenUID != ActorUID::INVALID) continue;
 				const f32 d = glm::length(vec2(p->body->GetWorldPos()) - vec2(npc.pos));
 				if(d < best) { best = d; closer = &*p; }
 			}
-			if(closer && closer->Main().UID != npc.monsterTarget) {
+			if(closer && closer->Main().UID != npc.monsterTarget && (f32)(RandUint() % 10000) / 10000.0f < ai.retargetRate) {
 				npc.monsterTarget = closer->Main().UID;
 				targetAt = closer->body->GetWorldPos();
 				targetPos = &targetAt;
