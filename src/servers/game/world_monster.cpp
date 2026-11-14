@@ -162,7 +162,8 @@ void World::ApplyDeathHit(const DeathHit& hit)
 			else if(firstStatus != 0) ApplyStatusToNpcFromNpc(*helper, *o, firstStatus);
 			for(i32 s = 1; s < (i32)d.statuses.size(); s++) if(o->hp > 0) ApplyStatusToNpcFromNpc(*helper, *o, d.statuses[s]);
 		}
-		if(damage > 0 && !d.ally) {
+		const Remote* deathRemote = GetGameXmlContent().FindRemote((RemoteIdx)d.remote);
+		if(damage > 0 && !d.ally && deathRemote && (deathRemote->vs & (1u << Remote::VS_DYNAMIC))) {
 			foreach(w, actorDynamicList) {
 				if(w->destroyed || !w->collider || !GetGameXmlContent().dynamicJumpable.count((i32)w->docID)) continue;
 				const vec2 at = WallContactPoint(*w, vec2(helper->pos));
@@ -534,6 +535,13 @@ void World::MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const Gam
 		bool onPath = glm::length(vec2(targetPos) - vec2(*aimPos)) <= HYP_MONSTER_SHELL_HIT_RADIUS;
 		const bool seeks = shot && (shot->behaviorType == Remote::BehaviorType::HOMING || shot->behaviorType == Remote::BehaviorType::FOLLOW_TARGET);
 		if(seeks) onPath = true;
+		else if(shot && attack.speed > 0 && (shot->vs & (1u << Remote::VS_DYNAMIC))) {
+			if(ActorDynamic* wall = JumpWallOnPath(attacker.pos, targetPos)) {
+				LOG("Monster :: creature=%d (local %d) shot stopped by jumpable wall %d", (i32)attacker.docID, attacker.localID, wall->localID);
+				DamageJumpWall(*wall, damage, false, attacker.UID, -1, remoteID, shot->ID, vec3(WallContactPoint(*wall, vec2(attacker.pos)), wall->pos.z), ClientHandle::INVALID);
+				return;
+			}
+		}
 		else if(shot && !shot->bezier && glm::length(vec2(*aimPos) - vec2(attacker.pos)) > 1.0f) {
 			const vec2 dir = glm::normalize(vec2(*aimPos) - vec2(attacker.pos));
 			const vec2 rel = vec2(targetPos) - vec2(attacker.pos);
@@ -736,6 +744,18 @@ vec2 World::WallContactPoint(const ActorDynamic& wall, const vec2& from)
 	return vec2(wall.pos);
 }
 
+World::ActorDynamic* World::JumpWallOnPath(const vec3& from, const vec3& to)
+{
+	const f32 z = from.z + OBSTRUCT_JUMPABLE_HEIGHT * 0.5f;
+	f32 dist = 0;
+	const PxRigidActor* hitActor = nullptr;
+	if(glm::length(vec2(to) - vec2(from)) < 1.0f || !physics.RaycastStatic(vec3(vec2(from), z), vec3(vec2(to), z), &dist, -1, &hitActor) || !hitActor) return nullptr;
+	foreach(d, actorDynamicList) {
+		if(!d->destroyed && (const PxRigidActor*)d->collider == hitActor && GetGameXmlContent().dynamicJumpable.count((i32)d->docID)) return &*d;
+	}
+	return nullptr;
+}
+
 f32 World::LaneMinionDefence() const
 {
 	foreach_const(o, actorNpcList) {
@@ -827,7 +847,7 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 			mr.activations--;
 		}
 		const bool executes = GetGameXmlContent().executeMinionRemotes.count((i32)remote.ID) != 0;
-		if(hitsEnemies && !targetOnly && (damage > 0 || executes)) {
+		if(hitsEnemies && !targetOnly && (remote.vs & (1u << Remote::VS_DYNAMIC)) && (damage > 0 || executes)) {
 			foreach(d, actorDynamicList) {
 				if(d->destroyed || !d->collider || !GetGameXmlContent().dynamicJumpable.count((i32)d->docID)) continue;
 				const vec2 at = WallContactPoint(*d, origin);

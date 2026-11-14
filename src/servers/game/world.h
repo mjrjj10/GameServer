@@ -1453,6 +1453,7 @@ public:
 	void DamageJumpWall(ActorDynamic& wall, i32 damage, bool exact, ActorUID attackerUID, i32 killerIndex, u32 remoteID, RemoteIdx remoteDoc, const vec3& pos, ClientHandle seedOwnerHd);
 	f32 LaneMinionDefence() const;
 	vec2 WallContactPoint(const ActorDynamic& wall, const vec2& from);
+	ActorDynamic* JumpWallOnPath(const vec3& from, const vec3& to);
 	bool LevelTriggerActive(const GameXmlContent::LevelEventNode& node) const;
 	void SpawnGroundItems(i32 dropIndex, i32 areaID, i32 tagID);
 	void SpawnDropGroupAt(i32 dropIndex, const vec3& pos, i32 tagID);
