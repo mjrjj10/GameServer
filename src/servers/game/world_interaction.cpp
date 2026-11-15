@@ -630,6 +630,18 @@ void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 s
 	npcStatuses.push_back(ns);
 }
 
+f32 World::NpcStatusMul(const ActorNpc& npc, i32 stat) const
+{
+	f32 sum = 0;
+	foreach_const(ns, npcStatuses) {
+		if(ns->npcUID != npc.UID || localTime >= ns->until) continue;
+		const StatusInfo* info = GetGameXmlContent().FindStatus(ns->statusID);
+		if(!info) continue;
+		foreach_const(m, info->mods) if((i32)m->stat == stat && !m->regen && m->mul) sum += m->value;
+	}
+	return MAX(1.0f + sum / 100.0f, 0.0f);
+}
+
 bool World::NpcHasStatusType(const ActorNpc& npc, StatusType type) const
 {
 	foreach_const(ns, npcStatuses) {

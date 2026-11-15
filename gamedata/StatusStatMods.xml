@@ -11,6 +11,8 @@
   <MOD status="1200100022" stat="STAT_TYPE_SKILLDAMAGE_REDUCE_RATIO" value="15" source="STR_STATUS_MOB_TOOLTIP_1200100022; MEASURED 7 official 5v5 captures: SN_UpdateStat 58 = 15 on add (276 of 280)" />
   <MOD status="1200100032" stat="STAT_TYPE_MOVESPEED" value="50" mul="1" source="STR_STATUS_MOB_TOOLTIP_1200100032; MEASURED 7 official 5v5 captures: +50% (45 of 77 adds, 57 of 89 removes)" />
   <MOD status="1200100033" stat="STAT_TYPE_MOVESPEED" value="-30" mul="1" source="MEASURED 7 official 5v5 captures: -30% (107 of 170 adds, 132 of 201 removes); tooltip says -0%" />
+  <MOD status="1200100031" stat="SERVER_DAMAGE_TAKEN_RATIO" value="25" mul="1" source="MEASURED 7 official 5v5 captures (Rozark curse on towers, 5 kills): minion remotes 1480010020/024 on cursed towers 165 vs 133 on uncursed towers in the same minutes, step x1.31 at the curse with x1.04 minion growth" />
+  <MOD status="1200100031" stat="STAT_TYPE_ATTACK" value="-30" mul="1" source="MEASURED 7 official 5v5 captures (Rozark curse on towers): tower shots 1480010004/005 on monsters x0.69/x0.70 during the curse (n 61/82)" />
   <MOD status="1200100003" stat="STAT_TYPE_TAG_HEALTHREGEN_VALUE" value="40" samples="6" />
   <MOD status="1200100006" stat="STAT_TYPE_STAMINAREGEN" value="3" samples="6" />
   <MOD status="1200100006" stat="STAT_TYPE_MANAREGEN" value="12" samples="6" />

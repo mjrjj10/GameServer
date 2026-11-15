@@ -139,7 +139,7 @@ void World::ApplyDeathHit(const DeathHit& hit)
 	if(!helper) return;
 	const GameXmlContent::DeathRemote& d = *hit.remote;
 	const bool teamed = helper->faction == Faction::RED || helper->faction == Faction::BLUE;
-	const i32 damage = (i32)(MonsterAttackPower(*helper) * d.multiplier + 0.5f);
+	const i32 damage = (i32)(MonsterAttackPower(*helper) * NpcStatusMul(*helper, StatusMod::ATTACK) * d.multiplier + 0.5f);
 	const i32 firstStatus = d.statuses.empty() ? 0 : d.statuses[0];
 	if(d.pc) {
 		foreach(p, players) {
@@ -505,7 +505,7 @@ void World::MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const Gam
 	if(attackerIt == actorNpcMap.end()) return;
 	ActorNpc& attacker = *attackerIt->second;
 	const Remote* hitData = attack.hitRemote > 0 ? GetGameXmlContent().FindRemote((RemoteIdx)attack.hitRemote) : nullptr;
-	const i32 damage = (i32)(MonsterAttackPower(attacker) * (hitData ? hitData->attackMultiplier : attack.multiplier) + 0.5f);
+	const i32 damage = (i32)(MonsterAttackPower(attacker) * NpcStatusMul(attacker, StatusMod::ATTACK) * (hitData ? hitData->attackMultiplier : attack.multiplier) + 0.5f);
 	if(damage <= 0 && attack.status <= 0) return;
 	auto targetIt = actorNpcMap.find(targetUID);
 	ActorMaster* master = targetIt == actorNpcMap.end() ? FindMasterActor(targetUID) : nullptr;
@@ -769,7 +769,7 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 {
 	const Remote& remote = *mr.remote;
 	if(remote.boundType == Remote::BoundType::E_BOUND_NONE || remote.damageGroup == Remote::DamageGroup::eNONE || mr.activations <= 0) return;
-	const i32 damage = (i32)(MonsterAttackPower(owner) * remote.attackMultiplier + 0.5f);
+	const i32 damage = (i32)(MonsterAttackPower(owner) * NpcStatusMul(owner, StatusMod::ATTACK) * remote.attackMultiplier + 0.5f);
 	const bool hitsEnemies = remote.damageGroup == Remote::DamageGroup::eENEMY || remote.damageGroup == Remote::DamageGroup::eALL;
 	const bool hitsAllies = remote.damageGroup == Remote::DamageGroup::eFRIEND || remote.damageGroup == Remote::DamageGroup::eALL;
 	const vec2 origin = vec2(mr.pos) + mr.dir * (remote.attachFireObject ? -RemoteBoundOffset(remote) : RemoteBoundOffset(remote));

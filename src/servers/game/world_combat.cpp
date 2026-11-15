@@ -550,7 +550,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	if(damage <= 0 || !NpcHittableBy(npc, attacker)) return;
 	if(npc.ownerUID == ActorUID::INVALID && NpcHasStatusType(npc, StatusType::GODMODE)) return;
 	if(npc.monsterEvadeUntil != Time::ZERO && localTime < npc.monsterEvadeUntil) return;
-	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence, 0.0f)) + 0.5f), 1);
+	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence, 0.0f)) * NpcStatusMul(npc, StatusMod::DAMAGE_TAKEN) + 0.5f), 1);
 	const i32 hpBefore = npc.hp;
 	if(npc.faction == Faction::MONSTER && npc.ownerUID == ActorUID::INVALID) {
 		static const f64 HYP_HIT_COMBO_WINDOW_MS = 3000.0;
@@ -622,7 +622,7 @@ void World::DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i
 		if(status > 0) ApplyStatusToNpcFromNpc(attacker, target, status);
 		return;
 	}
-	const i32 dealt = exact ? damage : MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(target.defence, 0.0f)) + 0.5f), 1);
+	const i32 dealt = exact ? damage : MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(target.defence, 0.0f)) * NpcStatusMul(target, StatusMod::DAMAGE_TAKEN) + 0.5f), 1);
 	const i32 hpBefore = target.hp;
 	target.hp = MAX(target.hp - AbsorbNpcShield(target, dealt), 0);
 	if(target.ownerUID == ActorUID::INVALID) OnMonsterDamaged(target, hpBefore);

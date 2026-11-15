@@ -1376,6 +1376,7 @@ public:
 	void StartTitanVictory(Faction deadFaction, const vec3& deadPos, ActorUID soulUID, ActorUID triggerUID);
 	void UpdateNpcVictory(ActorNpc& npc);
 	bool NpcHasStatusType(const ActorNpc& npc, StatusType type) const;
+	f32 NpcStatusMul(const ActorNpc& npc, i32 stat) const;
 	void OnMonsterDeath(ActorNpc& npc, ActorUID killerUID);
 	void CountTagDeath(i32 tagID, Faction killerTeam, i32 killerIndex);
 	void DestroyDynamic(ActorDynamic& dynamic, i32 killerIndex);
