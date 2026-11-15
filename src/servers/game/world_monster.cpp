@@ -1668,7 +1668,8 @@ void World::UpdateMonsterAi(f32 delta)
 				const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos));
 				if(d < bestOther) { bestOther = d; other = &*o; otherAttack = a; }
 			}
-			const bool tooLong = TimeDiffSec(TimeDiff(npc.monsterMasterSince, localTime)) >= masterChaseSec;
+			const bool chiefOutOfReach = ai.tagKey == chiefTag && attack && glm::length(vec2(*targetPos) - vec2(npc.pos)) > attack->range + MONSTER_REACH_TOLERANCE;
+			const bool tooLong = chiefOutOfReach || TimeDiffSec(TimeDiff(npc.monsterMasterSince, localTime)) >= masterChaseSec;
 			if(other || tooLong) {
 				LOG("Monster :: creature=%d (local %d) releases its master target (%s)", (i32)npc.docID, npc.localID, other ? "closer minion or structure" : "chase too long");
 				npc.monsterMasterSince = Time::ZERO;
@@ -1723,6 +1724,7 @@ void World::UpdateMonsterAi(f32 delta)
 				foreach(p, players) {
 					if(!MonsterHostile(npc, *p)) continue;
 					const f32 d = glm::length(vec2(p->body->GetWorldPos()) - vec2(npc.pos));
+					if(ai.tagKey == chiefTag && d > ai.byTarget[GameXmlContent::MonsterAttack::MASTER]->range + MONSTER_REACH_TOLERANCE) continue;
 					if(d < best) { best = d; chosen = p->Main().UID; targetAt = p->body->GetWorldPos(); attack = ai.byTarget[GameXmlContent::MonsterAttack::MASTER]; }
 				}
 			}
@@ -1866,6 +1868,7 @@ void World::UpdateMonsterAi(f32 delta)
 					}
 				}
 				if(run <= 0 || (npc.monsterDashHold && localTime < npc.monsterDashTurnAt)) continue;
+				if(ai.tagKey == chiefTag && FindMasterActor(npc.monsterTarget)) continue;
 				if(!laneWalk) {
 					if(ai.walkState != ActionStateID::INVALID && !npc.monsterWalkStateOn && localTime < npc.monsterNextAttack) continue;
 					npc.monsterWalking = false;
