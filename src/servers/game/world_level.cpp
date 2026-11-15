@@ -558,6 +558,7 @@ void World::TransformTitan(Player& player, i32 formIndex, bool initial)
 	if(initial) {
 		AddTeamPieces((i32)player.team, -titan.cost);
 		player.titanSavedHp = chara.hp;
+		if(player.clientHd == ClientHandle::INVALID) player.botSkillReady.fill(Time::ZERO);
 		player.titanUntil = TimeAdd(localTime, TimeMsToTime((f64)form.duration));
 		chara.hpMax = (i32)form.Stat((u8)StatType::STAT_TYPE_HEALTH);
 		chara.hp = chara.hpMax;

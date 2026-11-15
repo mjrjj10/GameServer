@@ -198,10 +198,9 @@ void World::UpdateBotSkills()
 			const i32 base = (i32)bot.mainCharaID * 2;
 			eastl::fixed_vector<i32,5,false> ready;
 			for(i32 i = 0; i < 5; i++) {
-				const i32 skill = (*skills)[i];
+				const i32 skill = titan && i == 4 ? content.titan.forms[bot.titanForm].ug : (*skills)[i];
 				if(skill == 0 || localTime < bot.botSkillReady[i]) continue;
 				if(!titan && i != 4 && !Config().DevShowcase && (i32)bot.skills[base] != skill && (i32)bot.skills[base + 1] != skill) continue;
-				if(titan && i == 4) continue;
 				const f32 maxDist = titan ? BotTitanSkillDistance(skill) : content.GetBotSkillMaxDistance(skill);
 				if(maxDist <= 0 || best > maxDist) continue;
 				if(!Config().DevShowcase && !Config().DevMirror && !SkillCostAffordable(bot, skill, PlayerSkillConsumeMP(bot, skill))) continue;
@@ -209,7 +208,7 @@ void World::UpdateBotSkills()
 			}
 			if(ready.empty()) continue;
 			const i32 slot = ready[RandUint() % ready.size()];
-			skill = (*skills)[slot];
+			skill = titan && slot == 4 ? content.titan.forms[bot.titanForm].ug : (*skills)[slot];
 
 			const f32 botCd = slot == 4 ? content.BotUgSkillCoolTime() : content.BotNormalSkillCoolTime();
 			cd = MAX(SkillCoolTime(bot, skill), botCd);
