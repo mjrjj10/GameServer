@@ -1498,10 +1498,14 @@ void World::UpdateHideVisibility()
 			const vec2 at = vec2(it->body->GetWorldPos());
 			const Faction mine = it->team == 0 ? Faction::RED : Faction::BLUE;
 			foreach_const(npc, actorNpcList) {
-				if(npc->ownerUID == ActorUID::INVALID || npc->faction == mine || localTime >= npc->despawnAt || detectors.full()) continue;
-				const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc->docID);
-				if(!info || info->hideDetectRadius <= 0) continue;
-				if(glm::length(vec2(npc->pos) - at) <= info->hideDetectRadius * HIDE_DETECT_RADIUS_UNIT) detectors.push_back(npc->UID);
+				if(npc->faction == mine || (npc->despawnAt != Time::ZERO && localTime >= npc->despawnAt) || detectors.full()) continue;
+				f32 radius = 0;
+				if(npc->ownerUID != ActorUID::INVALID) {
+					const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc->docID);
+					radius = info ? info->hideDetectRadius : 0.0f;
+				}
+				else if(npc->hp > 0 && (npc->faction == Faction::RED || npc->faction == Faction::BLUE)) radius = GetGameXmlContent().CreatureHideDetectRadius((i32)npc->docID);
+				if(radius > 0 && glm::length(vec2(npc->pos) - at) <= radius * HIDE_DETECT_RADIUS_UNIT) detectors.push_back(npc->UID);
 			}
 		}
 		const ActorUID concealed = detectors.empty() ? hidden : ActorUID::INVALID;
@@ -1517,7 +1521,7 @@ void World::UpdateHideVisibility()
 		foreach_const(d, detectors) {
 			if(eastl::find(it->hideDetectors.begin(), it->hideDetectors.end(), *d) != it->hideDetectors.end() && hidden == it->hideDetectedUID) continue;
 			SendHideDetectToAll(*d, hidden, 1);
-			LOG("Hide :: %ls detected by summon %u", it->name.data(), (u32)*d);
+			LOG("Hide :: %ls detected by %u", it->name.data(), (u32)*d);
 		}
 		it->hideDetectors = detectors;
 		it->hideDetectedUID = hidden;

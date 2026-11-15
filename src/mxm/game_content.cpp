@@ -4784,9 +4784,12 @@ bool GameXmlContent::LoadSummons()
 		for(XMLElement* pInfo = xmlPvp.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
 			const i32 id = pInfo->IntAttribute("ID");
 			if(sharedEntities.find(id) != sharedEntities.end() && summonMap.find(id) == summonMap.end()) LoadSummonInfo(pInfo);
+			XMLElement* creature = pInfo->FirstChildElement("CreatureComData");
+			XMLElement* detector = creature ? creature->FirstChildElement("_HideDetector") : nullptr;
+			if(detector) creatureHideDetect[id] = detector->FloatAttribute("_Radius", 0.0f);
 		}
 	}
-	LOG("Loaded %d summon creatures", (i32)summonMap.size());
+	LOG("Loaded %d summon creatures, %d map hide detectors", (i32)summonMap.size(), (i32)creatureHideDetect.size());
 	return true;
 }
 
