@@ -457,6 +457,7 @@ void World::GrantMonsterKillPoints(const ActorNpc& npc, ActorUID killerUID)
 			else if(tag == chiefTag || npc.faction == Faction::ORANGE) kind = END_KILL_BOSS;
 			else if(npc.faction == Faction::MONSTER) kind = END_KILL_NEUTRAL;
 			if(kind >= 0 && master->parent->monsterKills[kind] < 255) master->parent->monsterKills[kind]++;
+			if(kind == END_KILL_MINION || kind == END_KILL_NEUTRAL || kind == END_KILL_BOSS) replication->SendMonsterKillCountsToAll(master->parent->userID, master->parent->monsterKills[END_KILL_MINION], master->parent->monsterKills[END_KILL_NEUTRAL] + master->parent->monsterKills[END_KILL_BOSS]);
 		}
 	}
 	const auto& giants = GetGameXmlContent().titan.giants;

@@ -3503,6 +3503,21 @@ void Replication::SendPointsToAll(UserID userID, u8 team, i32 points, i32 teamPo
 	}
 }
 
+void Replication::SendMonsterKillCountsToAll(UserID userID, i32 minionKills, i32 neutralKills)
+{
+	enum : u32 { MINION_KILL_COUNT = 9, NEUTRAL_MONSTER_KILL_COUNT = 11 };
+	PacketWriter<Sv::SN_ScoreUpdate> packet;
+	packet.Write<u32>((u32)userID);
+	packet.Write<TeamType>(TeamType::INVALID);
+	packet.Write<u16>(2);
+	packet.Write<u32>(MINION_KILL_COUNT); packet.Write<u32>((u32)minionKills);
+	packet.Write<u32>(NEUTRAL_MONSTER_KILL_COUNT); packet.Write<u32>((u32)neutralKills);
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		SendPacket(clientHandle[clientID], packet);
+	}
+}
+
 void Replication::SendTeamPointsToAll(u8 team, i32 teamPoints)
 {
 	enum : u32 { SCORE = 0 };

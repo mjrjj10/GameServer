@@ -607,6 +607,7 @@ struct Replication
 	void SendDeathToAll(ActorUID killerUID, ActorUID targetUID, CreatureIndex killerDocID, u32 remoteID, RemoteIdx remoteDoc, UserID targetUserID, i32 respawnDelayMs);
 	void SendPvpAnnouncementToAll(u32 type, u32 data, ActorUID attackerUID, ActorUID victimUID, u32 score = 1);
 	void SendPointsToAll(UserID userID, u8 team, i32 points, i32 teamPoints);
+	void SendMonsterKillCountsToAll(UserID userID, i32 minionKills, i32 neutralKills);
 	void SendNpcDeadAckToAll(ActorUID npcUID, ActorUID killerUID, u32 killerDoc);
 	void SendReviveToAll(UserID userID, ActorUID activeUID, ActorUID inactiveUID, const vec3& pos);
 	void SendRevive(ClientHandle clientHd, UserID userID, ActorUID activeUID, ActorUID inactiveUID, const vec3& pos);
