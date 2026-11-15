@@ -433,6 +433,17 @@ static const f32 BOT_NAV_REACHED = 200.0f;
 static const f32 BOT_NAV_REROUTE_DIST = 500.0f;
 static const f32 BOT_NAV_RAY_HEIGHT = 100.0f;
 static const f32 BOT_NAV_RAY_SIDE = 40.0f;
+static const f32 HYP_BOT_NAV_JUMP_RANGE = 400.0f;
+static const f32 HYP_BOT_NAV_JUMP_MARGIN = 0.85f;
+static const f32 HYP_BOT_NAV_JUMP_COST = 300.0f;
+static const f32 HYP_BOT_NAV_LEDGE = 150.0f;
+static const f32 HYP_BOT_NAV_JUMP_TRIGGER = 300.0f;
+
+f32 World::BotJumpRise() const
+{
+	const f32 v = GetGlobalTweakableVars().jumpForce;
+	return v * v / (2.0f * GetGlobalTweakableVars().gravity) * HYP_BOT_NAV_JUMP_MARGIN;
+}
 
 bool World::BotSees(const vec3& from, const vec3& to)
 {
@@ -516,6 +527,25 @@ void World::BuildBotNav()
 			botNav[b].links.push_back((u16)a);
 		}
 	}
+	const f32 jumpRise = BotJumpRise();
+	i32 jumps = 0;
+	for(i32 a = 0; a < (i32)botNav.size(); a++) {
+		for(i32 b = 0; b < (i32)botNav.size(); b++) {
+			if(a == b || botNav[a].jumps.full()) continue;
+			const vec3 from = botNav[a].pos;
+			const vec3 to = botNav[b].pos;
+			const f32 h = glm::length(vec2(to) - vec2(from));
+			const f32 rise = to.z - from.z;
+			if(h > HYP_BOT_NAV_JUMP_RANGE || rise <= physics.MaxWalkRise(h) || rise > jumpRise) continue;
+			if(eastl::find(botNav[a].links.begin(), botNav[a].links.end(), (u16)b) != botNav[a].links.end()) continue;
+			const f32 top = to.z + BOT_NAV_RAY_HEIGHT;
+			if(physics.RaycastStatic(vec3(vec2(from), from.z + BOT_NAV_RAY_HEIGHT), vec3(vec2(from), top), nullptr)) continue;
+			if(physics.RaycastStatic(vec3(vec2(from), top), vec3(vec2(to), top), nullptr)) continue;
+			botNav[a].jumps.push_back((u16)b);
+			jumps++;
+		}
+	}
+	LOG("Bot :: nav %d jump links (rise up to %.0f)", jumps, jumpRise);
 	for(i32 team = 0; team < 2; team++) {
 		if(!titanSaveAreaKnown[team] || !titanSaveAreaKnown[1 - team]) continue;
 		foreach_const(path, map->paths) {
@@ -568,6 +598,10 @@ void World::BotPlanRoute(Player& bot, const vec2& goal)
 			const f32 d = dist[cur] + glm::length(vec2(botNav[*l].pos) - vec2(botNav[cur].pos));
 			if(d < dist[*l]) { dist[*l] = d; prev[*l] = cur; }
 		}
+		foreach_const(l, botNav[cur].jumps) {
+			const f32 d = dist[cur] + glm::length(vec2(botNav[*l].pos) - vec2(botNav[cur].pos)) + HYP_BOT_NAV_JUMP_COST;
+			if(d < dist[*l]) { dist[*l] = d; prev[*l] = cur; }
+		}
 	}
 	i32 last = -1;
 	f32 lastCost = 1e30f;
@@ -602,7 +636,11 @@ vec2 World::BotNavStep(Player& bot, const vec2& goal)
 	}
 	static const f32 HYP_BOT_NAV_REACHED_STUCK = 60.0f;
 	const f32 reached = localTime < bot.botRouteForceUntil ? HYP_BOT_NAV_REACHED_STUCK : BOT_NAV_REACHED;
-	while(!bot.botRoute.empty() && (glm::length(vec2(botNav[bot.botRoute.front()].pos) - here) < reached || InsideBodyBlocker(vec2(botNav[bot.botRoute.front()].pos), PLAYER_BODY_RADIUS))) bot.botRoute.erase(bot.botRoute.begin());
+	while(!bot.botRoute.empty() && ((glm::length(vec2(botNav[bot.botRoute.front()].pos) - here) < reached && botNav[bot.botRoute.front()].pos.z - pos.z < HYP_BOT_NAV_LEDGE) || InsideBodyBlocker(vec2(botNav[bot.botRoute.front()].pos), PLAYER_BODY_RADIUS))) bot.botRoute.erase(bot.botRoute.begin());
+	if(!bot.botRoute.empty() && bot.body->grounded) {
+		const vec3 next = botNav[bot.botRoute.front()].pos;
+		if(next.z - pos.z >= HYP_BOT_NAV_LEDGE && glm::length(vec2(next) - here) < HYP_BOT_NAV_JUMP_TRIGGER) bot.input.jump = 1;
+	}
 	if(bot.botRoute.size() > 1 && BotSees(pos, botNav[bot.botRoute[1]].pos) && BotWalkable(pos, botNav[bot.botRoute[1]].pos)) bot.botRoute.erase(bot.botRoute.begin());
 	if(bot.botRoute.empty()) return goal;
 	return vec2(botNav[bot.botRoute.front()].pos);
