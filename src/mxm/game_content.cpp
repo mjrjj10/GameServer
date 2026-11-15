@@ -1382,6 +1382,8 @@ bool GameXmlContent::LoadMonsterAi()
 			}
 			ParseIdList(pInfo->Attribute("groggyStatus"), ai.groggyStatuses);
 			ParseIdList(pInfo->Attribute("seek"), ai.seekDocs);
+			ParseIdList(pInfo->Attribute("hideStatuses"), ai.hideStatuses);
+			ParseIdList(pInfo->Attribute("wakeStatuses"), ai.wakeStatuses);
 			ai.seekReach = pInfo->FloatAttribute("seekReach");
 			if(const char* cc = pInfo->Attribute("cc")) {
 				const char* at = cc;

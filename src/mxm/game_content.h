@@ -1380,6 +1380,8 @@ struct GameXmlContent
 		ActionStateID scriptPause = ActionStateID::INVALID;
 		eastl::fixed_vector<ScriptStep,12,false> script;
 		eastl::fixed_vector<i32,8,false> seekDocs;
+		eastl::fixed_vector<i32,4,false> hideStatuses;
+		eastl::fixed_vector<i32,4,false> wakeStatuses;
 		f32 seekReach = 0;
 		ActionStateID walkState = ActionStateID::INVALID;
 		ActionStateID preAttack = ActionStateID::INVALID;

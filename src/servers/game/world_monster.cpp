@@ -610,6 +610,17 @@ void World::MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const Gam
 	if(master && master->parent) DamagePlayerFromNpc(attacker, *master->parent, damage, attack.hitRemote, attack.status, remoteID);
 }
 
+void World::HideMonster(ActorNpc& npc)
+{
+	const GameXmlContent::MonsterAi& ai = *npc.monsterAi;
+	npc.monsterAwake = false;
+	npc.actionState = ai.idle;
+	replication->SendMonsterStateToAll(npc.UID, ai.idle, npc.pos, 0.0f);
+	foreach_const(st, ai.hideStatuses) ApplyMonsterStatus(npc, *st, true);
+	npc.monsterSkillReady.fill(Time::ZERO);
+	LOG("Monster :: creature=%d (local %d) hides", (i32)npc.docID, npc.localID);
+}
+
 void World::UpdateMonsterHits()
 {
 	for(i32 i = 0; i < (i32)deathHits.size(); ) {
@@ -1470,6 +1481,14 @@ void World::UpdateMonsterAi(f32 delta)
 		UpdateNpcVictory(npc);
 		UpdateMonsterDash(npc);
 		UpdateNpcDrag(npc, delta);
+		if(npc.monsterWakeEnd != Time::ZERO && localTime >= npc.monsterWakeEnd) {
+			npc.monsterWakeEnd = Time::ZERO;
+			foreach_const(st, ai.hideStatuses) {
+				const StatusInfo* info = GetGameXmlContent().FindStatus(*st);
+				if(!info || (info->type != StatusType::GODMODE && info->type != StatusType::EVADE)) ApplyMonsterStatus(npc, *st, false);
+			}
+			foreach_const(st, ai.wakeStatuses) ApplyMonsterStatus(npc, *st, false);
+		}
 		if(!npc.monsterStarted) {
 			if(localTime < TimeAdd(npc.spawnedAt, TimeMsToTime(MAX(MONSTER_START_DELAY_MS, (f64)ai.spawnTime * 1000.0)))) continue;
 			npc.monsterStarted = true;
@@ -1481,6 +1500,7 @@ void World::UpdateMonsterAi(f32 delta)
 			if(ai.idle != ActionStateID::INVALID) {
 				npc.actionState = ai.idle;
 				replication->SendMonsterStateToAll(npc.UID, ai.idle, npc.pos, 0.0f);
+				if(map && map->ingameLevels) foreach_const(st, ai.hideStatuses) ApplyMonsterStatus(npc, *st, true);
 			}
 			if(npc.path && walk > 0) {
 				npc.monsterWalking = true;
@@ -1564,6 +1584,23 @@ void World::UpdateMonsterAi(f32 delta)
 			if(titanMode) ApplyMonsterStatus(npc, MEASURED_GOT_MOB_RETURN_SUPERARMOR, false);
 		}
 		if(neutral && !targetPos && !roamer) {
+			if(titanMode && !npc.monsterAwake && !ai.hideStatuses.empty() && localTime >= npc.monsterNextSearch) {
+				npc.monsterNextSearch = TimeAdd(localTime, TimeMsToTime(MONSTER_SEARCH_MS));
+				f32 best = ai.perception;
+				const Player* seen = nullptr;
+				foreach_const(p, players) {
+					if(p->dead || p->untargetable || !p->body || p->hiddenUID != ActorUID::INVALID) continue;
+					const f32 d = glm::length(vec2(p->body->GetWorldPos()) - vec2(npc.pos));
+					if(d < best) { best = d; seen = &*p; }
+				}
+				if(seen) {
+					npc.monsterTarget = seen->Main().UID;
+					SetMonsterBattle(npc, true);
+					replication->SendAiSetTargetToAll(npc.UID, npc.monsterTarget);
+					LOG("Monster :: hidden creature=%d (local %d) sees %ls at %.0f", (i32)npc.docID, npc.localID, seen->name.data(), best);
+					continue;
+				}
+			}
 			const vec2 rel = vec2(npc.home) - vec2(npc.pos);
 			const f32 dist = glm::length(rel);
 			if(dist > MONSTER_WAYPOINT_REACHED && run > 0) {
@@ -1596,6 +1633,7 @@ void World::UpdateMonsterAi(f32 delta)
 				LOG("Monster :: neutral creature=%d (local %d) back home%s", (i32)npc.docID, npc.localID, titanMode ? "" : ", healed");
 				replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, npc.rot.z, 0.0f);
 			}
+			else if(titanMode && npc.monsterAwake && run <= 0 && !ai.hideStatuses.empty() && npc.monsterWakeEnd == Time::ZERO) HideMonster(npc);
 			continue;
 		}
 		static const u32 minionTag = StatusTypeKey("Minion");
@@ -1732,6 +1770,14 @@ void World::UpdateMonsterAi(f32 delta)
 			replication->SendMonsterStateToAll(npc.UID, ai.awake, npc.pos, 0.0f);
 			replication->SendAiSetTargetToAll(npc.UID, npc.monsterTarget);
 			npc.monsterHoldUntil = TimeAdd(localTime, TimeMsToTime(ai.awakeTime * 1000.0));
+			if(titanMode && !ai.hideStatuses.empty()) {
+				foreach_const(st, ai.hideStatuses) {
+					const StatusInfo* info = GetGameXmlContent().FindStatus(*st);
+					if(info && (info->type == StatusType::GODMODE || info->type == StatusType::EVADE)) ApplyMonsterStatus(npc, *st, false);
+				}
+				foreach_const(st, ai.wakeStatuses) ApplyMonsterStatus(npc, *st, true);
+				npc.monsterWakeEnd = npc.monsterHoldUntil;
+			}
 			LOG("Monster :: creature=%d (local %d) wakes up", (i32)npc.docID, npc.localID);
 			continue;
 		}

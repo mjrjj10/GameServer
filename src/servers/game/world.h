@@ -587,6 +587,7 @@ struct World
 		bool pathBackward = false;
 		bool monsterStarted = false;
 		bool monsterAwake = false;
+		Time monsterWakeEnd = Time::ZERO;
 		Time monsterHoldUntil = Time::ZERO;
 		Time defeatLieAt = Time::ZERO;
 		vec2 groundCheckedAt = vec2(0);
@@ -1379,6 +1380,7 @@ public:
 	void StartTitanVictory(Faction deadFaction, const vec3& deadPos, ActorUID soulUID, ActorUID triggerUID);
 	void UpdateNpcVictory(ActorNpc& npc);
 	bool NpcHasStatusType(const ActorNpc& npc, StatusType type) const;
+	void HideMonster(ActorNpc& npc);
 	f32 NpcStatusMul(const ActorNpc& npc, i32 stat) const;
 	void OnMonsterDeath(ActorNpc& npc, ActorUID killerUID);
 	void CountTagDeath(i32 tagID, Faction killerTeam, i32 killerIndex);
