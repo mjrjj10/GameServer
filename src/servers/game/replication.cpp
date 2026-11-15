@@ -1800,6 +1800,7 @@ static const u8 NPC_MOVE_POSITIONS_ONLY = 0x3e;
 static const u8 NPC_MOVE_YAW_AND_SPEED = 0x12;
 static const u8 NPC_MOVE_FLAG_STOPPED = 31;
 static const u8 NPC_MOVE_FLAG_MOVING = 32;
+static const u8 MEASURED_NPC_MOVE_FLAG_ACTION_STOP = 63;
 static const f32 SUMMON_SPAWN_HEIGHT = 50.0f;
 static const f32 NPC_SPEED_SCALE = 5.0f;
 static const u8 NPC_STATE_KEEP_SPEED = 0x08;
@@ -2453,7 +2454,7 @@ void Replication::SendCharacterPropertyPoint(ClientHandle clientHd, ActorUID cha
 	SendPacketData<Sv::SN_CharacterPropertyPoint>(clientHd, sizeof(packet), &packet);
 }
 
-void Replication::SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed)
+void Replication::SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed, bool beforeAction)
 {
 	const i16 yaw = WorldYawToMonsterDeciDegrees(worldYaw);
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
@@ -2475,7 +2476,7 @@ void Replication::SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const
 		if(withSpeed) packet.Write<u16>(speedSent);
 		packet.Write<float3>(v2f(pos));
 		packet.Write<float3>(v2f(goal));
-		packet.Write<u8>(stopped ? NPC_MOVE_FLAG_STOPPED : 0);
+		packet.Write<u8>(stopped ? (beforeAction ? MEASURED_NPC_MOVE_FLAG_ACTION_STOP : NPC_MOVE_FLAG_STOPPED) : 0);
 		SendPacket(clientHd, packet);
 	}
 }
@@ -2581,7 +2582,7 @@ void Replication::SendNpcLegStartToAll(ActorUID actorUID, const vec3& pos, const
 	}
 }
 
-void Replication::SendNpcLegStopToAll(ActorUID actorUID, const vec3& pos, f32 worldYaw)
+void Replication::SendNpcLegStopToAll(ActorUID actorUID, const vec3& pos, f32 worldYaw, bool beforeAction)
 {
 	const i16 yaw = WorldYawToMonsterDeciDegrees(worldYaw);
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
@@ -2596,7 +2597,7 @@ void Replication::SendNpcLegStopToAll(ActorUID actorUID, const vec3& pos, f32 wo
 		packet.Write<i16>(yaw);
 		packet.Write<float3>(v2f(pos));
 		packet.Write<float3>(v2f(pos));
-		packet.Write<u8>(NPC_MOVE_FLAG_STOPPED);
+		packet.Write<u8>(beforeAction ? MEASURED_NPC_MOVE_FLAG_ACTION_STOP : NPC_MOVE_FLAG_STOPPED);
 		SendPacket(clientHd, packet);
 	}
 }

@@ -546,10 +546,10 @@ struct Replication
 	void SendVotingResult(ClientHandle clientHd, UserID candidate, u32 type, u32 state, u32 reason, u32 playerCool, u32 teamCool);
 	void SendMonsterStopWithSpeedToAll(ActorUID actorUID, const vec3& pos, f32 speed);
 	void SendMonsterStopTurnToAll(ActorUID actorUID, const vec3& pos, f32 fromYaw, f32 toYaw, f32 speed);
-	void SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed);
+	void SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed, bool beforeAction = false);
 	void SendMonsterLiftToAll(ActorUID actorUID, const vec3& pos);
 	void SendNpcLegStartToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 speed);
-	void SendNpcLegStopToAll(ActorUID actorUID, const vec3& pos, f32 worldYaw);
+	void SendNpcLegStopToAll(ActorUID actorUID, const vec3& pos, f32 worldYaw, bool beforeAction = false);
 	void SendAiMoveTargetToAll(ActorUID actorUID, const vec3& goal, u32 movePreset);
 	void SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject = L"Scene Root", ClientHandle exclude = ClientHandle::INVALID);
 	struct RemoteCreate

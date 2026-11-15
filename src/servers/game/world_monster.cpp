@@ -1211,8 +1211,8 @@ bool World::UpdateMonsterMasterSpecial(ActorNpc& npc, const GameXmlContent::Mons
 		npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime(current.cooldown * 1000.0));
 		if(npc.monsterChasing || npc.monsterWalking) {
 			npc.monsterChasing = false;
-			if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, yaw);
-			else replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, yaw, 0.0f);
+			if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, yaw, true);
+			else replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, yaw, 0.0f, true);
 		}
 		npc.monsterWalking = false;
 		LOG("Monster :: creature=%d (local %d) turns to master %ls for %s at %.0f", (i32)npc.docID, npc.localID, chosen->name.data(), ActionStateToString(special.state), best);
@@ -1412,7 +1412,7 @@ bool World::UpdateMonsterSeek(ActorNpc& npc, const GameXmlContent::MonsterAi& ai
 		LOG("Monster :: creature=%d (local %d) reached creature=%d", (i32)npc.docID, npc.localID, (i32)goal->docID);
 		if(npc.monsterWalking) {
 			npc.monsterWalking = false;
-			replication->SendNpcLegStopToAll(npc.UID, npc.pos, yaw);
+			replication->SendNpcLegStopToAll(npc.UID, npc.pos, yaw, true);
 		}
 		if(boom) StartMonsterAttack(npc, ai, boom, nullptr, 0.0f, yaw, 0.0f);
 		else MonsterDie(npc, ActorUID::INVALID, CreatureIndex(0));
@@ -1802,8 +1802,8 @@ void World::UpdateMonsterAi(f32 delta)
 			npc.monsterLowHpDone = true;
 			if(npc.monsterChasing || npc.monsterWalking) {
 				npc.monsterChasing = false;
-				if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, npc.rot.z);
-				else replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, npc.rot.z, 0.0f);
+				if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, npc.rot.z, true);
+				else replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, npc.rot.z, 0.0f, true);
 			}
 			npc.monsterWalking = false;
 			npc.monsterWalkStateOn = false;
@@ -1856,8 +1856,8 @@ void World::UpdateMonsterAi(f32 delta)
 						npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime(attack->cooldown * 1000.0));
 						if(npc.monsterChasing || npc.monsterWalking) {
 							npc.monsterChasing = false;
-							if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, yaw);
-							else replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, yaw, 0.0f);
+							if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, yaw, true);
+							else replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, yaw, 0.0f, true);
 						}
 						npc.monsterWalking = false;
 						LOG("Monster :: creature=%d (local %d) uses %s at range %.0f", (i32)npc.docID, npc.localID, ActionStateToString(farAttack.state), dist);
@@ -1909,8 +1909,8 @@ void World::UpdateMonsterAi(f32 delta)
 			else {
 				if(npc.monsterChasing || npc.monsterWalking) {
 					npc.monsterChasing = false;
-					if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, yaw);
-					else replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, yaw, 0.0f);
+					if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, yaw, true);
+					else replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, yaw, 0.0f, true);
 				}
 				npc.monsterWalking = false;
 				if(localTime < npc.monsterNextAttack) {
