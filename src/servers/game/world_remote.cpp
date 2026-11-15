@@ -742,7 +742,7 @@ bool World::RemoteFriendNpc(RemoteInst& inst, ActorNpc& npc)
 	if(remote.friendlyStatuses.empty() || !(remote.includeParty || remote.contactFriend)) return false;
 	Player& owner = players[inst.ownerIndex];
 	const Faction ownFaction = owner.team == 0 ? Faction::RED : Faction::BLUE;
-	if(npc.faction != ownFaction || npc.hp <= 0 || npc.removeAt != Time::ZERO || npc.UID == inst.sourceUID) return false;
+	if(npc.faction != ownFaction || npc.hp <= 0 || npc.removeAt != Time::ZERO || npc.UID == inst.sourceUID || GetGameXmlContent().CreatureUntargetable((i32)npc.docID)) return false;
 	const Time until = TimeAdd(localTime, TimeMsToTime(MAX(remote.hitInvalidTime, 0.1f) * 1000.0));
 	bool recorded = false;
 	foreach(h, inst.npcHits) {
@@ -1150,7 +1150,7 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 			if(pass < 2) {
 				const Faction ownFaction = ownerTeam == 0 ? Faction::RED : Faction::BLUE;
 				foreach(npc, actorNpcList) {
-					const bool ally = friendChain && npc->faction == ownFaction && npc->removeAt == Time::ZERO;
+					const bool ally = friendChain && npc->faction == ownFaction && npc->removeAt == Time::ZERO && !GetGameXmlContent().CreatureUntargetable((i32)npc->docID);
 					if(npc->hp <= 0 || !(ally || NpcHittableBy(*npc, players[inst.ownerIndex])) || npc->UID == inst.chainNpcHit || !inCone(vec2(npc->pos))) continue;
 					const f32 d = glm::length(vec2(npc->pos) - vec2(inst.pos));
 					if(d < bestDist) { bestDist = d; bestNpc = &*npc; best = nullptr; }

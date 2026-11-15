@@ -4787,6 +4787,10 @@ bool GameXmlContent::LoadSummons()
 			XMLElement* creature = pInfo->FirstChildElement("CreatureComData");
 			XMLElement* detector = creature ? creature->FirstChildElement("_HideDetector") : nullptr;
 			if(detector) creatureHideDetect[id] = detector->FloatAttribute("_Radius", 0.0f);
+			if(XMLElement* entity = pInfo->FirstChildElement("EntityComData")) {
+				const char* targetable = entity->Attribute("_IsTargetable");
+				if(targetable && EA::StdC::Stricmp(targetable, "false") == 0) creatureUntargetable[id] = true;
+			}
 			if(XMLElement* stats = pInfo->FirstChildElement("StatsComData")) {
 				const i32 defence = stats->IntAttribute("_DFStatusIndex", 0);
 				if(defence != 0) creatureDefenceStatus[id] = defence;

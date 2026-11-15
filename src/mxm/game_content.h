@@ -1809,6 +1809,7 @@ struct GameXmlContent
 	eastl::hash_map<i32, eastl::fixed_vector<i32,64,true>> gearDocs;
 	static i32 GearKey(const char* gearType, const char* rank);
 	const SummonInfo* FindSummon(i32 creatureID) const { auto f = summonMap.find(creatureID); return f == summonMap.end() ? nullptr : &f->second; }
+	bool CreatureUntargetable(i32 creatureID) const { return creatureUntargetable.find(creatureID) != creatureUntargetable.end(); }
 	i32 CreatureDefenceStatus(i32 creatureID) const { auto f = creatureDefenceStatus.find(creatureID); return f == creatureDefenceStatus.end() ? 0 : f->second; }
 	f32 CreatureHideDetectRadius(i32 creatureID) const { auto f = creatureHideDetect.find(creatureID); return f == creatureHideDetect.end() ? 0.0f : f->second; }
 	Element GetCreatureElement(i32 creatureID) const { auto f = creatureElement.find(creatureID); return f == creatureElement.end() ? Element::NONE : f->second; }
@@ -1897,6 +1898,7 @@ private:
 	eastl::hash_map<i32, SummonInfo> summonMap;
 	eastl::hash_map<i32, f32> creatureHideDetect;
 	eastl::hash_map<i32, i32> creatureDefenceStatus;
+	eastl::hash_map<i32, bool> creatureUntargetable;
 	eastl::hash_map<i32, GroundItemInfo> groundItemMap;
 	eastl::hash_map<i32, DropGroup> dropGroupMap;
 	eastl::hash_map<u64, f32> aniSeqTime;
