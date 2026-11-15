@@ -598,7 +598,7 @@ void World::BotPlanRoute(Player& bot, const vec2& goal)
 			const f32 d = dist[cur] + glm::length(vec2(botNav[*l].pos) - vec2(botNav[cur].pos));
 			if(d < dist[*l]) { dist[*l] = d; prev[*l] = cur; }
 		}
-		foreach_const(l, botNav[cur].jumps) {
+		if(bot.clientHd == ClientHandle::INVALID) foreach_const(l, botNav[cur].jumps) {
 			const f32 d = dist[cur] + glm::length(vec2(botNav[*l].pos) - vec2(botNav[cur].pos)) + HYP_BOT_NAV_JUMP_COST;
 			if(d < dist[*l]) { dist[*l] = d; prev[*l] = cur; }
 		}
@@ -637,7 +637,7 @@ vec2 World::BotNavStep(Player& bot, const vec2& goal)
 	static const f32 HYP_BOT_NAV_REACHED_STUCK = 60.0f;
 	const f32 reached = localTime < bot.botRouteForceUntil ? HYP_BOT_NAV_REACHED_STUCK : BOT_NAV_REACHED;
 	while(!bot.botRoute.empty() && ((glm::length(vec2(botNav[bot.botRoute.front()].pos) - here) < reached && botNav[bot.botRoute.front()].pos.z - pos.z < HYP_BOT_NAV_LEDGE) || InsideBodyBlocker(vec2(botNav[bot.botRoute.front()].pos), PLAYER_BODY_RADIUS))) bot.botRoute.erase(bot.botRoute.begin());
-	if(!bot.botRoute.empty() && bot.body->grounded) {
+	if(!bot.botRoute.empty() && bot.clientHd == ClientHandle::INVALID && bot.body->grounded) {
 		const vec3 next = botNav[bot.botRoute.front()].pos;
 		if(next.z - pos.z >= HYP_BOT_NAV_LEDGE && glm::length(vec2(next) - here) < HYP_BOT_NAV_JUMP_TRIGGER) bot.input.jump = 1;
 	}
