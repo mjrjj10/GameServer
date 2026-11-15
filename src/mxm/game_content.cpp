@@ -4379,6 +4379,7 @@ bool GameXmlContent::LoadMeasuredBotGear()
 		gear.attack = pGear->FloatAttribute("attack");
 		gear.defence = pGear->FloatAttribute("defence");
 		gear.health = pGear->FloatAttribute("health");
+		gear.critical = pGear->FloatAttribute("critical");
 		gear.weaponTier = pGear->IntAttribute("weaponTier", 1);
 		gear.weapon = pGear->IntAttribute("weapon", 0);
 		measuredBotGear.push_back(gear);

@@ -55,10 +55,11 @@ static void AddMeasuredBotGear(World::ActorMaster& chara, WeaponIndex weapon, i3
 	const f32 tierAttack = GetGameXmlContent().GetWeaponAttack(doc - doc % 10 + gear->weaponTier);
 	const f32 weaponAttack = GetGameXmlContent().GetWeaponAttack(doc);
 	const f32 tierBonus = doc % 10 == 1 && tierAttack > weaponAttack ? tierAttack - weaponAttack : 0.0f;
-	const eastl::pair<u8,f32> adds[3] = {
+	const eastl::pair<u8,f32> adds[4] = {
 		eastl::make_pair((u8)STAT_ATTACK, (weaponAttack + tierBonus) * gear->attack * k + tierBonus),
 		eastl::make_pair((u8)StatType::STAT_TYPE_DEFENCE, MasterStat(chara.classType, (i32)StatType::STAT_TYPE_DEFENCE) * gear->defence * k),
 		eastl::make_pair((u8)STAT_HEALTH, gear->health * k),
+		eastl::make_pair((u8)StatType::STAT_TYPE_CRITICALRATE, gear->critical * k),
 	};
 	for(const auto& a : adds) {
 		if(a.second <= 0) continue;
