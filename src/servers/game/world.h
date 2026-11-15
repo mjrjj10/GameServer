@@ -827,6 +827,7 @@ struct World
 
 	struct RemoteInst
 	{
+		bool singleHitDone = false;
 		ActorUID sourceUID = ActorUID::INVALID;
 		ActorUID casterMasterUID = ActorUID::INVALID;
 		u16 nodeName = 0;

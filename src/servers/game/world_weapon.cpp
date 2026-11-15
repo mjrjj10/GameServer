@@ -349,8 +349,30 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 	const vec2 zone = vec2(center) + (bombRemote ? source->dir * RemoteBoundOffset(*bombRemote) : vec2(0));
 	i32 mastersHit = 0;
 	i32 npcsHit = 0;
+	const bool singleActivation = source && source->bombDoc == RemoteIdx::INVALID && source->hitsLeft == 1;
+	const Player* onlyPlayer = nullptr;
+	const ActorNpc* onlyNpc = nullptr;
+	if(singleActivation) {
+		f32 best = FLT_MAX;
+		foreach_const(it, players) {
+			if(it->team == owner.team || it->dead || it->untargetable || fabsf(it->body->GetWorldPos().z - center.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
+			const f32 d = LagDistToPoint(*it, zone);
+			if(d > radius + HitRadius(*it) + WEAPON_HIT_TOLERANCE || d >= best) continue;
+			best = d;
+			onlyPlayer = &*it;
+		}
+		foreach_const(npc, actorNpcList) {
+			if(!NpcHittableBy(*npc, owner)) continue;
+			const f32 d = glm::length(vec2(npc->pos) - zone);
+			if(d > radius + NpcHitRadius(*npc) || d >= best) continue;
+			best = d;
+			onlyPlayer = nullptr;
+			onlyNpc = &*npc;
+		}
+	}
 	foreach(it, players) {
 		if(it->team == owner.team || it->dead || it->untargetable) continue;
+		if(singleActivation && &*it != onlyPlayer) continue;
 		const vec3 pos = it->body->GetWorldPos();
 		if(fabsf(pos.z - center.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 		if(LagDistToPoint(*it, zone) > radius + HitRadius(*it) + WEAPON_HIT_TOLERANCE) continue;
@@ -362,6 +384,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 	}
 	foreach(npc, actorNpcList) {
 		if(!NpcHittableBy(*npc, owner)) continue;
+		if(singleActivation && &*npc != onlyNpc) continue;
 		const f32 d = glm::length(vec2(npc->pos) - zone);
 		if(d > radius + NpcHitRadius(*npc)) continue;
 		Replication::RemoteDamage hit;
@@ -546,7 +569,9 @@ void World::UpdateProjectiles(f32 delta)
 					proj->friendNpcHitList.push_back(npc->UID);
 					ApplyFriendlyRemoteStatuses(owner, *shotRemote, nullptr, &*npc);
 				}
-			}			foreach(it, players) {
+			}
+			const bool singleActivation = proj->hitsLeft == 1;
+			foreach(it, players) {
 				if(it->team == owner.team || it->dead || it->untargetable) continue;
 				if(eastl::find(proj->hitList.begin(), proj->hitList.end(), it->index) != proj->hitList.end()) continue;
 				const vec3 pos = it->body->GetWorldPos();
@@ -570,7 +595,7 @@ void World::UpdateProjectiles(f32 delta)
 				activationCost += (u32)cost;
 				if(!activationTarget) activationTarget = &*it;
 				proj->penetrationLeft -= cost;
-				if(proj->penetrationLeft <= 0) break;
+				if(proj->penetrationLeft <= 0 || singleActivation) break;
 			}
 			if(activationTarget) {
 				const vec3 hitPos = vec3(vec2(activationTarget->body->GetWorldPos()), proj->pos.z);
