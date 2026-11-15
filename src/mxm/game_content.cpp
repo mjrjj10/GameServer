@@ -3142,6 +3142,7 @@ bool GameXmlContent::LoadRemoteData()
 				pComp->QueryFloatAttribute("_HitDamageMultiplier", &remote.hitDamageMultiplier);
 				pComp->QueryFloatAttribute("_MaxHitDamageMultiplier", &remote.maxHitDamageMultiplier);
 				if(const char* mt = pComp->Attribute("_StatusTypeToMultiplyDamage")) remote.statusTypeMultiplyKey = StatusTypeKey(mt);
+				remote.statusTypeMultiplierToCaster = XmlAttrTrue(pComp, "_bStatusTypeMultiplierToCaster");
 				pComp->QueryFloatAttribute("_DamageOnBound", &remote.damageOnBound);
 				pComp->QueryFloatAttribute("_PenaltyApplyDistance", &remote.penaltyApplyDistance);
 				const char* _OnHitOwnerMemorizeTarget = nullptr;

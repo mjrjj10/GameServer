@@ -538,6 +538,7 @@ struct Remote
 	f32 reflectDamage = 1;
 	f32 maxHitDamageMultiplier = 0;
 	u32 statusTypeMultiplyKey = 0;
+	bool statusTypeMultiplierToCaster = false;
 	f32 damageOnBound = 100;
 	f32 distPenaltyRate = 0;
 	f32 penaltyApplyDistance = 0;

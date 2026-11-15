@@ -271,18 +271,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	if(attacker.team != target.team) damage = (i32)(damage * GroupingDamageMul(attacker, target));
 	{
 		const RemoteIdx doc = proj ? proj->remoteDoc : remoteDoc;
-		const Remote* pr = doc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(doc) : nullptr;
-		if(pr && pr->distPenaltyRate > 0 && pr->penaltyApplyDistance > 0 &&
-		   glm::length(vec2(target.body->GetWorldPos()) - vec2(attacker.body->GetWorldPos())) < pr->penaltyApplyDistance) {
-			damage = (i32)(damage * (1.0f - pr->distPenaltyRate / 100.0f));
-		}
-		if(pr && pr->statusTypeMultiplyKey != 0 && pr->statusTypeMultiplier != 1.0f) {
-			foreach_const(st, activeStatuses) {
-				if(st->targetIndex != target.index || !st->info || st->info->typeKey != pr->statusTypeMultiplyKey || st->until <= localTime) continue;
-				damage = (i32)(damage * pr->statusTypeMultiplier);
-				break;
-			}
-		}
+		damage = (i32)(damage * RemoteTargetDamageMul(attacker, doc, target.body->GetWorldPos(), &target, nullptr));
 	}
 
 	if(attacker.index != target.index && !preMitigated) {
@@ -550,6 +539,34 @@ void World::WeaponLifesteal(Player& attacker, i32 damage)
 	replication->SendStatToAll(chara.UID, (i32)StatType::STAT_TYPE_HEALTH, (f32)chara.hp, (f32)chara.hpMax);
 }
 
+bool World::HasStatusTypeKey(const Player* player, const ActorNpc* npc, u32 key) const
+{
+	if(player) {
+		foreach_const(st, activeStatuses) if(st->targetIndex == player->index && st->info && st->info->typeKey == key && st->until > localTime) return true;
+	}
+	if(npc) {
+		foreach_const(ns, npcStatuses) {
+			if(ns->npcUID != npc->UID || localTime >= ns->until) continue;
+			const StatusInfo* info = GetGameXmlContent().FindStatus(ns->statusID);
+			if(info && info->typeKey == key) return true;
+		}
+	}
+	return false;
+}
+
+f32 World::RemoteTargetDamageMul(const Player& attacker, RemoteIdx doc, const vec3& targetPos, const Player* targetPlayer, const ActorNpc* targetNpc) const
+{
+	const Remote* pr = doc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(doc) : nullptr;
+	if(!pr) return 1.0f;
+	f32 mul = 1.0f;
+	if(pr->distPenaltyRate > 0 && pr->penaltyApplyDistance > 0 && attacker.body && glm::length(vec2(targetPos) - vec2(attacker.body->GetWorldPos())) < pr->penaltyApplyDistance) mul *= 1.0f - pr->distPenaltyRate / 100.0f;
+	if(pr->statusTypeMultiplyKey != 0 && pr->statusTypeMultiplier != 1.0f) {
+		const bool has = pr->statusTypeMultiplierToCaster ? HasStatusTypeKey(&attacker, nullptr, pr->statusTypeMultiplyKey) : HasStatusTypeKey(targetPlayer, targetNpc, pr->statusTypeMultiplyKey);
+		if(has) mul *= pr->statusTypeMultiplier;
+	}
+	return mul;
+}
+
 f32 World::RollCritical(const Player& attacker, bool weapon, RemoteIdx doc, f32 bonus)
 {
 	const ClassType ac = attacker.Main().classType;
@@ -568,7 +585,8 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	if(npc.monsterEvadeUntil != Time::ZERO && localTime < npc.monsterEvadeUntil) return;
 	const f32 titanPen = skillID == SkillID::INVALID ? MAX(TitanDefencePenetration(attacker), 0.0f) : 0.0f;
 	const f32 critMul = remoteHit ? RollCritical(attacker, skillID == SkillID::INVALID, remoteHit->remoteDoc, 0.0f) : 0.0f;
-	const i32 dealt = MAX((i32)(damage * (critMul > 0 ? critMul : 1.0f) * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence * (1.0f - titanPen), 0.0f)) * NpcStatusMul(npc, StatusMod::DAMAGE_TAKEN) + 0.5f), 1);
+	const f32 remoteMul = remoteHit ? RemoteTargetDamageMul(attacker, remoteHit->remoteDoc, npc.pos, nullptr, &npc) : 1.0f;
+	const i32 dealt = MAX((i32)(damage * remoteMul * (critMul > 0 ? critMul : 1.0f) * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence * (1.0f - titanPen), 0.0f)) * NpcStatusMul(npc, StatusMod::DAMAGE_TAKEN) + 0.5f), 1);
 	const i32 hpBefore = npc.hp;
 	if(npc.faction == Faction::MONSTER && npc.ownerUID == ActorUID::INVALID) {
 		static const f64 HYP_HIT_COMBO_WINDOW_MS = 3000.0;
