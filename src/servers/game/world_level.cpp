@@ -569,6 +569,14 @@ void World::TransformTitan(Player& player, i32 formIndex, bool initial)
 	if(!initial) return;
 	ApplyStatus(player, player, TITAN_SPAWN_STATUS);
 	ApplyStatus(player, player, TITAN_SPAWN_SELF_STATUS);
+	if(const GameXmlContent::Action* landing = GetGameXmlContent().FindSkillAction(ActionClass(player), ActionStateID::EXTRAMOTION_1_BEHAVIORSTATE, chara.stance)) {
+		const vec2 facing = vec2(cosf(player.input.rot.bodyYaw), sinf(player.input.rot.bodyYaw));
+		foreach_const(cmd, landing->commands) {
+			if(cmd->type != ActionCommand::Type::REMOTE || cmd->remote.idx == RemoteIdx::INVALID || cmd->remote.remove || cmd->delay > 0) continue;
+			SpawnRemote(player.index, cmd->remote.idx, player.body->GetWorldPos(), facing, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), true);
+			LOG("Titan :: %ls landing remote %d", player.name.data(), (i32)cmd->remote.idx);
+		}
+	}
 	const StatusInfo* reveal = GetGameXmlContent().FindStatus(TITAN_SPAWN_REVEAL_STATUS);
 	const f64 revealMs = reveal && reveal->durationSec > 0 ? reveal->durationSec * 1000.0 : 0.0;
 	foreach(e, players) {
