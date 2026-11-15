@@ -392,6 +392,52 @@ bool World::BotChiefGoal(const Player& bot, vec2* goal) const
 	return false;
 }
 
+static const i32 MEASURED_COMPONENT_FIRST_MASTER_HIT_SEC[] = { 15, 24, 27, 232, 233, 278, 311, 313, 449, 569 };
+static const i32 MEASURED_KING_FIRST_MASTER_HIT_SEC[] = { 34, 46, 49, 78, 78, 132, 155, 166, 183, 233 };
+struct BotBossRule
+{
+	i32 docID;
+	const i32* firstHitSec;
+	i32 firstHitCount;
+	i32 masters;
+};
+static const BotBossRule MEASURED_BOT_BOSS_RULES[] = {
+	{ 105001402, MEASURED_COMPONENT_FIRST_MASTER_HIT_SEC, (i32)ARRAY_COUNT(MEASURED_COMPONENT_FIRST_MASTER_HIT_SEC), 1 },
+	{ 105001040, MEASURED_KING_FIRST_MASTER_HIT_SEC, (i32)ARRAY_COUNT(MEASURED_KING_FIRST_MASTER_HIT_SEC), 3 },
+};
+
+bool World::BotBossGoal(const Player& bot, vec2* goal)
+{
+	if(bot.titanForm >= 0) return false;
+	const vec2 here = vec2(bot.body->GetWorldPos());
+	foreach(npc, actorNpcList) {
+		if(!npc->monsterAi || npc->faction != Faction::ORANGE || npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
+		const BotBossRule* rule = nullptr;
+		for(i32 r = 0; r < (i32)ARRAY_COUNT(MEASURED_BOT_BOSS_RULES); r++) if((i32)npc->docID == MEASURED_BOT_BOSS_RULES[r].docID) rule = &MEASURED_BOT_BOSS_RULES[r];
+		if(!rule) continue;
+		if(npc->botBossFrom == Time::ZERO) {
+			npc->botBossFrom = TimeAdd(localTime, TimeMsToTime(rule->firstHitSec[RandUint() % (u32)rule->firstHitCount] * 1000.0));
+			LOG("Bot :: boss creature=%d contested from %.0f s", (i32)npc->docID, TimeDiffSec(TimeDiff(localTime, npc->botBossFrom)));
+		}
+		if(localTime < npc->botBossFrom) continue;
+		const vec2 at = vec2(npc->pos);
+		if(BotDangerAt(bot, at, nullptr, nullptr)) continue;
+		const f32 mine = glm::length(at - here);
+		i32 closer = 0;
+		foreach_const(p, players) {
+			if(&*p == &bot || p->dead || p->removed || !p->body || p->titanForm >= 0) continue;
+			if(glm::length(at - vec2(p->body->GetWorldPos())) < mine) closer++;
+		}
+		if(closer >= rule->masters) continue;
+		const f32 range = WeaponIsMelee(bot) ? BOT_MELEE_RANGE : MIN(WeaponRange(bot) * BOT_RANGE_FRACTION, BOT_RANGED_MAX);
+		const vec2 away = here - at;
+		const f32 len = glm::length(away);
+		*goal = at + (len > 1.0f ? away / len : vec2(1, 0)) * MIN(range, len);
+		return true;
+	}
+	return false;
+}
+
 bool World::BotObjective(const Player& bot, vec2* goal)
 {
 	if(!map) return false;
@@ -402,6 +448,7 @@ bool World::BotObjective(const Player& bot, vec2* goal)
 		return true;
 	}
 	if(BotChiefGoal(bot, goal)) return true;
+	if(BotBossGoal(bot, goal)) return true;
 	f32 best = BOT_PIECE_SEARCH_RANGE;
 	bool found = false;
 	foreach_const(g, groundItems) {
