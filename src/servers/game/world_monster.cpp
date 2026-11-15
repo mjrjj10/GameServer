@@ -1539,7 +1539,7 @@ void World::UpdateMonsterAi(f32 delta)
 			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
 		}
 		static const f64 MEASURED_NEUTRAL_RETARGET_STEP_MS = 500.0;
-		if(neutral && titanMode && ai.retargetRate > 0 && targetPos && !held && taunt == ActorUID::INVALID && localTime >= npc.monsterNextSearch && FindMasterActor(npc.monsterTarget)) {
+		if(neutral && titanMode && ai.retargetRate > 0 && targetPos && taunt == ActorUID::INVALID && localTime >= npc.monsterNextSearch && FindMasterActor(npc.monsterTarget)) {
 			npc.monsterNextSearch = TimeAdd(localTime, TimeMsToTime(MEASURED_NEUTRAL_RETARGET_STEP_MS));
 			f32 best = MIN(glm::length(vec2(*targetPos) - vec2(npc.pos)), ai.perception) - ai.retargetGain;
 			Player* closer = nullptr;
@@ -1886,7 +1886,7 @@ void World::UpdateMonsterAi(f32 delta)
 						npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime((special.firstAt >= 0 ? special.firstAt : special.cooldown) * 1000.0));
 						if(localTime < npc.monsterSkillReady[s]) continue;
 					}
-					if(dist > special.range + (reach - attack->range) || dist < special.minRange) continue;
+					if(dist > special.range + (reach - attack->range) + MONSTER_REACH_TOLERANCE || dist < special.minRange) continue;
 					if(MonsterDashNeedsTurn(npc, special, yaw)) continue;
 					ready.push_back(s);
 					totalShare += special.share;
