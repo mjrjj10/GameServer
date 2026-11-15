@@ -1661,6 +1661,9 @@ bool World::OccupyTarget(const Player& bot, vec2* point, ActorUID* object, f32* 
 		if(occupyMode ? !info->pvpOccupy : ((info->action != GameXmlContent::InteractionInfo::TOTEM && info->action != GameXmlContent::InteractionInfo::OCCUPY) || info->individual || m->creature)) continue;
 		if(m->coolUntil != Time::ZERO && localTime < m->coolUntil) continue;
 		if(!(m->openMask & (1u << (PLAYER_FACTION_BASE + bot.team)))) continue;
+		bool skipped = false;
+		foreach_const(s, bot.botFarmSkips) if(s->first == m->object && localTime < s->second) skipped = true;
+		if(skipped) continue;
 		if(m->occupiedTeam != INTERACTION_NOT_OCCUPIED && !info->pvpOccupy) continue;
 		bool busy = false;
 		if(!info->individual) foreach_const(p, players) if(p->interactSlot >= 0 && &mapInteractions[p->interactSlot] == &*m && &*p != &bot) busy = true;

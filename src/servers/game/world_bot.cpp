@@ -794,8 +794,28 @@ void World::UpdateBotMovement()
 			bot.input.rot.upperPitch = 0;
 		}
 		else if(occupyGoal) {
+			static const f32 HYP_BOT_OCCUPY_PROGRESS_SEC = 8.0f;
+			static const f32 HYP_BOT_OCCUPY_PROGRESS_DIST = 300.0f;
+			static const f32 HYP_BOT_OCCUPY_SKIP_SEC = 30.0f;
 			const vec2 d = occupyPoint - here;
 			const f32 len = glm::length(d);
+			if(occupyObject != bot.botFarmUID) {
+				bot.botFarmUID = occupyObject;
+				bot.botFarmCheckAt = TimeAdd(localTime, TimeMsToTime(HYP_BOT_OCCUPY_PROGRESS_SEC * 1000.0));
+				bot.botFarmCheckDist = len;
+			}
+			else if(localTime >= bot.botFarmCheckAt) {
+				if(len > bot.botFarmCheckDist - HYP_BOT_OCCUPY_PROGRESS_DIST) {
+					LOG("BotOccupy :: %ls gives up object at (%.0f, %.0f), %.0f away (was %.0f)", bot.name.data(), occupyPoint.x, occupyPoint.y, len, bot.botFarmCheckDist);
+					if(bot.botFarmSkips.full()) bot.botFarmSkips.erase(bot.botFarmSkips.begin());
+					bot.botFarmSkips.push_back(eastl::make_pair(occupyObject, TimeAdd(localTime, TimeMsToTime(HYP_BOT_OCCUPY_SKIP_SEC * 1000.0))));
+					bot.botFarmUID = ActorUID::INVALID;
+				}
+				else {
+					bot.botFarmCheckAt = TimeAdd(localTime, TimeMsToTime(HYP_BOT_OCCUPY_PROGRESS_SEC * 1000.0));
+					bot.botFarmCheckDist = len;
+				}
+			}
 			goal = len > BOT_ROAM_STEP ? here + d / len * BOT_ROAM_STEP : occupyPoint;
 			mode = BOT_MODE_OCCUPY;
 		}
