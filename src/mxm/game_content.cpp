@@ -1383,6 +1383,7 @@ bool GameXmlContent::LoadMonsterAi()
 			ParseIdList(pInfo->Attribute("groggyStatus"), ai.groggyStatuses);
 			ParseIdList(pInfo->Attribute("seek"), ai.seekDocs);
 			ParseIdList(pInfo->Attribute("hideStatuses"), ai.hideStatuses);
+			ai.reactionImmune = pInfo->BoolAttribute("reactionImmune");
 			ParseIdList(pInfo->Attribute("wakeStatuses"), ai.wakeStatuses);
 			ai.seekReach = pInfo->FloatAttribute("seekReach");
 			if(const char* cc = pInfo->Attribute("cc")) {
@@ -4075,6 +4076,7 @@ bool GameXmlContent::LoadStatusData()
 			pCommon->QueryFloatAttribute("_TimeRatio", &st.timeRatio);
 			pCommon->QueryFloatAttribute("_HeightRatio", &st.heightRatio);
 			pCommon->QueryFloatAttribute("_LyingTime", &st.lyingTime);
+			st.reaction = XmlAttrTrue(pCommon, "_ReAction");
 			pCommon->QueryFloatAttribute("_DotBaseDamage", &st.dotDamage);
 			st.attachToCaster = pCommon->Attribute("_AttachNodeName") != nullptr;
 			pCommon->QueryFloatAttribute("_DotDrainMultiplier", &st.drainMultiplier);

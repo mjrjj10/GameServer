@@ -537,6 +537,7 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	i32 prevOverlap = 0;
 	Time prevTick = Time::ZERO;
 	const StatusInfo* known = GetGameXmlContent().FindStatus(statusID);
+	if(!remove && known && known->reaction && npc.monsterAi && npc.monsterAi->reactionImmune) return;
 	const ActorUID casterField = statusCasterOverride != ActorUID::INVALID ? statusCasterOverride : caster.Main().UID;
 	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
 		if(npcStatuses[i].npcUID != npc.UID || npcStatuses[i].statusID != statusID || npcStatuses[i].linked) { i++; continue; }

@@ -300,6 +300,7 @@ struct StatusInfo
 	f32 timeRatio = 0;
 	f32 heightRatio = 0;
 	f32 lyingTime = 0;
+	bool reaction = false;
 	f32 dotDamage = 0;
 	f32 dotMul = 0;
 	f32 healMul = 0;
@@ -1381,6 +1382,7 @@ struct GameXmlContent
 		eastl::fixed_vector<ScriptStep,12,false> script;
 		eastl::fixed_vector<i32,8,false> seekDocs;
 		eastl::fixed_vector<i32,4,false> hideStatuses;
+		bool reactionImmune = false;
 		eastl::fixed_vector<i32,4,false> wakeStatuses;
 		f32 seekReach = 0;
 		ActionStateID walkState = ActionStateID::INVALID;
