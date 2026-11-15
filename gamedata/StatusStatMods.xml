@@ -127,4 +127,11 @@
   <MOD status="1230330013" stat="STAT_TYPE_DEFENCE" value="20" mul="1" source="Skillpropertydesc STR_SKILL_PROPERTY_TOOLTIP1_280331006: Shugo Enchantment Stone Bundle rank 6 adds +20% Defense Effect (1230330012 -> 1230330013)" />
   <MOD status="1230200001" stat="STAT_TYPE_RAGE" value="5" count="20" source="MEASURED 7 official 5v5 captures: slime mass +5 every 0.5 s while charging (807 steps after the charge status)" />
   <MOD status="1230200002" stat="STAT_TYPE_RAGE" value="-10" count="1" source="MEASURED 7 official 5v5 captures: slime mass -10 per basic fire (328 steps)" />
+  <MOD status="1230170007" stat="STAT_TYPE_DEFENCE" value="30" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 153/318; KEYNAME MAGICGIRL_ATTACK_DEFENCEUP_30" />
+  <MOD status="1230330002" stat="STAT_TYPE_MOVESPEED" value="-10" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 224/269; Shugo Trader passive check" />
+  <MOD status="1230340202" stat="STAT_TYPE_MOVESPEED" value="30" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 21/35; KEYNAME NAGA_ATTACK_MOVESPEED_UP3" />
+  <MOD status="1230340203" stat="STAT_TYPE_MOVESPEED" value="40" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 151/157; KEYNAME NAGA_ATTACK_MOVESPEED_UP4" />
+  <MOD status="1239100021" stat="STAT_TYPE_MOVESPEED" value="30" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 10/13; Titan Siege skill 2 movespeed" />
+  <MOD status="1230140013" stat="STAT_TYPE_ATTACK" value="1" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 1605/1626; Rodmaster attack stat up per stack" />
+  <MOD status="1230110011" stat="STAT_TYPE_MOVESPEED" value="20" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 156/423; KEYNAME DOUBLEGUN_PASSIVE_MOVESPEED" />
 </STATUS_STAT_MODS>
