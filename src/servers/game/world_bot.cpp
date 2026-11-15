@@ -95,7 +95,7 @@ static const f32 MEASURED_BOT_EVADE_CONTACT_DIST = 306.0f;
 bool World::BotEvade(Player& bot)
 {
 	const auto& content = GetGameXmlContent();
-	if(localTime < bot.botEvadeReady || bot.titanForm >= 0) return false;
+	if(localTime < bot.botEvadeReady) return false;
 	const f32 nearby = content.BotConstant("BOTLOGIC_CONSTANT_KEY_NEARBY_REMOTE_DISTANCE_FOR_GOOD_EVADE_STATE_IN_BOTHELPER");
 	const f32 cooltime = content.BotConstant("BOTLOGIC_CONSTANT_KEY_EVADE_COOLTIME_IN_PVP_AI_ENTITY_BASE");
 	if(nearby <= 0 || cooltime <= 0) return false;
@@ -128,7 +128,12 @@ bool World::BotEvade(Player& bot)
 	if(glm::length(incoming) < 0.5f) return false;
 	const GameXmlContent::Master& master = content.GetMaster(bot.Main().classType);
 	SkillID shirk = master.shirkSkill;
-	if(shirk == SkillID::INVALID) foreach_const(sid, master.skillIDs) {
+	if(bot.titanForm >= 0 && bot.titanForm < (i32)content.titan.forms.size()) {
+		const i32 family = content.titan.forms[bot.titanForm].skill1 / 1000;
+		shirk = SkillID::INVALID;
+		foreach_const(sk, content.skillMap) if(sk->second.type == SkillType::SHIRK && (i32)sk->first / 1000 == family) { shirk = sk->first; break; }
+	}
+	else if(shirk == SkillID::INVALID) foreach_const(sid, master.skillIDs) {
 		auto f = content.skillMap.find(*sid);
 		if(f != content.skillMap.end() && f->second.type == SkillType::SHIRK) { shirk = *sid; break; }
 	}
