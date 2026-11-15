@@ -171,6 +171,14 @@ void World::RefreshMasterHealth(Player& player, ActorMaster& chara)
 	replication->SendStatToAll(chara.UID, LEVEL_STAT_HEALTH, (f32)chara.hp, (f32)chara.hpMax);
 }
 
+f32 World::CombatStatBase(const Player& player, const ActorMaster& chara, u8 statType) const
+{
+	const auto& content = GetGameXmlContent();
+	const WeaponIndex weapon = (chara.UID == player.Main().UID) == ((player.mainCharaID & 1) == 0) ? player.mainWeapon : player.subWeapon;
+	const f32 base = statType == LEVEL_STAT_ATTACK ? content.GetWeaponAttack((i32)weapon) : MasterStat(chara.classType, statType);
+	return base + LevelBonus(player, chara.classType, statType) + content.MasterTraitBonus(chara.classType, chara.traits, statType) + chara.GearBonus(statType);
+}
+
 f32 World::StatBonus(const Player& player, u8 statType) const
 {
 	const ActorMaster& chara = player.Main();

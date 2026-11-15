@@ -318,6 +318,8 @@ struct World
 		eastl::array<f32,2> tagStatSent = { -1, -1 };
 		eastl::array<f32,2> statusStatSent = { 0, 0 };
 		ActorUID statusStatMain = ActorUID::INVALID;
+		eastl::array<f32,2> combatStatSent = { 0, 0 };
+		ActorUID combatStatMain = ActorUID::INVALID;
 		bool regenResend = false;
 		f32 shotLeadSec = 0;
 		f32 weaponAimYaw = 0;
@@ -1415,6 +1417,7 @@ public:
 	i32 IngameRespawnDelayMs(const Player& player) const;
 	f32 LevelBonus(const Player& player, ClassType classType, u8 statType) const;
 	f32 StatBonus(const Player& player, u8 statType) const;
+	f32 CombatStatBase(const Player& player, const ActorMaster& chara, u8 statType) const;
 	void SendTraitStats(Player& player, ActorMaster& chara);
 	void RefreshMasterHealth(Player& player, ActorMaster& chara);
 	u32 UpgradeTraits(Player& player, ActorUID characterUID, const u8* indices, i32 count);

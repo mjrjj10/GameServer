@@ -167,6 +167,27 @@ void World::UpdateUltimateGauges(f32 delta)
 			it->statusStatMain = main.UID;
 		}
 
+		{
+			static const StatusMod::Stat COMBAT_STAT_MODS[2] = { StatusMod::ATTACK, StatusMod::DEFENCE };
+			static const u8 COMBAT_STAT_TYPES[2] = { (u8)StatType::STAT_TYPE_ATTACK, (u8)StatType::STAT_TYPE_DEFENCE };
+			const ActorMaster& main = it->Main();
+			const bool mainChanged = it->combatStatMain != main.UID;
+			for(i32 k = 0; k < 2; k++) {
+				if(mainChanged && it->combatStatMain != ActorUID::INVALID) {
+					for(u32 m = 0; m < it->characters.size(); m++) {
+						const ActorMaster& old = *it->characters[m];
+						if(old.UID != it->combatStatMain || old.classType == ClassType::NONE) continue;
+						replication->SendStatToAll(old.UID, COMBAT_STAT_TYPES[k], 0.0f, CombatStatBase(*it, old, COMBAT_STAT_TYPES[k]));
+					}
+				}
+				const f32 value = (CombatStatBase(*it, main, COMBAT_STAT_TYPES[k]) + StatusModSum(*it, COMBAT_STAT_MODS[k])) * MAX(1.0f + StatusModMulSum(*it, COMBAT_STAT_MODS[k]) / 100.0f, 0.0f);
+				if(!mainChanged && fabsf(value - it->combatStatSent[k]) <= 0.01f) continue;
+				it->combatStatSent[k] = value;
+				replication->SendStatToAll(main.UID, COMBAT_STAT_TYPES[k], 0.0f, value);
+			}
+			it->combatStatMain = main.UID;
+		}
+
 		if(localTime >= it->tNextRegen) {
 			it->tNextRegen = TimeAdd(localTime, TimeMsToTime(REGEN_INTERVAL_MS));
 			auto regen = [&](ActorUID uid, i32 stat, f32& value, f32 max, f32 amount) {
