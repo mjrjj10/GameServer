@@ -1420,6 +1420,7 @@ public:
 	i32 IngameRespawnDelayMs(const Player& player) const;
 	f32 LevelBonus(const Player& player, ClassType classType, u8 statType) const;
 	f32 StatBonus(const Player& player, u8 statType) const;
+	f32 TitanDefencePenetration(const Player& p) const;
 	f32 CombatStatBase(const Player& player, const ActorMaster& chara, u8 statType) const;
 	void SendTraitStats(Player& player, ActorMaster& chara);
 	void RefreshMasterHealth(Player& player, ActorMaster& chara);

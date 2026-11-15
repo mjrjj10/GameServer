@@ -1786,10 +1786,12 @@ void World::UpdateFog()
 				EndPlayerStatus(*p, MEASURED_BUSH_HIDE_STATUS);
 				EndPlayerStatus(*p, MEASURED_BUSH_REVEAL_STATUS);
 			}
-			else if(!p->dead && !PlayerHasActiveStatus(*p, MEASURED_BUSH_REVEAL_STATUS)) ApplyStatus(*p, *p, MEASURED_BUSH_HIDE_STATUS, 0, STATUS_INFINITE_DURATION_SEC);
+			else if(!p->dead && !PlayerHasActiveStatus(*p, MEASURED_BUSH_REVEAL_STATUS)) { statusNoCaster = true; ApplyStatus(*p, *p, MEASURED_BUSH_HIDE_STATUS, 0, STATUS_INFINITE_DURATION_SEC); statusNoCaster = false; }
 		}
 		else if(bush != ActorUID::INVALID && !p->dead && !PlayerHasActiveStatus(*p, MEASURED_BUSH_HIDE_STATUS) && !PlayerHasActiveStatus(*p, MEASURED_BUSH_REVEAL_STATUS)) {
+			statusNoCaster = true;
 			ApplyStatus(*p, *p, MEASURED_BUSH_HIDE_STATUS, 0, STATUS_INFINITE_DURATION_SEC);
+			statusNoCaster = false;
 		}
 	}
 	UpdateSummonBushes();

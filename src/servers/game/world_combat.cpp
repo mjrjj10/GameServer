@@ -142,11 +142,19 @@ static f32 ElementMultiplier(const World::Player& attacker, const World::Player&
 	return 1.0f;
 }
 
+f32 World::TitanDefencePenetration(const Player& p) const
+{
+	const auto& forms = GetGameXmlContent().titan.forms;
+	if(p.titanForm < 0 || p.titanForm >= (i32)forms.size()) return -1.0f;
+	return MIN(MAX(forms[p.titanForm].Stat((u8)StatType::STAT_TYPE_DEFENCE_PENETRATION), 0.0f), 100.0f) / 100.0f;
+}
+
 f32 World::DefenceMultiplier(const Player& attacker, const Player& target, bool skillHit) const
 {
 	const f32 def = (MasterStat(target.Main().classType, STAT_DEFENCE) + StatBonus(target, STAT_DEFENCE)) * MAX(1.0f + StatusModMulSum(target, StatusMod::DEFENCE) / 100.0f, 0.0f);
 	const i32 penStat = skillHit ? STAT_SKILL_PENETRATION : STAT_DEFENCE_PENETRATION;
-	const f32 pen = MIN(MAX(MasterStat(attacker.Main().classType, penStat) + StatBonus(attacker, (u8)penStat), 0.0f), PENETRATION_CAP) / 100.0f;
+	const f32 titanPen = skillHit ? -1.0f : TitanDefencePenetration(attacker);
+	const f32 pen = titanPen >= 0 ? titanPen : MIN(MAX(MasterStat(attacker.Main().classType, penStat) + StatBonus(attacker, (u8)penStat), 0.0f), PENETRATION_CAP) / 100.0f;
 	f32 mul = DEFENCE_SCALE / (DEFENCE_SCALE + MAX(def * (1.0f - pen), 0.0f));
 	if(skillHit) mul *= 1.0f - MIN(MAX(MasterStat(target.Main().classType, STAT_SKILLDAMAGE_REDUCE_RATIO) + StatBonus(target, STAT_SKILLDAMAGE_REDUCE_RATIO) + StatusModSum(target, StatusMod::SKILLDAMAGE_REDUCE), 0.0f), SKILLDAMAGE_REDUCE_CAP) / 100.0f;
 	mul *= MAX(1.0f + StatusModMulSum(target, StatusMod::DAMAGE_TAKEN) / 100.0f, 0.0f);
@@ -550,7 +558,8 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	if(damage <= 0 || !NpcHittableBy(npc, attacker)) return;
 	if(npc.ownerUID == ActorUID::INVALID && NpcHasStatusType(npc, StatusType::GODMODE)) return;
 	if(npc.monsterEvadeUntil != Time::ZERO && localTime < npc.monsterEvadeUntil) return;
-	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence, 0.0f)) * NpcStatusMul(npc, StatusMod::DAMAGE_TAKEN) + 0.5f), 1);
+	const f32 titanPen = skillID == SkillID::INVALID ? MAX(TitanDefencePenetration(attacker), 0.0f) : 0.0f;
+	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence * (1.0f - titanPen), 0.0f)) * NpcStatusMul(npc, StatusMod::DAMAGE_TAKEN) + 0.5f), 1);
 	const i32 hpBefore = npc.hp;
 	if(npc.faction == Faction::MONSTER && npc.ownerUID == ActorUID::INVALID) {
 		static const f64 HYP_HIT_COMBO_WINDOW_MS = 3000.0;
