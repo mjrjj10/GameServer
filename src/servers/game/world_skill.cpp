@@ -62,11 +62,12 @@ void World::UpdateUltimateGauges(f32 delta)
 		}
 		{
 			const f32 base = MasterStat(cls, STAT_MOVESPEED) + StatBonus(*it, STAT_MOVESPEED);
-			const f32 speed = base * MovespeedMul(StatusModMulSum(*it, StatusMod::MOVESPEED), base);
+			const f32 firingMul = localTime < it->firingStatUntil || it->weaponState == WEAPON_STATE_CHARGE ? it->firingMoveSpeedMul : 0.0f;
+			const f32 speed = base * MovespeedMul(StatusModMulSum(*it, StatusMod::MOVESPEED) + firingMul, base);
 			if(base > 0 && fabsf(speed - it->moveSpeedSent) > 0.01f) {
 				it->moveSpeedSent = speed;
 				replication->SendStatToAll(it->Main().UID, STAT_MOVESPEED, speed, speed);
-				if(fabsf(speed - base) > 0.01f) LOG("MoveSpeed :: %ls %.0f%%", it->name.data(), speed);
+				if(firingMul == 0.0f && fabsf(speed - base) > 0.01f) LOG("MoveSpeed :: %ls %.0f%%", it->name.data(), speed);
 			}
 		}
 
@@ -1428,7 +1429,7 @@ f32 World::PlayerMoveSpeed(const Player& p) const
 {
 	const f32 baseSpeed = const_cast<CharacterModel&>(GetGameXmlContent().GetMaster(p.Main().classType).character).getMoveSpeed();
 	f32 mul = StatusModMulSum(p, StatusMod::MOVESPEED);
-	if(localTime < p.firingStatUntil) mul += p.firingMoveSpeedMul;
+	if(localTime < p.firingStatUntil || p.weaponState == WEAPON_STATE_CHARGE) mul += p.firingMoveSpeedMul;
 	return baseSpeed * (p.battleStage == 2 ? BATTLE_SPEED_RATIO_ACTIVE : (p.battleStage == 1 ? BATTLE_SPEED_RATIO_RECENT : 1.0f)) * MovespeedMul(mul, MasterStat(p.Main().classType, STAT_MOVESPEED) + StatBonus(p, STAT_MOVESPEED));
 }
 
