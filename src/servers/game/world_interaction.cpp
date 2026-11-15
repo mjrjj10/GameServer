@@ -602,7 +602,10 @@ void World::UpdateNpcDrag(ActorNpc& npc, f32 delta)
 void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 statusID)
 {
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
-	if(info && info->reaction && npc.monsterAi && npc.monsterAi->reactionImmune) return;
+	if(info && ((info->reaction && npc.monsterAi && npc.monsterAi->reactionImmune) || NpcResistsDebuff(npc, info))) {
+		replication->SendResistStatusToAll(npc.UID, caster.UID, STATUS_RESIST_EVENT_PASSIVE);
+		return;
+	}
 	foreach_const(ns, npcStatuses) if(ns->npcUID == npc.UID && ns->statusID == statusID && ns->casterUID == caster.UID && ns->appliedAt == localTime && (!info || info->maxOverlap <= 1)) return;
 	const f32 hold = NpcDefeatReaction(npc, info);
 	if(hold < 0) {
