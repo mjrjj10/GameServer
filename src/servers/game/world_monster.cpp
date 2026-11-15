@@ -27,6 +27,7 @@ static const u32 MEASURED_MONSTER_REMOTE_SEED_STEP = 4;
 static const i32 MEASURED_GOT_MOB_RETURN_SUPERARMOR = 1264070082;
 static const f32 MONSTER_REACH_TOLERANCE = 1.0f;
 static const f32 MEASURED_TITAN_CHASE_GOAL_OFFSET = 278.0f;
+static const f32 MEASURED_TITAN_ROAD_MIN_TRAVEL = 100.0f;
 static const f64 MEASURED_MONSTER_WALK_STATE_START_MS = 153.0;
 
 static vec2 ClosestOnPath(const eastl::fixed_vector<vec3,48,true>& path, const vec2& at)
@@ -1868,7 +1869,7 @@ void World::UpdateMonsterAi(f32 delta)
 				if(!laneWalk) {
 					if(ai.walkState != ActionStateID::INVALID && !npc.monsterWalkStateOn && localTime < npc.monsterNextAttack) continue;
 					npc.monsterWalking = false;
-					if(StartMonsterWalkState(npc, ai, run)) continue;
+					if(dist - reach >= MEASURED_TITAN_ROAD_MIN_TRAVEL && StartMonsterWalkState(npc, ai, run)) continue;
 					const f32 stepMax = run * delta;
 					const bool legDone = npc.monsterChasing && glm::length(npc.monsterLegGoal - vec2(npc.pos)) <= stepMax;
 					const bool resync = !npc.monsterChasing || localTime >= npc.monsterNextSync || legDone;
