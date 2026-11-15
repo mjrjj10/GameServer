@@ -393,6 +393,7 @@ static const f32 HYP_BOT_RETREAT_HP = 0.25f;
 static const f32 HYP_BOT_RETREAT_DONE_HP = 0.9f;
 static const i32 HYP_BOT_SIEGE_TANKS = 2;
 static const i32 HYP_BOT_SIEGE_GIANT_WEIGHT = 3;
+static const f32 MEASURED_FIRST_MASTER_TOWER_HIT_SEC[] = { 113.0f, 125.0f, 171.0f, 205.0f, 207.0f, 209.0f, 235.0f };
 static const i32 BOT_LANE_MIN_POINTS = 10;
 static const f32 BOT_LANE_END_DIST = 3000.0f;
 static const f32 BOT_LANE_SAME_DIST = 1500.0f;
@@ -620,9 +621,17 @@ bool World::BotLaneGoal(Player& bot, vec2* goal)
 	return true;
 }
 
+void World::RollBotSiegeFrom()
+{
+	const f32 sec = MEASURED_FIRST_MASTER_TOWER_HIT_SEC[RandUint() % ARRAY_COUNT(MEASURED_FIRST_MASTER_TOWER_HIT_SEC)];
+	botSiegeFrom = TimeAdd(localTime, TimeMsToTime(sec * 1000.0));
+	LOG("BotSiege :: bots may siege towers from %.0f s", sec);
+}
+
 bool World::BotSiegeOk(const Player& bot, const ActorNpc& tower) const
 {
 	if(!map || !map->ingameLevels || !IsStructure(tower)) return false;
+	if(botSiegeFrom == Time::ZERO || localTime < botSiegeFrom) return false;
 	if(bot.titanForm >= 0) return true;
 	const GameXmlContent::MonsterAttack* attack = tower.monsterAi->byTarget[GameXmlContent::MonsterAttack::MINION];
 	if(!attack) attack = tower.monsterAi->byTarget[GameXmlContent::MonsterAttack::MASTER];
@@ -1287,7 +1296,7 @@ void World::UpdateBotCombat()
 			}
 			if(!swing && !Config().DevShowcase) {
 				foreach_const(npc, actorNpcList) {
-					if(!NpcHittableBy(*npc, bot)) continue;
+					if(!NpcHittableBy(*npc, bot) || (IsStructure(*npc) && !BotSiegeOk(bot, *npc))) continue;
 					if(glm::length(vec2(npc->pos) - vec2(bot.body->GetWorldPos())) <= meleeReach + NpcHitRadius(*npc) + HitRadius(bot)) { swing = true; swingAt = vec2(npc->pos); break; }
 				}
 			}
@@ -1323,7 +1332,7 @@ void World::UpdateBotCombat()
 		if(!target && !repair && !Config().DevShowcase) {
 			f32 bestNpc = range;
 			foreach_const(npc, actorNpcList) {
-				if(!NpcHittableBy(*npc, bot)) continue;
+				if(!NpcHittableBy(*npc, bot) || (IsStructure(*npc) && !BotSiegeOk(bot, *npc))) continue;
 				const f32 d = glm::length(vec2(npc->pos) - vec2(pos));
 				if(d < bestNpc) { bestNpc = d; best = d; aim = npc->pos; }
 			}

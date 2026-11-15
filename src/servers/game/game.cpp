@@ -469,6 +469,7 @@ void Game::Update(Time localTime_)
 				gameStartUnix = (i64)time(nullptr);
 				world.combatLocked = false;
 				if(!Config().DevShowcase) world.gameStartedAt = localTime;
+				world.RollBotSiegeFrom();
 				world.ApplyAllPassives();
 				world.StartSkillPoints();
 				foreach_const(p, world.players) world.SendTagCooltimeToTeam(*p, 0);
