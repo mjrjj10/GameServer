@@ -22,6 +22,12 @@ static f32 WeaponReach(const Remote& remote, const WeaponFiring& wf)
 	return wf.maxDistance;
 }
 
+static const Remote* WeaponDelayedHit(const Remote& base)
+{
+	if(base.boundType != Remote::BoundType::E_BOUND_NONE || base.onTime.empty() || base.onTime[0].idx == RemoteIdx::INVALID) return nullptr;
+	return GetGameXmlContent().FindRemote(base.onTime[0].idx);
+}
+
 static f32 SegmentPointDist2D(const vec2& a, const vec2& b, const vec2& p)
 {
 	const vec2 ab = b - a;
@@ -891,7 +897,14 @@ f32 World::WeaponRange(const Player& p) const
 	const WeaponFiring& wf = ActiveWeaponFiring(p, p.Main().stance);
 	const Remote* remote = GetGameXmlContent().FindRemote(wf.base);
 	ASSERT(remote);
+	if(const Remote* hit = WeaponDelayedHit(*remote)) return WeaponReach(*hit, wf);
 	return WeaponReach(*remote, wf);
+}
+
+bool World::WeaponHitsLater(const Player& p) const
+{
+	const Remote* remote = GetGameXmlContent().FindRemote(ActiveWeaponFiring(p, p.Main().stance).base);
+	return remote && WeaponDelayedHit(*remote) != nullptr;
 }
 
 bool World::WeaponIsMelee(const Player& p) const
@@ -899,6 +912,7 @@ bool World::WeaponIsMelee(const Player& p) const
 	const WeaponFiring& wf = ActiveWeaponFiring(p, p.Main().stance);
 	const Remote* remote = GetGameXmlContent().FindRemote(wf.base);
 	ASSERT(remote);
+	if(const Remote* hit = WeaponDelayedHit(*remote)) return remote->maxSpeed <= 0 && hit->maxSpeed <= 0 && hit->behaviorType == Remote::BehaviorType::NONETARGET && !wf.spawnAtAim && (hit->boundType == Remote::BoundType::E_BOUND_BOX || hit->boundType == Remote::BoundType::E_BOUND_SPHERE);
 	if(remote->maxSpeed > 0 || remote->behaviorType != Remote::BehaviorType::NONETARGET || wf.spawnAtAim) return false;
 	if(remote->boundType != Remote::BoundType::E_BOUND_BOX && remote->boundType != Remote::BoundType::E_BOUND_SPHERE) return false;
 	return WeaponReach(*remote, wf) <= WEAPON_MELEE_MAX_RANGE;

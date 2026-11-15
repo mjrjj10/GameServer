@@ -1652,6 +1652,7 @@ private:
 	f32 HitRadius(const Player& p) const;
 	f32 BodyMidHeight(const Player& p) const;
 	bool WeaponIsMelee(const Player& p) const;
+	bool WeaponHitsLater(const Player& p) const;
 	const WeaponFiring& ActiveWeaponFiring(const Player& p, i8 stance) const;
 	RemoteIdx SelectWeaponRemote(Player& player, const WeaponFiring& wf);
 	f32 WeaponRange(const Player& p) const;

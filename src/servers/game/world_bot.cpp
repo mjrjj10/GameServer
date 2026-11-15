@@ -1274,15 +1274,22 @@ void World::UpdateBotCombat()
 		if(WeaponIsMelee(bot) && Config().DevShowcase) continue;
 		if(WeaponIsMelee(bot)) {
 			bool swing = false;
+			const bool lateHit = WeaponHitsLater(bot);
+			const f32 meleeReach = lateHit ? WeaponRange(bot) : BOT_MELEE_RANGE;
+			vec2 swingAt = vec2(0);
 			foreach_const(e, players) {
 				if(e->dead || e->untargetable || e->team == bot.team || !(e->fogSeenBy & (1u << bot.team))) continue;
-				if(glm::length(vec2(e->body->GetWorldPos()) - vec2(bot.body->GetWorldPos())) <= BOT_MELEE_RANGE + HitRadius(*e) + HitRadius(bot)) { swing = true; break; }
+				if(glm::length(vec2(e->body->GetWorldPos()) - vec2(bot.body->GetWorldPos())) <= meleeReach + HitRadius(*e) + HitRadius(bot)) { swing = true; swingAt = vec2(e->body->GetWorldPos()); break; }
 			}
 			if(!swing && !Config().DevShowcase) {
 				foreach_const(npc, actorNpcList) {
 					if(!NpcHittableBy(*npc, bot)) continue;
-					if(glm::length(vec2(npc->pos) - vec2(bot.body->GetWorldPos())) <= BOT_MELEE_RANGE + NpcHitRadius(*npc) + HitRadius(bot)) { swing = true; break; }
+					if(glm::length(vec2(npc->pos) - vec2(bot.body->GetWorldPos())) <= meleeReach + NpcHitRadius(*npc) + HitRadius(bot)) { swing = true; swingAt = vec2(npc->pos); break; }
 				}
+			}
+			if(swing && lateHit) {
+				const vec2 rel = swingAt - vec2(bot.body->GetWorldPos());
+				if(glm::length(rel) > 1.0f) bot.weaponAimYaw = atan2f(rel.y, rel.x);
 			}
 			if(swing) {
 				bot.weaponFired = true;
