@@ -1531,6 +1531,7 @@ public:
 	bool BotLaneGoal(Player& bot, vec2* goal);
 	bool BotRetreat(Player& bot, vec2* goal);
 	bool BotSiegeOk(const Player& bot, const ActorNpc& tower) const;
+	bool BotChiefGoal(const Player& bot, vec2* goal) const;
 	void RollBotSiegeFrom();
 	void SummonGiant(i32 team);
 	struct GroundItem { u32 uid = 0; i32 itemIndex = 0; vec3 pos = vec3(0); i32 tagID = -1; Time expireAt = Time::ZERO; i32 count = 1; i32 owner = -1; bool ron = false; i32 team = -1; };
