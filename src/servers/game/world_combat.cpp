@@ -539,14 +539,15 @@ void World::WeaponLifesteal(Player& attacker, i32 damage)
 	replication->SendStatToAll(chara.UID, (i32)StatType::STAT_TYPE_HEALTH, (f32)chara.hp, (f32)chara.hpMax);
 }
 
-bool World::HasStatusTypeKey(const Player* player, const ActorNpc* npc, u32 key) const
+bool World::HasStatusTypeKey(const Player* player, const ActorNpc* npc, u32 key, const Player* caster) const
 {
 	if(player) {
-		foreach_const(st, activeStatuses) if(st->targetIndex == player->index && st->info && st->info->typeKey == key && st->until > localTime) return true;
+		foreach_const(st, activeStatuses) if(st->targetIndex == player->index && st->info && st->info->typeKey == key && st->until > localTime && (!caster || st->casterIndex == caster->index)) return true;
 	}
 	if(npc) {
 		foreach_const(ns, npcStatuses) {
 			if(ns->npcUID != npc->UID || localTime >= ns->until) continue;
+			if(caster && ns->casterUID != caster->Main().UID && ns->casterUID != caster->Sub().UID) continue;
 			const StatusInfo* info = GetGameXmlContent().FindStatus(ns->statusID);
 			if(info && info->typeKey == key) return true;
 		}
@@ -561,8 +562,7 @@ f32 World::RemoteTargetDamageMul(const Player& attacker, RemoteIdx doc, const ve
 	f32 mul = 1.0f;
 	if(pr->distPenaltyRate > 0 && pr->penaltyApplyDistance > 0 && attacker.body && glm::length(vec2(targetPos) - vec2(attacker.body->GetWorldPos())) < pr->penaltyApplyDistance) mul *= 1.0f - pr->distPenaltyRate / 100.0f;
 	if(pr->statusTypeMultiplyKey != 0 && pr->statusTypeMultiplier != 1.0f) {
-		const bool has = pr->statusTypeMultiplierToCaster ? HasStatusTypeKey(&attacker, nullptr, pr->statusTypeMultiplyKey) : HasStatusTypeKey(targetPlayer, targetNpc, pr->statusTypeMultiplyKey);
-		if(has) mul *= pr->statusTypeMultiplier;
+		if(HasStatusTypeKey(targetPlayer, targetNpc, pr->statusTypeMultiplyKey, pr->statusTypeMultiplierToCaster ? &attacker : nullptr)) mul *= pr->statusTypeMultiplier;
 	}
 	return mul;
 }

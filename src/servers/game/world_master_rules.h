@@ -481,7 +481,6 @@ static const LowHpFireRateRule MEASURED_LOW_HP_FIRE_RATES[] = {
 };
 
 static const WeaponBonusRule WEAPON_BONUS_RULES[] = {
-	{ ClassType::BOXER, WeaponBonus::TARGET_HAS_OWN_STATUS, 0, 1230320002, 1.15f },
 	{ ClassType::SHUGOTRADER, WeaponBonus::EVERY_NTH_HIT, 6, 1230330000, 1.80f },
-	{ ClassType::RYTLOCK, WeaponBonus::LAST_OF_CHAIN, 3, 1230250002, 1.20f },
+	{ ClassType::RYTLOCK, WeaponBonus::LAST_OF_CHAIN, 3, 1230250002, 1.0f },
 };

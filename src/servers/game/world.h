@@ -1424,7 +1424,7 @@ public:
 	f32 StatBonus(const Player& player, u8 statType) const;
 	f32 TitanDefencePenetration(const Player& p) const;
 	f32 RollCritical(const Player& attacker, bool weapon, RemoteIdx doc, f32 bonus);
-	bool HasStatusTypeKey(const Player* player, const ActorNpc* npc, u32 key) const;
+	bool HasStatusTypeKey(const Player* player, const ActorNpc* npc, u32 key, const Player* caster) const;
 	f32 RemoteTargetDamageMul(const Player& attacker, RemoteIdx doc, const vec3& targetPos, const Player* targetPlayer, const ActorNpc* targetNpc) const;
 	f32 CombatStatBase(const Player& player, const ActorMaster& chara, u8 statType) const;
 	void SendTraitStats(Player& player, ActorMaster& chara);
