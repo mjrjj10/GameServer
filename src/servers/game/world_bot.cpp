@@ -426,6 +426,7 @@ static const i32 BOT_LANE_MIN_POINTS = 10;
 static const f32 BOT_LANE_END_DIST = 3000.0f;
 static const f32 BOT_LANE_SAME_DIST = 1500.0f;
 static const i32 BOT_LANE_LOOKAHEAD = 2;
+static const f32 HYP_BOT_WAVE_LANE_DIST = 800.0f;
 static const f32 BOT_NAV_MERGE_DIST = 200.0f;
 static const f32 BOT_NAV_LINK_RANGE = 1500.0f;
 static const f32 BOT_NAV_REACHED = 200.0f;
@@ -643,8 +644,21 @@ bool World::BotLaneGoal(Player& bot, vec2* goal)
 		const f32 d = glm::length(lane[k] - here);
 		if(d < nearestDist) { nearestDist = d; nearest = k; }
 	}
-	i32 next = MIN(nearest + BOT_LANE_LOOKAHEAD, (i32)lane.size() - 1);
-	while(next < (i32)lane.size() - 1 && InsideBodyBlocker(lane[next], PLAYER_BODY_RADIUS + BOT_NAV_REACHED)) next++;
+	static const u32 minionTag = StatusTypeKey("Minion");
+	i32 front = -1;
+	foreach_const(npc, actorNpcList) {
+		if(!npc->monsterAi || npc->monsterAi->tagKey != minionTag || npc->hp <= 0 || npc->removeAt != Time::ZERO || (i32)npc->faction != (i32)bot.team) continue;
+		i32 at = -1;
+		f32 atDist = HYP_BOT_WAVE_LANE_DIST;
+		for(i32 k = 0; k < (i32)lane.size(); k++) {
+			const f32 d = glm::length(lane[k] - vec2(npc->pos));
+			if(d < atDist) { atDist = d; at = k; }
+		}
+		front = MAX(front, at);
+	}
+	if(front < 0) front = (i32)lane.size() / 2;
+	i32 next = MIN(nearest + BOT_LANE_LOOKAHEAD, front);
+	while(next < front && InsideBodyBlocker(lane[next], PLAYER_BODY_RADIUS + BOT_NAV_REACHED)) next++;
 	*goal = lane[next];
 	return true;
 }
