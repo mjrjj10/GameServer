@@ -444,20 +444,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 			if(stackBonus > 0) LOG("Passive :: %ls stack bonus +%d on %ls", owner.name.data(), stackBonus, target.name.data());
 		}
 		i32 dealt = amount + stackBonus;
-		const RepeatHitDecayRule* decay = FindRepeatHitDecay(remote.ID);
-		if(enemy && (decay || GetGameXmlContent().IsRepeatHitReduced((i32)inst.skillID))) {
-			RepeatHit* rh = nullptr;
-			foreach(r, repeatHits) if(r->castID == inst.castID && r->targetIndex == target.index) rh = &*r;
-			if(!rh) {
-				repeatHits.push_back({ inst.castID, target.index, 0, localTime });
-				rh = &repeatHits.back();
-			}
-			if(decay && decay->resetSec > 0 && TimeDiffSec(TimeDiff(rh->at, localTime)) > decay->resetSec) rh->count = 0;
-			if(decay) dealt = (i32)(dealt * MAX(1.0f - decay->stepPerHit * rh->count, decay->floor));
-			else dealt = (i32)(dealt * MAX(1.0f - REPEAT_HIT_REDUCTION * rh->count, 1.0f - REPEAT_HIT_REDUCTION_CAP));
-			rh->count++;
-			rh->at = localTime;
-		}
+		if(enemy) dealt = (i32)(dealt * RepeatHitMul(inst.castID, inst.ownerIndex, target.index, remote.ID, inst.skillID));
 		if(enemy) dealt = (i32)(dealt * falloff);
 		if(enemy && remote.hitDamageMultiplier != 0) {
 			dealt = (i32)(dealt * MAX(1.0f + remote.hitDamageMultiplier * inst.enemiesHit, 1.0f + remote.maxHitDamageMultiplier));
@@ -784,6 +771,30 @@ void World::ChangeCasterActionOnHit(RemoteInst& inst, Player& owner, ActorUID ta
 	hitActionOnly = false;
 }
 
+f32 World::RepeatHitMul(u32 castID, u32 ownerIndex, u32 targetKey, RemoteIdx remoteID, SkillID skillID)
+{
+	static const u32 REPEAT_HIT_CASTER_KEY = 0xC0000000u;
+	const RepeatHitDecayRule* decay = FindRepeatHitDecay(remoteID);
+	if(!decay && !GetGameXmlContent().IsRepeatHitReduced((i32)skillID)) return 1.0f;
+	if(decay && decay->perCaster) castID = REPEAT_HIT_CASTER_KEY | ownerIndex;
+	RepeatHit* rh = nullptr;
+	foreach(r, repeatHits) if(r->castID == castID && r->targetIndex == targetKey) rh = &*r;
+	if(!rh) {
+		repeatHits.push_back({ castID, targetKey, 0, localTime });
+		rh = &repeatHits.back();
+	}
+	const f64 idle = TimeDiffSec(TimeDiff(rh->at, localTime));
+	if(decay && decay->perCaster && decay->resetSec > 0) {
+		const i32 cap = (i32)ceilf((1.0f - decay->floor) / decay->stepPerHit - 0.001f);
+		rh->count = MAX(MIN(rh->count, cap) - (i32)(idle / decay->resetSec), 0);
+	}
+	else if(decay && decay->resetSec > 0 && idle > decay->resetSec) rh->count = 0;
+	const f32 mul = decay ? MAX(1.0f - decay->stepPerHit * rh->count, decay->floor) : MAX(1.0f - REPEAT_HIT_REDUCTION * rh->count, 1.0f - REPEAT_HIT_REDUCTION_CAP);
+	rh->count++;
+	rh->at = localTime;
+	return mul;
+}
+
 bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 {
 	const Remote& remote = *inst.remote;
@@ -811,7 +822,12 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 		hit.remotePos = inst.pos;
 		hit.dir = inst.dir;
 		hit.seedOwnerHd = inst.seedOwnerHd;
-		DamageNpc(players[inst.ownerIndex], npc, inst.skillID, (i32)(base * RemoteDistanceFalloff(remote, dist)), &hit);
+		f32 mul = RemoteDistanceFalloff(remote, dist) * RepeatHitMul(inst.castID, inst.ownerIndex, (u32)npc.UID | VOLLEY_NPC_TARGET_BIT, remote.ID, inst.skillID);
+		if(remote.hitDamageMultiplier != 0) {
+			mul *= MAX(1.0f + remote.hitDamageMultiplier * inst.enemiesHit, 1.0f + remote.maxHitDamageMultiplier);
+			if(inst.enemiesHit < 255) inst.enemiesHit++;
+		}
+		DamageNpc(players[inst.ownerIndex], npc, inst.skillID, (i32)(base * mul), &hit);
 	}
 	Player& owner = players[inst.ownerIndex];
 	if(inst.clientRemoteID != 0) {

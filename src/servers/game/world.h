@@ -909,6 +909,8 @@ struct World
 	eastl::fixed_vector<CastHit,512,false> castHits;
 	struct RepeatHit { u32 castID; u32 targetIndex; i32 count; Time at; };
 	eastl::fixed_vector<RepeatHit,64,true> repeatHits;
+	static constexpr u32 VOLLEY_NPC_TARGET_BIT = 0x80000000u;
+	f32 RepeatHitMul(u32 castID, u32 ownerIndex, u32 targetKey, RemoteIdx remoteID, SkillID skillID);
 	f32 VolleyLockout(const Projectile& proj) const;
 	bool VolleyHitLocked(const Projectile& proj, u32 target);
 
@@ -1421,6 +1423,7 @@ public:
 	f32 LevelBonus(const Player& player, ClassType classType, u8 statType) const;
 	f32 StatBonus(const Player& player, u8 statType) const;
 	f32 TitanDefencePenetration(const Player& p) const;
+	f32 RollCritical(const Player& attacker, bool weapon, RemoteIdx doc, f32 bonus);
 	f32 CombatStatBase(const Player& player, const ActorMaster& chara, u8 statType) const;
 	void SendTraitStats(Player& player, ActorMaster& chara);
 	void RefreshMasterHealth(Player& player, ActorMaster& chara);

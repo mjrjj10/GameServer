@@ -291,16 +291,13 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	}
 
 	u32 damageType = PACKET_DAMAGE_TYPE_NORMAL;
-	if(proj || skillID != SkillID::INVALID) {
-		const f32 mul = ElementMultiplier(attacker, target, !proj);
+	if(proj || skillID != SkillID::INVALID || remoteDoc != RemoteIdx::INVALID) {
+		const bool weaponHit = proj || skillID == SkillID::INVALID;
+		const f32 mul = ElementMultiplier(attacker, target, !weaponHit);
 		if(mul != 1.0f) damage = (i32)(damage * mul);
 		elementMul = mul;
 
-		const ClassType ac = attacker.Main().classType;
 		const RemoteIdx doc = proj ? proj->remoteDoc : remoteDoc;
-		const Remote* critRemote = doc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(doc) : nullptr;
-		const f32 rate = MasterStat(ac, proj ? STAT_CRITICALRATE : STAT_SKILL_CRITICALRATE) + (proj ? StatBonus(attacker, STAT_CRITICALRATE) : 0.0f) + (critRemote ? critRemote->criticalRate : 0) +
-			StatusModSum(attacker, proj ? StatusMod::CRITICALRATE : StatusMod::SKILL_CRITICALRATE);
 		f32 bonus = 0;
 		foreach_const(st, activeStatuses) {
 			if(st->targetIndex != target.index || !st->info || localTime >= st->until) continue;
@@ -308,9 +305,9 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		}
 		static const f32 DESC_PIERCE_CRITICAL_STEP = 33.0f;
 		if(proj && proj->hitList.size() > 1 && FindPassiveOfType(attacker, StatusType::SNIPER)) bonus += DESC_PIERCE_CRITICAL_STEP * (f32)(proj->hitList.size() - 1);
-		if(rate + bonus > 0 && (RandUint() % 10000) < (u32)((rate + bonus) * 100.0f)) {
-			const f32 critDamage = MasterStat(ac, proj ? STAT_CRITICALDAMAGE : STAT_SKILL_CRITICALDAMAGE);
-			damage = (i32)(damage * (critDamage > 0 ? critDamage : 100.0f) / 100.0f);
+		const f32 critMul = RollCritical(attacker, weaponHit, doc, bonus);
+		if(critMul > 0) {
+			damage = (i32)(damage * critMul);
 			damageType = PACKET_DAMAGE_TYPE_CRITICAL;
 		}
 	}
@@ -553,13 +550,25 @@ void World::WeaponLifesteal(Player& attacker, i32 damage)
 	replication->SendStatToAll(chara.UID, (i32)StatType::STAT_TYPE_HEALTH, (f32)chara.hp, (f32)chara.hpMax);
 }
 
+f32 World::RollCritical(const Player& attacker, bool weapon, RemoteIdx doc, f32 bonus)
+{
+	const ClassType ac = attacker.Main().classType;
+	const Remote* critRemote = doc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(doc) : nullptr;
+	const f32 rate = MasterStat(ac, weapon ? STAT_CRITICALRATE : STAT_SKILL_CRITICALRATE) + (weapon ? StatBonus(attacker, STAT_CRITICALRATE) : 0.0f) + (critRemote ? critRemote->criticalRate : 0) +
+		StatusModSum(attacker, weapon ? StatusMod::CRITICALRATE : StatusMod::SKILL_CRITICALRATE);
+	if(rate + bonus <= 0 || (RandUint() % 10000) >= (u32)((rate + bonus) * 100.0f)) return 0.0f;
+	const f32 critDamage = MasterStat(ac, weapon ? STAT_CRITICALDAMAGE : STAT_SKILL_CRITICALDAMAGE);
+	return (critDamage > 0 ? critDamage : 100.0f) / 100.0f;
+}
+
 void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage, const Replication::RemoteDamage* remoteHit)
 {
 	if(damage <= 0 || !NpcHittableBy(npc, attacker)) return;
 	if(npc.ownerUID == ActorUID::INVALID && NpcHasStatusType(npc, StatusType::GODMODE)) return;
 	if(npc.monsterEvadeUntil != Time::ZERO && localTime < npc.monsterEvadeUntil) return;
 	const f32 titanPen = skillID == SkillID::INVALID ? MAX(TitanDefencePenetration(attacker), 0.0f) : 0.0f;
-	const i32 dealt = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence * (1.0f - titanPen), 0.0f)) * NpcStatusMul(npc, StatusMod::DAMAGE_TAKEN) + 0.5f), 1);
+	const f32 critMul = remoteHit ? RollCritical(attacker, skillID == SkillID::INVALID, remoteHit->remoteDoc, 0.0f) : 0.0f;
+	const i32 dealt = MAX((i32)(damage * (critMul > 0 ? critMul : 1.0f) * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence * (1.0f - titanPen), 0.0f)) * NpcStatusMul(npc, StatusMod::DAMAGE_TAKEN) + 0.5f), 1);
 	const i32 hpBefore = npc.hp;
 	if(npc.faction == Faction::MONSTER && npc.ownerUID == ActorUID::INVALID) {
 		static const f64 HYP_HIT_COMBO_WINDOW_MS = 3000.0;
@@ -589,6 +598,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 		hit.attackerUID = damageAttackerOverride != ActorUID::INVALID ? damageAttackerOverride : attacker.Main().UID;
 		hit.targetUID = npc.UID;
 		hit.targetPos = npc.pos;
+		hit.damageType = critMul > 0 ? PACKET_DAMAGE_TYPE_CRITICAL : hit.damageType;
 		hit.damage = MIN(dealt, hpBefore);
 		hit.hp = npc.hp;
 		hit.hpMax = npc.hpMax;

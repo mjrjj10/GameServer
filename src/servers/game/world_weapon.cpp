@@ -316,8 +316,6 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	}
 }
 
-static const u32 VOLLEY_NPC_TARGET_BIT = 0x80000000u;
-
 f32 World::VolleyLockout(const Projectile& proj) const
 {
 	if(proj.volleyID == 0) return 0.0f;
@@ -626,13 +624,21 @@ void World::UpdateProjectiles(f32 delta)
 				if(SegmentPointDist2D(from, lastStep ? to + proj->dir * proj->forwardReach : to, vec2(npc->pos)) > proj->halfWidth + NpcHitRadius(*npc) + PROJECTILE_HIT_TOLERANCE) continue;
 				proj->npcHitList.push_back(npc->UID);
 				if(VolleyHitLocked(*proj, (u32)npc->UID | VOLLEY_NPC_TARGET_BIT)) continue;
+				f32 volleyMul = 1.0f;
+				if(proj->volleyID != 0 && !VolleyLockout(*proj)) {
+					const u32 key = (u32)npc->UID | VOLLEY_NPC_TARGET_BIT;
+					bool repeated = false;
+					foreach(r, repeatHits) if(r->castID == proj->volleyID && r->targetIndex == key) repeated = true;
+					if(repeated) volleyMul = MEASURED_RADIATE_REPEAT_HIT_RATIO;
+					else repeatHits.push_back({ proj->volleyID, key, 1, localTime });
+				}
 				Replication::RemoteDamage hit;
 				hit.remoteID = proj->remoteID;
 				hit.remoteDoc = proj->remoteDoc;
 				hit.remotePos = vec3(vec2(proj->pos), npc->pos.z);
 				hit.dir = proj->dir;
 				hit.seedOwnerHd = proj->seedOwnerHd;
-				if(proj->damage > 0) DamageNpc(owner, *npc, SkillID::INVALID, proj->damage, &hit);
+				if(proj->damage > 0) DamageNpc(owner, *npc, SkillID::INVALID, (i32)(proj->damage * volleyMul), &hit);
 				if(proj->remoteID != 0) {
 					proj->npcActivation += NpcDensity(*npc);
 					replication->SendRemoteActivatedToAll(proj->remoteID, proj->seedOwnerHd, ClientHandle::INVALID, npc->UID, proj->npcActivation, proj->pos);

@@ -81,6 +81,7 @@ struct RepeatHitDecayRule
 	f32 stepPerHit;
 	f32 floor;
 	f32 resetSec = 0;
+	bool perCaster = false;
 };
 
 static const RepeatHitDecayRule MEASURED_REPEAT_HIT_DECAY[] = {
@@ -92,8 +93,8 @@ static const RepeatHitDecayRule MEASURED_REPEAT_HIT_DECAY[] = {
 	{ RemoteIdx(1440110054), 0.1f, 0.2f },
 	{ RemoteIdx(1440430051), 0.1f, 0.2f },
 	{ RemoteIdx(1440430052), 0.1f, 0.2f },
-	{ RemoteIdx(1430200012), 0.2f, 0.4f },
-	{ RemoteIdx(1430200015), 0.2f, 0.4f },
+	{ RemoteIdx(1430200012), 0.2f, 0.4f, 1.0f, true },
+	{ RemoteIdx(1430200015), 0.2f, 0.4f, 1.0f, true },
 	{ RemoteIdx(1440040042), 0.8f, 0.2f, 1.0f },
 	{ RemoteIdx(1440040044), 0.8f, 0.2f, 1.0f },
 };
