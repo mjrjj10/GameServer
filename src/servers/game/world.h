@@ -272,6 +272,8 @@ struct World
 		Time botEvadeReady = Time::ZERO;
 		Time multiHitPassiveReady = Time::ZERO;
 		Time botStageSkillReady = Time::ZERO;
+		Time botReturnReady = Time::ZERO;
+		Time lastDamagedAt = Time::ZERO;
 		ActorUID botAimTarget = ActorUID::INVALID;
 		f32 ultGauge = -1.0f;
 		i8 ultReadySent = -1;
@@ -1485,6 +1487,7 @@ public:
 	f32 BotTitanSkillDistance(i32 skill) const;
 	bool BotFarmTarget(Player& bot, vec2* goal, f32 range);
 	bool BotStageSkill(Player& bot);
+	bool BotReturnSkill(Player& bot);
 	bool BotEvade(Player& bot);
 	void SetCarriedPieces(Player& player, i32 count);
 	void AddTeamPieces(i32 team, i32 count);

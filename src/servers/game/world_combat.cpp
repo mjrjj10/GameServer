@@ -329,6 +329,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	ShowcaseOnDamage(target, damage);
 	target.damageTaken += damage;
 	target.hitsTaken++;
+	target.lastDamagedAt = localTime;
 	chara.hp = MAX(chara.hp - damage, (HasStatusType(target, StatusType::NEARLY_IMMORTAL) || HasStatusType(target, StatusType::UNDEAD)) ? 1 : 0);
 	if(ShowcaseKeepsAlive(target)) chara.hp = MAX(chara.hp, 1);
 	if(chara.hp == 0) PassiveOnLethal(target);
@@ -734,6 +735,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	ActorMaster& chara = target.Main();
 	target.damageTaken += damage;
 	target.hitsTaken++;
+	target.lastDamagedAt = localTime;
 	chara.hp = MAX(chara.hp - damage, (HasStatusType(target, StatusType::NEARLY_IMMORTAL) || HasStatusType(target, StatusType::UNDEAD)) ? 1 : 0);
 	if(ShowcaseKeepsAlive(target)) chara.hp = MAX(chara.hp, 1);
 	if(chara.hp == 0) PassiveOnLethal(target);

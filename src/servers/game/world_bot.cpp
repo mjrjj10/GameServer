@@ -89,6 +89,24 @@ bool World::BotStageSkill(Player& bot)
 	return true;
 }
 
+static const f64 MEASURED_BOT_RETURN_AFTER_DAMAGE_SEC = 2.7;
+
+bool World::BotReturnSkill(Player& bot)
+{
+	const auto& content = GetGameXmlContent();
+	const i32 skill = (i32)bot.stageSkills[0];
+	if(skill <= 0 || skill != content.BotReturnSkill() || !bot.botRetreat || bot.titanForm >= 0 || bot.devGod || localTime < bot.botReturnReady) return false;
+	if(bot.lastDamagedAt != Time::ZERO && TimeDiffSec(TimeDiff(bot.lastDamagedAt, localTime)) < MEASURED_BOT_RETURN_AFTER_DAMAGE_SEC) return false;
+	const vec3 pos = bot.body->GetWorldPos();
+	if(glm::length(vec2(pos) - vec2(bot.spawnPos)) <= content.BotConstant("BOTLOGIC_STRATEGY_CONST_KEY_IN_BASE_CAMP_RANGE")) return false;
+	bot.botReturnReady = TimeAdd(localTime, TimeMsToTime(content.BotConstant("BOTLOGIC_STRATEGY_CONST_KEY_USE_RETURN_SKILL_STRATEGY_DISABLE_TIME") * 1000.0));
+	bot.input.moveTo = pos;
+	LOG("BotSkill :: %ls uses return skill %d at %.0f from base", bot.name.data(), skill, glm::length(vec2(pos) - vec2(bot.spawnPos)));
+	const ActorUID none = ActorUID::INVALID;
+	PlayerCastSkill(bot, SkillID(skill), pos, Slice<const ActorUID>(&none, (size_t)0), 0);
+	return true;
+}
+
 static const f32 HYP_BOT_EVADE_AIM_DISTANCE = 500.0f;
 static const f32 MEASURED_BOT_EVADE_CONTACT_DIST = 306.0f;
 
@@ -156,6 +174,7 @@ void World::UpdateBotSkills()
 	foreach(it, players) {
 		Player& bot = *it;
 		if(bot.clientHd != ClientHandle::INVALID || bot.dead) continue;
+		if(bot.casting.skillID != SkillID::INVALID && (i32)bot.casting.skillID == content.BotReturnSkill()) bot.botReturnReady = TimeAdd(localTime, TimeMsToTime(content.BotConstant("BOTLOGIC_STRATEGY_CONST_KEY_USE_RETURN_SKILL_STRATEGY_DISABLE_TIME") * 1000.0));
 		if(localTime >= bot.tNextBotSkill && BotReleaseHold(bot)) continue;
 		if(localTime < bot.tNextBotSkill || localTime < bot.ccUntil || localTime < bot.dashUntil || localTime < bot.botSkillStillUntil || bot.botShotAt == localTime) continue;
 		if(bot.casting.skillID == SkillID::INVALID && !Config().DevShowcase && !IsBlocked(bot, false, false, true) && BotEvade(bot)) {
@@ -164,7 +183,7 @@ void World::UpdateBotSkills()
 		}
 		if(IsBlocked(bot, false, true, false) || BotHoldsHide(bot)) continue;
 		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500));
-		if(bot.casting.skillID != SkillID::INVALID || BotStageSkill(bot)) continue;
+		if(bot.casting.skillID != SkillID::INVALID || BotReturnSkill(bot) || BotStageSkill(bot)) continue;
 
 		const ActorMaster& master = bot.Main();
 		const bool titan = bot.titanForm >= 0 && bot.titanForm < (i32)content.titan.forms.size();

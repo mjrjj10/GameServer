@@ -6228,12 +6228,17 @@ bool GameXmlContent::LoadBotBrain()
 		const char* key = p->Attribute("DATAKEY");
 		if(key) botConstants[StatusTypeKey(key)] = p->FloatAttribute("DATA");
 	}
+	for(XMLElement* p = pRoot ? pRoot->FirstChildElement("_StrategyConstantData") : nullptr; p; p = p->NextSiblingElement("_StrategyConstantData")) {
+		const char* key = p->Attribute("DATAKEY");
+		if(key) botConstants[StatusTypeKey(key)] = p->FloatAttribute("DATA");
+	}
 	if(XMLElement* p = pRoot ? pRoot->FirstChildElement("_CommonSkillIndexData") : nullptr) {
 		for(i32 i = 0; i < (i32)botStageSkills.size(); i++) {
 			char attr[16];
 			EA::StdC::Snprintf(attr, sizeof(attr), "_StageSkill%d", i);
 			botStageSkills[i] = p->IntAttribute(attr);
 		}
+		botReturnSkill = p->IntAttribute("_ReturnSkill");
 	}
 	foreach_const(m, masters) {
 		const i32 creature = (i32)m->ID;
