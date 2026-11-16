@@ -5594,7 +5594,7 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		else if(XMLElement* e = pNode->FirstChildElement("_DialogTriggerData")) { node.kind = LevelEventNode::DIALOG_TRIGGER; node.aiIndex = e->IntAttribute("_ID"); }
 		else if(pNode->FirstChildElement("_EventPartyConditionInfo") || pNode->FirstChildElement("_EventBehaviorInfo") || pNode->FirstChildElement("_CallRemoteInfo")) node.kind = LevelEventNode::PASS_THROUGH;
 		else if(pNode->FirstChildElement("_UpdateObjectivePointInfo") || pNode->FirstChildElement("_ShowProgressMessageInfo") || pNode->FirstChildElement("_CameraWallInfo")) node.kind = LevelEventNode::CLIENT_EVENT;
-		else if(pNode->FirstChildElement("_PrintMessageInfo") || pNode->FirstChildElement("_BGMEventInfo") || pNode->FirstChildElement("_ChangeCameraInfo") || pNode->FirstChildElement("_SetNameTagVisibillityInfo") || pNode->FirstChildElement("_InputLockInfo") || pNode->FirstChildElement("_ClientDrivenActionChangeInfo")) { node.kind = LevelEventNode::CLIENT_EVENT; node.dialogLine = pNode->FirstChildElement("_PrintMessageInfo") != nullptr; node.seqRoot = pNode->FirstChildElement("_InputLockInfo") != nullptr; }
+		else if(pNode->FirstChildElement("_PrintMessageInfo") || pNode->FirstChildElement("_BGMEventInfo") || pNode->FirstChildElement("_ChangeCameraInfo") || pNode->FirstChildElement("_SetNameTagVisibillityInfo") || pNode->FirstChildElement("_InputLockInfo") || pNode->FirstChildElement("_ClientDrivenActionChangeInfo")) { node.kind = LevelEventNode::CLIENT_EVENT; node.dialogLine = pNode->FirstChildElement("_PrintMessageInfo") != nullptr; node.seqRoot = true; }
 		else if(pNode->FirstChildElement("_PingBroadcastInfo") || pNode->FirstChildElement("_MaterialSetChange") || pNode->FirstChildElement("_EffectLightSwitch")) node.kind = LevelEventNode::CLIENT_EVENT;
 		else if(XMLElement* e = pNode->FirstChildElement("_ActiveEvents")) {
 			node.kind = LevelEventNode::ACTIVE_EVENTS;
@@ -5658,6 +5658,19 @@ bool GameXmlContent::LoadLevelEvents(Map* map, const wchar* levelDir)
 		}
 	}
 	AddLevelAITriggerSources(map, levelDir);
+	for(bool changed = true; changed;) {
+		changed = false;
+		foreach(n, map->levelEvents) {
+			if(!n->seqRoot) continue;
+			foreach_const(o, n->outputs) {
+				const LevelEventNode* next = map->FindLevelEvent(*o);
+				if(next && next->seqRoot) continue;
+				n->seqRoot = false;
+				changed = true;
+				break;
+			}
+		}
+	}
 	LOG("Loaded %d level event nodes", (i32)map->levelEvents.size());
 	return true;
 }

@@ -1018,7 +1018,8 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 		}
 	}
 	struct SeqRestore { bool& flag; bool value; ~SeqRestore() { flag = value; } } seqRestore{ levelClientSeq, levelClientSeq };
-	if(node->seqRoot && !levelClientSeq && replication->titanMode) {
+	const GameXmlContent::LevelEventNode* trigger = node->seqRoot && fromNode >= 0 ? map->FindLevelEvent(fromNode) : nullptr;
+	if(trigger && (LevelEventSource(trigger->kind) || trigger->kind == GameXmlContent::LevelEventNode::TIME_RECORD_START) && !levelClientSeq && replication->titanMode) {
 		replication->SendClientLevelEventSeqToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID);
 		levelClientSeq = true;
 	}

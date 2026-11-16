@@ -1306,6 +1306,7 @@ void Replication::SendGameStart(ClientHandle clientHd)
 	Sv::SN_NotifyAasRestricted notify;
 	notify.isRestrictedByAAS = 0;
 	SendPacket(clientHd, notify);
+	if(titanMode) return;
 
 	// EVENT: Release input lock (Data\Design\Level\PVP\PVP_DeathMatch\EVENTNODES\LEVELEVENT_CLIENT.XML)
 	// Sv::SN_RunClientLevelEventSeq
