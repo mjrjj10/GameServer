@@ -292,8 +292,13 @@ u32 World::PlayerPaySkillCost(Player& player, i32 skillID)
 	f32 mp = PlayerSkillConsumeMP(player, skillID);
 	foreach(it, activeStatuses) {
 		if(it->targetIndex != player.index || !it->info || it->info->type != StatusType::NOCOST || it->until <= localTime) continue;
-		if(eastl::find(it->info->costSkills.begin(), it->info->costSkills.end(), skillID) == it->info->costSkills.end()) continue;
-		mp = MAX(mp * (1.0f + it->info->costRatioMP / 100.0f), 0.0f);
+		const bool listed = eastl::find(it->info->costSkills.begin(), it->info->costSkills.end(), skillID) != it->info->costSkills.end();
+		bool ownSkill = false;
+		if(!listed && player.Main().classType != ClassType::NONE && content.GetSkillConsumeStamina(skillID) <= 0) {
+			foreach_const(sid, content.GetMaster(player.Main().classType).skillIDs) if((i32)*sid == skillID) ownSkill = true;
+		}
+		if(!listed && !ownSkill) continue;
+		if(listed) mp = MAX(mp * (1.0f + it->info->costRatioMP / 100.0f), 0.0f);
 		it->until = localTime;
 		LOG("Passive :: %ls skill %d mana cost %.0f (status %d used)", player.name.data(), skillID, mp, it->statusID);
 		break;
