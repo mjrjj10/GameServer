@@ -604,6 +604,7 @@ void World::UpdateProjectiles(f32 delta)
 			if(activationTarget) {
 				const vec3 hitPos = vec3(vec2(activationTarget->body->GetWorldPos()), proj->pos.z);
 				if(proj->remoteID != 0) replication->SendRemoteActivatedToAll(proj->remoteID, proj->seedOwnerHd, ClientHandle::INVALID, activationTarget->Main().UID, activationCost, hitPos);
+				if(shotRemote) SpawnProjectileHitRemotes(*proj, *shotRemote, hitPos, (i32)activationTarget->index, ActorUID::INVALID);
 				if(proj->chainRemote != RemoteIdx::INVALID && !proj->chained) {
 					proj->chained = true;
 					RemoteInst* chain = SpawnRemote(proj->ownerIndex, proj->chainRemote, hitPos, proj->dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, proj->chainDamage, true, nullptr, proj->nodeName, false, false, true);
@@ -643,6 +644,7 @@ void World::UpdateProjectiles(f32 delta)
 					proj->npcActivation += NpcDensity(*npc);
 					replication->SendRemoteActivatedToAll(proj->remoteID, proj->seedOwnerHd, ClientHandle::INVALID, npc->UID, proj->npcActivation, proj->pos);
 				}
+				if(shotRemote) SpawnProjectileHitRemotes(*proj, *shotRemote, vec3(vec2(npc->pos), proj->pos.z), -1, npc->UID);
 				if(const Remote* shot = GetGameXmlContent().FindRemote(proj->remoteDoc)) {
 					if(npc->hp > 0 && npc->ownerUID == ActorUID::INVALID) {
 						foreach_const(st, shot->statuses) if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(owner, *npc, StanceUpgradedStatus(owner, st->statusID), false);

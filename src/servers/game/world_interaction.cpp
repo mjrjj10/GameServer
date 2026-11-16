@@ -543,13 +543,16 @@ void World::UpdateNpcDefeat(ActorNpc& npc)
 		npc.defeatLieAt = Time::ZERO;
 		npc.actionState = ActionStateID::LIE_BEHAVIORSTATE;
 		replication->SendMonsterStateToAll(npc.UID, ActionStateID::LIE_BEHAVIORSTATE, npc.pos, npc.monsterAi ? npc.monsterAi->run * npc.speedMul : 0.0f);
+		if(npc.monsterAi && npc.monsterAi->ccArmorStatus) ApplyMonsterStatus(npc, npc.monsterAi->ccArmorStatus, true);
 	}
 	if(npc.stateEndAt != Time::ZERO && localTime >= npc.stateEndAt && npc.actionState != ActionStateID::SPAWN_BEHAVIORSTATE) {
 		npc.stateEndAt = Time::ZERO;
+		const bool ccArmorAgain = npc.monsterAi && npc.monsterAi->ccArmorStatus && (npc.actionState == ActionStateID::DEFEAT_PUSH_BEHAVIORSTATE || npc.actionState == ActionStateID::DEFEAT_SYNC_BEHAVIORSTATE);
 		npc.actionState = ActionStateID::NONE_BEHAVIORSTATE;
 		const f32 endSpeed = npc.monsterStopSpeed > 0 ? npc.monsterStopSpeed : (npc.monsterAi ? npc.monsterAi->run * npc.speedMul : 0.0f);
 		npc.monsterStopSpeed = 0;
 		replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, endSpeed);
+		if(ccArmorAgain) ApplyMonsterStatus(npc, npc.monsterAi->ccArmorStatus, true);
 	}
 }
 

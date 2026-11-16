@@ -1140,6 +1140,7 @@ struct World
 	void SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, const Remote::SpawnRule& rule, const vec3& pos, const vec2& dir, ActorUID target);
 	void RetargetMonsters(ActorUID from, ActorUID to);
 	u32 SendRemoteCreator(const RemoteInst& parent, u16 creator, const vec3& pos, u32 childCount, ActorUID spawnerActor, const vec3& aimPos, bool hitInvalidParent);
+	void SpawnProjectileHitRemotes(const Projectile& proj, const Remote& shot, const vec3& at, i32 hitIndex, ActorUID hitNpc);
 	vec3 npcHitCenter = vec3(0);
 	bool npcHitCenterSet = false;
 	void UpdateMonsterRemotes(f32 delta);
@@ -1306,7 +1307,7 @@ public:
 	void RunWeaponActionStatuses(Player& player, i8 stance, const vec3* aimPos = nullptr);
 	f32 WeaponHeatScale(const Player& player) const;
 	f32 WeaponFireDelayScale(const Player& player) const;
-	f32 BotNextFireDelay(const Player& bot) const;
+	f32 BotNextFireDelay(const Player& bot, u32 combo) const;
 	f32 OwnerRemoteSpeedRatio(const Player& player) const;
 	u16 DefaultWeaponCreator(const Player& player, const WeaponFiring& wf) const;
 	RemoteInst* FindProjectileReflector(const Projectile& proj, const vec2& from, const vec2& to, vec2* contact);

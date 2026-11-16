@@ -352,6 +352,33 @@ u32 World::SendRemoteCreator(const RemoteInst& parent, u16 creator, const vec3& 
 	return seed + 1;
 }
 
+void World::SpawnProjectileHitRemotes(const Projectile& proj, const Remote& shot, const vec3& at, i32 hitIndex, ActorUID hitNpc)
+{
+	if(shot.onHitCharacter.empty()) return;
+	RemoteInst parent = RemoteInst();
+	parent.remote = &shot;
+	parent.ownerIndex = proj.ownerIndex;
+	parent.casterMasterUID = players[proj.ownerIndex].Main().UID;
+	parent.skillID = SkillID::INVALID;
+	parent.castID = nextCastID++;
+	parent.damage = proj.damage;
+	parent.pos = at;
+	parent.dir = proj.dir;
+	parent.spawnTime = localTime;
+	parent.target = ActorUID::INVALID;
+	parent.nodeName = proj.nodeName;
+	parent.clientRemoteID = proj.remoteID;
+	parent.seedOwnerHd = proj.seedOwnerHd;
+	parent.lastHitIndex = hitIndex;
+	const u32 before = (u32)remoteInsts.size();
+	SpawnRemoteRules(*this, parent, shot.onHitCharacter, shot.creatorOnHitCharacter, at, hitIndex, RemoteIdx::INVALID);
+	if(hitNpc == ActorUID::INVALID) return;
+	for(u32 i = before; i < (u32)remoteInsts.size(); i++) {
+		RemoteInst& child = remoteInsts[i];
+		if(!child.npcHits.full()) child.npcHits.push_back({ hitNpc, TimeAdd(localTime, TimeMsToTime(MAX(child.remote->hitInvalidTime, 0.1f) * 1000.0)) });
+	}
+}
+
 i32 World::PenetrationCost(const Player& p) const
 {
 	if(p.Main().classType == ClassType::NONE) return 0;

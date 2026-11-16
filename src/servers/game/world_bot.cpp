@@ -412,6 +412,8 @@ static const BotBossRule MEASURED_BOT_BOSS_RULES[] = {
 	{ 105001403, MEASURED_ROBOT_BUFF2_FIRST_MASTER_HIT_SEC, (i32)ARRAY_COUNT(MEASURED_ROBOT_BUFF2_FIRST_MASTER_HIT_SEC), 2 },
 };
 
+static const f32 HYP_BOT_BOSS_ENGAGED_MARGIN = 300.0f;
+
 bool World::BotBossGoal(const Player& bot, vec2* goal)
 {
 	if(bot.titanForm >= 0) return false;
@@ -431,12 +433,14 @@ bool World::BotBossGoal(const Player& bot, vec2* goal)
 		const vec2 at = vec2(npc->pos);
 		if(BotDangerAt(bot, at, nullptr, nullptr)) continue;
 		const f32 mine = glm::length(at - here);
+		const f32 reach = WeaponIsMelee(bot) ? BOT_MELEE_RANGE : MIN(WeaponRange(bot) * BOT_RANGE_FRACTION, BOT_RANGED_MAX);
+		const bool engaged = npc->monsterTarget == bot.Main().UID || mine <= reach + HYP_BOT_BOSS_ENGAGED_MARGIN;
 		i32 closer = 0;
 		foreach_const(p, players) {
 			if(&*p == &bot || p->dead || p->removed || !p->body || p->titanForm >= 0) continue;
 			if(glm::length(at - vec2(p->body->GetWorldPos())) < mine) closer++;
 		}
-		if(closer >= rule->masters) continue;
+		if(!engaged && closer >= rule->masters) continue;
 		if(!chosen || mine < chosenDist) {
 			chosen = &*npc;
 			chosenDist = mine;
@@ -1465,7 +1469,9 @@ void World::UpdateBotCombat()
 			}
 			if(swing) {
 				bot.weaponFired = true;
-				bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot) * 1000.0));
+				const WeaponFiring& swingWf = ActiveWeaponFiring(bot, bot.Main().stance);
+				const bool chained = bot.firingCombo < swingWf.comboValid.size() && bot.botComboShotAt != Time::ZERO && localTime <= TimeAdd(bot.botComboShotAt, TimeMsToTime(swingWf.comboValid[bot.firingCombo] * 1000.0));
+				bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot, chained ? bot.firingCombo + 1 : 0) * 1000.0));
 			}
 			continue;
 		}
@@ -1480,7 +1486,7 @@ void World::UpdateBotCombat()
 			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(pos));
 			if(d < best) { best = d; target = &*e; }
 		}
-		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot) * 1000.0));
+		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot, bot.firingCombo) * 1000.0));
 		vec3 aim = target ? target->body->GetWorldPos() : vec3(0);
 		const ActorNpc* repair = !Config().DevShowcase ? BotRepairTarget(bot, range) : nullptr;
 		if(repair) {
@@ -1515,7 +1521,7 @@ void World::UpdateBotCombat()
 		bot.weaponAimYaw = atan2f(dir.y, dir.x);
 		PlayerWeaponShot(bot, pos, dir, best);
 		bot.botIdleResourceGoal = -1;
-		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot) * 1000.0));
+		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot, bot.firingCombo) * 1000.0));
 	}
 }
 
@@ -1541,11 +1547,11 @@ u8 World::BotRollChargeLevel(const Player& bot, const WeaponFiring& wf) const
 	return 0;
 }
 
-f32 World::BotNextFireDelay(const Player& bot) const
+f32 World::BotNextFireDelay(const Player& bot, u32 combo) const
 {
 	const WeaponFiring& wf = ActiveWeaponFiring(bot, bot.Main().stance);
 	f32 delay = wf.fireDelay;
-	if(bot.firingCombo < wf.comboDelay.size() && wf.comboDelay[bot.firingCombo] > 0 && wf.comboDelay[bot.firingCombo] <= wf.comboValid[bot.firingCombo]) delay = wf.comboDelay[bot.firingCombo];
-	if(wf.continuityCount > 0 && (i32)bot.firingCombo + 1 >= wf.continuityCount) delay = MAX(delay, wf.continuityDelay);
+	if(combo < wf.comboDelay.size() && wf.comboDelay[combo] > 0 && wf.comboDelay[combo] <= wf.comboValid[combo]) delay = wf.comboDelay[combo];
+	if(wf.continuityCount > 0 && (i32)combo + 1 >= wf.continuityCount) delay = MAX(delay, wf.continuityDelay);
 	return MAX(delay, BOT_MIN_FIRE_DELAY) * WeaponFireDelayScale(bot);
 }
