@@ -446,11 +446,8 @@ struct PassiveStatusRule
 };
 
 static const PassiveStatusRule PASSIVE_STATUS_RULES[] = {
-	{ ClassType::ANDROA, PassiveTrigger::SKILL_USE, PassiveTarget::SELF, 1230290001, 0, 0 },
 	{ ClassType::ANDROB, PassiveTrigger::SKILL_USE, PassiveTarget::LOWEST_HP_ALLY_IN_STATUS_RANGE, 1230300001, 0, 250 },
-	{ ClassType::BOXER, PassiveTrigger::SKILL_HIT, PassiveTarget::HIT_TARGET, 1230320002, 0, 0 },
 	{ ClassType::PHOTOG, PassiveTrigger::SKILL_HIT, PassiveTarget::SELF, 1230150010, 0, 0 },
-	{ ClassType::EFREET, PassiveTrigger::SKILL_HIT, PassiveTarget::HIT_TARGET, 1230230001, 0, 0 },
 	{ ClassType::SHADOWHUNTER, PassiveTrigger::SKILL_HIT, PassiveTarget::SELF, 1230240000, 1230240001, 0 },
 };
 

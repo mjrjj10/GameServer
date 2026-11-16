@@ -1382,7 +1382,6 @@ void World::UpdateStatuses()
 				   (cond == StatusInfo::NextCondition::REMOVE_ONHIT && it->removeOnHit)) next = it->info->nextStatus;
 			}
 			const u32 casterIndex = it->casterIndex;
-			const bool noCaster = it->casterUID == ActorUID::INVALID;
 			if(it->info && it->info->auraStatus != 0) EndAura(casterIndex, *it->info);
 			if(it->ccEnd != Time::ZERO && localTime < it->ccStatusEnd && target.ccUntil == it->ccEnd) {
 				Time cc = TimeAdd(localTime, TimeDiff(it->ccStatusEnd, it->ccEnd));
@@ -1405,7 +1404,7 @@ void World::UpdateStatuses()
 				ps.targetUID = target.Main().UID;
 				ps.duration = -1.0f;
 				ps.power = 0;
-				ps.noCaster = noCaster;
+				ps.noCaster = true;
 				const StatusInfo* nextInfo = GetGameXmlContent().FindStatus(next);
 				ps.lastChild = nextInfo && nextInfo->targetsLastChild;
 				pendingStatuses.push_back(ps);
