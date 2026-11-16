@@ -1873,8 +1873,7 @@ void World::UpdateLevelEvents()
 		const vec2 at = vec2(p->body->GetWorldPos());
 		for(i32 i = 0; i < (i32)groundItems.size(); i++) {
 			if(glm::length(vec2(groundItems[i].pos) - at) > BOT_ITEM_PICKUP_RADIUS) continue;
-			TakeGroundItem(*p, groundItems[i].uid);
-			break;
+			if(TakeGroundItem(*p, groundItems[i].uid)) break;
 		}
 	}
 }

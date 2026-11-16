@@ -1538,7 +1538,7 @@ public:
 	bool BotSees(const vec3& from, const vec3& to);
 	bool BotWalkable(const vec3& from, const vec3& to);
 	void BotPlanRoute(Player& bot, const vec2& goal);
-	bool BotShotClear(const Player& bot, const vec3& aim);
+	bool BotShotClear(const Player& bot, const vec3& aim, f32 bodyRadius);
 	bool BotCanStepToward(Player& bot, const vec2& to);
 	bool BotPassesStuckSpot(const Player& bot, const vec2& from, const vec2& to) const;
 	vec2 BotNavStep(Player& bot, const vec2& goal);

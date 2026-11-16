@@ -478,7 +478,7 @@ bool World::BotBossGoal(const Player& bot, vec2* goal)
 		}
 	}
 	if(!chosen) return false;
-	if(!BotShotClear(bot, chosen->pos)) {
+	if(!BotShotClear(bot, chosen->pos, NpcHitRadius(*chosen))) {
 		*goal = vec2(chosen->pos);
 		return true;
 	}
@@ -732,14 +732,15 @@ void World::BotPlanRoute(Player& bot, const vec2& goal)
 	for(i32 k = (i32)reversed.size() - 1; k >= 0 && !bot.botRoute.full(); k--) bot.botRoute.push_back(reversed[k]);
 }
 
-bool World::BotShotClear(const Player& bot, const vec3& aim)
+bool World::BotShotClear(const Player& bot, const vec3& aim, f32 bodyRadius)
 {
 	const vec3 pos = bot.body->GetWorldPos();
 	const f32 z = pos.z + BodyMidHeight(bot);
 	f32 dist = 0;
 	const PxRigidActor* wall = nullptr;
 	ActorDynamic* gate = nullptr;
-	return !RaycastShot(vec3(vec2(pos), z), vec3(vec2(aim), z), (i32)bot.team, &dist, &wall, &gate);
+	if(!RaycastShot(vec3(vec2(pos), z), vec3(vec2(aim), z), (i32)bot.team, &dist, &wall, &gate)) return true;
+	return !gate && dist + 1.0f >= glm::length(vec2(aim) - vec2(pos)) - bodyRadius;
 }
 
 bool World::BotCanStepToward(Player& bot, const vec2& to)
@@ -1547,9 +1548,13 @@ void World::UpdateBotCombat()
 					if(glm::length(vec2(npc->pos) - vec2(bot.body->GetWorldPos())) <= meleeReach + NpcHitRadius(*npc) + HitRadius(bot)) { swing = true; swingAt = vec2(npc->pos); break; }
 				}
 			}
-			if(swing && lateHit) {
+			if(swing) {
 				const vec2 rel = swingAt - vec2(bot.body->GetWorldPos());
-				if(glm::length(rel) > 1.0f) bot.weaponAimYaw = atan2f(rel.y, rel.x);
+				if(glm::length(rel) > 1.0f) {
+					bot.weaponAimYaw = atan2f(rel.y, rel.x);
+					bot.input.rot.upperYaw = bot.weaponAimYaw;
+					bot.input.rot.bodyYaw = bot.weaponAimYaw;
+				}
 			}
 			if(swing) {
 				bot.weaponFired = true;
@@ -1583,7 +1588,7 @@ void World::UpdateBotCombat()
 			foreach_const(npc, actorNpcList) {
 				if(!NpcHittableBy(*npc, bot) || (IsStructure(*npc) && !BotSiegeOk(bot, *npc))) continue;
 				const f32 d = glm::length(vec2(npc->pos) - vec2(pos));
-				if(d < bestNpc && BotShotClear(bot, npc->pos)) { bestNpc = d; best = d; aim = npc->pos; }
+				if(d < bestNpc && BotShotClear(bot, npc->pos, NpcHitRadius(*npc))) { bestNpc = d; best = d; aim = npc->pos; }
 			}
 			if(bestNpc >= range) { BotIdleCharge(bot); continue; }
 		}

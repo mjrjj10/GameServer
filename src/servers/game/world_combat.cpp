@@ -509,6 +509,7 @@ bool World::NpcHittableBy(const ActorNpc& npc, const Player& attacker) const
 	if(npc.despawnAt != Time::ZERO && localTime >= npc.despawnAt) return false;
 	if(npc.ownerUID == ActorUID::INVALID) {
 		if(!npc.monsterAi) return false;
+		if(GetGameXmlContent().CreatureUntargetable((i32)npc.docID)) return false;
 		if(npc.faction == Faction::RED || npc.faction == Faction::BLUE) return npc.faction != (Faction)attacker.team;
 		return npc.faction == Faction::ORANGE || npc.faction == Faction::MONSTER;
 	}
