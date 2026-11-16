@@ -544,7 +544,6 @@ struct World
 		Time selfDestructAt = Time::ZERO;
 		Time standAt = Time::ZERO;
 		Time skillEndAt = Time::ZERO;
-		bool holdForSkill = false;
 		Time dieStandAt = Time::ZERO;
 		Time diedAt = Time::ZERO;
 		Time removeAt = Time::ZERO;
