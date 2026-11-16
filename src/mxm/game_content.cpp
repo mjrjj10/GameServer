@@ -2961,6 +2961,12 @@ void GameXmlContent::ParseUpgradeLists(XMLElement* pLevel, eastl::fixed_vector<e
 	ParseStatusReplaceList(pLevel, statusReplace);
 }
 
+struct MeasuredSkillPowerMul { i32 skillID; f32 mul; };
+static const MeasuredSkillPowerMul MEASURED_SKILL_POWER_MUL[] = {
+	{ 180030030, 0.307f },
+	{ 180120040, 0.728f },
+};
+
 bool GameXmlContent::LoadSkillUpgrades()
 {
 	eastl::hash_map<i32, eastl::fixed_vector<eastl::pair<i32,SkillUpgrade>,8,false>> byPriority;
@@ -3015,7 +3021,22 @@ bool GameXmlContent::LoadSkillUpgrades()
 		auto& out = propertyStatusChain[it->first];
 		foreach_const(p, it->second) out.push_back(p->second);
 	}
-	LOG("Loaded in-game upgrades for %d skills", (i32)skillUpgrades.size());
+	foreach_const(it, skillUpgrades) {
+		auto base = skillTooltipDamage.find(it->first);
+		if(base == skillTooltipDamage.end() || base->second <= 0) continue;
+		eastl::fixed_vector<eastl::pair<f32,f32>,8,false> points;
+		foreach_const(up, it->second) if(up->type == SkillUpgrade::Type::DAMAGE && up->baseDamage > 0 && up->attackMultiplier > 0 && !points.full()) points.push_back({ up->baseDamage, up->attackMultiplier });
+		if(points.empty()) continue;
+		f32 mul = points[0].second * base->second / points[0].first;
+		if(points.size() >= 2 && points[1].first != points[0].first) {
+			const f32 slope = (points[1].second - points[0].second) / (points[1].first - points[0].first);
+			const f32 line = points[0].second + slope * (base->second - points[0].first);
+			if(slope > 0 && line > 0) mul = line;
+		}
+		skillBasePowerMul[it->first] = mul;
+	}
+	for(const auto& m : MEASURED_SKILL_POWER_MUL) skillBasePowerMul[m.skillID] = m.mul;
+	LOG("Loaded in-game upgrades for %d skills, base skill power multipliers for %d", (i32)skillUpgrades.size(), (i32)skillBasePowerMul.size());
 	return true;
 }
 
@@ -4503,7 +4524,10 @@ bool GameXmlContent::LoadSkillTooltips()
 				if(!attrType || EA::StdC::Strcmp(attrType, "TTATTR_REMOTE_DAMAGE") != 0) continue;
 				f32 dmg = 0;
 				pT->QueryFloatAttribute("value_1", &dmg);
-				if(dmg > 0 && skillBaseDamage.find(skillID) == skillBaseDamage.end()) skillBaseDamage[skillID] = dmg / remoteDelegateMul;
+				if(dmg > 0 && skillBaseDamage.find(skillID) == skillBaseDamage.end()) {
+					skillBaseDamage[skillID] = dmg / remoteDelegateMul;
+					skillTooltipDamage[skillID] = dmg;
+				}
 			}
 			for(XMLElement* pLevel = pBase; pLevel; pLevel = pLevel->NextSiblingElement("data")) {
 				eastl::fixed_set<i32,16,true> levelTouched;

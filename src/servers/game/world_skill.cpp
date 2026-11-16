@@ -2166,6 +2166,8 @@ f32 World::PlayerSkillDamage(const Player& player, SkillID skillID) const
 		if(up->baseDamage >= 0) return MAX(up->baseDamage + up->attackMultiplier * PlayerSkillPower(player), 0.0f);
 	}
 	f32 damage = SkillDamage(skillID);
+	const f32 baseMul = GetGameXmlContent().GetSkillBasePowerMul((i32)skillID);
+	if(baseMul > 0) return MAX(damage + baseMul * PlayerSkillPower(player), 0.0f);
 	auto found = GetGameXmlContent().skillMap.find(skillID);
 	const f32 extraPower = statusPower + StatBonus(player, STAT_SKILLPOWER);
 	if(extraPower > 0 && found != GetGameXmlContent().skillMap.end()) {

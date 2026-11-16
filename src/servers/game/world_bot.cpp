@@ -1074,11 +1074,12 @@ void World::UpdateBotMovement()
 			const f32 len = glm::length(away);
 			goal = tower + (len > 1.0f ? away / len : vec2(1, 0)) * towerRange;
 		}
+		const vec2 rawGoal = goal;
 		BotGateBlocks(bot, here, &goal);
 		BotKeepOutOfBlockers(bot, &goal);
 		if(glm::length(goal - here) < BOT_REPATH_DIST && !fighting && localTime >= bot.botIdleLogAt) {
 			bot.botIdleLogAt = TimeAdd(localTime, TimeMsToTime(10000.0));
-			LOG("BotIdle :: %ls at (%.0f, %.0f) mode %s goal (%.0f, %.0f)", bot.name.data(), here.x, here.y, BOT_MODE_NAMES[mode], goal.x, goal.y);
+			LOG("BotIdle :: %ls at (%.0f, %.0f) mode %s goal (%.0f, %.0f) raw (%.0f, %.0f)", bot.name.data(), here.x, here.y, BOT_MODE_NAMES[mode], goal.x, goal.y, rawGoal.x, rawGoal.y);
 		}
 		bot.input.moveTo = vec3(goal, pos.z);
 		bot.input.speed = PlayerMoveSpeed(bot);

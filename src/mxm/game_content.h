@@ -1651,6 +1651,7 @@ struct GameXmlContent
 	const eastl::fixed_vector<i32,4,false>* FindPassiveStatuses(ClassType c) const { auto f = passiveStatuses.find((i32)c); return f == passiveStatuses.end() ? nullptr : &f->second; }
 	const WeaponHeatInfo* FindWeaponHeat(i32 weaponID) const { auto f = weaponHeat.find(weaponID); return f == weaponHeat.end() ? nullptr : &f->second; }
 	f32 GetSkillBaseDamage(i32 skillID) const { auto f = skillBaseDamage.find(skillID); return f == skillBaseDamage.end() ? 0 : f->second; }
+	f32 GetSkillBasePowerMul(i32 skillID) const { auto f = skillBasePowerMul.find(skillID); if(f != skillBasePowerMul.end()) return f->second; const i32 combo = GetComboBaseSkill(skillID); return combo != 0 && combo != skillID ? GetSkillBasePowerMul(combo) : 0.0f; }
 	struct StatusReplace {
 		i32 statusID = 0;
 		i32 replaceID = 0;
@@ -1898,6 +1899,8 @@ private:
 	eastl::hash_map<i32, f32> skillConsumeMP;
 	eastl::hash_map<i32, eastl::array<f32,4>> skillConsumeRes;
 	eastl::hash_map<i32, f32> skillBaseDamage;
+	eastl::hash_map<i32, f32> skillTooltipDamage;
+	eastl::hash_map<i32, f32> skillBasePowerMul;
 	eastl::hash_map<i32, f32> skillConsumeUG;
 	eastl::hash_map<i32, SummonInfo> summonMap;
 	eastl::hash_map<i32, f32> creatureHideDetect;
