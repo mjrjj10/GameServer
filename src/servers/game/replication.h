@@ -258,6 +258,7 @@ struct Replication
 	struct PlayerLocalInfo
 	{
 		eastl::fixed_map<ActorUID,LocalActorID,2048> localActorIDMap;
+		eastl::fixed_map<ActorUID,LocalActorID,256> departedActorIDMap;
 		eastl::fixed_set<ActorUID,2048> actorUIDSet;
 		LocalActorID nextPlayerLocalActorID;
 		LocalActorID nextNpcLocalActorID;
@@ -501,6 +502,7 @@ struct Replication
 	void SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap = 1, f32 scale = 1.0f, f32 nominalDist = -1.0f, bool withGraph = true, bool refresh = false, u8 customValue = 0);
 	void SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID);
 	bool linkMirror = true;
+	LocalActorID GetCasterLocalID(ClientHandle clientHd, ActorUID actorUID) const;
 	struct RemoteDamage
 	{
 		u32 remoteID = 0;
@@ -640,7 +642,7 @@ private:
 
 	void PlayerForceLocalActorID(i32 clientID, ActorUID actorUID, LocalActorID localActorID);
 	void CreateLocalActorID(i32 clientID, ActorUID actorUID);
-	void DeleteLocalActorID(i32 clientID, ActorUID actorUID);
+	void DeleteLocalActorID(i32 clientID, ActorUID actorUID, bool keepForCaster);
 
 	template<typename Packet>
 	inline void SendPacket(ClientHandle clientHd, const Packet& packet)

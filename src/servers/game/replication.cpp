@@ -51,6 +51,7 @@ void Replication::Frame::Clear()
 void Replication::PlayerLocalInfo::Reset()
 {
 	localActorIDMap.clear();
+	departedActorIDMap.clear();
 	actorUIDSet.clear();
 	hiddenActors.clear();
 	shownMain.clear();
@@ -2706,7 +2707,7 @@ void Replication::SendModifyStatusToAll(i32 statusID, ActorUID targetUID, ActorU
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID targetLocal = GetLocalActorID(clientHd, targetUID);
 		if(targetLocal == LocalActorID::INVALID) continue;
-		const LocalActorID casterLocal = GetLocalActorID(clientHd, casterUID);
+		const LocalActorID casterLocal = GetCasterLocalID(clientHd, casterUID);
 		PacketWriter<Sv::SN_ModifyStatus,32> packet;
 		packet.Write<u32>((u32)statusID);
 		packet.Write<u8>(1);
@@ -2787,7 +2788,7 @@ void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID 
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID targetLocal = GetLocalActorID(clientHd, targetUID);
 		if(targetLocal == LocalActorID::INVALID) continue;
-		const LocalActorID casterLocal = GetLocalActorID(clientHd, casterUID);
+		const LocalActorID casterLocal = GetCasterLocalID(clientHd, casterUID);
 		TruthEvent("\"c\":%d,\"status\":%d,\"to\":%u,\"from\":%u,\"dur\":%.2f,\"refresh\":%d", clientID, statusID, (u32)targetLocal, (u32)casterLocal, durationSec, refresh ? 1 : 0);
 
 		const f32 dist = to == vec3(0) ? 0.0f : glm::length(vec2(to - from));
@@ -2829,7 +2830,7 @@ void Replication::SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorU
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID targetLocal = GetLocalActorID(clientHd, targetUID);
 		if(targetLocal == LocalActorID::INVALID) continue;
-		const LocalActorID casterLocal = GetLocalActorID(clientHd, casterUID);
+		const LocalActorID casterLocal = GetCasterLocalID(clientHd, casterUID);
 
 		Sv::SN_RemoveStatus packet;
 		packet.statusID = (u32)statusID;
@@ -3725,7 +3726,7 @@ void Replication::UpdatePlayersLocalState()
 			if(!deadNpc) SendActorDestroy(clientHd, actorUID, despawned);
 
 			// Remove LocalActorID link
-			DeleteLocalActorID(pi, actorUID);
+			DeleteLocalActorID(pi, actorUID, deadNpc);
 		}
 
 		// send new spawns
@@ -4607,10 +4608,25 @@ void Replication::CreateLocalActorID(i32 clientID, ActorUID actorUID)
 	// TODO: start at 5000 for NPCs? Does it even matter?
 }
 
-void Replication::DeleteLocalActorID(i32 clientID, ActorUID actorUID)
+void Replication::DeleteLocalActorID(i32 clientID, ActorUID actorUID, bool keepForCaster)
 {
 	auto& localActorIDMap = playerLocalInfo[clientID].localActorIDMap;
-	localActorIDMap.erase(localActorIDMap.find(actorUID));
+	auto& departed = playerLocalInfo[clientID].departedActorIDMap;
+	auto found = localActorIDMap.find(actorUID);
+	if(keepForCaster) {
+		if(departed.size() >= departed.max_size()) departed.clear();
+		departed[actorUID] = found->second;
+	}
+	localActorIDMap.erase(found);
+}
+
+LocalActorID Replication::GetCasterLocalID(ClientHandle clientHd, ActorUID actorUID) const
+{
+	const LocalActorID local = GetLocalActorID(clientHd, actorUID);
+	if(local != LocalActorID::INVALID || actorUID == ActorUID::INVALID) return local;
+	const auto& departed = playerLocalInfo[playerMap.at(clientHd)].departedActorIDMap;
+	auto found = departed.find(actorUID);
+	return found != departed.end() ? found->second : LocalActorID::INVALID;
 }
 
 void Replication::GetPlayersInGame(ClientList* list)
