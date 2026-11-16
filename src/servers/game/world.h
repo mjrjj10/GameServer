@@ -228,6 +228,8 @@ struct World
 		Time titanVoteBlockedUntil = Time::ZERO;
 		Time nextSkillPointAt = Time::ZERO;
 		u8 botUpgradeTurn = 0;
+		i8 botUpgradePlan = -1;
+		i8 botUpgradeFocus = 0;
 		u32 resourceGainCast = 0;
 		eastl::fixed_vector<u32,10,false> resourceGainTargets;
 		eastl::array<i32,2> shotCount = { 0, 0 };

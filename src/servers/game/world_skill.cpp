@@ -1919,15 +1919,30 @@ void World::GrantSkillPoint(Player& player)
 void World::UpdateSkillPoints()
 {
 	static const i32 BOT_UPGRADE_ORDER[] = { SKILL_UPGRADE_SLOT_ULTIMATE, 0, 1 };
+	static const i32 MEASURED_BOT_UPGRADE_PLAN_WEIGHTS[] = { 69, 53, 16 };
 	foreach(it, players) {
 		if(it->nextSkillPointAt != Time::ZERO && localTime >= it->nextSkillPointAt) {
 			it->nextSkillPointAt = TimeAdd(it->nextSkillPointAt, TimeMsToTime(SKILL_POINT_INTERVAL_MS));
 			GrantSkillPoint(*it);
 		}
 		if(!botUpgrades || (it->clientHd != ClientHandle::INVALID && Config().DevStartLevel <= 0 && Config().DevPilotUpgrades <= 0) || it->skillPoints <= 0 || it->dead) continue;
-		for(i32 tries = 0; tries < (i32)ARRAY_COUNT(BOT_UPGRADE_ORDER) && it->skillPoints > 0; tries++) {
+		if(it->botUpgradePlan < 0) {
+			i32 total = 0;
+			for(const i32 w : MEASURED_BOT_UPGRADE_PLAN_WEIGHTS) total += w;
+			i32 roll = (i32)(RandUint() % (u32)total);
+			it->botUpgradePlan = 0;
+			while(roll >= MEASURED_BOT_UPGRADE_PLAN_WEIGHTS[it->botUpgradePlan]) roll -= MEASURED_BOT_UPGRADE_PLAN_WEIGHTS[it->botUpgradePlan++];
+			it->botUpgradeFocus = (i8)(RandUint() % 2);
+			LOG("Upgrade :: %ls plan %d focus slot %d", it->name.data(), (i32)it->botUpgradePlan, (i32)it->botUpgradeFocus);
+		}
+		for(i32 tries = 0; tries < MEASURED_BOT_SKILL_FIRST_UPGRADES * 3 && it->skillPoints > 0; tries++) {
 			const i32 turn = it->botUpgradeTurn++;
-			const i32 slot = turn < MEASURED_BOT_SKILL_FIRST_UPGRADES ? turn % 2 : BOT_UPGRADE_ORDER[(turn - MEASURED_BOT_SKILL_FIRST_UPGRADES) % ARRAY_COUNT(BOT_UPGRADE_ORDER)];
+			i32 slot = turn < MEASURED_BOT_SKILL_FIRST_UPGRADES ? turn % 2 : BOT_UPGRADE_ORDER[(turn - MEASURED_BOT_SKILL_FIRST_UPGRADES) % ARRAY_COUNT(BOT_UPGRADE_ORDER)];
+			if(it->botUpgradePlan == 1) {
+				const i32 stage = turn / MEASURED_BOT_SKILL_FIRST_UPGRADES;
+				slot = stage == 0 ? it->botUpgradeFocus : stage == 1 ? SKILL_UPGRADE_SLOT_ULTIMATE : stage == 2 ? 1 - it->botUpgradeFocus : BOT_UPGRADE_ORDER[turn % ARRAY_COUNT(BOT_UPGRADE_ORDER)];
+			}
+			else if(it->botUpgradePlan == 2) slot = BOT_UPGRADE_ORDER[turn % ARRAY_COUNT(BOT_UPGRADE_ORDER)];
 			if(UpgradeSkillSlot(*it, slot)) break;
 		}
 	}
