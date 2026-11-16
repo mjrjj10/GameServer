@@ -1004,7 +1004,7 @@ void World::SpawnPendingRemotes()
 			case ActionCommand::TargetPreset::POS_TFF_1_800_1000: {
 				atAimedPoint = glm::length(vec2(pr->castPos)) > 1.0f;
 				const vec3 base = glm::length(vec2(pr->castPos)) > 1.0f ? pr->castPos : owner.body->GetWorldPos();
-				pos = vec3(vec2(base) + dir * pr->offsetFront + Perp(dir) * pr->offsetSide, owner.body->GetWorldPos().z);
+				pos = vec3(vec2(base) + dir * (pr->offsetFront + (remote && remote->maxSpeed <= 0 && remote->initSpeed <= 0 && remote->angle <= 0 && (remote->boundType == Remote::BoundType::E_BOUND_BOX || remote->boundType == Remote::BoundType::E_BOUND_SPHERE) ? offsetY : 0.0f)) + Perp(dir) * pr->offsetSide, owner.body->GetWorldPos().z);
 			} break;
 			case ActionCommand::TargetPreset::CURRENT_FFF: {
 				const ActorMaster* targetMaster = pr->target != ActorUID::INVALID ? FindMasterActor(pr->target) : nullptr;
