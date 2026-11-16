@@ -500,6 +500,7 @@ struct Replication
 	void SendCooltimeReset(ClientHandle clientHd, ActorUID characterUID, Slice<const i32> coolTimeIDs, u32 leftMs = 1, u32 totalMs = 1);
 	void SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap = 1, f32 scale = 1.0f, f32 nominalDist = -1.0f, bool withGraph = true, bool refresh = false, u8 customValue = 0);
 	void SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID);
+	bool linkMirror = true;
 	struct RemoteDamage
 	{
 		u32 remoteID = 0;
@@ -523,7 +524,7 @@ struct Replication
 	void SendMasterGroupingEffect(ClientHandle clientHd, ActorUID masterUID, i32 index, ClassType classType, bool activate);
 	void SendTargetGraphMoveToAll(ActorUID casterUID, const vec3& casterPos, ActorUID targetUID, const vec3& targetPos, ActionStateID actionID);
 	void SendEvadeToAll(ActorUID attackerUID, ActorUID defenderUID, u32 remoteID, RemoteIdx remoteDoc, ClientHandle seedOwnerHd);
-	void SendModifyStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, u8 overlap, u8 customValue);
+	void SendModifyStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, u8 overlap, u8 customValue, ActorUID replaceCasterUID = ActorUID::INVALID);
 	void SendAttackActionToOthers(ClientHandle senderHd, ActorUID actorUID, f32 mxmYaw, ActionStateID state);
 	void SendActionStateOnlyToAll(ActorUID actorUID, ActionStateID state, f32 mxmYaw, bool move, const vec3& startPos, const vec3& endPos, f32 durationSec);
 	void SendDestroyRemoteToAll(u32 remoteID);

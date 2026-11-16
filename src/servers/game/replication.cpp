@@ -2699,7 +2699,7 @@ void Replication::SendEvadeToAll(ActorUID attackerUID, ActorUID defenderUID, u32
 	}
 }
 
-void Replication::SendModifyStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, u8 overlap, u8 customValue)
+void Replication::SendModifyStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, u8 overlap, u8 customValue, ActorUID replaceCasterUID)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
@@ -2712,7 +2712,8 @@ void Replication::SendModifyStatusToAll(i32 statusID, ActorUID targetUID, ActorU
 		packet.Write<u8>(1);
 		packet.Write<u32>((u32)targetLocal);
 		packet.Write<u32>(casterLocal != LocalActorID::INVALID ? (u32)casterLocal : 0);
-		packet.Write<u32>(0);
+		const LocalActorID replaceLocal = replaceCasterUID != ActorUID::INVALID ? GetLocalActorID(clientHd, replaceCasterUID) : LocalActorID::INVALID;
+		packet.Write<u32>(replaceLocal != LocalActorID::INVALID ? (u32)replaceLocal : 0);
 		packet.Write<u8>(overlap);
 		packet.Write<u8>(customValue);
 		packet.Write<u8>(0);
@@ -2811,6 +2812,14 @@ void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID 
 		packet.Write<f32>(0);
 		SendPacket(clientHd, packet);
 	}
+	if(linkMirror && casterUID != ActorUID::INVALID && casterUID != targetUID) {
+		const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
+		if(info && info->type == StatusType::LINK) {
+			linkMirror = false;
+			SendAddStatusToAll(statusID, casterUID, targetUID, durationSec, from, to, graphDuration, overlap, scale, nominalDist, false, refresh, customValue);
+			linkMirror = true;
+		}
+	}
 }
 
 void Replication::SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID)
@@ -2827,6 +2836,14 @@ void Replication::SendRemoveStatusToAll(i32 statusID, ActorUID targetUID, ActorU
 		packet.targetID = (u32)targetLocal;
 		packet.casterID = casterLocal != LocalActorID::INVALID ? (u32)casterLocal : 0;
 		SendPacket(clientHd, packet);
+	}
+	if(linkMirror && casterUID != ActorUID::INVALID && casterUID != targetUID) {
+		const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
+		if(info && info->type == StatusType::LINK) {
+			linkMirror = false;
+			SendRemoveStatusToAll(statusID, casterUID, targetUID);
+			linkMirror = true;
+		}
 	}
 }
 

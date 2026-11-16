@@ -1338,6 +1338,18 @@ void World::SwapMainMaster(Player& p)
 			replication->SendAddStatusToAll(st->statusID, newMain, st->casterUID, remain, at, at, 0, st->overlap, 1.0f, -1.0f, false, false);
 		}
 	}
+	foreach(st, activeStatuses) {
+		if(st->casterUID != oldMain || st->targetIndex == p.index || !st->info || st->info->type != StatusType::LINK || localTime >= st->until) continue;
+		const f32 remain = MIN((f32)TimeDiffSec(TimeDiff(localTime, st->until)), STATUS_INFINITE_DURATION_SEC);
+		const vec3 at = p.body ? p.body->GetWorldPos() : vec3(0);
+		replication->linkMirror = false;
+		replication->SendModifyStatusToAll(st->statusID, st->targetUID, oldMain, (u8)MAX(st->overlap, 1), (u8)MAX(st->custom, 0), newMain);
+		replication->SendRemoveStatusToAll(st->statusID, oldMain, st->targetUID);
+		replication->SendAddStatusToAll(st->statusID, newMain, st->targetUID, remain, at, at, 0, st->overlap, 1.0f, -1.0f, false, false);
+		replication->linkMirror = true;
+		st->casterUID = newMain;
+		LOG("Tag :: %ls link %d on %d now cast by the new master", p.name.data(), st->statusID, (i32)st->targetUID);
+	}
 }
 
 void World::RetargetMonsters(ActorUID from, ActorUID to)
