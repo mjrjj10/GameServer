@@ -1524,6 +1524,7 @@ public:
 	enum EndKill { END_KILL_TOWER = 0, END_KILL_BOSS, END_KILL_MINION, END_KILL_NEUTRAL };
 	bool titanSaveAreasBuilt = false;
 	bool BotObjective(const Player& bot, vec2* goal);
+	bool BotItemGoal(const Player& bot, vec2* goal) const;
 	struct BotNavNode { vec3 pos; eastl::fixed_vector<u16,12,true> links; eastl::fixed_vector<u16,4,false> jumps; };
 	f32 BotJumpRise() const;
 	eastl::vector<BotNavNode> botNav;

@@ -99,6 +99,8 @@ bool World::BotReturnSkill(Player& bot)
 	if(bot.lastDamagedAt != Time::ZERO && TimeDiffSec(TimeDiff(bot.lastDamagedAt, localTime)) < MEASURED_BOT_RETURN_AFTER_DAMAGE_SEC) return false;
 	const vec3 pos = bot.body->GetWorldPos();
 	if(glm::length(vec2(pos) - vec2(bot.spawnPos)) <= content.BotConstant("BOTLOGIC_STRATEGY_CONST_KEY_IN_BASE_CAMP_RANGE")) return false;
+	vec2 item;
+	if(BotItemGoal(bot, &item)) return false;
 	bot.botReturnReady = TimeAdd(localTime, TimeMsToTime(content.BotConstant("BOTLOGIC_STRATEGY_CONST_KEY_USE_RETURN_SKILL_STRATEGY_DISABLE_TIME") * 1000.0));
 	bot.input.moveTo = pos;
 	LOG("BotSkill :: %ls uses return skill %d at %.0f from base", bot.name.data(), skill, glm::length(vec2(pos) - vec2(bot.spawnPos)));
@@ -285,6 +287,7 @@ static const f32 BOT_REPATH_DIST = 150.0f;
 static const f32 BOT_STUCK_DIST = 20.0f;
 static const f32 BOT_ROAM_STEP = 800.0f;
 static const f32 BOT_PIECE_SEARCH_RANGE = 4000.0f;
+static const f32 MEASURED_BOT_ITEM_REACH = 1500.0f;
 static const i32 BOT_TITAN_PIECE_ITEM = 130100904;
 
 static const f32 BOT_FARM_RANGE = 4000.0f;
@@ -488,6 +491,19 @@ bool World::BotObjective(const Player& bot, vec2* goal)
 	bool found = false;
 	foreach_const(g, groundItems) {
 		if(g->itemIndex != BOT_TITAN_PIECE_ITEM) continue;
+		const f32 d = glm::length(vec2(g->pos) - here);
+		if(d < best) { best = d; *goal = vec2(g->pos); found = true; }
+	}
+	return found;
+}
+
+bool World::BotItemGoal(const Player& bot, vec2* goal) const
+{
+	const vec2 here = vec2(bot.body->GetWorldPos());
+	f32 best = MEASURED_BOT_ITEM_REACH;
+	bool found = false;
+	foreach_const(g, groundItems) {
+		if(g->owner >= 0 || g->itemIndex == BOT_TITAN_PIECE_ITEM || (g->team >= 0 && g->team != (i32)bot.team)) continue;
 		const f32 d = glm::length(vec2(g->pos) - here);
 		if(d < best) { best = d; *goal = vec2(g->pos); found = true; }
 	}
@@ -895,7 +911,8 @@ void World::UpdateBotMovement()
 		}
 		const bool titanNav = map && map->ingameLevels;
 		vec2 objective;
-		const bool objectiveGoal = titanNav && (BotRetreat(bot, &objective) || BotObjective(bot, &objective));
+		const bool retreatGoal = titanNav && BotRetreat(bot, &objective);
+		const bool objectiveGoal = titanNav && (BotItemGoal(bot, &objective) || retreatGoal || BotObjective(bot, &objective));
 		const f32 engage = occupyGoal || objectiveGoal ? HYP_BOT_OCCUPY_FIGHT_RANGE : (titanNav ? HYP_BOT_TITAN_ENGAGE_RANGE : BOT_ENGAGE_RANGE);
 		bool fighting = false;
 		bool farm = false;
