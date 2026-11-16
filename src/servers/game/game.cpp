@@ -1125,6 +1125,30 @@ void Game::OnPlayerDisconnect(ClientHandle clientHd)
 	replication.OnPlayerDisconnect(clientHd);
 }
 
+void Game::OnPlayerReconnect(ClientHandle clientHd, AccountUID accountUID)
+{
+	foreach(it, playerList) {
+		if(it->accountUID != accountUID) continue;
+		const ClientHandle oldHd = it->clientHd;
+		World::Player& player = world.GetPlayer(it->playerIndex);
+		if(oldHd != ClientHandle::INVALID) {
+			replication.OnPlayerDisconnect(oldHd);
+			playerMap.erase(oldHd);
+		}
+		it->clientHd = clientHd;
+		it->ready = false;
+		it->gameStartSent = false;
+		player.clientHd = clientHd;
+		playerMap.emplace(clientHd, it);
+		replication.OnPlayerConnect(clientHd, player.index);
+		replication.PlayerRegisterMasterActor(clientHd, player.Main().UID, player.mainClass);
+		replication.PlayerRegisterMasterActor(clientHd, player.Sub().UID, player.subClass);
+		LOG("[client%x] Game :: %ls reconnected (previous client%x)", clientHd, player.name.data(), oldHd);
+		return;
+	}
+	WARN("[client%x] Game :: reconnecting account %u is not in this game", clientHd, accountUID);
+}
+
 void Game::OnPlayerReadyToLoad(ClientHandle clientHd)
 {
 	replication.SendLoadPvpMap(clientHd, replication.mapIndex);

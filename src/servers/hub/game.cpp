@@ -209,8 +209,23 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 
 	LOG("[client%x] HubGame :: account %llu connected (%ls)", clientHd, (u64)accountData->UID, accountData->nickname.data());
 	SortieUID resultSortieUID = SortieUID::INVALID;
-	const bool returning = TakeAccountReturningFromGame(accountData->nickname, &resultSortieUID);
-	if(returning && eastl::find(endedSorties.begin(), endedSorties.end(), resultSortieUID) == endedSorties.end()) LOG("[client%x] HubGame :: back while game %llu is still running, normal lobby", clientHd, (u64)resultSortieUID);
+	AccountUID gameAccountUID = AccountUID::INVALID;
+	const bool returning = TakeAccountReturningFromGame(accountData->nickname, &resultSortieUID, &gameAccountUID);
+	if(returning && eastl::find(endedSorties.begin(), endedSorties.end(), resultSortieUID) == endedSorties.end()) {
+		LOG("[client%x] HubGame :: back while game %llu is still running, offering to return", clientHd, (u64)resultSortieUID);
+		playerMap[userID]->suspendedSortieUID = resultSortieUID;
+		playerMap[userID]->suspendedAccountUID = gameAccountUID;
+		foreach_const(r, sortieRosters) {
+			if(r->sortieUID != resultSortieUID) continue;
+			Sv::SN_SuspendedToCity suspended;
+			suspended.stageIdx = (u32)r->stage;
+			suspended.gameType = (u8)r->gameType;
+			suspended.gameDefType = (u8)r->gameDefinition;
+			replication.server->SendPacket(clientHd, suspended);
+			break;
+		}
+		if(Config().DevAutoReturnToGame) OnReturnToGame(clientHd);
+	}
 	else if(returning) {
 		auto pveAccount = GetAccountManager().accountMap.find(accountData->UID);
 		if(pveAccount != GetAccountManager().accountMap.end() && pveAccount->second->pveFailedReturn) {
@@ -506,6 +521,32 @@ void HubGame::OnPlayerJukeboxQueueSong(ClientHandle clientHd, SongID songID)
 void HubGame::OnPlayerReadyToLoad(ClientHandle clientHd)
 {
 	replication.SendLoadLobby(clientHd, MapIndex::LOBBY_NORMAL, true);
+}
+
+void HubGame::OnReturnToGame(ClientHandle clientHd)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	ASSERT(playerAccountData[userID]);
+	const Account& acc = *playerAccountData[userID];
+	const SortieUID sortieUID = playerMap[userID]->suspendedSortieUID;
+	eastl::array<u8,4> ip;
+	u16 port = 0;
+	if(sortieUID == SortieUID::INVALID || eastl::find(endedSorties.begin(), endedSorties.end(), sortieUID) != endedSorties.end() || !FindSortieGameServer(sortieUID, &ip, &port)) {
+		LOG("[client%x] HubGame :: %ls cannot return to game %llu", clientHd, acc.nickname.data(), (u64)sortieUID);
+		return;
+	}
+	const AccountUID gameAccountUID = playerMap[userID]->suspendedAccountUID;
+	playerMap[userID]->suspendedSortieUID = SortieUID::INVALID;
+	PacketWriter<Sv::SN_DoConnectGameServer> packet;
+	packet.Write<u16>(port);
+	packet.Write(ip);
+	packet.Write<i32>((i32)((u64)sortieUID & 0xFFFFFFFF));
+	packet.Write<u32>(0x0);
+	packet.WriteStringObj(acc.nickname.data(), acc.nickname.size());
+	packet.Write<u32>(In::ProduceInstantKey(gameAccountUID, sortieUID));
+	replication.server->SendPacket(clientHd, packet);
+	MarkAccountSentToGame(acc.nickname, sortieUID, gameAccountUID);
+	LOG("[client%x] HubGame :: %ls returns to game %llu", clientHd, acc.nickname.data(), (u64)sortieUID);
 }
 
 void HubGame::OnReturnToCity(ClientHandle clientHd)

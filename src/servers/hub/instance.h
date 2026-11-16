@@ -30,8 +30,10 @@ struct HubInstance
 	void OnMatchmakerPacket(const NetHeader& header, const u8* packetData);
 };
 
-void MarkAccountSentToGame(const WideString& nickname, SortieUID sortieUID);
-bool TakeAccountReturningFromGame(const WideString& nickname, SortieUID* sortieUID);
+void MarkAccountSentToGame(const WideString& nickname, SortieUID sortieUID, AccountUID gameAccountUID);
+void MarkSortieGameServer(SortieUID sortieUID, const eastl::array<u8,4>& ip, u16 port);
+bool FindSortieGameServer(SortieUID sortieUID, eastl::array<u8,4>* ip, u16* port);
+bool TakeAccountReturningFromGame(const WideString& nickname, SortieUID* sortieUID, AccountUID* gameAccountUID);
 
 struct RoomInstance
 {

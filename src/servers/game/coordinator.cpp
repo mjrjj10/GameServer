@@ -143,6 +143,11 @@ void InstancePool::Lane::Update()
 	}
 
 	foreach_const(e, connectedList) {
+		if(instancePvpMap.find(e->sortieUID) == instancePvpMap.end()) {
+			LOG("[Lane_%d][client%x] sortie %llu no longer exists, dropping the client", laneIndex, e->clientHd, e->sortieUID);
+			server->DisconnectClient(e->clientHd);
+			continue;
+		}
 		clientList.push_back();
 		auto cit = --clientList.end();
 		Client& client = *cit;
@@ -613,7 +618,18 @@ void Coordinator::HandlePacket_CQ_AuthenticateGameServer(ClientHandle clientHd, 
 		if(e->instantKey == instantKey) {
 			accountUID = e->accountUID;
 			sortieUID = e->sortieUID;
+			if(joinedClientList.full()) joinedClientList.erase(joinedClientList.begin());
+			joinedClientList.push_back(*e);
 			pendingClientQueue.erase(e);
+			break;
+		}
+	}
+	if(accountUID == AccountUID::INVALID) {
+		foreach_const(e, joinedClientList) {
+			if(e->instantKey != instantKey) continue;
+			accountUID = e->accountUID;
+			sortieUID = e->sortieUID;
+			LOG("[client%x] Client returns to its running game (accountUID=%u sortieUID=%llu)", clientHd, accountUID, sortieUID);
 			break;
 		}
 	}

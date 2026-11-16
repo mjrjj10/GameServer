@@ -103,7 +103,7 @@ struct World
 
 		const u32 index;
 		const UserID userID;
-		const ClientHandle clientHd;
+		ClientHandle clientHd;
 		const WideString name;
 		const WideString guildTag;
 		const u8 team;

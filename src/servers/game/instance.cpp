@@ -26,6 +26,13 @@ void PvpInstance::Update(Time localTime_)
 
 void PvpInstance::OnClientsConnected(const eastl::pair<ClientHandle,AccountUID>* clientList, const i32 count)
 {
+	if(phase == Phase::PlayingGame) {
+		for(int ci = 0; ci < count; ci++) {
+			for(int p = 0; p < gameInfo.playerCount; p++) if(gameInfo.players[p].accountUID == clientList[ci].second) clientAccountLink[p] = clientList[ci].first;
+			game.OnPlayerReconnect(clientList[ci].first, clientList[ci].second);
+		}
+		return;
+	}
 	for(int ci = 0; ci < count; ci++) {
 		bool found = false;
 		for(int p = 0; p < gameInfo.playerCount; p++) {

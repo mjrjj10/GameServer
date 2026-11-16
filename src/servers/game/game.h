@@ -25,7 +25,7 @@ struct Game
 
 	struct Player
 	{
-		const ClientHandle clientHd;
+		ClientHandle clientHd;
 		const AccountUID accountUID;
 		const WideString& name;
 		const u32 playerIndex;
@@ -101,6 +101,7 @@ struct Game
 	bool LoadMap();
 
 	void OnPlayerDisconnect(ClientHandle clientHd);
+	void OnPlayerReconnect(ClientHandle clientHd, AccountUID accountUID);
 	void OnPlayerReadyToLoad(ClientHandle clientHd);
 	void OnPlayerGetCharacterInfo(ClientHandle clientHd, ActorUID actorUID);
 	void OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, const vec2& dir, const RotationHumanoid& rot, f32 speed, ActionStateID action, f32 clientTime, bool force = false);

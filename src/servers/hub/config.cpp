@@ -26,6 +26,7 @@ bool CConfigHub::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "ListenPort=%d", &ListenPort) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevMode=%d", &DevMode) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevQuickConnect=%d", &DevQuickConnect) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevAutoReturnToGame=%d", &DevAutoReturnToGame) == 1) return true;
 	if(EA::StdC::Sscanf(line, "TraceNetwork=%d", &TraceNetwork) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevShowcase=%d", &DevShowcase) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevAutoQueueStage=%d", &DevAutoQueueStage) == 1) return true;
@@ -111,6 +112,7 @@ bool CConfigHub::SaveConfigFile()
 	out.append_sprintf("ListenPort=%d\n", ListenPort);
 	out.append_sprintf("DevMode=%d\n", DevMode);
 	out.append_sprintf("DevQuickConnect=%d\n", DevQuickConnect);
+	out.append_sprintf("DevAutoReturnToGame=%d\n", DevAutoReturnToGame);
 	out.append_sprintf("TraceNetwork=%d\n", TraceNetwork);
 	out.append_sprintf("LobbyMap=%d\n", LobbyMap);
 	out.append_sprintf("DevDailyAreaEvent=%d\n", DevDailyAreaEvent);
@@ -139,6 +141,7 @@ void CConfigHub::Print() const
 	LOG("	ListenPort=%d", ListenPort);
 	LOG("	DevMode=%d", DevMode);
 	LOG("	DevQuickConnect=%d", DevQuickConnect);
+	LOG("	DevAutoReturnToGame=%d", DevAutoReturnToGame);
 	LOG("	TraceNetwork=%d", TraceNetwork);
 	LOG("	LobbyMap=%d", LobbyMap);
 	LOG("	DevDailyAreaEvent=%d", DevDailyAreaEvent);

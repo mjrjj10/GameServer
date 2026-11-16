@@ -168,6 +168,7 @@ void Replication::FramePushSkillExec(const SkillExec& skillExec)
 void Replication::OnPlayerConnect(ClientHandle clientHd, u32 playerIndex)
 {
 	playerMap[clientHd] = playerIndex;
+	playerState[playerIndex].prev = PlayerState::DISCONNECTED;
 	playerState[playerIndex].cur = PlayerState::CONNECTED;
 	playerLocalInfo[playerIndex].Reset();
 	clientHandle[playerIndex] = clientHd;

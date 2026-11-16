@@ -6,6 +6,7 @@ struct CConfigHub
 	i32 ListenPort = 11900;
 	i32 DevMode = false;
 	i32 DevQuickConnect = false;
+	i32 DevAutoReturnToGame = false;
 	i32 TraceNetwork = false;
 	i32 DevShowcase = false;
 	i32 DevAutoQueue = 0;

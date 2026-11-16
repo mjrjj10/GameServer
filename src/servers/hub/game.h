@@ -29,6 +29,8 @@ struct HubGame
 		PartyUID partyUID = PartyUID::INVALID;
 		SortieUID sortieUID = SortieUID::INVALID;
 		SortieUID resultSortieUID = SortieUID::INVALID;
+		SortieUID suspendedSortieUID = SortieUID::INVALID;
+		AccountUID suspendedAccountUID = AccountUID::INVALID;
 
 		Player(): clientHd(ClientHandle::INVALID) {}
 
@@ -126,6 +128,7 @@ struct HubGame
 	void StartNextSweepStage(ClientHandle clientHd);
 	i32 stageSweepDone = 0;
 	void OnReturnToCity(ClientHandle clientHd);
+	void OnReturnToGame(ClientHandle clientHd);
 	void BroadcastPlayerStateInTown(i32 userID, i8 state, const u8* modes, i32 modeCount);
 	void OnPraise(ClientHandle clientHd, const wchar* nickname, i32 nicknameLen);
 	void OnHonor(ClientHandle clientHd, const WideString& nickname);

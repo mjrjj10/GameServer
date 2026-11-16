@@ -58,6 +58,7 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CN_ReadyToLoadGameMap);
 		HANDLE_CASE(CN_EnterCityScene);
 		HANDLE_CASE(CQ_ReturnToCity);
+		HANDLE_CASE(CQ_ReturnToGame);
 		HANDLE_CASE(CQ_PartyInvite);
 		HANDLE_CASE(CQ_PartyInviteAccept);
 		HANDLE_CASE(CQ_BreakUpPartyRoom);
@@ -352,6 +353,12 @@ void HubPacketHandler::HandlePacket_CQ_ReturnToCity(ClientHandle clientHd, const
 {
 	NT_LOG("[client%x] Client :: CQ_ReturnToCity ::", clientHd);
 	game->OnReturnToCity(clientHd);
+}
+
+void HubPacketHandler::HandlePacket_CQ_ReturnToGame(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	NT_LOG("[client%x] Client :: CQ_ReturnToGame ::", clientHd);
+	game->OnReturnToGame(clientHd);
 }
 
 void HubPacketHandler::HandlePacket_CQ_PartyInvite(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

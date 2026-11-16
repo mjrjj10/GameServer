@@ -109,28 +109,64 @@ struct SentToGame
 {
 	WideString nickname;
 	SortieUID sortieUID;
+	AccountUID gameAccountUID;
 };
 static eastl::fixed_vector<SentToGame,64,true> g_sentToGame;
 
-void MarkAccountSentToGame(const WideString& nickname, SortieUID sortieUID)
+void MarkAccountSentToGame(const WideString& nickname, SortieUID sortieUID, AccountUID gameAccountUID)
 {
 	std::lock_guard<std::mutex> lock(g_sentToGameMutex);
 	foreach(it, g_sentToGame) {
 		if(it->nickname != nickname) continue;
 		it->sortieUID = sortieUID;
+		it->gameAccountUID = gameAccountUID;
 		LOG("[Room] %ls sent to a game server", nickname.data());
 		return;
 	}
-	g_sentToGame.push_back({ nickname, sortieUID });
+	g_sentToGame.push_back({ nickname, sortieUID, gameAccountUID });
 	LOG("[Room] %ls sent to a game server", nickname.data());
 }
 
-bool TakeAccountReturningFromGame(const WideString& nickname, SortieUID* sortieUID)
+struct SortieGameServer
+{
+	SortieUID sortieUID;
+	eastl::array<u8,4> ip;
+	u16 port;
+};
+static eastl::fixed_vector<SortieGameServer,64,true> g_sortieGameServers;
+
+void MarkSortieGameServer(SortieUID sortieUID, const eastl::array<u8,4>& ip, u16 port)
+{
+	std::lock_guard<std::mutex> lock(g_sentToGameMutex);
+	foreach(it, g_sortieGameServers) {
+		if(it->sortieUID != sortieUID) continue;
+		it->ip = ip;
+		it->port = port;
+		return;
+	}
+	if(g_sortieGameServers.size() >= 64) g_sortieGameServers.erase(g_sortieGameServers.begin());
+	g_sortieGameServers.push_back({ sortieUID, ip, port });
+}
+
+bool FindSortieGameServer(SortieUID sortieUID, eastl::array<u8,4>* ip, u16* port)
+{
+	std::lock_guard<std::mutex> lock(g_sentToGameMutex);
+	foreach_const(it, g_sortieGameServers) {
+		if(it->sortieUID != sortieUID) continue;
+		*ip = it->ip;
+		*port = it->port;
+		return true;
+	}
+	return false;
+}
+
+bool TakeAccountReturningFromGame(const WideString& nickname, SortieUID* sortieUID, AccountUID* gameAccountUID)
 {
 	std::lock_guard<std::mutex> lock(g_sentToGameMutex);
 	foreach(it, g_sentToGame) {
 		if(it->nickname != nickname) continue;
 		*sortieUID = it->sortieUID;
+		*gameAccountUID = it->gameAccountUID;
 		g_sentToGame.erase(it);
 		return true;
 	}
@@ -768,7 +804,8 @@ void RoomInstance::Update(Time localTime_)
 				packet.WriteStringObj(user.name.data(), user.name.size());
 				packet.Write<u32>(In::ProduceInstantKey(user.accountUID, sortieUID));
 				SendPacket(user.clientHd, packet);
-				MarkAccountSentToGame(user.name, sortieUID);
+				MarkAccountSentToGame(user.name, sortieUID, user.accountUID);
+				MarkSortieGameServer(sortieUID, matchServerIp, matchServerPort);
 			}
 		}
 
