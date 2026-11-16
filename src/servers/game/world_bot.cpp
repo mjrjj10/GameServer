@@ -271,7 +271,13 @@ void World::UpdateBotSkills()
 		i32 next = ComboSkillFor(bot, skill);
 		if(next == 0) next = content.GetNextComboSkill(skill);
 		const i32 windowMs = next != 0 && next != skill ? content.GetComboDurationMs(next) : 0;
-		bot.botComboSkill = windowMs > 0 ? SkillID(next) : SkillID::INVALID;
+		const i32 autoMs = windowMs > 0 ? content.GetComboAutoCastMs(next) : 0;
+		if(autoMs > 0) {
+			bot.comboSkill = SkillID(next);
+			bot.comboCastPos = tpos;
+			bot.comboAutoAt = TimeAdd(localTime, TimeMsToTime((f64)autoMs));
+		}
+		bot.botComboSkill = windowMs > 0 && autoMs <= 0 ? SkillID(next) : SkillID::INVALID;
 		bot.botComboUntil = windowMs > 0 ? TimeAdd(localTime, TimeMsToTime((f64)windowMs)) : Time::ZERO;
 		bot.botComboClass = bot.Main().classType;
 	}

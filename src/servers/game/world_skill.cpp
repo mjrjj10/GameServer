@@ -944,7 +944,7 @@ void World::UpdateCasts()
 		}
 		if(it->comboAutoAt != Time::ZERO && localTime >= it->comboAutoAt) {
 			it->comboAutoAt = Time::ZERO;
-			if(it->comboSlot >= 0 && it->comboSkill != SkillID::INVALID && !it->dead) {
+			if((it->comboSlot >= 0 || it->clientHd == ClientHandle::INVALID) && it->comboSkill != SkillID::INVALID && !it->dead) {
 				const GameXmlContent::SkillInput* comboIn = GetGameXmlContent().FindSkillInput((i32)it->comboSkill);
 				const bool petToCaster = it->clientHd == ClientHandle::INVALID && comboIn && comboIn->petCaster && comboIn->needsClick && IsCarrying(*it);
 				const vec3 comboPos = petToCaster ? it->body->GetWorldPos() : it->comboCastPos;
