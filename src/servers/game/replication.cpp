@@ -660,12 +660,17 @@ void Replication::SendGroundItemTaken(ClientHandle clientHd, ActorUID takerUID, 
 
 void Replication::SendGroundItemTaken(ClientHandle clientHd, ActorUID takerUID, u32 itemUID, u32 itemISN)
 {
+	SendGroundItemAnswer(clientHd, takerUID, itemUID, itemISN);
+	SendGroundItemAnswer(clientHd, takerUID, itemUID, itemISN);
+}
+
+void Replication::SendGroundItemAnswer(ClientHandle clientHd, ActorUID takerUID, u32 itemUID, u32 itemISN)
+{
 	Sv::SA_GetGroundItem answer;
 	answer.playerID = (u32)GetLocalActorID(clientHd, takerUID);
 	answer.itemID = itemUID;
 	answer.itemISN = itemISN;
 	answer.nErrorType = 0;
-	SendPacket(clientHd, answer);
 	SendPacket(clientHd, answer);
 }
 
@@ -674,13 +679,14 @@ void Replication::SendPublicGroundItemTaken(ClientHandle takerHd, ActorUID taker
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
-		if(clientHd == takerHd) continue;
 		const LocalActorID local = GetLocalActorID(clientHd, takerUID);
 		if(local == LocalActorID::INVALID) continue;
+		if(clientHd == takerHd) SendGroundItemAnswer(clientHd, takerUID, itemUID, 0);
 		Sv::SN_GetPublicGroundItem notify;
 		notify.playerID = (u32)local;
 		notify.itemID = (GroundItemUID)itemUID;
 		SendPacket(clientHd, notify);
+		if(clientHd == takerHd) SendGroundItemAnswer(clientHd, takerUID, itemUID, 0);
 	}
 }
 

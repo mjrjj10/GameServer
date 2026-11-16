@@ -381,6 +381,7 @@ struct Replication
 	void SendItemUpdate(ClientHandle clientHd, const AccountItem& item, u32 reason);
 	void SendGroundItemTaken(ClientHandle clientHd, ActorUID takerUID, u32 itemUID);
 	void SendPublicGroundItemTaken(ClientHandle takerHd, ActorUID takerUID, u32 itemUID);
+	void SendGroundItemAnswer(ClientHandle clientHd, ActorUID takerUID, u32 itemUID, u32 itemISN);
 	void SendDestroyGroundItemToAll(u32 itemUID);
 	void SendClientLevelEventSeq(ClientHandle clientHd, i32 eventID);
 

@@ -1380,8 +1380,8 @@ bool World::TakeGroundItem(Player& player, u32 itemUID, GroundItem* taken)
 		foreach_const(a, info->statAdd) apply(a->type, a->value);
 		foreach_const(st, info->statuses) ApplyStatus(player, player, *st);
 	}
-	if(player.clientHd != ClientHandle::INVALID) replication->SendGroundItemTaken(player.clientHd, player.Main().UID, itemUID);
 	if(item.owner < 0) replication->SendPublicGroundItemTaken(player.clientHd, player.Main().UID, itemUID);
+	else if(player.clientHd != ClientHandle::INVALID) replication->SendGroundItemTaken(player.clientHd, player.Main().UID, itemUID);
 	LOG("GroundItem :: %ls takes item %d (tag %d)", player.name.data(), item.itemIndex, item.tagID);
 	if(item.itemIndex == TITAN_PIECE_ITEM) SetCarriedPieces(player, player.titanPieces + 1);
 	foreach_const(n, map->levelEvents) {
