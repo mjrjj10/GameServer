@@ -572,6 +572,20 @@ void World::TriggerSkillHitEvent(const RemoteInst& inst, Player& owner, ActorUID
 		owner.hitComboTarget = targetUID;
 		owner.hitComboAt = TimeAdd(localTime, TimeMsToTime((f64)comboMs));
 	}
+	else if(owner.clientHd == ClientHandle::INVALID && combo != 0 && combo != (i32)inst.skillID) {
+		const i32 windowMs = content.GetComboDurationMs(combo);
+		const i32 autoMs = windowMs > 0 ? content.GetComboBotAutoCastMs(combo) : 0;
+		if(autoMs > 0) {
+			owner.comboSkill = SkillID(combo);
+			owner.comboCastPos = targetPos;
+			owner.comboAutoAt = TimeAdd(localTime, TimeMsToTime((f64)autoMs));
+		}
+		else if(windowMs > 0) {
+			owner.botComboSkill = SkillID(combo);
+			owner.botComboUntil = TimeAdd(localTime, TimeMsToTime((f64)windowMs));
+			owner.botComboClass = owner.Main().classType;
+		}
+	}
 }
 
 void World::RemoteHitAlongPath(RemoteInst& inst)

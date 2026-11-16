@@ -270,8 +270,8 @@ void World::UpdateBotSkills()
 		PlayerCastSkill(bot, SkillID(skill), tpos, Slice<const ActorUID>(&targetUID, in && in->takesTarget ? 1 : 0), 0);
 		i32 next = ComboSkillFor(bot, skill);
 		if(next == 0) next = content.GetNextComboSkill(skill);
-		const i32 windowMs = next != 0 && next != skill ? content.GetComboDurationMs(next) : 0;
-		const i32 autoMs = windowMs > 0 ? content.GetComboAutoCastMs(next) : 0;
+		const i32 windowMs = next != 0 && next != skill && content.FindSkillHitEventRemote(skill) == 0 ? content.GetComboDurationMs(next) : 0;
+		const i32 autoMs = windowMs > 0 ? content.GetComboBotAutoCastMs(next) : 0;
 		if(autoMs > 0) {
 			bot.comboSkill = SkillID(next);
 			bot.comboCastPos = tpos;

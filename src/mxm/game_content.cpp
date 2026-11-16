@@ -4690,6 +4690,8 @@ bool GameXmlContent::LoadSkillCosts()
 				const bool afterCast = selectState && EA::StdC::Strcmp(selectState, "SKILL_TARGET_SELECT_STATE_AFTERCAST") == 0;
 				if(afterCast && pCombo->BoolAttribute("_AutoCasting")) comboAutoCastMs[skillID] = MAX(pCombo->IntAttribute("_ExecuteTimeMS"), 1);
 				const char* selectType = pComboTarget ? pComboTarget->Attribute("_SelectType") : nullptr;
+				const bool hitTarget = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_USE_HIT_EVENT_TARGET") == 0;
+				if(!hitTarget && pCombo->BoolAttribute("_AutoCasting")) comboBotAutoCastMs[skillID] = MAX(pCombo->IntAttribute("_ExecuteTimeMS"), 1);
 				if(selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_USE_HIT_EVENT_TARGET") == 0) hitTargetComboMs[skillID] = pCombo->BoolAttribute("_AutoCasting") ? MAX(pCombo->IntAttribute("_ExecuteTimeMS"), 1) : 0;
 				for(XMLElement* pC = pCombo->FirstChildElement("_CleanupStatus"); pC; pC = pC->NextSiblingElement("_CleanupStatus")) {
 					auto& list = comboCleanupStatuses[skillID];
