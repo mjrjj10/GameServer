@@ -2375,6 +2375,16 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			return true;
 		}
 
+		i32 tpBot = 0;
+		if(EA::StdC::Sscanf(msg, L"tpbot %d %f %f %f", &tpBot, &tpX, &tpY, &tpZ) == 4) {
+			foreach(b, world.players) {
+				if(b->clientHd != ClientHandle::INVALID || !b->body || b->dead || EA::StdC::Strcmp(b->name.data(), LFMT(L"Bot%d", tpBot)) != 0) continue;
+				world.TeleportPlayer(*b, vec3(tpX, tpY, tpZ), b->input.rot.bodyYaw);
+				LOG("Scenario :: Bot%d teleported to (%.0f, %.0f, %.0f)", tpBot, tpX, tpY, tpZ);
+			}
+			return true;
+		}
+
 		if(EA::StdC::Strcmp(msg, L"clear") == 0) {
 			world.stageCleared = true;
 			SendDbgMsg(clientHd, L"Stage cleared");

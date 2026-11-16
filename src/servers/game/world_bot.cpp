@@ -95,7 +95,9 @@ bool World::BotReturnSkill(Player& bot)
 {
 	const auto& content = GetGameXmlContent();
 	const i32 skill = (i32)bot.stageSkills[0];
-	if(skill <= 0 || skill != content.BotReturnSkill() || !bot.botRetreat || bot.titanForm >= 0 || bot.devGod || localTime < bot.botReturnReady) return false;
+	static const i32 HYP_BOT_TRAPPED_EPISODES = 3;
+	const bool trapped = bot.botStuckEpisodes >= HYP_BOT_TRAPPED_EPISODES && localTime < bot.botStuckAvoidUntil;
+	if(skill <= 0 || skill != content.BotReturnSkill() || !(bot.botRetreat || trapped) || bot.titanForm >= 0 || bot.devGod || localTime < bot.botReturnReady) return false;
 	if(bot.lastDamagedAt != Time::ZERO && TimeDiffSec(TimeDiff(bot.lastDamagedAt, localTime)) < MEASURED_BOT_RETURN_AFTER_DAMAGE_SEC) return false;
 	const vec3 pos = bot.body->GetWorldPos();
 	if(glm::length(vec2(pos) - vec2(bot.spawnPos)) <= content.BotConstant("BOTLOGIC_STRATEGY_CONST_KEY_IN_BASE_CAMP_RANGE")) return false;
@@ -103,7 +105,8 @@ bool World::BotReturnSkill(Player& bot)
 	if(BotItemGoal(bot, &item)) return false;
 	bot.botReturnReady = TimeAdd(localTime, TimeMsToTime(content.BotConstant("BOTLOGIC_STRATEGY_CONST_KEY_USE_RETURN_SKILL_STRATEGY_DISABLE_TIME") * 1000.0));
 	bot.input.moveTo = pos;
-	LOG("BotSkill :: %ls uses return skill %d at %.0f from base", bot.name.data(), skill, glm::length(vec2(pos) - vec2(bot.spawnPos)));
+	LOG("BotSkill :: %ls uses return skill %d at %.0f from base%s", bot.name.data(), skill, glm::length(vec2(pos) - vec2(bot.spawnPos)), trapped ? " (trapped)" : "");
+	bot.botStuckEpisodes = 0;
 	const ActorUID none = ActorUID::INVALID;
 	PlayerCastSkill(bot, SkillID(skill), pos, Slice<const ActorUID>(&none, (size_t)0), 0);
 	return true;
@@ -475,6 +478,10 @@ bool World::BotBossGoal(const Player& bot, vec2* goal)
 		}
 	}
 	if(!chosen) return false;
+	if(!BotShotClear(bot, chosen->pos)) {
+		*goal = vec2(chosen->pos);
+		return true;
+	}
 	const f32 range = WeaponIsMelee(bot) ? BOT_MELEE_RANGE : MIN(WeaponRange(bot) * BOT_RANGE_FRACTION, BOT_RANGED_MAX);
 	const vec2 away = here - vec2(chosen->pos);
 	const f32 len = glm::length(away);
@@ -688,7 +695,7 @@ void World::BotPlanRoute(Player& bot, const vec2& goal)
 	for(i32 n = 0; n < count; n++) {
 		const f32 d = glm::length(vec2(botNav[n].pos) - vec2(pos));
 		if(d < nearestDist) { nearestDist = d; nearest = n; }
-		if(d <= BOT_NAV_LINK_RANGE && BotSees(pos, botNav[n].pos) && BotWalkable(pos, botNav[n].pos)) { dist[n] = d; seen = true; }
+		if(d <= BOT_NAV_LINK_RANGE && BotSees(pos, botNav[n].pos) && BotWalkable(pos, botNav[n].pos) && (localTime >= bot.botRouteForceUntil || BotCanStepToward(bot, vec2(botNav[n].pos)))) { dist[n] = d; seen = true; }
 	}
 	if(!seen) dist[nearest] = nearestDist;
 	for(;;) {
@@ -715,7 +722,7 @@ void World::BotPlanRoute(Player& bot, const vec2& goal)
 		if(dist[n] >= 1e29f) continue;
 		const f32 d = glm::length(vec2(botNav[n].pos) - goal);
 		if(d < fallbackDist) { fallbackDist = d; fallback = n; }
-		if(d > BOT_NAV_LINK_RANGE || dist[n] + d >= lastCost || !BotSees(botNav[n].pos, goal3) || !BotWalkable(botNav[n].pos, goal3)) continue;
+		if(d > BOT_NAV_LINK_RANGE || dist[n] + d >= lastCost || BotPassesStuckSpot(bot, vec2(botNav[n].pos), goal) || !BotSees(botNav[n].pos, goal3) || !BotWalkable(botNav[n].pos, goal3)) continue;
 		lastCost = dist[n] + d;
 		last = n;
 	}
@@ -725,12 +732,42 @@ void World::BotPlanRoute(Player& bot, const vec2& goal)
 	for(i32 k = (i32)reversed.size() - 1; k >= 0 && !bot.botRoute.full(); k--) bot.botRoute.push_back(reversed[k]);
 }
 
+bool World::BotShotClear(const Player& bot, const vec3& aim)
+{
+	const vec3 pos = bot.body->GetWorldPos();
+	const f32 z = pos.z + BodyMidHeight(bot);
+	f32 dist = 0;
+	const PxRigidActor* wall = nullptr;
+	ActorDynamic* gate = nullptr;
+	return !RaycastShot(vec3(vec2(pos), z), vec3(vec2(aim), z), (i32)bot.team, &dist, &wall, &gate);
+}
+
+bool World::BotCanStepToward(Player& bot, const vec2& to)
+{
+	static const f32 HYP_BOT_STEP_PROBE = 100.0f;
+	static const f32 HYP_BOT_STEP_MIN_PROGRESS = 0.5f;
+	const vec2 here = vec2(bot.body->GetWorldPos());
+	const vec2 d = to - here;
+	const f32 len = glm::length(d);
+	if(len < 1.0f) return true;
+	const f32 probe = MIN(len, HYP_BOT_STEP_PROBE);
+	const vec2 dir = d / len;
+	const vec3 reach = physics.FindMovePos(bot.body, vec3(dir * probe, 0), 0.3f);
+	return glm::dot(vec2(reach) - here, dir) >= probe * HYP_BOT_STEP_MIN_PROGRESS;
+}
+
+bool World::BotPassesStuckSpot(const Player& bot, const vec2& from, const vec2& to) const
+{
+	static const f32 HYP_BOT_STUCK_SPOT_RADIUS = 120.0f;
+	return localTime < bot.botStuckAvoidUntil && SegmentPointDist2D(from, to, bot.botStuckPos) < HYP_BOT_STUCK_SPOT_RADIUS;
+}
+
 vec2 World::BotNavStep(Player& bot, const vec2& goal)
 {
 	if(!botNavBuilt) BuildBotNav();
 	const vec3 pos = bot.body->GetWorldPos();
 	const vec2 here = vec2(pos);
-	if(botNav.empty() || (localTime >= bot.botRouteForceUntil && BotSees(pos, vec3(goal, pos.z)) && BotWalkable(pos, vec3(goal, pos.z)))) {
+	if(botNav.empty() || (localTime >= bot.botRouteForceUntil && !BotPassesStuckSpot(bot, here, goal) && BotSees(pos, vec3(goal, pos.z)) && BotWalkable(pos, vec3(goal, pos.z)))) {
 		bot.botRoute.clear();
 		return goal;
 	}
@@ -1010,7 +1047,12 @@ void World::UpdateBotMovement()
 			static const i32 HYP_BOT_STUCK_ROUTE_CHECKS = 6;
 			static const f64 HYP_BOT_STUCK_ROUTE_MS = 5000.0;
 			if(titanNav && bot.botStillChecks >= HYP_BOT_STUCK_ROUTE_CHECKS && localTime >= bot.botRouteForceUntil) {
+				static const f64 HYP_BOT_STUCK_SPOT_MS = 20000.0;
 				bot.botRouteForceUntil = TimeAdd(localTime, TimeMsToTime(HYP_BOT_STUCK_ROUTE_MS));
+				static const f32 HYP_BOT_TRAP_SAME_SPOT = 300.0f;
+				bot.botStuckEpisodes = localTime < bot.botStuckAvoidUntil && glm::length(here - bot.botStuckPos) < HYP_BOT_TRAP_SAME_SPOT ? bot.botStuckEpisodes + 1 : 1;
+				bot.botStuckAvoidUntil = TimeAdd(localTime, TimeMsToTime(HYP_BOT_STUCK_SPOT_MS));
+				bot.botStuckPos = here;
 				eastl::fixed_string<char,128,false> free;
 				for(i32 k = 0; k < 8; k++) {
 					const vec2 d8 = vec2(cosf((f32)k * PI / 4.0f), sinf((f32)k * PI / 4.0f));
@@ -1541,7 +1583,7 @@ void World::UpdateBotCombat()
 			foreach_const(npc, actorNpcList) {
 				if(!NpcHittableBy(*npc, bot) || (IsStructure(*npc) && !BotSiegeOk(bot, *npc))) continue;
 				const f32 d = glm::length(vec2(npc->pos) - vec2(pos));
-				if(d < bestNpc) { bestNpc = d; best = d; aim = npc->pos; }
+				if(d < bestNpc && BotShotClear(bot, npc->pos)) { bestNpc = d; best = d; aim = npc->pos; }
 			}
 			if(bestNpc >= range) { BotIdleCharge(bot); continue; }
 		}

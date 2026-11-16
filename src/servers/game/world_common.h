@@ -142,3 +142,12 @@ static inline vec2 Perp(const vec2& v)
 {
 	return vec2(-v.y, v.x);
 }
+
+static inline f32 SegmentPointDist2D(const vec2& a, const vec2& b, const vec2& p)
+{
+	const vec2 ab = b - a;
+	const f32 len2 = glm::dot(ab, ab);
+	f32 t = len2 > 0 ? glm::dot(p - a, ab) / len2 : 0;
+	t = clamp(t, 0.0f, 1.0f);
+	return glm::length(p - (a + ab * t));
+}
