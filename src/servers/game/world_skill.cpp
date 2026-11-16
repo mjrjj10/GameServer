@@ -1195,7 +1195,9 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			if(cmd->status.removeAtEnd) {
 				i32 animId = 0, loop = 1;
 				foreach_const(st, action.anims) if(st->index == curAnim) { animId = st->animationId; loop = MAX(st->loop, 1); }
-				const f32 passLen = animId != 0 ? content.GetAniSeqTime(ActionClassName(player), animId) * (f32)loop : action.seqLength;
+				f32 wholeLen = 0;
+				if(animId == 0) foreach_const(st, action.anims) wholeLen += content.GetAniSeqTime(ActionClassName(player), st->animationId) * (f32)MAX(st->loop, 1);
+				const f32 passLen = animId != 0 ? content.GetAniSeqTime(ActionClassName(player), animId) * (f32)loop : MAX(action.seqLength, wholeLen);
 				f32 endAt = animPasses[pass].start + passLen;
 				if(cmd->status.removeAtEnd == (u8)ActionCommand::StatusEnd::ACTION) {
 					f32 total = 0;
