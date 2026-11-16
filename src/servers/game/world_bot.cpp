@@ -394,6 +394,9 @@ bool World::BotChiefGoal(const Player& bot, vec2* goal) const
 
 static const i32 MEASURED_COMPONENT_FIRST_MASTER_HIT_SEC[] = { 15, 24, 27, 232, 233, 278, 311, 313, 449, 569 };
 static const i32 MEASURED_KING_FIRST_MASTER_HIT_SEC[] = { 34, 46, 49, 78, 78, 132, 155, 166, 183, 233 };
+static const i32 MEASURED_ROBOT_BUFF_FIRST_MASTER_HIT_SEC[] = { 3, 6, 13, 21, 24, 37, 51, 59, 72, 93 };
+static const i32 MEASURED_ROBOT_EXP_FIRST_MASTER_HIT_SEC[] = { 1, 2, 10, 20, 30, 57, 82, 144, 255, 387 };
+static const i32 MEASURED_ROBOT_BUFF2_FIRST_MASTER_HIT_SEC[] = { 1, 8, 13, 14, 23, 31, 48, 73, 84, 115 };
 struct BotBossRule
 {
 	i32 docID;
@@ -404,12 +407,17 @@ struct BotBossRule
 static const BotBossRule MEASURED_BOT_BOSS_RULES[] = {
 	{ 105001402, MEASURED_COMPONENT_FIRST_MASTER_HIT_SEC, (i32)ARRAY_COUNT(MEASURED_COMPONENT_FIRST_MASTER_HIT_SEC), 1 },
 	{ 105001040, MEASURED_KING_FIRST_MASTER_HIT_SEC, (i32)ARRAY_COUNT(MEASURED_KING_FIRST_MASTER_HIT_SEC), 3 },
+	{ 105001400, MEASURED_ROBOT_BUFF_FIRST_MASTER_HIT_SEC, (i32)ARRAY_COUNT(MEASURED_ROBOT_BUFF_FIRST_MASTER_HIT_SEC), 1 },
+	{ 105001401, MEASURED_ROBOT_EXP_FIRST_MASTER_HIT_SEC, (i32)ARRAY_COUNT(MEASURED_ROBOT_EXP_FIRST_MASTER_HIT_SEC), 1 },
+	{ 105001403, MEASURED_ROBOT_BUFF2_FIRST_MASTER_HIT_SEC, (i32)ARRAY_COUNT(MEASURED_ROBOT_BUFF2_FIRST_MASTER_HIT_SEC), 2 },
 };
 
 bool World::BotBossGoal(const Player& bot, vec2* goal)
 {
 	if(bot.titanForm >= 0) return false;
 	const vec2 here = vec2(bot.body->GetWorldPos());
+	const ActorNpc* chosen = nullptr;
+	f32 chosenDist = 0.0f;
 	foreach(npc, actorNpcList) {
 		if(!npc->monsterAi || npc->faction != Faction::ORANGE || npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
 		const BotBossRule* rule = nullptr;
@@ -429,13 +437,17 @@ bool World::BotBossGoal(const Player& bot, vec2* goal)
 			if(glm::length(at - vec2(p->body->GetWorldPos())) < mine) closer++;
 		}
 		if(closer >= rule->masters) continue;
-		const f32 range = WeaponIsMelee(bot) ? BOT_MELEE_RANGE : MIN(WeaponRange(bot) * BOT_RANGE_FRACTION, BOT_RANGED_MAX);
-		const vec2 away = here - at;
-		const f32 len = glm::length(away);
-		*goal = at + (len > 1.0f ? away / len : vec2(1, 0)) * MIN(range, len);
-		return true;
+		if(!chosen || mine < chosenDist) {
+			chosen = &*npc;
+			chosenDist = mine;
+		}
 	}
-	return false;
+	if(!chosen) return false;
+	const f32 range = WeaponIsMelee(bot) ? BOT_MELEE_RANGE : MIN(WeaponRange(bot) * BOT_RANGE_FRACTION, BOT_RANGED_MAX);
+	const vec2 away = here - vec2(chosen->pos);
+	const f32 len = glm::length(away);
+	*goal = vec2(chosen->pos) + (len > 1.0f ? away / len : vec2(1, 0)) * MIN(range, len);
+	return true;
 }
 
 bool World::BotObjective(const Player& bot, vec2* goal)
