@@ -1268,7 +1268,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	if(teleportToChild) {
 		const ActorNpc* child = FindNpcActor(player.lastChildUID);
 		if(child && localTime < child->despawnAt) {
-			const vec3 to = vec3(vec2(child->pos), player.body->GetWorldPos().z);
+			const vec3 to = vec3(vec2(child->pos), MAX(child->pos.z, player.body->GetWorldPos().z));
 			LOG("Teleport :: %ls to its last entity %d at (%.0f, %.0f)", player.name.data(), (i32)child->docID, to.x, to.y);
 			TeleportPlayer(player, to, player.input.rot.upperYaw);
 			replication->SendPlayerSyncTeleportToAll(player.Main().UID, to);

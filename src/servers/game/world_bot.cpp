@@ -496,10 +496,14 @@ bool World::BotObjective(const Player& bot, vec2* goal)
 	const vec2 here = vec2(bot.body->GetWorldPos());
 	if(bot.titanPieces > 0 && titanSaveAreaKnown[bot.team]) {
 		*goal = titanSaveAreas[bot.team];
+		botObjectiveKind = 's';
 		return true;
 	}
+	botObjectiveKind = 'c';
 	if(BotChiefGoal(bot, goal)) return true;
+	botObjectiveKind = 'b';
 	if(BotBossGoal(bot, goal)) return true;
+	botObjectiveKind = 'p';
 	f32 best = BOT_PIECE_SEARCH_RANGE;
 	bool found = false;
 	foreach_const(g, groundItems) {
@@ -956,7 +960,9 @@ void World::UpdateBotMovement()
 		const bool titanNav = map && map->ingameLevels;
 		vec2 objective;
 		const bool retreatGoal = titanNav && BotRetreat(bot, &objective);
-		const bool objectiveGoal = titanNav && (BotItemGoal(bot, &objective) || retreatGoal || BotObjective(bot, &objective));
+		const bool itemGoal = titanNav && BotItemGoal(bot, &objective);
+		const bool objectiveGoal = itemGoal || retreatGoal || (titanNav && BotObjective(bot, &objective));
+		bot.botGoalKind = itemGoal ? 'i' : retreatGoal ? 'r' : objectiveGoal ? botObjectiveKind : '-';
 		const f32 engage = occupyGoal || objectiveGoal ? HYP_BOT_OCCUPY_FIGHT_RANGE : (titanNav ? HYP_BOT_TITAN_ENGAGE_RANGE : BOT_ENGAGE_RANGE);
 		bool fighting = false;
 		bool farm = false;
@@ -1079,7 +1085,7 @@ void World::UpdateBotMovement()
 		BotKeepOutOfBlockers(bot, &goal);
 		if(glm::length(goal - here) < BOT_REPATH_DIST && !fighting && localTime >= bot.botIdleLogAt) {
 			bot.botIdleLogAt = TimeAdd(localTime, TimeMsToTime(10000.0));
-			LOG("BotIdle :: %ls at (%.0f, %.0f) mode %s goal (%.0f, %.0f) raw (%.0f, %.0f)", bot.name.data(), here.x, here.y, BOT_MODE_NAMES[mode], goal.x, goal.y, rawGoal.x, rawGoal.y);
+			LOG("BotIdle :: %ls at (%.0f, %.0f) mode %s goal (%.0f, %.0f) raw (%.0f, %.0f) kind %c", bot.name.data(), here.x, here.y, BOT_MODE_NAMES[mode], goal.x, goal.y, rawGoal.x, rawGoal.y, bot.botGoalKind);
 		}
 		bot.input.moveTo = vec3(goal, pos.z);
 		bot.input.speed = PlayerMoveSpeed(bot);

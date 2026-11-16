@@ -294,6 +294,7 @@ struct World
 		f32 botFarmCheckDist = 0;
 		i32 botFarmCheckHp = 0;
 		Time botIdleLogAt = Time::ZERO;
+		char botGoalKind = '-';
 		Time botHeldSince = Time::ZERO;
 		i32 botStillChecks = 0;
 		Time botRouteForceUntil = Time::ZERO;
@@ -1527,6 +1528,7 @@ public:
 	enum EndKill { END_KILL_TOWER = 0, END_KILL_BOSS, END_KILL_MINION, END_KILL_NEUTRAL };
 	bool titanSaveAreasBuilt = false;
 	bool BotObjective(const Player& bot, vec2* goal);
+	char botObjectiveKind = '-';
 	bool BotItemGoal(const Player& bot, vec2* goal) const;
 	struct BotNavNode { vec3 pos; eastl::fixed_vector<u16,12,true> links; eastl::fixed_vector<u16,4,false> jumps; };
 	f32 BotJumpRise() const;

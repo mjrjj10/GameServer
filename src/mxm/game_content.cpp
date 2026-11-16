@@ -2965,6 +2965,13 @@ struct MeasuredSkillPowerMul { i32 skillID; f32 mul; };
 static const MeasuredSkillPowerMul MEASURED_SKILL_POWER_MUL[] = {
 	{ 180030030, 0.307f },
 	{ 180120040, 0.728f },
+	{ 180050040, 0.517f },
+	{ 180070010, 0.508f },
+	{ 180070030, 0.288f },
+	{ 180240010, 0.318f },
+	{ 180250010, 0.395f },
+	{ 180340040, 0.164f },
+	{ 180220040, 0.143f },
 };
 
 bool GameXmlContent::LoadSkillUpgrades()
