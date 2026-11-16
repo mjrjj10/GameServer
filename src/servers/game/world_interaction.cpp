@@ -605,7 +605,7 @@ void World::UpdateNpcDrag(ActorNpc& npc, f32 delta)
 void World::ApplyStatusToNpcFromNpc(const ActorNpc& caster, ActorNpc& npc, i32 statusID)
 {
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
-	if(info && ((info->reaction && npc.monsterAi && npc.monsterAi->reactionImmune) || NpcResistsDebuff(npc, info))) {
+	if(info && ((info->reaction && npc.monsterAi && npc.monsterAi->reactionImmune) || NpcResistsDebuff(npc, info, caster.faction != npc.faction))) {
 		replication->SendResistStatusToAll(npc.UID, caster.UID, STATUS_RESIST_EVENT_PASSIVE);
 		return;
 	}

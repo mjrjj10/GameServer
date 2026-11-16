@@ -537,10 +537,10 @@ void World::TrackNpcSelfStatus(ActorUID npcUID, const StatusInfo& info)
 	npcStatuses.push_back(ns);
 }
 
-bool World::NpcResistsDebuff(const ActorNpc& npc, const StatusInfo* info) const
+bool World::NpcResistsDebuff(const ActorNpc& npc, const StatusInfo* info, bool hostile) const
 {
 	static const i32 MEASURED_SLOW_IMMUNE_DEFENCE_STATUSES[] = { 400000140, 400000160 };
-	if(!info || !(info->type == StatusType::SLOW || (info->type == StatusType::STAT && info->isDebuff))) return false;
+	if(!info || !(info->type == StatusType::SLOW || (info->type == StatusType::STAT && (info->isDebuff || hostile)))) return false;
 	const i32 defence = GetGameXmlContent().CreatureDefenceStatus((i32)npc.docID);
 	for(i32 i = 0; i < (i32)ARRAY_COUNT(MEASURED_SLOW_IMMUNE_DEFENCE_STATUSES); i++) if(defence == MEASURED_SLOW_IMMUNE_DEFENCE_STATUSES[i]) return true;
 	return false;
@@ -551,7 +551,7 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	i32 prevOverlap = 0;
 	Time prevTick = Time::ZERO;
 	const StatusInfo* known = GetGameXmlContent().FindStatus(statusID);
-	if(!remove && known && ((known->reaction && npc.monsterAi && npc.monsterAi->reactionImmune) || NpcResistsDebuff(npc, known))) {
+	if(!remove && known && ((known->reaction && npc.monsterAi && npc.monsterAi->reactionImmune) || NpcResistsDebuff(npc, known, npc.faction != (caster.team == 0 ? Faction::RED : Faction::BLUE)))) {
 		replication->SendResistStatusToAll(npc.UID, caster.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
 		return;
 	}
