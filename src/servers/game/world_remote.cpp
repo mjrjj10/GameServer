@@ -1199,6 +1199,7 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 			}
 		}
 		const vec2 beamFrom = vec2(inst.pos);
+		const ActorUID prevNpc = inst.chainNpcHit;
 		if(bestNpc) {
 			inst.dir = glm::length(vec2(bestNpc->pos - inst.pos)) > 1.0f ? glm::normalize(vec2(bestNpc->pos - inst.pos)) : inst.dir;
 			inst.pos = vec3(vec2(bestNpc->pos), inst.pos.z);
@@ -1206,7 +1207,7 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 			else RemoteFriendNpc(inst, *bestNpc);
 			inst.chainNpcHit = bestNpc->UID;
 			if(friendChain) inst.excludeIndex = -1;
-			ChainBeamPassThrough(inst, beamFrom, vec2(bestNpc->pos), -1, bestNpc->UID);
+			ChainBeamPassThrough(inst, beamFrom, vec2(bestNpc->pos), bestNpc->UID, prevNpc);
 		}
 		else if(best) {
 			inst.dir = glm::length(vec2(best->body->GetWorldPos() - inst.pos)) > 1.0f ? glm::normalize(vec2(best->body->GetWorldPos() - inst.pos)) : inst.dir;
@@ -1216,7 +1217,7 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 			inst.excludeIndex = (i32)best->index;
 			inst.chainHitMask |= 1u << best->index;
 			if(friendChain) inst.chainNpcHit = ActorUID::INVALID;
-			ChainBeamPassThrough(inst, beamFrom, vec2(best->body->GetWorldPos()), (i32)best->index, ActorUID::INVALID);
+			ChainBeamPassThrough(inst, beamFrom, vec2(best->body->GetWorldPos()), ActorUID::INVALID, prevNpc);
 		}
 		else {
 			inst.chainEnded = true;
@@ -1226,19 +1227,20 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 	return false;
 }
 
-void World::ChainBeamPassThrough(RemoteInst& inst, const vec2& from, const vec2& to, i32 skipIndex, ActorUID skipNpc)
+void World::ChainBeamPassThrough(RemoteInst& inst, const vec2& from, const vec2& to, ActorUID skipNpc, ActorUID prevNpc)
 {
 	if(inst.remote->penetrationCount <= 1) return;
 	const f32 halfWidth = inst.remote->boundSize[0] * 0.5f;
 	Player& owner = players[inst.ownerIndex];
 	foreach(it, players) {
-		if((i32)it->index == skipIndex || it->team == owner.team || !RemoteCanAffect(inst, *it, false)) continue;
+		if(((inst.chainHitMask >> it->index) & 1) || it->team == owner.team || !RemoteCanAffect(inst, *it, false)) continue;
 		if(SegmentPointDist2D(from, to, vec2(it->body->GetWorldPos())) > halfWidth + HitRadius(*it)) continue;
 		LOG("Chain :: remote %d beam passes through %ls", (i32)inst.remote->ID, it->name.data());
+		inst.chainHitMask |= 1u << it->index;
 		RemoteHit(inst, *it);
 	}
 	foreach(npc, actorNpcList) {
-		if(npc->UID == skipNpc || npc->hp <= 0 || !NpcHittableBy(*npc, owner)) continue;
+		if(npc->UID == skipNpc || npc->UID == prevNpc || npc->hp <= 0 || !NpcHittableBy(*npc, owner)) continue;
 		const f32 dist = SegmentPointDist2D(from, to, vec2(npc->pos));
 		if(dist > halfWidth + NpcHitRadius(*npc)) continue;
 		LOG("Chain :: remote %d beam passes through creature %d", (i32)inst.remote->ID, (i32)npc->docID);
