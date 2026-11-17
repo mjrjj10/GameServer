@@ -483,11 +483,12 @@ void World::Replicate()
 			rch.moveDir = player.movement.moveDir;
 			rch.speed = player.input.speed;
 			rch.rotation = player.movement.rot;
-			rch.skillMoving = localTime < player.dashUntil || AttachedToCaster(player);
-			rch.graphMoving = (localTime < player.dashUntil && !AttachedToCaster(player)) || localTime < player.pushUntil || player.dragElapsed < player.dragDuration;
+			const bool weaponLunge = player.weaponLungeUntil != Time::ZERO && player.weaponLungeUntil == player.dashUntil;
+			rch.skillMoving = (localTime < player.dashUntil && !weaponLunge) || AttachedToCaster(player);
+			rch.graphMoving = (localTime < player.dashUntil && !weaponLunge && !AttachedToCaster(player)) || localTime < player.pushUntil || player.dragElapsed < player.dragDuration;
 			rch.statusGraph = localTime < player.pushUntil && player.pushSilent;
 			const Time holdEnd = TimeDiffSec(TimeDiff(player.dashStartAt, player.dashUntil)) <= MEASURED_UNSYNCED_GRAPH_MAX_SEC || player.dashBlockUntil >= player.dashUntil ? TimeAdd(player.dashUntil, TimeMsToTime(MEASURED_GRAPH_END_SYNC_DELAY_MS)) : player.dashBlockUntil;
-			rch.graphHold = player.clientHd == ClientHandle::INVALID && player.dashUntil != Time::ZERO && localTime < holdEnd && !AttachedToCaster(player);
+			rch.graphHold = player.clientHd == ClientHandle::INVALID && player.dashUntil != Time::ZERO && localTime < holdEnd && !AttachedToCaster(player) && !weaponLunge;
 
 			const bool idle = chara.actionState == ActionStateID::INVALID || chara.actionState == ActionStateID::NONE_BEHAVIORSTATE;
 			const bool walking = player.movement.moveSpeed > 0 && localTime >= player.dashUntil;

@@ -371,6 +371,7 @@ struct World
 		f32 dragElapsed = 0;
 		Time fearNextTurn = Time::ZERO;
 		Time dashUntil = Time::ZERO;
+		Time weaponLungeUntil = Time::ZERO;
 		vec2 dashDir = vec2(1, 0);
 		f32 dashSpeed = 0;
 		Time dashStartAt = Time::ZERO;

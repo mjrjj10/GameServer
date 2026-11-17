@@ -104,6 +104,7 @@ void World::BotWeaponLunge(Player& player, const GameXmlContent::Action& action,
 		player.dashAwaitClientStart = false;
 		player.dashUntil = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
 		player.dashBlockUntil = player.dashUntil;
+		player.weaponLungeUntil = player.dashUntil;
 		LOG("Dash :: %ls weapon lunge %.0f over %.2fs%s", player.name.data(), player.dashDist, duration, curve ? " (move graph)" : "");
 		return;
 	}
