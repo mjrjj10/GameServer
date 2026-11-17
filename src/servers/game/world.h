@@ -1240,7 +1240,7 @@ struct World
 	void ApplyResourceGain(Player& player, ResourceEvent event);
 	void ApplyRemoteHitResourceGain(Player& owner, RemoteIdx remote, u32 castID, u32 targetIndex);
 	void GroupTeleport(Player& caster, SkillID skillID, const vec3& from);
-	struct PendingInteraction { Time time; u32 ownerIndex; i32 interactionID; };
+	struct PendingInteraction { Time time; u32 ownerIndex; i32 interactionID; ActorUID teleportTarget = ActorUID::INVALID; };
 	struct OpenInteraction { ActorUID objectUID; u32 ownerIndex; i32 interactionID; Time until; Time announceAt; };
 	eastl::fixed_vector<PendingInteraction,16,false> pendingInteractions;
 	eastl::fixed_vector<OpenInteraction,16,false> openInteractions;

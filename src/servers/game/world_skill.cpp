@@ -674,6 +674,10 @@ bool World::TeleportNextToTarget(Player& player, ActorUID target)
 	vec3 targetPos;
 	i32 targetDoc = 0;
 	if(const ActorNpc* npc = FindNpcActor(target)) { targetPos = npc->pos; targetDoc = (i32)npc->docID; }
+	else if(const ActorMaster* master = FindMasterActor(target)) {
+		if(master->parent->dead) return false;
+		targetPos = master->parent->body->GetWorldPos();
+	}
 	else {
 		auto dyn = actorDynamicMap.find(target);
 		if(dyn == actorDynamicMap.end()) return false;
@@ -1139,7 +1143,17 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		}
 		if(cmd->type == ActionCommand::Type::TELEPORT && cmd->teleport.toLastChild && t <= 0.001f) teleportToChild = true;
 		if(cmd->type == ActionCommand::Type::TELEPORT && cmd->teleport.toSpawnPoint) teleportToSpawn = true;
-		if(cmd->type == ActionCommand::Type::TELEPORT && cmd->teleport.toTarget) teleportToTarget = true;
+		if(cmd->type == ActionCommand::Type::TELEPORT && cmd->teleport.toTarget) {
+			if(t <= 0.001f || currentTarget == ActorUID::INVALID || pendingInteractions.full()) teleportToTarget = true;
+			else {
+				PendingInteraction pt;
+				pt.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
+				pt.ownerIndex = player.index;
+				pt.interactionID = 0;
+				pt.teleportTarget = currentTarget;
+				pendingInteractions.push_back(pt);
+			}
+		}
 		if(cmd->type == ActionCommand::Type::INTERACTION && cmd->interaction.interactionID != 0 && !pendingInteractions.full()) {
 			PendingInteraction pi;
 			pi.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));

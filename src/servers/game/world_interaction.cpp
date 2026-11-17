@@ -172,7 +172,8 @@ void World::UpdateInteractions()
 			continue;
 		}
 		Player& owner = players[it->ownerIndex];
-		if(!owner.dead) OpenInteractionObject(owner, it->interactionID);
+		if(!owner.dead && it->teleportTarget != ActorUID::INVALID) TeleportNextToTarget(owner, it->teleportTarget);
+		else if(!owner.dead) OpenInteractionObject(owner, it->interactionID);
 		it = pendingInteractions.erase_unsorted(it);
 	}
 	for(auto it = openInteractions.begin(); it != openInteractions.end(); ) {

@@ -817,11 +817,18 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	MarkInBattle(player);
 	const ActorUID hitEventTarget = player.memorizedTarget;
 	if(targets.size() == 0 && hitEventTarget != ActorUID::INVALID && GetGameXmlContent().UsesHitEventTarget((i32)skillID)) targets = Slice<const ActorUID>(&hitEventTarget, 1);
-	eastl::fixed_vector<ActorUID,10,false> allEnemyTargets;
+	eastl::fixed_vector<ActorUID,10,false> selectedTargets;
 	if(const GameXmlContent::SkillInput* selIn = GetGameXmlContent().FindSkillInput((i32)skillID)) {
 		if(selIn->allEnemies) {
-			foreach_const(e, players) if(e->team != player.team && !e->dead) allEnemyTargets.push_back(e->Main().UID);
-			targets = Slice<const ActorUID>(allEnemyTargets.data(), allEnemyTargets.size());
+			foreach_const(e, players) if(e->team != player.team && !e->dead) selectedTargets.push_back(e->Main().UID);
+			targets = Slice<const ActorUID>(selectedTargets.data(), selectedTargets.size());
+		}
+		if(selIn->minHpFriend) {
+			const Player* weakest = nullptr;
+			foreach_const(f, players) if(f->team == player.team && f->index != player.index && !f->dead && (!weakest || f->Main().hp < weakest->Main().hp)) weakest = &*f;
+			if(weakest) selectedTargets.push_back(weakest->Main().UID);
+			targets = Slice<const ActorUID>(selectedTargets.data(), selectedTargets.size());
+			LOG("Skill :: %ls skill=%d picks the weakest ally %ls", player.name.data(), (i32)skillID, weakest ? weakest->name.data() : L"(none)");
 		}
 	}
 	// TODO: check if can cast
