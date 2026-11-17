@@ -1256,6 +1256,7 @@ void World::StartMonsterAttack(ActorNpc& npc,const GameXmlContent::MonsterAi& ai
 	}
 	npc.monsterWalkStateOn = false;
 	replication->SendMonsterStateToAll(npc.UID, attack->state, npc.pos, run);
+	replication->NoteNpcMoveFlag(npc.UID, false, 0);
 	if(attack->anim > 0) {
 		npc.stateEndAt = TimeAdd(localTime, TimeMsToTime(attack->anim * 1000.0));
 		if(npc.monsterHoldUntil < npc.stateEndAt) npc.monsterHoldUntil = npc.stateEndAt;

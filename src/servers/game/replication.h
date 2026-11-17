@@ -304,6 +304,8 @@ struct Replication
 		bool blocked = false;
 	};
 	eastl::fixed_map<ActorUID,SentMove,64> sentMoves;
+	eastl::fixed_map<ActorUID,i16,64> npcActionStopYaw;
+	void NoteNpcMoveFlag(ActorUID actorUID, bool actionStop, i16 yaw);
 
 	hash_map<ClientHandle, i32, MAX_PLAYERS> playerMap;
 

@@ -2453,6 +2453,7 @@ void Replication::SendCharacterPropertyPoint(ClientHandle clientHd, ActorUID cha
 void Replication::SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed, bool beforeAction)
 {
 	const i16 yaw = WorldYawToMonsterDeciDegrees(worldYaw);
+	NoteNpcMoveFlag(actorUID, beforeAction && vec2(pos) == vec2(goal), yaw);
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
@@ -2479,6 +2480,7 @@ void Replication::SendMonsterMoveToAll(ActorUID actorUID, const vec3& pos, const
 
 void Replication::SendMonsterStopWithSpeedToAll(ActorUID actorUID, const vec3& pos, f32 speed)
 {
+	NoteNpcMoveFlag(actorUID, false, 0);
 	static const u8 NPC_MOVE_SPEED_AND_POSITIONS = 0x1e;
 	const u16 speedSent = (u16)MIN(speed * MONSTER_SPEED_SCALE, 65535.0f);
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
@@ -2520,13 +2522,34 @@ void Replication::SendMonsterStopTurnToAll(ActorUID actorUID, const vec3& pos, f
 	}
 }
 
+void Replication::NoteNpcMoveFlag(ActorUID actorUID, bool actionStop, i16 yaw)
+{
+	if(actionStop) npcActionStopYaw[actorUID] = yaw;
+	else npcActionStopYaw.erase(actorUID);
+}
+
 void Replication::SendMonsterLiftToAll(ActorUID actorUID, const vec3& pos)
 {
+	auto pending = npcActionStopYaw.find(actorUID);
+	const bool clearActionStop = pending != npcActionStopYaw.end();
+	const i16 pendingYaw = clearActionStop ? pending->second : 0;
+	if(clearActionStop) npcActionStopYaw.erase(pending);
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID) continue;
+		if(clearActionStop) {
+			PacketWriter<Sv::SN_AIMonsterSyncMove,48> stop;
+			stop.Write<u8>(NPC_MOVE_YAW_AND_POSITIONS);
+			stop.Write<u32>((u32)localID);
+			stop.Write<i16>(pendingYaw);
+			stop.Write<i16>(pendingYaw);
+			stop.Write<float3>(v2f(pos));
+			stop.Write<float3>(v2f(pos));
+			stop.Write<u8>(NPC_MOVE_FLAG_STOPPED);
+			SendPacket(clientHd, stop);
+		}
 		PacketWriter<Sv::SN_AIMonsterSyncMove,48> packet;
 		packet.Write<u8>(NPC_MOVE_POSITIONS_ONLY);
 		packet.Write<u32>((u32)localID);
@@ -2556,6 +2579,7 @@ void Replication::SendNpcTurnToAll(ActorUID actorUID, f32 worldYaw)
 
 void Replication::SendNpcLegStartToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 speed)
 {
+	NoteNpcMoveFlag(actorUID, false, 0);
 	static const u8 NPC_MOVE_SPEED_AND_POSITIONS = 0x1e;
 	const u16 speedSent = (u16)MIN(MAX(speed, 0.0f) * MONSTER_SPEED_SCALE, 65535.0f);
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
@@ -2581,6 +2605,7 @@ void Replication::SendNpcLegStartToAll(ActorUID actorUID, const vec3& pos, const
 void Replication::SendNpcLegStopToAll(ActorUID actorUID, const vec3& pos, f32 worldYaw, bool beforeAction)
 {
 	const i16 yaw = WorldYawToMonsterDeciDegrees(worldYaw);
+	NoteNpcMoveFlag(actorUID, beforeAction, yaw);
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
