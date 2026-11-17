@@ -831,6 +831,14 @@ void World::CallMonsters(const GameXmlContent::LevelEventNode& node, i32 playerI
 	}
 	for(i32 i = 0; i < node.count; i++) {
 		if(node.monster / 1000000 == DYNAMIC_INDEX_RANGE) {
+			bool timed = false;
+			if(GetGameXmlContent().dynamicRespawnSec.count(node.monster)) {
+				foreach_const(d, actorDynamicList) if((i32)d->docID == node.monster && d->tagID == node.tagID && (!d->destroyed || d->respawnAt != Time::ZERO)) timed = true;
+			}
+			if(timed) {
+				LOG("LevelEvent :: node %d skips dynamic %d (tag %d), its own respawn timer brings it back", node.id, node.monster, node.tagID);
+				continue;
+			}
 			ActorDynamic& dyn = SpawnDynamic((CreatureIndex)node.monster, node.areaID);
 			dyn.pos = area->pos;
 			dyn.rot = area->rot;
