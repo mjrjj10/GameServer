@@ -915,6 +915,7 @@ struct World
 
 	u32 nextRemoteInstID = 1;
 	eastl::fixed_vector<PendingRemote,256,false> pendingRemotes;
+	eastl::fixed_vector<vec3,32,false> deadStructureFootprints;
 	eastl::fixed_vector<RemoteInst,256,false> remoteInsts;
 	eastl::fixed_vector<CastHit,512,false> castHits;
 	struct RepeatHit { u32 castID; u32 targetIndex; i32 count; Time at; };
@@ -1459,6 +1460,7 @@ public:
 	eastl::array<i32,2> giantsKilled = {{ 0, 0 }};
 	f64 GameTimeSec() const { return gameStartedAt == Time::ZERO ? 0.0 : TimeDiffSec(TimeDiff(gameStartedAt, localTime)); }
 	bool IsStructure(const ActorNpc& npc) const;
+	vec2 DetourDeadStructures(const ActorNpc& npc, const vec2& goal) const;
 	void GrantMonsterKillPoints(const ActorNpc& npc, ActorUID killerUID);
 	Time nextPassiveExpAt = Time::ZERO;
 	eastl::hash_map<i32,i32> deadCounts;

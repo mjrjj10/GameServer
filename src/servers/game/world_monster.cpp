@@ -306,6 +306,7 @@ void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDo
 	SetMonsterBattle(npc, false);
 	npc.hp = 0;
 	npc.killerUID = killerUID;
+	if(npc.bodyBlocker && npc.monsterAi && IsStructure(npc) && !deadStructureFootprints.full()) deadStructureFootprints.push_back(vec3(vec2(npc.pos), npc.monsterAi->bodyBlockRadius));
 	physics.RemoveWall(npc.bodyBlocker);
 	npc.bodyBlocker = nullptr;
 	npc.actionState = ActionStateID::DIE_BEHAVIORSTATE;
@@ -1156,6 +1157,29 @@ static void MonsterStateCooldown(eastl::array<Time,24>& ready, const GameXmlCont
 	for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)ready.size(); s++) if(ai.attacks[s].special && ai.attacks[s].state == state) ready[s] = until;
 }
 
+vec2 World::DetourDeadStructures(const ActorNpc& npc, const vec2& goal) const
+{
+	const vec2 from = vec2(npc.pos);
+	const vec2 rel = goal - from;
+	const f32 len = glm::length(rel);
+	if(len < 1.0f || !npc.monsterAi) return goal;
+	const vec2 dir = rel / len;
+	f32 nearest = len;
+	vec2 out = goal;
+	foreach_const(f, deadStructureFootprints) {
+		const vec2 center = vec2(*f);
+		const f32 clear = f->z + npc.monsterAi->radius;
+		const f32 along = glm::dot(center - from, dir);
+		if(along <= 0 || along >= nearest || glm::length(center - from) <= clear) continue;
+		if(SegmentPointDist2D(from, goal, center) >= clear) continue;
+		const vec2 side = vec2(-dir.y, dir.x);
+		const f32 offset = glm::dot(from + dir * along - center, side);
+		out = center + side * (offset >= 0 ? clear : -clear);
+		nearest = along;
+	}
+	return out;
+}
+
 bool World::StartMonsterWalkState(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, f32 speed)
 {
 	if(ai.walkState == ActionStateID::INVALID || localTime < npc.monsterHoldUntil) return false;
@@ -1890,6 +1914,7 @@ void World::UpdateMonsterAi(f32 delta)
 						const f32 sideLen = glm::length(side);
 						freshGoal = sideLen > MEASURED_TITAN_CHASE_GOAL_OFFSET ? lane + side / sideLen * MEASURED_TITAN_CHASE_GOAL_OFFSET : vec2(*targetPos);
 					}
+					freshGoal = DetourDeadStructures(npc, freshGoal);
 					const vec2 toFresh = freshGoal - vec2(npc.pos);
 					const f32 freshYaw = glm::length(toFresh) > 1.0f ? atan2f(toFresh.y, toFresh.x) : yaw;
 					const bool turned = npc.monsterChasing && YawGap(freshYaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD && TimeDurationMs(npc.monsterLastTurn, localTime) >= HYP_MONSTER_TURN_RESYNC_MS;

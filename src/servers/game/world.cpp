@@ -1388,6 +1388,7 @@ void World::ClearMapContent()
 	actorDynamicMap.clear();
 	remoteInsts.clear();
 	pendingRemotes.clear();
+	deadStructureFootprints.clear();
 	groundAuras.clear();
 	projectileList.clear();
 	pendingSummonCommands.clear();
