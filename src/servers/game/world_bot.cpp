@@ -405,6 +405,9 @@ bool World::BotChiefGoal(const Player& bot, vec2* goal) const
 	const vec2 here = vec2(bot.body->GetWorldPos());
 	foreach_const(npc, actorNpcList) {
 		if(!npc->monsterAi || npc->monsterAi->tagKey != chiefTag || npc->hp <= 0 || npc->removeAt != Time::ZERO || !NpcHittableBy(*npc, bot) || NpcHasStatusType(*npc, StatusType::GODMODE)) continue;
+		bool skipped = false;
+		foreach_const(s, bot.botFarmSkips) if(s->first == npc->UID && localTime < s->second) skipped = true;
+		if(skipped) continue;
 		const vec2 at = vec2(npc->pos);
 		if(BotDangerAt(bot, at, nullptr, nullptr)) continue;
 		const f32 mine = glm::length(at - here);
@@ -418,6 +421,7 @@ bool World::BotChiefGoal(const Player& bot, vec2* goal) const
 		const vec2 away = here - at;
 		const f32 len = glm::length(away);
 		*goal = at + (len > 1.0f ? away / len : vec2(1, 0)) * MIN(range, len);
+		botLastBossUID = npc->UID;
 		return true;
 	}
 	return false;
@@ -1086,7 +1090,7 @@ void World::UpdateBotMovement()
 			const f32 len = glm::length(away);
 			goal = tower + (len > 1.0f ? away / len : vec2(1, 0)) * towerRange;
 			static const f32 HYP_BOT_DANGER_HOLD_DIST = 60.0f;
-			dangerHeld = mode == BOT_MODE_OBJECTIVE && bot.botGoalKind == 'b' && glm::length(goal - here) < HYP_BOT_DANGER_HOLD_DIST;
+			dangerHeld = mode == BOT_MODE_OBJECTIVE && (bot.botGoalKind == 'b' || bot.botGoalKind == 'c') && glm::length(goal - here) < HYP_BOT_DANGER_HOLD_DIST;
 		}
 		if(!dangerHeld) bot.botDangerHoldSince = Time::ZERO;
 		else if(bot.botDangerHoldSince == Time::ZERO) bot.botDangerHoldSince = localTime;
