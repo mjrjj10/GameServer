@@ -615,6 +615,8 @@ struct Remote
 	f32 forceScale = 0;
 	f32 forceDelay = 0;
 	f32 criticalRate = 0;
+	f32 hitCriticalRate = 0;
+	f32 maxHitCriticalRate = 0;
 	i32 onHitOwnerStatus = 0;
 	f32 activateDelay = 0;
 };

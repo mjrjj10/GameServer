@@ -661,6 +661,7 @@ void World::UpdateProjectiles(f32 delta)
 				Replication::RemoteDamage hit;
 				hit.remoteID = proj->remoteID;
 				hit.remoteDoc = proj->remoteDoc;
+				hit.pierceHits = (u32)(proj->hitList.size() + proj->npcHitList.size() - 1);
 				hit.remotePos = vec3(vec2(proj->pos), npc->pos.z);
 				hit.dir = proj->dir;
 				hit.seedOwnerHd = proj->seedOwnerHd;

@@ -292,8 +292,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			if(st->targetIndex != target.index || !st->info || localTime >= st->until) continue;
 			if(st->info->type == StatusType::WEAK_ON_CRITICAL && attacker.team != target.team) bonus = 100.0f;
 		}
-		static const f32 DESC_PIERCE_CRITICAL_STEP = 33.0f;
-		if(proj && proj->hitList.size() > 1 && FindPassiveOfType(attacker, StatusType::SNIPER)) bonus += DESC_PIERCE_CRITICAL_STEP * (f32)(proj->hitList.size() - 1);
+		if(proj && !proj->hitList.empty()) bonus += PierceCriticalBonus(doc, (u32)(proj->hitList.size() - 1 + proj->npcHitList.size()));
 		const f32 critMul = RollCritical(attacker, weaponHit, doc, bonus);
 		if(critMul > 0) {
 			damage = (i32)(damage * critMul);
@@ -569,6 +568,14 @@ f32 World::RemoteTargetDamageMul(const Player& attacker, RemoteIdx doc, const ve
 	return mul;
 }
 
+f32 World::PierceCriticalBonus(RemoteIdx doc, u32 earlierHits) const
+{
+	const Remote* r = doc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(doc) : nullptr;
+	if(!r || r->hitCriticalRate <= 0 || earlierHits == 0) return 0.0f;
+	const f32 bonus = r->hitCriticalRate * (f32)earlierHits;
+	return r->maxHitCriticalRate > 0 ? MIN(bonus, r->maxHitCriticalRate) : bonus;
+}
+
 f32 World::RollCritical(const Player& attacker, bool weapon, RemoteIdx doc, f32 bonus)
 {
 	const ClassType ac = attacker.Main().classType;
@@ -586,7 +593,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	if(npc.ownerUID == ActorUID::INVALID && NpcHasStatusType(npc, StatusType::GODMODE)) return;
 	if(npc.monsterEvadeUntil != Time::ZERO && localTime < npc.monsterEvadeUntil) return;
 	const f32 titanPen = skillID == SkillID::INVALID ? MAX(TitanDefencePenetration(attacker), 0.0f) : 0.0f;
-	const f32 critMul = remoteHit ? RollCritical(attacker, skillID == SkillID::INVALID, remoteHit->remoteDoc, 0.0f) : 0.0f;
+	const f32 critMul = remoteHit ? RollCritical(attacker, skillID == SkillID::INVALID, remoteHit->remoteDoc, PierceCriticalBonus(remoteHit->remoteDoc, remoteHit->pierceHits)) : 0.0f;
 	const f32 remoteMul = remoteHit ? RemoteTargetDamageMul(attacker, remoteHit->remoteDoc, npc.pos, nullptr, &npc) : 1.0f;
 	const i32 dealt = MAX((i32)(damage * remoteMul * (critMul > 0 ? critMul : 1.0f) * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence * (1.0f - titanPen), 0.0f)) * NpcStatusMul(npc, StatusMod::DAMAGE_TAKEN) + 0.5f), 1);
 	const i32 hpBefore = npc.hp;

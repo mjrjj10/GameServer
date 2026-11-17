@@ -508,6 +508,7 @@ struct Replication
 	{
 		u32 remoteID = 0;
 		RemoteIdx remoteDoc = RemoteIdx::INVALID;
+		u32 pierceHits = 0;
 		ActorUID attackerUID = ActorUID::INVALID;
 		ActorUID targetUID = ActorUID::INVALID;
 		vec3 remotePos = vec3(0);

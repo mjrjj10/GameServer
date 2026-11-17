@@ -1227,6 +1227,7 @@ struct World
 	void MoveCasterTargetRemote(RemoteInst& inst, Player& instOwner, f32 delta);
 	void RunRemoteTimeEvent(RemoteInst& inst, f32 elapsed);
 	bool UpdateChainRemote(RemoteInst& inst);
+	f32 PierceCriticalBonus(RemoteIdx doc, u32 earlierHits) const;
 	void ChainBeamPassThrough(RemoteInst& inst, const vec2& from, const vec2& to, i32 skipIndex, ActorUID skipNpc);
 	void ApplyAttachedRemote(RemoteInst& inst, Player& instOwner);
 	void SweepFireNodePath(RemoteInst& inst, Player& instOwner);

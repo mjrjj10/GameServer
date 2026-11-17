@@ -3143,6 +3143,8 @@ bool GameXmlContent::LoadRemoteData()
 				remote.attachFireObject = XmlAttrTrue(pComp, "_AttachFireObject");
 				remote.attachTargetObject = XmlAttrTrue(pComp, "_AttachTargetObject");
 				pComp->QueryFloatAttribute("_CriticalRate", &remote.criticalRate);
+				pComp->QueryFloatAttribute("_HitCriticalRate", &remote.hitCriticalRate);
+				pComp->QueryFloatAttribute("_MaxHitCriticalRate", &remote.maxHitCriticalRate);
 				pComp->QueryAttribute("_OnHitOwnerStatusIndex", &remote.onHitOwnerStatus);
 				pComp->QueryAttribute("_SkillIndex", &remote.skillIndex);
 				remote.activateCount = _ActivateCount;
