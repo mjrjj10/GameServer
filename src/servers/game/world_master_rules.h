@@ -329,6 +329,14 @@ struct SummonGroupLimitRule
 	i32 limit;
 };
 
+static const i32 MEASURED_ONE_HIT_SUMMONS[] = { 105000453 };
+
+static inline bool OneHitSummon(i32 creature)
+{
+	for(i32 c : MEASURED_ONE_HIT_SUMMONS) if(c == creature) return true;
+	return false;
+}
+
 static const SummonGroupLimitRule MEASURED_SUMMON_GROUP_LIMITS[] = {
 	{ ClassType::MECHANIC, 100033800, 100033839, 3 },
 };

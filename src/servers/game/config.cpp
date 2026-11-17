@@ -8,6 +8,7 @@ bool CConfigGame::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "DevMode=%d", &DevMode) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevQuickConnect=%d", &DevQuickConnect) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevForcedMap=%d", &DevForcedMap) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevBotStageSkill=%d", &DevBotStageSkill) == 1) return true;
 	if(EA::StdC::Sscanf(line, "ShotLeadMs=%d", &ShotLeadMs) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevGameTimeSec=%d", &DevGameTimeSec) == 1) return true;
 	if(EA::StdC::Sscanf(line, "DevAutoStage=%d", &DevAutoStage) == 1) return true;
@@ -104,6 +105,7 @@ bool CConfigGame::SaveConfigFile()
 	out.append_sprintf("DevMode=%d\n", DevMode);
 	out.append_sprintf("DevQuickConnect=%d\n", DevQuickConnect);
 	out.append_sprintf("DevForcedMap=%d\n", DevForcedMap);
+	out.append_sprintf("DevBotStageSkill=%d\n", DevBotStageSkill);
 	out.append_sprintf("ShotLeadMs=%d\n", ShotLeadMs);
 	out.append_sprintf("DevGameTimeSec=%d\n", DevGameTimeSec);
 	out.append_sprintf("DevShowcase=%d\n", DevShowcase);
@@ -137,6 +139,7 @@ void CConfigGame::Print() const
 	LOG("	DevMode=%d", DevMode);
 	LOG("	DevQuickConnect=%d", DevQuickConnect);
 	LOG("	DevForcedMap=%d", DevForcedMap);
+	LOG("	DevBotStageSkill=%d", DevBotStageSkill);
 	LOG("	ShotLeadMs=%d", ShotLeadMs);
 	LOG("	DevGameTimeSec=%d", DevGameTimeSec);
 	LOG("	DevAutoStage=%d", DevAutoStage);

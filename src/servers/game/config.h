@@ -7,6 +7,7 @@ struct CConfigGame
 	i32 DevMode = false;
 	i32 DevQuickConnect = false;
 	i32 DevForcedMap = 0;
+	i32 DevBotStageSkill = 0;
 	i32 ShotLeadMs = 50;
 	i32 DevGameTimeSec = 0;
 	i32 DevShowcase = 0;

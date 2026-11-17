@@ -295,7 +295,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 			desc.stageSkills[0] = stage->stageSkill;
 			if(!stage->stageSkillCandidates.empty()) desc.stageSkills[1] = stage->stageSkillCandidates[0];
 			foreach_const(c, stage->stageSkillCandidates) if(*c == p.stageSkill) desc.stageSkills[1] = p.stageSkill;
-			if(desc.clientHd == ClientHandle::INVALID) desc.stageSkills[1] = MeasuredBotStageSkill(*stage, desc.stageSkills[1]);
+			if(desc.clientHd == ClientHandle::INVALID) desc.stageSkills[1] = Config().DevBotStageSkill != 0 ? SkillID(Config().DevBotStageSkill) : MeasuredBotStageSkill(*stage, desc.stageSkills[1]);
 		}
 		desc.weapons = p.weapons;
 		desc.weaponGrades = p.weaponGrades;

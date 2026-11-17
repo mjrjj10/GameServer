@@ -590,6 +590,15 @@ f32 World::RollCritical(const Player& attacker, bool weapon, RemoteIdx doc, f32 
 void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage, const Replication::RemoteDamage* remoteHit)
 {
 	if(damage <= 0 || !NpcHittableBy(npc, attacker)) return;
+	if(npc.ownerUID != ActorUID::INVALID && OneHitSummon((i32)npc.docID)) {
+		npc.hp = 0;
+		replication->SendHpToAll(npc.UID, 0, npc.hpMax);
+		npc.killerUID = attacker.Main().UID;
+		npc.despawnAt = localTime;
+		GrantMonsterKillExp(npc, attacker.Main().UID);
+		LOG("Summon :: creature=%d destroyed by one hit from %ls", (i32)npc.docID, attacker.name.data());
+		return;
+	}
 	if(npc.ownerUID == ActorUID::INVALID && NpcHasStatusType(npc, StatusType::GODMODE)) return;
 	if(npc.monsterEvadeUntil != Time::ZERO && localTime < npc.monsterEvadeUntil) return;
 	const f32 titanPen = skillID == SkillID::INVALID ? MAX(TitanDefencePenetration(attacker), 0.0f) : 0.0f;

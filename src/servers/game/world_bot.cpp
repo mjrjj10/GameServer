@@ -15,6 +15,8 @@ f32 World::BotTitanSkillDistance(i32 skill) const
 static const i32 BOT_STAGE_RECOVERY = 0;
 static const i32 BOT_STAGE_SHIELD = 1;
 static const i32 BOT_STAGE_TELEPORT = 2;
+static const i32 BOT_STAGE_WARD = 4;
+static const f32 DATA_BOT_WARD_CHECK_DISTANCE = 6000.0f;
 static const f32 HYP_BOT_TELEPORT_FROM_BASE = 2500.0f;
 static const f32 HYP_BOT_TELEPORT_LANE_DIST = 1500.0f;
 
@@ -80,6 +82,13 @@ bool World::BotStageSkill(Player& bot)
 				at = npc->pos;
 			}
 			if(target == ActorUID::INVALID) return false;
+		} break;
+		case BOT_STAGE_WARD: {
+			if(glm::length(vec2(pos) - vec2(bot.spawnPos)) <= HYP_BOT_TELEPORT_FROM_BASE) return false;
+			foreach_const(npc, actorNpcList) {
+				if(!OneHitSummon((i32)npc->docID) || npc->hp <= 0 || npc->ownerUID == ActorUID::INVALID || players[npc->ownerIndex].team != bot.team) continue;
+				if(glm::length(vec2(npc->pos) - vec2(pos)) < DATA_BOT_WARD_CHECK_DISTANCE) return false;
+			}
 		} break;
 		default: return false;
 	}
