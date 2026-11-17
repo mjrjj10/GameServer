@@ -320,7 +320,7 @@ bool World::BotFarmTarget(Player& bot, vec2* goal, f32 range)
 	const ActorNpc* kept = nullptr;
 	for(i32 s = (i32)bot.botFarmSkips.size() - 1; s >= 0; s--) if(localTime >= bot.botFarmSkips[s].second) bot.botFarmSkips.erase(bot.botFarmSkips.begin() + s);
 	foreach_const(npc, actorNpcList) {
-		if(!npc->monsterAi || npc->ownerUID != ActorUID::INVALID || IsStructure(*npc) || !NpcHittableBy(*npc, bot)) continue;
+		if(!npc->monsterAi || npc->ownerUID != ActorUID::INVALID || IsStructure(*npc) || !NpcHittableBy(*npc, bot) || NpcHasStatusType(*npc, StatusType::GODMODE)) continue;
 		bool skipped = false;
 		foreach_const(s, bot.botFarmSkips) if(s->first == npc->UID) skipped = true;
 		if(skipped) continue;
@@ -404,7 +404,7 @@ bool World::BotChiefGoal(const Player& bot, vec2* goal) const
 	static const u32 chiefTag = StatusTypeKey("Chief");
 	const vec2 here = vec2(bot.body->GetWorldPos());
 	foreach_const(npc, actorNpcList) {
-		if(!npc->monsterAi || npc->monsterAi->tagKey != chiefTag || npc->hp <= 0 || npc->removeAt != Time::ZERO || !NpcHittableBy(*npc, bot)) continue;
+		if(!npc->monsterAi || npc->monsterAi->tagKey != chiefTag || npc->hp <= 0 || npc->removeAt != Time::ZERO || !NpcHittableBy(*npc, bot) || NpcHasStatusType(*npc, StatusType::GODMODE)) continue;
 		const vec2 at = vec2(npc->pos);
 		if(BotDangerAt(bot, at, nullptr, nullptr)) continue;
 		const f32 mine = glm::length(at - here);
@@ -452,7 +452,7 @@ bool World::BotBossGoal(const Player& bot, vec2* goal)
 	const ActorNpc* chosen = nullptr;
 	f32 chosenDist = 0.0f;
 	foreach(npc, actorNpcList) {
-		if(!npc->monsterAi || npc->faction != Faction::ORANGE || npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
+		if(!npc->monsterAi || npc->faction != Faction::ORANGE || npc->hp <= 0 || npc->removeAt != Time::ZERO || NpcHasStatusType(*npc, StatusType::GODMODE)) continue;
 		const BotBossRule* rule = nullptr;
 		for(i32 r = 0; r < (i32)ARRAY_COUNT(MEASURED_BOT_BOSS_RULES); r++) if((i32)npc->docID == MEASURED_BOT_BOSS_RULES[r].docID) rule = &MEASURED_BOT_BOSS_RULES[r];
 		if(!rule) continue;
