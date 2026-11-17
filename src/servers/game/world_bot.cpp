@@ -453,6 +453,9 @@ bool World::BotBossGoal(const Player& bot, vec2* goal)
 	f32 chosenDist = 0.0f;
 	foreach(npc, actorNpcList) {
 		if(!npc->monsterAi || npc->faction != Faction::ORANGE || npc->hp <= 0 || npc->removeAt != Time::ZERO || NpcHasStatusType(*npc, StatusType::GODMODE)) continue;
+		bool skipped = false;
+		foreach_const(s, bot.botFarmSkips) if(s->first == npc->UID && localTime < s->second) skipped = true;
+		if(skipped) continue;
 		const BotBossRule* rule = nullptr;
 		for(i32 r = 0; r < (i32)ARRAY_COUNT(MEASURED_BOT_BOSS_RULES); r++) if((i32)npc->docID == MEASURED_BOT_BOSS_RULES[r].docID) rule = &MEASURED_BOT_BOSS_RULES[r];
 		if(!rule) continue;
@@ -478,6 +481,7 @@ bool World::BotBossGoal(const Player& bot, vec2* goal)
 		}
 	}
 	if(!chosen) return false;
+	botLastBossUID = chosen->UID;
 	if(!BotShotClear(bot, chosen->pos, NpcHitRadius(*chosen))) {
 		*goal = vec2(chosen->pos);
 		return true;
@@ -1044,6 +1048,7 @@ void World::UpdateBotMovement()
 			LOG("BotMode :: %ls %s at (%.0f, %.0f) hp %d/%d pieces %d", bot.name.data(), BOT_MODE_NAMES[mode], here.x, here.y, bot.Main().hp, bot.Main().hpMax, bot.titanPieces);
 			bot.botMode = mode;
 		}
+		const vec2 preNavGoal = goal;
 		if(titanNav && !fighting) {
 			goal = BotNavStep(bot, goal);
 			const vec2 d = goal - here;
@@ -1075,17 +1080,32 @@ void World::UpdateBotMovement()
 		}
 		vec2 tower;
 		f32 towerRange = 0;
+		bool dangerHeld = false;
 		if(BotDangerAt(bot, goal, &tower, &towerRange)) {
 			const vec2 away = here - tower;
 			const f32 len = glm::length(away);
 			goal = tower + (len > 1.0f ? away / len : vec2(1, 0)) * towerRange;
+			static const f32 HYP_BOT_DANGER_HOLD_DIST = 60.0f;
+			dangerHeld = mode == BOT_MODE_OBJECTIVE && bot.botGoalKind == 'b' && glm::length(goal - here) < HYP_BOT_DANGER_HOLD_DIST;
+		}
+		if(!dangerHeld) bot.botDangerHoldSince = Time::ZERO;
+		else if(bot.botDangerHoldSince == Time::ZERO) bot.botDangerHoldSince = localTime;
+		else {
+			static const f64 HYP_BOT_DANGER_HOLD_SEC = 5.0;
+			static const f64 HYP_BOT_BOSS_SKIP_SEC = 30.0;
+			if(TimeDiffSec(TimeDiff(bot.botDangerHoldSince, localTime)) > HYP_BOT_DANGER_HOLD_SEC && botLastBossUID != ActorUID::INVALID) {
+				if(bot.botFarmSkips.full()) bot.botFarmSkips.erase(bot.botFarmSkips.begin());
+				bot.botFarmSkips.push_back(eastl::make_pair(botLastBossUID, TimeAdd(localTime, TimeMsToTime(HYP_BOT_BOSS_SKIP_SEC * 1000.0))));
+				LOG("BotNav :: %ls held at a tower edge on the way to a boss, skips it for %.0f s", bot.name.data(), HYP_BOT_BOSS_SKIP_SEC);
+				bot.botDangerHoldSince = Time::ZERO;
+			}
 		}
 		const vec2 rawGoal = goal;
 		BotGateBlocks(bot, here, &goal);
 		BotKeepOutOfBlockers(bot, &goal);
 		if(glm::length(goal - here) < BOT_REPATH_DIST && !fighting && localTime >= bot.botIdleLogAt) {
 			bot.botIdleLogAt = TimeAdd(localTime, TimeMsToTime(10000.0));
-			LOG("BotIdle :: %ls at (%.0f, %.0f) mode %s goal (%.0f, %.0f) raw (%.0f, %.0f) kind %c", bot.name.data(), here.x, here.y, BOT_MODE_NAMES[mode], goal.x, goal.y, rawGoal.x, rawGoal.y, bot.botGoalKind);
+			LOG("BotIdle :: %ls at (%.0f, %.0f) mode %s goal (%.0f, %.0f) raw (%.0f, %.0f) kind %c target (%.0f, %.0f) route %d next (%.0f, %.0f, %.0f) z %.0f", bot.name.data(), here.x, here.y, BOT_MODE_NAMES[mode], goal.x, goal.y, rawGoal.x, rawGoal.y, bot.botGoalKind, preNavGoal.x, preNavGoal.y, (i32)bot.botRoute.size(), bot.botRoute.empty() ? 0.0f : botNav[bot.botRoute.front()].pos.x, bot.botRoute.empty() ? 0.0f : botNav[bot.botRoute.front()].pos.y, bot.botRoute.empty() ? 0.0f : botNav[bot.botRoute.front()].pos.z, pos.z);
 		}
 		bot.input.moveTo = vec3(goal, pos.z);
 		bot.input.speed = PlayerMoveSpeed(bot);
