@@ -4448,6 +4448,20 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 			SendPacket(clientHd, move);
 		}
 	}
+	if(actor.ownerUID == ActorUID::INVALID && actor.dashSpeed > 0) {
+		static const u8 NPC_MOVE_SPEED_AND_POSITIONS = 0x1e;
+		const u16 speedSent = (u16)MIN(actor.dashSpeed * MONSTER_SPEED_SCALE, 65535.0f);
+		playerLocalInfo[clientID].monsterSpeedSent[actor.actorUID] = speedSent;
+		PacketWriter<Sv::SN_AIMonsterSyncMove,48> dash;
+		dash.Write<u8>(NPC_MOVE_SPEED_AND_POSITIONS);
+		dash.Write<LocalActorID>(localActorID);
+		dash.Write<u16>(speedSent);
+		dash.Write<float3>(v2f(actor.pos));
+		dash.Write<float3>(v2f(vec3(actor.dashGoal, actor.pos.z)));
+		dash.Write<u8>(0);
+		SendPacket(clientHd, dash);
+		LOG("[client%03d] Replication :: monster %u spawned during a dash, sent to its end (%.0f, %.0f)", clientID, (u32)actor.actorUID, actor.dashGoal.x, actor.dashGoal.y);
+	}
 }
 
 void Replication::SendActorDynamicSpawn(ClientHandle clientHd, const ActorDynamic& actor)

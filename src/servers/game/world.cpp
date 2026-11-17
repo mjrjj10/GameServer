@@ -569,6 +569,15 @@ void World::Replicate()
 		rfl.growthLevel = actor.growthLevel;
 		rfl.statScale = actor.statScale;
 		rfl.stateSpeed = actor.monsterAi ? actor.monsterAi->run * actor.speedMul : 0.0f;
+		if(actor.dashEnd != Time::ZERO && actor.dashCurve == NPC_DASH_CURVE_LINEAR) {
+			const vec2 goal = actor.dashFrom + actor.dashDir * actor.dashDist;
+			const f32 left = (f32)TimeDiffSec(TimeDiff(localTime > actor.dashStart ? localTime : actor.dashStart, actor.dashEnd));
+			const f32 togo = glm::length(goal - vec2(actor.pos));
+			if(left > 0 && togo > 1.0f) {
+				rfl.dashGoal = goal;
+				rfl.dashSpeed = togo / left;
+			}
+		}
 
 
 		replication->FramePushNpcActor(rfl);

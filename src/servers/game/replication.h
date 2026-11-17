@@ -147,6 +147,8 @@ struct Replication
 		i32 growthLevel = 0;
 		f32 statScale = 1.0f;
 		f32 stateSpeed = 0;
+		vec2 dashGoal = vec2(0);
+		f32 dashSpeed = 0;
 
 
 		vec3 pos;
