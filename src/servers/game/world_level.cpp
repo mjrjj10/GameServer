@@ -154,6 +154,7 @@ void World::ApplyLevelStats(Player& player)
 {
 	for(i32 i = 0; i < 2; i++) {
 		ActorMaster& chara = i == 0 ? player.Main() : player.Sub();
+		if(i == 0 && player.titanForm >= 0) continue;
 		RefreshMasterHealth(player, chara);
 		const WeaponIndex weapon = (chara.UID == player.Main().UID) == ((player.mainCharaID & 1) == 0) ? player.mainWeapon : player.subWeapon;
 		const auto& content = GetGameXmlContent();
@@ -164,6 +165,7 @@ void World::ApplyLevelStats(Player& player)
 
 void World::RefreshMasterHealth(Player& player, ActorMaster& chara)
 {
+	if(player.titanForm >= 0 && chara.UID == player.Main().UID) return;
 	const f32 groupingMul = chara.UID == player.Main().UID ? 1.0f + GroupingStatMod(player, StatusMod::HEALTH, true) / 100.0f : 1.0f;
 	const i32 hpMax = (i32)((MasterStat(chara.classType, LEVEL_STAT_HEALTH) + LevelBonus(player, chara.classType, LEVEL_STAT_HEALTH) + GetGameXmlContent().MasterTraitBonus(chara.classType, chara.traits, LEVEL_STAT_HEALTH) + chara.GearBonus(LEVEL_STAT_HEALTH)) * groupingMul);
 	if(chara.hp > 0) chara.hp = MIN(chara.hp + MAX(hpMax - chara.hpMax, 0), hpMax);
