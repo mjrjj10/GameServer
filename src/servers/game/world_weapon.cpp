@@ -484,7 +484,7 @@ void World::ApplyFriendlyRemoteStatuses(Player& owner, const Remote& remote, Pla
 		ApplyStatusToNpc(owner, *npc, flagged->ID, false);
 		const StatusInfo* info = flagged->flagEffectStatus != 0 ? GetGameXmlContent().FindStatus(flagged->flagEffectStatus) : nullptr;
 		if(!info || npc->ownerUID == ActorUID::INVALID) continue;
-		replication->SendAddStatusToAll(info->ID, npc->UID, npc->UID, StatusSentDuration(*info), npc->pos, npc->pos, 0, 1, 1.0f, -1.0f, false);
+		ApplyMonsterStatus(*npc, info->ID, true);
 		if(info->descHealPct <= 0 || npc->hp >= npc->hpMax) continue;
 		npc->hp = MIN(npc->hp + (i32)(npc->hpMax * info->descHealPct / 100.0f), npc->hpMax);
 		replication->SendHpToAll(npc->UID, npc->hp, npc->hpMax);
