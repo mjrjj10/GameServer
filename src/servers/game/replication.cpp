@@ -1611,19 +1611,6 @@ void Replication::SendGameEnd(const EndPlayer* players, i32 count, i32 redScore,
 	for(i32 i = 0; i < count; i++) {
 		const ClientHandle clientHd = players[i].clientHd;
 		if(clientHd == ClientHandle::INVALID) continue;
-		PacketWriter<Sv::SN_RewardStageStart,64> start;
-		start.Write<u32>(0);
-		start.Write<u8>(0);
-		start.Write<u32>(0);
-		start.Write<u8>(0);
-		start.Write<u32>(0);
-		SendPacket(clientHd, start);
-		PacketWriter<Sv::SN_RewardStageEnd,64> end;
-		end.Write<u16>(0);
-		end.Write<u16>(0);
-		end.Write<u32>(0);
-		SendPacket(clientHd, end);
-
 		Sv::SA_RestartPvpEntryLeave leave;
 		leave.errcode = 0;
 		SendPacket(clientHd, leave);
