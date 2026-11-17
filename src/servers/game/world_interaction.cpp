@@ -1170,6 +1170,8 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 			if(p.titanPieces <= 0) break;
 			const i32 saved = p.titanPieces;
 			p.savedPieces += saved;
+			static const u32 SCORE_GOT_SAVE_COUNT = 39;
+			if(map && map->ingameLevels) replication->SendPlayerScoreToAll(p.userID, SCORE_GOT_SAVE_COUNT, p.savedPieces);
 			SetCarriedPieces(p, 0);
 			AddTeamPieces((i32)p.team, saved);
 			LOG("Titan :: %ls saves %d piece(s)", p.name.data(), saved);
@@ -1595,8 +1597,17 @@ void World::CompleteMapInteraction(Player& player)
 		minerals = MAX(minerals - info->requireMinerals, 0);
 		SendMinerals();
 	}
-	if(info->action == GameXmlContent::InteractionInfo::TOTEM && player.statueCaptures < 255) player.statueCaptures++;
-	if(info->action == GameXmlContent::InteractionInfo::OCCUPY && player.visionCaptures < 255) player.visionCaptures++;
+	enum : u32 { SCORE_OCCUPY_STATUE_COUNT = 29, SCORE_OCCUPY_SIGHT_COUNT = 30 };
+	const bool gotScores = map && map->ingameLevels && !occupyMode;
+	if(info->action == GameXmlContent::InteractionInfo::TOTEM && player.statueCaptures < 255) {
+		player.statueCaptures++;
+		if(gotScores) replication->SendPlayerScoreToAll(player.userID, SCORE_OCCUPY_STATUE_COUNT, player.statueCaptures);
+	}
+	const bool visionCapture = info->action == GameXmlContent::InteractionInfo::OCCUPY && gotScores;
+	if(info->action == GameXmlContent::InteractionInfo::OCCUPY && player.visionCaptures < 255) {
+		player.visionCaptures++;
+		if(visionCapture) replication->SendPlayerScoreToAll(player.userID, SCORE_OCCUPY_SIGHT_COUNT, player.visionCaptures);
+	}
 	if(info->pvpOccupy && occupyMode) {
 		m.occupier = (i32)player.index;
 		m.nextOccupyTick = TimeAdd(localTime, TimeMsToTime(MEASURED_OCCUPY_TICK_MS));
@@ -1610,7 +1621,14 @@ void World::CompleteMapInteraction(Player& player)
 	if(info->announcement != 0 && !(info->pvpOccupy && occupyMode)) {
 		if(!m.creature) player.occupyStreak++;
 		replication->SendPvpAnnouncementToAll(info->announcement, m.creature ? 0 : player.occupyStreak, player.Main().UID, m.object, (u32)info->points);
-		if(info->points > 0 && info->requireMinerals == 0) AddPoints(player, info->points);
+		if(visionCapture && info->points > 0 && info->requireMinerals == 0) {
+			player.points += info->points;
+			player.visionPoints += info->points;
+			const i32 teamPoints = TeamPoints(player.team);
+			replication->SendOccupyScoreToAll(player.userID, player.team, player.visionCaptures, player.visionPoints, player.points, TeamHeldVision(player.team), teamPoints, TeamHeldVision(player.team ^ 1), true);
+			OnTeamPointsChanged(player.team, teamPoints - info->points, teamPoints);
+		}
+		else if(info->points > 0 && info->requireMinerals == 0) AddPoints(player, info->points);
 	}
 	if(!m.creature && !stageCommonDrop.empty()) {
 		auto obj = actorDynamicMap.find(m.object);
@@ -1643,6 +1661,16 @@ void World::CompleteMapInteraction(Player& player)
 	}
 }
 
+
+i32 World::TeamHeldVision(i32 team) const
+{
+	i32 held = 0;
+	foreach_const(m, mapInteractions) {
+		const GameXmlContent::InteractionInfo* info = GetGameXmlContent().FindInteraction(m->interactionID);
+		if(info && info->action == GameXmlContent::InteractionInfo::OCCUPY && m->occupiedTeam == (i32)PLAYER_FACTION_BASE + team) held++;
+	}
+	return held;
+}
 
 i32 World::TeamHeldPoints(i32 team) const
 {

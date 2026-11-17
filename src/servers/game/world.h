@@ -174,6 +174,7 @@ struct World
 		u8 occupyCaptures = 0;
 		i32 occupyScore = 0;
 		u8 visionCaptures = 0;
+		i32 visionPoints = 0;
 		eastl::fixed_vector<Replication::DamageTaken,48,false> recentDamage;
 		Time lastKillAt = Time::ZERO;
 		Time botAttackStateUntil = Time::ZERO;
@@ -1512,6 +1513,7 @@ public:
 	bool occupyMode = false;
 	void OccupyScore(Player& player, i32 points, bool capture);
 	i32 TeamHeldPoints(i32 team) const;
+	i32 TeamHeldVision(i32 team) const;
 	void UpdateOccupy();
 	bool OccupyTarget(const Player& bot, vec2* point, ActorUID* object, f32* reach) const;
 	eastl::fixed_vector<MapInteraction,64,false> mapInteractions;

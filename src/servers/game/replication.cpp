@@ -1700,6 +1700,20 @@ void Replication::SendOccupyScoreToAll(UserID userID, u8 team, i32 captures, i32
 	}
 }
 
+void Replication::SendPlayerScoreToAll(UserID userID, u32 type, i32 value)
+{
+	PacketWriter<Sv::SN_ScoreUpdate> packet;
+	packet.Write<u32>((u32)userID);
+	packet.Write<TeamType>(TeamType::INVALID);
+	packet.Write<u16>(1);
+	packet.Write<u32>(type);
+	packet.Write<u32>((u32)MAX(value, 0));
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		SendPacket(clientHandle[clientID], packet);
+	}
+}
+
 void Replication::SendAssistScoreToAll(UserID userID, u8 team, i32 assists, i32 score, i32 teamScore)
 {
 	enum : u32 { SCORE = 0, ASSIST_COUNT = 2 };
