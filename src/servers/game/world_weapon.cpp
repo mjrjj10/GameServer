@@ -72,6 +72,40 @@ void World::PlayerWeaponFire(Player& player)
 		const GameXmlContent::MeasuredSwingNode* node = GetGameXmlContent().FindMeasuredSwingNode(swing);
 		const vec2 at = dir * (swingRemote->offsetY + (node ? node->forward : 0)) + Perp(dir) * (node ? node->side : 0);
 		SpawnRemote(player.index, swing, origin + vec3(at, 0), dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), true, nullptr, 0, player.clientHd != ClientHandle::INVALID);
+		if(player.clientHd == ClientHandle::INVALID) BotWeaponLunge(player, GetGameXmlContent().GetSkillAction(ActionClass(player), WeaponAttackState(player, wf), swingStance), dir);
+	}
+}
+
+void World::BotWeaponLunge(Player& player, const GameXmlContent::Action& action, const vec2& dir)
+{
+	foreach_const(cmd, action.commands) {
+		if(cmd->type != ActionCommand::Type::GRAPH_MOVE_HORZ || cmd->graphMoveHorz.distance <= 0) continue;
+		f32 duration = SkillMoveDuration(GetGameXmlContent(), ActionClassName(player), action, cmd->animIndex);
+		const GameXmlContent::MoveCurve* curve = nullptr;
+		foreach_const(st, action.anims) {
+			if(st->index != cmd->animIndex) continue;
+			curve = GetGameXmlContent().GetMoveCurve(ActionClassName(player), st->animationId);
+			if(curve && curve->time > 0) duration = curve->time;
+			break;
+		}
+		if(duration <= 0.02f) return;
+		const vec3 from = player.body->GetWorldPos();
+		const vec3 end = physics.FindMovePos(player.body, vec3(dir * cmd->graphMoveHorz.distance, 0), duration);
+		player.input.moveTo = from;
+		player.body->vel = vec3(0);
+		player.dashDir = dir;
+		player.dashDist = glm::length(vec2(end) - vec2(from));
+		player.dashSpeed = player.dashDist / duration;
+		player.dashStartAt = localTime;
+		player.dashOrigin = from;
+		player.dashDone = 0;
+		player.dashCurve = curve;
+		player.dashFly = false;
+		player.dashAwaitClientStart = false;
+		player.dashUntil = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
+		player.dashBlockUntil = player.dashUntil;
+		LOG("Dash :: %ls weapon lunge %.0f over %.2fs%s", player.name.data(), player.dashDist, duration, curve ? " (move graph)" : "");
+		return;
 	}
 }
 

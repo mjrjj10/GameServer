@@ -1588,8 +1588,17 @@ void World::UpdateBotCombat()
 				}
 			}
 			if(swing) {
-				bot.weaponFired = true;
 				const WeaponFiring& swingWf = ActiveWeaponFiring(bot, bot.Main().stance);
+				if(!swingWf.charge.empty() && !swingWf.chargeTime.empty()) {
+					if(bot.weaponState != WEAPON_STATE_CHARGE) {
+						bot.botChargeGoal = BotRollChargeLevel(bot, swingWf);
+						OnWeaponState(bot, WEAPON_STATE_CHARGE, 0, bot.firingCombo);
+						replication->RelayWeaponState(ClientHandle::INVALID, bot.Main().UID, MEASURED_WEAPON_STATE_WEAPON_ID, WEAPON_STATE_CHARGE, 0, bot.firingCombo);
+					}
+					if(bot.chargeAnnounced < bot.botChargeGoal) { bot.tNextBotShot = localTime; continue; }
+					OnWeaponState(bot, WEAPON_STATE_FIRE, bot.chargeAnnounced, bot.firingCombo);
+				}
+				bot.weaponFired = true;
 				const bool chained = bot.firingCombo < swingWf.comboValid.size() && bot.botComboShotAt != Time::ZERO && localTime <= TimeAdd(bot.botComboShotAt, TimeMsToTime(swingWf.comboValid[bot.firingCombo] * 1000.0));
 				bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot, chained ? bot.firingCombo + 1 : 0) * 1000.0));
 			}

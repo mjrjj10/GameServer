@@ -1280,6 +1280,7 @@ private:
 	eastl::fixed_vector<SkillAnimPass,8,false> lastAnimPasses;
 
 	void PlayerWeaponFire(Player& player);
+	void BotWeaponLunge(Player& player, const GameXmlContent::Action& action, const vec2& dir);
 	void UpdateProjectiles(f32 delta);
 	void SteerProjectile(Projectile& proj, f32 delta);
 	void Explode(Player& owner, const vec3& center, f32 radius, i32 damage, const Projectile* source = nullptr);
