@@ -436,6 +436,8 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 	return total;
 }
 
+static const f32 MEASURED_NPC_FORCEBACK_HOLD_SEC = 0.2f;
+
 World::NpcCcGraph World::StartNpcCc(ActorNpc& npc, const StatusInfo* info, const vec3& source, const vec2& dragCenter, const vec3& casterPos, f32 hold)
 {
 	NpcCcGraph cc;
@@ -468,6 +470,10 @@ World::NpcCcGraph World::StartNpcCc(ActorNpc& npc, const StatusInfo* info, const
 		npc.dashEnd = TimeAdd(localTime, TimeMsToTime(cc.graphSec * 1000.0));
 		npc.dashCurve = NPC_DASH_CURVE_PUSH;
 		npc.ccNextMove = TimeAdd(localTime, TimeMsToTime(MEASURED_NPC_CC_FIRST_MOVE_MS));
+		if(forceBack && npc.monsterAi) {
+			const Time holdEnd = TimeAdd(localTime, TimeMsToTime(MEASURED_NPC_FORCEBACK_HOLD_SEC * 1000.0));
+			if(npc.monsterHoldUntil < holdEnd) npc.monsterHoldUntil = holdEnd;
+		}
 		return cc;
 	}
 	if(npc.monsterAi && info->type == StatusType::DRAGGED && cc.duration > 0) {
