@@ -472,6 +472,19 @@ World::NpcCcGraph World::StartNpcCc(ActorNpc& npc, const StatusInfo* info, const
 		npc.ccNextMove = TimeAdd(localTime, TimeMsToTime(MEASURED_NPC_CC_FIRST_MOVE_MS));
 		if(forceBack && npc.monsterAi) {
 			const Time holdEnd = TimeAdd(localTime, TimeMsToTime(MEASURED_NPC_FORCEBACK_HOLD_SEC * 1000.0));
+			const bool attacking = npc.actionState == ActionStateID::ATTACK_BEHAVIORSTATE || (npc.actionState >= ActionStateID::SKILL_1_BEHAVIORSTATE && npc.actionState <= ActionStateID::SKILL_30_BEHAVIORSTATE);
+			if(attacking && npc.monsterAi->tagKey == StatusTypeKey("Minion") && npc.stateEndAt != Time::ZERO && localTime < npc.stateEndAt) {
+				for(i32 i = 0; i < (i32)monsterHits.size(); ) {
+					if(monsterHits[i].attacker == npc.UID && !monsterHits[i].ally && localTime < monsterHits[i].at) monsterHits.erase(monsterHits.begin() + i);
+					else i++;
+				}
+				for(i32 i = 0; i < (i32)monsterFires.size(); ) {
+					if(monsterFires[i].npc == npc.UID && localTime < monsterFires[i].at) monsterFires.erase(monsterFires.begin() + i);
+					else i++;
+				}
+				npc.stateEndAt = localTime;
+				npc.monsterHoldUntil = holdEnd;
+			}
 			if(npc.monsterHoldUntil < holdEnd) npc.monsterHoldUntil = holdEnd;
 		}
 		return cc;
