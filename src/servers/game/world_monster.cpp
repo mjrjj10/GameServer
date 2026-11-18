@@ -1900,8 +1900,9 @@ void World::UpdateMonsterAi(f32 delta)
 				}
 				if(run <= 0 || (npc.monsterDashHold && localTime < npc.monsterDashTurnAt)) continue;
 				if(ai.tagKey == chiefTag && FindMasterActor(npc.monsterTarget)) {
-					if(npc.monsterChasing) {
+					if(npc.monsterChasing || npc.monsterWalking) {
 						npc.monsterChasing = false;
+						npc.monsterWalking = false;
 						replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, npc.rot.z, 0.0f);
 					}
 					continue;
