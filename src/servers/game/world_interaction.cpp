@@ -433,6 +433,7 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 	}
 	const f32 total = sec + (lie ? NPC_LIE_SEC : 0.0f);
 	if(npc.monsterAi->tagKey == StatusTypeKey("Minion")) CancelNpcPendingHits(npc);
+	npc.monsterSpreading = false;
 	npc.actionState = state;
 	replication->SendMonsterStateToAll(npc.UID, state, npc.pos, npc.monsterAi->run * npc.speedMul);
 	if(info->type == StatusType::DANCE) {

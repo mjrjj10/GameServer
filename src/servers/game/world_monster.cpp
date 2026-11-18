@@ -1988,13 +1988,16 @@ void World::UpdateMonsterAi(f32 delta)
 						const vec2 to = npc.monsterSpreadGoal - vec2(npc.pos);
 						const f32 left = glm::length(to);
 						const f32 step = run * delta;
-						if(left > step) {
+						if(left > HYP_MINION_ATTACK_SPACING * 2.0f) npc.monsterSpreading = false;
+						else if(left > step) {
 							npc.pos = vec3(vec2(npc.pos) + to / left * step, npc.pos.z);
 							continue;
 						}
-						npc.pos = vec3(npc.monsterSpreadGoal, npc.pos.z);
-						npc.monsterSpreading = false;
-						npc.monsterChasing = true;
+						else {
+							npc.pos = vec3(npc.monsterSpreadGoal, npc.pos.z);
+							npc.monsterSpreading = false;
+							npc.monsterChasing = true;
+						}
 					}
 				}
 				if(npc.monsterChasing || npc.monsterWalking) {
