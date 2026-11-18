@@ -1387,6 +1387,7 @@ public:
 	i32 AreaOwnerTeam(const GameXmlContent::Map::Area& area) const;
 	void ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply);
 	void UpdateMonsterAllyBuffs(ActorNpc& npc);
+	void CancelNpcPendingHits(const ActorNpc& npc);
 	f32 NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info);
 	enum : u8 { NPC_DASH_CURVE_LINEAR = 0, NPC_DASH_CURVE_PUSH = 1, NPC_DASH_CURVE_HOOK = 2 };
 	struct NpcCcGraph { vec3 to = vec3(0); f32 duration = 0; f32 graphSec = 0; f32 nominal = -1.0f; bool graph = false; };
