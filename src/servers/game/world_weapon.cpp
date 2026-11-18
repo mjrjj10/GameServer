@@ -73,6 +73,23 @@ void World::PlayerWeaponFire(Player& player)
 		const vec2 at = dir * (swingRemote->offsetY + (node ? node->forward : 0)) + Perp(dir) * (node ? node->side : 0);
 		SpawnRemote(player.index, swing, origin + vec3(at, 0), dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), true, nullptr, 0, player.clientHd != ClientHandle::INVALID);
 		if(player.clientHd == ClientHandle::INVALID) BotWeaponLunge(player, GetGameXmlContent().GetSkillAction(ActionClass(player), WeaponAttackState(player, wf), swingStance), dir);
+		else if(player.chargeLevel > 0) HumanWeaponLunge(player, GetGameXmlContent().GetSkillAction(ActionClass(player), WeaponAttackState(player, wf), swingStance), WeaponAttackState(player, wf), dir);
+	}
+}
+
+void World::HumanWeaponLunge(Player& player, const GameXmlContent::Action& action, ActionStateID state, const vec2& dir)
+{
+	foreach_const(cmd, action.commands) {
+		if(cmd->type != ActionCommand::Type::GRAPH_MOVE_HORZ || cmd->graphMoveHorz.distance <= 0) continue;
+		i32 animID = 0;
+		foreach_const(st, action.anims) if(st->index == MAX(cmd->animIndex, 0)) animID = st->animationId;
+		const f32 sec = animID != 0 ? GetGameXmlContent().GetAniSeqTime(ActionClassName(player), animID) : action.seqLength;
+		if(sec <= 0) return;
+		const vec3 from = player.body->GetWorldPos();
+		const vec3 end = from + vec3(dir * cmd->graphMoveHorz.distance, 0);
+		replication->SendActionStateOnlyToAll(player.Main().UID, state, WorldYawToMxmYaw(atan2f(dir.y, dir.x)), true, from, end, sec);
+		LOG("Dash :: %ls charged lunge %.0f over %.2fs sent", player.name.data(), cmd->graphMoveHorz.distance, sec);
+		return;
 	}
 }
 
@@ -895,12 +912,20 @@ void World::OnWeaponState(Player& player, i32 state, u8 chargeLevel, u8 firingCo
 	if(state == WEAPON_STATE_CHARGE && player.weaponState != WEAPON_STATE_CHARGE) {
 		player.chargeStart = localTime;
 		player.chargeAnnounced = 0;
+		player.chargeDelayedDone = 0;
 		const WeaponFiring& chargeFiring = ActiveWeaponFiring(player, player.Main().stance);
 		player.firingMoveSpeedMul = chargeFiring.firingStatDuration > 0 ? chargeFiring.firingMoveSpeedMul : 0.0f;
 		const GameXmlContent::Action* charge = GetGameXmlContent().FindSkillAction(ActionClass(player), ActionStateID::ATTACKCHARGE_BEHAVIORSTATE, player.Main().stance);
 		if(charge && !player.dead) foreach_const(cmd, charge->commands) {
 			if(cmd->type != ActionCommand::Type::STATUS || cmd->status.statusIndex == 0 || cmd->status.remove || cmd->status.removeAtEnd || cmd->delay > 0) continue;
 			if(cmd->status.targetPreset == ActionCommand::TargetPreset::SELF_FFF || cmd->status.targetPreset == ActionCommand::TargetPreset::SELF_TFF) ApplyStatus(player, player, cmd->status.statusIndex);
+		}
+	}
+	if(state != WEAPON_STATE_CHARGE && player.weaponState == WEAPON_STATE_CHARGE) {
+		const GameXmlContent::Action* charge = GetGameXmlContent().FindSkillAction(ActionClass(player), ActionStateID::ATTACKCHARGE_BEHAVIORSTATE, player.Main().stance);
+		if(charge) foreach_const(cmd, charge->commands) {
+			if(cmd->type != ActionCommand::Type::STATUS || cmd->status.statusIndex == 0 || !cmd->status.removeAtEnd) continue;
+			foreach(st, activeStatuses) if(st->targetIndex == player.index && st->statusID == cmd->status.statusIndex && localTime < st->until) st->until = localTime;
 		}
 	}
 	if(state == WEAPON_STATE_FIRE && player.weaponState == WEAPON_STATE_CHARGE) {
@@ -919,6 +944,18 @@ void World::UpdateWeaponCharges()
 		if(it->weaponState != WEAPON_STATE_CHARGE || it->dead) continue;
 		const WeaponFiring& wf = ActiveWeaponFiring(*it, it->Main().stance);
 		const f64 held = TimeDiffSec(TimeDiff(it->chargeStart, localTime));
+		const GameXmlContent::Action* charge = GetGameXmlContent().FindSkillAction(ActionClass(*it), ActionStateID::ATTACKCHARGE_BEHAVIORSTATE, it->Main().stance);
+		if(charge) {
+			u32 bit = 1;
+			foreach_const(cmd, charge->commands) {
+				const bool delayed = cmd->type == ActionCommand::Type::STATUS && cmd->status.statusIndex != 0 && !cmd->status.remove && cmd->delay > 0 && (cmd->status.targetPreset == ActionCommand::TargetPreset::SELF_FFF || cmd->status.targetPreset == ActionCommand::TargetPreset::SELF_TFF);
+				if(delayed && !(it->chargeDelayedDone & bit) && held >= cmd->delay) {
+					it->chargeDelayedDone |= bit;
+					ApplyStatus(*it, *it, cmd->status.statusIndex);
+				}
+				bit <<= 1;
+			}
+		}
 		while(it->chargeAnnounced < wf.chargeTime.size() && it->chargeAnnounced < wf.charge.size() && held >= wf.chargeTime[it->chargeAnnounced]) {
 			it->chargeAnnounced++;
 			replication->RelayWeaponState(ClientHandle::INVALID, it->Main().UID, MEASURED_WEAPON_STATE_WEAPON_ID, WEAPON_STATE_CHARGE, it->chargeAnnounced, it->firingCombo);

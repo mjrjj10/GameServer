@@ -182,6 +182,7 @@ struct World
 		i32 weaponState = 0;
 		Time chargeStart = Time::ZERO;
 		u8 chargeAnnounced = 0;
+		u32 chargeDelayedDone = 0;
 		u8 botChargeGoal = 0;
 		f32 botIdleResourceGoal = -1;
 		eastl::fixed_map<i32,u8,12,false> skillLevels;
@@ -1294,6 +1295,7 @@ private:
 	eastl::fixed_vector<SkillAnimPass,8,false> lastAnimPasses;
 
 	void PlayerWeaponFire(Player& player);
+	void HumanWeaponLunge(Player& player, const GameXmlContent::Action& action, ActionStateID state, const vec2& dir);
 	void BotWeaponLunge(Player& player, const GameXmlContent::Action& action, const vec2& dir);
 	void UpdateProjectiles(f32 delta);
 	void SteerProjectile(Projectile& proj, f32 delta);
