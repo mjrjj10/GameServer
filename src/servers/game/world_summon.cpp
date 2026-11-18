@@ -465,10 +465,10 @@ void World::UpdateSummonAi(f32 delta)
 					const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(npc.pos));
 					if(d < best) { best = d; target = &*e; chosen = e->Main().UID; }
 				}
-				if(!target) foreach_const(o, actorNpcList) {
+				foreach_const(o, actorNpcList) {
 					if(&*o == &npc || o->hp <= 0 || o->removeAt != Time::ZERO || !NpcHittableBy(*o, owner)) continue;
 					const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos));
-					if(d < best) { best = d; npcTarget = &*o; chosen = o->UID; }
+					if(d < best) { best = d; target = nullptr; npcTarget = &*o; chosen = o->UID; }
 				}
 				if(chosen != npc.chaseTarget) {
 					if(chosen != ActorUID::INVALID) StopNpcLeg(npc);
