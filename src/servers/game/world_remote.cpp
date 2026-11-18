@@ -309,7 +309,8 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 				World::Player& owner = world.GetPlayer(parent.ownerIndex);
 				childTarget = owner.Main().UID;
 				const vec2 rel = vec2(owner.body->GetWorldPos()) - vec2(at);
-				if(glm::length(rel) > 1.0f) dir = glm::normalize(rel);
+				const bool turnsItself = child->behaviorType == Remote::BehaviorType::HOMING && child->angularVel > 0;
+				if(glm::length(rel) > 1.0f && !turnsItself) dir = glm::normalize(rel);
 			}
 			if(parent.sourceUID != ActorUID::INVALID && world.FindNpcActor(parent.sourceUID)) world.remoteParentOverride = parent.sourceUID;
 			const bool broadcast = !fromCreator && parent.clientRemoteID != 0;
