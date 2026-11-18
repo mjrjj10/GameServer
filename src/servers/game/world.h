@@ -655,6 +655,7 @@ struct World
 		vec2 monsterChaseOffset = vec2(0);
 		vec2 monsterLegGoal = vec2(0);
 		bool monsterReturning = false;
+		bool monsterGoHome = false;
 		bool monsterWalkStateOn = false;
 		Time monsterWalkStateAt = Time::ZERO;
 		bool monsterLowHpDone = false;

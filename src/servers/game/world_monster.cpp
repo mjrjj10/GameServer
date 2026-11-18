@@ -112,7 +112,7 @@ void World::MonsterAggroOnHit(ActorNpc& npc, Player& attacker)
 	const bool neutral = MonsterNeutral(npc, hostileMonsters);
 	if(!neutral && !MonsterHostile(npc, attacker)) return;
 	const bool titanMode = map && map->ingameLevels;
-	if(neutral && titanMode && npc.monsterReturning) return;
+	if(neutral && titanMode && (npc.monsterReturning || npc.monsterGoHome)) return;
 	if(npc.monsterReturning && titanMode) ApplyMonsterStatus(npc, MEASURED_GOT_MOB_RETURN_SUPERARMOR, false);
 	npc.monsterTarget = attacker.Main().UID;
 	npc.monsterReturning = false;
@@ -1539,6 +1539,7 @@ void World::UpdateMonsterAi(f32 delta)
 		const GameXmlContent::MonsterAttack* attack = nullptr;
 		vec3 targetAt;
 		bool targetLost = false;
+		bool lostTooFar = false;
 		vec3 tauntAt;
 		const GameXmlContent::MonsterAttack* tauntAttack = nullptr;
 		const ActorUID taunt = MonsterTauntTarget(npc, ai, &tauntAt, &tauntAttack);
@@ -1568,12 +1569,14 @@ void World::UpdateMonsterAi(f32 delta)
 				npc.monsterTarget = ActorUID::INVALID;
 				npc.monsterNextSearch = localTime;
 				targetLost = true;
+				lostTooFar = tooFar;
 			}
 		}
 		const bool neutral = MonsterNeutral(npc, hostileMonsters);
 		const bool titanMode = map && map->ingameLevels;
 		if(neutral && targetLost) {
 			targetLost = false;
+			if(titanMode && lostTooFar) npc.monsterGoHome = true;
 			SetMonsterBattle(npc, false);
 			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
 		}
@@ -1582,6 +1585,7 @@ void World::UpdateMonsterAi(f32 delta)
 		if(neutral && targetPos && !held && glm::length(vec2(npc.pos) - vec2(npc.home)) > leash) {
 			targetPos = nullptr;
 			npc.monsterTarget = ActorUID::INVALID;
+			if(titanMode) npc.monsterGoHome = true;
 			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
 		}
 		static const f64 MEASURED_NEUTRAL_RETARGET_STEP_MS = 500.0;
@@ -1605,6 +1609,7 @@ void World::UpdateMonsterAi(f32 delta)
 		}
 		if(neutral && !targetPos && held) continue;
 		const bool roamer = neutral && npc.pathRoundTrip && walk > 0;
+		if(roamer && !targetPos) npc.monsterGoHome = false;
 		if(roamer && !targetPos && npc.monsterReturning) {
 			npc.monsterReturning = false;
 			if(titanMode) ApplyMonsterStatus(npc, MEASURED_GOT_MOB_RETURN_SUPERARMOR, false);
@@ -1629,6 +1634,7 @@ void World::UpdateMonsterAi(f32 delta)
 			}
 			const vec2 rel = vec2(npc.home) - vec2(npc.pos);
 			const f32 dist = glm::length(rel);
+			if(dist <= MONSTER_WAYPOINT_REACHED || run <= 0) npc.monsterGoHome = false;
 			if(dist > MONSTER_WAYPOINT_REACHED && run > 0) {
 				const f32 yaw = atan2f(rel.y, rel.x);
 				const f32 back = titanMode && walk > 0 ? walk : run * ai.returnSpeedRate;
