@@ -129,6 +129,8 @@ static const u32 MONSTER_REMOTE_ID_BASE = 0xC0000000u;
 static const u32 MONSTER_REMOTE_ID_MASK = 0x3FFFFFFFu;
 static const u32 MEASURED_MONSTER_HIT_PENETRATION = 10;
 static const f32 HYP_MONSTER_MELEE_HIT_SLACK = 60.0f;
+static const f32 HYP_MINION_CROWD_DIST = 40.0f;
+static const f32 HYP_MINION_ATTACK_SPACING = 55.0f;
 static const f32 HYP_MONSTER_SHELL_HIT_RADIUS = 200.0f;
 static const f32 HYP_MONSTER_TARGET_RADIUS = 55.0f;
 static const f32 HYP_MONSTER_FIRE_DEFAULT_REACH = 300.0f;
@@ -1866,6 +1868,7 @@ void World::UpdateMonsterAi(f32 delta)
 			const bool laneWalk = npc.path && ai.tagKey == StatusTypeKey("Titan") && npc.pathPoint < (i32)npc.path->size() && walk > 0 && (attack->target == GameXmlContent::MonsterAttack::MASTER || attack->target == GameXmlContent::MonsterAttack::MINION);
 			if(npc.monsterDashHold && localTime < npc.monsterDashTurnAt) continue;
 			if(dist > reach + MONSTER_REACH_TOLERANCE) {
+				npc.monsterSpreading = false;
 				if(localTime >= npc.monsterNextAttack) {
 					const f32 hpNow = npc.hpMax > 0 ? (f32)npc.hp / (f32)npc.hpMax : 1.0f;
 					i32 farIndex = -1;
@@ -1953,6 +1956,47 @@ void World::UpdateMonsterAi(f32 delta)
 				}
 			}
 			else {
+				if(ai.tagKey == minionTag && (npc.monsterChasing || npc.monsterSpreading)) {
+					if(!npc.monsterSpreading) {
+						bool crowded = false;
+						foreach_const(o, actorNpcList) {
+							if(&*o == &npc || !o->monsterAi || o->monsterAi->tagKey != minionTag || o->faction != npc.faction || o->hp <= 0) continue;
+							if(glm::length(vec2(o->pos) - vec2(npc.pos)) < HYP_MINION_CROWD_DIST) { crowded = true; break; }
+						}
+						if(crowded) {
+							const vec2 from = vec2(npc.pos) - vec2(*targetPos);
+							const f32 angle = HYP_MINION_ATTACK_SPACING / MAX(dist, HYP_MINION_ATTACK_SPACING);
+							f32 bestClear = -1;
+							for(i32 side = -1; side <= 1; side += 2) {
+								const f32 a = angle * (f32)side;
+								const vec2 cand = vec2(*targetPos) + vec2(from.x * cosf(a) - from.y * sinf(a), from.x * sinf(a) + from.y * cosf(a));
+								f32 clear = FLT_MAX;
+								foreach_const(o, actorNpcList) {
+									if(&*o == &npc || !o->monsterAi || o->monsterAi->tagKey != minionTag || o->faction != npc.faction || o->hp <= 0) continue;
+									clear = MIN(clear, glm::length(vec2(o->pos) - cand));
+								}
+								if(clear > bestClear) { bestClear = clear; npc.monsterSpreadGoal = cand; }
+							}
+							npc.monsterSpreading = true;
+							npc.monsterChasing = false;
+							const vec2 to = npc.monsterSpreadGoal - vec2(npc.pos);
+							replication->SendMonsterMoveToAll(npc.UID, npc.pos, vec3(npc.monsterSpreadGoal, npc.pos.z), glm::length(to) > 1.0f ? atan2f(to.y, to.x) : yaw, run);
+							continue;
+						}
+					}
+					else {
+						const vec2 to = npc.monsterSpreadGoal - vec2(npc.pos);
+						const f32 left = glm::length(to);
+						const f32 step = run * delta;
+						if(left > step) {
+							npc.pos = vec3(vec2(npc.pos) + to / left * step, npc.pos.z);
+							continue;
+						}
+						npc.pos = vec3(npc.monsterSpreadGoal, npc.pos.z);
+						npc.monsterSpreading = false;
+						npc.monsterChasing = true;
+					}
+				}
 				if(npc.monsterChasing || npc.monsterWalking) {
 					npc.monsterChasing = false;
 					if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, yaw, true);

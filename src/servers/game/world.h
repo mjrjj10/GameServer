@@ -656,6 +656,8 @@ struct World
 		vec2 monsterLegGoal = vec2(0);
 		bool monsterReturning = false;
 		bool monsterGoHome = false;
+		bool monsterSpreading = false;
+		vec2 monsterSpreadGoal = vec2(0);
 		u8 coreStage = 0;
 		Time coreNextAt = Time::ZERO;
 		bool monsterWalkStateOn = false;
