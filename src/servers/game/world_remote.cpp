@@ -65,19 +65,19 @@ bool World::RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includ
 
 static f32 BezierArcLength(const Remote& remote, f32 range)
 {
-	vec2 c[4];
-	c[0] = vec2(0);
-	c[3] = vec2(range, 0);
+	vec3 c[4];
+	c[0] = vec3(0);
+	c[3] = vec3(range, 0, 0);
 	for(int k = 0; k < 2; k++) {
 		const f32 a = remote.bezierRotate[k] * PI / 180.0f;
-		c[k + 1] = vec2(range * (k + 1) / 3.0f + remote.bezierFront[k], remote.bezierUp[k] * sinf(a));
+		c[k + 1] = vec3(range * (k + 1) / 3.0f + remote.bezierFront[k], remote.bezierUp[k] * sinf(a), remote.bezierUp[k] * cosf(a));
 	}
 	f32 length = 0;
-	vec2 prev = c[0];
+	vec3 prev = c[0];
 	for(int i = 1; i <= BEZIER_ARC_SAMPLES; i++) {
 		const f32 u = (f32)i / BEZIER_ARC_SAMPLES;
 		const f32 v = 1.0f - u;
-		const vec2 p = c[0] * (v * v * v) + c[1] * (3 * v * v * u) + c[2] * (3 * v * u * u) + c[3] * (u * u * u);
+		const vec3 p = c[0] * (v * v * v) + c[1] * (3 * v * v * u) + c[2] * (3 * v * u * u) + c[3] * (u * u * u);
 		length += glm::length(p - prev);
 		prev = p;
 	}
