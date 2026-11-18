@@ -319,6 +319,7 @@ bool World::BotFarmTarget(Player& bot, vec2* goal, f32 range)
 	static const f32 HYP_BOT_FARM_PROGRESS_DIST = 300.0f;
 	static const f32 HYP_BOT_FARM_SKIP_SEC = 30.0f;
 	static const f32 HYP_BOT_FARM_KEEP_RANGE_MUL = 1.5f;
+	static const f32 HYP_BOT_FARM_ROUTE_GOAL_SLACK = 1300.0f;
 	if(!map || !map->ingameLevels) return false;
 	const vec2 here = vec2(bot.body->GetWorldPos());
 	const bool jungler = bot.clientHd == ClientHandle::INVALID && bot.index % HYP_BOT_JUNGLE_ROLE_EVERY == 2;
@@ -349,10 +350,34 @@ bool World::BotFarmTarget(Player& bot, vec2* goal, f32 range)
 	if(bestNeutral >= neutralRange) neutral = nullptr;
 	const ActorNpc* chosen = kept ? kept : (jungler && neutral) ? neutral : minion ? minion : (neutral && bestNeutral < range) ? neutral : nullptr;
 	if(!chosen) {
+		const ActorNpc* dropped = bot.botFarmUID != ActorUID::INVALID ? FindNpcActor(bot.botFarmUID) : nullptr;
+		if(dropped && dropped->hp > 0 && dropped->removeAt == Time::ZERO) {
+			LOG("BotFarm :: %ls drops creature=%d at %.0f, out of reach", bot.name.data(), (i32)dropped->docID, glm::length(vec2(dropped->pos) - here));
+			static const f32 HYP_BOT_CAMP_RADIUS = 1000.0f;
+			const bool neutralCamp = dropped->faction == Faction::ORANGE || dropped->faction == Faction::MONSTER;
+			foreach_const(npc, actorNpcList) {
+				if(&*npc != dropped && (!neutralCamp || npc->faction != dropped->faction || glm::length(vec2(npc->home) - vec2(dropped->home)) > HYP_BOT_CAMP_RADIUS)) continue;
+				if(bot.botFarmSkips.full()) bot.botFarmSkips.erase(bot.botFarmSkips.begin());
+				bot.botFarmSkips.push_back(eastl::make_pair(npc->UID, TimeAdd(localTime, TimeMsToTime(HYP_BOT_FARM_SKIP_SEC * 1000.0))));
+			}
+		}
 		bot.botFarmUID = ActorUID::INVALID;
 		return false;
 	}
 	const f32 dist = glm::length(vec2(chosen->pos) - here);
+	const bool chosenNeutral = chosen->faction == Faction::ORANGE || chosen->faction == Faction::MONSTER;
+	const f32 reach = (chosenNeutral ? neutralRange : range) * HYP_BOT_FARM_KEEP_RANGE_MUL;
+	if(chosen->UID == bot.botFarmUID && !bot.botRoute.empty() && glm::length(bot.botRouteGoal - vec2(chosen->pos)) <= HYP_BOT_FARM_ROUTE_GOAL_SLACK && bot.botRouteCost > reach) {
+		LOG("BotFarm :: %ls skips creature=%d, route %.0f longer than %.0f", bot.name.data(), (i32)chosen->docID, bot.botRouteCost, reach);
+		static const f32 HYP_BOT_CAMP_RADIUS_ROUTE = 1500.0f;
+		foreach_const(npc, actorNpcList) {
+			if(&*npc != chosen && (!chosenNeutral || npc->faction != chosen->faction || glm::length(vec2(npc->home) - vec2(chosen->home)) > HYP_BOT_CAMP_RADIUS_ROUTE)) continue;
+			if(bot.botFarmSkips.full()) bot.botFarmSkips.erase(bot.botFarmSkips.begin());
+			bot.botFarmSkips.push_back(eastl::make_pair(npc->UID, TimeAdd(localTime, TimeMsToTime(HYP_BOT_FARM_SKIP_SEC * 1000.0))));
+		}
+		bot.botFarmUID = ActorUID::INVALID;
+		return false;
+	}
 	if(chosen->UID != bot.botFarmUID) {
 		bot.botFarmUID = chosen->UID;
 		bot.botFarmCheckAt = TimeAdd(localTime, TimeMsToTime(HYP_BOT_FARM_PROGRESS_SEC * 1000.0));
@@ -703,6 +728,7 @@ void World::BotPlanRoute(Player& bot, const vec2& goal)
 {
 	bot.botRoute.clear();
 	bot.botRouteGoal = goal;
+	bot.botRouteCost = 0;
 	const i32 count = (i32)botNav.size();
 	if(count == 0) return;
 	const vec3 pos = bot.body->GetWorldPos();
@@ -748,6 +774,7 @@ void World::BotPlanRoute(Player& bot, const vec2& goal)
 		last = n;
 	}
 	if(last < 0) last = fallback;
+	if(last >= 0) bot.botRouteCost = last == fallback && lastCost >= 1e29f ? dist[last] + fallbackDist : lastCost;
 	eastl::fixed_vector<u16,256,true> reversed;
 	for(i32 n = last; n >= 0; n = prev[n]) reversed.push_back((u16)n);
 	for(i32 k = (i32)reversed.size() - 1; k >= 0 && !bot.botRoute.full(); k--) bot.botRoute.push_back(reversed[k]);
@@ -1058,7 +1085,9 @@ void World::UpdateBotMovement()
 			if((f32)Randf01() < MEASURED_PLAYER_JUMPS_PER_MIN * sinceRollSec / 60.0f) bot.input.jump = 1;
 		}
 		if(titanNav && mode != bot.botMode) {
-			LOG("BotMode :: %ls %s at (%.0f, %.0f) hp %d/%d pieces %d", bot.name.data(), BOT_MODE_NAMES[mode], here.x, here.y, bot.Main().hp, bot.Main().hpMax, bot.titanPieces);
+			const ActorNpc* farmNpc = mode == BOT_MODE_FARM ? FindNpcActor(bot.botFarmUID) : nullptr;
+			LOG("BotMode :: %ls %s at (%.0f, %.0f) hp %d/%d pieces %d farm creature=%d at (%.0f, %.0f)", bot.name.data(), BOT_MODE_NAMES[mode], here.x, here.y, bot.Main().hp, bot.Main().hpMax, bot.titanPieces,
+				farmNpc ? (i32)farmNpc->docID : 0, farmNpc ? farmNpc->pos.x : 0.0f, farmNpc ? farmNpc->pos.y : 0.0f);
 			bot.botMode = mode;
 		}
 		const vec2 preNavGoal = goal;

@@ -303,7 +303,8 @@ struct World
 		Time botStuckAvoidUntil = Time::ZERO;
 		vec2 botStuckPos = vec2(0);
 		i32 botStuckEpisodes = 0;
-		eastl::fixed_vector<eastl::pair<ActorUID,Time>,4,false> botFarmSkips;
+		eastl::fixed_vector<eastl::pair<ActorUID,Time>,16,false> botFarmSkips;
+		f32 botRouteCost = 0;
 		i8 botLane = -1;
 		u8 botMode = 0xff;
 		bool botRetreat = false;
