@@ -612,6 +612,8 @@ void GamePacketHandler::HandlePacket_CQ_RemoteSyncTarget(ClientHandle clientHd, 
 	}
 	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_RemoteSyncTarget>(packetData, packetSize));
 	replication->RelayRemoteSyncTarget(clientHd, packetData, packetSize);
+	const Cl::CQ_RemoteSyncTarget& sync = *(const Cl::CQ_RemoteSyncTarget*)packetData;
+	game->OnRemoteSyncTarget(clientHd, sync.remoteID, f2v(sync.DestPos));
 }
 
 void GamePacketHandler::HandlePacket_CQ_CancelCastSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

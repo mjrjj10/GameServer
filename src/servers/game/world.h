@@ -879,6 +879,8 @@ struct World
 		bool areaDone;
 		bool wallHitDone = false;
 		u32 clientRemoteID = 0;
+		vec3 casterDest = vec3(0);
+		bool casterDestSet = false;
 		u32 npcActivation = 0;
 		f32 syncIn = MEASURED_REMOTE_SYNC_FIRST_SEC;
 		ActorUID syncedTarget = ActorUID::INVALID;
@@ -1234,6 +1236,7 @@ struct World
 	void PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir, f32 distance);
 	void SpawnPendingRemotes();
 	void MoveCasterTargetRemote(RemoteInst& inst, Player& instOwner, f32 delta);
+	void SetCasterRemoteDest(u32 ownerIndex, u32 clientRemoteID, const vec3& dest);
 	void RunRemoteTimeEvent(RemoteInst& inst, f32 elapsed);
 	bool UpdateChainRemote(RemoteInst& inst);
 	f32 PierceCriticalBonus(RemoteIdx doc, u32 earlierHits) const;

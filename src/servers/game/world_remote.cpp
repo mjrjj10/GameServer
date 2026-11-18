@@ -1128,6 +1128,15 @@ void World::SpawnPendingRemotes()
 	}
 }
 
+void World::SetCasterRemoteDest(u32 ownerIndex, u32 clientRemoteID, const vec3& dest)
+{
+	foreach(r, remoteInsts) {
+		if(r->ownerIndex != ownerIndex || r->clientRemoteID != clientRemoteID || !r->remote || r->remote->behaviorType != Remote::BehaviorType::CASTER_TARGET) continue;
+		r->casterDest = dest;
+		r->casterDestSet = true;
+	}
+}
+
 void World::MoveCasterTargetRemote(RemoteInst& inst, Player& instOwner, f32 delta)
 {
 	const Remote& remote = *inst.remote;
@@ -1135,7 +1144,8 @@ void World::MoveCasterTargetRemote(RemoteInst& inst, Player& instOwner, f32 delt
 	if(inst.followDist < 0) inst.followDist = glm::length(vec2(inst.pos) - ownerPos);
 	vec2 desired;
 	const ActorMaster* tm = inst.target != ActorUID::INVALID ? FindMasterActor(inst.target) : nullptr;
-	if(instOwner.clientHd == ClientHandle::INVALID && tm && !tm->parent->dead) desired = vec2(tm->parent->body->GetWorldPos());
+	if(inst.casterDestSet) desired = vec2(inst.casterDest);
+	else if(instOwner.clientHd == ClientHandle::INVALID && tm && !tm->parent->dead) desired = vec2(tm->parent->body->GetWorldPos());
 	else {
 		const f32 yaw = instOwner.input.rot.upperYaw;
 		desired = ownerPos + vec2(cosf(yaw), sinf(yaw)) * inst.followDist;

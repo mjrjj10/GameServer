@@ -2251,6 +2251,13 @@ void Game::OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID, const ve
 	if(player.casting.skillID == skillID) world.ReleaseCast(player);
 }
 
+void Game::OnRemoteSyncTarget(ClientHandle clientHd, u32 remoteID, const vec3& dest)
+{
+	auto found = playerMap.find(clientHd);
+	if(found == playerMap.end()) return;
+	world.SetCasterRemoteDest(found->second->playerIndex, remoteID, dest);
+}
+
 void Game::OnPlayerCancelCast(ClientHandle clientHd, SkillID skillID)
 {
 	Player& p = *playerMap.at(clientHd);

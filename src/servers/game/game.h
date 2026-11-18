@@ -188,6 +188,7 @@ struct Game
 	bool IsWeaponFireObject(ClientHandle clientHd, const wchar* name, u16 len);
 	void OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID, const vec3& targetPos, LocalActorID target);
 	void OnPlayerCancelCast(ClientHandle clientHd, SkillID skillID);
+	void OnRemoteSyncTarget(ClientHandle clientHd, u32 remoteID, const vec3& dest);
 
 	bool ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 len);
 	void SendDbgMsg(ClientHandle clientHd, const wchar* msg);
