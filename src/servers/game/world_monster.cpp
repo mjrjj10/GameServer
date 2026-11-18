@@ -1893,7 +1893,13 @@ void World::UpdateMonsterAi(f32 delta)
 					}
 				}
 				if(run <= 0 || (npc.monsterDashHold && localTime < npc.monsterDashTurnAt)) continue;
-				if(ai.tagKey == chiefTag && FindMasterActor(npc.monsterTarget)) continue;
+				if(ai.tagKey == chiefTag && FindMasterActor(npc.monsterTarget)) {
+					if(npc.monsterChasing) {
+						npc.monsterChasing = false;
+						replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, npc.rot.z, 0.0f);
+					}
+					continue;
+				}
 				if(!laneWalk) {
 					if(ai.walkState != ActionStateID::INVALID && !npc.monsterWalkStateOn && localTime < npc.monsterNextAttack) continue;
 					npc.monsterWalking = false;
