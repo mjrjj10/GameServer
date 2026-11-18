@@ -351,12 +351,11 @@ bool World::BotFarmTarget(Player& bot, vec2* goal, f32 range)
 	const ActorNpc* chosen = kept ? kept : (jungler && neutral) ? neutral : minion ? minion : (neutral && bestNeutral < range) ? neutral : nullptr;
 	if(!chosen) {
 		const ActorNpc* dropped = bot.botFarmUID != ActorUID::INVALID ? FindNpcActor(bot.botFarmUID) : nullptr;
-		if(dropped && dropped->hp > 0 && dropped->removeAt == Time::ZERO) {
+		if(dropped && dropped->hp > 0 && dropped->removeAt == Time::ZERO && (dropped->faction == Faction::ORANGE || dropped->faction == Faction::MONSTER)) {
 			LOG("BotFarm :: %ls drops creature=%d at %.0f, out of reach", bot.name.data(), (i32)dropped->docID, glm::length(vec2(dropped->pos) - here));
 			static const f32 HYP_BOT_CAMP_RADIUS = 1000.0f;
-			const bool neutralCamp = dropped->faction == Faction::ORANGE || dropped->faction == Faction::MONSTER;
 			foreach_const(npc, actorNpcList) {
-				if(&*npc != dropped && (!neutralCamp || npc->faction != dropped->faction || glm::length(vec2(npc->home) - vec2(dropped->home)) > HYP_BOT_CAMP_RADIUS)) continue;
+				if(&*npc != dropped && (npc->faction != dropped->faction || glm::length(vec2(npc->home) - vec2(dropped->home)) > HYP_BOT_CAMP_RADIUS)) continue;
 				if(bot.botFarmSkips.full()) bot.botFarmSkips.erase(bot.botFarmSkips.begin());
 				bot.botFarmSkips.push_back(eastl::make_pair(npc->UID, TimeAdd(localTime, TimeMsToTime(HYP_BOT_FARM_SKIP_SEC * 1000.0))));
 			}
