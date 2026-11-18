@@ -1492,6 +1492,20 @@ bool GameXmlContent::LoadMonsterAi()
 			const char* preset = pA->Attribute("TargetPreset");
 			if(!cls || !state || !type || pA->Attribute("VariationType")) continue;
 			const char* param2 = pA->Attribute("Param2");
+			const ActionStateID rowState = ActionStateFromString(state);
+			if(rowState == ActionStateID::EXTRAMOTION_1_BEHAVIORSTATE || rowState == ActionStateID::EXTRAMOTION_2_BEHAVIORSTATE || rowState == ActionStateID::EXTRAMOTION_3_BEHAVIORSTATE) {
+				const bool selfRow = EA::StdC::Strcmp(type, "STATUS") == 0 && preset && EA::StdC::Strncmp(preset, "TARGET_SELF", 11) == 0;
+				const bool removeRow = param2 && EA::StdC::Strcmp(param2, "Remove") == 0;
+				const i32 animID = pA->IntAttribute("AnimationId");
+				foreach(it, monsterAi) {
+					MonsterAi& ai = it->second;
+					if(ai.className != cls) continue;
+					if(selfRow && (!param2 || removeRow) && pA->IntAttribute("StatusIndex") != 0 && !ai.stateStatuses.full()) ai.stateStatuses.push_back({ rowState, pA->IntAttribute("StatusIndex"), removeRow });
+					bool known = false;
+					foreach_const(a, ai.stateAnims) if(a->state == rowState) known = true;
+					if(animID != 0 && !known && !ai.stateAnims.full()) ai.stateAnims.push_back({ rowState, animID });
+				}
+			}
 			const bool remoteCmd = EA::StdC::Strcmp(type, "REMOTE") == 0 && preset && EA::StdC::Strncmp(preset, "TARGET_SELF", 11) == 0;
 			if(param2 && remoteCmd && EA::StdC::Strcmp(param2, "Remove") == 0) {
 				const i32 removed = pA->IntAttribute("RemoteIndex");

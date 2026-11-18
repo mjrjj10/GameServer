@@ -254,6 +254,8 @@ void World::StartLevelEvents()
 {
 	if(levelEventsStarted) return;
 	levelEventsStarted = true;
+	static const u32 coreTag = StatusTypeKey("Core");
+	if(map->ingameLevels) foreach(npc, actorNpcList) if(npc->monsterAi && npc->monsterAi->tagKey == coreTag) StartCore(*npc);
 	foreach_const(n, map->levelEvents) {
 		if(n->kind != GameXmlContent::LevelEventNode::LEVEL_START || !NodeInDifficulty(*n)) continue;
 		foreach_const(o, n->outputs) FireLevelEvent(*o, -1, n->id);
@@ -744,6 +746,16 @@ static const f64 CORE_ANNOUNCE_INTERVAL_MS = 1000.0;
 
 void World::OnMonsterDamaged(ActorNpc& npc, i32 hpBefore)
 {
+	if(npc.coreStage != 0 && npc.hp < hpBefore) {
+		foreach(ns, npcStatuses) {
+			if(ns->npcUID != npc.UID || localTime >= ns->until) continue;
+			const StatusInfo* info = GetGameXmlContent().FindStatus(ns->statusID);
+			if(info && info->nextCondition == StatusInfo::NextCondition::REMOVE_ONHIT) {
+				ns->until = localTime;
+				ns->removedOnHit = true;
+			}
+		}
+	}
 	static const u32 coreTag = StatusTypeKey("Core");
 	if(npc.monsterAi && npc.monsterAi->tagKey == coreTag && npc.hp > 0 && npc.hp < hpBefore && localTime >= npc.coreAnnounceAt) {
 		npc.coreAnnounceAt = TimeAdd(localTime, TimeMsToTime(CORE_ANNOUNCE_INTERVAL_MS));

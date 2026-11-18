@@ -765,6 +765,8 @@ void World::UpdateNpcSpeedMods()
 void World::UpdateNpcStatuses()
 {
 	UpdateNpcDots();
+	static const u32 coreTag = StatusTypeKey("Core");
+	eastl::fixed_vector<eastl::pair<ActorUID,i32>,8,false> nextStatuses;
 	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
 		const NpcStatus& ns = npcStatuses[i];
 		bool linked = false;
@@ -787,6 +789,11 @@ void World::UpdateNpcStatuses()
 		if((linked || !ns.linked) && !pairCasterGone && localTime < ns.until && holder && (holder->hp > 0 || holder->hpMax <= 0)) { i++; continue; }
 		replication->SendRemoveStatusToAll(ns.statusID, ns.npcUID, ns.casterUID);
 		const StatusInfo* motionStatus = GetGameXmlContent().FindStatus(ns.statusID);
+		if(motionStatus && motionStatus->nextStatus != 0 && holder && holder->hp > 0 && holder->monsterAi && holder->monsterAi->tagKey == coreTag && !nextStatuses.full()) {
+			const auto cond = motionStatus->nextCondition;
+			const bool timeOver = localTime >= ns.until && !ns.removedOnHit;
+			if(cond == StatusInfo::NextCondition::ALL || (cond == StatusInfo::NextCondition::TIMEOVER && timeOver) || (cond == StatusInfo::NextCondition::REMOVE_ONHIT && ns.removedOnHit)) nextStatuses.push_back({ ns.npcUID, motionStatus->nextStatus });
+		}
 		ActorNpc* released = motionStatus && motionStatus->npcMotion != ActionStateID::INVALID ? FindNpcActor(ns.npcUID) : nullptr;
 		if(released && released->ownerUID != ActorUID::INVALID && released->actionState == motionStatus->npcMotion && (released->hp > 0 || released->hpMax <= 0) && released->removeAt == Time::ZERO) {
 			const SummonInfo* releasedInfo = GetGameXmlContent().FindSummon((i32)released->docID);
@@ -797,6 +804,7 @@ void World::UpdateNpcStatuses()
 		npcStatuses.erase(npcStatuses.begin() + i);
 		if(shieldedUID != ActorUID::INVALID && FindNpcActor(shieldedUID)) SendNpcShieldStat(shieldedUID);
 	}
+	foreach_const(n, nextStatuses) if(ActorNpc* npc = FindNpcActor(n->first)) ApplyMonsterStatus(*npc, n->second, true);
 	foreach(st, activeStatuses) {
 		if(!st->info || st->info->type != StatusType::CASTER || st->info->casterStatus == 0 || st->until <= localTime || FindMasterActor(st->casterUID) || !NpcPairCasterGone(st->casterUID)) continue;
 		st->until = localTime;

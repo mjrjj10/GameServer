@@ -1344,6 +1344,10 @@ struct GameXmlContent
 		eastl::fixed_vector<i32,4,false> dieRemotes;
 		eastl::fixed_vector<i32,4,false> spawnRemotes;
 		eastl::fixed_vector<i32,4,false> lowHpRemoveRemotes;
+		struct StateStatus { ActionStateID state; i32 statusID; bool remove; };
+		eastl::fixed_vector<StateStatus,8,false> stateStatuses;
+		struct StateAnim { ActionStateID state; i32 animID; };
+		eastl::fixed_vector<StateAnim,8,false> stateAnims;
 		u32 tagKey = 0;
 		ActionStateID idle = ActionStateID::INVALID;
 		ActionStateID awake = ActionStateID::INVALID;

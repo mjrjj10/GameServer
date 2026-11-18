@@ -1534,6 +1534,10 @@ void World::UpdateMonsterAi(f32 delta)
 			}
 		}
 
+		if(npc.coreStage != 0) {
+			UpdateCore(npc);
+			continue;
+		}
 		if(hostileMonsters && !ai.seekDocs.empty() && UpdateMonsterSeek(npc, ai, walk, delta)) continue;
 		const vec3* targetPos = nullptr;
 		const GameXmlContent::MonsterAttack* attack = nullptr;
@@ -2058,4 +2062,78 @@ void World::UpdateMonsterAllyBuffs(ActorNpc& npc)
 	if(npc.allyBuffLevel > 0 && npc.allyBuffLevel != level) ApplyMonsterStatus(npc, ai.allyBuffs[npc.allyBuffLevel - 1], false);
 	if(level > 0) ApplyMonsterStatus(npc, ai.allyBuffs[level - 1], true);
 	npc.allyBuffLevel = level;
+}
+
+static const f64 MEASURED_CORE_HIDE_DELAY_SEC = 3.1;
+static const i32 MEASURED_CORE_PEACE_STATUS = 1200100042;
+
+f32 World::NpcStateAnimSec(const ActorNpc& npc, ActionStateID state) const
+{
+	if(!npc.monsterAi) return 0;
+	foreach_const(a, npc.monsterAi->stateAnims) if(a->state == state) return GetGameXmlContent().GetAniSeqTime(npc.monsterAi->className.c_str(), a->animID);
+	return 0;
+}
+
+void World::EnterNpcState(ActorNpc& npc, ActionStateID state)
+{
+	npc.actionState = state;
+	replication->SendMonsterStateToAll(npc.UID, state, npc.pos, 0.0f);
+	if(!npc.monsterAi) return;
+	foreach_const(s, npc.monsterAi->stateStatuses) if(s->state == state) ApplyMonsterStatus(npc, s->statusID, !s->remove);
+}
+
+void World::StartCore(ActorNpc& npc)
+{
+	if(npc.hp <= 0 || npc.coreStage != 0) return;
+	EnterNpcState(npc, ActionStateID::SPAWN_BEHAVIORSTATE);
+	foreach_const(st, npc.monsterAi->spawnStatuses) ApplyMonsterStatus(npc, *st, true);
+	EnterNpcState(npc, ActionStateID::NONE_BEHAVIORSTATE);
+	npc.coreStage = 1;
+	npc.coreNextAt = TimeAdd(localTime, TimeMsToTime(MEASURED_CORE_HIDE_DELAY_SEC * 1000.0));
+	LOG("Core :: creature=%d (local %d) spawn state", (i32)npc.docID, npc.localID);
+}
+
+void World::UpdateCore(ActorNpc& npc)
+{
+	if(npc.hp <= 0 || npc.removeAt != Time::ZERO) return;
+	bool godmode = false;
+	foreach_const(ns, npcStatuses) {
+		if(ns->npcUID != npc.UID || localTime >= ns->until) continue;
+		const StatusInfo* info = GetGameXmlContent().FindStatus(ns->statusID);
+		if(info && info->type == StatusType::GODMODE) godmode = true;
+	}
+	switch(npc.coreStage) {
+		case 1: if(localTime >= npc.coreNextAt) {
+			EnterNpcState(npc, ActionStateID::EXTRAMOTION_2_BEHAVIORSTATE);
+			npc.coreNextAt = TimeAdd(localTime, TimeMsToTime(NpcStateAnimSec(npc, ActionStateID::EXTRAMOTION_2_BEHAVIORSTATE) * 1000.0));
+			npc.coreStage = 2;
+		} break;
+		case 2: if(localTime >= npc.coreNextAt) {
+			EnterNpcState(npc, ActionStateID::NONE_BEHAVIORSTATE);
+			npc.coreStage = 3;
+		} break;
+		case 3: if(godmode) npc.coreStage = 4; break;
+		case 4: if(!godmode) {
+			EnterNpcState(npc, ActionStateID::EXTRAMOTION_1_BEHAVIORSTATE);
+			npc.coreNextAt = TimeAdd(localTime, TimeMsToTime(NpcStateAnimSec(npc, ActionStateID::EXTRAMOTION_1_BEHAVIORSTATE) * 1000.0));
+			npc.coreStage = 5;
+			LOG("Core :: creature=%d (local %d) can be attacked", (i32)npc.docID, npc.localID);
+		} break;
+		case 5: if(localTime >= npc.coreNextAt) {
+			EnterNpcState(npc, ActionStateID::NONE_BEHAVIORSTATE);
+			ApplyMonsterStatus(npc, MEASURED_CORE_PEACE_STATUS, true);
+			EnterNpcState(npc, ActionStateID::EXTRAMOTION_3_BEHAVIORSTATE);
+			npc.coreNextAt = TimeAdd(localTime, TimeMsToTime(NpcStateAnimSec(npc, ActionStateID::EXTRAMOTION_3_BEHAVIORSTATE) * 1000.0));
+			npc.coreStage = 6;
+		} break;
+		case 6: if(localTime >= npc.coreNextAt) {
+			if(NpcStateAnimSec(npc, ActionStateID::EXTRAMOTION_3_BEHAVIORSTATE) <= 0) {
+				npc.coreStage = 7;
+				break;
+			}
+			EnterNpcState(npc, ActionStateID::NONE_BEHAVIORSTATE);
+			EnterNpcState(npc, ActionStateID::EXTRAMOTION_3_BEHAVIORSTATE);
+			npc.coreNextAt = TimeAdd(localTime, TimeMsToTime(NpcStateAnimSec(npc, ActionStateID::EXTRAMOTION_3_BEHAVIORSTATE) * 1000.0));
+		} break;
+	}
 }

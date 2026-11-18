@@ -656,6 +656,8 @@ struct World
 		vec2 monsterLegGoal = vec2(0);
 		bool monsterReturning = false;
 		bool monsterGoHome = false;
+		u8 coreStage = 0;
+		Time coreNextAt = Time::ZERO;
 		bool monsterWalkStateOn = false;
 		Time monsterWalkStateAt = Time::ZERO;
 		bool monsterLowHpDone = false;
@@ -1386,6 +1388,10 @@ public:
 	i32 LevelNodeOverride(const GameXmlContent::LevelEventNode& node) const;
 	i32 AreaOwnerTeam(const GameXmlContent::Map::Area& area) const;
 	void ApplyMonsterStatus(ActorNpc& npc, i32 statusID, bool apply);
+	void EnterNpcState(ActorNpc& npc, ActionStateID state);
+	f32 NpcStateAnimSec(const ActorNpc& npc, ActionStateID state) const;
+	void StartCore(ActorNpc& npc);
+	void UpdateCore(ActorNpc& npc);
 	void UpdateMonsterAllyBuffs(ActorNpc& npc);
 	void CancelNpcPendingHits(const ActorNpc& npc);
 	f32 NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info);
@@ -1600,7 +1606,7 @@ public:
 	bool stageCleared = false;
 	bool noRespawn = false;
 	bool NodeInDifficulty(const GameXmlContent::LevelEventNode& node) const { return difficultyBit == GameXmlContent::ALL_DIFFICULTIES || (node.difficultyMask & difficultyBit) != 0; }
-	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; f32 shieldMax = 0; u32 dotCaster = UINT32_MAX; f32 dotPower = 0; f32 healValue = 0; bool healPct = false; i32 dotOverlap = 1; Time dotNextTick = Time::ZERO; Time appliedAt = Time::ZERO; };
+	struct NpcStatus { ActorUID npcUID; i32 statusID; ActorUID casterUID; Time until; bool linked = true; f32 shieldHP = 0; f32 shieldMax = 0; u32 dotCaster = UINT32_MAX; f32 dotPower = 0; f32 healValue = 0; bool healPct = false; i32 dotOverlap = 1; Time dotNextTick = Time::ZERO; Time appliedAt = Time::ZERO; bool removedOnHit = false; };
 	void UpdateNpcDots();
 	void UpdateNpcSpeedMods();
 	void ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool remove);
