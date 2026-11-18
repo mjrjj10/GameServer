@@ -143,6 +143,7 @@ static const FireNodeRule FIRE_NODE_RULES[] = {
 	{ RemoteIdx(1440060050), 211.0f, -7.0f, 152.0f },
 	{ RemoteIdx(1440060051), 177.0f, 0.0f, 152.0f },
 	{ RemoteIdx(1440060052), 211.0f, -7.0f, 152.0f },
+	{ RemoteIdx(1440060053), 177.0f, 0.0f, 152.0f },
 	{ RemoteIdx(1440080020), 70.0f, 0.0f, 147.0f },
 	{ RemoteIdx(1440090000), 0.0f, 0.0f, 248.0f },
 	{ RemoteIdx(1440090050), 45.0f, -87.0f, 252.0f },
