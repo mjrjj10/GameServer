@@ -4618,7 +4618,10 @@ bool GameXmlContent::LoadSkillTooltips()
 			if(st.type != StatusType::TOGGLE || len <= 7 || EA::StdC::Strcmp(st.keyName.c_str() + len - 7, "_REMOVE") != 0) continue;
 			st.endsGrab = len > 12 && EA::StdC::Strcmp(st.keyName.c_str() + len - 12, "_GRAB_REMOVE") == 0;
 			auto found = statusByKey.find(eastl::string(st.keyName.c_str(), st.keyName.c_str() + len - 7));
-			if(found != statusByKey.end()) st.toggleRemoves = found->second;
+			if(found == statusByKey.end()) continue;
+			st.toggleRemoves = found->second;
+			auto removed = statusMap.find(found->second);
+			if(removed != statusMap.end() && removed->second.durationSec < 0) actionRemovedStatuses.insert(found->second);
 		}
 	}
 	static const f32 MEASURED_DESC_HEAL_SKILLPOWER_RATIO = 8.0f / 37.0f;
