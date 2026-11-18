@@ -186,6 +186,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		const u32 seed = nextRemoteSeed;
 		nextRemoteSeed += 2;
 		inst.clientRemoteID = seed + 1;
+		inst.sentByDoc = true;
 		vec3 targetPos = pos + vec3(dir * (inst.range > 0 ? inst.range : 1000.0f), 0);
 		const ActorMaster* targetMaster = target != ActorUID::INVALID ? FindMasterActor(target) : nullptr;
 		if(targetMaster) targetPos = targetMaster->parent->body->GetWorldPos();
@@ -315,7 +316,7 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 			if(parent.sourceUID != ActorUID::INVALID && world.FindNpcActor(parent.sourceUID)) world.remoteParentOverride = parent.sourceUID;
 			const bool broadcast = !fromCreator && parent.clientRemoteID != 0;
 			if(broadcast) {
-				world.remoteSendParentID = parent.clientRemoteID;
+				world.remoteSendParentID = parent.clientRemoteID - (parent.sentByDoc ? 1 : 0);
 				world.remoteSendParentSeedHd = parent.seedOwnerHd;
 			}
 			World::RemoteInst* inst = WorldRemoteSpawner::Spawn(world, parent.ownerIndex, CostReplacedRemote(parent.costLevel, rule->idx), at + vec3(dir * child->offsetY, 0), dir, childTarget, parent.skillID, parent.castID, parent.damage, broadcast, false, parent.nodeName);
@@ -348,7 +349,7 @@ u32 World::SendRemoteCreator(const RemoteInst& parent, u16 creator, const vec3& 
 	const ActorUID ownerUID = parent.sourceUID != ActorUID::INVALID && FindNpcActor(parent.sourceUID) ? parent.sourceUID : players[parent.ownerIndex].Main().UID;
 	const ActorMaster* targetMaster = parent.target != ActorUID::INVALID ? FindMasterActor(parent.target) : nullptr;
 	const ActorUID hitInvalid = fromRemote && hitInvalidParent && parent.lastHitIndex >= 0 ? players[parent.lastHitIndex].Main().UID : ActorUID::INVALID;
-	replication->SendChildRemoteCreateToAll(ownerUID, fromRemote ? ownerUID : spawnerActor, fromRemote ? parent.clientRemoteID : 0, fromRemote ? parent.seedOwnerHd : ClientHandle::INVALID, seed, RemoteIdx::INVALID, creator, pos, atan2f(parent.dir.y, parent.dir.x), fromRemote ? pos : aimPos,
+	replication->SendChildRemoteCreateToAll(ownerUID, fromRemote ? ownerUID : spawnerActor, fromRemote ? parent.clientRemoteID - (parent.sentByDoc ? 1 : 0) : 0, fromRemote ? parent.seedOwnerHd : ClientHandle::INVALID, seed, RemoteIdx::INVALID, creator, pos, atan2f(parent.dir.y, parent.dir.x), fromRemote ? pos : aimPos,
 		targetMaster ? parent.target : ActorUID::INVALID, hitInvalid, GetGameXmlContent().GetNodeName(parent.nodeName), fromRemote ? MEASURED_REMOTE_CREATE_FLAG_PARENT_REMOTE : 0, ClientHandle::INVALID);
 	return seed + 1;
 }
@@ -1607,7 +1608,7 @@ void World::DestroyRemote(i32 index)
 					childPos = copy.castOrigin + vec3(face * copy.measuredNode->childForward + Perp(face) * copy.measuredNode->childSide, copy.measuredNode->childUp);
 					childDir = RotateDir(face, copy.measuredNode->childRot);
 				}
-				remoteSendParentID = copy.clientRemoteID;
+				remoteSendParentID = copy.clientRemoteID - (copy.sentByDoc ? 1 : 0);
 				remoteSendParentSeedHd = copy.seedOwnerHd;
 				RemoteInst* child = SpawnRemote(copy.ownerIndex, CostReplacedRemote(copy.costLevel, next), childPos, childDir, copy.target, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, copy.nodeName, false, false, true);
 				if(child && copy.measuredNode && copy.measuredNode->hasChild) child->dirZ = copy.measuredNode->childDirZ;

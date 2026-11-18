@@ -880,6 +880,7 @@ struct World
 		bool areaDone;
 		bool wallHitDone = false;
 		u32 clientRemoteID = 0;
+		bool sentByDoc = false;
 		vec3 casterDest = vec3(0);
 		bool casterDestSet = false;
 		u32 npcActivation = 0;
