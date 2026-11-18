@@ -445,7 +445,7 @@ void World::UpdateSummonAi(f32 delta)
 					continue;
 				}
 				npc.legMoving = false;
-				npc.pos = target ? target->body->GetWorldPos() : npcTarget->pos;
+				if(npc.pendingMotion == ActionStateID::INVALID) npc.pos = target ? target->body->GetWorldPos() : npcTarget->pos;
 				continue;
 			}
 			const f32 keepRange = info->targetLost > 0 ? info->targetLost : info->perception;
