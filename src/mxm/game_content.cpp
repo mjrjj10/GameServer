@@ -2914,7 +2914,9 @@ static void ParseAppliedStatuses(XMLElement* pParent, const char* name, eastl::f
 		pStatus->QueryAttribute("DATAKEY", &st.statusID);
 		pStatus->QueryAttribute("_Rate", &st.rate);
 		pStatus->QueryAttribute("_Value", &st.value);
-		if(st.statusID != 0 && !out.full()) out.push_back(st);
+		bool listed = false;
+		foreach_const(o, out) if(o->statusID == st.statusID) listed = true;
+		if(st.statusID != 0 && !listed && !out.full()) out.push_back(st);
 	}
 }
 
