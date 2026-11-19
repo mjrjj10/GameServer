@@ -938,9 +938,10 @@ void World::UpdateMonsterRemotes(f32 delta)
 			const vec3 at = monsterRemotes[i].pos;
 			const vec2 dir = monsterRemotes[i].dir;
 			const ActorUID target = monsterRemotes[i].target;
+			const u32 parentSeed = monsterRemotes[i].seed;
 			const eastl::fixed_vector<Remote::SpawnRule,4,false> rules = monsterRemotes[i].remote->onDestroy;
 			monsterRemotes.erase(monsterRemotes.begin() + i);
-			foreach_const(r, rules) if(const Remote* child = content.FindRemote(r->idx)) SpawnMonsterChildRemotes(owner, *child, *r, at, dir, target);
+			foreach_const(r, rules) if(const Remote* child = content.FindRemote(r->idx)) SpawnMonsterChildRemotes(owner, *child, *r, at, dir, target, parentSeed);
 			continue;
 		}
 		i++;
