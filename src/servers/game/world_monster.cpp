@@ -709,10 +709,10 @@ bool World::MonsterAttackUsesRemotes(const GameXmlContent::MonsterAttack& attack
 	return false;
 }
 
-void World::SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, const Remote::SpawnRule& rule, const vec3& pos, const vec2& dir, ActorUID target)
+void World::SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, const Remote::SpawnRule& rule, const vec3& pos, const vec2& dir, ActorUID target, u32 parentSeed)
 {
 	if(rule.kind != Remote::SPAWN_RADIATE || rule.maxNum <= 1) {
-		SpawnMonsterRemote(npc, child, pos, dir, target, rule.kind != Remote::SPAWN_RADIATE);
+		SpawnMonsterRemote(npc, child, pos, dir, target, rule.kind != Remote::SPAWN_RADIATE, 0, parentSeed);
 		return;
 	}
 	for(i32 n = 0; n < rule.maxNum; n++) {
@@ -723,12 +723,13 @@ void World::SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, c
 	}
 }
 
-void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed)
+void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed, u32 parentSeed)
 {
 	if(send) {
 		seed = MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID & MONSTER_REMOTE_ID_MASK);
 		nextMonsterRemoteID += MEASURED_MONSTER_REMOTE_SEED_STEP;
-		replication->SendRemoteCreateToAll(npc.UID, seed, remote.ID, pos, atan2f(dir.y, dir.x), pos, target);
+		if(parentSeed != 0) replication->SendChildRemoteCreateToAll(npc.UID, npc.UID, parentSeed + 1, ClientHandle::INVALID, seed, remote.ID, 0, pos, atan2f(dir.y, dir.x), pos, target, ActorUID::INVALID, L"Scene Root", MEASURED_REMOTE_CREATE_FLAG_PARENT_REMOTE, ClientHandle::INVALID);
+		else replication->SendRemoteCreateToAll(npc.UID, seed, remote.ID, pos, atan2f(dir.y, dir.x), pos, target);
 	}
 	if(monsterRemotes.full()) return;
 	MonsterRemote mr;
@@ -928,9 +929,10 @@ void World::UpdateMonsterRemotes(f32 delta)
 			const vec3 at = mr.pos;
 			const vec2 dir = mr.dir;
 			const ActorUID target = mr.target;
+			const u32 parentSeed = mr.seed;
 			mr.nextTime = remote.timeEventRecycle ? TimeAdd(mr.nextTime, TimeMsToTime(MAX(remote.timeEventDelay, MONSTER_REMOTE_MIN_LIFE_SEC) * 1000.0)) : Time::ZERO;
 			const eastl::fixed_vector<Remote::SpawnRule,4,false> rules = remote.onTime;
-			foreach_const(r, rules) if(const Remote* child = content.FindRemote(r->idx)) SpawnMonsterChildRemotes(owner, *child, *r, at, dir, target);
+			foreach_const(r, rules) if(const Remote* child = content.FindRemote(r->idx)) SpawnMonsterChildRemotes(owner, *child, *r, at, dir, target, parentSeed);
 		}
 		if(expired) {
 			const vec3 at = monsterRemotes[i].pos;
