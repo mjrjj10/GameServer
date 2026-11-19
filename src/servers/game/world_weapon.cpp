@@ -831,11 +831,14 @@ void World::UpdateWeaponHeat(Player& player)
 void World::OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize)
 {
 	if(frozen || combatLocked) return;
-	foreach_const(id, player.weaponAniEndStatuses) {
-		foreach(st, activeStatuses) if(st->targetIndex == player.index && st->casterIndex == player.index && st->statusID == *id && st->info && st->info->blockAttack && localTime < st->until) st->until = localTime;
+	bool blocked = false;
+	foreach_const(st, activeStatuses) {
+		if(st->targetIndex != player.index || !st->info || !st->info->blockAttack || localTime >= st->until) continue;
+		bool ownAniEnd = false;
+		if(st->casterIndex == player.index) foreach_const(id, player.weaponAniEndStatuses) if(*id == st->statusID) ownAniEnd = true;
+		if(!ownAniEnd) blocked = true;
 	}
-	player.weaponAniEndStatuses.clear();
-	if(IsBlocked(player, true, false, false)) {
+	if(blocked) {
 		LOG("Blocked :: %ls shot ignored (attack blocked by a status)", player.name.data());
 		return;
 	}
@@ -1052,7 +1055,7 @@ void World::RunWeaponActionStatuses(Player& player, i8 stance, const vec3* aimPo
 			if(capInfo && capInfo->durationSec > 0) duration = MIN(duration, capInfo->durationSec);
 		}
 		if(!player.dead) ApplyStatus(player, player, cmd->status.statusIndex, 0, duration);
-		if(cmd->status.removeAtEnd && !player.weaponAniEndStatuses.full()) player.weaponAniEndStatuses.push_back(cmd->status.statusIndex);
+		if(cmd->status.removeAtEnd && eastl::find(player.weaponAniEndStatuses.begin(), player.weaponAniEndStatuses.end(), cmd->status.statusIndex) == player.weaponAniEndStatuses.end() && !player.weaponAniEndStatuses.full()) player.weaponAniEndStatuses.push_back(cmd->status.statusIndex);
 	}
 }
 
