@@ -1638,22 +1638,35 @@ void World::UpdateMonsterAi(f32 delta)
 					continue;
 				}
 			}
-			const vec2 rel = vec2(npc.home) - vec2(npc.pos);
-			const f32 dist = glm::length(rel);
+			const f32 dist = glm::length(vec2(npc.home) - vec2(npc.pos));
 			if(dist <= MONSTER_WAYPOINT_REACHED || run <= 0) npc.monsterGoHome = false;
 			if(dist > MONSTER_WAYPOINT_REACHED && run > 0) {
+				bool newLeg = !npc.monsterReturning;
+				if(newLeg) {
+					npc.homeRoute.clear();
+					npc.homeRouteAt = 0;
+					if(titanMode && !(BotSees(npc.pos, npc.home) && BotWalkable(npc.pos, npc.home))) PlanNavRoute(npc.pos, npc.home, npc.homeRoute);
+					if(!npc.homeRoute.empty()) LOG("Monster :: creature=%d (local %d) returns home through %d walk graph nodes", (i32)npc.docID, npc.localID, (i32)npc.homeRoute.size());
+				}
+				while(npc.homeRouteAt < npc.homeRoute.size() && glm::length(vec2(botNav[npc.homeRoute[npc.homeRouteAt]].pos) - vec2(npc.pos)) <= MONSTER_WAYPOINT_REACHED) {
+					npc.homeRouteAt++;
+					newLeg = true;
+				}
+				const vec3 legGoal = npc.homeRouteAt < npc.homeRoute.size() ? vec3(vec2(botNav[npc.homeRoute[npc.homeRouteAt]].pos), npc.pos.z) : npc.home;
+				const vec2 rel = vec2(legGoal) - vec2(npc.pos);
+				const f32 legDist = MAX(glm::length(rel), 1.0f);
 				const f32 yaw = atan2f(rel.y, rel.x);
 				const f32 back = titanMode && walk > 0 ? walk : run * ai.returnSpeedRate;
-				npc.pos = vec3(vec2(npc.pos) + rel / dist * MIN(back * delta, dist), npc.pos.z);
+				npc.pos = vec3(vec2(npc.pos) + rel / legDist * MIN(back * delta, legDist), npc.pos.z);
 				npc.rot.z = yaw;
 				if(!npc.monsterReturning && titanMode) ApplyMonsterStatus(npc, MEASURED_GOT_MOB_RETURN_SUPERARMOR, true);
-				if(!npc.monsterReturning || localTime >= npc.monsterNextSync) {
+				if(newLeg || localTime >= npc.monsterNextSync) {
 					npc.monsterReturning = true;
 					npc.monsterNextSync = TimeAdd(localTime, TimeMsToTime(MONSTER_SYNC_MS));
 					npc.monsterSyncYaw = yaw;
 					npc.monsterLastTurn = localTime;
 					npc.monsterChasing = false;
-					replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.home, yaw, back);
+					replication->SendMonsterMoveToAll(npc.UID, npc.pos, legGoal, yaw, back);
 				}
 			}
 			else if(npc.monsterReturning) {

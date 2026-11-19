@@ -657,6 +657,8 @@ struct World
 		vec2 monsterLegGoal = vec2(0);
 		bool monsterReturning = false;
 		bool monsterGoHome = false;
+		eastl::fixed_vector<u16,24,false> homeRoute;
+		u8 homeRouteAt = 0;
 		bool monsterSpreading = false;
 		vec2 monsterSpreadGoal = vec2(0);
 		u8 coreStage = 0;
@@ -1567,6 +1569,7 @@ public:
 	bool BotSees(const vec3& from, const vec3& to);
 	bool BotWalkable(const vec3& from, const vec3& to);
 	void BotPlanRoute(Player& bot, const vec2& goal);
+	void PlanNavRoute(const vec3& from, const vec3& to, eastl::fixed_vector<u16,24,false>& out);
 	bool BotShotClear(const Player& bot, const vec3& aim, f32 bodyRadius);
 	bool BotCanStepToward(Player& bot, const vec2& to);
 	bool BotPassesStuckSpot(const Player& bot, const vec2& from, const vec2& to) const;

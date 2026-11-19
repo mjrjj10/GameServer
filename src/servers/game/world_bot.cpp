@@ -779,6 +779,44 @@ void World::BotPlanRoute(Player& bot, const vec2& goal)
 	for(i32 k = (i32)reversed.size() - 1; k >= 0 && !bot.botRoute.full(); k--) bot.botRoute.push_back(reversed[k]);
 }
 
+void World::PlanNavRoute(const vec3& from, const vec3& to, eastl::fixed_vector<u16,24,false>& out)
+{
+	out.clear();
+	const i32 count = (i32)botNav.size();
+	if(count == 0) return;
+	eastl::vector<f32> dist(count, 1e30f);
+	eastl::vector<i32> prev(count, -1);
+	eastl::vector<bool> done(count, false);
+	for(i32 n = 0; n < count; n++) {
+		const f32 d = glm::length(vec2(botNav[n].pos) - vec2(from));
+		if(d <= BOT_NAV_LINK_RANGE && BotSees(from, botNav[n].pos) && BotWalkable(from, botNav[n].pos)) dist[n] = d;
+	}
+	for(;;) {
+		i32 cur = -1;
+		for(i32 n = 0; n < count; n++) {
+			if(!done[n] && dist[n] < 1e29f && (cur < 0 || dist[n] < dist[cur])) cur = n;
+		}
+		if(cur < 0) break;
+		done[cur] = true;
+		foreach_const(l, botNav[cur].links) {
+			const f32 d = dist[cur] + glm::length(vec2(botNav[*l].pos) - vec2(botNav[cur].pos));
+			if(d < dist[*l]) { dist[*l] = d; prev[*l] = cur; }
+		}
+	}
+	i32 last = -1;
+	f32 lastCost = 1e30f;
+	for(i32 n = 0; n < count; n++) {
+		if(dist[n] >= 1e29f) continue;
+		const f32 d = glm::length(vec2(botNav[n].pos) - vec2(to));
+		if(d > BOT_NAV_LINK_RANGE || dist[n] + d >= lastCost || !BotSees(botNav[n].pos, to) || !BotWalkable(botNav[n].pos, to)) continue;
+		lastCost = dist[n] + d;
+		last = n;
+	}
+	eastl::fixed_vector<u16,64,true> reversed;
+	for(i32 n = last; n >= 0; n = prev[n]) reversed.push_back((u16)n);
+	for(i32 k = (i32)reversed.size() - 1; k >= 0 && !out.full(); k--) out.push_back(reversed[k]);
+}
+
 bool World::BotShotClear(const Player& bot, const vec3& aim, f32 bodyRadius)
 {
 	const vec3 pos = bot.body->GetWorldPos();
