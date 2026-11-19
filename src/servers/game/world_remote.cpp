@@ -389,7 +389,7 @@ i32 World::PenetrationCost(const Player& p) const
 
 void World::BeginRemoteActivation(const RemoteInst& inst)
 {
-	remoteActivation.remoteID = inst.clientRemoteID;
+	remoteActivation.remoteID = inst.clientRemoteID - (inst.sentByDoc ? 1 : 0);
 	remoteActivation.skipHd = inst.casterLocal ? players[inst.ownerIndex].clientHd : ClientHandle::INVALID;
 	remoteActivation.targetUID = ActorUID::INVALID;
 	remoteActivation.penetration = 0;
@@ -875,7 +875,7 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 	Player& owner = players[inst.ownerIndex];
 	if(inst.clientRemoteID != 0) {
 		inst.npcActivation += NpcDensity(npc);
-		replication->SendRemoteActivatedToAll(inst.clientRemoteID, inst.seedOwnerHd, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, npc.UID, inst.npcActivation, inst.pos);
+		replication->SendRemoteActivatedToAll(inst.clientRemoteID - (inst.sentByDoc ? 1 : 0), inst.seedOwnerHd, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, npc.UID, inst.npcActivation, inst.pos);
 	}
 	if(remote.onHitOwnerStatus != 0 && !owner.dead && (inst.sourceUID == ActorUID::INVALID || !FindNpcActor(inst.sourceUID))) {
 		const ActorUID prevCaster = statusCasterOverride;
