@@ -405,6 +405,7 @@ void World::Update(Time localTime_)
 	}
 	*/
 
+	UpdateStatuses();
 	Replicate();
 }
 
