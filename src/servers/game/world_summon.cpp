@@ -498,7 +498,7 @@ void World::UpdateSummonAi(f32 delta)
 		if(info->moveSpeed <= 0) continue;
 		const vec2 rel = vec2(goal) - vec2(npc.pos);
 		const f32 dist = glm::length(rel);
-		if(dist <= stopDist + 1.0f) { StopNpcLeg(npc); continue; }
+		if(dist <= stopDist + 1.0f || (!npc.legMoving && dist <= stopDist + NPC_LEG_RETARGET_DIST)) { StopNpcLeg(npc); continue; }
 		const vec2 dir = rel / dist;
 		f32 chaseSpeed = info->moveSpeed;
 		if(const SummonChaseSpeedRule* chase = npc.ai == SummonInfo::AI_RELAY ? nullptr : FindSummonChaseSpeedRule((i32)npc.docID)) {
@@ -510,9 +510,12 @@ void World::UpdateSummonAi(f32 delta)
 		const f32 legDist = glm::length(legRel);
 		if(legDist > 1.0f) {
 			const vec2 legDir = legRel / legDist;
-			npc.pos = vec3(vec2(npc.pos) + legDir * MIN((npc.legSpeed > 0 ? npc.legSpeed : info->moveSpeed) * delta, legDist), goal.z);
+			const f32 legStep = (npc.legSpeed > 0 ? npc.legSpeed : info->moveSpeed) * delta;
+			npc.pos = vec3(vec2(npc.pos) + legDir * MIN(legStep, legDist), goal.z);
 			npc.rot.z = atan2f(legDir.y, legDir.x);
+			if(legStep >= legDist) StopNpcLeg(npc);
 		}
+		else StopNpcLeg(npc);
 	}
 }
 
