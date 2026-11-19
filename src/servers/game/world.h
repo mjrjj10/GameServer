@@ -183,6 +183,7 @@ struct World
 		Time chargeStart = Time::ZERO;
 		u8 chargeAnnounced = 0;
 		u32 chargeDelayedDone = 0;
+		eastl::fixed_vector<u32,4,false> weaponAniEndStatuses;
 		u8 botChargeGoal = 0;
 		f32 botIdleResourceGoal = -1;
 		eastl::fixed_map<i32,u8,12,false> skillLevels;

@@ -831,6 +831,10 @@ void World::UpdateWeaponHeat(Player& player)
 void World::OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize)
 {
 	if(frozen || combatLocked) return;
+	foreach_const(id, player.weaponAniEndStatuses) {
+		foreach(st, activeStatuses) if(st->targetIndex == player.index && st->casterIndex == player.index && st->statusID == *id && st->info && st->info->blockAttack && localTime < st->until) st->until = localTime;
+	}
+	player.weaponAniEndStatuses.clear();
 	if(IsBlocked(player, true, false, false)) {
 		LOG("Blocked :: %ls shot ignored (attack blocked by a status)", player.name.data());
 		return;
@@ -1048,6 +1052,7 @@ void World::RunWeaponActionStatuses(Player& player, i8 stance, const vec3* aimPo
 			if(capInfo && capInfo->durationSec > 0) duration = MIN(duration, capInfo->durationSec);
 		}
 		if(!player.dead) ApplyStatus(player, player, cmd->status.statusIndex, 0, duration);
+		if(cmd->status.removeAtEnd && !player.weaponAniEndStatuses.full()) player.weaponAniEndStatuses.push_back(cmd->status.statusIndex);
 	}
 }
 
