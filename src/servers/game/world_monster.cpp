@@ -1505,8 +1505,11 @@ void World::UpdateMonsterAi(f32 delta)
 		if(combatLocked && hostileMonsters) continue;
 		if(npc.despawnAt != Time::ZERO && localTime >= npc.despawnAt) continue;
 		const GameXmlContent::MonsterAi& ai = *npc.monsterAi;
-		const f32 walk = ai.walk * npc.speedMul;
-		const f32 run = ai.run * npc.speedMul;
+		static const u32 MEASURED_STATIONARY_MONSTERS[] = { 105001040 };
+		bool stationary = false;
+		for(u32 s : MEASURED_STATIONARY_MONSTERS) if((u32)npc.docID == s) stationary = true;
+		const f32 walk = stationary ? 0.0f : ai.walk * npc.speedMul;
+		const f32 run = stationary ? 0.0f : ai.run * npc.speedMul;
 		UpdateMonsterAllyBuffs(npc);
 		UpdateNpcDefeat(npc);
 		UpdateNpcVictory(npc);
