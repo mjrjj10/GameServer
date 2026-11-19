@@ -1886,7 +1886,7 @@ void World::UpdateMonsterAi(f32 delta)
 			const f32 reach = attack->range;
 			const bool laneWalk = npc.path && ai.tagKey == StatusTypeKey("Titan") && npc.pathPoint < (i32)npc.path->size() && walk > 0 && (attack->target == GameXmlContent::MonsterAttack::MASTER || attack->target == GameXmlContent::MonsterAttack::MINION);
 			if(npc.monsterDashHold && localTime < npc.monsterDashTurnAt) continue;
-			if(dist > reach + MONSTER_REACH_TOLERANCE) {
+			if(dist > reach + (npc.monsterSpreading ? HYP_MINION_ATTACK_SPACING : MONSTER_REACH_TOLERANCE)) {
 				npc.monsterSpreading = false;
 				if(localTime >= npc.monsterNextAttack) {
 					const f32 hpNow = npc.hpMax > 0 ? (f32)npc.hp / (f32)npc.hpMax : 1.0f;
