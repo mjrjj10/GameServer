@@ -787,6 +787,8 @@ struct World
 		i32 zoneDamage = 0;
 		f32 speed;
 		f32 halfWidth;
+		f32 coneHalfCos = -2.0f;
+		f32 coneRadius = 0;
 		u32 remoteID = 0;
 		u32 npcActivation = 0;
 		ClientHandle seedOwnerHd = ClientHandle::INVALID;

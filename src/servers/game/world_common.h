@@ -52,6 +52,15 @@ static inline f32 SkillMoveDuration(const GameXmlContent& content, const char* c
 	return action.seqLength;
 }
 
+static inline bool ProjectileConeHolds(const World::Projectile& proj, const vec2& at, f32 radius)
+{
+	if(proj.coneHalfCos < -1.5f) return true;
+	const vec2 rel = at - vec2(proj.start);
+	const f32 dist = glm::length(rel);
+	if(dist > proj.coneRadius + radius) return false;
+	return dist <= radius || glm::dot(rel / dist, proj.dir) >= proj.coneHalfCos;
+}
+
 static inline f32 CapsuleOrSphereRadius(const Remote& remote)
 {
 	return remote.boundType == Remote::BoundType::E_BOUND_CAPSULE ? remote.boundSize[0] : remote.boundSize[0] * 0.5f;

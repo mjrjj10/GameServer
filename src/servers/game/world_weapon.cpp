@@ -213,6 +213,12 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	proj.ignoreWalls = !remote || remote->ignoreGround;
 	proj.wallZ = player.body->GetWorldPos().z + BodyMidHeight(player);
 	proj.halfWidth = remote ? remote->boundSize[0] * 0.5f : 20.0f;
+	if(remote && remote->boundType == Remote::BoundType::E_BOUND_SPHERE && remote->angle > 0 && remote->angle < 180.0f && !graph) {
+		proj.coneRadius = remote->boundSize[0] * 0.5f;
+		proj.coneHalfCos = cosf(remote->angle * 0.5f * PI / 180.0f);
+		proj.range = proj.coneRadius;
+		proj.halfWidth = proj.coneRadius * sinf(remote->angle * 0.5f * PI / 180.0f);
+	}
 	const bool chainShot = remote && remote->behaviorType == Remote::BehaviorType::CHAIN;
 	proj.hitsLeft = chainShot ? 1 : remote ? MAX(remote->activateCount, 1) : 1;
 	proj.penetrationLeft = remote && remote->penetrationCount > 0 ? remote->penetrationCount : PENETRATION_UNLIMITED;
@@ -626,6 +632,7 @@ void World::UpdateProjectiles(f32 delta)
 				proj->closest = MIN(proj->closest, lagDist);
 				if(fabsf(pos.z - proj->pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 				if(!LagSegmentHits(*it, from, to, proj->halfWidth + HitRadius(*it) + PROJECTILE_HIT_TOLERANCE, lastStep ? proj->forwardReach + HitRadius(*it) : HitRadius(*it))) continue;
+				if(!ProjectileConeHolds(*proj, vec2(pos), HitRadius(*it))) continue;
 
 				if(!proj->hitList.full()) proj->hitList.push_back(it->index);
 				if(VolleyHitLocked(*proj, it->index)) continue;
@@ -666,6 +673,7 @@ void World::UpdateProjectiles(f32 delta)
 				if(destroyed || proj->npcHitList.full() || (proj->damage <= 0 && proj->bombDoc == RemoteIdx::INVALID) || !NpcHittableBy(*npc, owner)) continue;
 				if(eastl::find(proj->npcHitList.begin(), proj->npcHitList.end(), npc->UID) != proj->npcHitList.end()) continue;
 				if(SegmentPointDist2D(from, lastStep ? to + proj->dir * proj->forwardReach : to, vec2(npc->pos)) > proj->halfWidth + NpcHitRadius(*npc) + PROJECTILE_HIT_TOLERANCE) continue;
+				if(!ProjectileConeHolds(*proj, vec2(npc->pos), NpcHitRadius(*npc))) continue;
 				proj->npcHitList.push_back(npc->UID);
 				if(VolleyHitLocked(*proj, (u32)npc->UID | VOLLEY_NPC_TARGET_BIT)) continue;
 				f32 volleyMul = 1.0f;
