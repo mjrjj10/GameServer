@@ -1102,10 +1102,13 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	}
 
 	if(info && info->type == StatusType::WEAPON_GAUGE_RECOVERY) RecoverWeaponHeat(target, info->paramRatio);
+	i32 dispelled = 0;
 	if(info && info->type == StatusType::DISPEL && info->dispelStatusType != StatusType::OTHER) {
 		foreach(it, activeStatuses) {
+			if(info->dispelMaxCount > 0 && dispelled >= info->dispelMaxCount) break;
 			if(it->targetIndex != target.index || !it->info || !it->info->canDispel || it->info->type != info->dispelStatusType || it->until <= localTime) continue;
 			it->until = localTime;
+			dispelled++;
 			LOG("Dispel :: %ls removed status %d (type %s) from %ls", caster.name.data(), it->statusID, it->info->typeName.c_str(), target.name.data());
 		}
 	}
@@ -1113,7 +1116,10 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		foreach(it, activeStatuses) {
 			if(it->targetIndex != target.index || !it->info || !it->info->canDispel || it->statusID == statusID) continue;
 			if((it->info->isDebuff ? 1 : 0) != info->dispelEffect) continue;
+			if(it->until <= localTime) continue;
+			if(info->dispelMaxCount > 0 && dispelled >= info->dispelMaxCount) break;
 			it->until = localTime;
+			dispelled++;
 			LOG("Dispel :: %ls removed status %d from %ls", caster.name.data(), it->statusID, target.name.data());
 		}
 	}
@@ -1149,6 +1155,10 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		target.defeatGuardSource = statusID;
 		target.defeatGuardUntil = TimeAdd(localTime, TimeMsToTime((guardInfo ? guardInfo->durationSec : 0) * 1000.0));
 		ApplyStatus(target, target, guard);
+	}
+	if(info && info->type == StatusType::DISPEL && info->dispelDamage > 0 && dispelled > 0 && caster.team != target.team && !target.dead) {
+		LOG("Dispel :: %ls dispelled %d statuses from %ls, %.0f damage each", caster.name.data(), dispelled, target.name.data(), info->dispelDamage);
+		DamagePlayer(caster, target, SkillID(info->skillIndex), (i32)(info->dispelDamage * dispelled));
 	}
 }
 

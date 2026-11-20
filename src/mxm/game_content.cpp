@@ -4165,6 +4165,8 @@ bool GameXmlContent::LoadStatusData()
 				const char* dispelStatus = nullptr;
 				pCommon->QueryStringAttribute("_DispelStatusType", &dispelStatus);
 				if(dispelStatus) st.dispelStatusType = StatusTypeFromString(dispelStatus);
+				st.dispelMaxCount = pCommon->IntAttribute("_MaxDispeDamageApplyCount", 0);
+				st.dispelDamage = pCommon->FloatAttribute("_DispelDamage", 0.0f);
 				for(XMLElement* pDefense = pCommon->FirstChildElement("_ADD_DF_STATUS"); pDefense; pDefense = pDefense->NextSiblingElement("_ADD_DF_STATUS")) {
 					const char* defense = nullptr;
 					pDefense->QueryStringAttribute("DATAKEY", &defense);
