@@ -1773,19 +1773,24 @@ void Replication::SendDeadDamageInfo(ClientHandle clientHd, u32 killerIndex, con
 		return a.total > b.total;
 	});
 
+	static const u16 MEASURED_DEAD_DAMAGE_ITEMS_PER_ATTACKER = 3;
+	static const u16 MEASURED_DEAD_DAMAGE_OTHER_ATTACKERS = 2;
 	PacketWriter<Sv::SN_DeadDamageInfo> packet;
 	auto writeList = [&](const Group& g) {
 		u16 n = 0;
 		foreach_const(e, entries) if(e->attackerIndex == g.attackerIndex) n++;
+		n = MIN(n, MEASURED_DEAD_DAMAGE_ITEMS_PER_ATTACKER);
 		packet.Write<u16>(n);
+		u16 written = 0;
 		foreach_const(e, entries) {
-			if(e->attackerIndex != g.attackerIndex) continue;
+			if(e->attackerIndex != g.attackerIndex || written >= n) continue;
+			written++;
 			packet.Write<u32>((u32)e->object);
 			packet.Write<u32>(e->skill != SkillID::INVALID ? (u32)e->skill : 0xFFFFFFFF);
 			packet.Write<u32>(e->status != 0 ? (u32)e->status : 0xFFFFFFFF);
 			packet.Write<u32>((u32)e->damage);
 			packet.Write<u8>(0);
-			packet.Write<u8>(e->damageType);
+			packet.Write<u8>(e->status != 0 ? 1 : 0);
 		}
 		packet.Write<u32>((u32)g.userID);
 	};
@@ -1795,8 +1800,10 @@ void Replication::SendDeadDamageInfo(ClientHandle clientHd, u32 killerIndex, con
 		packet.Write<u16>(0);
 		packet.Write<u32>(0);
 	}
-	packet.Write<u16>((u16)(groups.size() - (hasKiller ? 1 : 0)));
-	for(i32 g = hasKiller ? 1 : 0; g < (i32)groups.size(); g++) writeList(groups[g]);
+	const i32 first = hasKiller ? 1 : 0;
+	const i32 others = MIN((i32)groups.size() - first, (i32)MEASURED_DEAD_DAMAGE_OTHER_ATTACKERS);
+	packet.Write<u16>((u16)others);
+	for(i32 g = first; g < first + others; g++) writeList(groups[g]);
 	packet.Write<u32>((u32)durationMs);
 	SendPacket(clientHd, packet);
 }
