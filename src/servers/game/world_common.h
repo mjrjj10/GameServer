@@ -52,6 +52,11 @@ static inline f32 SkillMoveDuration(const GameXmlContent& content, const char* c
 	return action.seqLength;
 }
 
+static inline f32 CapsuleOrSphereRadius(const Remote& remote)
+{
+	return remote.boundType == Remote::BoundType::E_BOUND_CAPSULE ? remote.boundSize[0] : remote.boundSize[0] * 0.5f;
+}
+
 static inline f32 RemoteBoundOffset(const Remote& remote)
 {
 	return remote.forceTargetDir ? -remote.boundOffsetY : remote.boundOffsetY;

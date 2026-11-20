@@ -709,16 +709,18 @@ void World::RemoteApplyPolygonOutline(RemoteInst& inst)
 void World::RemoteApplyArea(RemoteInst& inst)
 {
 	const Remote& remote = *inst.remote;
-	if(remote.boundType != Remote::BoundType::E_BOUND_SPHERE && remote.boundType != Remote::BoundType::E_BOUND_BOX) {
+	const bool capsule = remote.boundType == Remote::BoundType::E_BOUND_CAPSULE;
+	if(remote.boundType != Remote::BoundType::E_BOUND_SPHERE && remote.boundType != Remote::BoundType::E_BOUND_BOX && !capsule) {
 		RemoteApplyShape(inst);
 		return;
 	}
-	RemoteHitWalls(inst, RemoteBoundOffset(remote) + (remote.boundType == Remote::BoundType::E_BOUND_SPHERE ? remote.boundSize[0] * 0.5f : remote.boundSize[1] * 0.5f));
+	const f32 roundRadius = CapsuleOrSphereRadius(remote);
+	RemoteHitWalls(inst, RemoteBoundOffset(remote) + (remote.boundType == Remote::BoundType::E_BOUND_BOX ? remote.boundSize[1] * 0.5f : roundRadius));
 	const bool fanBox = remote.boundType == Remote::BoundType::E_BOUND_BOX && remote.angle > 0;
-	const vec2 origin = vec2(inst.pos) + inst.dir * RemoteBoundOffset(remote);
-	if(remote.boundType == Remote::BoundType::E_BOUND_SPHERE || fanBox) {
+	const vec2 origin = capsule && remote.attachFireObject ? vec2(players[inst.ownerIndex].body->GetWorldPos()) : vec2(inst.pos) + inst.dir * RemoteBoundOffset(remote);
+	if(remote.boundType == Remote::BoundType::E_BOUND_SPHERE || fanBox || capsule) {
 		const bool cone = remote.angle > 0;
-		const f32 radius = remote.boundSize[0] * 0.5f;
+		const f32 radius = roundRadius;
 		foreach(it, players) {
 			const vec3 pos = it->body->GetWorldPos();
 			if(fabsf(pos.z - (inst.pos.z - inst.hitZOffset)) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
@@ -757,15 +759,16 @@ void World::RemoteHitNpcs(RemoteInst& inst)
 	const bool enemies = !(base <= 0 && remote.statuses.empty()) && (remote.damageGroup == Remote::DamageGroup::eENEMY || remote.damageGroup == Remote::DamageGroup::eALL);
 	if(!enemies && remote.friendlyStatuses.empty()) return;
 	Player& owner = players[inst.ownerIndex];
-	const bool sphere = remote.boundType == Remote::BoundType::E_BOUND_SPHERE || remote.angle > 0;
+	const bool sphere = remote.boundType == Remote::BoundType::E_BOUND_SPHERE || remote.boundType == Remote::BoundType::E_BOUND_CAPSULE || remote.angle > 0;
+	const f32 roundRadius = CapsuleOrSphereRadius(remote);
 	foreach(npc, actorNpcList) {
 		const bool hittable = NpcHittableBy(*npc, owner);
 		if(hittable ? !enemies : remote.friendlyStatuses.empty()) continue;
 		const f32 r = NpcHitRadius(*npc);
-		const vec2 rel = vec2(npc->pos) - vec2(inst.pos) - inst.dir * RemoteBoundOffset(remote);
+		const vec2 rel = remote.boundType == Remote::BoundType::E_BOUND_CAPSULE && remote.attachFireObject ? vec2(npc->pos) - vec2(owner.body->GetWorldPos()) : vec2(npc->pos) - vec2(inst.pos) - inst.dir * RemoteBoundOffset(remote);
 		const f32 dist = glm::length(rel);
 		if(sphere) {
-			if(dist > remote.boundSize[0] * 0.5f + r) continue;
+			if(dist > roundRadius + r) continue;
 			if(remote.angle > 0 && dist > r && glm::dot(rel / dist, inst.dir) < cosf(MIN(remote.angle * 0.5f, 180.0f) * PI / 180.0f)) continue;
 		}
 		else {
