@@ -661,6 +661,7 @@ struct World
 		eastl::fixed_vector<u16,24,false> homeRoute;
 		u8 homeRouteAt = 0;
 		bool monsterSpreading = false;
+		ActorUID monsterInReachTarget = ActorUID::INVALID;
 		vec2 monsterSpreadGoal = vec2(0);
 		u8 coreStage = 0;
 		Time coreNextAt = Time::ZERO;
