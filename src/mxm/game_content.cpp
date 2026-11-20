@@ -1439,6 +1439,8 @@ bool GameXmlContent::LoadMonsterAi()
 				const char* kind = pAttack->Attribute("kind");
 				attack.special = kind && EA::StdC::Strcmp(kind, "special") == 0;
 				attack.radius = pAttack->FloatAttribute("radius");
+				static const i32 MEASURED_AREA_REACH_MONSTERS[] = { 105001403 };
+				for(i32 id : MEASURED_AREA_REACH_MONSTERS) if(id == pInfo->IntAttribute("ID") && !attack.special && attack.speed <= 0 && attack.radius * 0.5f > attack.range) attack.range = attack.radius * 0.5f;
 				attack.hits = (u8)MAX(pAttack->IntAttribute("hits", 1), 1);
 				attack.interval = pAttack->FloatAttribute("interval");
 				attack.hpMin = pAttack->FloatAttribute("hpMin", 0.0f);

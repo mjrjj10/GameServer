@@ -1592,7 +1592,10 @@ void World::UpdateMonsterAi(f32 delta)
 			SetMonsterBattle(npc, false);
 			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
 		}
-		const f32 leash = titanMode ? ai.perception : MAX(ai.lost, ai.perception);
+		struct MeasuredLeash { u32 doc; f32 dist; };
+		static const MeasuredLeash MEASURED_HOME_LEASH[] = { { 105001403, 911.0f } };
+		f32 leash = titanMode ? ai.perception : MAX(ai.lost, ai.perception);
+		for(const MeasuredLeash& l : MEASURED_HOME_LEASH) if((u32)npc.docID == l.doc) leash = l.dist;
 		const bool held = localTime < npc.monsterHoldUntil;
 		if(neutral && targetPos && !held && glm::length(vec2(npc.pos) - vec2(npc.home)) > leash) {
 			targetPos = nullptr;
