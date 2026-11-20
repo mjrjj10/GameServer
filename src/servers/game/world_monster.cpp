@@ -825,7 +825,7 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 			else ApplyStatusToNpcFromNpc(owner, *n, st->statusID);
 		}
 	};
-	const u32 remoteID = mr.seed != 0 ? mr.seed + MEASURED_MONSTER_HIT_ID_OFFSET : (MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID++ & MONSTER_REMOTE_ID_MASK));
+	const u32 remoteID = mr.seed != 0 ? mr.seed : (MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID++ & MONSTER_REMOTE_ID_MASK));
 	const bool targetOnly = remote.targetOnly && mr.target != ActorUID::INVALID;
 	const ActorMaster* targetMaster = targetOnly ? FindMasterActor(mr.target) : nullptr;
 	const Player* targetPlayer = targetMaster ? targetMaster->parent : nullptr;
