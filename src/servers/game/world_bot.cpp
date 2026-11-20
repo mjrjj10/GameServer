@@ -124,6 +124,36 @@ bool World::BotReturnSkill(Player& bot)
 static const f32 HYP_BOT_EVADE_AIM_DISTANCE = 500.0f;
 static const f32 MEASURED_BOT_EVADE_CONTACT_DIST = 306.0f;
 
+bool World::BotEvadeZone(const Player& bot, vec2* away, f32* depth) const
+{
+	const vec2 at = vec2(bot.body->GetWorldPos());
+	foreach_const(mr, monsterRemotes) {
+		const Remote* r = mr->remote;
+		if(!r || r->evadeBound == 0 || r->evadeLengthX <= 0 || localTime >= mr->expire) continue;
+		const ActorNpc* owner = FindNpcActor(mr->owner);
+		if(!owner || !NpcHittableBy(*owner, bot)) continue;
+		const vec2 rel = at - vec2(mr->pos);
+		const f32 dist = glm::length(rel);
+		const vec2 dir = glm::length(mr->dir) > 0.5f ? glm::normalize(mr->dir) : vec2(1, 0);
+		const vec2 lateral = vec2(-dir.y, dir.x);
+		if(r->evadeBound == 1) {
+			if(dist > r->evadeLengthX * 0.5f) continue;
+			if(r->evadeAngle > 0 && dist >= 1.0f && glm::dot(rel / dist, dir) < cosf(MIN(r->evadeAngle, 180.0f) * PI / 180.0f)) continue;
+			*away = dist >= 1.0f ? rel / dist : lateral;
+			*depth = r->evadeLengthX * 0.5f - dist;
+		}
+		else {
+			const f32 along = glm::dot(rel, dir);
+			const f32 side = glm::dot(rel, lateral);
+			if(along < 0 || along > r->evadeLengthY || fabsf(side) > r->evadeLengthX * 0.5f) continue;
+			*away = side >= 0 ? lateral : -lateral;
+			*depth = r->evadeLengthX * 0.5f - fabsf(side);
+		}
+		return true;
+	}
+	return false;
+}
+
 bool World::BotEvade(Player& bot)
 {
 	const auto& content = GetGameXmlContent();
@@ -133,6 +163,7 @@ bool World::BotEvade(Player& bot)
 	if(nearby <= 0 || cooltime <= 0) return false;
 	const vec2 at = vec2(bot.body->GetWorldPos());
 	vec2 incoming = vec2(0);
+	vec2 forcedSide = vec2(0);
 	foreach_const(pr, projectileList) {
 		if(players[pr->ownerIndex].team == bot.team || pr->damage <= 0) continue;
 		if(glm::length(vec2(pr->pos) - at) > nearby) continue;
@@ -147,6 +178,11 @@ bool World::BotEvade(Player& bot)
 			incoming = glm::length(ri->dir) > 0.5f ? ri->dir : glm::normalize(at - vec2(ri->pos) + vec2(0.01f, 0.0f));
 			break;
 		}
+	}
+	f32 zoneDepth = 0;
+	if(glm::length(incoming) < 0.5f && BotEvadeZone(bot, &forcedSide, &zoneDepth)) {
+		incoming = vec2(-forcedSide.y, forcedSide.x);
+		LOG("BotEvade :: %ls inside a monster evade zone, %.0f from its edge", bot.name.data(), zoneDepth);
 	}
 	if(glm::length(incoming) < 0.5f && FindPassiveOfType(bot, StatusType::STATUS_ON_EVADE)) {
 		foreach_const(e, players) {
@@ -171,7 +207,7 @@ bool World::BotEvade(Player& bot)
 	}
 	if(shirk == SkillID::INVALID || !SkillCostAffordable(bot, (i32)shirk, PlayerSkillConsumeMP(bot, (i32)shirk))) return false;
 	bot.botEvadeReady = TimeAdd(localTime, TimeMsToTime(cooltime * 1000.0));
-	const vec2 side = (RandUint() & 1) ? vec2(-incoming.y, incoming.x) : vec2(incoming.y, -incoming.x);
+	const vec2 side = glm::length(forcedSide) > 0.5f ? forcedSide : ((RandUint() & 1) ? vec2(-incoming.y, incoming.x) : vec2(incoming.y, -incoming.x));
 	const vec3 to = vec3(at + side * HYP_BOT_EVADE_AIM_DISTANCE, bot.body->GetWorldPos().z);
 	const f32 yaw = atan2f(side.y, side.x);
 	bot.input.rot.upperYaw = yaw;
@@ -1179,6 +1215,10 @@ void World::UpdateBotMovement()
 				bot.botDangerHoldSince = Time::ZERO;
 			}
 		}
+		static const f32 HYP_BOT_EVADE_ZONE_MARGIN = 150.0f;
+		vec2 zoneAway = vec2(0);
+		f32 zoneDepth = 0;
+		if(BotEvadeZone(bot, &zoneAway, &zoneDepth)) goal = here + zoneAway * (zoneDepth + HYP_BOT_EVADE_ZONE_MARGIN);
 		const vec2 rawGoal = goal;
 		BotGateBlocks(bot, here, &goal);
 		BotKeepOutOfBlockers(bot, &goal);

@@ -1521,6 +1521,7 @@ public:
 	bool BotFarmTarget(Player& bot, vec2* goal, f32 range);
 	bool BotStageSkill(Player& bot);
 	bool BotReturnSkill(Player& bot);
+	bool BotEvadeZone(const Player& bot, vec2* away, f32* depth) const;
 	bool BotEvade(Player& bot);
 	void SetCarriedPieces(Player& player, i32 count);
 	void AddTeamPieces(i32 team, i32 count);

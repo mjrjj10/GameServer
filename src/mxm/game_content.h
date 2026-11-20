@@ -546,6 +546,10 @@ struct Remote
 	f32 penaltyApplyDistance = 0;
 	f32 boundOffsetY = 0;
 	f32 angle = 0;
+	u8 evadeBound = 0;
+	f32 evadeLengthX = 0;
+	f32 evadeLengthY = 0;
+	f32 evadeAngle = 0;
 	f32 hitInvalidTime = 1;
 	f32 multiHitTimeOut = 0;
 	f32 fixedGraphLength = 0;

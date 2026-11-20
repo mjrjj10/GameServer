@@ -3158,6 +3158,10 @@ bool GameXmlContent::LoadRemoteData()
 				ELT_GET(pComp, i32, _AttackMultiplier, 0);
 				ELT_GET(pComp, f32, _LifeTime, 0);
 				ParseAppliedStatuses(pComp, "_Status", remote.statuses);
+				if(const char* ev = pComp->Attribute("_BoundTypeEvade")) remote.evadeBound = EA::StdC::Strcmp(ev, "E_BOUND_SPHERE") == 0 ? 1 : (EA::StdC::Strcmp(ev, "E_BOUND_BOX") == 0 ? 2 : 0);
+				remote.evadeLengthX = pComp->FloatAttribute("_LengthXEvade", 0.0f);
+				remote.evadeLengthY = pComp->FloatAttribute("_LengthYEvade", 0.0f);
+				remote.evadeAngle = pComp->FloatAttribute("_AngleEvade", 0.0f);
 				ParseAppliedStatuses(pComp, "_StatusFriendly", remote.friendlyStatuses);
 				remote.attachFireObject = XmlAttrTrue(pComp, "_AttachFireObject");
 				remote.attachTargetObject = XmlAttrTrue(pComp, "_AttachTargetObject");
