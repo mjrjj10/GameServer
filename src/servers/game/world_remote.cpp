@@ -481,7 +481,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 		}
 		damageAttackerOverride = inst.sourceUID;
 		damageSeedOwnerOverride = inst.seedOwnerHd;
-		if(enemy) DamagePlayer(owner, target, inst.skillID, dealt, nullptr, inst.clientRemoteID != 0 ? inst.clientRemoteID : inst.damageRemoteID, remote.ID, inst.dir);
+		if(enemy) DamagePlayer(owner, target, inst.skillID, dealt, nullptr, inst.clientRemoteID != 0 ? inst.clientRemoteID - (inst.sentByDoc ? 1 : 0) : inst.damageRemoteID, remote.ID, inst.dir);
 		else if(remote.damageGroup == Remote::DamageGroup::eFRIEND) HealPlayer(owner, target, amount);
 		damageAttackerOverride = ActorUID::INVALID;
 		damageSeedOwnerOverride = ClientHandle::INVALID;
@@ -860,7 +860,7 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 	inst.singleHitDone = true;
 	if(base > 0) {
 		Replication::RemoteDamage hit;
-		hit.remoteID = inst.clientRemoteID != 0 ? inst.clientRemoteID : inst.damageRemoteID;
+		hit.remoteID = inst.clientRemoteID != 0 ? inst.clientRemoteID - (inst.sentByDoc ? 1 : 0) : inst.damageRemoteID;
 		hit.remoteDoc = remote.ID;
 		hit.remotePos = inst.pos;
 		hit.dir = inst.dir;
