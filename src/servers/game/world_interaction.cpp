@@ -885,7 +885,7 @@ void World::CallMonsters(const GameXmlContent::LevelEventNode& node, i32 playerI
 			if(const i32 interaction = GetGameXmlContent().FindDynamicInteraction(node.monster)) AddDynamicInteraction(dyn, interaction);
 			continue;
 		}
-		ActorNpc& npc = SpawnMonster((CreatureIndex)node.monster, node.areaID, area->pos, area->rot, node.team, node.tagID);
+		ActorNpc& npc = SpawnMonster((CreatureIndex)node.monster, node.areaID, area->pos, vec3(area->rot.x, area->rot.y, MxmYawToWorldYaw(area->rot.z)), node.team, node.tagID);
 		npc.spawnAnim = node.spawnAnim;
 		npc.wanderDist = node.wander;
 	}
