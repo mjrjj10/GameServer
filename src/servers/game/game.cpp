@@ -2301,6 +2301,7 @@ void Game::OnPlayerGameIsReady(ClientHandle clientHd)
 	World::Player& player = world.GetPlayer(p.playerIndex);
 	ASSERT(player.clientHd == clientHd);
 	p.ready = true;
+	world.MarkPlayerStatsDirty();
 
 	if(pveStage) {
 		i32 humans = 0;
