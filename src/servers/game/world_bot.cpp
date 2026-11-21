@@ -1335,9 +1335,33 @@ bool World::PilotTourStep(Player& p, PilotDecision* out, vec2* goal)
 bool World::Pilot(Player& p, PilotDecision* out)
 {
 	static const f32 HYP_PILOT_ENGAGE_RANGE = 1300.0f;
-	if(!map || !map->ingameLevels || !p.body || p.dead || p.Main().classType == ClassType::NONE) return false;
+	if(!map || !p.body || p.dead || p.Main().classType == ClassType::NONE) return false;
 	const vec3 pos = p.body->GetWorldPos();
 	const vec2 here = vec2(pos);
+	if(!map->ingameLevels) {
+		const Player* nearest = nullptr;
+		f32 nearestDist = 0;
+		foreach_const(e, players) {
+			if(e->dead || e->untargetable || e->team == p.team || !e->body || e->Main().classType == ClassType::NONE) continue;
+			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - here);
+			if(nearest && d >= nearestDist) continue;
+			nearest = &*e;
+			nearestDist = d;
+		}
+		if(!nearest) return false;
+		const vec3 at = nearest->body->GetWorldPos();
+		if(nearestDist < HYP_PILOT_ENGAGE_RANGE) {
+			out->hasTarget = true;
+			out->master = true;
+			out->target = at;
+			out->hp = nearest->Main().hp;
+			out->hpMax = nearest->Main().hpMax;
+			out->doc = 100000000 + (i32)nearest->Main().classType;
+		}
+		out->finalGoal = at;
+		out->goal = vec3(BotNavStep(p, vec2(at)), pos.z);
+		return true;
+	}
 	vec2 goal = here;
 	const bool touring = Config().DevPilotTour && PilotTourStep(p, out, &goal);
 	const bool retreat = !touring && BotRetreat(p, &goal);
