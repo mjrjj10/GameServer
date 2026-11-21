@@ -1308,6 +1308,7 @@ void World::WarpPlayer(Player& p, const vec3& pos, f32 yaw)
 {
 	TeleportPlayer(p, pos, yaw);
 	if(p.clientHd != ClientHandle::INVALID) replication->SendTeleportRequest(p.clientHd, p.Main().UID, pos);
+	else replication->SendPlayerSyncTeleportToAll(p.Main().UID, pos);
 }
 
 void World::SpawnRespawnFlyRemote(Player& player)
