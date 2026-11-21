@@ -886,6 +886,8 @@ void World::CallMonsters(const GameXmlContent::LevelEventNode& node, i32 playerI
 			continue;
 		}
 		ActorNpc& npc = SpawnMonster((CreatureIndex)node.monster, node.areaID, area->pos, vec3(area->rot.x, area->rot.y, MxmYawToWorldYaw(area->rot.z)), node.team, node.tagID);
+		npc.createRot = area->rot;
+		npc.hasCreateRot = true;
 		npc.spawnAnim = node.spawnAnim;
 		npc.wanderDist = node.wander;
 	}

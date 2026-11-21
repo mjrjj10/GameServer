@@ -526,6 +526,8 @@ struct World
 	struct ActorNpc
 	{
 		const ActorUID UID;
+		vec3 createRot = vec3(0);
+		bool hasCreateRot = false;
 		i32 hp = 0;
 		i32 hpMax = 0;
 		f32 defence = 0;

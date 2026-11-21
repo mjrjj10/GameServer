@@ -4352,7 +4352,7 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 		packet.Write<CreatureIndex>(actor.docID);
 		packet.Write<i32>(actor.localID);
 		packet.Write(spawnPos);
-		packet.Write(actor.dir);
+		packet.Write(actor.hasCreateRot ? actor.createRot : actor.dir);
 		packet.Write<i32>(actor.spawnAnim);
 		packet.Write<ActionStateID>(actor.ownerUID != ActorUID::INVALID ? ActionStateID::SPAWN_BEHAVIORSTATE : actor.actionState);
 		packet.Write<i32>(actor.ownerUID != ActorUID::INVALID ? (i32)GetLocalActorID(clientHd, actor.ownerUID) : actor.ownerID);

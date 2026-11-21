@@ -555,6 +555,8 @@ void World::Replicate()
 		rfl.docID = actor.docID;
 		rfl.pos = actor.pos;
 		rfl.dir = actor.rot;
+		rfl.createRot = actor.createRot;
+		rfl.hasCreateRot = actor.hasCreateRot;
 		rfl.localID = actor.localID;
 		rfl.faction = actor.faction;
 		rfl.spawnAnim = actor.spawnAnim;

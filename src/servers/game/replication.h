@@ -133,6 +133,8 @@ struct Replication
 		CreatureIndex docID;
 		i32 localID;
 		Faction faction;
+		vec3 createRot = vec3(0);
+		bool hasCreateRot = false;
 		i32 spawnAnim = 0;
 		i32 ownerID = 0;
 		u8 dirToNearPC = 0;
