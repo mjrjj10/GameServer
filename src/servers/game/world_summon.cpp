@@ -605,7 +605,7 @@ void World::UpdateSummons()
 				}
 			}
 			if(reuse && (reuse->queuedState >= 0 || localTime < reuse->leapEndAt)) {
-				ps->time = reuse->queuedState >= 0 ? TimeAdd(reuse->queuedStateAt, TimeMsToTime(50)) : reuse->leapEndAt;
+				ps->time = TimeAdd(reuse->queuedState >= 0 && localTime < reuse->queuedStateAt ? reuse->queuedStateAt : (localTime < reuse->leapEndAt ? reuse->leapEndAt : localTime), TimeMsToTime(50));
 				LOG("Summon :: relay robot of %ls in flight, next order at landing", owner.name.data());
 				++ps;
 				continue;

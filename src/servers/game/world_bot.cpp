@@ -1342,7 +1342,7 @@ bool World::Pilot(Player& p, PilotDecision* out)
 		const Player* nearest = nullptr;
 		f32 nearestDist = 0;
 		foreach_const(e, players) {
-			if(e->dead || e->untargetable || e->team == p.team || !e->body || e->Main().classType == ClassType::NONE) continue;
+			if(e->dead || e->untargetable || e->team == p.team || !e->body || e->Main().classType == ClassType::NONE || !(e->fogSeenBy & (1u << p.team))) continue;
 			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - here);
 			if(nearest && d >= nearestDist) continue;
 			nearest = &*e;
