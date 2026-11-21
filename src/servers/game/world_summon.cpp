@@ -105,14 +105,14 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 		}
 		LOG("Summon :: creature=%d plays %s", (i32)npc.docID, name.c_str());
 	}
-	f32 t = 0;
+	f32 passStart = 0;
 	i32 pass = 0;
 	foreach_const(c, commands) {
 		if(!lifted && c->animIndex > pass) {
 			pass = c->animIndex;
-			t = SummonPassStart(*info, state, pass);
+			passStart = SummonPassStart(*info, state, pass);
 		}
-		t += c->delay;
+		const f32 t = passStart + c->delay;
 		if(c->kind == SummonCommand::REMOTE) {
 			if(pendingSummonCommands.full()) continue;
 			PendingSummonCommand pc;
@@ -216,9 +216,14 @@ void World::ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos)
 		}
 		LOG("Summon :: %ls carried to (%.0f, %.0f)", carried.name.data(), pos.x, pos.y);
 	}
+	const vec3 from = npc->pos;
 	npc->pos = goal;
 	npc->aimPos = pos;
 	RunSummonState(*npc, child);
+	if(dist > 1.0f && npc->pendingMotion != ActionStateID::INVALID) {
+		npc->motionFrom = from;
+		npc->motionFromSet = true;
+	}
 }
 
 static bool NpcKeepsSpeed(const World::ActorNpc& npc)
@@ -385,8 +390,9 @@ void World::UpdateSummonAi(f32 delta)
 		ActorNpc& npc = *it;
 		if(npc.pendingMotion != ActionStateID::INVALID && localTime >= npc.motionAt) {
 			const SummonInfo* motionInfo = content.FindSummon((i32)npc.docID);
-			replication->SendNpcBehaviorToAll(npc.UID, npc.pendingMotion, npc.pos, npc.motionTarget, npc.motionTargetUID, motionInfo ? motionInfo->moveSpeed : 0.0f);
+			replication->SendNpcBehaviorToAll(npc.UID, npc.pendingMotion, npc.motionFromSet ? npc.motionFrom : npc.pos, npc.motionTarget, npc.motionTargetUID, motionInfo ? motionInfo->moveSpeed : 0.0f);
 			npc.pendingMotion = ActionStateID::INVALID;
+			npc.motionFromSet = false;
 		}
 		if(npc.queuedState >= 0 && localTime >= npc.queuedStateAt && npc.pendingMotion == ActionStateID::INVALID) {
 			if(glm::length(vec2(npc.queuedGoal)) > 1.0f) {
@@ -670,6 +676,10 @@ void World::UpdateSummons()
 						actor.passiveBlockedUntil = TimeAdd(localTime, TimeMsToTime((hide ? hide->durationSec : 0.0f) * 1000.0));
 					}
 					RunSummonState(actor, modeState);
+					if(glm::length(vec2(childPos)) > 1.0f && actor.pendingMotion != ActionStateID::INVALID) {
+						actor.motionTarget = childPos;
+						actor.motionTargetUID = ActorUID::INVALID;
+					}
 					actor.aimPos = childPos;
 					actor.queuedGoal = mode != RELAY_ARTILLERY_MODE && glm::length(vec2(childPos)) > 1.0f ? vec3(vec2(childPos), actor.pos.z) : vec3(0);
 					const f32 modeSec = GetGameXmlContent().GetAniSeqTime(info->className.c_str(), info->stateAnim[modeState]);
@@ -861,7 +871,6 @@ void World::UpdateSummons()
 				}
 			}
 			if(info) {
-				f32 t = 0;
 				u8 wanted = 0;
 				foreach_const(c, info->onDie) if(c->dieMode == it->dieMode) wanted = it->dieMode;
 				if(!info->onDie.empty()) LOG("Summon :: creature=%d dies in mode %d (own %d) with %d die commands", (i32)it->docID, (i32)wanted, (i32)it->dieMode, (i32)info->onDie.size());
@@ -869,7 +878,7 @@ void World::UpdateSummons()
 					if(c->dieMode != wanted) continue;
 					if(!pendingSummonCommands.full()) {
 						PendingSummonCommand pc;
-						pc.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
+						pc.time = TimeAdd(localTime, TimeMsToTime(c->delay * 1000.0));
 						pc.ownerIndex = it->ownerIndex;
 						pc.kind = c->kind;
 						pc.index = c->index;
@@ -881,7 +890,6 @@ void World::UpdateSummons()
 						if(it->ownerUID != ActorUID::INVALID) pc.source = it->UID;
 						pendingSummonCommands.push_back(pc);
 					}
-					t += c->delay;
 				}
 			}
 			if(it->ownerUID != ActorUID::INVALID) {

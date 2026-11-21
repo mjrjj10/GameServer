@@ -584,6 +584,8 @@ struct World
 		Time motionAt = Time::ZERO;
 		vec3 motionTarget = vec3(0);
 		ActorUID motionTargetUID = ActorUID::INVALID;
+		vec3 motionFrom = vec3(0);
+		bool motionFromSet = false;
 		f32 motionYaw = 0;
 		i32 relayMode = -1;
 		i32 queuedState = -1;
