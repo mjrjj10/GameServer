@@ -2997,6 +2997,7 @@ static const MeasuredSkillPowerMul MEASURED_SKILL_POWER_MUL[] = {
 	{ 180400020, 0.573f },
 	{ 180140030, 0.421f },
 	{ 180220020, 0.234f },
+	{ 180270010, 0.589f },
 };
 
 bool GameXmlContent::LoadSkillUpgrades()
