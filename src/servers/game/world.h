@@ -1009,6 +1009,9 @@ struct World
 		vec3 rot;
 		ActorUID target = ActorUID::INVALID;
 		bool remove = false;
+		i32 childSkill = 0;
+		vec3 childPos = vec3(0);
+		ActorUID childTarget = ActorUID::INVALID;
 	};
 	eastl::fixed_vector<PendingSummon,64,false> pendingSummons;
 

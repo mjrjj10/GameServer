@@ -605,6 +605,12 @@ void World::UpdateSummons()
 				}
 			}
 			if(reuse && (reuse->queuedState >= 0 || localTime < reuse->leapEndAt)) {
+				if(ps->childSkill == 0 && owner.pendingChildSkill > 0 && localTime < owner.pendingChildSkillUntil) {
+					ps->childSkill = owner.pendingChildSkill;
+					ps->childPos = owner.pendingChildPos;
+					ps->childTarget = owner.pendingChildTarget;
+					owner.pendingChildSkill = 0;
+				}
 				ps->time = TimeAdd(reuse->queuedState >= 0 && localTime < reuse->queuedStateAt ? reuse->queuedStateAt : (localTime < reuse->leapEndAt ? reuse->leapEndAt : localTime), TimeMsToTime(50));
 				LOG("Summon :: relay robot of %ls in flight, next order at landing", owner.name.data());
 				++ps;
@@ -647,8 +653,11 @@ void World::UpdateSummons()
 			actor.skillTarget = ps->target;
 			owner.lastChildUID = actor.UID;
 			if(reuse && info->perception > 0 && glm::length(vec2(ps->pos) - vec2(actor.pos)) > info->perception) RelayWarp(actor, ps->pos);
-			if(info && owner.pendingChildSkill > 0 && localTime < owner.pendingChildSkillUntil) {
-				const i32 child = owner.pendingChildSkill;
+			const bool carried = ps->childSkill > 0;
+			const i32 child = carried ? ps->childSkill : (owner.pendingChildSkill > 0 && localTime < owner.pendingChildSkillUntil ? owner.pendingChildSkill : 0);
+			const vec3 childPos = carried ? ps->childPos : owner.pendingChildPos;
+			const ActorUID childTarget = carried ? ps->childTarget : owner.pendingChildTarget;
+			if(info && child > 0) {
 				const i32 modeState = child + RELAY_MODE_STATE_OFFSET;
 				if(info->ai == SummonInfo::AI_RELAY && modeState <= 20 && !info->skillStates[modeState].empty()) {
 					const i32 mode = (child - 1) / RELAY_IDS_PER_MODE;
@@ -661,8 +670,8 @@ void World::UpdateSummons()
 						actor.passiveBlockedUntil = TimeAdd(localTime, TimeMsToTime((hide ? hide->durationSec : 0.0f) * 1000.0));
 					}
 					RunSummonState(actor, modeState);
-					actor.aimPos = owner.pendingChildPos;
-					actor.queuedGoal = mode != RELAY_ARTILLERY_MODE && glm::length(vec2(owner.pendingChildPos)) > 1.0f ? vec3(vec2(owner.pendingChildPos), actor.pos.z) : vec3(0);
+					actor.aimPos = childPos;
+					actor.queuedGoal = mode != RELAY_ARTILLERY_MODE && glm::length(vec2(childPos)) > 1.0f ? vec3(vec2(childPos), actor.pos.z) : vec3(0);
 					const f32 modeSec = GetGameXmlContent().GetAniSeqTime(info->className.c_str(), info->stateAnim[modeState]);
 					actor.queuedState = activeState;
 					actor.queuedStateAt = TimeAdd(localTime, TimeMsToTime((f64)modeSec * 1000.0 + 60.0));
@@ -670,10 +679,10 @@ void World::UpdateSummons()
 				}
 				else {
 					LOG("Summon :: %ls relay state SKILL_%d", owner.name.data(), child);
-					if(owner.pendingChildTarget != ActorUID::INVALID) actor.skillTarget = owner.pendingChildTarget;
+					if(childTarget != ActorUID::INVALID) actor.skillTarget = childTarget;
 					RunSummonState(actor, child);
 				}
-				owner.pendingChildSkill = 0;
+				if(!carried) owner.pendingChildSkill = 0;
 			}
 			if(info && !reuse) {
 				foreach_const(c, info->onSpawn) {
