@@ -391,6 +391,7 @@ void World::UpdateSummonAi(f32 delta)
 		if(npc.queuedState >= 0 && localTime >= npc.queuedStateAt && npc.pendingMotion == ActionStateID::INVALID) {
 			if(glm::length(vec2(npc.queuedGoal)) > 1.0f) {
 				replication->SendNpcMoveToAll(npc.UID, npc.pos, npc.queuedGoal, atan2f(npc.queuedGoal.y - npc.pos.y, npc.queuedGoal.x - npc.pos.x), RELAY_LEAP_SPEED);
+				npc.leapEndAt = TimeAdd(localTime, TimeMsToTime(glm::length(vec2(npc.queuedGoal) - vec2(npc.pos)) / RELAY_LEAP_SPEED * 1000.0));
 				npc.pos = npc.queuedGoal;
 			}
 			const i32 state = npc.queuedState;
@@ -602,6 +603,12 @@ void World::UpdateSummons()
 				foreach(other, actorNpcList) {
 					if(other->ownerIndex == ps->ownerIndex && other->ai == SummonInfo::AI_RELAY && localTime < other->despawnAt) reuse = &*other;
 				}
+			}
+			if(reuse && (reuse->queuedState >= 0 || localTime < reuse->leapEndAt)) {
+				ps->time = reuse->queuedState >= 0 ? TimeAdd(reuse->queuedStateAt, TimeMsToTime(50)) : reuse->leapEndAt;
+				LOG("Summon :: relay robot of %ls in flight, next order at landing", owner.name.data());
+				++ps;
+				continue;
 			}
 			if(!reuse) EnforceSummonLimit(owner, ps->ownerIndex, ps->creature);
 			ActorNpc& actor = reuse ? *reuse : SpawnNpcActor(CreatureIndex(ps->creature), nextSummonLocalID++);

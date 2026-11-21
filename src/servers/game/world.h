@@ -589,6 +589,7 @@ struct World
 		i32 queuedState = -1;
 		Time queuedStateAt = Time::ZERO;
 		vec3 queuedGoal = vec3(0);
+		Time leapEndAt = Time::ZERO;
 		PxRigidStatic* wall = nullptr;
 		i32 ownerClass = -1;
 		Time nextPassive = Time::ZERO;
