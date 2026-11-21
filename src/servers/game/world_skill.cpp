@@ -378,6 +378,13 @@ void World::SetStance(ActorMaster& master, i8 stance, f32 duration, i32 weaponFi
 	if(oldStance != 0 && stance == 0 && master.parent) RunStanceOut(*master.parent, oldStance);
 }
 
+void World::PlayerCancelStance(Player& player)
+{
+	if(player.dead || player.Main().stance == 0) return;
+	LOG("Stance :: %ls cancels stance %d", player.name.data(), (i32)player.Main().stance);
+	SetStance(player.Main(), 0, 0, 0, false);
+}
+
 void World::StanceWeaponUse(Player& player)
 {
 	ActorMaster& m = player.Main();

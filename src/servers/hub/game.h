@@ -115,6 +115,7 @@ struct HubGame
 
 	void OnPlayerConnect(ClientHandle clientHd, const Account* accountData);
 	void OnPlayerDisconnect(ClientHandle clientHd);
+	void DisconnectUser(i32 userID, ClientHandle clientHd);
 	void OnPlayerGetCharacterInfo(ClientHandle clientHd, ActorUID actorUID);
 	void OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID characterActorUID, const vec3& pos, const vec3& dir, const vec3& eye, f32 rotate, f32 speed, ActionStateID state, i32 actionID);
 	void OnPlayerChatMessage(ClientHandle clientHd, i32 chatType, const wchar* msg, i32 msglen);
@@ -241,6 +242,7 @@ struct HubGame
 	void MmOnPartyEnqueued(PartyUID partyUID);
 	void MmOnMatchFound(const In::MN_MatchingPartyFound& matchingParty);
 	void MmOnGameEnded(SortieUID sortieUID);
+	void MmOnRoomCancelled(SortieUID sortieUID);
 
 	bool ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 len);
 	void SendDbgMsg(ClientHandle clientHd, const wchar* msg);

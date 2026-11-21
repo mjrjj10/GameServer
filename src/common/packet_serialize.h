@@ -2658,6 +2658,19 @@ inline const char* PacketSerialize<In::MN_GameEnded>(const void* packetData, con
 }
 
 template<>
+inline const char* PacketSerialize<In::MN_RoomCancelled>(const void* packetData, const i32 packetSize)
+{
+	SER_BEGIN();
+	const In::MN_RoomCancelled& packet = SafeCast<In::MN_RoomCancelled>(packetData, packetSize);
+
+	SER("MN_RoomCancelled(%d, %d) :: {", In::MN_RoomCancelled::NET_ID, packetSize);
+	SER("	sortieUID=%llu", packet.sortieUID);
+	SER("}");
+
+	return str.data();
+}
+
+template<>
 inline const char* PacketSerialize<In::MN_MatchCreated>(const void* packetData, const i32 packetSize)
 {
 	SER_BEGIN();

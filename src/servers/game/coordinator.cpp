@@ -84,6 +84,7 @@ intptr_t ThreadCoordinator(void* pData)
 }
 
 static EA::Thread::AtomicUint32 g_NextInstanceUID = 1;
+static const f64 HYP_EMPTY_GAME_GRACE_SEC = 120.0;
 
 void InstancePool::Lane::Update()
 {
@@ -274,7 +275,9 @@ void InstancePool::Lane::Update()
 	for(auto room = instancePvpList.begin(); room != instancePvpList.end();) {
 		bool linked = false;
 		foreach_const(c, this->clientList) if(c->sortieUID == room->sortieUID) { linked = true; break; }
-		const bool abandoned = room->phase == PvpInstance::Phase::PlayingGame;
+		if(linked) room->emptySince = Time::ZERO;
+		else if(room->emptySince == Time::ZERO) room->emptySince = localTime;
+		const bool abandoned = room->phase == PvpInstance::Phase::PlayingGame && !linked && (room->game.Deserted() || TimeDiffSec(TimeDiff(room->emptySince, localTime)) >= HYP_EMPTY_GAME_GRACE_SEC);
 		if(linked || (!room->game.Finished() && !abandoned)) { ++room; continue; }
 		LOG("[Lane_%d] Destroyed game (sortieUID=%llu)%s", laneIndex, room->sortieUID, room->game.Finished() ? "" : " abandoned by every client");
 		if(!room->endReported) Matchmaker().QueryGameEnded(room->sortieUID);

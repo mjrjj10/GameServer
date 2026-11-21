@@ -31,6 +31,7 @@ struct Game
 		const u32 playerIndex;
 		bool ready = false;
 		bool gameStartSent = false;
+		bool left = false;
 
 		Player(ClientHandle clientHd_, AccountUID accountUID_, const WideString& name_, u32 playerIndex_):
 			clientHd(clientHd_),
@@ -74,6 +75,7 @@ struct Game
 	Time tGameEnded = Time::ZERO;
 	bool sentBackToLobby = false;
 	bool Finished() const { return gameEnded && sentBackToLobby; }
+	bool Deserted() const { foreach_const(p, playerList) if(p->clientHd != ClientHandle::INVALID && !p->left) return false; return true; }
 	bool IsDevPilot(const World::Player& p) const;
 	void EndGame();
 	f64 LevelStartLeadMs() const;
@@ -188,6 +190,7 @@ struct Game
 	bool IsWeaponFireObject(ClientHandle clientHd, const wchar* name, u16 len);
 	void OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID, const vec3& targetPos, LocalActorID target);
 	void OnPlayerCancelCast(ClientHandle clientHd, SkillID skillID);
+	void OnPlayerCancelStance(ClientHandle clientHd);
 	void OnRemoteSyncTarget(ClientHandle clientHd, u32 remoteID, const vec3& dest);
 
 	bool ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 len);

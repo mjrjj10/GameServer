@@ -295,7 +295,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 			desc.stageSkills[0] = stage->stageSkill;
 			if(!stage->stageSkillCandidates.empty()) desc.stageSkills[1] = stage->stageSkillCandidates[0];
 			foreach_const(c, stage->stageSkillCandidates) if(*c == p.stageSkill) desc.stageSkills[1] = p.stageSkill;
-			if(desc.clientHd == ClientHandle::INVALID) desc.stageSkills[1] = Config().DevBotStageSkill != 0 ? SkillID(Config().DevBotStageSkill) : MeasuredBotStageSkill(*stage, desc.stageSkills[1]);
+			if(p.isBot) desc.stageSkills[1] = Config().DevBotStageSkill != 0 ? SkillID(Config().DevBotStageSkill) : MeasuredBotStageSkill(*stage, desc.stageSkills[1]);
 		}
 		desc.weapons = p.weapons;
 		desc.weaponGrades = p.weaponGrades;
@@ -354,7 +354,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 		const SpawnPoint& spawnPoint = spawnPoints.empty() ? fallback : spawnPoints[spawnPointIndex[p.team]++ % spawnPoints.size()];
 		if(spawnPoints.empty()) WARN("Spawn :: map %d has no spawn point", (i32)replication.mapIndex);
 
-		if(desc.clientHd == ClientHandle::INVALID) RollBotGear(desc);
+		if(p.isBot) RollBotGear(desc);
 		LOG("Spawn :: %ls team=%d masters=(%d, %d) skins=(%d, %d) weapons=(%d, %d)", desc.name.data(), (i32)desc.team, (i32)desc.masters[0], (i32)desc.masters[1], (i32)desc.skins[0], (i32)desc.skins[1], (i32)desc.weapons[0], (i32)desc.weapons[1]);
 		World::Player& worldPlayer = world.CreatePlayer(desc, spawnPoint.pos, RotationHumanoid{0.f, 0.f, MxmYawToWorldYaw(spawnPoint.rot.z)});
 
@@ -1135,7 +1135,13 @@ void Game::OnPlayerReconnect(ClientHandle clientHd, AccountUID accountUID)
 			replication.OnPlayerDisconnect(oldHd);
 			playerMap.erase(oldHd);
 		}
+		for(auto b = botList.begin(); b != botList.end(); ++b) {
+			if(b->playerIndex != it->playerIndex) continue;
+			botList.erase(b);
+			break;
+		}
 		it->clientHd = clientHd;
+		it->left = false;
 		it->ready = false;
 		it->gameStartSent = false;
 		player.clientHd = clientHd;
@@ -2013,6 +2019,7 @@ void Game::OnPlayerReturnToChannel(ClientHandle clientHd)
 	auto found = playerMap.find(clientHd);
 	if(found == playerMap.end()) return;
 	World::Player& player = world.GetPlayer(found->second->playerIndex);
+	found->second->left = true;
 	i32 hubIP[4] = { Config().HostIP[0], Config().HostIP[1], Config().HostIP[2], Config().HostIP[3] };
 	if(hubIP[0] == 0) { hubIP[0] = 127; hubIP[3] = 1; }
 	replication.SendDoConnectChannel(clientHd, player.name.data(), hubIP, HUB_LISTEN_PORT);
@@ -2267,6 +2274,14 @@ void Game::OnPlayerCancelCast(ClientHandle clientHd, SkillID skillID)
 		replication.SendWeaponStateTo(clientHd, player.Main().UID, MEASURED_WEAPON_STATE_WEAPON_ID, WEAPON_STATE_CHARGE, MEASURED_CANCEL_WEAPON_RESULT);
 		world.CancelCast(player, "client");
 	}
+}
+
+void Game::OnPlayerCancelStance(ClientHandle clientHd)
+{
+	auto found = playerMap.find(clientHd);
+	if(found == playerMap.end()) return;
+	World::Player& player = world.GetPlayer(found->second->playerIndex);
+	world.PlayerCancelStance(player);
 }
 
 bool Game::IsDevPilot(const World::Player& p) const

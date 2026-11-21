@@ -183,6 +183,12 @@ static bool RegameFind(const wchar* nick, Regame& out)
 void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 {
 	const i32 userID = plidMap->Get(clientHd);
+	for(i32 i = 0; i < MAX_PLAYERS; i++) {
+		if(i == userID || !playerAccountData[i] || playerAccountData[i]->nickname != accountData->nickname) continue;
+		const ClientHandle stale = playerMap[i] != playerList.end() ? playerMap[i]->clientHd : ClientHandle::INVALID;
+		LOG("[client%x] HubGame :: %ls reconnects, stale session %d removed", clientHd, accountData->nickname.data(), i);
+		DisconnectUser(i, stale);
+	}
 	playerAccountData[userID] = accountData;
 	accountClientHandleMap.emplace(accountData->UID, clientHd);
 
@@ -255,7 +261,11 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 
 void HubGame::OnPlayerDisconnect(ClientHandle clientHd)
 {
-	const i32 userID = plidMap->Get(clientHd);
+	DisconnectUser(plidMap->Get(clientHd), clientHd);
+}
+
+void HubGame::DisconnectUser(i32 userID, ClientHandle clientHd)
+{
 	LOG("[client%x] GameHub :: OnClientDisconnect :: actorUID=%u", clientHd, (u32)playerActorUID[userID]);
 
 	if(playerAccountData[userID] && playerMap[userID] != playerList.end()) LeaveParty(userID, playerMap[userID]->sortieUID == SortieUID::INVALID);
@@ -276,7 +286,7 @@ void HubGame::OnPlayerDisconnect(ClientHandle clientHd)
 	accountClientHandleMap.erase(playerAccountData[userID]->UID);
 	playerAccountData[userID] = nullptr;
 
-	replication.OnClientDisconnect(clientHd);
+	if(clientHd != ClientHandle::INVALID) replication.OnClientDisconnect(clientHd);
 }
 
 void HubGame::OnPlayerGetCharacterInfo(ClientHandle clientHd, ActorUID actorUID)
@@ -1836,6 +1846,7 @@ void HubGame::OnSortieRoomFound(ClientHandle clientHd, SortieUID sortieID)
 void HubGame::OnSortieRoomConfirm(ClientHandle clientHd, bool confirm)
 {
 	const i32 userID = plidMap->Get(clientHd);
+	if(playerMap[userID]->sortieUID == SortieUID::INVALID) return;
 	matchmaker->QueryPlayerRoomConfirm(playerAccountData[userID]->UID, playerMap[userID]->sortieUID, confirm);
 	foreach_const(r, sortieRosters) {
 		if(r->sortieUID != playerMap[userID]->sortieUID) continue;
@@ -1911,6 +1922,27 @@ void HubGame::MmOnGameEnded(SortieUID sortieUID)
 {
 	if(eastl::find(endedSorties.begin(), endedSorties.end(), sortieUID) == endedSorties.end()) endedSorties.push_back(sortieUID);
 	LOG("HubGame :: game %llu ended", (u64)sortieUID);
+}
+
+void HubGame::MmOnRoomCancelled(SortieUID sortieUID)
+{
+	LOG("HubGame :: room %llu cancelled, match not confirmed", (u64)sortieUID);
+	eastl::fixed_vector<PartyUID,16,false> notified;
+	foreach_const(r, sortieRosters) {
+		if(r->sortieUID != sortieUID) continue;
+		foreach_const(m, r->members) {
+			if(m->bot) continue;
+			auto h = accountClientHandleMap.find(m->accountUID);
+			if(h == accountClientHandleMap.end()) continue;
+			const i32 userID = plidMap->Get(h->second);
+			if(playerMap[userID]->sortieUID != sortieUID) continue;
+			playerMap[userID]->sortieUID = SortieUID::INVALID;
+			const PartyUID partyUID = playerMap[userID]->partyUID;
+			if(eastl::find(notified.begin(), notified.end(), partyUID) != notified.end()) continue;
+			notified.push_back(partyUID);
+			OnCancelMatching(h->second);
+		}
+	}
 }
 
 void HubGame::MmOnPartyEnqueued(PartyUID partyUID)

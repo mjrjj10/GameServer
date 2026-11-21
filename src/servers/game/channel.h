@@ -64,6 +64,7 @@ private:
 	void HandlePacket_CQ_RemoteSyncTarget(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_PlayerCastSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_CancelCastSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
+	void HandlePacket_CQ_PlayerCancelStance(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 
 	template<typename Packet>
 	inline void SendPacket(ClientHandle clientHd, const Packet& packet)

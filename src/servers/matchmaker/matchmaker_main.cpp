@@ -11,6 +11,7 @@
 #include "config.h"
 
 static const i32 MAX_TEAM_SIZE = 5;
+static const f64 HYP_ROOM_CONFIRM_TIMEOUT_SEC = 20.0;
 
 Server* g_Server = nullptr;
 Listener* g_Listener = nullptr;
@@ -126,6 +127,7 @@ struct Matchmaker
 		MapIndex mapIndex = MapIndex(0);
 		GameType gameType = GameType::PVP_NORMAL;
 		u8 draft = 0;
+		Time tCreated = Time::ZERO;
 		eastl::fixed_vector<Player,16,false> playerList;
 		eastl::fixed_vector<decltype(playerList)::iterator,5> teamRed;
 		eastl::fixed_vector<decltype(playerList)::iterator,5> teamBlue;
@@ -393,7 +395,9 @@ struct Matchmaker
 				// TODO: validate args?
 
 				bool found = false;
-				Room& room = *roomMap.at(packet.sortieUID);
+				auto roomIt = roomMap.find(packet.sortieUID);
+				if(roomIt == roomMap.end()) break;
+				Room& room = *roomIt->second;
 				foreach(pl, room.playerList) {
 					if(pl->accountUID == packet.accountUID) {
 						pl->status = Room::PlayerStatus::RoomFoundAck;
@@ -413,7 +417,9 @@ struct Matchmaker
 				// TODO: validate args?
 
 				bool found = false;
-				Room& room = *roomMap.at(packet.sortieUID);
+				auto roomIt = roomMap.find(packet.sortieUID);
+				if(roomIt == roomMap.end()) break;
+				Room& room = *roomIt->second;
 				foreach(pl, room.playerList) {
 					if(pl->accountUID == packet.accountUID) {
 						if(packet.confirm) {
@@ -591,6 +597,7 @@ struct Matchmaker
 		room.mapIndex = firstParty.mapIndex;
 		room.gameType = firstParty.gameType;
 		room.draft = firstParty.draft;
+		room.tCreated = now;
 
 		LOG("MatchParties :: creating room %llu with %d player(s) from %d party(ies)", (u64)room.UID, humanCount, (i32)matchingPartyList.size());
 
@@ -693,6 +700,7 @@ struct Matchmaker
 	void UpdateRooms()
 	{
 		eastl::fixed_vector<SortieUID,128> removeList;
+		const Time now = TimeRelNow();
 
 		foreach(r, roomList) {
 			// check if all players have accepted the match
@@ -735,6 +743,32 @@ struct Matchmaker
 					SendPacket(*chd, packet);
 				}
 			}
+
+			bool expired = false;
+			bool inLobby = false;
+			foreach_const(pl, r->playerList) {
+				if(pl->isBot) continue;
+				inLobby = inLobby || pl->status == Room::PlayerStatus::InLobby;
+				if(pl->status == Room::PlayerStatus::Accepted || pl->status == Room::PlayerStatus::InLobby) continue;
+				expired = expired || pl->status == Room::PlayerStatus::Refused || TimeDiffSec(TimeDiff(r->tCreated, now)) >= HYP_ROOM_CONFIRM_TIMEOUT_SEC;
+			}
+			if(expired && !inLobby && !removeList.full()) removeList.push_back(r->UID);
+		}
+
+		foreach_const(uid, removeList) {
+			auto r = roomMap.find(*uid);
+			In::MN_RoomCancelled cancel;
+			cancel.sortieUID = *uid;
+			eastl::fixed_set<ClientHandle,16,false> setInstance;
+			foreach_const(pl, r->second->playerList) {
+				if(!pl->isBot) setInstance.insert(pl->instanceChd);
+			}
+			foreach_const(chd, setInstance) {
+				SendPacket(*chd, cancel);
+			}
+			LOG("Room %llu cancelled, match not confirmed", (u64)*uid);
+			roomList.erase(r->second);
+			roomMap.erase(r);
 		}
 	}
 

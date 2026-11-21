@@ -1210,7 +1210,7 @@ bool World::StartMonsterWalkState(ActorNpc& npc, const GameXmlContent::MonsterAi
 
 bool World::UpdateMonsterMasterSpecial(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const GameXmlContent::MonsterAttack& current, f32 run)
 {
-	if(current.target == GameXmlContent::MonsterAttack::MASTER || !map || !map->ingameLevels || localTime < npc.monsterNextAttack) return false;
+	if(current.target == GameXmlContent::MonsterAttack::MASTER || !map || !map->ingameLevels || IsStructure(npc) || localTime < npc.monsterNextAttack) return false;
 	const f32 hpRatio = npc.hpMax > 0 ? (f32)npc.hp / (f32)npc.hpMax : 1.0f;
 	for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)npc.monsterSkillReady.size(); s++) {
 		const GameXmlContent::MonsterAttack& special = ai.attacks[s];
@@ -1219,6 +1219,10 @@ bool World::UpdateMonsterMasterSpecial(ActorNpc& npc, const GameXmlContent::Mons
 		if(specialRemote && specialRemote->monsterOnly) continue;
 		if(npc.monsterSkillReady[s] == Time::ZERO) npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime((special.firstAt >= 0 ? special.firstAt : special.cooldown) * 1000.0));
 		if(localTime < npc.monsterSkillReady[s]) continue;
+		if(special.share > 0 && (f32)Randf01() >= special.share) {
+			npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime(current.cooldown * 1000.0));
+			continue;
+		}
 		Player* chosen = nullptr;
 		f32 best = special.range;
 		foreach(p, players) {
@@ -2052,7 +2056,7 @@ void World::UpdateMonsterAi(f32 delta)
 					}
 					if(dist > special.range + (reach - attack->range) + MONSTER_REACH_TOLERANCE || dist < special.minRange) continue;
 					if(MonsterDashNeedsTurn(npc, special, yaw)) continue;
-					ready.push_back(s);
+					if(!ready.full()) ready.push_back(s);
 					totalShare += special.share;
 				}
 				if(!basicReady && ready.empty()) {

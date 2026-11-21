@@ -168,6 +168,7 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 		CASE(CQ_GetGroundItem);
 		CASE(CQ_PlayerCastSkill);
 		CASE(CQ_CancelCastSkill);
+		CASE(CQ_PlayerCancelStance);
 		CASE(CQ_WeaponState);
 		CASE(CQ_InteractionCasting);
 		CASE(CQ_InteractionCancel);
@@ -624,6 +625,15 @@ void GamePacketHandler::HandlePacket_CQ_CancelCastSkill(ClientHandle clientHd, c
 	}
 	const Cl::CQ_CancelCastSkill& packet = SafeCast<Cl::CQ_CancelCastSkill>(packetData, packetSize);
 	game->OnPlayerCancelCast(clientHd, packet.skillID);
+}
+
+void GamePacketHandler::HandlePacket_CQ_PlayerCancelStance(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	if(!ValidatePacket<Cl::CQ_PlayerCancelStance>(packetData, packetSize)) {
+		WARN("[client%x] WARNING: invalid CQ_PlayerCancelStance (size=%d)", clientHd, packetSize);
+		return;
+	}
+	game->OnPlayerCancelStance(clientHd);
 }
 
 void GamePacketHandler::HandlePacket_CQ_PlayerCastSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

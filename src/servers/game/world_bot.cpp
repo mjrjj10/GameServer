@@ -137,10 +137,21 @@ bool World::BotEvadeZone(const Player& bot, vec2* away, f32* depth) const
 		const vec2 dir = glm::length(mr->dir) > 0.5f ? glm::normalize(mr->dir) : vec2(1, 0);
 		const vec2 lateral = vec2(-dir.y, dir.x);
 		if(r->evadeBound == 1) {
-			if(dist > r->evadeLengthX * 0.5f) continue;
-			if(r->evadeAngle > 0 && dist >= 1.0f && glm::dot(rel / dist, dir) < cosf(MIN(r->evadeAngle, 180.0f) * PI / 180.0f)) continue;
+			const f32 radius = r->evadeLengthX * 0.5f;
+			if(dist > radius) continue;
 			*away = dist >= 1.0f ? rel / dist : lateral;
-			*depth = r->evadeLengthX * 0.5f - dist;
+			*depth = radius - dist;
+			if(r->evadeAngle > 0 && dist >= 1.0f) {
+				const f32 half = MIN(r->evadeAngle * 0.5f, 180.0f) * PI / 180.0f;
+				const f32 off = acosf(glm::clamp(glm::dot(rel / dist, dir), -1.0f, 1.0f));
+				if(off > half) continue;
+				const f32 toEdge = dist * sinf(half - off);
+				if(half < PI * 0.5f && toEdge < *depth) {
+					const vec2 perp = vec2(-rel.y, rel.x) / dist;
+					*away = glm::dot(perp, lateral) * glm::dot(rel, lateral) >= 0.0f ? perp : -perp;
+					*depth = toEdge;
+				}
+			}
 		}
 		else {
 			const f32 along = glm::dot(rel, dir);
@@ -231,7 +242,9 @@ void World::UpdateBotSkills()
 			bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500));
 			continue;
 		}
-		if(IsBlocked(bot, false, true, false) || BotHoldsHide(bot)) continue;
+		vec2 zoneAway;
+		f32 zoneDepth = 0;
+		if(IsBlocked(bot, false, true, false) || BotHoldsHide(bot) || BotEvadeZone(bot, &zoneAway, &zoneDepth)) continue;
 		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500));
 		if(bot.casting.skillID != SkillID::INVALID || BotReturnSkill(bot) || BotStageSkill(bot)) continue;
 
@@ -1048,7 +1061,9 @@ void World::UpdateBotMovement()
 			bot.botStuckCheck = TimeAdd(localTime, TimeMsToTime(BOT_STUCK_CHECK_MS));
 		}
 		const bool arrived = glm::length(vec2(bot.input.moveTo) - here) < BOT_REPATH_DIST;
-		if(!stuck && !arrived && localTime < bot.botMoveAt) continue;
+		vec2 zoneDir;
+		f32 zoneDeep = 0;
+		if(!stuck && !arrived && localTime < bot.botMoveAt && !BotEvadeZone(bot, &zoneDir, &zoneDeep)) continue;
 		bot.botMoveAt = TimeAdd(localTime, TimeMsToTime(BOT_DECISION_MIN_MS + RandUint() % BOT_DECISION_SPAN_MS));
 		if(stuck || RandUint() % 6 == 0) bot.botStrafe = -bot.botStrafe;
 
@@ -1699,7 +1714,9 @@ void World::UpdateBotCombat()
 		Player& bot = *it;
 		if(bot.clientHd != ClientHandle::INVALID || bot.dead) continue;
 		if(localTime < bot.tNextBotShot || localTime < bot.ccUntil) continue;
-		if(BotHoldsHide(bot)) continue;
+		vec2 zoneAway;
+		f32 zoneDepth = 0;
+		if(BotHoldsHide(bot) || BotEvadeZone(bot, &zoneAway, &zoneDepth)) continue;
 		if(localTime < bot.dashUntil || localTime < bot.botSkillStillUntil || bot.casting.skillID != SkillID::INVALID) continue;
 		if(IsBlocked(bot, true, false, false)) continue;
 		if(WeaponIsMelee(bot) && Config().DevShowcase) continue;
@@ -1738,7 +1755,7 @@ void World::UpdateBotCombat()
 					OnWeaponState(bot, WEAPON_STATE_FIRE, bot.chargeAnnounced, bot.firingCombo);
 				}
 				bot.weaponFired = true;
-				const bool chained = bot.firingCombo < swingWf.comboValid.size() && bot.botComboShotAt != Time::ZERO && localTime <= TimeAdd(bot.botComboShotAt, TimeMsToTime(swingWf.comboValid[bot.firingCombo] * 1000.0));
+				const bool chained = bot.firingCombo < swingWf.comboValid.size() && bot.botComboShotAt != Time::ZERO && (swingWf.comboValid[bot.firingCombo] <= 0 || localTime <= TimeAdd(bot.botComboShotAt, TimeMsToTime(swingWf.comboValid[bot.firingCombo] * 1000.0)));
 				bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot, chained ? bot.firingCombo + 1 : 0) * 1000.0));
 			}
 			continue;

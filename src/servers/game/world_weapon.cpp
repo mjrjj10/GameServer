@@ -904,7 +904,7 @@ RemoteIdx World::SelectWeaponRemote(Player& player, const WeaponFiring& wf)
 {
 	const u32 m = player.mainCharaID & 1;
 	if(player.clientHd == ClientHandle::INVALID) {
-		const bool chained = player.firingCombo < wf.comboValid.size() && player.botComboShotAt != Time::ZERO && localTime <= TimeAdd(player.botComboShotAt, TimeMsToTime(wf.comboValid[player.firingCombo] * 1000.0));
+		const bool chained = player.firingCombo < wf.comboValid.size() && player.botComboShotAt != Time::ZERO && (wf.comboValid[player.firingCombo] <= 0 || localTime <= TimeAdd(player.botComboShotAt, TimeMsToTime(wf.comboValid[player.firingCombo] * 1000.0)));
 		player.firingCombo = chained ? player.firingCombo + 1 : 0;
 		player.botComboShotAt = wf.comboValid.empty() ? Time::ZERO : localTime;
 	}

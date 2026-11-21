@@ -268,6 +268,11 @@ void HubPacketHandler::OnMatchmakerPacket(const NetHeader& header, const u8* pac
 			const In::MN_GameEnded resp = SafeCast<In::MN_GameEnded>(packetData, packetSize);
 			game->MmOnGameEnded(resp.sortieUID);
 		} break;
+
+		case In::MN_RoomCancelled::NET_ID: {
+			const In::MN_RoomCancelled resp = SafeCast<In::MN_RoomCancelled>(packetData, packetSize);
+			game->MmOnRoomCancelled(resp.sortieUID);
+		} break;
 	}
 }
 

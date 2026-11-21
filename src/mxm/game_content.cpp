@@ -1302,8 +1302,6 @@ void GameXmlContent::LoadMonsterFires()
 	LOG("Loaded %d monster fire states, attached to %d monster attacks", (i32)fires.size(), attached);
 }
 
-static const f32 MEASURED_COMBO_VALID_TIME_SEC = 1.0f;
-
 bool GameXmlContent::LoadMonsterAi()
 {
 	static const wchar* AI_FILES[] = { L"/MonsterAi.xml", L"/MonsterAiEstimated.xml" };
@@ -6001,7 +5999,7 @@ bool GameXmlContent::LoadWeaponFiring()
 			if(const char* anim = pData ? pData->Attribute("_Animation") : nullptr) wf.animation = ActionStateFromString(anim);
 			if(XMLElement* pCombo = pData ? pData->FirstChildElement("_COMBO") : nullptr) {
 				for(XMLElement* pLevel = pCombo->FirstChildElement("_LEVEL"); pLevel && !wf.comboValid.full(); pLevel = pLevel->NextSiblingElement("_LEVEL")) {
-					wf.comboValid.push_back(pLevel->FloatAttribute("_ValidTime", MEASURED_COMBO_VALID_TIME_SEC));
+					wf.comboValid.push_back(pLevel->FloatAttribute("_ValidTime"));
 					wf.comboDelay.push_back(pLevel->FloatAttribute("_FireDelayTime"));
 					const char* anim = pLevel->Attribute("_Animation");
 					wf.comboAnimation.push_back(anim ? ActionStateFromString(anim) : wf.animation);

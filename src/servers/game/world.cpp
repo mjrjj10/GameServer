@@ -1337,6 +1337,8 @@ void World::SwapMainMaster(Player& p)
 	AccumulateMasterScore(p);
 	const ActorUID oldMain = p.Main().UID;
 	p.mainCharaID ^= 1;
+	p.firingCombo = 0;
+	p.botComboShotAt = Time::ZERO;
 	RetargetMonsters(oldMain, p.Main().UID);
 	eastl::swap(p.mana, p.benchMana);
 	eastl::swap(p.stamina, p.benchStamina);

@@ -303,6 +303,13 @@ struct MN_GameEnded
 
 	SortieUID sortieUID;
 };
+
+struct MN_RoomCancelled
+{
+	enum { NET_ID = 3010 };
+
+	SortieUID sortieUID;
+};
 POP_PACKED
 
 }
