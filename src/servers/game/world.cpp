@@ -1197,6 +1197,14 @@ bool World::SkillTargetsAllowed(const Player& player, SkillID skillID, Slice<con
 			LOG("Skill :: %ls skill=%d refused: cannot cling to another Bumaro (ERROR_TYPE_SKILL_CANT_USE_SAME_MASTER)", player.name.data(), (i32)skillID);
 			return false;
 		}
+		static const i32 MEASURED_CLING_CARRIER_STATUS = 1230200020;
+		if(picked && picked->parent != &player) {
+			foreach_const(st, activeStatuses) {
+				if(st->targetIndex != picked->parent->index || st->statusID != MEASURED_CLING_CARRIER_STATUS || st->casterIndex == player.index || localTime >= st->until) continue;
+				LOG("Skill :: %ls skill=%d refused: target already clung to", player.name.data(), (i32)skillID);
+				return false;
+			}
+		}
 	}
 	return true;
 }
