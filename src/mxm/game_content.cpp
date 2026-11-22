@@ -2267,7 +2267,7 @@ bool GameXmlContent::LoadServiceRule()
 	}
 	for(XMLElement* p = gear ? gear->FirstChildElement("_PvPGearPowerPercent") : nullptr; p; p = p->NextSiblingElement("_PvPGearPowerPercent")) {
 		const char* type = p->Attribute("_GameType");
-		for(const auto& t : GAME_TYPES) if(type && EA::StdC::Strcmp(type, t.name) == 0) gearPowerPercent[(i32)t.type] = p->IntAttribute("DATA", 100);
+		for(const auto& t : GAME_TYPES) if(type && EA::StdC::Strcmp(type, t.name) == 0 && t.type != GameType::PVP_NORMAL && t.type != GameType::PVP_AI) gearPowerPercent[(i32)t.type] = p->IntAttribute("DATA", 100);
 	}
 	return true;
 }

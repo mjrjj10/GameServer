@@ -671,7 +671,7 @@ void HubGame::OnInventoryExpand(ClientHandle clientHd, i32 tab)
 	replication.SendInventoryExpand(clientHd, 0, tab, progress.inventoryLines[line]);
 }
 
-static const u8 MEASURED_SETTING_TYPE_COUNT = 3;
+static const u8 MEASURED_SETTING_TYPE_COUNT = 4;
 static const i32 SETTINGS_MAX_BYTES = 2040;
 
 void HubGame::OnSaveSettings(ClientHandle clientHd, u8 settingType, const u8* data, i32 size)

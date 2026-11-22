@@ -1178,4 +1178,13 @@ void Coordinator::ClientSendAccountData(ClientHandle clientHd)
 
 		SendPacket(clientHd, packet);
 	}
+
+	const AccountSettingsBlob smartCast = AccountSettingsLoad(accountNick, 3);
+	if(!smartCast.data.empty()) {
+		PacketWriter<Sv::SN_ClientSettings,4096> packet;
+		packet.Write<u8>(3);
+		packet.Write<u16>((u16)smartCast.data.size());
+		packet.WriteRaw(smartCast.data.data(), smartCast.data.size());
+		SendPacket(clientHd, packet);
+	}
 }

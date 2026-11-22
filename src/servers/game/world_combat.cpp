@@ -625,7 +625,15 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	}
 	const f32 critMul = remoteHit ? RollCritical(attacker, skillID == SkillID::INVALID, remoteHit->remoteDoc, PierceCriticalBonus(remoteHit->remoteDoc, remoteHit->pierceHits) + weakBonus) : 0.0f;
 	const f32 remoteMul = remoteHit ? RemoteTargetDamageMul(attacker, remoteHit->remoteDoc, npc.pos, nullptr, &npc) : 1.0f;
-	const i32 dealt = MAX((i32)(damage * remoteMul * (critMul > 0 ? critMul : 1.0f) * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence * (1.0f - titanPen), 0.0f)) * NpcStatusMul(npc, StatusMod::DAMAGE_TAKEN) + 0.5f), 1);
+	f32 npcDefenceMod = 0;
+	foreach_const(ns, npcStatuses) {
+		if(ns->npcUID != npc.UID || localTime >= ns->until) continue;
+		const StatusInfo* nsInfo = GetGameXmlContent().FindStatus(ns->statusID);
+		if(!nsInfo) continue;
+		foreach_const(m, nsInfo->mods) if(m->stat == StatusMod::DEFENCE && !m->regen && m->mul) npcDefenceMod += m->value * (f32)MAX(ns->dotOverlap, 1);
+	}
+	const f32 npcDefence = npc.defence * MAX(1.0f + npcDefenceMod / 100.0f, 0.0f);
+	const i32 dealt = MAX((i32)(damage * remoteMul * (critMul > 0 ? critMul : 1.0f) * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npcDefence * (1.0f - titanPen), 0.0f)) * NpcStatusMul(npc, StatusMod::DAMAGE_TAKEN) + 0.5f), 1);
 	const i32 hpBefore = npc.hp;
 	if(npc.faction == Faction::MONSTER && npc.ownerUID == ActorUID::INVALID) {
 		static const f64 HYP_HIT_COMBO_WINDOW_MS = 3000.0;

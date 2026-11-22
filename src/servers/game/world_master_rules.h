@@ -336,7 +336,7 @@ struct TesterRemoteFuse
 };
 
 static const TesterRemoteFuse TESTER_REMOTE_FUSES[] = {
-	{ RemoteIdx(1440430060), 0.5f, 100, 1230010012, 0.33f, RemoteIdx(1440020021) },
+	{ RemoteIdx(1440430060), 0.5f, 100, 1230010012, 0.5f, RemoteIdx(1440020021) },
 };
 
 static inline const TesterRemoteFuse* FindTesterRemoteFuse(RemoteIdx remote)

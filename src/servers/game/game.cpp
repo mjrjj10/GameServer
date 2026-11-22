@@ -515,6 +515,7 @@ void Game::Update(Time localTime_)
 				for(i32 team = 0; team < 2 && scoreLimit > 0; team++) {
 					if(world.TeamPoints(team) >= scoreLimit && world.TeamPoints(team) > world.TeamPoints(1 - team)) {
 						world.winnerTeam = team;
+						if(replication.titanMode) world.DestroyTeamCore(1 - team);
 						LOG("Game :: team %d reaches %d points, wins", team, scoreLimit);
 					}
 				}
@@ -527,7 +528,13 @@ void Game::Update(Time localTime_)
 				if(TimeDiffSec(TimeDiff(tGameStarted, localTime)) >= limit) {
 					if(pveStage) EndStage(false);
 					else if(defenceStage) { world.defence.failed = true; EndDefence(); }
-					else EndGame();
+					else {
+						if(replication.titanMode && world.winnerTeam < 0 && world.TeamPoints(0) != world.TeamPoints(1)) {
+							world.winnerTeam = world.TeamPoints(0) > world.TeamPoints(1) ? 0 : 1;
+							world.DestroyTeamCore(1 - world.winnerTeam);
+						}
+						EndGame();
+					}
 				}
 			}
 			const f64 lobbyDelay = defenceStage ? (f64)MEASURED_DEFENCE_RETURN_MS / 1000.0 : pveStage && !world.stageCleared ? (f64)MEASURED_PVE_FAIL_RETURN_MS / 1000.0 : pveStage ? PVE_REWARD_TIMEOUT_SEC : RETURN_TO_LOBBY_DELAY_SEC;

@@ -150,6 +150,8 @@ struct Server
 	bool running;
 	eastl::array<u8,MAX_CLIENTS> clientIsConnected; // is guarded by ClientNet.mutexConnect
 	eastl::array<u8,MAX_CLIENTS> clientDoDisconnect;
+	eastl::array<u8,MAX_CLIENTS> clientRecvClosed;
+	eastl::array<Time,MAX_CLIENTS> clientRecvClosedAt;
 	eastl::array<SOCKET,MAX_CLIENTS> clientSocket;
 	eastl::array<ClientNet,MAX_CLIENTS> clientNet;
 	eastl::array<ClientInfo,MAX_CLIENTS> clientInfo;

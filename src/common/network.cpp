@@ -2,6 +2,8 @@
 #include "protocol.h"
 #include <chrono>
 
+static const f64 HYP_RECV_DRAIN_MAX_SEC = 1.0;
+
 static const i32 TRACE_CLIENTS_PER_SERVER = 1000;
 
 const char* IpToString(const u8* ip)
@@ -45,6 +47,7 @@ bool Server::Init()
 
 	clientIsConnected.fill(0);
 	clientDoDisconnect.fill(false);
+	clientRecvClosed.fill(0);
 
 	for(int i = 0; i < MAX_CLIENTS; i++) {
 		clientSocket[i] = INVALID_SOCKET;
@@ -108,6 +111,7 @@ ClientHandle Server::ListenerAddClient(SOCKET s, const sockaddr& addr_)
 			clientHandle2IDMap[clientHd] = clientID;
 
 			clientDoDisconnect[clientID] = false;
+			clientRecvClosed[clientID] = 0;
 
 			clientIsConnected[clientID] = 1; // register the socket at the end, when everything is initialized
 
@@ -157,10 +161,21 @@ void Server::Update()
 			continue;
 		}
 
+		if(clientRecvClosed[clientID]) {
+			bool drained;
+			{
+				LOCK_MUTEX(client.mutexRecv);
+				drained = client.recvPendingProcessingBuff.size == 0;
+			}
+			if(drained || TimeDurationSinceSec(clientRecvClosedAt[clientID]) > HYP_RECV_DRAIN_MAX_SEC) DisconnectClient(clientID);
+			continue;
+		}
+
 		i32 len = 0;
 		NetPollResult r = client.async.PollReceive(&len);
 		if(r == NetPollResult::POLL_ERROR) {
-			DisconnectClient(clientID);
+			clientRecvClosed[clientID] = 1;
+			clientRecvClosedAt[clientID] = TimeNow();
 			continue;
 		}
 		else if(r == NetPollResult::SUCCESS) {

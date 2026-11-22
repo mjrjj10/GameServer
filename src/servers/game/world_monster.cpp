@@ -303,6 +303,17 @@ void World::SaveProgress(const Player& player)
 	progressLoaded[player.index] = 1;
 }
 
+void World::DestroyTeamCore(i32 team)
+{
+	static const u32 coreTag = StatusTypeKey("Core");
+	foreach(it, actorNpcList) {
+		if(!it->monsterAi || it->monsterAi->tagKey != coreTag || it->hp <= 0 || it->removeAt != Time::ZERO || (i32)it->faction != team) continue;
+		LOG("Game :: core of team %d destroyed at the end of the game", team);
+		replication->SendHpToAll(it->UID, 0, it->hpMax);
+		MonsterDie(*it, ActorUID::INVALID, CreatureIndex(0));
+	}
+}
+
 void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDoc)
 {
 	if(npc.removeAt != Time::ZERO) return;

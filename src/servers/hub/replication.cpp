@@ -572,6 +572,7 @@ void HubReplication::SendProfileCharactersWeapons(ClientHandle clientHd, const A
 	const GameXmlContent& content = GetGameXmlContent();
 	const Account* owner = account ? account : playerAccount[plidMap->Get(clientHd)];
 	const AccountArsenal arsenal = owner ? AccountArsenalLoad(owner->nickname.data()) : AccountArsenal();
+	const AccountGears gears = owner ? AccountGearsLoad(owner->nickname.data()) : AccountGears();
 	// SN_ProfileCharacters
 	{
 		PacketWriter<Sv::SN_ProfileCharacters,2048> packet;
@@ -595,7 +596,7 @@ void HubReplication::SendProfileCharactersWeapons(ClientHandle clientHd, const A
 			const u8 equippedType = arsenal.EquippedType((i32)it->classType);
 			const i32 equipped = ArsenalWeaponIndex(*it, equippedType, arsenal.Grade((i32)it->classType, equippedType));
 			chara.weaponIndex = equipped >= 0 ? (WeaponIndex)equipped : it->defaultWeaponIDs[0];
-			chara.masterGearNo = 1;
+			chara.masterGearNo = gears.SelectedPage((i32)it->classType);
 			packet.Write(chara);
 		}
 

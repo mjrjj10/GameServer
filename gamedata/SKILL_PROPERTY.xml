@@ -7745,6 +7745,36 @@
       </_PROPERTY_LEVEL>
     </ST_SKILL_PROPERTY>
   </INFO>
+  <INFO ID="280413001" _DocID="100000041">
+    <ST_SKILL_PROPERTY _Index="280413001" _Name="Shockwave" _SkillIndex="180410030" _Type="E_SKILL_PROPERTY_COST" _Priority="1">
+      <_PROPERTY_LEVEL _CoolTimeType="SKILL_3" _CoolTime="8.5" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280413002" _DocID="100000041">
+    <ST_SKILL_PROPERTY _Index="280413002" _Name="Shockwave" _SkillIndex="180410030" _Type="E_SKILL_PROPERTY_COST" _Priority="2">
+      <_PROPERTY_LEVEL _ConsumeRP="25" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280413003" _DocID="100000041">
+    <ST_SKILL_PROPERTY _Index="280413003" _Name="Shockwave" _SkillIndex="180410030" _Type="E_SKILL_PROPERTY_COST" _Priority="3">
+      <_PROPERTY_LEVEL _CoolTimeType="SKILL_3" _CoolTime="8" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280413004" _DocID="100000041">
+    <ST_SKILL_PROPERTY _Index="280413004" _Name="Shockwave" _SkillIndex="180410030" _Type="E_SKILL_PROPERTY_COST" _Priority="4">
+      <_PROPERTY_LEVEL _ConsumeRP="20" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280413005" _DocID="100000041">
+    <ST_SKILL_PROPERTY _Index="280413005" _Name="Shockwave" _SkillIndex="180410030" _Type="E_SKILL_PROPERTY_COST" _Priority="5">
+      <_PROPERTY_LEVEL _CoolTimeType="SKILL_3" _CoolTime="7.5" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
+  <INFO ID="280413006" _DocID="100000041">
+    <ST_SKILL_PROPERTY _Index="280413006" _Name="Shockwave" _SkillIndex="180410030" _Type="E_SKILL_PROPERTY_COST" _Priority="6">
+      <_PROPERTY_LEVEL _CoolTimeType="SKILL_3" _CoolTime="7" />
+    </ST_SKILL_PROPERTY>
+  </INFO>
   <INFO ID="280414001" _DocID="100000041">
     <ST_SKILL_PROPERTY _Index="280414001" _Name="마스터 수송" _SkillIndex="180410040" _Type="E_SKILL_PROPERTY_COST" _Priority="1">
       <_PROPERTY_LEVEL _CoolTimeType="SKILL_4" _CoolTime="21" />

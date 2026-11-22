@@ -1753,6 +1753,8 @@ static const f32 TAG_COOLTIME_FLOOR_SEC = 5.0f;
 
 u32 World::TagCooltimeMs(const Player& owner) const
 {
+	static const i32 MEASURED_BASE_RECOVERY_STATUS = 1264070031;
+	foreach_const(st, activeStatuses) if(st->targetIndex == owner.index && st->statusID == MEASURED_BASE_RECOVERY_STATUS && localTime < st->until) return 0;
 	const f32 mul = MAX(1.0f + StatusRegenBonus(owner, StatusMod::TAG_COOLTIME, true) / 100.0f, 0.0f);
 	return (u32)(MAX(MasterStat(owner.Sub().classType, STAT_TAG_COOLTIME) * mul, TAG_COOLTIME_FLOOR_SEC) * 1000.0f + 0.5f);
 }
