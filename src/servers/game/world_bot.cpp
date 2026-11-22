@@ -943,6 +943,7 @@ static const BotTagRate MEASURED_BOT_TAG_RATE[] = { { 0.2f, 11.10f }, { 0.3f, 5.
 
 bool World::BotWantsTag(const Player& bot) const
 {
+	if(Config().DevShowcase || frozen || combatLocked || winnerTeam >= 0) return false;
 	if(bot.titanForm >= 0 || bot.Sub().classType == ClassType::NONE || localTime < bot.botTagReadyAt || localTime < bot.ccUntil) return false;
 	const f32 ratio = HpRatio(bot.Main().hp, bot.Main().hpMax);
 	f32 perMin = 0;

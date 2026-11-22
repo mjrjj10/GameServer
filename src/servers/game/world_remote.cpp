@@ -1183,6 +1183,7 @@ void World::SpawnPendingRemotes()
 				spawned->costLevel = pr->costLevel;
 				spawned->centeredBox = atAimedPoint;
 				if(remote && remote->offsetZ != 0 && (measured || fabsf(pos.z - (ownerZ + remote->offsetZ)) < 1.0f)) spawned->hitZOffset = remote->offsetZ;
+				if(owner.dashFly && owner.dashLift > 0 && owner.dashDone < owner.dashDist) spawned->hitZOffset += ownerZ - owner.dashOrigin.z;
 				spawned->aniEndAt = pr->aniEndAt;
 				spawned->endWithSource = pr->endWithSource;
 				if(measured) {
@@ -1637,7 +1638,7 @@ bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
 			foreach(it, players) {
 				if(!RemoteCanAffect(inst, *it, false)) continue;
 				const vec3 pos = it->body->GetWorldPos();
-				if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
+				if(fabsf(pos.z - (inst.pos.z - inst.hitZOffset)) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 				if(!LagSegmentHits(*it, from, to, halfWidth + HitRadius(*it) + PROJECTILE_HIT_TOLERANCE, boxFront + HitRadius(*it))) continue;
 				if(!RemoteHit(inst, *it)) continue;
 				if(it->team == players[inst.ownerIndex].team && remote.damageGroup == Remote::DamageGroup::eENEMY) continue;

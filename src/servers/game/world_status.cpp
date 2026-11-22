@@ -931,8 +931,10 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	}
 	if(info && target.mana >= 0 && !target.dead) {
 		const f32 manaMax = MasterStat(target.Main().classType, STAT_MANA);
+		bool ticked = false;
+		foreach_const(h, info->mods) if(h->stat == StatusMod::HEALTH && h->regen) ticked = true;
 		foreach_const(m, info->mods) {
-			if(m->stat != StatusMod::MANA || !m->regen || manaMax <= 0) continue;
+			if(m->stat != StatusMod::MANA || !m->regen || manaMax <= 0 || ticked) continue;
 			const f32 gain = m->mul ? manaMax * m->value / 100.0f : m->value;
 			target.mana = MIN(target.mana + gain, manaMax);
 			target.manaDirty = true;

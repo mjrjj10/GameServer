@@ -1278,7 +1278,7 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 	else if(force || world.localTime < player.ccUntil || (world.localTime >= player.dashUntil && drifted) || glm::length(vec2(pos) - vec2(bodyPos)) > HYP_HUMAN_DASH_SNAP) {
 		player.body->collider->setFootPosition(PxExtendedVec3(pos.x, pos.y, pos.z));
 		player.body->vel = vec3(0);
-		if(player.dashDone < player.dashDist) player.dashOrigin = pos - vec3(player.dashDir * player.dashDone, 0);
+		if(player.dashDone < player.dashDist) player.dashOrigin = vec3(vec2(pos) - player.dashDir * player.dashDone, player.dashFly && player.dashLift > 0 ? player.dashOrigin.z : pos.z);
 	}
 
 	// TODO: check for movement hacking

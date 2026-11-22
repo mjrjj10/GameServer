@@ -134,6 +134,10 @@ void World::Update(Time localTime_)
 			}
 			else if(p.dashCurve ? fabsf(ahead) > 0.01f : ahead > 0) physics.ClimbMove(&body, p.dashDir * ahead, (f32)tdelta);
 			p.dashDone = frac >= 1.0f ? p.dashDist : (p.dashCurve ? MIN(fabsf(target), p.dashDist - 0.01f) : target);
+			if(frac >= 1.0f && p.dashFly && p.dashLift > 0) {
+				physics.Move(&body, vec3(0, 0, -p.dashLift), (f32)tdelta);
+				p.dashLift = 0;
+			}
 			p.input.moveTo = body.GetWorldPos();
 		}
 
@@ -243,9 +247,10 @@ void World::Update(Time localTime_)
 		if(p.input.tag) {
 			p.input.tag = 0;
 			if(p.casting.skillID != SkillID::INVALID) CancelCast(p, "tag");
+			if(p.weaponState == WEAPON_STATE_CHARGE) OnWeaponState(p, 0, 0, 0);
 			ToggleOff(p);
 			SwapMainMaster(p);
-			foreach(s, boundTriggerStates) if(s->playerIndex == p.index) s->inside = false;
+			foreach(s, boundTriggerStates) if(s->playerIndex == p.index && map && map->levelEvents[s->node].ownTeamOnly) s->inside = false;
 			if(!p.dead) {
 				statusNoCaster = true;
 				ApplyStatus(p, p, STATUS_PC_TAG_GODMODE);

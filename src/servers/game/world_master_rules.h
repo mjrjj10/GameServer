@@ -490,25 +490,6 @@ static inline bool IsChainedZoneRemote(RemoteIdx remote)
 	return false;
 }
 
-struct LongJumpRiseRule
-{
-	ClassType master;
-	f32 rise;
-};
-
-static const LongJumpRiseRule MEASURED_LONG_JUMP_RISES[] = {
-	{ ClassType::LILU, 297.0f },
-	{ ClassType::RODMASTER, 322.3f },
-};
-
-static inline f32 LongJumpRise(ClassType master)
-{
-	for(const LongJumpRiseRule& rule : MEASURED_LONG_JUMP_RISES) {
-		if(rule.master == master) return rule.rise;
-	}
-	return 0.0f;
-}
-
 enum class PassiveTrigger: u8
 {
 	SKILL_USE,

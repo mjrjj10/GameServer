@@ -232,9 +232,9 @@ void World::ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos)
 	foreach_const(ns, npcStatuses) {
 		if(localTime >= ns->until || (ns->casterUID != owner.Main().UID && ns->casterUID != npc->UID)) continue;
 		const StatusInfo* carryInfo = GetGameXmlContent().FindStatus(ns->statusID);
-		if(!carryInfo || carryInfo->type != StatusType::TARGET) continue;
+		if(!carryInfo || carryInfo->type != StatusType::TARGET || !carryInfo->blockMove) continue;
 		ActorNpc* carried = FindNpcActor(ns->npcUID);
-		if(!carried || !carried->monsterAi || carried->hp <= 0) continue;
+		if(!carried || !carried->monsterAi || carried->hp <= 0 || carried->removeAt != Time::ZERO || IsStructure(*carried) || carried->monsterAi->walk <= 0) continue;
 		const vec2 toDrop = vec2(pos) - vec2(carried->pos);
 		const f32 carryDist = glm::length(toDrop);
 		const f32 carryTime = MAX(travel, 0.05f);

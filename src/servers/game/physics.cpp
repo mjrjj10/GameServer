@@ -389,10 +389,12 @@ vec3 PhysicsScene::ClimbMove(PhysicsDynamicBody* body, const vec2& disp, f32 tim
 }
 
 static const f32 HYP_SKILL_MOVE_SUBSTEP = 50.0f;
+static const f32 SKILL_MOVE_MAX_DISTANCE = 5000.0f;
 
 vec3 PhysicsScene::FindSkillMovePos(PhysicsDynamicBody* body, const vec2& dir, f32 dist, f32 time, f32 lift)
 {
-	ASSERT(dist >= 0 && lift >= 0);
+	if(!(dist >= 0) || !(lift >= 0) || !(glm::length(dir) >= 0)) return body->GetWorldPos();
+	dist = MIN(dist, SKILL_MOVE_MAX_DISTANCE);
 	const PxExtendedVec3 start = body->collider->getFootPosition();
 	const vec2 from = vec2(body->GetWorldPos());
 	const i32 steps = MAX((i32)ceilf(dist / HYP_SKILL_MOVE_SUBSTEP), 1);

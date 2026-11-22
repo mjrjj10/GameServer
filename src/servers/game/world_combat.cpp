@@ -747,13 +747,6 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	foreach(it, activeStatuses) {
 		if(it->targetIndex == target.index && it->info && it->info->nextCondition == StatusInfo::NextCondition::REMOVE_ONHIT && it->shieldHits <= 0) it->removeOnHit = true;
 	}
-	foreach(it, activeStatuses) {
-		if(it->targetIndex != target.index || it->shieldHits <= 0 || it->until <= localTime) continue;
-		it->shieldHits--;
-		LOG("Status :: %ls shield %d absorbs a hit from creature=%d (%d left)", target.name.data(), it->statusID, (i32)attacker.docID, it->shieldHits);
-		if(status > 0) ApplyStatusFromNpc(attacker, target, status);
-		return;
-	}
 	bool shieldHit = false;
 	foreach(it, activeStatuses) {
 		if(damage <= 0) break;
