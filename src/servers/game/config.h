@@ -26,6 +26,7 @@ struct CConfigGame
 	i32 DevTrail = 0;
 	i32 DevTruth = 0;
 	i32 DevScenario = 0;
+	i32 DevTrainingSkillPass = -1;
 	i32 DevObserver = 0;
 	i32 DevPilotTour = 0;
 	i32 DevPilotTourFirst = 0;

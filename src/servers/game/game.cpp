@@ -654,6 +654,7 @@ void Game::Update(Time localTime_)
 	Dbg::PushPhysics(dbgGameUID, world.physics);
 
 	replication.FrameEnd();
+	FlushTrainingLoadouts();
 }
 
 bool Game::LoadMap()
@@ -1556,7 +1557,7 @@ void Game::OnMasterTrainingEvent(ClientHandle clientHd, const u8* data, i32 size
 	replication.SendMasterTrainingEvent(clientHd, eventType, 0, 0, 0, 0);
 	if(eventType == MEASURED_TRAINING_EVENT_LOADOUT && size >= (i32)sizeof(Cl::CN_UNKNOWN_60296)) {
 		ChangeTrainingLoadout(clientHd, ((const Cl::CN_UNKNOWN_60296*)data)->slot_pair_data);
-		replication.SendMasterTrainingEvent(clientHd, eventType, 0, 1, 1, 1);
+		pendingLoadoutDone.push_back(clientHd);
 	}
 	if(eventType == MEASURED_TRAINING_EVENT_CREATE_AI && size >= 9) {
 		const i32 choice = *(const i32*)(data + 5);
@@ -1596,6 +1597,18 @@ void Game::RemoveTrainingBots()
 	trainingBots.clear();
 }
 
+void Game::FlushTrainingLoadouts()
+{
+	foreach_const(hd, pendingLoadoutDone) {
+		auto pl = playerMap.find(*hd);
+		if(pl == playerMap.end()) continue;
+		const World::Player& player = world.GetPlayer(pl->second->playerIndex);
+		replication.SendSkillPoints(*hd, player.userID, player.skillPoints);
+		replication.SendMasterTrainingEvent(*hd, MEASURED_TRAINING_EVENT_LOADOUT, 0, 1, 1, 1);
+	}
+	pendingLoadoutDone.clear();
+}
+
 bool Game::TrainingLoadoutCommand(ClientHandle clientHd, const i32* classes, const i32* skillSuffix)
 {
 	const GameXmlContent& xml = GetGameXmlContent();
@@ -1604,8 +1617,9 @@ bool Game::TrainingLoadoutCommand(ClientHandle clientHd, const i32* classes, con
 	for(int mi = 0; mi < 2; mi++) {
 		auto found = xml.masterClassTypeMap.find((ClassType)classes[mi]);
 		if(found == xml.masterClassTypeMap.end() || found->second->skillIDs.size() < 2) return false;
+		const i32 pass = Config().DevTrainingSkillPass > 0 && (i32)found->second->skillIDs.size() >= 4 ? Config().DevTrainingSkillPass : 0;
 		for(int si = 0; si < 2; si++) {
-			skills[mi][si] = (u32)found->second->skillIDs[si];
+			skills[mi][si] = (u32)found->second->skillIDs[pass * 2 + si];
 			foreach_const(sid, found->second->skillIDs) if(skillSuffix[mi * 2 + si] > 0 && (i32)*sid % 100 == skillSuffix[mi * 2 + si]) skills[mi][si] = (u32)*sid;
 		}
 	}
@@ -1619,7 +1633,7 @@ bool Game::TrainingLoadoutCommand(ClientHandle clientHd, const i32* classes, con
 	slots.field11 = 1;
 	replication.SendMasterTrainingEvent(clientHd, MEASURED_TRAINING_EVENT_LOADOUT, 0, 0, 0, 0);
 	ChangeTrainingLoadout(clientHd, slots);
-	replication.SendMasterTrainingEvent(clientHd, MEASURED_TRAINING_EVENT_LOADOUT, 0, 1, 1, 1);
+	pendingLoadoutDone.push_back(clientHd);
 	return true;
 }
 

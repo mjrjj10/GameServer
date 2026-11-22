@@ -774,6 +774,11 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 	const GameXmlContent::Master& masterSub = content.GetMaster(player->subClass);
 	const GameXmlContent::StageMaps* stage = content.FindStageMaps(stageIndex);
 	const bool fullRoster = stage && stage->gameMode == GameModeType::GAME_MODE_MASTER_TRAINING;
+	const i32 skillPass = fullRoster && Config().DevTrainingSkillPass >= 0 ? Config().DevTrainingSkillPass : -1;
+	auto passSkill = [&](const GameXmlContent::Master& m, i32 si, SkillID fallback) {
+		const i32 k = skillPass * 2 + si;
+		return skillPass >= 0 && k < (i32)m.skillIDs.size() ? m.skillIDs[k] : fallback;
+	};
 
 	// SN_AccountInfo
 	{
@@ -808,8 +813,8 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 			Sv::SN_ProfileCharacters::Character chara;
 			chara.characterID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (i32)player->mainClass);
 			chara.creatureIndex = CreatureIndex(100000000 + (i32)player->mainClass);
-			chara.skillSlot1 = player->skills[0];
-			chara.skillSlot2 = player->skills[1];
+			chara.skillSlot1 = passSkill(masterMain, 0, player->skills[0]);
+			chara.skillSlot2 = passSkill(masterMain, 1, player->skills[1]);
 			chara.classType = player->mainClass;
 			chara.x = actorMain->pos.x;
 			chara.y = actorMain->pos.y;
@@ -825,8 +830,8 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 			Sv::SN_ProfileCharacters::Character chara;
 			chara.characterID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (i32)player->subClass);
 			chara.creatureIndex = CreatureIndex(100000000 + (i32)player->subClass);
-			chara.skillSlot1 = player->skills[2];
-			chara.skillSlot2 = player->skills[3];
+			chara.skillSlot1 = passSkill(masterSub, 0, player->skills[2]);
+			chara.skillSlot2 = passSkill(masterSub, 1, player->skills[3]);
 			chara.classType = player->subClass;
 			chara.x = actorSub->pos.x;
 			chara.y = actorSub->pos.y;
@@ -844,8 +849,8 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 				Sv::SN_ProfileCharacters::Character chara;
 				chara.characterID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (i32)m->classType);
 				chara.creatureIndex = m->ID;
-				chara.skillSlot1 = m->skillIDs[0];
-				chara.skillSlot2 = m->skillIDs[1];
+				chara.skillSlot1 = passSkill(*m, 0, m->skillIDs[0]);
+				chara.skillSlot2 = passSkill(*m, 1, m->skillIDs[1]);
 				chara.classType = m->classType;
 				chara.x = actorMain->pos.x;
 				chara.y = actorMain->pos.y;

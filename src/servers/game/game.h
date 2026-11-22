@@ -122,6 +122,7 @@ struct Game
 	void OnGamePing(ClientHandle clientHd, LocalActorID chara, const float3& pos, LocalActorID target, u32 ping);
 	void SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team);
 	void RemoveTrainingBots();
+	void FlushTrainingLoadouts();
 	bool TrainingLoadoutCommand(ClientHandle clientHd, const i32* classes, const i32* skillSuffix);
 	eastl::fixed_vector<MapIndex,8,false> zoneMaps;
 	i32 zoneIndex = 0;
@@ -136,6 +137,7 @@ struct Game
 	struct ScenarioStep { f32 at; eastl::fixed_string<wchar,128,true> cmd; };
 	eastl::fixed_vector<ScenarioStep,512,true> scenario;
 	i32 scenarioNext = 0;
+	eastl::fixed_vector<ClientHandle,8,true> pendingLoadoutDone;
 	bool scenarioLoaded = false;
 	Time tNextTruth = Time::ZERO;
 	Time tNextTelemetry = Time::ZERO;
