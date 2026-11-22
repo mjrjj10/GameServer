@@ -1576,21 +1576,51 @@ void Game::OnMasterTrainingEvent(ClientHandle clientHd, const u8* data, i32 size
 		const u8 humanTeam = pl != playerMap.end() ? world.GetPlayer(pl->second->playerIndex).team : 0;
 		SpawnTrainingBot(mainClass, subClass, humanTeam ^ 1);
 	}
-	if(eventType == MEASURED_TRAINING_EVENT_REMOVE_AI) {
-		foreach_const(t, trainingBots) {
-			world.RemovePlayer(world.GetPlayer(*t));
-			for(auto b = botList.begin(); b != botList.end(); ++b) {
-				if(b->playerIndex != *t) continue;
-				botList.erase(b);
-				break;
-			}
-		}
-		trainingBots.clear();
-	}
+	if(eventType == MEASURED_TRAINING_EVENT_REMOVE_AI) RemoveTrainingBots();
 	if(eventType == MEASURED_TRAINING_EVENT_RESET_SKILLS) {
 		auto pl = playerMap.find(clientHd);
 		if(pl != playerMap.end()) world.ResetSkillPoints(world.GetPlayer(pl->second->playerIndex));
 	}
+}
+
+void Game::RemoveTrainingBots()
+{
+	foreach_const(t, trainingBots) {
+		world.RemovePlayer(world.GetPlayer(*t));
+		for(auto b = botList.begin(); b != botList.end(); ++b) {
+			if(b->playerIndex != *t) continue;
+			botList.erase(b);
+			break;
+		}
+	}
+	trainingBots.clear();
+}
+
+bool Game::TrainingLoadoutCommand(ClientHandle clientHd, const i32* classes, const i32* skillSuffix)
+{
+	const GameXmlContent& xml = GetGameXmlContent();
+	Cl::CN_UNKNOWN_60296::SlotPairData slots = {};
+	u32 skills[2][2] = {};
+	for(int mi = 0; mi < 2; mi++) {
+		auto found = xml.masterClassTypeMap.find((ClassType)classes[mi]);
+		if(found == xml.masterClassTypeMap.end() || found->second->skillIDs.size() < 2) return false;
+		for(int si = 0; si < 2; si++) {
+			skills[mi][si] = (u32)found->second->skillIDs[si];
+			foreach_const(sid, found->second->skillIDs) if(skillSuffix[mi * 2 + si] > 0 && (i32)*sid % 100 == skillSuffix[mi * 2 + si]) skills[mi][si] = (u32)*sid;
+		}
+	}
+	slots.field0 = (u32)(MEASURED_MASTER_CREATURE_BASE + classes[0]);
+	slots.field1 = skills[0][0];
+	slots.field2 = skills[0][1];
+	slots.field5 = 1;
+	slots.field6 = (u32)(MEASURED_MASTER_CREATURE_BASE + classes[1]);
+	slots.field8 = skills[1][0];
+	slots.field9 = skills[1][1];
+	slots.field11 = 1;
+	replication.SendMasterTrainingEvent(clientHd, MEASURED_TRAINING_EVENT_LOADOUT, 0, 0, 0, 0);
+	ChangeTrainingLoadout(clientHd, slots);
+	replication.SendMasterTrainingEvent(clientHd, MEASURED_TRAINING_EVENT_LOADOUT, 0, 1, 1, 1);
+	return true;
 }
 
 void Game::OnTitanIncarnate(ClientHandle clientHd, i32 formDoc)
@@ -2569,6 +2599,30 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			playerActor.ultGauge = 100.0f;
 			playerActor.ultDirty = true;
 			SendDbgMsg(clientHd, L"Ultimate gauge full");
+			return true;
+		}
+
+		i32 lo[2] = {}, ls[4] = {};
+		const i32 loCount = EA::StdC::Sscanf(msg, L"loadout %d %d %d %d %d %d", &lo[0], &lo[1], &ls[0], &ls[1], &ls[2], &ls[3]);
+		if(loCount == 2 || loCount == 6) {
+			const bool ok = TrainingLoadoutCommand(clientHd, lo, ls);
+			SendDbgMsg(clientHd, ok ? LFMT(L"Loadout %d %d", lo[0], lo[1]) : L"Loadout refused");
+			return true;
+		}
+		i32 aiA = 0, aiB = 0;
+		if(EA::StdC::Sscanf(msg, L"ai %d %d", &aiA, &aiB) == 2) {
+			const auto& masters = GetGameXmlContent().masterClassTypeMap;
+			if(masters.find((ClassType)aiA) == masters.end() || masters.find((ClassType)aiB) == masters.end() || aiA == aiB) {
+				SendDbgMsg(clientHd, L"AI refused");
+				return true;
+			}
+			SpawnTrainingBot((ClassType)aiA, (ClassType)aiB, world.GetPlayer(p.playerIndex).team ^ 1);
+			SendDbgMsg(clientHd, LFMT(L"AI %d %d", aiA, aiB));
+			return true;
+		}
+		if(EA::StdC::Strcmp(msg, L"removeai") == 0) {
+			RemoveTrainingBots();
+			SendDbgMsg(clientHd, L"AI removed");
 			return true;
 		}
 
