@@ -724,6 +724,7 @@ struct GameXmlContent
 	};
 	eastl::hash_map<i32, GearItem> gearItems;
 	eastl::array<i32,(i32)GameType::MAX> gearPowerPercent;
+	f32 spActionJump = 0;
 	eastl::fixed_vector<eastl::pair<u8,i32>,16,false> achievementTierPoints;
 	u8 AchievementTier(i32 score) const;
 	i32 GearPowerPercent(GameType type) const { return type > GameType::INVALID && type < GameType::MAX ? gearPowerPercent[(i32)type] : 100; }

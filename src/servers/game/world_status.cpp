@@ -379,6 +379,11 @@ void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& cente
 				ns.casterUID = npcCaster;
 				ns.until = TimeAdd(localTime, TimeMsToTime((f64)STATUS_INFINITE_DURATION_SEC * 1000.0));
 				ns.linked = false;
+				if(child->dotDamage > 0) {
+					ns.dotCaster = casterIndex;
+					ns.dotPower = PlayerSkillPower(caster);
+					ns.dotNextTick = TimeAdd(localTime, TimeMsToTime((child->intervalSec > 0 ? child->intervalSec : 0.0f) * 1000.0));
+				}
 				npcStatuses.push_back(ns);
 				continue;
 			}
@@ -738,7 +743,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 {
 	if(target.dead || target.untargetable) return;
 	const ActorNpc* npcSource = &caster == &target && statusCasterOverride != ActorUID::INVALID ? FindNpcActor(statusCasterOverride) : nullptr;
-	const bool hostileSource = &caster != &target ? caster.team != target.team : npcSource && NpcHittableBy(*npcSource, target);
+	const bool hostileSource = &caster != &target ? caster.team != target.team : npcSource && (npcSource->ownerUID != ActorUID::INVALID ? npcSource->ownerIndex < players.size() && players[npcSource->ownerIndex].team != target.team : npcSource->faction != (Faction)target.team);
 	if(caster.team != target.team) target.statusesTaken++;
 	const StatusInfo* info = GetGameXmlContent().FindStatus(statusID);
 	f32 duration = info && info->durationSec > 0 ? info->durationSec : (info && (info->type == StatusType::MOTION || info->instant) ? 0.0f : 1.0f);

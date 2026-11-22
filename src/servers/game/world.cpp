@@ -312,6 +312,11 @@ void World::Update(Time localTime_)
 			p.input.jump = 0;
 			p.movement.hasJumped = true;
 			body.vel.z = GetGlobalTweakableVars().jumpForce;
+			const f32 jumpCost = GetGameXmlContent().spActionJump;
+			if(jumpCost > 0 && p.stamina >= 0) {
+				p.stamina = MAX(p.stamina - jumpCost, 0.0f);
+				p.staminaDirty = true;
+			}
 		}
 
 		// apply 2D velocity

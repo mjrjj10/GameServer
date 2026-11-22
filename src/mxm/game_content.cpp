@@ -2253,6 +2253,7 @@ bool GameXmlContent::LoadServiceRule()
 	if(!LoadXMLFile(L"/client/ServiceRule.xml", doc)) return true;
 	XMLElement* rule = doc.FirstChildElement() ? doc.FirstChildElement()->FirstChildElement("ST_SERVICERULE") : nullptr;
 	XMLElement* gear = rule ? rule->FirstChildElement("_MasterGearInfo") : nullptr;
+	spActionJump = rule ? rule->FloatAttribute("_SPActionJump") : 0.0f;
 	for(XMLElement* p = rule ? rule->FirstChildElement("_AchievementTierPoint") : nullptr; p && !achievementTierPoints.full(); p = p->NextSiblingElement("_AchievementTierPoint")) achievementTierPoints.push_back({ (u8)p->IntAttribute("_Tier"), p->IntAttribute("_MinPoint") });
 	for(XMLElement* p = gear ? gear->FirstChildElement("_PvPGearPowerPercent") : nullptr; p; p = p->NextSiblingElement("_PvPGearPowerPercent")) {
 		const char* type = p->Attribute("_GameType");

@@ -28,6 +28,10 @@
   <SWING remote="1430300001" forward="98" side="-6" samples="25" iqr="60" />
   <SWING remote="1430300002" forward="96" side="-3" samples="74" iqr="51" />
   <SWING remote="1430300003" forward="109" side="-23" samples="64" iqr="57" />
+  <SWING remote="1430310300" forward="255" side="1" samples="83" iqr="39" />
+  <SWING remote="1430320000" forward="117" side="3" samples="35" iqr="51" />
+  <SWING remote="1430320001" forward="119" side="6" samples="218" iqr="34" />
+  <SWING remote="1430320002" forward="120" side="4" samples="190" iqr="38" />
   <SWING remote="1430340000" forward="140" side="5" samples="21" iqr="34" />
   <SWING remote="1430340001" forward="163" side="13" samples="15" iqr="27" />
   <SWING remote="1430340012" forward="168" side="-16" samples="11" iqr="15" />
@@ -36,10 +40,17 @@
   <SWING remote="1430340042" forward="175" side="-5" samples="13" iqr="39" />
   <SWING remote="1430360010" forward="139" side="14" samples="85" iqr="39" />
   <SWING remote="1439000013" forward="-79" side="11" samples="12" iqr="100" />
+  <SWING remote="1440070020" forward="-240" side="-8" samples="18" iqr="97" />
+  <SWING remote="1440120022" forward="192" side="2" samples="28" iqr="2" />
+  <SWING remote="1440140020" forward="163" side="-34" samples="32" iqr="98" />
   <SWING remote="1440140034" forward="0" side="0" samples="9" iqr="0" />
   <SWING remote="1440180011" forward="1074" side="-2" samples="8" iqr="40" />
+  <SWING remote="1440180020" forward="13" side="-3" samples="18" iqr="30" />
+  <SWING remote="1440180040" forward="117" side="-5" samples="17" iqr="80" />
   <SWING remote="1440200020" forward="0" side="16" samples="11" iqr="10" />
   <SWING remote="1440250040" forward="155" side="-0" samples="27" iqr="20" />
+  <SWING remote="1440320020" forward="137" side="-5" samples="53" iqr="3" />
+  <SWING remote="1440320022" forward="137" side="15" samples="22" iqr="5" />
   <SWING remote="1440350053" forward="836" side="-2" samples="22" iqr="48" />
   <SWING remote="1440350054" forward="1063" side="16" samples="9" iqr="70" />
 </MeasuredSwingNodes>

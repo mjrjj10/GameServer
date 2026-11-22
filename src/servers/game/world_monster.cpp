@@ -516,6 +516,7 @@ void World::MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const Gam
 	auto targetIt = actorNpcMap.find(targetUID);
 	ActorMaster* master = targetIt == actorNpcMap.end() ? FindMasterActor(targetUID) : nullptr;
 	if(attack.radius > 0) {
+		const f32 areaRadius = attack.radius * 0.5f;
 		vec3 center = attacker.pos;
 		if(attack.selfCentered) center = attacker.pos;
 		else if(aimPos && attack.hitRemote > 0 && GetGameXmlContent().FindRemote((RemoteIdx)attack.hitRemote) && GetGameXmlContent().FindRemote((RemoteIdx)attack.hitRemote)->bezier) center = *aimPos;
@@ -523,11 +524,11 @@ void World::MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const Gam
 		else if(targetIt != actorNpcMap.end()) center = targetIt->second->pos;
 		else if(master && master->parent) center = master->parent->body->GetWorldPos();
 		foreach(p, players) {
-			if(p->dead || !p->body || !MonsterHostile(attacker, *p) || glm::length(vec2(p->body->GetWorldPos()) - vec2(center)) > attack.radius + (aimPos || attack.selfCentered ? HitRadius(*p) : 0.0f)) continue;
+			if(p->dead || !p->body || !MonsterHostile(attacker, *p) || glm::length(vec2(p->body->GetWorldPos()) - vec2(center)) > areaRadius + (aimPos || attack.selfCentered ? HitRadius(*p) : 0.0f)) continue;
 			DamagePlayerFromNpc(attacker, *p, damage, attack.hitRemote, attack.status, remoteID);
 		}
 		foreach(o, actorNpcList) {
-			if(&*o == &attacker || o->hp <= 0 || !MonsterHostile(attacker, *o) || glm::length(vec2(o->pos) - vec2(center)) > attack.radius) continue;
+			if(&*o == &attacker || o->hp <= 0 || !MonsterHostile(attacker, *o) || glm::length(vec2(o->pos) - vec2(center)) > areaRadius) continue;
 			const bool execute = attack.executeMinion && o->monsterAi && MonsterTargetKind(*o->monsterAi) == GameXmlContent::MonsterAttack::MINION;
 			DamageNpcFromNpc(attacker, *o, execute ? o->hpMax : damage, attack.hitRemote, remoteID, attack.status, execute);
 		}
