@@ -144,6 +144,7 @@ void World::ApplyDeathHit(const DeathHit& hit)
 	const bool teamed = helper->faction == Faction::RED || helper->faction == Faction::BLUE;
 	const i32 damage = (i32)(MonsterAttackPower(*helper) * NpcStatusMul(*helper, StatusMod::ATTACK) * d.multiplier + 0.5f);
 	const i32 firstStatus = d.statuses.empty() ? 0 : d.statuses[0];
+	replication->SendRemoteCreateToAll(helper->UID, MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID++ & MONSTER_REMOTE_ID_MASK), (RemoteIdx)d.remote, helper->pos, helper->rot.z, helper->pos, ActorUID::INVALID);
 	if(d.pc) {
 		foreach(p, players) {
 			if(p->dead || !p->body || p->untargetable) continue;
@@ -357,6 +358,7 @@ void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDo
 		f32 longest = 0;
 		const u32 remoteID = MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID++ & MONSTER_REMOTE_ID_MASK);
 		for(const auto& d : *deaths) {
+			if(d.guide != 0) replication->SendRemoteCreateToAll(npc.UID, MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID++ & MONSTER_REMOTE_ID_MASK), (RemoteIdx)d.guide, npc.pos, npc.rot.z, npc.pos, ActorUID::INVALID);
 			if(deathHits.full()) break;
 			deathHits.push_back({ npc.UID, TimeAdd(localTime, TimeMsToTime(d.delay * 1000.0)), &d, remoteID });
 			longest = MAX(longest, d.delay);
@@ -674,7 +676,14 @@ void World::FireMonsterRemote(const MonsterFireEvent& fire)
 	bool atTarget = fire.fire->atTarget && fire.target != ActorUID::INVALID;
 	for(i32 r : MEASURED_MONSTER_REMOTES_AT_TARGET) if(r == fire.fire->remote && fire.target != ActorUID::INVALID) atTarget = true;
 	const vec3 firePos = atTarget ? vec3(vec2(targetPos), npc.pos.z) : npc.pos;
-	replication->SendRemoteCreateToAll(npc.UID, fire.seed, (RemoteIdx)fire.fire->remote, firePos, npc.rot.z, vec3(vec2(targetPos), npc.pos.z), fire.target, fire.fire->node.c_str());
+	vec3 sentFirePos = firePos;
+	if(!atTarget) {
+		if(const GameXmlContent::MeasuredFireNode* node = GetGameXmlContent().FindMeasuredFireNode((i32)npc.docID, fire.fire->remote, 0)) {
+			const vec2 fwd = vec2(cosf(npc.rot.z), sinf(npc.rot.z));
+			sentFirePos += vec3(fwd * node->forward + Perp(fwd) * node->side, node->up);
+		}
+	}
+	replication->SendRemoteCreateToAll(npc.UID, fire.seed, (RemoteIdx)fire.fire->remote, sentFirePos, npc.rot.z, targetPos, fire.target, fire.fire->node.c_str());
 	const Remote* remote = GetGameXmlContent().FindRemote((RemoteIdx)fire.fire->remote);
 	if(remote && fire.byRemotes) {
 		const vec2 rel = vec2(targetPos) - vec2(npc.pos);

@@ -851,6 +851,7 @@ ActorUID World::PickEntityAtCastPos(const Player& player, SkillID skillID, const
 	const GameXmlContent::SkillInput* in = content.FindSkillInput((i32)skillID);
 	if(!in || !in->pickedEntity || in->friendlyOnly || glm::length(vec2(castPos)) <= 1.0f) return ActorUID::INVALID;
 	const f32 reach = MAX(content.GetSkillTargetRange((i32)skillID) * 0.5f, 1.0f);
+	if(in->maxDistance > 0 && glm::length(vec2(castPos) - vec2(player.body->GetWorldPos())) > in->maxDistance + reach) return ActorUID::INVALID;
 	ActorUID best = ActorUID::INVALID;
 	f32 bestDist = 0;
 	foreach_const(e, players) {
@@ -1178,7 +1179,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.castID = castID;
 			pr.damage = castCostLevel ? (i32)(damage * castCostLevel->damageRatio) : damage;
 			pr.castPos = castPos;
-			pr.angle = cmd->lowerDummyDir && BurstsBackAfterThrough(skillID) ? angle + PI : (cmd->lowerDummyDir ? MovementYaw(player, angle) : angle);
+			pr.angle = cmd->lowerDummyDir && BurstsBackAfterThrough(skillID) && currentTarget != ActorUID::INVALID ? angle + PI : (cmd->lowerDummyDir ? MovementYaw(player, angle) : angle);
 			pr.target = cmd->remote.targetPreset == ActionCommand::TargetPreset::MEMORIZED_TFT ? player.memorizedTarget : currentTarget;
 			if(cmd->remote.targetPreset == ActionCommand::TargetPreset::MULTI_LOCKON_FFF && liveTargets.size() > 0) pr.target = liveTargets[lockOnIndex++ % liveTargets.size()];
 			pr.atTarget = cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET;
@@ -2237,18 +2238,18 @@ f32 World::PlayerSkillDamage(const Player& player, SkillID skillID) const
 {
 	const f32 statusPower = StatusModSum(player, StatusMod::SKILLPOWER);
 	if(const GameXmlContent::SkillUpgrade* up = LatestUpgrade(player, (i32)skillID, GameXmlContent::SkillUpgrade::Type::DAMAGE)) {
-		if(up->baseDamage >= 0) return MAX(up->baseDamage + up->attackMultiplier * PlayerSkillPower(player), 0.0f);
+		if(up->baseDamage >= 0) return MAX(up->baseDamage + up->attackMultiplier * PlayerSkillPower(player), 0.0f) * TesterSkillDamageMul(skillID);
 	}
 	f32 damage = SkillDamage(skillID);
 	const f32 baseMul = GetGameXmlContent().GetSkillBasePowerMul((i32)skillID);
-	if(baseMul > 0) return MAX(damage + baseMul * PlayerSkillPower(player), 0.0f);
+	if(baseMul > 0) return MAX(damage + baseMul * PlayerSkillPower(player), 0.0f) * TesterSkillDamageMul(skillID);
 	auto found = GetGameXmlContent().skillMap.find(skillID);
 	const f32 extraPower = statusPower + StatBonus(player, STAT_SKILLPOWER);
 	if(extraPower > 0 && found != GetGameXmlContent().skillMap.end()) {
 		SkillNormalModel& sm = const_cast<SkillNormalModel&>(found->second);
 		damage += extraPower * sm.getSkillNormalLevelByIndex(0)->getAttackMultiplier();
 	}
-	return damage;
+	return damage * TesterSkillDamageMul(skillID);
 }
 
 f32 World::PlayerSkillConsume(const Player& player, i32 skillID, i32 index) const

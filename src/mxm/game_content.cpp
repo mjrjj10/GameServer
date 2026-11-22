@@ -4951,6 +4951,7 @@ bool GameXmlContent::LoadDeathRemotes()
 		if(list.full()) continue;
 		DeathRemote d;
 		d.remote = pD->IntAttribute("remote");
+		d.guide = pD->IntAttribute("guide");
 		d.delay = pD->FloatAttribute("delay");
 		d.radius = pD->FloatAttribute("radius");
 		d.multiplier = pD->FloatAttribute("multiplier");

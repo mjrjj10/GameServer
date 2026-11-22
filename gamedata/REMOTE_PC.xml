@@ -20221,7 +20221,7 @@
   <INFO ID="1430410010" KEYNAME="REMOTE_SHUTTLE_ATTACK_DEFAULT_REMOTE" _DocID="100000041">
     <EntityComData _Description="[우주셔틀] 테이저건 기본 공격" />
     <RemoteBoundComData2 _DamageGroup="eENEMY" _IgnoreGround="true" _LengthX="300" _OffsetZ="0" _Type="E_BOUND_SPHERE" _VsDynamic="true" _VsNPC_Monster="true" _VsPC="true" />
-    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="12" _AttachFireObject="true" _AttackMultiplier="1" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.4" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
+    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="12" _AttachFireObject="true" _AttackMultiplier="1.7" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.4" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
       <_Resist DATAKEY="RESIST_TYPE_IMPACT" />
     </RemoteComData2>
     <RemoteTargetComData _HitInvalidTime="1" />
@@ -20230,7 +20230,7 @@
   <INFO ID="1430410011" KEYNAME="REMOTE_SHUTTLE_ATTACK_DEFAULT_CHARGE" _DocID="100000041">
     <EntityComData _Description="[우주셔틀] 테이저건 챠지 공격" />
     <RemoteBoundComData2 _DamageGroup="eENEMY" _IgnoreGround="true" _LengthX="300" _LengthY="500" _LengthZ="400" _OffsetY="-150" _OffsetZ="0" _Type="E_BOUND_BOX" _VsDynamic="true" _VsNPC_Monster="true" _VsPC="true" />
-    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="21.5" _AttachFireObject="true" _AttackMultiplier="1.25" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.5" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
+    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="21.5" _AttachFireObject="true" _AttackMultiplier="2.125" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.5" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
       <_Resist DATAKEY="RESIST_TYPE_IMPACT" />
     </RemoteComData2>
     <RemoteTargetComData _HitInvalidTime="1" />
@@ -20239,7 +20239,7 @@
   <INFO ID="1430410110" KEYNAME="REMOTE_SHUTTLE_ATTACK_RANGE_REMOTE" _DocID="100000041">
     <EntityComData _Description="[우주셔틀] 테이저건 기본 공격 : 사거리 타입1" />
     <RemoteBoundComData2 _DamageGroup="eENEMY" _IgnoreGround="true" _LengthX="330" _OffsetZ="0" _Type="E_BOUND_SPHERE" _VsDynamic="true" _VsNPC_Monster="true" _VsPC="true" />
-    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="12" _AttachFireObject="true" _AttackMultiplier="1" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.4" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
+    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="12" _AttachFireObject="true" _AttackMultiplier="1.7" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.4" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
       <_Resist DATAKEY="RESIST_TYPE_IMPACT" />
     </RemoteComData2>
     <RemoteTargetComData _HitInvalidTime="1" />
@@ -20248,7 +20248,7 @@
   <INFO ID="1430410111" KEYNAME="REMOTE_SHUTTLE_ATTACK_RANGE1_REMOTE" _DocID="100000041">
     <EntityComData _Description="[우주셔틀] 테이저건 기본 공격 : 사거리 타입2" />
     <RemoteBoundComData2 _DamageGroup="eENEMY" _IgnoreGround="true" _LengthX="350" _OffsetZ="0" _Type="E_BOUND_SPHERE" _VsDynamic="true" _VsNPC_Monster="true" _VsPC="true" />
-    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="12" _AttachFireObject="true" _AttackMultiplier="1" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.4" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
+    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="12" _AttachFireObject="true" _AttackMultiplier="1.7" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.4" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
       <_Resist DATAKEY="RESIST_TYPE_IMPACT" />
     </RemoteComData2>
     <RemoteTargetComData _HitInvalidTime="1" />
@@ -20257,7 +20257,7 @@
   <INFO ID="1430410112" KEYNAME="REMOTE_SHUTTLE_ATTACK_RANGE2_REMOTE" _DocID="100000041">
     <EntityComData _Description="[우주셔틀] 테이저건 기본 공격 : 사거리 타입3" />
     <RemoteBoundComData2 _DamageGroup="eENEMY" _IgnoreGround="true" _LengthX="370" _OffsetZ="0" _Type="E_BOUND_SPHERE" _VsDynamic="true" _VsNPC_Monster="true" _VsPC="true" />
-    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="12" _AttachFireObject="true" _AttackMultiplier="1" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.4" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
+    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="12" _AttachFireObject="true" _AttackMultiplier="1.7" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.4" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
       <_Resist DATAKEY="RESIST_TYPE_IMPACT" />
     </RemoteComData2>
     <RemoteTargetComData _HitInvalidTime="1" />
@@ -20266,7 +20266,7 @@
   <INFO ID="1430410113" KEYNAME="REMOTE_SHUTTLE_ATTACK_RANGE3_REMOTE" _DocID="100000041">
     <EntityComData _Description="[우주셔틀] 테이저건 기본 공격 : 사거리 타입4" />
     <RemoteBoundComData2 _DamageGroup="eENEMY" _IgnoreGround="true" _LengthX="400" _OffsetZ="0" _Type="E_BOUND_SPHERE" _VsDynamic="true" _VsNPC_Monster="true" _VsPC="true" />
-    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="12" _AttachFireObject="true" _AttackMultiplier="1" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.4" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
+    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="12" _AttachFireObject="true" _AttackMultiplier="1.7" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.4" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
       <_Resist DATAKEY="RESIST_TYPE_IMPACT" />
     </RemoteComData2>
     <RemoteTargetComData _HitInvalidTime="1" />
@@ -20275,7 +20275,7 @@
   <INFO ID="1430410114" KEYNAME="REMOTE_SHUTTLE_ATTACK_RANGE_CHARGE" _DocID="100000041">
     <EntityComData _Description="[우주셔틀] 테이저건 챠지 공격 : 사거리 타입1" />
     <RemoteBoundComData2 _DamageGroup="eENEMY" _IgnoreGround="true" _LengthX="300" _LengthY="520" _LengthZ="400" _OffsetY="-150" _OffsetZ="0" _Type="E_BOUND_BOX" _VsDynamic="true" _VsNPC_Monster="true" _VsPC="true" />
-    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="21.5" _AttachFireObject="true" _AttackMultiplier="1.25" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.5" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
+    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="21.5" _AttachFireObject="true" _AttackMultiplier="2.125" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.5" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
       <_Resist DATAKEY="RESIST_TYPE_IMPACT" />
     </RemoteComData2>
     <RemoteTargetComData _HitInvalidTime="1" />
@@ -20284,7 +20284,7 @@
   <INFO ID="1430410115" KEYNAME="REMOTE_SHUTTLE_ATTACK_RANGE1_CHARGE" _DocID="100000041">
     <EntityComData _Description="[우주셔틀] 테이저건 챠지 공격 : 사거리 타입2" />
     <RemoteBoundComData2 _DamageGroup="eENEMY" _IgnoreGround="true" _LengthX="300" _LengthY="560" _LengthZ="400" _OffsetY="-150" _OffsetZ="0" _Type="E_BOUND_BOX" _VsDynamic="true" _VsNPC_Monster="true" _VsPC="true" />
-    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="21.5" _AttachFireObject="true" _AttackMultiplier="1.25" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.5" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
+    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="21.5" _AttachFireObject="true" _AttackMultiplier="2.125" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.5" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
       <_Resist DATAKEY="RESIST_TYPE_IMPACT" />
     </RemoteComData2>
     <RemoteTargetComData _HitInvalidTime="1" />
@@ -20293,7 +20293,7 @@
   <INFO ID="1430410116" KEYNAME="REMOTE_SHUTTLE_ATTACK_RANGE2_CHARGE" _DocID="100000041">
     <EntityComData _Description="[우주셔틀] 테이저건 챠지 공격 : 사거리 타입3" />
     <RemoteBoundComData2 _DamageGroup="eENEMY" _IgnoreGround="true" _LengthX="300" _LengthY="590" _LengthZ="400" _OffsetY="-150" _OffsetZ="0" _Type="E_BOUND_BOX" _VsDynamic="true" _VsNPC_Monster="true" _VsPC="true" />
-    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="21.5" _AttachFireObject="true" _AttackMultiplier="1.25" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.5" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
+    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="21.5" _AttachFireObject="true" _AttackMultiplier="2.125" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.5" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
       <_Resist DATAKEY="RESIST_TYPE_IMPACT" />
     </RemoteComData2>
     <RemoteTargetComData _HitInvalidTime="1" />
@@ -20302,7 +20302,7 @@
   <INFO ID="1430410117" KEYNAME="REMOTE_SHUTTLE_ATTACK_RANGE3_CHARGE" _DocID="100000041">
     <EntityComData _Description="[우주셔틀] 테이저건 챠지 공격 : 사거리 타입4" />
     <RemoteBoundComData2 _DamageGroup="eENEMY" _IgnoreGround="true" _LengthX="300" _LengthY="620" _LengthZ="400" _OffsetY="-150" _OffsetZ="0" _Type="E_BOUND_BOX" _VsDynamic="true" _VsNPC_Monster="true" _VsPC="true" />
-    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="21.5" _AttachFireObject="true" _AttackMultiplier="1.25" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.5" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
+    <RemoteComData2 _ActivateCount="9999" _ActivateGround="false" _AddGroggy="21.5" _AttachFireObject="true" _AttackMultiplier="2.125" _BehaviorType="E_REMOTE_BEHAVIOR_TYPE_NONETARGET" _CriticalRate="0" _LifeTime="0.5" _PenetrationCount="10000000" _RangeType="SHORT_RANGE" _UseSKillGroggy="False">
       <_Resist DATAKEY="RESIST_TYPE_IMPACT" />
     </RemoteComData2>
     <RemoteTargetComData _HitInvalidTime="1" />

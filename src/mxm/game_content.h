@@ -1504,7 +1504,7 @@ struct GameXmlContent
 	eastl::hash_map<i32, eastl::fixed_vector<i32,4,false>> monsterDieSpawn;
 	eastl::hash_map<i32, f32> monsterLifeTime;
 	const eastl::fixed_vector<i32,4,false>* FindMonsterDieSpawn(i32 creatureID) const { auto f = monsterDieSpawn.find(creatureID); return f == monsterDieSpawn.end() ? nullptr : &f->second; }
-	struct DeathRemote { i32 remote = 0; f32 delay = 0; f32 radius = 0; f32 multiplier = 0; eastl::fixed_vector<i32,4,false> statuses; bool ally = false; bool pc = false; bool npc = false; };
+	struct DeathRemote { i32 remote = 0; i32 guide = 0; f32 delay = 0; f32 radius = 0; f32 multiplier = 0; eastl::fixed_vector<i32,4,false> statuses; bool ally = false; bool pc = false; bool npc = false; };
 	eastl::hash_map<i32, eastl::fixed_vector<DeathRemote,4,false>> deathRemotes;
 	const eastl::fixed_vector<DeathRemote,4,false>* FindDeathRemotes(i32 creatureID) const { auto f = deathRemotes.find(creatureID); return f == deathRemotes.end() ? nullptr : &f->second; }
 	bool LoadDeathRemotes();

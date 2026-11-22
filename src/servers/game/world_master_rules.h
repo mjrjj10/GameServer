@@ -278,6 +278,22 @@ static const i32 MEASURED_BOT_SKILL_FIRST_UPGRADES = 6;
 
 static const SkillID TESTER_BURST_BACK_AFTER_THROUGH[] = { SkillID(180430020) };
 
+struct TesterSkillDamageRule
+{
+	SkillID skill;
+	f32 mul;
+};
+
+static const TesterSkillDamageRule TESTER_SKILL_DAMAGE_MULS[] = {
+	{ SkillID(180430050), 340.0f / 150.0f },
+};
+
+static inline f32 TesterSkillDamageMul(SkillID skill)
+{
+	for(const TesterSkillDamageRule& r : TESTER_SKILL_DAMAGE_MULS) if(r.skill == skill) return r.mul;
+	return 1.0f;
+}
+
 static inline bool BurstsBackAfterThrough(SkillID skill)
 {
 	for(SkillID s : TESTER_BURST_BACK_AFTER_THROUGH) if(s == skill) return true;

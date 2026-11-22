@@ -217,7 +217,20 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 	SortieUID resultSortieUID = SortieUID::INVALID;
 	AccountUID gameAccountUID = AccountUID::INVALID;
 	const bool returning = TakeAccountReturningFromGame(accountData->nickname, &resultSortieUID, &gameAccountUID);
-	if(returning && eastl::find(endedSorties.begin(), endedSorties.end(), resultSortieUID) == endedSorties.end()) {
+	const bool stillRunning = returning && eastl::find(endedSorties.begin(), endedSorties.end(), resultSortieUID) == endedSorties.end();
+	bool stageLeft = false;
+	if(stillRunning) {
+		foreach_const(r, sortieRosters) {
+			if(r->sortieUID != resultSortieUID) continue;
+			const GameXmlContent::StageMaps* maps = GetGameXmlContent().FindStageMaps(r->stage);
+			stageLeft = maps && (maps->gameMode == GameModeType::GAME_MODE_STAGE || maps->gameMode == GameModeType::GAME_MODE_DEFENCE || maps->gameMode == GameModeType::GAME_MODE_MASTER_TRAINING);
+		}
+	}
+	if(stageLeft) {
+		LOG("[client%x] HubGame :: left stage %llu before its end, loading the lobby", clientHd, (u64)resultSortieUID);
+		replication.SendLoadLobby(clientHd, MapIndex::LOBBY_NORMAL, true);
+	}
+	else if(stillRunning) {
 		LOG("[client%x] HubGame :: back while game %llu is still running, offering to return", clientHd, (u64)resultSortieUID);
 		playerMap[userID]->suspendedSortieUID = resultSortieUID;
 		playerMap[userID]->suspendedAccountUID = gameAccountUID;
@@ -542,7 +555,9 @@ void HubGame::OnReturnToGame(ClientHandle clientHd)
 	eastl::array<u8,4> ip;
 	u16 port = 0;
 	if(sortieUID == SortieUID::INVALID || eastl::find(endedSorties.begin(), endedSorties.end(), sortieUID) != endedSorties.end() || !FindSortieGameServer(sortieUID, &ip, &port)) {
-		LOG("[client%x] HubGame :: %ls cannot return to game %llu", clientHd, acc.nickname.data(), (u64)sortieUID);
+		LOG("[client%x] HubGame :: %ls cannot return to game %llu, loading the lobby", clientHd, acc.nickname.data(), (u64)sortieUID);
+		playerMap[userID]->suspendedSortieUID = SortieUID::INVALID;
+		replication.SendLoadLobby(clientHd, MapIndex::LOBBY_NORMAL, true);
 		return;
 	}
 	const AccountUID gameAccountUID = playerMap[userID]->suspendedAccountUID;

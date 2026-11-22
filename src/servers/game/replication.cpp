@@ -2777,10 +2777,9 @@ void Replication::SendAttackActionToOthers(ClientHandle senderHd, ActorUID actor
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
-		if(clientHd == senderHd) continue;
 
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
-		if(localID == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
+		if(localID == LocalActorID::INVALID || (clientHd != senderHd && playerLocalInfo[clientID].hiddenActors.count(actorUID))) continue;
 
 		Sv::SN_PlayerSyncActionStateOnly packet;
 		memset(&packet, 0, sizeof(packet));
@@ -3261,7 +3260,7 @@ void Replication::RelayPlayerMove(ClientHandle fromHd, ActorUID actorUID, const 
 	for(int pi = 0; pi < MAX_PLAYERS; pi++) {
 		if(playerState[pi].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[pi];
-		if(clientHd == fromHd || playerLocalInfo[pi].hiddenActors.count(actorUID)) continue;
+		if(clientHd != fromHd && playerLocalInfo[pi].hiddenActors.count(actorUID)) continue;
 		sync.entityID = GetLocalActorID(clientHd, actorUID);
 		if(sync.entityID == LocalActorID::INVALID) continue;
 		SendPacket(clientHd, sync);
@@ -3276,7 +3275,7 @@ void Replication::RelayPlayerTurn(ClientHandle fromHd, ActorUID actorUID, const 
 	for(int pi = 0; pi < MAX_PLAYERS; pi++) {
 		if(playerState[pi].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[pi];
-		if(clientHd == fromHd || playerLocalInfo[pi].hiddenActors.count(actorUID)) continue;
+		if(clientHd != fromHd && playerLocalInfo[pi].hiddenActors.count(actorUID)) continue;
 		sync.entityID = GetLocalActorID(clientHd, actorUID);
 		if(sync.entityID == LocalActorID::INVALID) continue;
 		SendPacket(clientHd, sync);
