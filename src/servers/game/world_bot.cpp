@@ -234,7 +234,7 @@ void World::UpdateBotSkills()
 	const auto& content = GetGameXmlContent();
 	foreach(it, players) {
 		Player& bot = *it;
-		if(bot.clientHd != ClientHandle::INVALID || bot.dead) continue;
+		if(bot.clientHd != ClientHandle::INVALID || bot.dead || bot.trainingDummy) continue;
 		if(bot.casting.skillID != SkillID::INVALID && (i32)bot.casting.skillID == content.BotReturnSkill()) bot.botReturnReady = TimeAdd(localTime, TimeMsToTime(content.BotConstant("BOTLOGIC_STRATEGY_CONST_KEY_USE_RETURN_SKILL_STRATEGY_DISABLE_TIME") * 1000.0));
 		if(localTime >= bot.tNextBotSkill && BotReleaseHold(bot)) continue;
 		if(localTime < bot.tNextBotSkill || localTime < bot.ccUntil || localTime < bot.dashUntil || localTime < bot.botSkillStillUntil || bot.botShotAt == localTime) continue;
@@ -1047,7 +1047,7 @@ void World::UpdateBotMovement()
 	if(Config().DevShowcase) return;
 	foreach(it, players) {
 		Player& bot = *it;
-		if(bot.clientHd != ClientHandle::INVALID || bot.dead || bot.Main().classType == ClassType::NONE) continue;
+		if(bot.clientHd != ClientHandle::INVALID || bot.dead || bot.trainingDummy || bot.Main().classType == ClassType::NONE) continue;
 		const char* held = localTime < bot.ccUntil ? "cc" : localTime < bot.dashUntil ? "dash" : bot.casting.skillID != SkillID::INVALID ? "casting" : AttachedToCaster(bot) ? "attached" : bot.interactSlot >= 0 ? "interaction" : localTime < bot.botSkillStillUntil ? "skill still" : nullptr;
 		if(held) {
 			if(bot.botHeldSince == Time::ZERO) bot.botHeldSince = localTime;
@@ -1725,7 +1725,7 @@ void World::UpdateBotCombat()
 {
 	foreach(it, players) {
 		Player& bot = *it;
-		if(bot.clientHd != ClientHandle::INVALID || bot.dead) continue;
+		if(bot.clientHd != ClientHandle::INVALID || bot.dead || bot.trainingDummy) continue;
 		if(localTime < bot.tNextBotShot || localTime < bot.ccUntil) continue;
 		vec2 zoneAway;
 		f32 zoneDepth = 0;

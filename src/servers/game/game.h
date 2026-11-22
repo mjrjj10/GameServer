@@ -122,6 +122,7 @@ struct Game
 	void OnGamePing(ClientHandle clientHd, LocalActorID chara, const float3& pos, LocalActorID target, u32 ping);
 	void SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team);
 	void RemoveTrainingBots();
+	void SpawnTrainingDummy(ClassType mainClass, ClassType subClass, u8 team);
 	void FlushTrainingLoadouts();
 	bool TrainingLoadoutCommand(ClientHandle clientHd, const i32* classes, const i32* skillSuffix);
 	eastl::fixed_vector<MapIndex,8,false> zoneMaps;

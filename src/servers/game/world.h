@@ -158,6 +158,7 @@ struct World
 		bool firstBlood = false;
 		i64 damageDealt = 0;
 		bool devGod = false;
+		bool trainingDummy = false;
 		bool devVision = false;
 		ActorUID bushUID = ActorUID::INVALID;
 		ActorUID fogHiddenUID = ActorUID::INVALID;

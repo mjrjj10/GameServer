@@ -1437,6 +1437,7 @@ static const u8 MEASURED_TRAINING_EVENT_CREATE_AI = 5;
 static const u8 MEASURED_TRAINING_EVENT_REMOVE_AI = 6;
 static const u8 MEASURED_TRAINING_EVENT_RESET_SKILLS = 0;
 static const i32 HYP_TRAINING_BOT_SUB_OFFSET = 3;
+static const f32 HYP_TRAINING_DUMMY_DISTANCE = 500.0f;
 static const wchar* MEASURED_TRAINING_BOT_NAME = L"BOT_NAME_02";
 static const i32 MEASURED_MASTER_CREATURE_BASE = 100000000;
 static const u8 MEASURED_MASTER_GEAR_SETS = 11;
@@ -1648,6 +1649,20 @@ void Game::OnTitanIncarnate(ClientHandle clientHd, i32 formDoc)
 		return;
 	}
 	WARN("Training :: unknown titan form %d", formDoc);
+}
+
+void Game::SpawnTrainingDummy(ClassType mainClass, ClassType subClass, u8 team)
+{
+	const size_t before = trainingBots.size();
+	SpawnTrainingBot(mainClass, subClass, team);
+	if(trainingBots.size() == before) return;
+	World::Player& dummy = world.GetPlayer(trainingBots.back());
+	dummy.trainingDummy = true;
+	dummy.devGod = true;
+	const World::Player& owner = world.GetPlayer(0);
+	const vec2 dir = vec2(cosf(owner.input.rot.bodyYaw), sinf(owner.input.rot.bodyYaw));
+	world.TeleportPlayer(dummy, owner.body->GetWorldPos() + vec3(dir * HYP_TRAINING_DUMMY_DISTANCE, 0), owner.input.rot.bodyYaw + PI);
+	LOG("Training :: dummy masters=(%d, %d)", (i32)mainClass, (i32)subClass);
 }
 
 void Game::SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team)
@@ -2624,13 +2639,15 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			return true;
 		}
 		i32 aiA = 0, aiB = 0;
-		if(EA::StdC::Sscanf(msg, L"ai %d %d", &aiA, &aiB) == 2) {
+		const bool dummy = EA::StdC::Sscanf(msg, L"dummy %d %d", &aiA, &aiB) == 2;
+		if(dummy || EA::StdC::Sscanf(msg, L"ai %d %d", &aiA, &aiB) == 2) {
 			const auto& masters = GetGameXmlContent().masterClassTypeMap;
 			if(masters.find((ClassType)aiA) == masters.end() || masters.find((ClassType)aiB) == masters.end() || aiA == aiB) {
 				SendDbgMsg(clientHd, L"AI refused");
 				return true;
 			}
-			SpawnTrainingBot((ClassType)aiA, (ClassType)aiB, world.GetPlayer(p.playerIndex).team ^ 1);
+			if(dummy) SpawnTrainingDummy((ClassType)aiA, (ClassType)aiB, world.GetPlayer(p.playerIndex).team ^ 1);
+			else SpawnTrainingBot((ClassType)aiA, (ClassType)aiB, world.GetPlayer(p.playerIndex).team ^ 1);
 			SendDbgMsg(clientHd, LFMT(L"AI %d %d", aiA, aiB));
 			return true;
 		}
