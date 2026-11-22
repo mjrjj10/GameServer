@@ -382,6 +382,8 @@ bool HubGame::AutoQueueActive() const
 }
 
 static const StageType MEASURED_PVE_STAGE_TYPE = StageType(1);
+static const i32 MEASURED_TRAINING_ENTRY = 210037002;
+static const i32 MEASURED_TRAINING_STAGE = 200000100;
 
 bool HubGame::JoinDevAutoParty(ClientHandle clientHd)
 {
@@ -424,6 +426,10 @@ void HubGame::OnPlayerEnterCity(ClientHandle clientHd)
 			bool pve = false;
 			foreach_const(e, GetGameXmlContent().stageEntries) {
 				foreach_const(a, e->areas) foreach_const(s, a->stages) if((i32)s->stage == Config().DevAutoQueueStage) { entry = (EntrySystemID)e->ID; pve = true; }
+			}
+			if(!pve && Config().DevAutoQueueStage == MEASURED_TRAINING_STAGE) {
+				entry = (EntrySystemID)MEASURED_TRAINING_ENTRY;
+				pve = true;
 			}
 			if(Config().DevAutoParty > 1 && devAutoPartyLeader == AccountUID::INVALID) devAutoPartyLeader = playerAccountData[userID]->UID;
 			OnCreateParty(clientHd, entry, pve ? MEASURED_PVE_STAGE_TYPE : StageType::PVP_GAME);
