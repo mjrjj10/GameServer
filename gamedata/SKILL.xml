@@ -1886,7 +1886,7 @@
   </INFO>
   <INFO ID="180300050">
     <ST_COMMONSKILL _Group="SKILL_GROUP_CHARACTER" _Type="SKILL_TYPE_NORMAL" _RequireClass="CLASS_TYPE_ANDROB" _IconAlias="androb_ultimate_01" _Name="STR_SKILL_NAME_180300050" _Description="STR_SKILL_DESC_180300050" _UpgradeType="E_SKILL_UPGRADE_KEY" _Action="SKILL_5_BEHAVIORSTATE" _GaugeAfterUseSkill="2" _SmartCast="SKILL_SMARTCAST_BYOPTION" _CoolTimeID="300050" _CoolTime="90" _ConsumeUG="60" _AddGroggy="0" _GhostBotUse="False">
-      <_Target _SelectStateType="SKILL_TARGET_SELECT_STATE_AFTERCAST" _UXType="SKILL_CAST_MY_POSITION" _SelectType="SKILL_TARGET_FRIENDLY_PC_MIN_HP" _MinTarget="1" _MaxTarget="1" _Friendly="True" _Neutral="False" _UnFriendly="False" _Myself="False" _PC="True" _PC_Ally="False" _NPC_Monster="False" _Tower="False">
+      <_Target _SelectStateType="SKILL_TARGET_SELECT_STATE_BEFORECAST" _UXType="SKILL_CAST_TARGET_POSITION" _MaxDistance="50000" _SelectType="SKILL_TARGET_PICKED_MINIMAP" _PC="True" _TargetRangeSFX="Pc_Fx_SkillCursor_Circle_Targetting" _TargetRangeLengthX="600" _TargetRangeLengthY="600" _MinTarget="1" _MaxTarget="1" _Friendly="True" _Neutral="False" _UnFriendly="False" _Myself="False" _PC_Ally="False" _NPC_Monster="False" _Tower="False">
         <_TargetGroupList DATA="PC" />
       </_Target>
     </ST_COMMONSKILL>

@@ -13,6 +13,7 @@ static const f64 MEASURED_UNSYNCED_GRAPH_MAX_SEC = 0.5;
 static const f64 WEAPON_HIT_INTERVAL_MS = 80.0;
 static const i32 MEASURED_COMBO_SLOT_FIRST = 0;
 static const f32 OBSTRUCT_LOW_HEIGHT = 30.0f;
+static const f32 HYP_MINIMAP_ALLY_PICK_RADIUS = 600.0f;
 static const i32 MEASURED_COMBO_SLOT_UG = 2;
 static const i32 MEASURED_COMBO_SLOT_SHIRK = 3;
 
@@ -862,6 +863,21 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		if(selIn->allEnemies) {
 			foreach_const(e, players) if(e->team != player.team && !e->dead) selectedTargets.push_back(e->Main().UID);
 			targets = Slice<const ActorUID>(selectedTargets.data(), selectedTargets.size());
+		}
+		if(selIn->minimapFriendPc && targets.size() == 0 && glm::length(vec2(castPos)) > 1.0f) {
+			const f32 pickRadius = MAX(GetGameXmlContent().GetSkillTargetRange((i32)skillID), HYP_MINIMAP_ALLY_PICK_RADIUS);
+			const Player* picked = nullptr;
+			f32 best = pickRadius;
+			foreach_const(f, players) {
+				if(f->team != player.team || f->index == player.index || f->dead) continue;
+				const f32 d = glm::length(vec2(f->body->GetWorldPos()) - vec2(castPos));
+				if(d < best) { best = d; picked = &*f; }
+			}
+			if(picked) {
+				selectedTargets.push_back(picked->Main().UID);
+				targets = Slice<const ActorUID>(selectedTargets.data(), selectedTargets.size());
+				LOG("Skill :: %ls skill=%d picks the ally %ls clicked near (%.0f, %.0f)", player.name.data(), (i32)skillID, picked->name.data(), castPos.x, castPos.y);
+			}
 		}
 		if(selIn->minHpFriend) {
 			const Player* weakest = nullptr;

@@ -2,4 +2,5 @@
 <STATUS_SHIELD>
   <STATUS ID="1200100023" shield="10873" samples="7" />
   <STATUS ID="1200100027" shield="1000" samples="32" source="STR_STATUS_MOB_TOOLTIP_1200100027 (1000 absorbed); MEASURED 7 official 5v5 captures: SN_UpdateStat 19 = 1000 on add (31 of 32)" />
+  <STATUS ID="1230410061" shield="450" source="TESTER Malachi 22/11: GX-09 Plasma Shield 250 (passive tooltip 180410000) + 200" />
 </STATUS_SHIELD>

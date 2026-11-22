@@ -397,7 +397,7 @@ i32 World::PenetrationCost(const Player& p) const
 
 void World::BeginRemoteActivation(const RemoteInst& inst)
 {
-	remoteActivation.remoteID = inst.clientRemoteID - (inst.sentByDoc ? 1 : 0);
+	remoteActivation.remoteID = inst.clientRemoteID;
 	remoteActivation.skipHd = inst.casterLocal ? players[inst.ownerIndex].clientHd : ClientHandle::INVALID;
 	remoteActivation.targetUID = ActorUID::INVALID;
 	remoteActivation.penetration = 0;
@@ -500,7 +500,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 		damageAttackerOverride = inst.sourceUID;
 		damageSeedOwnerOverride = inst.seedOwnerHd;
 		damageOwnerSeedOverride = inst.ownerSeed;
-		if(enemy) DamagePlayer(owner, target, inst.skillID, dealt, nullptr, inst.clientRemoteID != 0 ? inst.clientRemoteID - (inst.sentByDoc ? 1 : 0) : inst.damageRemoteID, remote.ID, inst.dir);
+		if(enemy) DamagePlayer(owner, target, inst.skillID, dealt, nullptr, inst.clientRemoteID != 0 ? inst.clientRemoteID : inst.damageRemoteID, remote.ID, inst.dir);
 		else if(remote.damageGroup == Remote::DamageGroup::eFRIEND) HealPlayer(owner, target, amount);
 		damageAttackerOverride = ActorUID::INVALID;
 		damageSeedOwnerOverride = ClientHandle::INVALID;
@@ -558,7 +558,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 		SpawnRemoteRules(*this, copy, remote.onHitCharacter, remote.creatorOnHitCharacter, at, (i32)target.index, RemoteIdx::INVALID);
 	}
 
-	if(enemy) TriggerSkillHitEvent(inst, owner, target.Main().UID, target.body->GetWorldPos());
+	if(enemy || (&target != &owner && !remote.friendlyStatuses.empty())) TriggerSkillHitEvent(inst, owner, target.Main().UID, target.body->GetWorldPos());
 	statusFromBehind = false;
 	statusForceCenterSet = false;
 	statusPushDirSet = false;
@@ -701,7 +701,7 @@ void World::RemoteHitWalls(RemoteInst& inst, f32 farEdge)
 	ActorDynamic* wallGate = nullptr;
 	if(!RaycastShot(vec3(from, inst.wallZ), vec3(to, inst.wallZ), (i32)owner.team, &wallDist, &wallActor, &wallGate) || (!wallActor && !wallGate)) return;
 	inst.wallHitDone = true;
-	OnDynamicHit(wallActor, inst.clientRemoteID != 0 ? inst.clientRemoteID - (inst.sentByDoc ? 1 : 0) : inst.damageRemoteID, inst.seedOwnerHd, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, vec3(from + glm::normalize(to - from) * wallDist, inst.wallZ), wallGate, (i32)inst.ownerIndex, (i32)(inst.damage * remote.attackMultiplier), remote.ID);
+	OnDynamicHit(wallActor, inst.clientRemoteID != 0 ? inst.clientRemoteID : inst.damageRemoteID, inst.seedOwnerHd, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, vec3(from + glm::normalize(to - from) * wallDist, inst.wallZ), wallGate, (i32)inst.ownerIndex, (i32)(inst.damage * remote.attackMultiplier), remote.ID);
 }
 
 static const f32 MEASURED_POLYGON_BLADE_RADIUS = 470.0f;
@@ -842,7 +842,7 @@ void World::RemoteFriendTargetNpc(RemoteInst& inst, ActorNpc& npc)
 	}
 	if(inst.clientRemoteID != 0) {
 		inst.npcActivation += NpcDensity(npc);
-		replication->SendRemoteActivatedToAll(inst.clientRemoteID - (inst.sentByDoc ? 1 : 0), inst.seedOwnerHd, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, npc.UID, inst.npcActivation, inst.pos);
+		replication->SendRemoteActivatedToAll(inst.clientRemoteID, inst.seedOwnerHd, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, npc.UID, inst.npcActivation, inst.pos);
 	}
 	LOG("Remote :: %d reaches allied creature=%d (friend statuses)", (i32)remote.ID, (i32)npc.docID);
 }
@@ -907,7 +907,7 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 	inst.singleHitDone = true;
 	if(base > 0) {
 		Replication::RemoteDamage hit;
-		hit.remoteID = inst.clientRemoteID != 0 ? inst.clientRemoteID - (inst.sentByDoc ? 1 : 0) : inst.damageRemoteID;
+		hit.remoteID = inst.clientRemoteID != 0 ? inst.clientRemoteID : inst.damageRemoteID;
 		hit.remoteDoc = remote.ID;
 		hit.remotePos = inst.pos;
 		hit.dir = inst.dir;
@@ -923,7 +923,7 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 	Player& owner = players[inst.ownerIndex];
 	if(inst.clientRemoteID != 0) {
 		inst.npcActivation += NpcDensity(npc);
-		replication->SendRemoteActivatedToAll(inst.clientRemoteID - (inst.sentByDoc ? 1 : 0), inst.seedOwnerHd, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, npc.UID, inst.npcActivation, inst.pos);
+		replication->SendRemoteActivatedToAll(inst.clientRemoteID, inst.seedOwnerHd, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, npc.UID, inst.npcActivation, inst.pos);
 	}
 	if(remote.onHitOwnerStatus != 0 && !owner.dead && (inst.sourceUID == ActorUID::INVALID || !FindNpcActor(inst.sourceUID))) {
 		const ActorUID prevCaster = statusCasterOverride;
@@ -946,9 +946,17 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 	if(npc.hp <= 0 || npc.ownerUID != ActorUID::INVALID) return true;
 	const ActorUID prevCaster = statusCasterOverride;
 	if(inst.sourceUID != ActorUID::INVALID && FindNpcActor(inst.sourceUID)) statusCasterOverride = inst.sourceUID;
+	const bool fixedForce = remote.forceFixedAngle != 0 && glm::length(inst.dir) > 0.5f;
+	if(fixedForce) {
+		const f32 a = remote.forceFixedAngle * PI / 180.0f;
+		const vec2 d = glm::normalize(inst.dir);
+		statusPushDir = vec2(d.x * cosf(a) - d.y * sinf(a), d.x * sinf(a) + d.y * cosf(a));
+		statusPushDirSet = true;
+	}
 	foreach_const(st, remote.statuses) {
 		if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(players[inst.ownerIndex], npc, st->statusID, false);
 	}
+	if(fixedForce) statusPushDirSet = false;
 	statusCasterOverride = prevCaster;
 	return true;
 }
@@ -993,6 +1001,29 @@ void World::UpdateRemotes(f32 delta)
 		}
 
 		if(!destroyed && inst.aniEndAt != Time::ZERO && localTime >= inst.aniEndAt) destroyed = true;
+		if(!destroyed) {
+			if(const TesterRemoteFuse* fuse = FindTesterRemoteFuse(remote.ID)) {
+				if(elapsed >= fuse->fuseSec && !instOwner.dead) {
+					const f32 radius = remote.boundSize[0] * 0.5f;
+					const vec3 center = inst.pos;
+					replication->SendRemoteCreateToAll(instOwner.Main().UID, nextRemoteSeed, fuse->visual, center, atan2f(inst.dir.y, inst.dir.x), center, ActorUID::INVALID, FIRE_OBJECT_SCENE_ROOT);
+					nextRemoteSeed += 2;
+					Explode(instOwner, center, radius, fuse->damage, nullptr);
+					foreach(it, players) {
+						if(it->team == instOwner.team || it->dead || it->untargetable) continue;
+						if(glm::length(vec2(it->body->GetWorldPos()) - vec2(center)) > radius + HitRadius(*it)) continue;
+						ApplyStatus(instOwner, *it, fuse->stunStatus, 0, fuse->stunSec);
+					}
+					foreach(npc, actorNpcList) {
+						if(!NpcHittableBy(*npc, instOwner) || npc->hp <= 0) continue;
+						if(glm::length(vec2(npc->pos) - vec2(center)) > radius + NpcHitRadius(*npc)) continue;
+						ApplyStatusToNpc(instOwner, *npc, fuse->stunStatus, false);
+					}
+					LOG("Remote :: %ls mine %d exploded after %.2fs radius=%.0f damage=%d stun=%.2fs", instOwner.name.data(), (i32)remote.ID, elapsed, radius, fuse->damage, fuse->stunSec);
+					destroyed = true;
+				}
+			}
+		}
 		if(!destroyed && inst.endWithSource) {
 			const ActorNpc* source = FindNpcActor(inst.sourceUID);
 			if(!source || source->removeAt != Time::ZERO || (source->despawnAt != Time::ZERO && localTime >= source->despawnAt) || (source->hpMax > 0 && source->hp <= 0)) destroyed = true;
@@ -1684,7 +1715,7 @@ bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
 			if(hitWall || (inst.range > 0 && inst.travelled >= inst.range - 0.01f)) destroyed = true;
 			if(hitWall) {
 				LOG("Remote :: %d stopped by a wall after %.0f", (i32)remote.ID, inst.travelled);
-				OnDynamicHit(wallActor, inst.clientRemoteID != 0 ? inst.clientRemoteID - (inst.sentByDoc ? 1 : 0) : inst.damageRemoteID, inst.seedOwnerHd, inst.casterLocal ? players[inst.ownerIndex].clientHd : ClientHandle::INVALID, inst.pos, wallGate, (i32)inst.ownerIndex, (i32)(inst.damage * remote.attackMultiplier), remote.ID);
+				OnDynamicHit(wallActor, inst.clientRemoteID != 0 ? inst.clientRemoteID : inst.damageRemoteID, inst.seedOwnerHd, inst.casterLocal ? players[inst.ownerIndex].clientHd : ClientHandle::INVALID, inst.pos, wallGate, (i32)inst.ownerIndex, (i32)(inst.damage * remote.attackMultiplier), remote.ID);
 			}
 		}
 	}

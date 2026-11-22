@@ -493,15 +493,26 @@ void World::ApplyMonsterAllyStatus(ActorUID casterUID, const GameXmlContent::Mon
 	const ActorNpc* caster = FindNpcActor(casterUID);
 	if(!caster || caster->hp <= 0) return;
 	const vec2 center = vec2(caster->pos);
+	const f32 healRatio = TesterAllyHealRatio(attack.allyStatus);
 	foreach(o, actorNpcList) {
 		if(&*o == caster || o->hp <= 0 || o->removeAt != Time::ZERO || !o->monsterAi || o->faction != caster->faction) continue;
 		if(glm::length(vec2(o->pos) - center) > attack.allyRadius) continue;
 		ApplyStatusToNpcFromNpc(*caster, *o, attack.allyStatus);
+		if(healRatio > 0 && o->hp < o->hpMax) {
+			o->hp = MIN(o->hp + (i32)(o->hpMax * healRatio), o->hpMax);
+			replication->SendHpToAll(o->UID, o->hp, o->hpMax);
+		}
 	}
 	foreach(p, players) {
 		if(p->dead || !p->body || (Faction)p->team != caster->faction) continue;
 		if(glm::length(vec2(p->body->GetWorldPos()) - center) > attack.allyRadius) continue;
 		ApplyStatusFromNpc(*caster, *p, attack.allyStatus);
+		ActorMaster& chara = p->Main();
+		if(healRatio > 0 && chara.hp < chara.hpMax) {
+			chara.hp = MIN(chara.hp + (i32)(chara.hpMax * healRatio), chara.hpMax);
+			LOG("Heal :: creature=%d -> %ls status=%d ratio=%.2f hp=%d/%d", (i32)caster->docID, p->name.data(), attack.allyStatus, healRatio, chara.hp, chara.hpMax);
+			replication->SendHpToAll(chara.UID, chara.hp, chara.hpMax);
+		}
 	}
 }
 

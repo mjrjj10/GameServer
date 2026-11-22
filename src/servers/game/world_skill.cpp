@@ -629,7 +629,8 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 		applyingCasterStatus = false;
 	}
 	const vec3 from = npc.pos;
-	const vec3 center = statusForceCenterSet ? statusForceCenter : caster.body->GetWorldPos();
+	vec3 center = statusForceCenterSet ? statusForceCenter : caster.body->GetWorldPos();
+	if(statusPushDirSet && info && (info->type == StatusType::FLY || info->type == StatusType::PUSH)) center = npc.pos - vec3(glm::normalize(statusPushDir) * 100.0f, 0);
 	const NpcCcGraph cc = StartNpcCc(npc, info, center, vec2(center), caster.body->GetWorldPos(), 0.0f);
 	const bool summonBound = info && info->durationSec < 0 && cc.graphSec <= 0 && npc.ownerUID != ActorUID::INVALID && info->dotDamage <= 0 && info->intervalSec <= 0;
 	const f32 duration = summonBound ? STATUS_INFINITE_DURATION_SEC : cc.duration;
@@ -1397,6 +1398,7 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 	const auto& cmd = action.commands[cmdIndex];
 	f32 distance = 0;
 	f32 moveDuration = 0;
+	f32 flyLift = 0;
 	const GameXmlContent::MoveCurve* curve = nullptr;
 
 	switch(cmd.type) {
@@ -1407,6 +1409,14 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			if(!freeMove) caster->parent->body->lockedMoveUntil = TimeAddSec(localTime, cmd.delay);
 		} break
 			;
+		case ActionCommand::Type::FLY_MOVE: {
+			Player& flyer = *caster->parent;
+			if(flyer.clientHd != ClientHandle::INVALID || cmd.flyMove.height <= 0) break;
+			foreach_const(c2, action.commands) if(c2->type == ActionCommand::Type::STATE_BLOCK && c2->animIndex == cmd.animIndex) moveDuration = MAX(moveDuration, c2->delay);
+			if(moveDuration <= 0.02f) break;
+			distance = PlayerMoveSpeed(flyer) * moveDuration;
+			flyLift = (f32)cmd.flyMove.height;
+		} break;
 		case ActionCommand::Type::GRAPH_MOVE_HORZ: {
 			distance = cmd.graphMoveHorz.distance;
 			moveDuration = SkillMoveDuration(content, caster->parent ? ActionClassName(*caster->parent) : content.GetMaster(caster->classType).className.c_str(), action, cmd.animIndex);
@@ -1478,7 +1488,7 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			}
 		}
 		if(moveDist > 999990.0f) moveDist = 0;
-		const f32 lift = SkillMoveLift(prog.skillID);
+		const f32 lift = flyLift > 0 ? flyLift : SkillMoveLift(prog.skillID);
 		const bool fly = lift > 0 || (longJump && mover.clientHd != ClientHandle::INVALID);
 		if(moveDuration > 0.02f && moveDist > 0 && (lift > 0 || !fly)) {
 			const vec3 reach = physics.FindSkillMovePos(mover.body, moveDir, moveDist, moveDuration, lift);
@@ -2323,18 +2333,18 @@ f32 World::PlayerSkillDamage(const Player& player, SkillID skillID) const
 {
 	const f32 statusPower = StatusModSum(player, StatusMod::SKILLPOWER);
 	if(const GameXmlContent::SkillUpgrade* up = LatestUpgrade(player, (i32)skillID, GameXmlContent::SkillUpgrade::Type::DAMAGE)) {
-		if(up->baseDamage >= 0) return MAX(up->baseDamage + up->attackMultiplier * PlayerSkillPower(player), 0.0f) * TesterSkillDamageMul(skillID);
+		if(up->baseDamage >= 0) return MAX(up->baseDamage + up->attackMultiplier * PlayerSkillPower(player), 0.0f);
 	}
 	f32 damage = SkillDamage(skillID);
 	const f32 baseMul = GetGameXmlContent().GetSkillBasePowerMul((i32)skillID);
-	if(baseMul > 0) return MAX(damage + baseMul * PlayerSkillPower(player), 0.0f) * TesterSkillDamageMul(skillID);
+	if(baseMul > 0) return MAX(damage + baseMul * PlayerSkillPower(player), 0.0f);
 	auto found = GetGameXmlContent().skillMap.find(skillID);
 	const f32 extraPower = statusPower + StatBonus(player, STAT_SKILLPOWER);
 	if(extraPower > 0 && found != GetGameXmlContent().skillMap.end()) {
 		SkillNormalModel& sm = const_cast<SkillNormalModel&>(found->second);
 		damage += extraPower * sm.getSkillNormalLevelByIndex(0)->getAttackMultiplier();
 	}
-	return damage * TesterSkillDamageMul(skillID);
+	return damage;
 }
 
 f32 World::PlayerSkillConsume(const Player& player, i32 skillID, i32 index) const

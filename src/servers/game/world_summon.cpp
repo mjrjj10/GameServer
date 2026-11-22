@@ -837,7 +837,7 @@ void World::UpdateSummons()
 				const SummonInfo* sourceInfo = sourceNpc ? GetGameXmlContent().FindSummon((i32)sourceNpc->docID) : nullptr;
 				f32 sourceAttack = 0;
 				if(sourceInfo) foreach_const(st, sourceInfo->baseStats) if(st->type == STAT_ATTACK) sourceAttack = st->value;
-				if(summonRemote && summonRemote->skillIndex != 0) pr.damage = (i32)(PlayerSkillDamage(owner, SkillID(summonRemote->skillIndex)) * TesterSummonDamageMul((i32)owner.Main().classType, SkillID(summonRemote->skillIndex)));
+				if(summonRemote && summonRemote->skillIndex != 0) pr.damage = (i32)PlayerSkillDamage(owner, SkillID(summonRemote->skillIndex));
 				else if(summonRemote && sourceAttack > 0) pr.damage = (i32)sourceAttack;
 				else pr.damage = pc->skill != 0 ? (i32)PlayerSkillDamage(owner, SkillID(pc->skill)) : 0;
 				pr.castPos = aimedGraph ? pc->aim : pc->pos;
@@ -979,8 +979,9 @@ void World::UpdateSummons()
 				replication->SendAiActionStateToAll(it->UID, ActionStateID::DIE_BEHAVIORSTATE, it->rot.z, it->pos, NpcKeepsSpeed(*it));
 				const ActorMaster* killer = it->killerUID != ActorUID::INVALID ? FindMasterActor(it->killerUID) : nullptr;
 				replication->SendNpcDeadAckToAll(it->UID, killer ? it->killerUID : ActorUID::INVALID, killer ? (u32)(100000000 + (i32)killer->classType) : NPC_DEAD_NO_KILLER);
-				it->dieStandAt = TimeAdd(localTime, TimeMsToTime(SUMMON_DIE_STAND_MS));
-				it->removeAt = TimeAdd(localTime, TimeMsToTime(MAX((f64)(info ? info->destroyTime : 0.0f) * 1000.0, SUMMON_DIE_STAND_MS)));
+				const f64 standMs = (f64)SummonDieStandSec((i32)it->docID, (f32)(SUMMON_DIE_STAND_MS / 1000.0)) * 1000.0;
+				it->dieStandAt = TimeAdd(localTime, TimeMsToTime(standMs));
+				it->removeAt = TimeAdd(localTime, TimeMsToTime(MAX((f64)(info ? info->destroyTime : 0.0f) * 1000.0, standMs)));
 				++it;
 				continue;
 			}

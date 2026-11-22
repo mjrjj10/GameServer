@@ -4,7 +4,7 @@
 static const u32 MEASURED_RESULT_CHANNEL_ID = 1;
 static const i64 TESTER_MIN_GOLD = 100000000;
 static const i64 TESTER_MIN_CCOIN = 1000000;
-static const i32 TESTER_MIN_PVP_MEDALS = 999;
+static const i32 TESTER_MIN_PVP_MEDALS = 9999;
 static const bool TESTER_FREE_ACCOUNT_SERVICES = true;
 static const u32 MEASURED_RESULT_CHANNEL_TYPE = 3;
 static const u8 MEASURED_PVP_REPORT_COUNT = 5;

@@ -49274,7 +49274,7 @@
 				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230410010" />
 				<tableDatas attrType="TTATTR_ACTIONBASE_MOVEHORIZON" attrKey="TTATTR_ACTIONBASE_MOVEHORIZON" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="900" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_STAT" attrKey="TTATTR_STATUS_STAT" proc="STATPROC_STAT" apply="STATAPPLY_MUL" stat="STAT_TYPE_MOVESPEED" value_1="-40" value_2="1" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="75" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="275" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="11" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
@@ -49306,7 +49306,7 @@
 				<props attr="TTATTR_SKILL_COOLTIME" stat="STAT_TYPE_INVALID" value_1="-0.5" value_2="0" />
 				<tableDatas attrType="TTATTR_ACTIONBASE_MOVEHORIZON" attrKey="TTATTR_ACTIONBASE_MOVEHORIZON" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="900" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_STAT" attrKey="TTATTR_STATUS_STAT" proc="STATPROC_STAT" apply="STATAPPLY_MUL" stat="STAT_TYPE_MOVESPEED" value_1="-40" value_2="1" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="75" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="275" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="10.5" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
@@ -49338,7 +49338,7 @@
 				<props attr="TTATTR_SKILL_CONSUME_RP" stat="STAT_TYPE_INVALID" value_1="-5" value_2="0" />
 				<tableDatas attrType="TTATTR_ACTIONBASE_MOVEHORIZON" attrKey="TTATTR_ACTIONBASE_MOVEHORIZON" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="900" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_STAT" attrKey="TTATTR_STATUS_STAT" proc="STATPROC_STAT" apply="STATAPPLY_MUL" stat="STAT_TYPE_MOVESPEED" value_1="-40" value_2="1" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="75" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="275" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="10.5" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
@@ -49372,7 +49372,7 @@
 				<props attr="TTATTR_REMOTE_RANGE" stat="STAT_TYPE_INVALID" value_1="0" value_2="4" />
 				<tableDatas attrType="TTATTR_ACTIONBASE_MOVEHORIZON" attrKey="TTATTR_ACTIONBASE_MOVEHORIZON" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="1300" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_STAT" attrKey="TTATTR_STATUS_STAT" proc="STATPROC_STAT" apply="STATAPPLY_MUL" stat="STAT_TYPE_MOVESPEED" value_1="-40" value_2="1" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="75" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="275" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="10.5" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
@@ -49404,7 +49404,7 @@
 				<props attr="TTATTR_SKILL_COOLTIME" stat="STAT_TYPE_INVALID" value_1="-0.5" value_2="0" />
 				<tableDatas attrType="TTATTR_ACTIONBASE_MOVEHORIZON" attrKey="TTATTR_ACTIONBASE_MOVEHORIZON" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="1300" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_STAT" attrKey="TTATTR_STATUS_STAT" proc="STATPROC_STAT" apply="STATAPPLY_MUL" stat="STAT_TYPE_MOVESPEED" value_1="-40" value_2="1" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="75" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="275" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="10" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
@@ -49436,7 +49436,7 @@
 				<props attr="TTATTR_SKILL_CONSUME_RP" stat="STAT_TYPE_INVALID" value_1="-5" value_2="0" />
 				<tableDatas attrType="TTATTR_ACTIONBASE_MOVEHORIZON" attrKey="TTATTR_ACTIONBASE_MOVEHORIZON" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="1300" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_STAT" attrKey="TTATTR_STATUS_STAT" proc="STATPROC_STAT" apply="STATAPPLY_MUL" stat="STAT_TYPE_MOVESPEED" value_1="-40" value_2="1" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="75" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="275" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="10" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
@@ -49467,7 +49467,7 @@
 				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230410010" />
 				<tableDatas attrType="TTATTR_ACTIONBASE_MOVEHORIZON" attrKey="TTATTR_ACTIONBASE_MOVEHORIZON" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="1300" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_STAT" attrKey="TTATTR_STATUS_STAT" proc="STATPROC_STAT" apply="STATAPPLY_MUL" stat="STAT_TYPE_MOVESPEED" value_1="-40" value_2="1" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="75" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="275" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="10" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
@@ -49693,7 +49693,7 @@
 			<data>
 				<attrMap DATAKEY="TTATTR_REMOTE_DELIGATE" DATA="1440410030" />
 				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230410030" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="250" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="450" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="9" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
@@ -50584,7 +50584,7 @@
 				<attrMap DATAKEY="TTATTR_ACTIONBASE_MOVESPEED" DATA="20" />
 				<attrMap DATAKEY="TTATTR_REMOTE_DELIGATE" DATA="1440430031" />
 				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230430000" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="100" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="250" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="18" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="200" value_2="0" />
@@ -50613,7 +50613,7 @@
 				<attrMap DATAKEY="TTATTR_REMOTE_DELIGATE" DATA="1440430031" />
 				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230430000" />
 				<props attr="TTATTR_SKILL_CONSUME_MP" stat="STAT_TYPE_INVALID" value_1="-5" value_2="0" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="100" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="250" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="18" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="195" value_2="0" />
@@ -50642,7 +50642,7 @@
 				<attrMap DATAKEY="TTATTR_REMOTE_DELIGATE" DATA="1440430031" />
 				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230430000" />
 				<props attr="TTATTR_SKILL_COOLTIME" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="100" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="250" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="17" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="195" value_2="0" />
@@ -50671,7 +50671,7 @@
 				<attrMap DATAKEY="TTATTR_REMOTE_DELIGATE" DATA="1440430033" />
 				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230430000" />
 				<props attr="TTATTR_REMOTE_RANGE" stat="STAT_TYPE_INVALID" value_1="4" value_2="0" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="100" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="250" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="17" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="195" value_2="0" />
@@ -50700,7 +50700,7 @@
 				<attrMap DATAKEY="TTATTR_REMOTE_DELIGATE" DATA="1440430033" />
 				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230430000" />
 				<props attr="TTATTR_SKILL_CONSUME_MP" stat="STAT_TYPE_INVALID" value_1="-5" value_2="0" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="100" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="250" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="17" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="190" value_2="0" />
@@ -50729,7 +50729,7 @@
 				<attrMap DATAKEY="TTATTR_REMOTE_DELIGATE" DATA="1440430033" />
 				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230430000" />
 				<props attr="TTATTR_SKILL_COOLTIME" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="100" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="250" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="16" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="190" value_2="0" />
@@ -50758,7 +50758,7 @@
 				<attrMap DATAKEY="TTATTR_REMOTE_DELIGATE" DATA="1440430033" />
 				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230430000" />
 				<props attr="TTATTR_REMOTE_DAMAGE" stat="STAT_TYPE_INVALID" value_1="10" value_2="0" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="110" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="260" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="16" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="190" value_2="0" />
@@ -51004,7 +51004,7 @@
 				<attrMap DATAKEY="TTATTR_ACTIONBASE_MOVESPEED" DATA="0" />
 				<attrMap DATAKEY="TTATTR_REMOTE_DELIGATE" DATA="1440430050" />
 				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230430000" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="150" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="600" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="30" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
@@ -51033,7 +51033,7 @@
 				<attrMap DATAKEY="TTATTR_REMOTE_DELIGATE" DATA="1440430050" />
 				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230430000" />
 				<props attr="TTATTR_REMOTE_DAMAGE" stat="STAT_TYPE_INVALID" value_1="5" value_2="0" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="155" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="605" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="30" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
@@ -51062,7 +51062,7 @@
 				<attrMap DATAKEY="TTATTR_REMOTE_DELIGATE" DATA="1440430050" />
 				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230430000" />
 				<props attr="TTATTR_REMOTE_DAMAGE" stat="STAT_TYPE_INVALID" value_1="5" value_2="0" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="160" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="610" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="30" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
@@ -51090,36 +51090,7 @@
 				<attrMap DATAKEY="TTATTR_ACTIONBASE_MOVESPEED" DATA="0" />
 				<attrMap DATAKEY="TTATTR_REMOTE_DELIGATE" DATA="1440430050" />
 				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230430000" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="160" value_2="0" />
-				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
-				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="30" value_2="0" />
-				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
-				<tableDatas attrType="TTATTR_SKILL_CONSUME_RP" attrKey="TTATTR_SKILL_CONSUME_RP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
-				<tableDatas attrType="TTATTR_SKILL_CONSUME_EP" attrKey="TTATTR_SKILL_CONSUME_EP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
-				<tableDatas attrType="TTATTR_SKILL_CONSUME_BB" attrKey="TTATTR_SKILL_CONSUME_BB" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
-				<tableDatas attrType="TTATTR_SKILL_CONSUME_HP" attrKey="TTATTR_SKILL_CONSUME_HP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
-				<tableDatas attrType="TTATTR_SKILL_CONSUME_HP_PERCENT" attrKey="TTATTR_SKILL_CONSUME_HP_PERCENT" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
-				<tableDatas attrType="TTATTR_SKILL_CONSUME_UG" attrKey="TTATTR_SKILL_CONSUME_UG" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="60" value_2="0" />
-				<tableDatas attrType="TTATTR_SKILL_CONSUME_STAMINA" attrKey="TTATTR_SKILL_CONSUME_STAMINA" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
-				<tableDatas attrType="TTATTR_SKILL_TOGGLE_CONSUMEINTERVAL" attrKey="TTATTR_SKILL_TOGGLE_CONSUMEINTERVAL" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="0" />
-				<tableDatas attrType="TTATTR_SKILL_TOGGLE_CONSUMEVALUE" attrKey="TTATTR_SKILL_TOGGLE_CONSUMEVALUE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="0" />
-				<tableDatas attrType="TTATTR_SKILL_CONSUME_TEAM_SCORE" attrKey="TTATTR_SKILL_CONSUME_TEAM_SCORE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
-				<tableDatas attrType="TTATTR_SKILL_TARGETMAXDISTANCE" attrKey="TTATTR_SKILL_TARGETMAXDISTANCE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="700" value_2="0" />
-				<tableDatas attrType="TTATTR_SKILL_CAST_TIME" attrKey="TTATTR_SKILL_CAST_TIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="0" />
-				<tableDatas attrType="TTATTR_SKILL_EFFECT" attrKey="TTATTR_SKILL_EFFECT" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="0" />
-				<tableDatas attrType="TTATTR_SKILL_MAXCHARGINGTIME" attrKey="TTATTR_SKILL_MAXCHARGINGTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="0" />
-				<tableDatas attrType="TTATTR_SKILL_MAXCHARGINGTIMERATIO" attrKey="TTATTR_SKILL_MAXCHARGINGTIMERATIO" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="0" />
-				<tableDatas attrType="TTATTR_REMOTE_RANGE" attrKey="TTATTR_REMOTE_RANGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="14" value_2="0" />
-				<tableDatas attrType="TTATTR_STATUS_STAT" attrKey="TTATTR_STATUS_STAT" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_SHIELD_DEFENCE" value_1="0" value_2="0" />
-				<tableDatas attrType="TTATTR_STATUS_STAT" attrKey="TTATTR_STATUS_STAT" proc="STATPROC_REGEN" apply="STATAPPLY_ADD" stat="STAT_TYPE_HEALTH" value_1="0" value_2="0" />
-				<tableDatas attrType="TTATTR_STATUS_TYPE" attrKey="TTATTR_STATUS_TYPE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="1" value_2="0" />
-			</data>
-			<data>
-				<attrMap DATAKEY="TTATTR_ACTIONBASE_MOVESPEED" DATA="0" />
-				<attrMap DATAKEY="TTATTR_REMOTE_DELIGATE" DATA="1440430050" />
-				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230430000" />
-				<props attr="TTATTR_REMOTE_DAMAGE" stat="STAT_TYPE_INVALID" value_1="5" value_2="0" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="165" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="610" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="30" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
@@ -51148,7 +51119,7 @@
 				<attrMap DATAKEY="TTATTR_REMOTE_DELIGATE" DATA="1440430050" />
 				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230430000" />
 				<props attr="TTATTR_REMOTE_DAMAGE" stat="STAT_TYPE_INVALID" value_1="5" value_2="0" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="170" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="615" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="30" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
@@ -51176,7 +51147,36 @@
 				<attrMap DATAKEY="TTATTR_ACTIONBASE_MOVESPEED" DATA="0" />
 				<attrMap DATAKEY="TTATTR_REMOTE_DELIGATE" DATA="1440430050" />
 				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230430000" />
-				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="170" value_2="0" />
+				<props attr="TTATTR_REMOTE_DAMAGE" stat="STAT_TYPE_INVALID" value_1="5" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="620" value_2="0" />
+				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
+				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="30" value_2="0" />
+				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
+				<tableDatas attrType="TTATTR_SKILL_CONSUME_RP" attrKey="TTATTR_SKILL_CONSUME_RP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
+				<tableDatas attrType="TTATTR_SKILL_CONSUME_EP" attrKey="TTATTR_SKILL_CONSUME_EP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
+				<tableDatas attrType="TTATTR_SKILL_CONSUME_BB" attrKey="TTATTR_SKILL_CONSUME_BB" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
+				<tableDatas attrType="TTATTR_SKILL_CONSUME_HP" attrKey="TTATTR_SKILL_CONSUME_HP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
+				<tableDatas attrType="TTATTR_SKILL_CONSUME_HP_PERCENT" attrKey="TTATTR_SKILL_CONSUME_HP_PERCENT" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
+				<tableDatas attrType="TTATTR_SKILL_CONSUME_UG" attrKey="TTATTR_SKILL_CONSUME_UG" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="60" value_2="0" />
+				<tableDatas attrType="TTATTR_SKILL_CONSUME_STAMINA" attrKey="TTATTR_SKILL_CONSUME_STAMINA" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
+				<tableDatas attrType="TTATTR_SKILL_TOGGLE_CONSUMEINTERVAL" attrKey="TTATTR_SKILL_TOGGLE_CONSUMEINTERVAL" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="0" />
+				<tableDatas attrType="TTATTR_SKILL_TOGGLE_CONSUMEVALUE" attrKey="TTATTR_SKILL_TOGGLE_CONSUMEVALUE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="0" />
+				<tableDatas attrType="TTATTR_SKILL_CONSUME_TEAM_SCORE" attrKey="TTATTR_SKILL_CONSUME_TEAM_SCORE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />
+				<tableDatas attrType="TTATTR_SKILL_TARGETMAXDISTANCE" attrKey="TTATTR_SKILL_TARGETMAXDISTANCE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="700" value_2="0" />
+				<tableDatas attrType="TTATTR_SKILL_CAST_TIME" attrKey="TTATTR_SKILL_CAST_TIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="0" />
+				<tableDatas attrType="TTATTR_SKILL_EFFECT" attrKey="TTATTR_SKILL_EFFECT" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="0" />
+				<tableDatas attrType="TTATTR_SKILL_MAXCHARGINGTIME" attrKey="TTATTR_SKILL_MAXCHARGINGTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="0" />
+				<tableDatas attrType="TTATTR_SKILL_MAXCHARGINGTIMERATIO" attrKey="TTATTR_SKILL_MAXCHARGINGTIMERATIO" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="0" />
+				<tableDatas attrType="TTATTR_REMOTE_RANGE" attrKey="TTATTR_REMOTE_RANGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="14" value_2="0" />
+				<tableDatas attrType="TTATTR_STATUS_STAT" attrKey="TTATTR_STATUS_STAT" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_SHIELD_DEFENCE" value_1="0" value_2="0" />
+				<tableDatas attrType="TTATTR_STATUS_STAT" attrKey="TTATTR_STATUS_STAT" proc="STATPROC_REGEN" apply="STATAPPLY_ADD" stat="STAT_TYPE_HEALTH" value_1="0" value_2="0" />
+				<tableDatas attrType="TTATTR_STATUS_TYPE" attrKey="TTATTR_STATUS_TYPE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="1" value_2="0" />
+			</data>
+			<data>
+				<attrMap DATAKEY="TTATTR_ACTIONBASE_MOVESPEED" DATA="0" />
+				<attrMap DATAKEY="TTATTR_REMOTE_DELIGATE" DATA="1440430050" />
+				<attrMap DATAKEY="TTATTR_STATUS_DELIGATE" DATA="1230430000" />
+				<tableDatas attrType="TTATTR_REMOTE_DAMAGE" attrKey="TTATTR_REMOTE_DAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="620" value_2="0" />
 				<tableDatas attrType="TTATTR_STATUS_DOTDAMAGE" attrKey="TTATTR_STATUS_DOTDAMAGE" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="0" value_2="1" />
 				<tableDatas attrType="TTATTR_SKILL_COOLTIME" attrKey="TTATTR_SKILL_COOLTIME" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="30" value_2="0" />
 				<tableDatas attrType="TTATTR_SKILL_CONSUME_MP" attrKey="TTATTR_SKILL_CONSUME_MP" proc="STATPROC_STAT" apply="STATAPPLY_ADD" stat="STAT_TYPE_INVALID" value_1="-1" value_2="0" />

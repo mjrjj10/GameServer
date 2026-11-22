@@ -9773,7 +9773,7 @@
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK1_BEHAVIORSTATE" />
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK_BEHAVIORSTATE" />
       </_COMBO>
-      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-166.666666666667" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.5" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="0" />
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-133.333333333333" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.35" _OverHeatDurationTime="2.5" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="32" />
     </FiringMethodData>
     <RemoteFactoryComData>
       <_Create>
@@ -9823,7 +9823,7 @@
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK1_BEHAVIORSTATE" />
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK_BEHAVIORSTATE" />
       </_COMBO>
-      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-166.666666666667" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.5" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="0" />
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-133.333333333333" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.35" _OverHeatDurationTime="2.5" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="32" />
     </FiringMethodData>
     <RemoteFactoryComData>
       <_Create>
@@ -9873,7 +9873,7 @@
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK1_BEHAVIORSTATE" />
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK_BEHAVIORSTATE" />
       </_COMBO>
-      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-166.666666666667" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.5" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="0" />
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-133.333333333333" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.35" _OverHeatDurationTime="2.5" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="32" />
     </FiringMethodData>
     <RemoteFactoryComData>
       <_Create>
@@ -9923,7 +9923,7 @@
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK1_BEHAVIORSTATE" />
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK_BEHAVIORSTATE" />
       </_COMBO>
-      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-166.666666666667" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.5" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="0" />
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-133.333333333333" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.35" _OverHeatDurationTime="2.5" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="32" />
     </FiringMethodData>
     <RemoteFactoryComData>
       <_Create>
@@ -9973,7 +9973,7 @@
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK1_BEHAVIORSTATE" />
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK_BEHAVIORSTATE" />
       </_COMBO>
-      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-166.666666666667" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.5" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="0" />
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-133.333333333333" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.35" _OverHeatDurationTime="2.5" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="32" />
     </FiringMethodData>
     <RemoteFactoryComData>
       <_Create>
@@ -10023,7 +10023,7 @@
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK1_BEHAVIORSTATE" />
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK_BEHAVIORSTATE" />
       </_COMBO>
-      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-166.666666666667" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.5" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="0" />
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-133.333333333333" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.35" _OverHeatDurationTime="2.5" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="30" />
     </FiringMethodData>
     <RemoteFactoryComData>
       <_Create>
@@ -10073,7 +10073,7 @@
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK1_BEHAVIORSTATE" />
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK_BEHAVIORSTATE" />
       </_COMBO>
-      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-166.666666666667" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.5" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="0" />
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-133.333333333333" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.35" _OverHeatDurationTime="2.5" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="27" />
     </FiringMethodData>
     <RemoteFactoryComData>
       <_Create>
@@ -10123,7 +10123,7 @@
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK1_BEHAVIORSTATE" />
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK_BEHAVIORSTATE" />
       </_COMBO>
-      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-166.666666666667" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.5" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="0" />
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-133.333333333333" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.35" _OverHeatDurationTime="2.5" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="24" />
     </FiringMethodData>
     <RemoteFactoryComData>
       <_Create>
@@ -10173,7 +10173,7 @@
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK1_BEHAVIORSTATE" />
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK_BEHAVIORSTATE" />
       </_COMBO>
-      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-166.666666666667" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.5" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="0" />
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-133.333333333333" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.35" _OverHeatDurationTime="2.5" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="20" />
     </FiringMethodData>
     <RemoteFactoryComData>
       <_Create>
@@ -10223,7 +10223,7 @@
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK1_BEHAVIORSTATE" />
         <_LEVEL _ValidTime="0.25" _Animation="ATTACK_BEHAVIORSTATE" />
       </_COMBO>
-      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-166.666666666667" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.5" _OverHeatDurationTime="2" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="0" />
+      <_GAUGE _Type="WEAPON_GAUGE_TYPE_INCREASE" _MaxGauge="1000" _AutoRegen="-133" _AutoRegenInterval="0.1" _AutoRegenDelayTime="0.35" _OverHeatDurationTime="2.5" _OverHeatPenaltyRatio="3" _OverHeatResetGauge="0" _GaugeStableRange="70" _Consumption="32" />
     </FiringMethodData>
     <RemoteFactoryComData>
       <_Create>

@@ -289,37 +289,60 @@ static const i32 MEASURED_BOT_SKILL_FIRST_UPGRADES = 6;
 
 static const SkillID TESTER_BURST_BACK_AFTER_THROUGH[] = { SkillID(180430020) };
 
-struct TesterSkillDamageRule
+struct SummonDieStandRule
 {
-	SkillID skill;
-	f32 mul;
+	i32 creature;
+	f32 sec;
 };
 
-static const TesterSkillDamageRule TESTER_SKILL_DAMAGE_MULS[] = {
-	{ SkillID(180430050), 340.0f / 150.0f },
+static const SummonDieStandRule MEASURED_SUMMON_DIE_STANDS[] = {
+	{ 100033841, 2.49f },
+	{ 100033842, 2.49f },
+	{ 100033400, 2.49f },
+	{ 100033401, 2.49f },
+	{ 100033402, 2.49f },
 };
 
-static inline f32 TesterSkillDamageMul(SkillID skill)
+static inline f32 SummonDieStandSec(i32 creature, f32 fallback)
 {
-	for(const TesterSkillDamageRule& r : TESTER_SKILL_DAMAGE_MULS) if(r.skill == skill) return r.mul;
-	return 1.0f;
+	for(const SummonDieStandRule& r : MEASURED_SUMMON_DIE_STANDS) if(r.creature == creature) return r.sec;
+	return fallback;
 }
 
-struct TesterSummonDamageRule
+struct TesterAllyHealRule
 {
-	i32 ownerClass;
-	SkillID skill;
-	f32 mul;
+	i32 status;
+	f32 hpRatio;
 };
 
-static const TesterSummonDamageRule TESTER_SUMMON_DAMAGE_MULS[] = {
-	{ 43, SkillID(180020020), 0.0f },
+static const TesterAllyHealRule TESTER_ALLY_HEALS[] = {
+	{ 1200070917, 0.33f },
 };
 
-static inline f32 TesterSummonDamageMul(i32 ownerClass, SkillID skill)
+static inline f32 TesterAllyHealRatio(i32 status)
 {
-	for(const TesterSummonDamageRule& r : TESTER_SUMMON_DAMAGE_MULS) if(r.ownerClass == ownerClass && r.skill == skill) return r.mul;
-	return 1.0f;
+	for(const TesterAllyHealRule& r : TESTER_ALLY_HEALS) if(r.status == status) return r.hpRatio;
+	return 0.0f;
+}
+
+struct TesterRemoteFuse
+{
+	RemoteIdx remote;
+	f32 fuseSec;
+	i32 damage;
+	i32 stunStatus;
+	f32 stunSec;
+	RemoteIdx visual;
+};
+
+static const TesterRemoteFuse TESTER_REMOTE_FUSES[] = {
+	{ RemoteIdx(1440430060), 0.5f, 100, 1230010012, 0.33f, RemoteIdx(1440020021) },
+};
+
+static inline const TesterRemoteFuse* FindTesterRemoteFuse(RemoteIdx remote)
+{
+	for(const TesterRemoteFuse& r : TESTER_REMOTE_FUSES) if(r.remote == remote) return &r;
+	return nullptr;
 }
 
 static inline bool BurstsBackAfterThrough(SkillID skill)
@@ -567,6 +590,7 @@ struct LowHpStatRule
 
 static const LowHpStatRule TOOLTIP_LOW_HP_STATS[] = {
 	{ 1230310000, StatusMod::DEFENCE, 25.0f },
+	{ 1230310000, StatusMod::ATTACK, 10.0f },
 };
 
 static const LowHpFireRateRule MEASURED_LOW_HP_FIRE_RATES[] = {
