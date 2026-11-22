@@ -859,7 +859,7 @@ static const i32 ULTIMATE_SKILL_SUFFIX = 50;
 void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPosIn, Slice<const ActorUID> targets, f32 clientTime, ActionStateID forcedAction)
 {
 	const SkillID skillID = ResolveComboRecast(player, skillIn, forcedAction);
-	const vec3 castPos = ResolveCastPos(player, skillID, castPosIn, forcedAction);
+	vec3 castPos = ResolveCastPos(player, skillID, castPosIn, forcedAction);
 	if(frozen || combatLocked || !SkillTargetsAllowed(player, skillID, targets)) {
 		if(forcedAction == ActionStateID::INVALID && player.clientHd != ClientHandle::INVALID) {
 			LOG("Skill :: %ls cast %d refused (frozen %d, locked %d)", player.name.data(), (i32)skillID, (i32)frozen, (i32)combatLocked);
@@ -901,6 +901,10 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 				targets = Slice<const ActorUID>(selectedTargets.data(), selectedTargets.size());
 				LOG("Skill :: %ls skill=%d picks the ally %ls clicked near (%.0f, %.0f)", player.name.data(), (i32)skillID, picked->name.data(), castPos.x, castPos.y);
 			}
+		}
+		if(selIn->minimapFriendPc && targets.size() > 0) {
+			const ActorMaster* ally = FindMasterActor(targets[0]);
+			if(ally && ally->parent && ally->parent->team == player.team && !ally->parent->dead) castPos = ally->parent->body->GetWorldPos();
 		}
 		if(selIn->minHpFriend) {
 			const Player* weakest = nullptr;
@@ -1534,9 +1538,10 @@ void World::RespawnPlayer(Player& player)
 		(*c)->hp = (*c)->hpMax;
 	}
 
-	player.body->collider->setFootPosition(PxExtendedVec3(player.spawnPos.x, player.spawnPos.y, player.spawnPos.z));
-	player.body->vel = vec3(0);
-	player.input.moveTo = player.spawnPos;
+	TeleportPlayer(player, player.spawnPos, player.input.rot.bodyYaw);
+	player.pushUntil = Time::ZERO;
+	player.ccUntil = Time::ZERO;
+	player.dragElapsed = player.dragDuration;
 
 	LOG("Respawn :: %ls", player.name.data());
 	replication->SendReviveToAll(player.userID, player.Main().UID, player.Sub().UID, player.spawnPos);

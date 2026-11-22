@@ -1247,7 +1247,7 @@ void GameXmlContent::LoadMonsterFires()
 			const char* type = e->Attribute("CommandType");
 			const char* cls = e->Attribute("Class");
 			const char* state = e->Attribute("BehaviorState");
-			if(type && cls && state) {
+			if(cls && state) {
 				Dash& dash = dashes[((u64)StatusTypeKey(cls) << 32) | (u32)ActionStateFromString(state)];
 				const i32 pass = e->IntAttribute("AnimationIndex");
 				if(pass >= 0 && pass < 4) {
@@ -1255,7 +1255,7 @@ void GameXmlContent::LoadMonsterFires()
 					dash.anims[pass] = e->IntAttribute("AnimationId");
 					if(e->IntAttribute("AnimationLoop") > 1) dash.loops[pass] = e->IntAttribute("AnimationLoop");
 				}
-				if(EA::StdC::Strcmp(type, "GRAPH_MOVE_HORZ") == 0) {
+				if(type && EA::StdC::Strcmp(type, "GRAPH_MOVE_HORZ") == 0) {
 					const char* param = e->Attribute("Param1");
 					if(param && EA::StdC::Sscanf(param, "%f|%f", &dash.dist, &dash.time) >= 1) dash.pass = pass;
 				}

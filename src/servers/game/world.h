@@ -1180,7 +1180,7 @@ struct World
 	struct MonsterFireEvent { ActorUID npc; ActorUID target; Time at; const GameXmlContent::MonsterFire* fire; u32 seed; bool byRemotes = false; f32 castYaw = 0; };
 	eastl::fixed_vector<MonsterFireEvent,64,true> monsterFires;
 	void FireMonsterRemote(const MonsterFireEvent& fire);
-	struct MonsterRemote { ActorUID owner; ActorUID target; const Remote* remote; vec3 pos; vec2 dir; Time expire; Time nextTime; i32 activations; f32 travelled; bool impacted; u32 seed = 0; f32 syncIn = MEASURED_REMOTE_SYNC_FIRST_SEC; eastl::fixed_vector<eastl::pair<ActorUID,Time>,24,true> hitUntil; };
+	struct MonsterRemote { ActorUID owner; ActorUID target; const Remote* remote; vec3 pos; vec2 dir; Time expire; Time nextTime; i32 activations; f32 travelled; bool impacted; u32 seed = 0; vec2 graphStart = vec2(0); vec2 graphDir = vec2(1, 0); f32 syncIn = MEASURED_REMOTE_SYNC_FIRST_SEC; eastl::fixed_vector<eastl::pair<ActorUID,Time>,24,true> hitUntil; };
 	eastl::fixed_vector<MonsterRemote,128,true> monsterRemotes;
 	void SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed = 0, u32 parentSeed = 0);
 	void SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, const Remote::SpawnRule& rule, const vec3& pos, const vec2& dir, ActorUID target, u32 parentSeed = 0, bool viaCreator = false);

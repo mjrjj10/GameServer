@@ -243,6 +243,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 	replication.surrenderAbleTime = gameInfo.surrenderAbleTime;
 	replication.supportKitIndex = -1;
 	world.Init(&replication);
+	world.combatLocked = !Config().DevShowcase;
 	if(const GameXmlContent::StageMaps* stage = GetGameXmlContent().FindStageMaps(gameInfo.stageIndex)) {
 		const bool pve = stage->gameMode == GameModeType::GAME_MODE_STAGE || stage->gameMode == GameModeType::GAME_MODE_DEFENCE;
 		world.hostileMonsters = pve;
@@ -1560,10 +1561,17 @@ void Game::OnMasterTrainingEvent(ClientHandle clientHd, const u8* data, i32 size
 	if(eventType == MEASURED_TRAINING_EVENT_CREATE_AI && size >= 9) {
 		const i32 choice = *(const i32*)(data + 5);
 		const auto* classes = GetGameXmlContent().FindStageBots(replication.stageIndex);
-		if(!classes || choice < 1 || choice > (i32)classes->size()) return;
+		if(!classes || classes->empty()) return;
 		const i32 n = (i32)classes->size();
-		const ClassType mainClass = (*classes)[choice - 1];
-		const ClassType subClass = (*classes)[(choice - 1 + HYP_TRAINING_BOT_SUB_OFFSET) % n];
+		i32 picked = -1;
+		for(i32 i = 0; i < n; i++) if((i32)(*classes)[i] == choice) picked = i;
+		if(picked < 0 && choice >= 1 && choice <= n) picked = choice - 1;
+		if(picked < 0) {
+			WARN("Training :: create AI choice %d not in the stage bot list", choice);
+			return;
+		}
+		const ClassType mainClass = (*classes)[picked];
+		const ClassType subClass = (*classes)[(picked + HYP_TRAINING_BOT_SUB_OFFSET) % n];
 		auto pl = playerMap.find(clientHd);
 		const u8 humanTeam = pl != playerMap.end() ? world.GetPlayer(pl->second->playerIndex).team : 0;
 		SpawnTrainingBot(mainClass, subClass, humanTeam ^ 1);

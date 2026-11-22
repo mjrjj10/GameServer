@@ -146,4 +146,7 @@
   <MOD status="1200000093" stat="STAT_TYPE_ATTACK" value="20" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 89/125; STATUS_ITEM friendly spirit: attack/skill power/attack speed +20%, movespeed +20" />
   <MOD status="1200100015" stat="STAT_TYPE_MOVESPEED" value="20" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 17/28; STATUS_MOB Ruark battle cry" />
   <MOD status="1230430000" stat="STAT_TYPE_DEFENCE" value="-1.5" mul="1" source="STATUS_PC _Description (-1.5% defence per stack, max 10 stacks); skilldesc 180430000 Armor-Piercing Rounds" />
+  <MOD status="1200100016" stat="STAT_TYPE_DEFENCE" value="20" mul="1" source="STR_STATUS_MOB_TOOLTIP_1200100017; MEASURED 7 official 5v5 captures: SN_UpdateStat 7 +20% of class base defence on add (33/39)" />
+  <MOD status="1200100016" stat="STAT_TYPE_SKILLDAMAGE_REDUCE_RATIO" value="20" source="MEASURED 7 official 5v5 captures: SN_UpdateStat 58 = 20 on add" />
+  <MOD status="1200100017" stat="STAT_TYPE_HEALTH" value="120" count="20" interval="0.5" source="MEASURED 7 official 5v5 captures: +120 HP every 0.5 s (697 ticks), 10 s" />
 </STATUS_STAT_MODS>

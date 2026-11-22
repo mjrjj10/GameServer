@@ -72,7 +72,11 @@ void World::PlayerWeaponFire(Player& player)
 		LOG("Shot :: %ls melee swing remote %d (stance %d)", player.name.data(), (i32)swing, (i32)swingStance);
 		const GameXmlContent::MeasuredSwingNode* node = GetGameXmlContent().FindMeasuredSwingNode(swing);
 		const vec2 at = dir * (swingRemote->offsetY + (node ? node->forward : 0)) + Perp(dir) * (node ? node->side : 0);
-		SpawnRemote(player.index, swing, origin + vec3(at, 0), dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), true, nullptr, 0, player.clientHd != ClientHandle::INVALID);
+		RemoteInst* swingInst = SpawnRemote(player.index, swing, origin + vec3(at, 0), dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), true, nullptr, 0, player.clientHd != ClientHandle::INVALID);
+		if(swingInst && node && swingRemote->attachFireObject) {
+			swingInst->attachForward = node->forward;
+			swingInst->attachSide = node->side;
+		}
 		if(player.clientHd == ClientHandle::INVALID) BotWeaponLunge(player, GetGameXmlContent().GetSkillAction(ActionClass(player), WeaponAttackState(player, wf), swingStance), dir);
 		else if(player.chargeLevel > 0) HumanWeaponLunge(player, GetGameXmlContent().GetSkillAction(ActionClass(player), WeaponAttackState(player, wf), swingStance), WeaponAttackState(player, wf), dir);
 	}

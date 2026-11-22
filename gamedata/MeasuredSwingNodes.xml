@@ -53,4 +53,9 @@
   <SWING remote="1440320022" forward="137" side="15" samples="22" iqr="5" />
   <SWING remote="1440350053" forward="836" side="-2" samples="22" iqr="48" />
   <SWING remote="1440350054" forward="1063" side="16" samples="9" iqr="70" />
+  <SWING remote="1430410010" forward="254" side="0" source="MEASURED SHUTTLE_ATTACK_0_S/1_S.kf fire dummy 254 forward, +-46 side averaged (HYP side 0)" />
+  <SWING remote="1430410110" forward="254" side="0" source="MEASURED SHUTTLE_ATTACK_0_S/1_S.kf fire dummy 254 forward, +-46 side averaged (HYP side 0)" />
+  <SWING remote="1430410111" forward="254" side="0" source="MEASURED SHUTTLE_ATTACK_0_S/1_S.kf fire dummy 254 forward, +-46 side averaged (HYP side 0)" />
+  <SWING remote="1430410112" forward="254" side="0" source="MEASURED SHUTTLE_ATTACK_0_S/1_S.kf fire dummy 254 forward, +-46 side averaged (HYP side 0)" />
+  <SWING remote="1430410113" forward="254" side="0" source="MEASURED SHUTTLE_ATTACK_0_S/1_S.kf fire dummy 254 forward, +-46 side averaged (HYP side 0)" />
 </MeasuredSwingNodes>

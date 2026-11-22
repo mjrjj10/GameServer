@@ -109,6 +109,10 @@ void World::MonsterAggroOnHit(ActorNpc& npc, Player& attacker)
 {
 	if(!npc.monsterAi || npc.monsterTarget != ActorUID::INVALID || npc.hp <= 0 || IsStructure(npc)) return;
 	if(!npc.monsterAi->byTarget[GameXmlContent::MonsterAttack::MASTER]) return;
+	static const u32 chiefTag = StatusTypeKey("Chief");
+	if(map && map->ingameLevels && npc.monsterAi->tagKey == chiefTag) {
+		foreach_const(o, actorNpcList) if(o->monsterAi && MonsterHostile(npc, *o) && MonsterAttackOn(*npc.monsterAi, *o) && glm::length(vec2(o->pos) - vec2(npc.pos)) < npc.monsterAi->perception) return;
+	}
 	const bool neutral = MonsterNeutral(npc, hostileMonsters);
 	if(!neutral && !MonsterHostile(npc, attacker)) return;
 	const bool titanMode = map && map->ingameLevels;
@@ -843,6 +847,8 @@ void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const 
 	mr.remote = &remote;
 	mr.pos = vec3(vec2(pos) + dir * remote.offsetY, pos.z);
 	mr.dir = dir;
+	mr.graphDir = dir;
+	mr.graphStart = vec2(pos) + dir * remote.offsetY;
 	mr.expire = TimeAdd(localTime, TimeMsToTime(MAX(remote.lifeTime, MONSTER_REMOTE_MIN_LIFE_SEC) * 1000.0));
 	mr.nextTime = !remote.onTime.empty() && remote.timeEventDelay >= 0 ? TimeAdd(localTime, TimeMsToTime(MAX(remote.timeEventDelay, MONSTER_REMOTE_MIN_LIFE_SEC) * 1000.0)) : Time::ZERO;
 	mr.activations = MAX(remote.activateCount, 1);
@@ -1017,8 +1023,19 @@ void World::UpdateMonsterRemotes(f32 delta)
 			else {
 				const f32 limit = remote.maxDistance > 0 ? remote.maxDistance : (remote.behaviorType == Remote::BehaviorType::GRAPH ? remote.fixedGraphLength : 0.0f);
 				const f32 move = limit > 0 ? MIN(step, MAX(limit - mr.travelled, 0.0f)) : step;
-				mr.pos += vec3(mr.dir * move, 0);
 				mr.travelled += move;
+				if(remote.behaviorType == Remote::BehaviorType::GRAPH && remote.bezier && limit > 0) {
+					const vec2 side = -Perp(mr.graphDir);
+					const vec2 p3 = mr.graphStart + mr.graphDir * limit;
+					vec2 c[2];
+					for(int k = 0; k < 2; k++) c[k] = mr.graphStart + mr.graphDir * (limit * (k + 1) / 3.0f + remote.bezierFront[k]) + side * (remote.bezierUp[k] * sinf(remote.bezierRotate[k] * PI / 180.0f));
+					const f32 u = MIN(mr.travelled / limit, 1.0f);
+					const f32 v = 1.0f - u;
+					const vec2 tangent = (c[0] - mr.graphStart) * (3 * v * v) + (c[1] - c[0]) * (6 * v * u) + (p3 - c[1]) * (3 * u * u);
+					if(glm::length(tangent) > 0.001f) mr.dir = glm::normalize(tangent);
+					mr.pos = vec3(mr.graphStart * (v * v * v) + c[0] * (3 * v * v * u) + c[1] * (3 * v * u * u) + p3 * (u * u * u), mr.pos.z);
+				}
+				else mr.pos += vec3(mr.dir * move, 0);
 				if(limit > 0 && mr.travelled >= limit) expired = true;
 			}
 			if(mr.seed != 0 && remote.homingLength > 0 && !expired) {
@@ -1331,7 +1348,7 @@ bool World::UpdateMonsterMasterSpecial(ActorNpc& npc, const GameXmlContent::Mons
 		if(npc.monsterSkillReady[s] == Time::ZERO) npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime((special.firstAt >= 0 ? special.firstAt : special.cooldown) * 1000.0));
 		if(localTime < npc.monsterSkillReady[s]) continue;
 		if(special.share > 0 && (f32)Randf01() >= special.share) {
-			npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime(current.cooldown * 1000.0));
+			npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime(special.cooldown * 1000.0));
 			continue;
 		}
 		Player* chosen = nullptr;
@@ -1900,12 +1917,14 @@ void World::UpdateMonsterAi(f32 delta)
 			f32 best = ai.perception;
 			ActorUID chosen = ActorUID::INVALID;
 			const bool mastersLast = titanMode && IsStructure(npc);
+			const bool monstersFirst = titanMode && ai.tagKey == chiefTag;
+			bool masterPicked = false;
 			if(ai.byTarget[GameXmlContent::MonsterAttack::MASTER] && !mastersLast) {
 				foreach(p, players) {
 					if(!MonsterHostile(npc, *p)) continue;
 					const f32 d = glm::length(vec2(p->body->GetWorldPos()) - vec2(npc.pos));
 					if(ai.tagKey == chiefTag && d > ai.byTarget[GameXmlContent::MonsterAttack::MASTER]->range + MONSTER_REACH_TOLERANCE) continue;
-					if(d < best) { best = d; chosen = p->Main().UID; targetAt = p->body->GetWorldPos(); attack = ai.byTarget[GameXmlContent::MonsterAttack::MASTER]; }
+					if(d < best) { best = d; chosen = p->Main().UID; targetAt = p->body->GetWorldPos(); attack = ai.byTarget[GameXmlContent::MonsterAttack::MASTER]; masterPicked = true; }
 				}
 			}
 			if(mastersLast) {
@@ -1917,7 +1936,7 @@ void World::UpdateMonsterAi(f32 delta)
 				const GameXmlContent::MonsterAttack* a = MonsterAttackOn(ai, *o);
 				if(!a) continue;
 				const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos));
-				if(d < best) { best = d; chosen = o->UID; targetAt = o->pos; attack = a; }
+				if(d < best || (monstersFirst && masterPicked && d < ai.perception)) { best = d; chosen = o->UID; targetAt = o->pos; attack = a; masterPicked = false; }
 			}
 			if(mastersLast && chosen == ActorUID::INVALID && ai.byTarget[GameXmlContent::MonsterAttack::MASTER]) {
 				foreach(p, players) {
