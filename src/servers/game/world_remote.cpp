@@ -508,7 +508,12 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	}
 
 	inst.lastHitIndex = (i32)target.index;
-	if(enemy && HasStatusType(target, StatusType::EVADE)) return true;
+	if(enemy && HasStatusType(target, StatusType::EVADE)) {
+		statusFromBehind = false;
+		statusForceCenterSet = false;
+		statusPushDirSet = false;
+		return true;
+	}
 	const bool npcOwnerStatus = enemy && remote.onHitOwnerStatus != 0 && inst.sourceUID != ActorUID::INVALID && FindNpcActor(inst.sourceUID);
 	if(remote.onHitOwnerStatus != 0 && !owner.dead && !npcOwnerStatus) {
 		const ActorUID prevCaster = statusCasterOverride;

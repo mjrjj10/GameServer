@@ -498,7 +498,7 @@ void World::ApplyMonsterAllyStatus(ActorUID casterUID, const GameXmlContent::Mon
 		if(&*o == caster || o->hp <= 0 || o->removeAt != Time::ZERO || !o->monsterAi || o->faction != caster->faction) continue;
 		if(glm::length(vec2(o->pos) - center) > attack.allyRadius) continue;
 		ApplyStatusToNpcFromNpc(*caster, *o, attack.allyStatus);
-		if(healRatio > 0 && o->hp < o->hpMax) {
+		if(healRatio > 0 && o->hp < o->hpMax && MonsterTargetKind(*o->monsterAi) == GameXmlContent::MonsterAttack::MINION) {
 			o->hp = MIN(o->hp + (i32)(o->hpMax * healRatio), o->hpMax);
 			replication->SendHpToAll(o->UID, o->hp, o->hpMax);
 		}
