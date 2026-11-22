@@ -276,6 +276,14 @@ static inline const HitRecoverRule* FindHitRecoverRule(i32 status)
 
 static const i32 MEASURED_BOT_SKILL_FIRST_UPGRADES = 6;
 
+static const SkillID TESTER_BURST_BACK_AFTER_THROUGH[] = { SkillID(180430020) };
+
+static inline bool BurstsBackAfterThrough(SkillID skill)
+{
+	for(SkillID s : TESTER_BURST_BACK_AFTER_THROUGH) if(s == skill) return true;
+	return false;
+}
+
 struct PvpRewardRule
 {
 	i32 minTeamSize;

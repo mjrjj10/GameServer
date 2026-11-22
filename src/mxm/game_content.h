@@ -699,6 +699,7 @@ struct GameXmlContent
 		eastl::fixed_vector<WeaponIndex,3,false> defaultWeaponIDs;
 		eastl::fixed_vector<WeaponIndex,3,false> fairPvpWeaponIDs;
 		eastl::fixed_vector<StatValue,32,false> baseStats;
+		eastl::fixed_vector<StatValue,4,false> initStats;
 		i32 densityCount = 0;
 		f32 moveSpeed = 0;
 

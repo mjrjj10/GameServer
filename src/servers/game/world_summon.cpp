@@ -330,7 +330,7 @@ void World::UpdateSummonAttack(ActorNpc& npc, f32 delta)
 	if(!info || npc.spawnedAt >= localTime) return;
 	const Player& owner = players[npc.ownerIndex];
 	ActorMaster* tm = FindMasterActor(npc.chaseTarget);
-	Player* target = tm && !tm->parent->dead && tm->parent->team != owner.team && (tm->parent->fogSeenBy & (1u << owner.team)) ? tm->parent : nullptr;
+	Player* target = tm && !tm->parent->dead && !tm->parent->untargetable && tm->parent->team != owner.team && (tm->parent->fogSeenBy & (1u << owner.team)) ? tm->parent : nullptr;
 	const f32 lost = info->targetLost > 0 ? info->targetLost : info->perception;
 	if(target && glm::length(vec2(target->body->GetWorldPos()) - vec2(npc.pos)) > lost) target = nullptr;
 	if(!target) {
@@ -456,7 +456,7 @@ void World::UpdateSummonAi(f32 delta)
 				continue;
 			}
 			const f32 keepRange = info->targetLost > 0 ? info->targetLost : info->perception;
-			const bool lost = target ? (target->dead || !(target->fogSeenBy & (1u << owner.team)) || glm::length(vec2(target->body->GetWorldPos()) - vec2(npc.pos)) > keepRange) : (!npcTarget || glm::length(vec2(npcTarget->pos) - vec2(npc.pos)) > keepRange);
+			const bool lost = target ? (target->dead || target->untargetable || !(target->fogSeenBy & (1u << owner.team)) || glm::length(vec2(target->body->GetWorldPos()) - vec2(npc.pos)) > keepRange) : (!npcTarget || glm::length(vec2(npcTarget->pos) - vec2(npc.pos)) > keepRange);
 			if(lost) {
 				target = nullptr;
 				npcTarget = nullptr;

@@ -888,6 +888,7 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 	}
 	if(npc.hp > 0 && !owner.dead) TriggerSkillHitEvent(inst, owner, npc.UID, npc.pos);
 	if(inst.skillID == SkillID::INVALID && base > 0) WeaponHitPlagueNpc(owner, npc);
+	if(base > 0) PassiveStackOnHitNpc(owner, npc, (i32)remote.ID, inst.skillID);
 	if(npc.hp > 0) ChangeCasterActionOnHit(inst, owner, npc.UID, npc.pos);
 	if(npc.hp <= 0 || npc.ownerUID != ActorUID::INVALID) return true;
 	const ActorUID prevCaster = statusCasterOverride;
@@ -1377,7 +1378,7 @@ bool World::UpdateTargetRemote(RemoteInst& inst, f32 delta)
 		f32 bestDist = remote.homingLength;
 		const f32 halfCos = cosf(remote.homingAngle * 0.5f * PI / 180.0f);
 		foreach(it, players) {
-			if(!RemoteCanAffect(inst, *it, false) || it->team == players[inst.ownerIndex].team) continue;
+			if(!RemoteCanAffect(inst, *it, false) || it->team == players[inst.ownerIndex].team || !(it->fogSeenBy & (1u << players[inst.ownerIndex].team))) continue;
 			const vec2 rel = vec2(it->body->GetWorldPos() - inst.pos);
 			const f32 d = glm::length(rel);
 			if(d > bestDist) continue;

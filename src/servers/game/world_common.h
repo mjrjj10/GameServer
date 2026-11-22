@@ -152,6 +152,15 @@ static inline f32 MasterStat(ClassType classType, i32 statType)
 	return 0;
 }
 
+static inline f32 MasterStartResource(ClassType classType, i32 slot, f32 resMax, bool startFull)
+{
+	const auto& master = GetGameXmlContent().GetMaster(classType);
+	foreach_const(st, master.initStats) {
+		if(st->type == RESOURCES[slot].maxStat) return MIN(st->value, resMax);
+	}
+	return startFull ? resMax : 0;
+}
+
 static inline vec2 Perp(const vec2& v)
 {
 	return vec2(-v.y, v.x);

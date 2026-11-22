@@ -540,6 +540,21 @@ void World::PassiveStackOnHit(Player& attacker, Player& target, i32 remoteID, Sk
 	if(apply != 0) ApplyStatus(attacker, target, apply);
 }
 
+void World::PassiveStackOnHitNpc(Player& attacker, ActorNpc& npc, i32 remoteID, SkillID skillID)
+{
+	if(npc.hp <= 0 || npc.removeAt != Time::ZERO) return;
+	i32 apply = 0;
+	foreach_const(it, activeStatuses) {
+		if(it->targetIndex != attacker.index || !it->info || it->info->type != StatusType::STACKATTACK) continue;
+		if(!PassiveOfActiveMaster(attacker, it->statusID)) continue;
+		const StatusInfo& info = *it->info;
+		if(skillID != SkillID::INVALID && eastl::find(info.fullStackSkills.begin(), info.fullStackSkills.end(), (i32)skillID) != info.fullStackSkills.end()) apply = info.stackFullStatus;
+		else if(eastl::find(info.stackRemotes.begin(), info.stackRemotes.end(), remoteID) != info.stackRemotes.end()) apply = info.stackStatus;
+		break;
+	}
+	if(apply != 0) ApplyStatusToNpc(attacker, npc, apply, false);
+}
+
 void World::OnEvade(Player& target)
 {
 	eastl::fixed_vector<i32,4,false> toApply;

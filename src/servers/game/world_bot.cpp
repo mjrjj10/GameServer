@@ -212,7 +212,7 @@ bool World::BotEvade(Player& bot)
 		shirk = SkillID::INVALID;
 		foreach_const(sk, content.skillMap) if(sk->second.type == SkillType::SHIRK && (i32)sk->first / 1000 == family) { shirk = sk->first; break; }
 	}
-	else if(shirk == SkillID::INVALID) foreach_const(sid, master.skillIDs) {
+	else foreach_const(sid, master.skillIDs) {
 		auto f = content.skillMap.find(*sid);
 		if(f != content.skillMap.end() && f->second.type == SkillType::SHIRK) { shirk = *sid; break; }
 	}

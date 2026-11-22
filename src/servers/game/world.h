@@ -1600,6 +1600,7 @@ public:
 	struct GroundItem { u32 uid = 0; i32 itemIndex = 0; vec3 pos = vec3(0); i32 tagID = -1; Time expireAt = Time::ZERO; i32 count = 1; i32 owner = -1; bool ron = false; i32 team = -1; };
 	void DropMasterSoul(const Player& dead);
 	void RefreshBushStates();
+	ActorUID PickEntityAtCastPos(const Player& player, SkillID skillID, const vec3& castPos);
 	ActorUID BushAt(const vec3& at) const;
 	void UpdateSummonBushes();
 	bool TakeGroundItem(Player& player, u32 itemUID, GroundItem* taken = nullptr);
@@ -1683,6 +1684,7 @@ private:
 	void OnEvade(Player& target);
 	void WeaponHitPlagueNpc(Player& attacker, ActorNpc& npc);
 	void PassiveStackOnHit(Player& attacker, Player& target, i32 remoteID, SkillID skillID);
+	void PassiveStackOnHitNpc(Player& attacker, ActorNpc& npc, i32 remoteID, SkillID skillID);
 	void PassiveOnWeaponHit(Player& attacker, Player& target, const Projectile& proj);
 	void PassiveOnWeaponStatusHit(Player& attacker, Player& target);
 	void PassiveOnSkillHit(Player& attacker, Player& target);

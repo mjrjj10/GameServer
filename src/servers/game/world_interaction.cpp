@@ -463,7 +463,8 @@ World::NpcCcGraph World::StartNpcCc(ActorNpc& npc, const StatusInfo* info, const
 	const f32 timeRatio = info->timeRatio > 0 ? info->timeRatio : 1.0f;
 	const bool knockdown = info->type == StatusType::KNOCKDOWN && npc.monsterAi;
 	const bool forceBack = info->type == StatusType::FORCEBACK && info->distance > 0 && info->durationSec > 0;
-	if(info->type == StatusType::PUSH || knockdown || forceBack) {
+	const bool flyAway = info->type == StatusType::FLY && info->distanceRatio > 0 && npc.monsterAi;
+	if(info->type == StatusType::PUSH || knockdown || forceBack || flyAway) {
 		vec2 dir = vec2(npc.pos) - vec2(source);
 		const f32 len = glm::length(dir);
 		dir = len > 1.0f ? dir / len : vec2(cosf(npc.rot.z), sinf(npc.rot.z));
@@ -471,8 +472,8 @@ World::NpcCcGraph World::StartNpcCc(ActorNpc& npc, const StatusInfo* info, const
 		if(signedDist < 0) dir = -dir;
 		f32 dist = fabsf(signedDist);
 		cc.nominal = dist;
-		cc.graphSec = forceBack ? info->durationSec : (knockdown ? NPC_DEFEAT_KNOCKDOWN_SEC : NPC_DEFEAT_PUSH_SEC) * timeRatio;
-		cc.duration = cc.graphSec;
+		cc.graphSec = forceBack ? info->durationSec : (flyAway ? MEASURED_NPC_AIRBORNE_GRAPH_SEC : knockdown ? NPC_DEFEAT_KNOCKDOWN_SEC : NPC_DEFEAT_PUSH_SEC) * timeRatio;
+		cc.duration = flyAway && info->durationSec > 0 ? info->durationSec : cc.graphSec;
 		cc.graph = true;
 		const f32 radius = npc.monsterAi ? npc.monsterAi->radius : 0.0f;
 		f32 wall = 0;
@@ -1376,6 +1377,14 @@ void World::DropMasterSoul(const Player& dead)
 	LOG("GroundItem :: %ls drops a master soul", dead.name.data());
 }
 
+static const i32 MEASURED_ULTIMATE_HEART_ITEMS[] = { 130100906 };
+
+static bool UltimateHeartItem(i32 item)
+{
+	for(i32 id : MEASURED_ULTIMATE_HEART_ITEMS) if(id == item) return true;
+	return false;
+}
+
 static f32 ItemStatMax(const World::Player& player, u8 type)
 {
 	const ClassType cls = player.Main().classType;
@@ -1427,7 +1436,10 @@ bool World::TakeGroundItem(Player& player, u32 itemUID, GroundItem* taken)
 				}
 			}
 		};
-		foreach_const(m, info->statMul) apply(m->type, ItemStatMax(player, m->type) * m->value / 100.0f);
+		foreach_const(m, info->statMul) {
+			apply(m->type, ItemStatMax(player, m->type) * m->value / 100.0f);
+			if(UltimateHeartItem(item.itemIndex) && m->type == (u8)StatType::STAT_TYPE_HEALTH) apply((u8)StatType::STAT_TYPE_ULTIMATE, ItemStatMax(player, (u8)StatType::STAT_TYPE_ULTIMATE) * m->value / 100.0f);
+		}
 		foreach_const(a, info->statAdd) apply(a->type, a->value);
 		foreach_const(st, info->statuses) ApplyStatus(player, player, *st);
 	}

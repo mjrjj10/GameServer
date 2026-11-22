@@ -15,6 +15,8 @@ static GameXmlContent* g_GameXmlContent = nullptr;
 
 static Path gameDataDir = L"gamedata";
 
+static u8 ConsumableStatType(const char* name);
+
 static bool XmlAttrTrue(XMLElement* pElt, const char* name)
 {
 	const char* v = nullptr;
@@ -41,6 +43,10 @@ bool GameXmlContent::LoadMasterDefinitions()
 		const char* className;
 		XMLElement* pStatsCompData = pNodeMaster->FirstChildElement("StatsComData");
 		pStatsCompData->QueryStringAttribute("_class", &className);
+		for(XMLElement* pInit = pStatsCompData->FirstChildElement("_STAT_INIT"); pInit && !master.initStats.full(); pInit = pInit->NextSiblingElement("_STAT_INIT")) {
+			const u8 type = ConsumableStatType(pInit->Attribute("DATAKEY"));
+			if(type != 0xff) master.initStats.push_back({ type, pInit->FloatAttribute("DATA") });
+		}
 
 		// read skill ids
 		XMLElement* pSkillElt = pNodeMaster->FirstChildElement("SkillComData")->FirstChildElement();
@@ -3067,6 +3073,17 @@ bool GameXmlContent::LoadSkillUpgrades()
 		skillBasePowerMul[it->first] = mul;
 	}
 	for(const auto& m : MEASURED_SKILL_POWER_MUL) skillBasePowerMul[m.skillID] = m.mul;
+	static const i32 HYP_PORTED_SKILL_CLASSES[] = { 41, 43 };
+	static const f32 HYP_PORTED_POWER_PER_DAMAGE = 0.000867f;
+	const auto ported = [](i32 skill) { for(i32 c : HYP_PORTED_SKILL_CLASSES) if((skill / 10000) % 100 == c) return true; return false; };
+	foreach_const(it, skillTooltipDamage) {
+		if(it->second <= 0 || !ported(it->first) || skillBasePowerMul.find(it->first) != skillBasePowerMul.end()) continue;
+		skillBasePowerMul[it->first] = it->second * HYP_PORTED_POWER_PER_DAMAGE;
+	}
+	foreach(it, skillUpgrades) {
+		if(!ported(it->first)) continue;
+		foreach(up, it->second) if(up->type == SkillUpgrade::Type::DAMAGE && up->baseDamage > 0 && up->attackMultiplier <= 0) up->attackMultiplier = up->baseDamage * HYP_PORTED_POWER_PER_DAMAGE;
+	}
 	LOG("Loaded in-game upgrades for %d skills, base skill power multipliers for %d", (i32)skillUpgrades.size(), (i32)skillBasePowerMul.size());
 	return true;
 }
@@ -4752,11 +4769,9 @@ bool GameXmlContent::LoadSkillCosts()
 			if(const i32 comboBase = pCommon->IntAttribute("_BaseComboSkill")) comboBaseSkill[skillID] = comboBase;
 			if(XMLElement* pCombo = pCommon->FirstChildElement("_SKILLCOMBO")) {
 				XMLElement* pComboTarget = pCommon->FirstChildElement("_Target");
-				const char* selectState = pComboTarget ? pComboTarget->Attribute("_SelectStateType") : nullptr;
-				const bool afterCast = selectState && EA::StdC::Strcmp(selectState, "SKILL_TARGET_SELECT_STATE_AFTERCAST") == 0;
-				if(afterCast && pCombo->BoolAttribute("_AutoCasting")) comboAutoCastMs[skillID] = MAX(pCombo->IntAttribute("_ExecuteTimeMS"), 1);
 				const char* selectType = pComboTarget ? pComboTarget->Attribute("_SelectType") : nullptr;
 				const bool hitTarget = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_USE_HIT_EVENT_TARGET") == 0;
+				if(!hitTarget && pCombo->BoolAttribute("_AutoCasting")) comboAutoCastMs[skillID] = MAX(pCombo->IntAttribute("_ExecuteTimeMS"), 1);
 				if(!hitTarget && pCombo->BoolAttribute("_AutoCasting")) comboBotAutoCastMs[skillID] = MAX(pCombo->IntAttribute("_ExecuteTimeMS"), 1);
 				if(selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_USE_HIT_EVENT_TARGET") == 0) hitTargetComboMs[skillID] = pCombo->BoolAttribute("_AutoCasting") ? MAX(pCombo->IntAttribute("_ExecuteTimeMS"), 1) : 0;
 				for(XMLElement* pC = pCombo->FirstChildElement("_CleanupStatus"); pC; pC = pC->NextSiblingElement("_CleanupStatus")) {
@@ -5243,6 +5258,7 @@ static u8 ConsumableStatType(const char* name)
 		{ "STAT_TYPE_ENERGY", StatType::STAT_TYPE_ENERGY },
 		{ "STAT_TYPE_MANA", StatType::STAT_TYPE_MANA },
 		{ "STAT_TYPE_RAGE", StatType::STAT_TYPE_RAGE },
+		{ "STAT_TYPE_BUBBLE", StatType::STAT_TYPE_BUBBLE },
 		{ "STAT_TYPE_ULTIMATE", StatType::STAT_TYPE_ULTIMATE },
 	};
 	if(!name) return 0xff;

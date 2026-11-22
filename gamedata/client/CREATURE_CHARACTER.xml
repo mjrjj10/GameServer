@@ -2533,7 +2533,7 @@
     </QuickSlotComData>
     <StatsComData _Team="TEAM_PLAYER" _class="CLASS_TYPE_SHUTTLE" _ElementType="CELEMENT_TYPE_BLUE" _DestroyTime="5" _RankHitBonus="1" _AttackRangeMin="300" _RClickMoveAttackMoveSpeedRatio="1" _DefaultArtifact="360000006" _SkillStatType="STAT_TYPE_RAGE">
       <_STAT_INIT DATAKEY="STAT_TYPE_RAGE" DATA="100" />
-      <_AbilityData DATAKEY="ABILITY_01" _StatUpCountLimit="12" _Tooltip="STR_TOOLTIP_SHUTTLE_ABILITY_01" _IconAlias="ability_weaponpower_01" />
+      <_AbilityData DATAKEY="ABILITY_01" _StatUpCountLimit="12" _Tooltip="STR_TOOLTIP_SHUTTLE_ABILITY_01" _IconAlias="ability_defence_01" />
       <_AbilityData DATAKEY="ABILITY_02" _StatUpCountLimit="12" _Tooltip="STR_TOOLTIP_SHUTTLE_ABILITY_02" _IconAlias="ability_skillpower_01" />
       <_AbilityData DATAKEY="ABILITY_03" _StatUpCountLimit="12" _Tooltip="STR_TOOLTIP_SHUTTLE_ABILITY_03" _IconAlias="ability_health_01" />
       <_AbilityData DATAKEY="ABILITY_04" _StatUpCountLimit="12" _Tooltip="STR_TOOLTIP_SHUTTLE_ABILITY_04" _IconAlias="ability_mobility_01" />
@@ -2549,10 +2549,10 @@
       <_SkillID _SkillSlot="SKILL_SLOT_1" _Index="180410010" _UnLock="True" />
       <_SkillID _SkillSlot="SKILL_SLOT_2" _Index="180410040" _UnLock="True" />
       <_SkillID _SkillSlot="SKILL_SLOT_3" _Index="180410020" _UnLock="True" />
-      <_SkillID _SkillSlot="SKILL_SLOT_4" _Index="180410002" _UnLock="True" />
+      <_SkillID _SkillSlot="SKILL_SLOT_4" _Index="180410030" _UnLock="True" />
       <_SkillID _SkillSlot="SKILL_SLOT_UG" _Index="180410050" _UnLock="True" />
       <_SkillID _SkillSlot="SKILL_SLOT_PASSIVE" _Index="180410000" _UnLock="True" />
-      <_SkillID _SkillSlot="SKILL_SLOT_SHIRK" _Index="180410030" _UnLock="True" />
+      <_SkillID _SkillSlot="SKILL_SLOT_SHIRK" _Index="180410002" _UnLock="True" />
     </SkillComData>
     <EquipComData>
       <_AttachNode DATAKEY="ITEM_SLOT_WEAPON_PRIMARY" _NodeName="R_WEAPONPOS" />

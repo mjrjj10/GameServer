@@ -86,7 +86,10 @@ void World::HumanWeaponLunge(Player& player, const GameXmlContent::Action& actio
 		const f32 sec = animID != 0 ? GetGameXmlContent().GetAniSeqTime(ActionClassName(player), animID) : action.seqLength;
 		if(sec <= 0) return;
 		const vec3 from = player.body->GetWorldPos();
-		const vec3 end = from + vec3(dir * cmd->graphMoveHorz.distance, 0);
+		BotWeaponLunge(player, action, dir);
+		const bool lunged = player.dashStartAt == localTime && player.weaponLungeUntil == player.dashUntil;
+		if(lunged) player.dashAwaitClientStart = true;
+		const vec3 end = lunged ? from + vec3(player.dashDir * player.dashDist, 0) : from + vec3(dir * cmd->graphMoveHorz.distance, 0);
 		replication->SendActionStateOnlyToAll(player.Main().UID, state, WorldYawToMxmYaw(atan2f(dir.y, dir.x)), true, from, end, sec);
 		LOG("Dash :: %ls charged lunge %.0f over %.2fs sent", player.name.data(), cmd->graphMoveHorz.distance, sec);
 		return;
@@ -482,7 +485,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 void World::SteerProjectile(Projectile& proj, f32 delta)
 {
 	const Player& owner = players[proj.ownerIndex];
-	const auto targetable = [&](const Player& p) { return p.team != owner.team && !p.dead && !p.untargetable; };
+	const auto targetable = [&](const Player& p) { return p.team != owner.team && !p.dead && !p.untargetable && (p.fogSeenBy & (1u << owner.team)); };
 	if(proj.homingTarget >= 0 && !targetable(players[proj.homingTarget])) proj.homingTarget = -1;
 	const ActorNpc* lockedNpc = proj.homingNpc != ActorUID::INVALID ? FindNpcActor(proj.homingNpc) : nullptr;
 	if(proj.homingNpc != ActorUID::INVALID && (!lockedNpc || !NpcHittableBy(*lockedNpc, owner))) { proj.homingNpc = ActorUID::INVALID; lockedNpc = nullptr; }
@@ -702,6 +705,7 @@ void World::UpdateProjectiles(f32 delta)
 						foreach_const(st, shot->statuses) if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(owner, *npc, StanceUpgradedStatus(owner, st->statusID), false);
 					}
 					WeaponHitPlagueNpc(owner, *npc);
+					PassiveStackOnHitNpc(owner, *npc, (i32)proj->remoteDoc, SkillID::INVALID);
 				}
 				if(proj->chainRemote != RemoteIdx::INVALID && !proj->chained) {
 					proj->chained = true;

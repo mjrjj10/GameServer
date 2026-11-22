@@ -2759,7 +2759,7 @@
     <ST_COMMONSKILL _Group="SKILL_GROUP_CHARACTER" _Type="SKILL_TYPE_PASSIVE" _RequireClass="CLASS_TYPE_SHUTTLE" _IconAlias="shuttle_passive_01" _Name="STR_SKILL_NAME_180410000" _Description="STR_SKILL_DESC_180410000" _UpgradeType="E_SKILL_UPGRADE_KEY" _Status="1230410048" />
   </INFO>
   <INFO ID="180410002" _DocID="100000041">
-    <ST_COMMONSKILL _Group="SKILL_GROUP_CHARACTER" _Type="SKILL_TYPE_SHIRK" _RequireClass="CLASS_TYPE_SHUTTLE" _IconAlias="shuttle_active_04_combo_01" _Name="STR_SKILL_NAME_180410002" _Description="STR_SKILL_DESC_180410002" _UpgradeType="E_SKILL_UPGRADE_KEY" _Action="SHIRK_BEHAVIORSTATE" _CoolTimeType="SHIRK" _CoolTime="0.3" _BotMoveSkill="True" _BotWallMove="True" _BotEvadeSkill="True" />
+    <ST_COMMONSKILL _Group="SKILL_GROUP_CHARACTER" _Type="SKILL_TYPE_SHIRK" _RequireClass="CLASS_TYPE_SHUTTLE" _IconAlias="shuttle_active_04_combo_01" _Name="STR_SKILL_NAME_180410002" _Description="STR_SKILL_DESC_180410002" _UpgradeType="E_SKILL_UPGRADE_KEY" _Action="SHIRK_BEHAVIORSTATE" _CoolTimeType="SHIRK" _CoolTime="0.3" _ConsumeStamina="100" _BotMoveSkill="True" _BotWallMove="True" _BotEvadeSkill="True" />
   </INFO>
   <INFO ID="180410010" _DocID="100000041">
     <ST_COMMONSKILL _Group="SKILL_GROUP_CHARACTER" _Type="SKILL_TYPE_NORMAL" _RequireClass="CLASS_TYPE_SHUTTLE" _HasMove="1" _IconAlias="shuttle_active_01" _Name="STR_SKILL_NAME_180410010" _Description="STR_SKILL_DESC_180410010" _UpgradeType="E_SKILL_UPGRADE_KEY" _Action="SKILL_1_BEHAVIORSTATE" _SmartCast="SKILL_SMARTCAST_BYOPTION" _SkillRangeSFX="Pc_Fx_SkillRange_Box_Normal" _SkillRangeLengthX="300" _SkillRangeLengthY="900" _CoolTimeType="SKILL_1" _CoolTime="11" _ConsumeRP="50" _AddGroggy="34">

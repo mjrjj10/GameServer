@@ -80,7 +80,7 @@ void World::UpdateUltimateGauges(f32 delta)
 		if(staminaMax > 0 && it->stamina < 0) { it->stamina = staminaMax; it->staminaDirty = true; }
 		if(manaMax > 0 && it->mana < 0) { it->mana = manaMax; it->manaDirty = true; }
 		for(int r = 0; r < 3; r++) {
-			if(resMax[r] > 0 && it->res[r] < 0) { it->res[r] = ResourceStartsFull(cls, r, RESOURCES[r].startFull) ? resMax[r] : 0; it->resDirty = true; }
+			if(resMax[r] > 0 && it->res[r] < 0) { it->res[r] = MasterStartResource(cls, r, resMax[r], ResourceStartsFull(cls, r, RESOURCES[r].startFull)); it->resDirty = true; }
 		}
 
 		const ActorMaster& sub = it->Sub();
@@ -98,7 +98,7 @@ void World::UpdateUltimateGauges(f32 delta)
 		}
 		for(int r = 0; r < 3; r++) {
 			if(benchResMax[r] <= 0 || it->benchRes[r] >= 0) continue;
-			it->benchRes[r] = ResourceStartsFull(benchCls, r, RESOURCES[r].startFull) ? benchResMax[r] : 0;
+			it->benchRes[r] = MasterStartResource(benchCls, r, benchResMax[r], ResourceStartsFull(benchCls, r, RESOURCES[r].startFull));
 			replication->SendStatToAll(sub.UID, RESOURCES[r].maxStat, it->benchRes[r], benchResMax[r]);
 		}
 
@@ -845,6 +845,28 @@ bool World::IsCarrying(const Player& player) const
 	return false;
 }
 
+ActorUID World::PickEntityAtCastPos(const Player& player, SkillID skillID, const vec3& castPos)
+{
+	const auto& content = GetGameXmlContent();
+	const GameXmlContent::SkillInput* in = content.FindSkillInput((i32)skillID);
+	if(!in || !in->pickedEntity || in->friendlyOnly || glm::length(vec2(castPos)) <= 1.0f) return ActorUID::INVALID;
+	const f32 reach = MAX(content.GetSkillTargetRange((i32)skillID) * 0.5f, 1.0f);
+	ActorUID best = ActorUID::INVALID;
+	f32 bestDist = 0;
+	foreach_const(e, players) {
+		if(e->dead || e->untargetable || !e->body || e->team == player.team || !(e->fogSeenBy & (1u << player.team))) continue;
+		const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(castPos)) - HitRadius(*e);
+		if(d <= reach && (best == ActorUID::INVALID || d < bestDist)) { best = e->Main().UID; bestDist = d; }
+	}
+	foreach_const(npc, actorNpcList) {
+		if(!NpcHittableBy(*npc, player)) continue;
+		const f32 d = glm::length(vec2(npc->pos) - vec2(castPos)) - NpcHitRadius(*npc);
+		if(d <= reach && (best == ActorUID::INVALID || d < bestDist)) { best = npc->UID; bestDist = d; }
+	}
+	if(best != ActorUID::INVALID) LOG("Skill :: %ls skill=%d picked entity %u at the cast position", player.name.data(), (i32)skillID, (u32)best);
+	return best;
+}
+
 void World::ReleaseCast(Player& player)
 {
 	const Player::Casting c = player.casting;
@@ -854,7 +876,16 @@ void World::ReleaseCast(Player& player)
 	LOG("Cast :: %ls skill=%d release", player.name.data(), (i32)c.skillID);
 	EndCastStatuses(player, c);
 	GroupTeleport(player, c.skillID, c.castPos);
-	if(f->second.action == ActionStateID::INVALID) return;
+	if(f->second.action == ActionStateID::INVALID) {
+		Replication::SkillExec exec = {};
+		exec.casterUID = player.Main().UID;
+		exec.skillID = c.skillID;
+		exec.actionID = ActionStateID::INVALID;
+		exec.castPos = vec3(0);
+		replication->FramePushSkillExec(exec);
+		LOG("Cast :: %ls skill=%d has no action, empty execute sent", player.name.data(), (i32)c.skillID);
+		return;
+	}
 	const GameXmlContent::SkillCast* sc = GetGameXmlContent().FindSkillCast((i32)c.skillID);
 	if(sc && sc->type == GameXmlContent::SkillCast::CHARGING && sc->maxChargingTime > 0 && sc->maxChargeRatio != sc->minChargeRatio) {
 		const f32 held = MIN((f32)TimeDiffSec(TimeDiff(c.startedAt, localTime)) / sc->maxChargingTime, 1.0f);
@@ -865,7 +896,7 @@ void World::ReleaseCast(Player& player)
 	if(player.clientHd == ClientHandle::INVALID && c.type != GameXmlContent::SkillCast::DELAY && !c.lifted && glm::length(vec2(c.castPos)) > 1.0f) {
 		const ActorUID aim = c.target != ActorUID::INVALID ? c.target : player.botAimTarget;
 		const ActorMaster* tm = aim != ActorUID::INVALID ? FindMasterActor(aim) : nullptr;
-		if(tm && !tm->parent->dead && !tm->parent->untargetable) {
+		if(tm && !tm->parent->dead && !tm->parent->untargetable && (tm->parent->team == player.team || (tm->parent->fogSeenBy & (1u << player.team)))) {
 			releasePos = tm->parent->body->GetWorldPos();
 			const f32 yaw = atan2f(releasePos.y - player.body->GetWorldPos().y, releasePos.x - player.body->GetWorldPos().x);
 			player.input.rot.upperYaw = yaw;
@@ -1069,6 +1100,10 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	const i32 damage = (i32)(PlayerSkillDamage(player, skillID) * player.castChargeRatio);
 	eastl::fixed_vector<ActorUID,8,false> liveTargets;
 	foreach_const(t, targets) if(!liveTargets.full() && (FindMasterActor(*t) || FindNpcActor(*t))) liveTargets.push_back(*t);
+	if(liveTargets.empty()) {
+		const ActorUID picked = PickEntityAtCastPos(player, skillID, castPos);
+		if(picked != ActorUID::INVALID) liveTargets.push_back(picked);
+	}
 	const ActorUID currentTarget = liveTargets.size() > 0 ? liveTargets[0] : ActorUID::INVALID;
 	u32 lockOnIndex = 0;
 	const i32 upgradeSummon = UpgradeSummon(player, (i32)skillID);
@@ -1143,7 +1178,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.castID = castID;
 			pr.damage = castCostLevel ? (i32)(damage * castCostLevel->damageRatio) : damage;
 			pr.castPos = castPos;
-			pr.angle = cmd->lowerDummyDir ? MovementYaw(player, angle) : angle;
+			pr.angle = cmd->lowerDummyDir && BurstsBackAfterThrough(skillID) ? angle + PI : (cmd->lowerDummyDir ? MovementYaw(player, angle) : angle);
 			pr.target = cmd->remote.targetPreset == ActionCommand::TargetPreset::MEMORIZED_TFT ? player.memorizedTarget : currentTarget;
 			if(cmd->remote.targetPreset == ActionCommand::TargetPreset::MULTI_LOCKON_FFF && liveTargets.size() > 0) pr.target = liveTargets[lockOnIndex++ % liveTargets.size()];
 			pr.atTarget = cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET;
