@@ -2825,7 +2825,7 @@
     </ST_COMMONSKILL>
   </INFO>
   <INFO ID="180430030" _DocID="100000043">
-    <ST_COMMONSKILL _Group="SKILL_GROUP_CHARACTER" _Type="SKILL_TYPE_NORMAL" _RequireClass="CLASS_TYPE_GATLING" _IconAlias="gatling_active_03" _Name="STR_SKILL_NAME_180430030" _Description="STR_SKILL_DESC_180430030" _UpgradeType="E_SKILL_UPGRADE_KEY" _Action="SKILL_3_BEHAVIORSTATE" _SmartCast="SKILL_SMARTCAST_BYOPTION" _SkillRangeSFX="Pc_Fx_Gatling_Skill3_SkillRange_sign180" _SkillRangeLengthX="584" _SkillRangeLengthY="584" _CoolTimeType="SKILL_3" _CoolTime="1" _ConsumeMP="200" _ConsumeBB="1" _AddGroggy="15">
+    <ST_COMMONSKILL _Group="SKILL_GROUP_CHARACTER" _Type="SKILL_TYPE_NORMAL" _RequireClass="CLASS_TYPE_GATLING" _IconAlias="gatling_active_03" _Name="STR_SKILL_NAME_180430030" _Description="STR_SKILL_DESC_180430030" _UpgradeType="E_SKILL_UPGRADE_KEY" _Action="SKILL_3_BEHAVIORSTATE" _SmartCast="SKILL_SMARTCAST_BYOPTION" _SkillRangeSFX="Pc_Fx_Gatling_Skill3_SkillRange_sign180" _SkillRangeLengthX="584" _SkillRangeLengthY="584" _CoolTimeType="SKILL_3" _CoolTime="18" _ConsumeMP="200" _AddGroggy="15">
       <_Target _SelectStateType="SKILL_TARGET_SELECT_STATE_BEFORECAST" _UXType="SKILL_CAST_MY_POSITION_DIRECTION" _BotSkillMaxDistance="584" />
     </ST_COMMONSKILL>
   </INFO>

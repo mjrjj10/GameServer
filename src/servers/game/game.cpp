@@ -1413,8 +1413,8 @@ void Game::OnPlayerSyncActionState(ClientHandle clientHd, ActorUID actorUID, Act
 	}
 
 	// TODO: check hacking
-	player.input.rot.bodyYaw = rotate;
-	player.input.rot.upperYaw = upperRotate;
+	player.input.rot.bodyYaw = MxmYawToWorldYaw(rotate);
+	player.input.rot.upperYaw = MxmYawToWorldYaw(upperRotate);
 	player.input.action = state;
 	player.input.actionParam1 = param1;
 	player.input.actionParam2 = param2;

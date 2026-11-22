@@ -251,16 +251,14 @@ bool World::PassiveBlocksCC(Player& target, const StatusInfo& info, f32* ccScale
 
 void World::PassiveOnCC(Player& target, const StatusInfo& info)
 {
-	if(info.kind != StatusInfo::Kind::HARD_CC && info.kind != StatusInfo::Kind::ROOT) return;
+	if(info.kind != StatusInfo::Kind::HARD_CC && info.kind != StatusInfo::Kind::ROOT && info.type != StatusType::SILENCE) return;
 	if(ShowcaseIsDummy(target)) return;
 	const ActiveStatus* st = FindPassiveOfType(target, StatusType::UNSHAKABLE);
 	if(!st) return;
-	if(target.cleanseCharges < 0) target.cleanseCharges = st->info->customInit;
 	const i32 defiance = (i32)st->info->ParamInt("_CustomAddStatusIndex");
-	if(target.cleanseCharges <= 0 || defiance == 0) return;
-	target.cleanseCharges--;
-	SendPassiveCounter(*st, target.cleanseCharges);
+	if(defiance == 0) return;
 	ActiveStatus* held = FindActiveStatus(target.index, defiance);
+	if(held && held->until > localTime && held->appliedAt >= localTime) return;
 	if(held && held->until > localTime) {
 		held->custom = MIN(held->custom + 1, MAX(held->info->customMax, 1));
 		SendPassiveCounter(*held, held->custom);
@@ -270,7 +268,7 @@ void World::PassiveOnCC(Player& target, const StatusInfo& info)
 		held = FindActiveStatus(target.index, defiance);
 		if(held && held->info) held->custom = MAX(held->info->customInit, 1);
 	}
-	LOG("Passive :: %ls struck by status %d gains defiance %d (charges left %d)", target.name.data(), info.ID, defiance, target.cleanseCharges);
+	LOG("Passive :: %ls struck by status %d gains defiance %d", target.name.data(), info.ID, defiance);
 }
 
 bool World::PassiveOnLethal(Player& target)
@@ -799,7 +797,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		}
 	}
 	f32 ccScale = 1.0f;
-	if(info && hostileSource && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT)) {
+	if(info && hostileSource && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT || info->type == StatusType::SILENCE)) {
 		foreach(it, activeStatuses) {
 			if(it->targetIndex != target.index || !it->info || it->info->type != StatusType::DEFIANCE || it->until <= localTime || it->appliedAt >= localTime) continue;
 			if(it->custom > 1) {
