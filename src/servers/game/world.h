@@ -1318,6 +1318,7 @@ private:
 	void TargetPositionMove(const Player& player, SkillID skillID, const GameXmlContent::Action& action, const vec3& castPos, f32* distance, vec2* gotoDir) const;
 	void StartCasting(Player& player, SkillID skillID, const GameXmlContent::SkillCast& cast, const vec3& castPos, Slice<const ActorUID> targets, const GameXmlContent::Action& action);
 	void UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType, const vec3& castPos, bool onHit = false);
+	void EndHitComboSlot(Player& player, SkillID skillID);
 	void QueueChildSkill(Player& player, ActionStateID actionState, const vec3& castPos, Slice<const ActorUID> targets);
 	void ExecuteSkillProgram(SkillProgram& prog);
 	void RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 cmdIndex, const vec2& dir);

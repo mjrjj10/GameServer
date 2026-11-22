@@ -902,6 +902,7 @@ void World::ReleaseCast(Player& player)
 	auto f = GetGameXmlContent().skillMap.find(c.skillID);
 	if(f == GetGameXmlContent().skillMap.end() || player.dead) return;
 	LOG("Cast :: %ls skill=%d release", player.name.data(), (i32)c.skillID);
+	EndHitComboSlot(player, c.skillID);
 	EndCastStatuses(player, c);
 	GroupTeleport(player, c.skillID, c.castPos);
 	if(f->second.action == ActionStateID::INVALID) {
@@ -1028,6 +1029,7 @@ void World::CancelCast(Player& player, const char* reason, ClientHandle skipHd)
 	replication->SendCancelSkillToAll(player.Main().UID, player.casting.skillID, skipHd);
 	const Player::Casting c = player.casting;
 	player.casting.skillID = SkillID::INVALID;
+	EndHitComboSlot(player, c.skillID);
 	if(!player.dead) EndCastStatuses(player, c);
 }
 

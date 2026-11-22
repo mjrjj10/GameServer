@@ -1314,7 +1314,8 @@ void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType
 	const auto& content = GetGameXmlContent();
 	const i32 chainSlot = skillType == SkillType::COMBO ? player.comboSlot : -1;
 	const SkillID chainBase = player.comboBase;
-	if(player.comboSlot >= 0 && (skillType == SkillType::COMBO || skillID == player.comboSkill)) {
+	const bool heldHitCombo = skillID == player.comboSkill && content.GetHitTargetComboMs((i32)skillID) > 0;
+	if(player.comboSlot >= 0 && !heldHitCombo && (skillType == SkillType::COMBO || skillID == player.comboSkill)) {
 		replication->SendChangeSkillSlot(player.clientHd, player.Main().UID, player.comboSlot, player.comboBase, 0);
 		LOG("Combo :: %ls slot %d back to %d", player.name.data(), player.comboSlot, (i32)player.comboBase);
 		player.comboSlot = -1;
@@ -1347,6 +1348,14 @@ void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType
 			player.comboAutoAt = autoMs > 0 ? TimeAdd(localTime, TimeMsToTime((f64)autoMs)) : Time::ZERO;
 		}
 	}
+}
+
+void World::EndHitComboSlot(Player& player, SkillID skillID)
+{
+	if(player.comboSlot < 0 || player.comboSkill != skillID || GetGameXmlContent().GetHitTargetComboMs((i32)skillID) <= 0) return;
+	replication->SendChangeSkillSlot(player.clientHd, player.Main().UID, player.comboSlot, player.comboBase, 0);
+	LOG("Combo :: %ls slot %d back to %d at the end of %d", player.name.data(), player.comboSlot, (i32)player.comboBase, (i32)skillID);
+	player.comboSlot = -1;
 }
 
 void World::QueueChildSkill(Player& player, ActionStateID actionState, const vec3& castPos, Slice<const ActorUID> targets)
