@@ -865,6 +865,11 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		ToggleOn(player, skillID, castPos);
 	}
 	if(!followUp && player.casting.skillID == skillID && player.casting.type != GameXmlContent::SkillCast::DELAY) {
+		const GameXmlContent::SkillInput* pressedIn = content.FindSkillInput((i32)skillID);
+		if(player.clientHd != ClientHandle::INVALID && player.casting.type == GameXmlContent::SkillCast::LIMIT && targets.size() == 0 && player.casting.target == ActorUID::INVALID && pressedIn && pressedIn->pickedEntity) {
+			CancelCast(player, "pressed again without a target");
+			return;
+		}
 		ReleaseCast(player);
 		return;
 	}
