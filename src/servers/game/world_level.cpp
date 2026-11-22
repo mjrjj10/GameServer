@@ -284,6 +284,14 @@ u32 World::ResetTraits(Player& player, ActorUID characterUID)
 	return 0;
 }
 
+void World::EnterDeathSafeZone(Player& player)
+{
+	if(!map || !map->ingameLevels || player.inSafeZone) return;
+	player.inSafeZone = true;
+	if(player.clientHd != ClientHandle::INVALID) replication->SendSafeZone(player.clientHd, player.userID, true);
+	else BotSpendTraits(player);
+}
+
 static const u32 VOTE_TYPE_SURRENDER = 0;
 static const u32 VOTE_TYPE_TITAN = 1;
 static const i32 TITAN_READY_STATUS = 1239000002;
@@ -375,7 +383,7 @@ void World::FinishVote(i32 team, bool passed)
 	if(vote.type == VOTE_TYPE_TITAN && vote.requestor >= 0) ConsumeStatus((u32)vote.requestor, TITAN_READY_STATUS);
 	if(!passed) return;
 	if(vote.type == VOTE_TYPE_SURRENDER && winnerTeam < 0) winnerTeam = team == 0 ? 1 : 0;
-	if(vote.type == VOTE_TYPE_TITAN && vote.requestor >= 0) TransformTitan(players[vote.requestor], 0, true);
+	if(vote.type == VOTE_TYPE_TITAN && vote.requestor >= 0) players[vote.requestor].titanTransformAt = localTime;
 }
 
 void World::UpdateVotes()
@@ -559,6 +567,7 @@ void World::TransformTitan(Player& player, i32 formIndex, bool initial)
 	if(player.casting.skillID != SkillID::INVALID) CancelCast(player, "titan form");
 	player.botComboSkill = SkillID::INVALID;
 	if(initial) {
+		if(chara.stance != 0) SetStance(chara, 0, 0, 0, false);
 		AddTeamPieces((i32)player.team, -titan.cost);
 		player.titanSavedHp = chara.hp;
 		if(player.clientHd == ClientHandle::INVALID) player.botSkillReady.fill(Time::ZERO);
@@ -623,9 +632,28 @@ void World::TitanOnCast(Player& player, SkillID skill)
 	player.titanModeAt = TimeAdd(localTime, TimeMsToTime(TITAN_MODE_SWITCH_DELAY_MS));
 }
 
+static const i32 TITAN_SKILL_FAMILY = 1000;
+
+bool World::TitanSkillAllowed(const Player& player, SkillID skill) const
+{
+	const auto& forms = GetGameXmlContent().titan.forms;
+	const i32 family = (i32)skill / TITAN_SKILL_FAMILY;
+	bool titanSkill = false;
+	foreach_const(f, forms) if(f->skill1 / TITAN_SKILL_FAMILY == family) titanSkill = true;
+	if(player.titanForm < 0 || player.titanForm >= (i32)forms.size()) return !titanSkill;
+	if(titanSkill) return forms[player.titanForm].skill1 / TITAN_SKILL_FAMILY == family;
+	if(player.Main().classType == ClassType::NONE) return true;
+	foreach_const(sid, GetGameXmlContent().GetMaster(player.Main().classType).skillIDs) if(*sid == skill) return false;
+	return true;
+}
+
 void World::UpdateTitans()
 {
 	foreach(p, players) {
+		if(p->titanTransformAt != Time::ZERO && localTime > p->titanTransformAt) {
+			p->titanTransformAt = Time::ZERO;
+			if(!p->dead) TransformTitan(*p, 0, true);
+		}
 		if(p->titanForm < 0) continue;
 		if(p->titanUntil != Time::ZERO && localTime >= p->titanUntil) {
 			RevertTitan(*p);
@@ -638,8 +666,6 @@ void World::UpdateTitans()
 		}
 	}
 }
-
-static const f64 BOT_TITAN_HUMAN_GRACE_SEC = 20.0;
 
 void World::UpdateBotTitanVotes()
 {
@@ -654,12 +680,12 @@ void World::UpdateBotTitanVotes()
 		Player* pick = nullptr;
 		foreach(p, players) {
 			if(p->team != team) continue;
-			if(p->titanForm >= 0) titanActive = true;
+			if(p->titanForm >= 0 || p->titanTransformAt != Time::ZERO) titanActive = true;
 			if(p->clientHd != ClientHandle::INVALID) human = true;
 			else if(!p->dead && localTime >= p->titanVoteBlockedUntil && (!pick || p->Main().hp > pick->Main().hp)) pick = &*p;
 		}
 		if(titanActive || !pick) continue;
-		if(human && TimeDiffSec(TimeDiff(teamTitanReadyAt[team], localTime)) < BOT_TITAN_HUMAN_GRACE_SEC) continue;
+		if(human) continue;
 		LOG("Titan :: bot %ls asks for the Titan (team %d, %d pieces)", pick->name.data(), team, teamTitanPieces[team]);
 		RequestVote(*pick, VOTE_TYPE_TITAN);
 	}

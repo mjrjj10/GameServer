@@ -180,7 +180,7 @@ struct SummonInfo
 
 struct StatusMod
 {
-	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE, ATTACK, MOVESPEED, REFLECT_DAMAGE_RATIO, DEFENCE, MANAREGEN, RAGEREGEN, STAMINA, REMOTESPEED, STAMINAREGEN, ENERGYREGEN, TAG_HEALTHREGEN, TAG_COOLTIME, HEALTHREGEN, LIFESTEAL, DAMAGE_TAKEN, RAGE, SKILL_COOLTIME_DISCOUNT, SKILLDAMAGE_REDUCE };
+	enum Stat: u8 { OTHER = 0, SHIELD_DEFENCE, HEALTH, SKILLPOWER, CRITICALRATE, SKILL_CRITICALRATE, ATTACK, MOVESPEED, REFLECT_DAMAGE_RATIO, DEFENCE, MANAREGEN, RAGEREGEN, STAMINA, REMOTESPEED, STAMINAREGEN, ENERGYREGEN, TAG_HEALTHREGEN, TAG_COOLTIME, HEALTHREGEN, LIFESTEAL, DAMAGE_TAKEN, RAGE, SKILL_COOLTIME_DISCOUNT, SKILLDAMAGE_REDUCE, RESTORE_HEALTH, RESTORE_RESOURCES, MANA };
 	Stat stat = OTHER;
 	bool regen = false;
 	bool mul = false;
@@ -311,7 +311,7 @@ struct StatusInfo
 	i32 skillIndex = 0;
 	ActionStateID motionAction = ActionStateID::INVALID;
 	ActionStateID npcMotion = ActionStateID::INVALID;
-	enum TagMode: u8 { TAG_STAY, TAG_MOVE, TAG_DROP };
+	enum TagMode: u8 { TAG_STAY, TAG_MOVE, TAG_DROP, TAG_BOTH };
 	TagMode tagMode = TAG_STAY;
 	f32 intervalSec = 0;
 	f32 distance = 0;
@@ -425,6 +425,7 @@ struct WeaponFiring
 	f32 firingMoveSpeedMul = 0;
 	eastl::fixed_vector<RemoteIdx,4,false> charge;
 	eastl::fixed_vector<f32,4,false> chargeTime;
+	eastl::fixed_vector<i32,4,false> chargeStatus;
 	eastl::fixed_string<char,32,false> chargeDummy;
 	i32 countRate = 0;
 	RemoteIdx countRemote = RemoteIdx::INVALID;
@@ -516,6 +517,8 @@ struct Remote
 	i32 skillIndex = 0;
 	bool useOwnerRemoteSpeedRatio = false;
 	f32 orbitRadius = 0;
+	f32 orbitInitDeg = 0;
+	f32 orbitDegPerSec = 0;
 	f32 lifeTime = 0;
 	i32 activateCount = 1;
 	i32 penetrationCount = 0;
@@ -533,6 +536,7 @@ struct Remote
 	f32 statusTypeMultiplier = 1;
 	f32 hitDamageMultiplier = 0;
 	bool targetOnly = false;
+	bool prioritySearchPC = false;
 	bool vsRemote = false;
 	bool canReflect = false;
 	bool reflectUse = false;
@@ -616,11 +620,14 @@ struct Remote
 	f32 homingAngle = 0;
 	f32 homingTime = 0;
 	bool homingLockOn = false;
+	bool searchTarget = false;
 	f32 angularVel = 0;
 	f32 initSpeed = 0;
 	f32 forceScale = 0;
 	f32 forceDelay = 0;
 	f32 criticalRate = 0;
+	f32 addGroggy = 0;
+	bool useSkillGroggy = false;
 	f32 hitCriticalRate = 0;
 	f32 maxHitCriticalRate = 0;
 	i32 onHitOwnerStatus = 0;
@@ -1385,7 +1392,7 @@ struct GameXmlContent
 		f32 allyBuffRadius = 0;
 		f32 allyBuffInterval = 0;
 		eastl::fixed_vector<i32,4,false> groggyStatuses;
-		eastl::fixed_vector<StatusType,8,false> ccTypes;
+		eastl::fixed_vector<StatusType,16,false> ccTypes;
 		eastl::fixed_vector<u32,10,false> enemyTags;
 		eastl::array<const MonsterAttack*,MonsterAttack::_COUNT> byTarget = {};
 		eastl::fixed_vector<MonsterAttack,24,false> attacks;
@@ -1490,6 +1497,16 @@ struct GameXmlContent
 	u8 FindMonsterRank(i32 creatureID) const { auto f = monsterRank.find(creatureID); return f == monsterRank.end() ? NO_RANK : f->second; }
 	static const u8 NO_RANK = 0xff;
 	bool LoadMonsterRanks();
+	struct ResistRule { u32 typeKey = 0; u8 rate = 0; u8 value = 0; };
+	eastl::hash_map<i32, eastl::fixed_vector<ResistRule,48,false>> resistRules;
+	const ResistRule* FindResist(i32 defenceStatus, u32 typeKey) const
+	{
+		auto f = resistRules.find(defenceStatus);
+		if(f == resistRules.end()) return nullptr;
+		foreach_const(r, f->second) if(r->typeKey == typeKey) return &*r;
+		return nullptr;
+	}
+	bool LoadResist();
 	struct GameEvent
 	{
 		i32 index = 0;
@@ -1590,7 +1607,7 @@ struct GameXmlContent
 	bool SkillActionKnown(ClassType classType, ActionStateID actionID, i8 stance = 0) const;
 	bool CheckSkillActions();
 	eastl::hash_set<u64> skillActionGaps;
-	struct SkillInput { bool needsClick = false; bool directionOnly = false; bool friendlyOnly = false; bool positionDirection = false; bool selfPosition = false; bool teleportEntity = false; bool allEnemies = false; bool pickedEntity = false; bool lockOn = false; bool minHpFriend = false; bool takesTarget = false; bool petCaster = false; i32 checkStatus = 0; u8 obstructMove = 0; bool obstructSight = false; i32 coolTimeID = 0; i32 resetCoolTimeID = 0; f32 coolTime = 0; f32 globalCoolTime = 0; f32 minDistance = 0; f32 maxDistance = 0; };
+	struct SkillInput { bool needsClick = false; bool directionOnly = false; bool friendlyOnly = false; bool positionDirection = false; bool positionRotation = false; bool selfPosition = false; bool teleportEntity = false; bool allEnemies = false; bool pickedEntity = false; bool lockOn = false; bool minHpFriend = false; bool takesTarget = false; bool petCaster = false; i32 checkStatus = 0; u8 obstructMove = 0; bool obstructSight = false; i32 coolTimeID = 0; i32 resetCoolTimeID = 0; f32 coolTime = 0; f32 globalCoolTime = 0; f32 minDistance = 0; f32 maxDistance = 0; f32 addGroggy = 0; };
 	const SkillInput* FindSkillInput(i32 skillID) const { auto f = skillInput.find(skillID); return f == skillInput.end() ? nullptr : &f->second; }
 	struct SkillCast { enum Type: u8 { DELAY, LIMIT, CHARGING } type = DELAY; f32 time = 0; ActionStateID action = ActionStateID::INVALID; bool interruptByMove = false; bool interruptByLostTarget = false; bool interruptByAttacked = false; bool interruptByOtherSkill = false; f32 maxChargingTime = 0; f32 minChargeRatio = 1; f32 maxChargeRatio = 1; };
 	const SkillCast* FindSkillCast(i32 skillID) const { auto f = skillCast.find(skillID); return f == skillCast.end() ? nullptr : &f->second; }
@@ -1663,6 +1680,7 @@ struct GameXmlContent
 	f32 GetWeaponAttack(i32 weaponID) const { auto f = weaponAttack.find(weaponID); return f == weaponAttack.end() ? 0.0f : f->second; }
 	const eastl::fixed_vector<i32,4,false>* FindPassiveStatuses(ClassType c) const { auto f = passiveStatuses.find((i32)c); return f == passiveStatuses.end() ? nullptr : &f->second; }
 	const WeaponHeatInfo* FindWeaponHeat(i32 weaponID) const { auto f = weaponHeat.find(weaponID); return f == weaponHeat.end() ? nullptr : &f->second; }
+	const WeaponHeatInfo* FindWeaponHeat(i32 weaponID, i8 stance) const { if(stance > 0) { auto f = weaponStanceHeat.find(((u32)weaponID << 4) | (u32)stance); if(f != weaponStanceHeat.end()) return f->second.consumption > 0 ? &f->second : nullptr; } return FindWeaponHeat(weaponID); }
 	f32 GetSkillBaseDamage(i32 skillID) const { auto f = skillBaseDamage.find(skillID); return f == skillBaseDamage.end() ? 0 : f->second; }
 	f32 GetSkillBasePowerMul(i32 skillID) const { auto f = skillBasePowerMul.find(skillID); if(f != skillBasePowerMul.end()) return f->second; const i32 combo = GetComboBaseSkill(skillID); return combo != 0 && combo != skillID ? GetSkillBasePowerMul(combo) : 0.0f; }
 	struct StatusReplace {
@@ -1885,6 +1903,7 @@ private:
 	eastl::hash_map<i32, WeaponFiring> weaponFiring;
 	eastl::hash_map<u32, WeaponFiring> weaponStanceFiring;
 	eastl::hash_map<u32, f32> weaponStanceFireDelay;
+	eastl::hash_map<u32, WeaponHeatInfo> weaponStanceHeat;
 	eastl::hash_map<i32, f32> weaponAttack;
 	eastl::hash_set<i32> repeatHitReduced;
 	eastl::hash_map<u32, i32> childSkill;

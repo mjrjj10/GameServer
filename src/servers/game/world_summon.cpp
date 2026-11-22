@@ -48,7 +48,7 @@ static f32 SummonPassStart(const SummonInfo& info, i32 state, i32 pass)
 	return start;
 }
 
-void World::RunSummonState(ActorNpc& npc, i32 state)
+void World::RunSummonState(ActorNpc& npc, i32 state, const f32* yawOverride)
 {
 	const SummonInfo* info = GetGameXmlContent().FindSummon((i32)npc.docID);
 	if(!info || state < 0 || state > SUMMON_STATE_LIFTED) return;
@@ -64,9 +64,10 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 		ActorMaster* m = FindMasterActor(npc.skillTarget);
 		if(m && !m->parent->dead) current = m->parent;
 	}
-	f32 yaw = owner.input.rot.upperYaw;
+	f32 yaw = yawOverride ? *yawOverride : owner.input.rot.upperYaw;
 	const ActorNpc* targetNpc = npc.skillTarget != ActorUID::INVALID && (!current || current == &owner) ? FindNpcActor(npc.skillTarget) : nullptr;
-	if(current && current != &owner) {
+	if(yawOverride) {}
+	else if(current && current != &owner) {
 		const vec2 rel = vec2(current->body->GetWorldPos()) - vec2(npc.pos);
 		if(glm::length(rel) > 1.0f) yaw = atan2f(rel.y, rel.x);
 	}
@@ -79,7 +80,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 		name.sprintf("SKILL_%d_BEHAVIORSTATE", state);
 		const ActionStateID action = ActionStateFromString(name.c_str());
 		const vec3 targetPos = targetNpc ? targetNpc->pos : (current ? current->body->GetWorldPos() : npc.pos);
-		if(npc.skillTarget != ActorUID::INVALID && current && current != &owner) {
+		if(npc.skillTarget != ActorUID::INVALID && ((current && current != &owner) || targetNpc)) {
 			f32 speed = 0;
 			foreach_const(c, info->skillStates[state]) {
 				if(c->kind != SummonCommand::REMOTE) continue;
@@ -87,7 +88,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 				if(r && r->behaviorType == Remote::BehaviorType::TARGET && r->maxSpeed > 0) speed = MAX(speed, r->maxSpeed);
 			}
 			if(speed > 0) {
-				const vec3 goal = current->body->GetWorldPos();
+				const vec3 goal = targetPos;
 				replication->SendNpcMoveToAll(npc.UID, npc.pos, goal, yaw, speed);
 				LOG("Summon :: creature=%d moves to its target at %.0f", (i32)npc.docID, speed);
 				npc.pos = goal;
@@ -125,7 +126,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state)
 			pc.yaw = yaw;
 			pc.skill = info->skills.empty() ? 0 : info->skills[0];
 			pc.until = npc.despawnAt;
-			pc.target = current && current != &owner ? current->Main().UID : (npc.ai == SummonInfo::AI_CHASE && FindNpcActor(npc.chaseTarget) ? npc.chaseTarget : ActorUID::INVALID);
+			pc.target = current && current != &owner ? current->Main().UID : (targetNpc ? targetNpc->UID : (npc.ai == SummonInfo::AI_CHASE && FindNpcActor(npc.chaseTarget) ? npc.chaseTarget : ActorUID::INVALID));
 			pc.source = npc.UID;
 			pc.aim = npc.aimPos;
 			pendingSummonCommands.push_back(pc);
@@ -193,6 +194,18 @@ void World::ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos)
 	}
 	f32 travel = 0;
 	foreach_const(c, info->skillStates[child]) if(c->kind == SummonCommand::REMOTE) { travel = c->delay; break; }
+	const GameXmlContent::SkillInput* castIn = GetGameXmlContent().FindSkillInput((i32)owner.lastCastSkill);
+	if(castIn && castIn->positionRotation) {
+		const vec2 aim = vec2(pos) - vec2(npc->pos);
+		const bool turned = glm::length(aim) > 1.0f;
+		if(turned) {
+			npc->rot.z = atan2f(aim.y, aim.x);
+			replication->SendNpcTurnToAll(npc->UID, npc->rot.z);
+		}
+		LOG("Summon :: %ls child SKILL_%d on its creature=%d, turns to (%.0f, %.0f)", owner.name.data(), child, (i32)npc->docID, pos.x, pos.y);
+		RunSummonState(*npc, child, turned ? &npc->rot.z : nullptr);
+		return;
+	}
 	const vec3 goal = vec3(vec2(pos), npc->pos.z);
 	const f32 dist = glm::length(vec2(goal) - vec2(npc->pos));
 	LOG("Summon :: %ls child SKILL_%d on its creature=%d, flies %.0f in %.2fs", owner.name.data(), child, (i32)npc->docID, dist, travel);
@@ -317,6 +330,35 @@ void World::WanderNpc(ActorNpc& npc, f32 moveSpeed, f32 delta)
 	npc.rot.z = atan2f(rel.y, rel.x);
 }
 
+void World::FleeOnSelfFear(ActorNpc& npc, f32 delta)
+{
+	const auto& content = GetGameXmlContent();
+	const StatusInfo* fear = nullptr;
+	foreach_const(ns, npcStatuses) {
+		if(ns->npcUID != npc.UID || ns->casterUID != npc.UID || localTime >= ns->until) continue;
+		const StatusInfo* st = content.FindStatus(ns->statusID);
+		if(st && st->type == StatusType::FEAR) fear = st;
+	}
+	const SummonInfo* info = fear ? content.FindSummon((i32)npc.docID) : nullptr;
+	if(!info || info->moveSpeed <= 0) return;
+	if(!npc.legMoving || localTime >= npc.wanderResumeAt) {
+		const f32 angle = (f32)(RandUint() % 3600) * PI / 1800.0f;
+		const f32 legSec = MAX(fear->intervalSec, 0.1f);
+		npc.legMoving = false;
+		SyncNpcLeg(npc, vec3(vec2(npc.pos) + vec2(cosf(angle), sinf(angle)) * info->moveSpeed * legSec, npc.pos.z), info->moveSpeed);
+		npc.wanderResumeAt = TimeAdd(localTime, TimeMsToTime(legSec * 1000.0));
+	}
+	const vec2 rel = vec2(npc.legGoal) - vec2(npc.pos);
+	const f32 dist = glm::length(rel);
+	const f32 step = info->moveSpeed * delta;
+	if(dist <= step) {
+		npc.pos = vec3(vec2(npc.legGoal), npc.pos.z);
+		return;
+	}
+	npc.pos += vec3(rel / dist * step, 0);
+	npc.rot.z = atan2f(rel.y, rel.x);
+}
+
 void World::StopNpcLeg(ActorNpc& npc)
 {
 	if(!npc.legMoving) return;
@@ -409,7 +451,10 @@ void World::UpdateSummonAi(f32 delta)
 			UpdateSummonAttack(npc, delta);
 			continue;
 		}
-		if(npc.ai == SummonInfo::AI_NONE) continue;
+		if(npc.ai == SummonInfo::AI_NONE) {
+			if(npc.ownerUID != ActorUID::INVALID && npc.removeAt == Time::ZERO && (npc.despawnAt == Time::ZERO || localTime < npc.despawnAt)) FleeOnSelfFear(npc, delta);
+			continue;
+		}
 		if(npc.despawnAt != Time::ZERO && localTime >= npc.despawnAt) continue;
 		const SummonInfo* info = content.FindSummon((i32)npc.docID);
 		if(!info) continue;

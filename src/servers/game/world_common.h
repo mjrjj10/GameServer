@@ -102,7 +102,7 @@ static inline const WeaponHeatInfo* ActiveWeaponHeat(const World::Player& player
 {
 	const u32 m = player.mainCharaID & 1;
 	const WeaponIndex weapon = m == 0 ? player.mainWeapon : player.subWeapon;
-	return GetGameXmlContent().FindWeaponHeat((i32)weapon);
+	return GetGameXmlContent().FindWeaponHeat((i32)weapon, player.Main().stance);
 }
 
 static inline f32 CurrentHeat(const World::Player& player, const WeaponHeatInfo& h, Time now)

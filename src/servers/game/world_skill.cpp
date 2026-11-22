@@ -113,7 +113,7 @@ void World::UpdateUltimateGauges(f32 delta)
 		}
 
 		const f32 staminaRegen = (MasterStat(cls, STAT_STAMINAREGEN) + StatBonus(*it, STAT_STAMINAREGEN) + StatusRegenBonus(*it, StatusMod::STAMINAREGEN, false)) * MAX(1.0f + StatusRegenBonus(*it, StatusMod::STAMINA, true) / 100.0f, 0.0f);
-		const f32 manaRegen = MasterStat(cls, STAT_MANAREGEN) + StatBonus(*it, STAT_MANAREGEN) + StatusRegenBonus(*it, StatusMod::MANAREGEN, false);
+		const f32 manaRegen = (MasterStat(cls, STAT_MANAREGEN) + StatBonus(*it, STAT_MANAREGEN) + StatusRegenBonus(*it, StatusMod::MANAREGEN, false)) * MAX(1.0f + StatusRegenBonus(*it, StatusMod::MANAREGEN, true) / 100.0f, 0.0f);
 		const f32 rageRegen = MasterStat(cls, RESOURCES[1].regenStat) + StatusRegenBonus(*it, StatusMod::RAGEREGEN, false);
 		const f32 energyRegen = MasterStat(cls, RESOURCES[0].regenStat) + StatusRegenBonus(*it, StatusMod::ENERGYREGEN, false);
 		{
@@ -416,7 +416,7 @@ void World::ToggleOn(Player& player, SkillID skillID, const vec3& castPos)
 	foreach_const(id, tg->remotes) {
 		i32 rid = *id;
 		if(mods) foreach_const(rr, mods->remoteReplace) if(rr->first == rid) rid = rr->second;
-		SpawnRemote(player.index, RemoteIdx(rid), pos, vec2(cosf(yaw), sinf(yaw)), ActorUID::INVALID, skillID, player.toggleCastID, (i32)SkillDamage(skillID), true, nullptr, 0, player.clientHd != ClientHandle::INVALID);
+		SpawnRemote(player.index, RemoteIdx(rid), pos, vec2(cosf(yaw), sinf(yaw)), ActorUID::INVALID, skillID, player.toggleCastID, (i32)SkillDamage(skillID), true, nullptr, 0, false);
 	}
 	player.toggleStatuses.clear();
 	foreach_const(id, tg->statuses) {
@@ -557,8 +557,15 @@ void World::TrackNpcSelfStatus(ActorUID npcUID, const StatusInfo& info)
 bool World::NpcResistsDebuff(const ActorNpc& npc, const StatusInfo* info, bool hostile) const
 {
 	static const i32 MEASURED_SLOW_IMMUNE_DEFENCE_STATUSES[] = { 400000140, 400000160 };
-	if(!info || !(info->type == StatusType::SLOW || (info->type == StatusType::STAT && (info->isDebuff || hostile)))) return false;
-	const i32 defence = GetGameXmlContent().CreatureDefenceStatus((i32)npc.docID);
+	if(!info || !(hostile || info->isDebuff)) return false;
+	const GameXmlContent& content = GetGameXmlContent();
+	const i32 defence = content.CreatureDefenceStatus((i32)npc.docID);
+	if(defence == 0) return false;
+	if(!content.resistRules.empty()) {
+		const GameXmlContent::ResistRule* rule = content.FindResist(defence, info->typeKey);
+		return rule && rule->rate > 0 && (rule->rate >= 100 || (i32)(RandUint() % 100) < (i32)rule->rate);
+	}
+	if(!(info->type == StatusType::SLOW || info->type == StatusType::STAT)) return false;
 	for(i32 i = 0; i < (i32)ARRAY_COUNT(MEASURED_SLOW_IMMUNE_DEFENCE_STATUSES); i++) if(defence == MEASURED_SLOW_IMMUNE_DEFENCE_STATUSES[i]) return true;
 	return false;
 }
@@ -745,8 +752,10 @@ void World::UpdateNpcDots()
 			const f32 perStack = info->dotDamage + npcStatuses[i].dotPower * info->dotMul;
 			const i32 tick = MAX((i32)perStack, 1) * npcStatuses[i].dotOverlap;
 			damageStatusID = npcStatuses[i].statusID;
+			const i32 hpBefore = npc->hp;
 			DamageNpc(caster, *npc, SkillID::INVALID, tick, nullptr);
 			damageStatusID = 0;
+			if(info->drainMultiplier > 0 && hpBefore > npc->hp && !caster.dead) HealPlayer(caster, caster, (i32)((hpBefore - npc->hp) * info->drainMultiplier));
 		}
 		if(npcStatuses[i].dotNextTick != Time::ZERO && npcStatuses[i].dotNextTick > npcStatuses[i].until) npcStatuses[i].dotNextTick = Time::ZERO;
 	}
@@ -755,10 +764,17 @@ void World::UpdateNpcDots()
 void World::UpdateNpcSpeedMods()
 {
 	eastl::fixed_vector<eastl::pair<ActorUID,f32>,64,false> sums;
+	eastl::fixed_vector<eastl::pair<ActorUID,u8>,64,false> controls;
 	foreach_const(ns, npcStatuses) {
 		if(localTime >= ns->until) continue;
 		const StatusInfo* info = GetGameXmlContent().FindStatus(ns->statusID);
 		if(!info) continue;
+		const u8 control = ns->casterUID == ns->npcUID ? 0 : info->type == StatusType::ROOT ? NPC_CONTROL_ROOT : info->type == StatusType::SILENCE ? NPC_CONTROL_SILENCE : 0;
+		if(control) {
+			bool known = false;
+			foreach(c, controls) if(c->first == ns->npcUID) { c->second |= control; known = true; break; }
+			if(!known && !controls.full()) controls.push_back({ ns->npcUID, control });
+		}
 		foreach_const(m, info->mods) {
 			if(m->stat != StatusMod::MOVESPEED || !m->mul || m->regen) continue;
 			bool found = false;
@@ -768,6 +784,16 @@ void World::UpdateNpcSpeedMods()
 	}
 	foreach(npc, actorNpcList) {
 		if(!npc->monsterAi) continue;
+		u8 control = 0;
+		foreach_const(c, controls) if(c->first == npc->UID) { control = c->second; break; }
+		if((control & NPC_CONTROL_ROOT) && !(npc->ccControl & NPC_CONTROL_ROOT) && (npc->monsterChasing || npc->monsterWalking || npc->monsterSpreading || npc->monsterReturning)) {
+			if(hostileMonsters) replication->SendNpcLegStopToAll(npc->UID, npc->pos, npc->rot.z, true);
+			else replication->SendMonsterMoveToAll(npc->UID, npc->pos, npc->pos, npc->rot.z, 0.0f, true);
+			npc->monsterChasing = false;
+			npc->monsterWalking = false;
+			npc->monsterSpreading = false;
+		}
+		npc->ccControl = control;
 		f32 sum = 0;
 		foreach_const(s, sums) if(s->first == npc->UID) { sum = s->second; break; }
 		const f32 mul = MAX(1.0f + sum / 100.0f, MEASURED_NPC_SPEED_MUL_MIN);
@@ -903,6 +929,14 @@ void World::ReleaseCast(Player& player)
 			player.input.rot.upperYaw = yaw;
 			player.input.rot.bodyYaw = yaw;
 			player.weaponAimYaw = yaw;
+		}
+	}
+	if(player.clientHd != ClientHandle::INVALID && c.type == GameXmlContent::SkillCast::LIMIT) {
+		foreach_const(r, remoteInsts) {
+			if(r->ownerIndex != player.index || r->skillID != c.skillID || !r->remote || r->remote->behaviorType != Remote::BehaviorType::CASTER_TARGET) continue;
+			LOG("Cast :: %ls skill=%d released at its indicator (%.0f, %.0f), client pos (%.0f, %.0f)", player.name.data(), (i32)c.skillID, r->pos.x, r->pos.y, releasePos.x, releasePos.y);
+			releasePos = vec3(vec2(r->pos), releasePos.z);
+			break;
 		}
 	}
 	PlayerCastSkill(player, c.skillID, releasePos, Slice<const ActorUID>(&c.target, c.target != ActorUID::INVALID ? 1 : 0), 0, f->second.action);
@@ -1106,6 +1140,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		if(picked != ActorUID::INVALID) liveTargets.push_back(picked);
 	}
 	const ActorUID currentTarget = liveTargets.size() > 0 ? liveTargets[0] : ActorUID::INVALID;
+	const ActorUID teleportTarget = currentTarget != ActorUID::INVALID || targets.empty() ? currentTarget : targets[0];
 	u32 lockOnIndex = 0;
 	const i32 upgradeSummon = UpgradeSummon(player, (i32)skillID);
 
@@ -1151,6 +1186,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			}
 		}
 	}
+	const bool passesFromActionStart = !animPasses.empty();
 	if(animPasses.empty()) animPasses.push_back({ anim, schedulePassOffset });
 	anim = animPasses[0].index;
 
@@ -1160,7 +1196,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	const i32 curAnim = animPasses[pass].index;
 	foreach_const(cmd, action.commands) {
 		if(cmd->animIndex != curAnim && (cmd->animIndex != -1 || pass > 0)) continue;
-		const f32 t = animPasses[pass].start + cmd->delay;
+		const f32 t = (cmd->animIndex == -1 && passesFromActionStart ? 0.0f : animPasses[pass].start) + cmd->delay;
 		if((cmd->type == ActionCommand::Type::REMOTE || cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET) && !pendingRemotes.full()) {
 			PendingRemote pr;
 			pr.casterMasterUID = player.Main().UID;
@@ -1205,13 +1241,13 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		if(cmd->type == ActionCommand::Type::TELEPORT && cmd->teleport.toLastChild && t <= 0.001f) teleportToChild = true;
 		if(cmd->type == ActionCommand::Type::TELEPORT && cmd->teleport.toSpawnPoint) teleportToSpawn = true;
 		if(cmd->type == ActionCommand::Type::TELEPORT && cmd->teleport.toTarget) {
-			if(t <= 0.001f || currentTarget == ActorUID::INVALID || pendingInteractions.full()) teleportToTarget = true;
+			if(t <= 0.001f || teleportTarget == ActorUID::INVALID || pendingInteractions.full()) teleportToTarget = true;
 			else {
 				PendingInteraction pt;
 				pt.time = TimeAdd(localTime, TimeMsToTime(t * 1000.0));
 				pt.ownerIndex = player.index;
 				pt.interactionID = 0;
-				pt.teleportTarget = currentTarget;
+				pt.teleportTarget = teleportTarget;
 				pendingInteractions.push_back(pt);
 			}
 		}
@@ -1335,7 +1371,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		}
 	}
 
-	if(teleportToTarget && !player.dead && currentTarget != ActorUID::INVALID) TeleportNextToTarget(player, currentTarget);
+	if(teleportToTarget && !player.dead && teleportTarget != ActorUID::INVALID) TeleportNextToTarget(player, teleportTarget);
 	if(teleportToSpawn && !player.dead) {
 		LOG("Teleport :: %ls back to spawn (%.0f, %.0f)", player.name.data(), player.spawnPos.x, player.spawnPos.y);
 		WarpPlayer(player, player.spawnPos, player.input.rot.upperYaw);
@@ -1417,10 +1453,12 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 		vec2 moveDir = distance < 0 ? -dir : dir;
 		f32 moveDist = fabsf(distance);
 		bool throughMove = false;
+		const GameXmlContent::SkillInput* castIn = content.FindSkillInput((i32)prog.skillID);
+		const bool castDirectionOnly = castIn && castIn->directionOnly;
 		foreach_const(c2, action.commands) {
 			if(c2->type != ActionCommand::Type::MOVE) continue;
 			const auto preset = c2->move.preset;
-			if((preset == ActionCommand::MovePreset::TARGET_POS || preset == ActionCommand::MovePreset::TARGET_POS_LEAP) && glm::length(vec2(prog.castPos)) > 1.0f) {
+			if((preset == ActionCommand::MovePreset::TARGET_POS || preset == ActionCommand::MovePreset::TARGET_POS_LEAP) && glm::length(vec2(prog.castPos)) > 1.0f && !castDirectionOnly) {
 				moveDist = glm::length(vec2(prog.castPos) - from);
 			}
 			const bool gotoTarget = preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET || preset == ActionCommand::MovePreset::GOTO_CURRENT_TARGET_CHASE ||
@@ -1440,9 +1478,10 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			}
 		}
 		if(moveDist > 999990.0f) moveDist = 0;
-		const bool fly = longJump && mover.clientHd != ClientHandle::INVALID;
-		if(moveDuration > 0.02f && moveDist > 0 && !fly) {
-			const vec3 reach = physics.FindMovePos(mover.body, vec3(moveDir * moveDist, 0), moveDuration);
+		const f32 lift = SkillMoveLift(prog.skillID);
+		const bool fly = lift > 0 || (longJump && mover.clientHd != ClientHandle::INVALID);
+		if(moveDuration > 0.02f && moveDist > 0 && (lift > 0 || !fly)) {
+			const vec3 reach = physics.FindSkillMovePos(mover.body, moveDir, moveDist, moveDuration, lift);
 			const f32 along = glm::dot(vec2(reach) - from, moveDir);
 			if(along >= 0 && along < moveDist - 1.0f) {
 				LOG("Dash :: %ls blocked after %.0f of %.0f", mover.name.data(), along, moveDist);
@@ -1482,6 +1521,7 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			mover.dashDone = 0;
 			mover.dashCurve = curve;
 			mover.dashFly = fly;
+			mover.dashLift = lift;
 			if(fly) LOG("Dash :: %ls long jump flies %.0f over obstacles", mover.name.data(), moveDist);
 			mover.dashAwaitClientStart = mover.clientHd != ClientHandle::INVALID;
 			mover.dashUntil = TimeAdd(localTime, TimeMsToTime(moveDuration * 1000.0));
@@ -1796,7 +1836,7 @@ void World::UpdateDynamicFog()
 		d->fogInit = true;
 		const bool jumpWall = content.dynamicJumpable.count((i32)d->docID) != 0;
 		const auto destroyable = content.dynamicDestroyHits.find((i32)d->docID);
-		const f32 hpLeft = jumpWall && destroyable != content.dynamicDestroyHits.end() && destroyable->second > 0 ? MAX(1.0f - (f32)d->destroyHits / (f32)destroyable->second, 0.0f) : 1.0f;
+		const f32 hpLeft = jumpWall && destroyable != content.dynamicDestroyHits.end() && destroyable->second > 0 ? MAX(1.0f - (f32)d->damageTaken / MEASURED_JUMPWALL_MAX_HP, 0.0f) : 1.0f;
 		foreach(viewer, players) {
 			if(viewer->clientHd == ClientHandle::INVALID || viewer->team > 1) continue;
 			const u32 bit = 1u << viewer->index;
@@ -1986,6 +2026,10 @@ void World::UpdateNpcFog()
 
 void World::StartSkillPoints()
 {
+	if(fullSkillPoints) {
+		foreach(it, players) if(it->clientHd != ClientHandle::INVALID) replication->SendSkillPoints(it->clientHd, it->userID, it->skillPoints);
+		return;
+	}
 	if(!ingameSkillPoints || (map && map->ingameLevels)) return;
 	foreach(it, players) it->nextSkillPointAt = TimeAdd(localTime, TimeMsToTime(SKILL_POINT_INTERVAL_MS));
 }
@@ -2055,6 +2099,44 @@ void World::SendSkillLevel(const Player& player, u32 masterIndex, SkillID skill)
 	eastl::fixed_vector<i32,8,false> props;
 	AcquiredProps(player, skill, props);
 	replication->SendPlayerSkillUpdateToAll(player.characters[masterIndex]->UID, skill, masterIndex == player.mainCharaID, Slice<const i32>(props.data(), props.size()));
+}
+
+void World::ResendSkillState(const Player& viewer)
+{
+	if(viewer.clientHd == ClientHandle::INVALID) return;
+	const i32 slots[] = { 0, 1, SKILL_UPGRADE_SLOT_ULTIMATE };
+	foreach_const(p, players) {
+		if(p->removed) continue;
+		for(u32 m = 0; m < 2; m++) {
+			for(const i32 slot : slots) {
+				const SkillID skill = SlotSkill(*p, m, slot);
+				if(skill == SkillID::INVALID || p->skillLevels.find((i32)skill) == p->skillLevels.end()) continue;
+				eastl::fixed_vector<i32,8,false> props;
+				AcquiredProps(*p, skill, props);
+				replication->SendPlayerSkillUpdate(viewer.clientHd, p->characters[m]->UID, skill, m == p->mainCharaID, Slice<const i32>(props.data(), props.size()));
+			}
+		}
+		if(map && map->ingameLevels) replication->SendLevelIngame(viewer.clientHd, p->userID, GetGameXmlContent().ingameLevel.ExpToLevelUp(p->ingameLevel), p->ingameLevel);
+	}
+	if(ingameSkillPoints) replication->SendSkillPoints(viewer.clientHd, viewer.userID, viewer.skillPoints);
+	for(u32 m = 0; m < 2; m++) if(viewer.characters[m]->traitPoints > 0) replication->SendCharacterPropertyPoint(viewer.clientHd, viewer.characters[m]->UID, viewer.characters[m]->traitPoints);
+	LOG("Upgrade :: %ls skill state resent (points %d)", viewer.name.data(), viewer.skillPoints);
+}
+
+i32 World::MaxSkillPoints(const Player& player) const
+{
+	const i32 slots[] = { 0, 1, SKILL_UPGRADE_SLOT_ULTIMATE };
+	i32 total = 0;
+	for(const i32 slot : slots) {
+		i32 most = 0;
+		for(u32 m = 0; m < 2; m++) {
+			const SkillID skill = SlotSkill(player, m, slot);
+			const auto* ups = skill != SkillID::INVALID ? GetGameXmlContent().FindSkillUpgrades((i32)skill) : nullptr;
+			if(ups) most = MAX(most, (i32)ups->size());
+		}
+		total += most;
+	}
+	return total;
 }
 
 void World::ResetSkillPoints(Player& player)
@@ -2179,10 +2261,13 @@ i32 World::UpgradeSummon(const Player& player, i32 skillID) const
 bool World::StatusConditionMet(const Player& caster, ActorUID targetUID, ActionCommand::StatusCondition condition) const
 {
 	const ActorMaster* tm = FindMasterActor(targetUID);
+	const ActorNpc* tn = tm ? nullptr : FindNpcActor(targetUID);
 	const ActorMaster& cm = caster.Main();
-	if(!tm || tm->hpMax <= 0 || cm.hpMax <= 0) return false;
-	const bool friendly = tm->parent->team == caster.team;
-	const bool bigger = (f32)tm->hp * (f32)cm.hpMax >= (f32)cm.hp * (f32)tm->hpMax;
+	const i32 hp = tm ? tm->hp : (tn ? tn->hp : 0);
+	const i32 hpMax = tm ? tm->hpMax : (tn ? tn->hpMax : 0);
+	if((!tm && !tn) || hpMax <= 0 || cm.hpMax <= 0) return false;
+	const bool friendly = tm ? tm->parent->team == caster.team : tn->faction == (caster.team == 0 ? Faction::RED : Faction::BLUE);
+	const bool bigger = (f32)hp * (f32)cm.hpMax >= (f32)cm.hp * (f32)hpMax;
 	switch(condition) {
 		case ActionCommand::StatusCondition::FRIENDLY_HPBIGGER: return friendly && bigger;
 		case ActionCommand::StatusCondition::FRIENDLY_HPLESS: return friendly && !bigger;

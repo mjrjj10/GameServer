@@ -128,10 +128,11 @@ void World::Update(Time localTime_)
 			const f32 target = p.dashCurve ? p.dashDist * p.dashCurve->Eval(frac) : p.dashDist * frac * frac;
 			const f32 ahead = glm::dot(vec2(p.dashOrigin) + p.dashDir * target - vec2(body.GetWorldPos()), p.dashDir);
 			if(p.dashFly && (p.dashCurve ? fabsf(ahead) > 0.01f : ahead > 0)) {
-				const vec3 at = body.GetWorldPos() + vec3(p.dashDir * ahead, 0);
+				const vec3 at = vec3(vec2(body.GetWorldPos()) + p.dashDir * ahead, p.dashLift > 0 ? p.dashOrigin.z + p.dashLift : body.GetWorldPos().z);
 				body.collider->setFootPosition(PxExtendedVec3(at.x, at.y, at.z));
+				body.vel.z = 0;
 			}
-			else if(p.dashCurve ? fabsf(ahead) > 0.01f : ahead > 0) physics.Move(&body, vec3(p.dashDir * ahead, 0), (f32)tdelta);
+			else if(p.dashCurve ? fabsf(ahead) > 0.01f : ahead > 0) physics.ClimbMove(&body, p.dashDir * ahead, (f32)tdelta);
 			p.dashDone = frac >= 1.0f ? p.dashDist : (p.dashCurve ? MIN(fabsf(target), p.dashDist - 0.01f) : target);
 			p.input.moveTo = body.GetWorldPos();
 		}
@@ -231,8 +232,10 @@ void World::Update(Time localTime_)
 		}
 
 		// tag
+		if(p.clientHd == ClientHandle::INVALID && !p.dead && BotWantsTag(p)) p.input.tag = 1;
+		if(p.input.tag && p.titanForm >= 0) p.input.tag = 0;
 		if(p.input.tag && p.clientHd == ClientHandle::INVALID) {
-			if(p.casting.skillID != SkillID::INVALID || localTime < p.dashUntil) p.input.tag = 0;
+			if(p.casting.skillID != SkillID::INVALID || localTime < p.dashUntil || localTime < p.botTagReadyAt) p.input.tag = 0;
 			foreach_const(pr, pendingRemotes) {
 				if(!pr->remove && pr->ownerIndex == p.index) { p.input.tag = 0; break; }
 			}
@@ -240,7 +243,9 @@ void World::Update(Time localTime_)
 		if(p.input.tag) {
 			p.input.tag = 0;
 			if(p.casting.skillID != SkillID::INVALID) CancelCast(p, "tag");
+			ToggleOff(p);
 			SwapMainMaster(p);
+			foreach(s, boundTriggerStates) if(s->playerIndex == p.index) s->inside = false;
 			if(!p.dead) {
 				statusNoCaster = true;
 				ApplyStatus(p, p, STATUS_PC_TAG_GODMODE);
@@ -248,6 +253,7 @@ void World::Update(Time localTime_)
 			}
 			SendTagCooltimeToTeam(p, TagCooltimeMs(p));
 			if(p.clientHd == ClientHandle::INVALID) {
+				p.botTagReadyAt = TimeAdd(localTime, TimeMsToTime((f64)TagCooltimeMs(p)));
 				const Time ready = TimeAdd(localTime, TimeMsToTime(MEASURED_TAG_FIRST_ATTACK_MS));
 				if(p.tNextBotShot < ready) p.tNextBotShot = ready;
 			}
@@ -647,6 +653,7 @@ World::Player& World::CreatePlayer(const PlayerDescription& desc, const vec3& po
 	player.input.action = ActionStateID::INVALID;
 
 	CreatePlayerMasters(player);
+	if(fullSkillPoints) player.skillPoints = MaxSkillPoints(player);
 	return player;
 }
 
@@ -824,6 +831,11 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 			LOG("Skill :: %ls cast %d refused (frozen %d, locked %d)", player.name.data(), (i32)skillID, (i32)frozen, (i32)combatLocked);
 			replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_SKILL_INVALID_STATE_BLOCK, player.body->GetWorldPos(), player.input.rot.upperYaw, player.input.speed, clientTime);
 		}
+		return;
+	}
+	if(forcedAction == ActionStateID::INVALID && !TitanSkillAllowed(player, skillID)) {
+		LOG("Skill :: %ls cast %d refused (not a skill of the current form %d)", player.name.data(), (i32)skillID, player.titanForm);
+		if(player.clientHd != ClientHandle::INVALID) replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_SKILL_INVALID_STATE_BLOCK, player.body->GetWorldPos(), player.input.rot.upperYaw, player.input.speed, clientTime);
 		return;
 	}
 	if(forcedAction == ActionStateID::INVALID) TitanOnCast(player, skillIn);
@@ -1050,9 +1062,11 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	if(distance > 0 && glm::length(gotoDir) < 0.5f && glm::length(vec2(castPos)) > 1.0f) TargetPositionMove(player, skillID, action, castPos, &distance, &gotoDir);
 	if(distance != 0) {
 		const vec2 moveDir = glm::length(gotoDir) > 0.5f ? gotoDir : dir;
-		const vec3 endPos = physics.FindMovePos(player.body, vec3(moveDir * distance, 0), moveDuration);
+		const vec3 endPos = physics.FindSkillMovePos(player.body, distance < 0 ? -moveDir : moveDir, fabsf(distance), moveDuration, SkillMoveLift(skillID));
 		rpExec.moveDir = moveDir;
 		rpExec.endPos = endPos;
+		rpExec.originDist = fabsf(distance);
+		if(glm::length(vec2(endPos) - vec2(rpExec.startPos)) < fabsf(distance) - 1.0f || fabsf(endPos.z - rpExec.startPos.z) > 1.0f) LOG("Dash :: %ls skill=%d graph end %.0f of %.0f, z %+.0f", player.name.data(), (i32)skillID, glm::length(vec2(endPos) - vec2(rpExec.startPos)), fabsf(distance), endPos.z - rpExec.startPos.z);
 	}
 
 	if(actionOnly) replication->SendActionStateOnlyToAll(player.Main().UID, actionState, WorldYawToMxmYaw(angle), distance != 0, rpExec.startPos, distance != 0 ? rpExec.endPos : rpExec.startPos, moveDuration);
@@ -1194,6 +1208,11 @@ bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos
 void World::TargetPositionMove(const Player& player, SkillID skillID, const GameXmlContent::Action& action, const vec3& castPos, f32* distance, vec2* gotoDir) const
 {
 	const f32 maxDistance = SkillMaxDistance(player, (i32)skillID);
+	const GameXmlContent::SkillInput* moveIn = GetGameXmlContent().FindSkillInput((i32)skillID);
+	if(moveIn && moveIn->directionOnly) {
+		if(maxDistance > 0) *distance = MIN(*distance, maxDistance);
+		return;
+	}
 	foreach_const(cmd, action.commands) {
 		if(cmd->type == ActionCommand::Type::MOVE && (cmd->move.preset == ActionCommand::MovePreset::TARGET_POS || cmd->move.preset == ActionCommand::MovePreset::TARGET_POS_LEAP)) {
 			const vec2 rel = vec2(castPos) - vec2(player.body->GetWorldPos());
@@ -1237,14 +1256,14 @@ void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType
 	const auto& content = GetGameXmlContent();
 	const i32 chainSlot = skillType == SkillType::COMBO ? player.comboSlot : -1;
 	const SkillID chainBase = player.comboBase;
-	if(player.comboSlot >= 0 && skillType == SkillType::COMBO) {
+	if(player.comboSlot >= 0 && (skillType == SkillType::COMBO || skillID == player.comboSkill)) {
 		replication->SendChangeSkillSlot(player.clientHd, player.Main().UID, player.comboSlot, player.comboBase, 0);
 		LOG("Combo :: %ls slot %d back to %d", player.name.data(), player.comboSlot, (i32)player.comboBase);
 		player.comboSlot = -1;
 	}
 	if(content.FindSkillHitEventRemote((i32)skillID) != 0 && !onHit) return;
 	i32 combo = ComboSkillFor(player, (i32)skillID);
-	if(combo == 0 && (onHit || skillType == SkillType::COMBO)) combo = content.GetNextComboSkill((i32)skillID);
+	if(combo == 0 && (onHit || skillType == SkillType::COMBO || skillType == SkillType::SHIRK)) combo = content.GetNextComboSkill((i32)skillID);
 	if(combo != 0) {
 		const i32 base = (i32)player.mainCharaID * 2;
 		i32 slot = -1;

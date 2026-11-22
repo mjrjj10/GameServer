@@ -1,4 +1,5 @@
 <?xml version="1.0"?>
 <STATUS_SHIELD>
   <STATUS ID="1200100023" shield="10873" samples="7" />
+  <STATUS ID="1200100027" shield="1000" samples="32" source="STR_STATUS_MOB_TOOLTIP_1200100027 (1000 absorbed); MEASURED 7 official 5v5 captures: SN_UpdateStat 19 = 1000 on add (31 of 32)" />
 </STATUS_SHIELD>

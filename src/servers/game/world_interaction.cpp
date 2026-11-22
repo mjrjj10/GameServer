@@ -402,7 +402,14 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 	if(!info || !npc.monsterAi) return 0.0f;
 	if(info->type == StatusType::DRAGGED || info->type == StatusType::DRAGGEDBYFORCE) {
 		const bool takes = eastl::find(npc.monsterAi->ccTypes.begin(), npc.monsterAi->ccTypes.end(), info->type) != npc.monsterAi->ccTypes.end();
-		return takes || (hostileMonsters && HypPveMonsterTakesCc(npc)) ? 0.0f : -1.0f;
+		return takes || HypPveMonsterTakesCc(npc) ? 0.0f : -1.0f;
+	}
+	const bool control = info->type == StatusType::FEAR || info->type == StatusType::ROOT || info->type == StatusType::SILENCE || (info->type == StatusType::TARGET && info->blockMove && info->durationSec > 0);
+	if(control) {
+		if(!HypPveMonsterTakesCc(npc) || IsStructure(npc) || NpcHasStatusType(npc, StatusType::SUPERARMOR)) return -1.0f;
+		if(npc.removeAt != Time::ZERO || (info->type != StatusType::FEAR && info->type != StatusType::TARGET) || info->durationSec <= 0) return 0.0f;
+		HoldNpcForControl(npc, info->durationSec);
+		return info->durationSec;
 	}
 	ActionStateID state;
 	f32 sec = 0;
@@ -419,7 +426,7 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 		case StatusType::DANCE: state = ActionStateID::DEFEAT_SYNC_BEHAVIORSTATE; sec = info->durationSec > 0 ? info->durationSec : NPC_DEFEAT_SYNC_SEC; break;
 		default: return 0.0f;
 	}
-	if(eastl::find(npc.monsterAi->ccTypes.begin(), npc.monsterAi->ccTypes.end(), info->type) == npc.monsterAi->ccTypes.end() && !(hostileMonsters && HypPveMonsterTakesCc(npc))) return -1.0f;
+	if(eastl::find(npc.monsterAi->ccTypes.begin(), npc.monsterAi->ccTypes.end(), info->type) == npc.monsterAi->ccTypes.end() && (!HypPveMonsterTakesCc(npc) || IsStructure(npc))) return -1.0f;
 	if(npc.removeAt != Time::ZERO) {
 		if(npc.diedAt == localTime) {
 			replication->SendMonsterStateToAll(npc.UID, state, npc.pos, npc.monsterAi->run * npc.speedMul);
@@ -450,6 +457,27 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 	npc.monsterChasing = false;
 	npc.monsterWalking = false;
 	return total;
+}
+
+void World::HoldNpcForControl(ActorNpc& npc, f32 sec)
+{
+	const bool attacking = npc.actionState == ActionStateID::ATTACK_BEHAVIORSTATE || (npc.actionState >= ActionStateID::SKILL_1_BEHAVIORSTATE && npc.actionState <= ActionStateID::SKILL_30_BEHAVIORSTATE);
+	if(attacking) {
+		CancelNpcPendingHits(npc);
+		npc.stateEndAt = Time::ZERO;
+		npc.actionState = ActionStateID::NONE_BEHAVIORSTATE;
+		replication->SendMonsterStateToAll(npc.UID, ActionStateID::NONE_BEHAVIORSTATE, npc.pos, npc.monsterAi->run * npc.speedMul);
+	}
+	if(npc.monsterChasing || npc.monsterWalking || npc.monsterSpreading) {
+		if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, npc.rot.z, true);
+		else replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, npc.rot.z, 0.0f, true);
+	}
+	npc.monsterChasing = false;
+	npc.monsterWalking = false;
+	npc.monsterSpreading = false;
+	npc.dashEnd = Time::ZERO;
+	const Time holdEnd = TimeAdd(localTime, TimeMsToTime(sec * 1000.0));
+	if(npc.monsterHoldUntil < holdEnd) npc.monsterHoldUntil = holdEnd;
 }
 
 static const f32 MEASURED_NPC_FORCEBACK_HOLD_SEC = 0.2f;
@@ -497,6 +525,27 @@ World::NpcCcGraph World::StartNpcCc(ActorNpc& npc, const StatusInfo* info, const
 			}
 			if(npc.monsterHoldUntil < holdEnd) npc.monsterHoldUntil = holdEnd;
 		}
+		return cc;
+	}
+	if(npc.monsterAi && info->type == StatusType::FEAR && cc.duration > 0) {
+		const f32 speed = npc.monsterAi->run * npc.speedMul;
+		if(speed <= 0) return cc;
+		vec2 dir = vec2(npc.pos) - vec2(source);
+		const f32 len = glm::length(dir);
+		dir = len > 1.0f ? dir / len : vec2(cosf(npc.rot.z), sinf(npc.rot.z));
+		f32 dist = speed * cc.duration;
+		f32 wall = 0;
+		const vec3 rayFrom = vec3(vec2(npc.pos), npc.pos.z + NPC_PUSH_RAY_HEIGHT);
+		if(physics.RaycastStatic(rayFrom, rayFrom + vec3(dir * (dist + npc.monsterAi->radius), 0), &wall)) dist = MAX(wall - npc.monsterAi->radius, 0.0f);
+		const vec3 goal = vec3(vec2(npc.pos) + dir * dist, npc.pos.z);
+		npc.dashFrom = vec2(npc.pos);
+		npc.dashDir = dir;
+		npc.dashDist = dist;
+		npc.dashStart = localTime;
+		npc.dashEnd = TimeAdd(localTime, TimeMsToTime(cc.duration * 1000.0));
+		npc.dashCurve = NPC_DASH_CURVE_FLEE;
+		npc.rot.z = atan2f(dir.y, dir.x);
+		replication->SendMonsterMoveToAll(npc.UID, npc.pos, goal, npc.rot.z, dist / cc.duration);
 		return cc;
 	}
 	if(npc.monsterAi && info->type == StatusType::DRAGGED && cc.duration > 0) {
@@ -706,6 +755,18 @@ void World::CountTagDeath(i32 tagID, Faction killerTeam, i32 killerIndex)
 	}
 }
 
+void World::AttachDynamicCollider(ActorDynamic& dynamic, f32 scale)
+{
+	const GameXmlContent& content = GetGameXmlContent();
+	const i32 doc = (i32)dynamic.docID;
+	const auto meshKey = content.dynamicMeshKey.find(doc);
+	if(dynamic.collider || !map || meshKey == content.dynamicMeshKey.end() || (!map->ingameLevels && !content.dynamicDestroyHits.count(doc))) return;
+	eastl::fixed_string<char,100,false> meshName;
+	meshName.sprintf("%s/%s", meshKey->second.c_str(), meshKey->second.c_str());
+	if(physics.HasStaticMesh(meshName.c_str())) dynamic.collider = physics.CreateStaticCollider(meshName.c_str(), dynamic.pos, dynamic.rot, scale, content.dynamicBlockSight.count(doc) > 0);
+	else if(content.dynamicDestroyHits.count(doc)) LOG("LevelEvent :: dynamic %d (doc %d) has no collision mesh %s", dynamic.localID, doc, meshName.c_str());
+}
+
 void World::DestroyDynamic(ActorDynamic& dynamic, i32 killerIndex)
 {
 	static const u32 DYNAMIC_DEAD_NO_KILLER_DOC = 0;
@@ -882,6 +943,7 @@ void World::CallMonsters(const GameXmlContent::LevelEventNode& node, i32 playerI
 			dyn.pos = area->pos;
 			dyn.rot = area->rot;
 			dyn.tagID = node.tagID;
+			AttachDynamicCollider(dyn, 1.0f);
 			if(node.team != Faction::INVALID && node.team != Faction::MONSTER) dyn.faction = node.team;
 			if(const i32 interaction = GetGameXmlContent().FindDynamicInteraction(node.monster)) AddDynamicInteraction(dyn, interaction);
 			continue;
@@ -1122,7 +1184,10 @@ void World::FireLevelEvent(i32 nodeID, i32 playerIndex, i32 fromNode)
 		case GameXmlContent::LevelEventNode::CALL_SFX: if(!levelClientSeq) replication->SendClientLevelEventToAll(node->id); break;
 		case GameXmlContent::LevelEventNode::CLIENT_EVENT:
 			if(!node->clientDriven && !levelClientSeq) replication->SendClientLevelEventToAll(node->id, playerIndex >= 0 ? players[playerIndex].Main().UID : ActorUID::INVALID);
-			if(node->initTagCool && playerIndex >= 0) SendTagCooltimeToTeam(players[playerIndex], 0);
+			if(node->initTagCool && playerIndex >= 0) {
+				players[playerIndex].botTagReadyAt = Time::ZERO;
+				SendTagCooltimeToTeam(players[playerIndex], 0);
+			}
 			break;
 		case GameXmlContent::LevelEventNode::CALL_ITEM: SpawnGroundItems(node->dropIndex, node->areaID, node->tagID); break;
 		case GameXmlContent::LevelEventNode::STATUS_CHANGE: {
@@ -1467,10 +1532,11 @@ void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle s
 		const bool byPlayer = ownerIndex >= 0 && ownerIndex < (i32)players.size();
 		if(damage > 0) DamageJumpWall(*hit, damage, false, byPlayer ? players[ownerIndex].Main().UID : ActorUID::INVALID, byPlayer ? ownerIndex : -1, remoteID, remoteDoc, pos, seedOwnerHd);
 	}
-	else if(destroyable != destroyHits.end() && ++hit->destroyHits >= destroyable->second) {
-		i32 killerIndex = -1;
-		foreach_const(p, players) if(p->clientHd == seedOwnerHd && seedOwnerHd != ClientHandle::INVALID) killerIndex = (i32)p->index;
-		DestroyDynamic(*hit, killerIndex);
+	else if(destroyable != destroyHits.end() && damage > 0) {
+		const i32 left = MAX(destroyable->second - ++hit->destroyHits, 0);
+		replication->SendStatToAll(hit->UID, (i32)StatType::STAT_TYPE_HEALTH, (f32)left, (f32)destroyable->second);
+		LOG("LevelEvent :: dynamic %d (doc %d) hit %d/%d", hit->localID, (i32)hit->docID, hit->destroyHits, destroyable->second);
+		if(left <= 0) DestroyDynamic(*hit, ownerIndex >= 0 && ownerIndex < (i32)players.size() ? ownerIndex : -1);
 	}
 	if(remoteID != 0) {
 		const auto& densities = GetGameXmlContent().dynamicDensity;
@@ -1868,6 +1934,17 @@ void World::UpdateCreatureEnterTrigger(const GameXmlContent::LevelEventNode& nod
 	foreach_const(o, node.outputs) FireLevelEvent(*o, -1, node.id);
 }
 
+static bool RefreshesStatusWhileInside(const GameXmlContent::Map& levelMap, const GameXmlContent::LevelEventNode& n)
+{
+	if(!n.ownTeamOnly || !n.enter || n.retrigger <= 0 || n.maxTriggers != 0 || n.outputs.empty()) return false;
+	foreach_const(o, n.outputs) {
+		const GameXmlContent::LevelEventNode* next = levelMap.FindLevelEvent(*o);
+		for(i32 hop = 0; next && hop < 4 && next->outputs.size() == 1 && (next->kind == GameXmlContent::LevelEventNode::TEAM_CONDITION || (next->kind == GameXmlContent::LevelEventNode::DELAY && next->delay <= 0 && next->variance <= 0)); hop++) next = levelMap.FindLevelEvent(next->outputs[0]);
+		if(!next || next->kind != GameXmlContent::LevelEventNode::STATUS_CHANGE) return false;
+	}
+	return true;
+}
+
 void World::UpdateBoundTriggers()
 {
 	if(!levelEventsStarted || Config().DevShowcase) return;
@@ -1904,12 +1981,13 @@ void World::UpdateBoundTriggers()
 				if(!n->ownTeamOnly) continue;
 				state = &boundTriggerStates.back();
 			}
-			if(state->inside == inside) continue;
+			const bool refresh = inside && state->inside && n->retrigger > 0 && state->last != Time::ZERO && TimeDiffSec(TimeDiff(state->last, localTime)) >= n->retrigger && RefreshesStatusWhileInside(levelMap, *n);
+			if(state->inside == inside && !refresh) continue;
 			state->inside = inside;
 			if(inside != n->enter) continue;
-			if(state->last != Time::ZERO && TimeDiffSec(TimeDiff(state->last, localTime)) < n->retrigger) continue;
+			if(!refresh && state->last != Time::ZERO && TimeDiffSec(TimeDiff(state->last, localTime)) < n->retrigger) continue;
 			state->last = localTime;
-			LOG("LevelEvent :: %ls %s area %d (node %d)", p->name.data(), inside ? "enters" : "leaves", n->areaID, n->id);
+			if(!refresh) LOG("LevelEvent :: %ls %s area %d (node %d)", p->name.data(), inside ? "enters" : "leaves", n->areaID, n->id);
 			if(n->maxTriggers > 0) boundTriggerFires[slot]++;
 			foreach_const(o, n->outputs) FireLevelEvent(*o, (i32)p->index, n->id);
 		}

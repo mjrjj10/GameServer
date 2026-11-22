@@ -163,8 +163,10 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	if(casterCreatesLocally && players[ownerIndex].clientHd != ClientHandle::INVALID) {
 		for(i32 k = 0; k < (i32)clientRemoteSeeds.size(); k++) {
 			const ClientRemoteSeed& cs = clientRemoteSeeds[k];
-			if(cs.playerIndex != ownerIndex || cs.doc != idx || localTime > TimeAdd(cs.at, TimeMsToTime(CLIENT_SEED_BIND_MS))) continue;
-			inst.clientRemoteID = cs.seed + 1;
+			const bool anyWeaponSeed = cs.doc == RemoteIdx::INVALID && skillID == SkillID::INVALID;
+			if(cs.playerIndex != ownerIndex || (cs.doc != idx && !anyWeaponSeed) || localTime > TimeAdd(cs.at, TimeMsToTime(CLIENT_SEED_BIND_MS))) continue;
+			if(!anyWeaponSeed) inst.clientRemoteID = cs.seed + 1;
+			inst.ownerSeed = cs.seed;
 			inst.seedOwnerHd = players[ownerIndex].clientHd;
 			clientRemoteSeeds.erase(clientRemoteSeeds.begin() + k);
 			break;
@@ -189,15 +191,21 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		inst.sentByDoc = true;
 		vec3 targetPos = pos + vec3(dir * (inst.range > 0 ? inst.range : 1000.0f), 0);
 		const ActorMaster* targetMaster = target != ActorUID::INVALID ? FindMasterActor(target) : nullptr;
+		const ActorNpc* targetNpc = !targetMaster && target != ActorUID::INVALID ? FindNpcActor(target) : nullptr;
 		if(targetMaster) targetPos = targetMaster->parent->body->GetWorldPos();
+		else if(targetNpc) targetPos = targetNpc->pos;
 		if(child && (remote->behaviorType == Remote::BehaviorType::NONETARGET || remote->behaviorType == Remote::BehaviorType::HOMING)) {
 			targetMaster = nullptr;
+			targetNpc = nullptr;
 			targetPos = pos;
 		}
 		if(!sendEntity) {
 			targetMaster = nullptr;
+			targetNpc = nullptr;
 			if(remote->behaviorType != Remote::BehaviorType::GRAPH && aimPos && glm::length(vec2(*aimPos)) > 1.0f) targetPos = *aimPos;
 		}
+		const bool destroyAtTarget = stopAtTarget && remote->behaviorType != Remote::BehaviorType::GRAPH && aimPos && glm::length(vec2(*aimPos)) > 1.0f && inst.speed > 0;
+		if(destroyAtTarget) targetPos = *aimPos;
 		if(remote->behaviorType == Remote::BehaviorType::GRAPH && aimPos && glm::length(vec2(*aimPos)) > 1.0f) {
 			targetPos = pos + vec3(dir * inst.range, 0);
 			targetPos.z = aimPos->z;
@@ -209,12 +217,12 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 		if(plainStaticBox && !atAimedPoint) sendPos -= vec3(dir * (remote->forceTargetDir ? -remote->offsetY : remote->offsetY) - Perp(dir) * remote->offsetX, 0);
 		if(remoteTargetEntityOverride != ActorUID::INVALID) targetPos = pos;
 		const ActorUID sendOwner = remoteParentOverride != ActorUID::INVALID ? remoteParentOverride : players[ownerIndex].Main().UID;
-		const ActorUID sendTarget = remoteTargetEntityOverride != ActorUID::INVALID ? remoteTargetEntityOverride : (targetMaster ? target : ActorUID::INVALID);
+		const ActorUID sendTarget = remoteTargetEntityOverride != ActorUID::INVALID ? remoteTargetEntityOverride : (targetMaster || targetNpc ? target : ActorUID::INVALID);
 		const wchar* sendNode = child && remote->behaviorType == Remote::BehaviorType::CHAIN ? CHAIN_CHILD_NODE : (Config().DevNoFireNode ? GetGameXmlContent().GetNodeName(0) : GetGameXmlContent().GetNodeName(nodeName));
 		const ClientHandle sendExclude = casterCreatesLocally ? players[ownerIndex].clientHd : ClientHandle::INVALID;
 		const vec3 sendFrom = remoteSendFromSet ? remoteSendFrom : sendPos;
 		if(remoteSendParentID != 0) replication->SendChildRemoteCreateToAll(sendOwner, sendOwner, remoteSendParentID, remoteSendParentSeedHd, seed, sendIdx, 0, sendFrom, sendYaw, targetPos, sendTarget, ActorUID::INVALID, sendNode, MEASURED_REMOTE_CREATE_FLAG_PARENT_REMOTE, sendExclude);
-		else replication->SendRemoteCreateToAll(sendOwner, seed, sendIdx, sendFrom, sendYaw, targetPos, sendTarget, sendNode, sendExclude);
+		else replication->SendRemoteCreateToAll(sendOwner, seed, sendIdx, sendFrom, sendYaw, targetPos, sendTarget, sendNode, sendExclude, destroyAtTarget ? MEASURED_REMOTE_CREATE_FLAG_DESTROY_AT_TARGET : 0);
 	}
 
 	remoteInsts.push_back(inst);
@@ -412,11 +420,21 @@ void World::FlushRemoteActivation()
 	remoteActivation.remoteID = 0;
 }
 
+static bool RemotePullsToCaster(const Remote& remote)
+{
+	foreach_const(st, remote.statuses) {
+		const StatusInfo* info = GetGameXmlContent().FindStatus(st->statusID);
+		if(info && info->type == StatusType::DRAGGED) return true;
+	}
+	return false;
+}
+
 bool World::RemoteHit(RemoteInst& inst, Player& target)
 {
 	const Remote& remote = *inst.remote;
 	Player& owner = players[inst.ownerIndex];
 	if(!RemoteCanAffect(inst, target, true)) return false;
+	if(&target == &owner && !remote.vsOwner && RemotePullsToCaster(remote)) return false;
 	if(remote.targetOnly && inst.target != ActorUID::INVALID) {
 		const ActorMaster* designated = FindMasterActor(inst.target);
 		if(designated ? designated->parent != &target : FindNpcActor(inst.target) != nullptr) return false;
@@ -430,7 +448,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	if(enemy && remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;
 	if(enemy) ChangeCasterActionOnHit(inst, owner, target.Main().UID, target.body->GetWorldPos());
 	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty() && remote.onHitOwnerStatus == 0) {
-		AddRemoteActivation(target, inst.pos.z);
+		if(enemy || remote.damageGroup != Remote::DamageGroup::eENEMY) AddRemoteActivation(target, inst.pos.z);
 		if(enemy) TriggerSkillHitEvent(inst, owner, target.Main().UID, target.body->GetWorldPos());
 		return true;
 	}
@@ -441,7 +459,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 		if(h->instID == inst.instID) return false;
 		if(sharedZone && h->castID == inst.castID && h->remoteID == remote.ID) return false;
 	}
-	if(inst.speed <= 0 && enemy) inst.hitsLeft--;
+	if(inst.speed <= 0 && (enemy || (remote.activateCount == 1 && sharedZone && !remote.friendlyStatuses.empty()))) inst.hitsLeft--;
 	if(enemy) inst.singleHitDone = true;
 	if(!castHits.full()) {
 		CastHit h;
@@ -452,7 +470,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 		h.until = TimeAdd(localTime, TimeMsToTime(MAX(remote.hitInvalidTime, 0.1f) * 1000.0));
 		castHits.push_back(h);
 	}
-	AddRemoteActivation(target, inst.pos.z);
+	if(enemy || remote.damageGroup != Remote::DamageGroup::eENEMY) AddRemoteActivation(target, inst.pos.z);
 	statusFromBehind = remote.offsetY < 0;
 	statusForceCenter = inst.pos;
 	statusForceCenterSet = true;
@@ -481,10 +499,12 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 		}
 		damageAttackerOverride = inst.sourceUID;
 		damageSeedOwnerOverride = inst.seedOwnerHd;
+		damageOwnerSeedOverride = inst.ownerSeed;
 		if(enemy) DamagePlayer(owner, target, inst.skillID, dealt, nullptr, inst.clientRemoteID != 0 ? inst.clientRemoteID - (inst.sentByDoc ? 1 : 0) : inst.damageRemoteID, remote.ID, inst.dir);
 		else if(remote.damageGroup == Remote::DamageGroup::eFRIEND) HealPlayer(owner, target, amount);
 		damageAttackerOverride = ActorUID::INVALID;
 		damageSeedOwnerOverride = ClientHandle::INVALID;
+		damageOwnerSeedOverride = 0;
 	}
 
 	inst.lastHitIndex = (i32)target.index;
@@ -554,13 +574,15 @@ void World::TriggerSkillHitEvent(const RemoteInst& inst, Player& owner, ActorUID
 	if(comboTriggeredCasts.full()) comboTriggeredCasts.erase(comboTriggeredCasts.begin());
 	comboTriggeredCasts.push_back(inst.castID);
 	owner.memorizedTarget = targetUID;
-	const vec2 rel = vec2(targetPos - owner.body->GetWorldPos());
 	LOG("ComboHit :: %ls skill=%d remote=%d -> next part", owner.name.data(), (i32)inst.skillID, (i32)inst.remote->ID);
-	castCostLevel = inst.costLevel;
-	schedulePassOffset = ComboPassOffset(owner, inst.skillID);
-	ScheduleSkillRemotes(owner, inst.skillID, targetPos, Slice<const ActorUID>(&targetUID, 1), atan2f(rel.y, rel.x), 1);
-	schedulePassOffset = 0;
-	castCostLevel = nullptr;
+	if(inst.remote->changeCasterAction == ActionStateID::INVALID) {
+		const vec2 rel = vec2(targetPos - owner.body->GetWorldPos());
+		castCostLevel = inst.costLevel;
+		schedulePassOffset = ComboPassOffset(owner, inst.skillID);
+		ScheduleSkillRemotes(owner, inst.skillID, targetPos, Slice<const ActorUID>(&targetUID, 1), atan2f(rel.y, rel.x), 1);
+		schedulePassOffset = 0;
+		castCostLevel = nullptr;
+	}
 	if(Config().DevShowcase) return;
 	if(owner.clientHd != ClientHandle::INVALID) {
 		auto sk = content.skillMap.find(inst.skillID);
@@ -679,7 +701,7 @@ void World::RemoteHitWalls(RemoteInst& inst, f32 farEdge)
 	ActorDynamic* wallGate = nullptr;
 	if(!RaycastShot(vec3(from, inst.wallZ), vec3(to, inst.wallZ), (i32)owner.team, &wallDist, &wallActor, &wallGate) || (!wallActor && !wallGate)) return;
 	inst.wallHitDone = true;
-	OnDynamicHit(wallActor, inst.clientRemoteID, ClientHandle::INVALID, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, vec3(from + glm::normalize(to - from) * wallDist, inst.wallZ), wallGate, (i32)inst.ownerIndex, (i32)(inst.damage * remote.attackMultiplier), remote.ID);
+	OnDynamicHit(wallActor, inst.clientRemoteID != 0 ? inst.clientRemoteID - (inst.sentByDoc ? 1 : 0) : inst.damageRemoteID, inst.seedOwnerHd, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, vec3(from + glm::normalize(to - from) * wallDist, inst.wallZ), wallGate, (i32)inst.ownerIndex, (i32)(inst.damage * remote.attackMultiplier), remote.ID);
 }
 
 static const f32 MEASURED_POLYGON_BLADE_RADIUS = 470.0f;
@@ -756,7 +778,7 @@ void World::RemoteHitNpcs(RemoteInst& inst)
 {
 	const Remote& remote = *inst.remote;
 	const i32 base = (i32)(inst.damage * remote.attackMultiplier);
-	const bool enemies = !(base <= 0 && remote.statuses.empty()) && (remote.damageGroup == Remote::DamageGroup::eENEMY || remote.damageGroup == Remote::DamageGroup::eALL);
+	const bool enemies = !(base <= 0 && remote.statuses.empty() && remote.changeCasterAction == ActionStateID::INVALID && remote.onActivate.empty() && remote.onHitCharacter.empty() && remote.onHitOwnerStatus == 0) && (remote.damageGroup == Remote::DamageGroup::eENEMY || remote.damageGroup == Remote::DamageGroup::eALL);
 	if(!enemies && remote.friendlyStatuses.empty()) return;
 	Player& owner = players[inst.ownerIndex];
 	const bool sphere = remote.boundType == Remote::BoundType::E_BOUND_SPHERE || remote.boundType == Remote::BoundType::E_BOUND_CAPSULE || remote.angle > 0;
@@ -801,6 +823,28 @@ bool World::RemoteFriendNpc(RemoteInst& inst, ActorNpc& npc)
 	if(!recorded) inst.npcHits.push_back({ npc.UID, until });
 	ApplyFriendlyRemoteStatuses(owner, remote, nullptr, &npc);
 	return true;
+}
+
+void World::RemoteFriendTargetNpc(RemoteInst& inst, ActorNpc& npc)
+{
+	const Remote& remote = *inst.remote;
+	Player& owner = players[inst.ownerIndex];
+	const Faction ownFaction = owner.team == 0 ? Faction::RED : Faction::BLUE;
+	if(remote.damageGroup != Remote::DamageGroup::eFRIEND || npc.faction != ownFaction || npc.hp <= 0 || npc.removeAt != Time::ZERO) return;
+	foreach_const(st, remote.statuses) {
+		if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(owner, npc, st->statusID, false);
+	}
+	if(remote.onHitOwnerStatus != 0 && !owner.dead) {
+		const ActorUID prevCaster = statusCasterOverride;
+		statusCasterOverride = npc.UID;
+		ApplyStatus(owner, owner, remote.onHitOwnerStatus);
+		statusCasterOverride = prevCaster;
+	}
+	if(inst.clientRemoteID != 0) {
+		inst.npcActivation += NpcDensity(npc);
+		replication->SendRemoteActivatedToAll(inst.clientRemoteID - (inst.sentByDoc ? 1 : 0), inst.seedOwnerHd, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, npc.UID, inst.npcActivation, inst.pos);
+	}
+	LOG("Remote :: %d reaches allied creature=%d (friend statuses)", (i32)remote.ID, (i32)npc.docID);
 }
 
 void World::ChangeCasterActionOnHit(RemoteInst& inst, Player& owner, ActorUID targetUID, const vec3& targetPos)
@@ -868,6 +912,7 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 		hit.remotePos = inst.pos;
 		hit.dir = inst.dir;
 		hit.seedOwnerHd = inst.seedOwnerHd;
+		hit.ownerSeed = inst.ownerSeed;
 		f32 mul = RemoteDistanceFalloff(remote, dist) * RepeatHitMul(inst.castID, inst.ownerIndex, (u32)npc.UID | VOLLEY_NPC_TARGET_BIT, remote.ID, inst.skillID);
 		if(remote.hitDamageMultiplier != 0) {
 			mul *= MAX(1.0f + remote.hitDamageMultiplier * inst.enemiesHit, 1.0f + remote.maxHitDamageMultiplier);
@@ -890,6 +935,14 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 	if(inst.skillID == SkillID::INVALID && base > 0) WeaponHitPlagueNpc(owner, npc);
 	if(base > 0) PassiveStackOnHitNpc(owner, npc, (i32)remote.ID, inst.skillID);
 	if(npc.hp > 0) ChangeCasterActionOnHit(inst, owner, npc.UID, npc.pos);
+	if(!remote.onActivate.empty() || !remote.onHitCharacter.empty()) {
+		const RemoteInst copy = inst;
+		const vec3 at = vec3(vec2(npc.pos), inst.pos.z);
+		SpawnRemoteRules(*this, copy, remote.onActivate, remote.creatorOnActivate, at, -1, RemoteIdx::INVALID);
+		const u32 before = (u32)remoteInsts.size();
+		SpawnRemoteRules(*this, copy, remote.onHitCharacter, remote.creatorOnHitCharacter, at, -1, RemoteIdx::INVALID);
+		for(u32 i = before; i < (u32)remoteInsts.size(); i++) if(!remoteInsts[i].npcHits.full()) remoteInsts[i].npcHits.push_back({ npc.UID, TimeAdd(localTime, TimeMsToTime(MAX(remoteInsts[i].remote->hitInvalidTime, 0.1f) * 1000.0)) });
+	}
 	if(npc.hp <= 0 || npc.ownerUID != ActorUID::INVALID) return true;
 	const ActorUID prevCaster = statusCasterOverride;
 	if(inst.sourceUID != ActorUID::INVALID && FindNpcActor(inst.sourceUID)) statusCasterOverride = inst.sourceUID;
@@ -914,8 +967,10 @@ void World::UpdateRemotes(f32 delta)
 
 		if(remote.attachTargetObject && inst.target != ActorUID::INVALID) {
 			const ActorMaster* targetMaster = FindMasterActor(inst.target);
-			if(!targetMaster || targetMaster->parent->dead) destroyed = true;
-			else inst.pos = vec3(vec2(targetMaster->parent->body->GetWorldPos()), inst.pos.z);
+			const ActorNpc* targetNpc = targetMaster ? nullptr : FindNpcActor(inst.target);
+			if(targetMaster && !targetMaster->parent->dead) inst.pos = vec3(vec2(targetMaster->parent->body->GetWorldPos()), inst.pos.z);
+			else if(targetNpc && targetNpc->hp > 0 && targetNpc->removeAt == Time::ZERO) inst.pos = vec3(vec2(targetNpc->pos), inst.pos.z);
+			else destroyed = true;
 		}
 		if(remote.behaviorType == Remote::BehaviorType::CASTER_TARGET && !instOwner.dead) MoveCasterTargetRemote(inst, instOwner, delta);
 		const bool attached = remote.attachFireObject || remote.behaviorType == Remote::BehaviorType::ORBIT ||
@@ -1024,11 +1079,13 @@ void World::SpawnPendingRemotes()
 			case ActionCommand::TargetPreset::POS_TFF_1_800_1000: {
 				atAimedPoint = glm::length(vec2(pr->castPos)) > 1.0f;
 				const vec3 base = glm::length(vec2(pr->castPos)) > 1.0f ? pr->castPos : owner.body->GetWorldPos();
-				pos = vec3(vec2(base) + dir * (pr->offsetFront + (remote && remote->maxSpeed <= 0 && remote->initSpeed <= 0 && remote->angle <= 0 && (remote->boundType == Remote::BoundType::E_BOUND_BOX || remote->boundType == Remote::BoundType::E_BOUND_SPHERE) ? offsetY : 0.0f)) + Perp(dir) * pr->offsetSide, owner.body->GetWorldPos().z);
+				pos = vec3(vec2(base) + dir * (pr->offsetFront + (remote && remote->maxSpeed <= 0 && remote->initSpeed <= 0 && remote->angle <= 0 && (remote->boundType == Remote::BoundType::E_BOUND_BOX || remote->boundType == Remote::BoundType::E_BOUND_SPHERE) ? offsetY : 0.0f)) + Perp(dir) * pr->offsetSide, atAimedPoint && pr->sourceUID == ActorUID::INVALID && owner.clientHd != ClientHandle::INVALID ? base.z : owner.body->GetWorldPos().z);
 			} break;
 			case ActionCommand::TargetPreset::CURRENT_FFF: {
 				const ActorMaster* targetMaster = pr->target != ActorUID::INVALID ? FindMasterActor(pr->target) : nullptr;
+				const ActorNpc* targetNpc = !targetMaster && pr->target != ActorUID::INVALID ? FindNpcActor(pr->target) : nullptr;
 				if(targetMaster && (!remote || (remote->maxSpeed <= 0 && !remote->attachFireObject))) pos = targetMaster->parent->body->GetWorldPos();
+				else if(targetNpc && (!remote || (remote->maxSpeed <= 0 && !remote->attachFireObject))) pos = targetNpc->pos;
 			} break;
 			case ActionCommand::TargetPreset::LAST_CHILD_FFF:
 			case ActionCommand::TargetPreset::LAST_CHILD_TFF: {
@@ -1045,7 +1102,7 @@ void World::SpawnPendingRemotes()
 		if(pr->atTarget) {
 			const ActorMaster* targetMaster = pr->target != ActorUID::INVALID ? FindMasterActor(pr->target) : nullptr;
 			if(targetMaster) pos = targetMaster->parent->body->GetWorldPos();
-			else if(glm::length(vec2(pr->castPos)) > 1.0f) pos = vec3(vec2(pr->castPos), owner.body->GetWorldPos().z);
+			else if(glm::length(vec2(pr->castPos)) > 1.0f) pos = pr->castPos;
 		}
 
 		if(const SummonFireRule* summonFire = remote && pr->sourceUID != ActorUID::INVALID ? FindSummonFireRule(remote->ID) : nullptr) {
@@ -1054,6 +1111,9 @@ void World::SpawnPendingRemotes()
 				const vec2 back = glm::length(toOwner) > 1.0f ? glm::normalize(toOwner) : -dir;
 				pos = vec3(vec2(source->pos) + back * summonFire->towardOwner, source->pos.z + summonFire->up);
 			}
+		}
+		else if(remote && pr->sourceUID != ActorUID::INVALID && (ActionCommand::TargetPreset)pr->preset == ActionCommand::TargetPreset::SELF_FFF) {
+			if(const ActorNpc* source = FindNpcActor(pr->sourceUID)) pos = vec3(vec2(source->pos) + dir * offsetY, source->pos.z + (pr->nodeName == SCENE_ROOT_NODE ? remote->offsetZ : FIRE_NODE_HEIGHT));
 		}
 		const ActionCommand::TargetPreset firePreset = (ActionCommand::TargetPreset)pr->preset;
 		const bool fromCaster = !atAimedPoint && !pr->atTarget && pr->sourceUID == ActorUID::INVALID && firePreset != ActionCommand::TargetPreset::CURRENT_FFF &&
@@ -1069,6 +1129,14 @@ void World::SpawnPendingRemotes()
 		else if(fireNode) {
 			pos += vec3(dir * fireNode->forward + Perp(dir) * fireNode->side, 0);
 			pos.z = owner.body->GetWorldPos().z + fireNode->up;
+		}
+		if(const FireNodeRule* hitNode = remote && pr->target != ActorUID::INVALID ? FindHitTargetFireNode(remote->ID) : nullptr) {
+			const ActorMaster* tm = FindMasterActor(pr->target);
+			const ActorNpc* tn = tm ? nullptr : FindNpcActor(pr->target);
+			if(tm || tn) {
+				const vec3 tpos = tm ? tm->parent->body->GetWorldPos() : tn->pos;
+				pos = vec3(vec2(tpos) + dir * (hitNode->forward + offsetY) + Perp(dir) * hitNode->side, owner.body->GetWorldPos().z + hitNode->up);
+			}
 		}
 
 		if(remote && remote->offsetX != 0) pos -= vec3(Perp(dir) * remote->offsetX, 0);
@@ -1194,17 +1262,17 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 		ActorNpc* bestNpc = nullptr;
 		const bool friendChain = remote.includeParty && !remote.friendlyStatuses.empty();
 		const bool firstHop = inst.chainHitMask == 0 && inst.chainNpcHit == ActorUID::INVALID;
-		for(i32 pass = 0; pass < (friendChain ? 1 : 4) && !best && !bestNpc; pass++) {
+		for(i32 pass = 0; pass < (friendChain ? 2 : 4) && !best && !bestNpc; pass++) {
 			f32 bestDist = sight + WEAPON_TARGET_RADIUS;
 			foreach(it, players) {
 				if(friendChain ? (firstHop && it->index == inst.ownerIndex) : (it->team != ownerTeam) != (pass < 2)) continue;
 				if(!RemoteCanAffect(inst, *it, remote.vsOwner)) continue;
-				if(!friendChain && pass % 2 == 0 && ((inst.chainHitMask >> it->index) & 1)) continue;
+				if(pass % 2 == 0 && ((inst.chainHitMask >> it->index) & 1)) continue;
 				if(!inCone(vec2(it->body->GetWorldPos()))) continue;
 				const f32 d = glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos));
 				if(d < bestDist) { bestDist = d; best = &*it; }
 			}
-			if(pass < 2) {
+			if(pass < 2 && !(remote.prioritySearchPC && best)) {
 				const Faction ownFaction = ownerTeam == 0 ? Faction::RED : Faction::BLUE;
 				foreach(npc, actorNpcList) {
 					const bool ally = friendChain && npc->faction == ownFaction && npc->removeAt == Time::ZERO && !GetGameXmlContent().CreatureUntargetable((i32)npc->docID);
@@ -1283,6 +1351,7 @@ void World::SweepFireNodePath(RemoteInst& inst, Player& instOwner)
 		const vec3 p = glm::mix(path.points[i], path.points[i + 1], MIN(f - (f32)i, 1.0f));
 		const vec2 center = vec2(base) + fwd * p.x + left * p.y;
 		inst.pos = vec3(center, base.z + p.z);
+		RemoteHitWalls(inst, radius);
 		foreach(it, players) {
 			if(it->dead || !it->body || !RemoteCanAffect(inst, *it, false)) continue;
 			if(glm::length(vec2(it->body->GetWorldPos()) - center) <= radius + HitRadius(*it)) RemoteHit(inst, *it);
@@ -1306,17 +1375,21 @@ void World::ApplyAttachedRemote(RemoteInst& inst, Player& instOwner)
 		return;
 	}
 	if(remote.behaviorType == Remote::BehaviorType::ORBIT) {
-		const f32 radius = remote.boundSize[0] * 0.5f + remote.orbitRadius;
+		const f32 orbitSec = (f32)TimeDiffSec(TimeDiff(inst.spawnTime, localTime));
+		const f32 orbitYaw = inst.firePathYaw + (remote.orbitInitDeg + remote.orbitDegPerSec * orbitSec) * PI / 180.0f;
+		const vec2 at = vec2(instOwner.body->GetWorldPos()) + vec2(cosf(orbitYaw), sinf(orbitYaw)) * remote.orbitRadius;
+		const f32 radius = remote.boundSize[0] * 0.5f;
 		foreach(it, players) {
 			if(!RemoteCanAffect(inst, *it, false)) continue;
-			if(glm::length(vec2(it->body->GetWorldPos()) - vec2(instOwner.body->GetWorldPos())) <= radius + HitRadius(*it)) RemoteHit(inst, *it);
+			if(glm::length(vec2(it->body->GetWorldPos()) - at) <= radius + HitRadius(*it)) RemoteHit(inst, *it);
 		}
-		{
-			foreach(npc, actorNpcList) {
-				if(!NpcHittableBy(*npc, instOwner)) continue;
-				const f32 dist = glm::length(vec2(npc->pos) - vec2(instOwner.body->GetWorldPos()));
-				if(dist <= radius + NpcHitRadius(*npc)) RemoteDamageNpc(inst, *npc, dist);
-			}
+		foreach(npc, actorNpcList) {
+			const bool hittable = NpcHittableBy(*npc, instOwner);
+			if(!hittable && remote.friendlyStatuses.empty()) continue;
+			const f32 dist = glm::length(vec2(npc->pos) - at);
+			if(dist > radius + NpcHitRadius(*npc)) continue;
+			if(hittable) RemoteDamageNpc(inst, *npc, dist);
+			else RemoteFriendNpc(inst, *npc);
 		}
 	}
 	else if(remote.boundType != Remote::BoundType::E_BOUND_NONE && remote.damageGroup != Remote::DamageGroup::eNONE) {
@@ -1411,13 +1484,17 @@ bool World::UpdateTargetRemote(RemoteInst& inst, f32 delta)
 		const f32 step = (inst.speed > 0 ? inst.speed : 3000.0f) * delta;
 		if(dist <= step + remote.boundSize[0] * 0.5f + NpcHitRadius(*targetNpc)) {
 			inst.pos = vec3(vec2(targetNpc->pos), inst.pos.z);
-			RemoteDamageNpc(inst, *targetNpc, 0.0f);
+			if(NpcHittableBy(*targetNpc, players[inst.ownerIndex])) {
+				RemoteDamageNpc(inst, *targetNpc, 0.0f);
+				return !BounceRemote(inst);
+			}
+			RemoteFriendTargetNpc(inst, *targetNpc);
 			return true;
 		}
 		if(steered && accelerating) {
 			bool reached = false;
 			const bool done = SteerRemote3D(inst, targetNpc->pos + vec3(0, 0, HYP_NPC_REMOTE_AIM_HEIGHT), targetNpc->pos.z, remote.boundSize[0] * 0.5f + NpcHitRadius(*targetNpc), delta, &reached);
-			if(reached) RemoteDamageNpc(inst, *targetNpc, 0.0f);
+			if(reached && NpcHittableBy(*targetNpc, players[inst.ownerIndex])) RemoteDamageNpc(inst, *targetNpc, 0.0f);
 			return done;
 		}
 		if(steered) {
@@ -1447,7 +1524,7 @@ bool World::UpdateTargetRemote(RemoteInst& inst, f32 delta)
 	if(dist <= step + remote.boundSize[0] * 0.5f + HitRadius(target)) {
 		inst.pos = vec3(vec2(tpos), inst.pos.z);
 		RemoteHit(inst, target);
-		return true;
+		return !BounceRemote(inst);
 	}
 	else if(steered) {
 		inst.dir = SteerToward(inst.dir, rel, remote.angularVel * delta);
@@ -1459,6 +1536,36 @@ bool World::UpdateTargetRemote(RemoteInst& inst, f32 delta)
 		RemoteHitAlongPath(inst);
 	}
 	return false;
+}
+
+bool World::BounceRemote(RemoteInst& inst)
+{
+	const Remote& remote = *inst.remote;
+	if(!remote.searchTarget || --inst.hitsLeft <= 0) return false;
+	const Player& owner = players[inst.ownerIndex];
+	const ActorUID from = inst.target;
+	ActorUID next = ActorUID::INVALID;
+	f32 bestDist = remote.homingLength;
+	foreach_const(it, players) {
+		if(it->Main().UID == from || it->team == owner.team || !RemoteCanAffect(inst, *it, false) || !(it->fogSeenBy & (1u << owner.team))) continue;
+		bool recent = false;
+		foreach_const(h, castHits) if(h->instID == inst.instID && h->playerIndex == it->index && localTime < h->until) recent = true;
+		if(recent) continue;
+		const f32 d = glm::length(vec2(it->body->GetWorldPos() - inst.pos));
+		if(d < bestDist) { bestDist = d; next = it->Main().UID; }
+	}
+	foreach_const(npc, actorNpcList) {
+		if(npc->UID == from || npc->hp <= 0 || !NpcHittableBy(*npc, owner)) continue;
+		bool recent = false;
+		foreach_const(h, inst.npcHits) if(h->uid == npc->UID && localTime < h->until) recent = true;
+		if(recent) continue;
+		const f32 d = glm::length(vec2(npc->pos - inst.pos));
+		if(d < bestDist) { bestDist = d; next = npc->UID; }
+	}
+	if(next == ActorUID::INVALID) return false;
+	LOG("Remote :: %d bounces to %u at %.0f (%d hits left)", (i32)remote.ID, (u32)next, bestDist, inst.hitsLeft);
+	inst.target = next;
+	return true;
 }
 
 bool World::AdvanceSteeredRemote(RemoteInst& inst, f32 delta)
@@ -1533,6 +1640,7 @@ bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
 				if(fabsf(pos.z - inst.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 				if(!LagSegmentHits(*it, from, to, halfWidth + HitRadius(*it) + PROJECTILE_HIT_TOLERANCE, boxFront + HitRadius(*it))) continue;
 				if(!RemoteHit(inst, *it)) continue;
+				if(it->team == players[inst.ownerIndex].team && remote.damageGroup == Remote::DamageGroup::eENEMY) continue;
 				if(!stopPos) stopPos = &*it;
 				inst.penetrationLeft -= PenetrationCost(*it);
 				if(inst.stopAtFirstHit && it->team != players[inst.ownerIndex].team) inst.hitsLeft = 1;
@@ -1545,10 +1653,15 @@ bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
 				const vec2 seg = to - from;
 				const f32 segLen2 = glm::dot(seg, seg);
 				foreach(npc, actorNpcList) {
-					if(!NpcHittableBy(*npc, owner)) continue;
+					const bool hittable = NpcHittableBy(*npc, owner);
+					if(!hittable && remote.friendlyStatuses.empty()) continue;
 					const vec2 np = vec2(npc->pos);
 					const f32 tt = segLen2 > 0 ? MIN(MAX(glm::dot(np - from, seg) / segLen2, 0.0f), 1.0f) : 0.0f;
 					if(glm::length(np - (from + seg * tt)) > halfWidth + NpcHitRadius(*npc) + PROJECTILE_HIT_TOLERANCE) continue;
+					if(!hittable) {
+						RemoteFriendNpc(inst, *npc);
+						continue;
+					}
 					if(!RemoteDamageNpc(inst, *npc, inst.travelled + step * tt)) continue;
 					if(!npcStop) { npcStop = true; npcStopPos = np; }
 					inst.penetrationLeft -= 1;
@@ -1570,7 +1683,7 @@ bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
 			if(hitWall || (inst.range > 0 && inst.travelled >= inst.range - 0.01f)) destroyed = true;
 			if(hitWall) {
 				LOG("Remote :: %d stopped by a wall after %.0f", (i32)remote.ID, inst.travelled);
-				OnDynamicHit(wallActor, inst.clientRemoteID, ClientHandle::INVALID, inst.casterLocal ? players[inst.ownerIndex].clientHd : ClientHandle::INVALID, inst.pos, wallGate, (i32)inst.ownerIndex, (i32)(inst.damage * remote.attackMultiplier), remote.ID);
+				OnDynamicHit(wallActor, inst.clientRemoteID != 0 ? inst.clientRemoteID - (inst.sentByDoc ? 1 : 0) : inst.damageRemoteID, inst.seedOwnerHd, inst.casterLocal ? players[inst.ownerIndex].clientHd : ClientHandle::INVALID, inst.pos, wallGate, (i32)inst.ownerIndex, (i32)(inst.damage * remote.attackMultiplier), remote.ID);
 			}
 		}
 	}
@@ -1605,7 +1718,7 @@ void World::DestroyRemote(i32 index)
 				const Remote* nextRemote = GetGameXmlContent().FindRemote(next);
 				const f32 nextOffset = nextRemote ? nextRemote->offsetY : 0;
 				if(copy.sourceUID != ActorUID::INVALID && FindNpcActor(copy.sourceUID)) remoteParentOverride = copy.sourceUID;
-				vec3 childPos = copy.pos + vec3(copy.dir * nextOffset, 0);
+				vec3 childPos = copy.pos + vec3(copy.dir * nextOffset - Perp(copy.dir) * (nextRemote ? nextRemote->offsetX : 0.0f), 0);
 				vec2 childDir = copy.dir;
 				if(copy.measuredNode && copy.measuredNode->hasChild) {
 					const vec2 face = vec2(cosf(copy.castYaw), sinf(copy.castYaw));
@@ -1662,4 +1775,24 @@ void World::BindClientRemote(Player& player, RemoteIdx doc, u32 seed)
 		else k++;
 	}
 	if(!clientRemoteSeeds.full()) clientRemoteSeeds.push_back({ player.index, doc, seed, localTime });
+}
+
+void World::BindMeleeSeed(Player& player, u32 seed)
+{
+	if(!WeaponIsMelee(player)) return;
+	RemoteInst* best = nullptr;
+	foreach(inst, remoteInsts) {
+		if(inst->ownerIndex != player.index || !inst->casterLocal || inst->skillID != SkillID::INVALID || inst->ownerSeed != 0 || localTime > TimeAdd(inst->spawnTime, TimeMsToTime(CLIENT_SEED_BIND_MS))) continue;
+		if(!best || inst->instID > best->instID) best = &*inst;
+	}
+	if(best) {
+		best->ownerSeed = seed;
+		best->seedOwnerHd = player.clientHd;
+		return;
+	}
+	for(i32 k = 0; k < (i32)clientRemoteSeeds.size(); ) {
+		if(localTime > TimeAdd(clientRemoteSeeds[k].at, TimeMsToTime(CLIENT_SEED_BIND_MS))) clientRemoteSeeds.erase(clientRemoteSeeds.begin() + k);
+		else k++;
+	}
+	if(!clientRemoteSeeds.full()) clientRemoteSeeds.push_back({ player.index, RemoteIdx::INVALID, seed, localTime });
 }

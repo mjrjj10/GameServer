@@ -2,6 +2,7 @@
 #include "coordinator.h"
 #include <mxm/game_content.h>
 #include <mxm/account_progress.h>
+#include "town_rules.h"
 
 static const u32 MEASURED_ITEM_UPDATE_REASON_GEAR = 208;
 static const u32 GEAR_RESULT_OK = 0;
@@ -110,9 +111,10 @@ void HubGame::OnMasterGearAdd(ClientHandle clientHd)
 		return;
 	}
 	const GameXmlContent::PriceCost& cost = costs[n];
+	const i32 price = TESTER_FREE_ACCOUNT_SERVICES ? 0 : cost.amount;
 	AccountProgress progress = AccountProgressLoad(account->nickname.data());
 	i64& wallet = cost.buyType == BUY_TYPE_GOLD_PRICE ? progress.gold : progress.ccoin;
-	if(wallet < cost.amount) {
+	if(wallet < price) {
 		packet.Write<u32>(HYP_GEAR_ADD_FAILED);
 		packet.Write<u8>(0);
 		packet.WriteStringObj(L"");
@@ -120,11 +122,11 @@ void HubGame::OnMasterGearAdd(ClientHandle clientHd)
 		replication.SendWriter(clientHd, packet);
 		return;
 	}
-	wallet -= cost.amount;
+	wallet -= price;
 	AccountProgressSave(account->nickname.data(), progress);
 	account->gold = progress.gold;
 	account->ccoin = progress.ccoin;
-	if(cost.amount > 0) {
+	if(price > 0) {
 		if(cost.buyType == BUY_TYPE_GOLD_PRICE) replication.SendMoney(clientHd, progress.gold, HYP_MONEY_REASON_GEAR_ADD);
 		else replication.SendCCoin(clientHd, progress.ccoin, (u32)HYP_MONEY_REASON_GEAR_ADD);
 	}
@@ -139,7 +141,7 @@ void HubGame::OnMasterGearAdd(ClientHandle clientHd)
 		packet.Write<u32>(0);
 	}
 	replication.SendWriter(clientHd, packet);
-	LOG("[client%x] Gear :: %ls buys page %d (%d)", clientHd, account->nickname.data(), n + 1, cost.amount);
+	LOG("[client%x] Gear :: %ls buys page %d (%d)", clientHd, account->nickname.data(), n + 1, price);
 }
 
 void HubGame::OnMasterGearSelect(ClientHandle clientHd, u32 characterID, u8 pageNo)

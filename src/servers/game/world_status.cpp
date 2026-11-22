@@ -335,6 +335,10 @@ void World::PulseAura(u32 casterIndex, const StatusInfo& aura, const vec2& cente
 			bool inside = !p->dead;
 			if(inside && glm::length(vec2(p->body->GetWorldPos()) - center) > range + HitRadius(*p)) inside = false;
 			ActiveStatus* cur = FindActiveStatus(p->index, *id);
+			if(cur && bound && cur->casterIndex == casterIndex && cur->targetUID != p->Main().UID) {
+				cur->until = localTime;
+				cur = nullptr;
+			}
 			if(!inside) {
 				if(cur && cur->casterIndex == casterIndex) cur->until = localTime;
 				continue;
@@ -726,10 +730,7 @@ f32 World::PassiveWeaponDamageMul(Player& attacker, Player& target)
 
 static f32 StatusShieldLayer(const StatusInfo& info, f32 skillPower, f32 power)
 {
-	f32 dataShield = 0;
-	foreach_const(m, info.mods) {
-		if(m->stat == StatusMod::SHIELD_DEFENCE && !m->mul) dataShield += m->value;
-	}
+	const f32 dataShield = GetGameXmlContent().StatusShieldAmount(info);
 	return dataShield > 0 ? (f32)(i32)(dataShield + skillPower * info.shieldMul) : MAX(power, 100.0f) * (info.paramRatio > 0 ? info.paramRatio : 1.0f);
 }
 
@@ -765,6 +766,10 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	}
 	if(hostileSource && HasStatusType(target, StatusType::BURROW)) {
 		LOG("Status :: %ls ignored %d (burrow)", target.name.data(), statusID);
+		return;
+	}
+	if(info && info->isDebuff && hostileSource && HasStatusType(target, StatusType::EVADE)) {
+		LOG("Status :: %ls evaded %d", target.name.data(), statusID);
 		return;
 	}
 	if(info && info->isDebuff && hostileSource && HasStatusType(target, StatusType::GODMODE)) {
@@ -904,6 +909,36 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	if(info && hostileSource) PassiveOnCC(target, *info);
 
 	if(info) foreach_const(m, info->mods) if(m->stat == StatusMod::RAGE && !m->regen) GainResource(target, 1, m->value);
+	if(info) foreach_const(m, info->mods) {
+		if(m->stat != StatusMod::RESTORE_HEALTH && m->stat != StatusMod::RESTORE_RESOURCES) continue;
+		const f32 ratio = m->value / 100.0f;
+		if(m->stat == StatusMod::RESTORE_HEALTH) {
+			HealPlayer(target, target, (i32)(target.Main().hpMax * ratio));
+			ActorMaster& bench = target.Sub();
+			if(bench.hp > 0 && bench.hp < bench.hpMax) {
+				bench.hp = MIN(bench.hp + (i32)(bench.hpMax * ratio), bench.hpMax);
+				replication->SendStatToAll(bench.UID, (i32)StatType::STAT_TYPE_HEALTH, (f32)bench.hp, (f32)bench.hpMax, STAT_REASON_REGEN);
+			}
+			continue;
+		}
+		const ClassType cls = target.Main().classType;
+		const f32 manaMax = MasterStat(cls, STAT_MANA);
+		const f32 staminaMax = MasterStat(cls, STAT_STAMINA);
+		const f32 ultMax = MasterStat(cls, STAT_ULTIMATE);
+		if(manaMax > 0 && target.mana >= 0) { target.mana = MIN(target.mana + manaMax * ratio, manaMax); target.manaDirty = true; }
+		if(staminaMax > 0 && target.stamina >= 0) { target.stamina = MIN(target.stamina + staminaMax * ratio, staminaMax); target.staminaDirty = true; }
+		if(ultMax > 0 && target.ultGauge >= 0) { target.ultGauge = MIN(target.ultGauge + ultMax * ratio, ultMax); target.ultDirty = true; }
+	}
+	if(info && target.mana >= 0 && !target.dead) {
+		const f32 manaMax = MasterStat(target.Main().classType, STAT_MANA);
+		foreach_const(m, info->mods) {
+			if(m->stat != StatusMod::MANA || !m->regen || manaMax <= 0) continue;
+			const f32 gain = m->mul ? manaMax * m->value / 100.0f : m->value;
+			target.mana = MIN(target.mana + gain, manaMax);
+			target.manaDirty = true;
+			LOG("Status :: %ls status=%d restores %.0f mana", target.name.data(), statusID, gain);
+		}
+	}
 	foreach(it, activeStatuses) {
 		if(it->statusID == statusID && it->targetIndex == target.index) {
 			if(it->appliedAt == localTime && it->casterIndex == caster.index && (!info || info->maxOverlap <= 1)) return;
@@ -934,6 +969,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			LOG("Status :: %ls -> %ls status=%d refreshed overlap=%d", caster.name.data(), target.name.data(), statusID, it->overlap);
 			const vec3 pos = target.body->GetWorldPos();
 			replication->SendAddStatusToAll(statusID, it->targetUID, it->casterUID, sentDuration, pos, StatusGraphAnchorOnly(info) ? vec3(0) : pos, 0, it->overlap, 1.0f, -1.0f, StatusGraphAnchorOnly(info), true);
+			if(info && info->tagMode == StatusInfo::TAG_BOTH) replication->SendAddStatusToAll(statusID, it->targetUID == target.Main().UID ? target.Sub().UID : target.Main().UID, it->casterUID, sentDuration, pos, pos, 0, it->overlap, 1.0f, -1.0f, false, true);
 			if(info && it->overlap >= info->maxOverlap && info->maxOverlap > 1) {
 				i32 full = 0;
 				foreach_const(ps, activeStatuses) {
@@ -1149,13 +1185,14 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	const bool motionGraph = info && info->type == StatusType::MOTION;
 	if(motionGraph) sentTo = vec3(0);
 	replication->SendAddStatusToAll(statusID, st.targetUID, st.casterUID, sentDuration, motionGraph ? vec3(0) : from, sentTo, StatusGraphTimed(info) ? graphDuration : 0.0f, 1, ccScale, nominalDist, StatusSendsGraph(info), false, info && info->permanent ? (u8)MAX(info->customInit, 0) : (u8)0);
+	if(info && info->tagMode == StatusInfo::TAG_BOTH) replication->SendAddStatusToAll(statusID, st.targetUID == target.Main().UID ? target.Sub().UID : target.Main().UID, st.casterUID, sentDuration, from, from, 0.0f, 1, 1.0f, -1.0f, false, false);
 	if(npcCasterStatus != 0) ApplyNpcOwnerStatus(npcCaster, target, npcCasterStatus);
 	bool motionPlaying = false;
 	if(info && info->motionAction != ActionStateID::INVALID) {
 		foreach_const(pr, skillProgramList) if(pr->casterUID == target.Main().UID && pr->actionID == info->motionAction) motionPlaying = true;
 		if(target.lastCastAction == info->motionAction && target.lastCastStart != Time::ZERO) {
-			const f32 seq = GetGameXmlContent().GetSkillAction(ActionClass(target), info->motionAction, target.lastCastStance).seqLength;
-			if(TimeDiffSec(TimeDiff(target.lastCastStart, localTime)) < seq) motionPlaying = true;
+			const GameXmlContent::Action* played = GetGameXmlContent().FindSkillAction(ActionClass(target), info->motionAction, target.lastCastStance);
+			if(played && TimeDiffSec(TimeDiff(target.lastCastStart, localTime)) < played->seqLength) motionPlaying = true;
 		}
 	}
 	if(motionPlaying) LOG("Status :: %ls motion status %d: action %d already playing", target.name.data(), statusID, (i32)info->motionAction);
@@ -1210,6 +1247,9 @@ f32 World::StatusModMulSum(const Player& p, i32 stat) const
 		foreach_const(m, it->info->mods) {
 			if((i32)m->stat == stat && !m->regen && m->mul) sum += m->value * it->overlap;
 		}
+		for(const LowHpStatRule& r : TOOLTIP_LOW_HP_STATS) {
+			if(r.status == it->statusID && (i32)r.stat == stat && PassiveOfActiveMaster(p, it->statusID) && p.Main().hp * 100 < p.Main().hpMax * it->info->Param("_CheckVal")) sum += r.value;
+		}
 	}
 	return sum;
 }
@@ -1250,6 +1290,16 @@ void World::UpdateStatuses()
 			foreach(npc, actorNpcList) {
 				if(npc->ownerIndex != ps->casterIndex || (i32)npc->docID != ps->childCreature || localTime >= npc->despawnAt) continue;
 				ApplyStatusToNpc(caster, *npc, ps->statusID, ps->remove);
+				const SummonInfo* childInfo = ps->remove ? nullptr : GetGameXmlContent().FindSummon((i32)npc->docID);
+				for(i32 s = 1; childInfo && s < (i32)childInfo->skillStates.size(); s++) {
+					bool signal = false;
+					foreach_const(c, childInfo->skillStates[s]) if(c->kind == SummonCommand::STATUS && !c->onCurrent && c->index == ps->statusID) signal = true;
+					if(!signal) continue;
+					LOG("Summon :: creature=%d imitates its owner on signal %d", (i32)npc->docID, ps->statusID);
+					RunSummonState(*npc, s);
+					npc->standAt = npc->skillEndAt;
+					break;
+				}
 			}
 			ps = pendingStatuses.erase_unsorted(ps);
 			continue;
@@ -1336,6 +1386,19 @@ void World::UpdateStatuses()
 					bench.hp = MIN(bench.hp + benchAmount, bench.hpMax);
 					replication->SendStatToAll(bench.UID, (i32)StatType::STAT_TYPE_HEALTH, (f32)bench.hp, (f32)bench.hpMax, STAT_REASON_REGEN);
 				}
+				foreach_const(mm, it->info->mods) {
+					if(mm->stat != StatusMod::MANA) continue;
+					const f32 manaMax = MasterStat(target.Main().classType, STAT_MANA);
+					if(manaMax > 0 && target.mana >= 0 && target.mana < manaMax) {
+						target.mana = MIN(target.mana + (mm->mul ? manaMax * mm->value / 100.0f : mm->value), manaMax);
+						target.manaDirty = true;
+					}
+					const f32 benchManaMax = MasterStat(target.Sub().classType, STAT_MANA);
+					if(it->info->bothCharacters && benchManaMax > 0 && target.benchMana >= 0 && target.benchMana < benchManaMax) {
+						target.benchMana = MIN(target.benchMana + (mm->mul ? benchManaMax * mm->value / 100.0f : mm->value), benchManaMax);
+						replication->SendStatToAll(target.Sub().UID, STAT_MANA, target.benchMana, benchManaMax);
+					}
+				}
 			}
 		}
 
@@ -1388,6 +1451,7 @@ void World::UpdateStatuses()
 				}
 			}
 			replication->SendRemoveStatusToAll(it->statusID, it->targetUID, it->casterUID);
+			if(it->info && it->info->tagMode == StatusInfo::TAG_BOTH) replication->SendRemoveStatusToAll(it->statusID, it->targetUID == target.Main().UID ? target.Sub().UID : target.Main().UID, it->casterUID);
 			if(it->info && it->info->casterStatus != 0 && it->info->casterStatus != it->statusID) {
 				foreach(o, activeStatuses) {
 					if(o == it || o->statusID != it->info->casterStatus || o->until <= localTime) continue;
@@ -1467,17 +1531,17 @@ void World::UpdatePushBounds()
 		PushBound& b = pushBounds[i];
 		i++;
 		vec3 at;
-		Faction faction;
 		const ActorMaster* pm = FindMasterActor(b.pushed);
 		const ActorNpc* pn = pm ? nullptr : FindNpcActor(b.pushed);
-		if(pm && !pm->parent->dead && pm->parent->body) { at = pm->parent->body->GetWorldPos(); faction = (Faction)pm->parent->team; }
-		else if(pn && pn->hp > 0) { at = pn->pos; faction = pn->faction; }
+		if(pm && !pm->parent->dead && pm->parent->body) at = pm->parent->body->GetWorldPos();
+		else if(pn && pn->hp > 0) at = pn->pos;
 		else continue;
 		Player& caster = players[b.casterIndex];
 		const f32 bound = (f32)b.remote->boundSize[0];
 		const ActorUID prevCaster = statusCasterOverride;
+		const bool firstContact = b.hit.empty();
 		foreach(p, players) {
-			if(p->removed || p->dead || !p->body || (Faction)p->team != faction || p->Main().UID == b.pushed || b.hit.full()) continue;
+			if(p->removed || p->dead || !p->body || p->team == caster.team || p->Main().UID == b.pushed || b.hit.full()) continue;
 			if(eastl::find(b.hit.begin(), b.hit.end(), p->Main().UID) != b.hit.end()) continue;
 			if(glm::length(vec2(p->body->GetWorldPos() - at)) > bound + HitRadius(*p)) continue;
 			b.hit.push_back(p->Main().UID);
@@ -1487,7 +1551,7 @@ void World::UpdatePushBounds()
 			statusCasterOverride = prevCaster;
 		}
 		foreach(n, actorNpcList) {
-			if(n->hp <= 0 || n->removeAt != Time::ZERO || n->faction != faction || n->UID == b.pushed || b.hit.full()) continue;
+			if(n->hp <= 0 || n->removeAt != Time::ZERO || !NpcHittableBy(*n, caster) || n->UID == b.pushed || b.hit.full()) continue;
 			if(eastl::find(b.hit.begin(), b.hit.end(), n->UID) != b.hit.end()) continue;
 			if(glm::length(vec2(n->pos - at)) > bound + NpcHitRadius(*n)) continue;
 			b.hit.push_back(n->UID);
@@ -1496,5 +1560,8 @@ void World::UpdatePushBounds()
 			foreach_const(s, b.remote->friendlyStatuses) ApplyStatusToNpc(caster, *n, s->statusID, false);
 			statusCasterOverride = prevCaster;
 		}
+		if(!firstContact || b.hit.empty()) continue;
+		if(pm) foreach_const(s, b.remote->statuses) ApplyStatus(caster, *pm->parent, s->statusID);
+		else if(ActorNpc* self = FindNpcActor(b.pushed)) foreach_const(s, b.remote->statuses) ApplyStatusToNpc(caster, *self, s->statusID, false);
 	}
 }

@@ -25,7 +25,6 @@ static const f32 HYP_CLIENT_SAME_DIR_DOT = 0.95f;
 static const f32 HYP_CLIENT_SLIDE_DIR_DOT = 0.985f;
 static const f64 HYP_CLIENT_PUSH_INFLIGHT_SEC = 0.3;
 static const f32 HYP_HUMAN_DASH_SNAP = 400.0f;
-static const f32 MEASURED_BOT_TAG_SHARE = 2.5f / 49.9f;
 static const u32 MEASURED_DEFENCE_RETURN_MS = 280;
 static const i32 MEASURED_DEFENCE_RESPAWN_MS = 12000;
 struct PvpGuildPointRule { i32 teamSize; u32 win; u32 lose; };
@@ -248,6 +247,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 		const bool pve = stage->gameMode == GameModeType::GAME_MODE_STAGE || stage->gameMode == GameModeType::GAME_MODE_DEFENCE;
 		world.hostileMonsters = pve;
 		world.ingameSkillPoints = !pve;
+		world.fullSkillPoints = stage->gameMode == GameModeType::GAME_MODE_MASTER_TRAINING;
 		replication.pveTeams = pve;
 		world.occupyMode = stage->gameMode == GameModeType::GAME_MODE_OCCUPY;
 		replication.occupyMode = world.occupyMode;
@@ -558,7 +558,7 @@ void Game::Update(Time localTime_)
 
 					eastl::array<f32,Action::_Count> actionWeight = {0.f};
 					actionWeight[Action::Move] = 8;
-					actionWeight[Action::Tag] = actionWeight[Action::Move] * MEASURED_BOT_TAG_SHARE / (1.0f - MEASURED_BOT_TAG_SHARE);
+					actionWeight[Action::Tag] = 0;
 					actionWeight[Action::Jump] = 0;
 
 					f32 actionSpace = 0;
@@ -728,12 +728,7 @@ bool Game::LoadMap()
 		actor.action = it->actionState;
 		actor.entityType = it->entityType;
 		actor.seed = (i32)RandUint();
-		const auto meshKey = GetGameXmlContent().dynamicMeshKey.find((i32)it->docID);
-		if(map->ingameLevels && meshKey != GetGameXmlContent().dynamicMeshKey.end()) {
-			eastl::fixed_string<char,100,false> meshName;
-			meshName.sprintf("%s/%s", meshKey->second.c_str(), meshKey->second.c_str());
-			if(world.physics.HasStaticMesh(meshName.c_str())) actor.collider = world.physics.CreateStaticCollider(meshName.c_str(), actor.pos, actor.rot, it->scale, GetGameXmlContent().dynamicBlockSight.count((i32)it->docID) > 0);
-		}
+		world.AttachDynamicCollider(actor, it->scale);
 	}
 
 	if(map->index != MapIndex::PVP_DEATHMATCH) return true;
@@ -1415,6 +1410,7 @@ void Game::OnPlayerSyncActionState(ClientHandle clientHd, ActorUID actorUID, Act
 	player.input.action = state;
 	player.input.actionParam1 = param1;
 	player.input.actionParam2 = param2;
+	if(state == ActionStateID::EMOTION_BEHAVIORSTATE && !player.dead) replication.SendPlayerActionStateToAll(actorUID, state, param1, param2, rotate, upperRotate);
 }
 
 void Game::OnPlayerLoadingComplete(ClientHandle clientHd)
@@ -2032,6 +2028,13 @@ void Game::OnClientRemoteCreated(ClientHandle clientHd, u32 seed, RemoteIdx doc)
 	world.BindClientRemote(world.GetPlayer(found->second->playerIndex), doc, seed);
 }
 
+void Game::OnPlayerMeleeSeed(ClientHandle clientHd, u32 seed)
+{
+	auto found = playerMap.find(clientHd);
+	if(found == playerMap.end()) return;
+	world.BindMeleeSeed(world.GetPlayer(found->second->playerIndex), seed);
+}
+
 void Game::OnPlayerTakeGroundItem(ClientHandle clientHd, u32 itemUID)
 {
 	auto found = playerMap.find(clientHd);
@@ -2326,6 +2329,7 @@ void Game::OnPlayerGameIsReady(ClientHandle clientHd)
 			replication.SendPreGameLevelEvents(clientHd);
 			replication.SendGameStart(clientHd);
 			p.gameStartSent = true;
+			world.ResendSkillState(player);
 		}
 	}
 }

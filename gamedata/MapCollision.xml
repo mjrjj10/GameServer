@@ -6740,6 +6740,7 @@
   <_Alias _Index="160005293" _Map="160005290" />
   <_Alias _Index="160005294" _Map="160005290" />
   <_Map _Index="160005412" _GroundPlane="0">
+    <_File _Path="collision/Charis_Public_NM_Barricate.physx_static" />
     <_File _Path="collision/CRS_S4Z1_RE_Land_A01_01.physx_static" />
     <_File _Path="collision/CRS_Bridge_LogB_03.physx_static" />
     <_File _Path="collision/CRS_Fence_01_OakFence_02.physx_static" />
@@ -7023,6 +7024,7 @@
   <_Alias _Index="160005413" _Map="160005412" />
   <_Alias _Index="160005414" _Map="160005412" />
   <_Map _Index="160005420" _GroundPlane="0">
+    <_File _Path="collision/Charis_Public_NM_Barricate.physx_static" />
     <_File _Path="collision/CRS_Stone_Moss_A01.physx_static" />
     <_File _Path="collision/CRS_re_Moss_Stone_A01.physx_static" />
     <_File _Path="collision/CRS_Floor01_S4Z1Land_A03_01.physx_static" />
@@ -9961,6 +9963,7 @@
   </_Map>
   <_Alias _Index="160007593" _Map="160007591" />
   <_Map _Index="160007611" _GroundPlane="0">
+    <_File _Path="collision/COH_Barricade.physx_static" />
     <_File _Path="collision/COH_Lamp_streeLamp_A_02.physx_static" />
     <_File _Path="collision/COH_Deco_WoodboxA_01.physx_static" />
     <_File _Path="collision/COH_Deco_WoodPalette_barri_01.physx_static" />
@@ -10798,7 +10801,7 @@
     <_File _Path="collision/TR_TrainRm_Env.physx_static" />
     <_File _Path="collision/TR_TrainRm_Collision.physx_static" />
     <_File _Path="collision/TR_Util_Hologram.physx_static" />
-    <_Collider _Mesh="TR_TrainRm_Env/TR_TrainRm_Aim" x="0" y="0" z="0" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="TR_TrainRm_Env/TR_TrainRm_Aim" x="0" y="0" z="0" angx="0" angy="0" angz="0" scale="1" _Walk="0" />
     <_Collider _Mesh="TR_TrainRm_Env/TR_TrainRm_GuardrailMob" x="0" y="0" z="0" angx="0" angy="0" angz="0" scale="1" />
     <_Collider _Mesh="TR_TrainRm_Collision/TR_TrainRm_Collision" x="0" y="0" z="0" angx="0" angy="0" angz="0" scale="1" />
     <_Collider _Mesh="TR_Util_Hologram/TR_Util_Hologram_Collision" x="12901.26" y="6583.05" z="4065.31" angx="0" angy="0" angz="-2.094387" scale="1" />
@@ -14749,6 +14752,7 @@
     <_Collider _Mesh="PVP_Occupy_bush_StartA01_02/PVP_Occupy_bush_StartA01_Collision" x="9494.55" y="11814.82" z="-31.62" angx="0" angy="0" angz="0.7854096" scale="1" />
   </_Map>
   <_Map _Index="160006103">
+    <_File _Path="collision/Cal_S3_NM_WoodBarricade_1.physx_static" />
     <_File _Path="collision/PVP_Deco_OccupyA_01.physx_static" />
     <_File _Path="collision/PVP_Occupy_Collision.physx_static" />
     <_File _Path="collision/VTS_Pillar_hydraulicB_02.physx_static" />
@@ -15008,6 +15012,7 @@
     <_Collider _Mesh="CLG_Lamp_LightA_01/MODEL_ROOT" x="9084.31" y="8089.53" z="519" angx="0" angy="0" angz="0.7854096" scale="1" />
   </_Map>
   <_Map _Index="160000100">
+    <_File _Path="collision/Cal_S3_NM_WoodBarricade_1.physx_static" />
     <_File _Path="collision/LCR_Fence_FenceB_02.physx_static" />
     <_File _Path="collision/LCR_Fence_FenceB_01.physx_static" />
     <_File _Path="collision/COH_Deco_ContainerA_02.physx_static" />

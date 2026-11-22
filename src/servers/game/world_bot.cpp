@@ -938,6 +938,18 @@ bool World::BotRetreat(Player& bot, vec2* goal)
 	return true;
 }
 
+struct BotTagRate { f32 hpBelow; f32 perMin; };
+static const BotTagRate MEASURED_BOT_TAG_RATE[] = { { 0.2f, 11.10f }, { 0.3f, 5.32f }, { 0.4f, 3.32f }, { 0.5f, 2.38f }, { 0.6f, 1.29f }, { 0.8f, 1.20f }, { 0.95f, 0.83f }, { 1.01f, 0.89f } };
+
+bool World::BotWantsTag(const Player& bot) const
+{
+	if(bot.titanForm >= 0 || bot.Sub().classType == ClassType::NONE || localTime < bot.botTagReadyAt || localTime < bot.ccUntil) return false;
+	const f32 ratio = HpRatio(bot.Main().hp, bot.Main().hpMax);
+	f32 perMin = 0;
+	for(const BotTagRate& r : MEASURED_BOT_TAG_RATE) if(ratio < r.hpBelow) { perMin = r.perMin; break; }
+	return (f32)Randf01() < perMin / 60.0f * (f32)UPDATE_RATE;
+}
+
 bool World::BotLaneGoal(Player& bot, vec2* goal)
 {
 	if(!botNavBuilt) BuildBotNav();

@@ -17,6 +17,7 @@ struct AccountData;
 
 static const wchar* const FIRE_OBJECT_SCENE_ROOT = L"Scene Root";
 static const u8 MEASURED_REMOTE_CREATE_FLAG_PARENT_REMOTE = 8;
+static const u8 MEASURED_REMOTE_CREATE_FLAG_DESTROY_AT_TARGET = 1;
 static const wchar* const FIRE_OBJECT_ATTACK_PREFIX = L"Attack";
 
 inline bool FireObjectStartsWith(const wchar* name, u16 len, const wchar* prefix)
@@ -208,6 +209,7 @@ struct Replication
 		RotationHumanoid rot;
 		f32 speed;
 		f32 moveDuration;
+		f32 originDist = 0;
 	};
 
 	struct Frame
@@ -403,6 +405,7 @@ struct Replication
 	void SendSkillPoints(ClientHandle clientHd, UserID userId, i32 points);
 	void SendSkillUpgradeResult(ClientHandle clientHd, i32 result, ActorUID mainUID, SkillID mainSkill, Slice<const i32> mainProps, ActorUID subUID, SkillID subSkill, Slice<const i32> subProps);
 	void SendPlayerSkillUpdateToAll(ActorUID charaUID, SkillID skill, bool active, Slice<const i32> props);
+	void SendPlayerSkillUpdate(ClientHandle clientHd, ActorUID charaUID, SkillID skill, bool active, Slice<const i32> props);
 
 	void SendPreGameLevelEvents(ClientHandle clientHd);
 	void SendGameStart(ClientHandle clientHd);
@@ -526,6 +529,7 @@ struct Replication
 		i32 hp = 0;
 		i32 hpMax = 0;
 		ClientHandle seedOwnerHd = ClientHandle::INVALID;
+		u32 ownerSeed = 0;
 	};
 	void SendRemoteDamageToAll(const RemoteDamage& hit);
 	void SendRemoteActivatedToAll(u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, ActorUID targetUID, u32 penetration, const vec3& pos);
@@ -537,11 +541,13 @@ struct Replication
 	void SendModifyStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, u8 overlap, u8 customValue, ActorUID replaceCasterUID = ActorUID::INVALID);
 	void SendAttackActionToOthers(ClientHandle senderHd, ActorUID actorUID, f32 mxmYaw, ActionStateID state);
 	void SendActionStateOnlyToAll(ActorUID actorUID, ActionStateID state, f32 mxmYaw, bool move, const vec3& startPos, const vec3& endPos, f32 durationSec);
+	void SendPlayerActionStateToAll(ActorUID actorUID, ActionStateID state, i32 param1, i32 param2, f32 worldYaw, f32 worldUpperYaw);
 	void SendDestroyRemoteToAll(u32 remoteID);
 	void SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed);
 	void SendNpcTurnToAll(ActorUID actorUID, f32 worldYaw);
 	void SendMonsterStateToAll(ActorUID actorUID, ActionStateID action, const vec3& pos, f32 speed);
 	void SendLevelIngameToAll(UserID userID, i32 expToLevelUp, i32 level);
+	void SendLevelIngame(ClientHandle clientHd, UserID userID, i32 expToLevelUp, i32 level);
 	void SendExpIngame(ClientHandle clientHd, UserID userID, i32 gain, i32 current, ActorUID target);
 	void SendCharacterPropertyPoint(ClientHandle clientHd, ActorUID character, i32 points);
 	void SendCharacterPropertyInfoToAll(ActorUID character, const eastl::array<u8,4>& levels);
@@ -562,7 +568,7 @@ struct Replication
 	void SendNpcLegStartToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 speed);
 	void SendNpcLegStopToAll(ActorUID actorUID, const vec3& pos, f32 worldYaw, bool beforeAction = false);
 	void SendAiMoveTargetToAll(ActorUID actorUID, const vec3& goal, u32 movePreset);
-	void SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject = L"Scene Root", ClientHandle exclude = ClientHandle::INVALID);
+	void SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject = L"Scene Root", ClientHandle exclude = ClientHandle::INVALID, u8 flags = 0);
 	struct RemoteCreate
 	{
 		ActorUID parentUID = ActorUID::INVALID;

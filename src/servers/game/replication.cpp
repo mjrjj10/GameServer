@@ -1189,6 +1189,25 @@ void Replication::SendSkillUpgradeResult(ClientHandle clientHd, i32 result, Acto
 	SendPacket(clientHd, packet);
 }
 
+void Replication::SendPlayerSkillUpdate(ClientHandle clientHd, ActorUID charaUID, SkillID skill, bool active, Slice<const i32> props)
+{
+	const LocalActorID local = GetLocalActorID(clientHd, charaUID);
+	if(local == LocalActorID::INVALID) return;
+	PacketWriter<Sv::SN_PlayerSkillUpdate,512> packet;
+	packet.Write<LocalActorID>(local);
+	packet.Write<SkillID>(skill);
+	packet.Write<u32>(0);
+	packet.Write<u8>(1);
+	packet.Write<u16>((u16)props.size());
+	foreach_const(p, props) {
+		packet.Write<u32>((u32)*p);
+		packet.Write<u32>(1);
+	}
+	packet.Write<u8>(active ? 1 : 0);
+	packet.Write<u8>(1);
+	SendPacket(clientHd, packet);
+}
+
 void Replication::SendPlayerSkillUpdateToAll(ActorUID charaUID, SkillID skill, bool active, Slice<const i32> props)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
@@ -2042,7 +2061,7 @@ void Replication::SendRemoteDamageToAll(const RemoteDamage& hit)
 
 		PacketWriter<Sv::SN_BroadcastDamage,256> packet;
 		packet.Write<u32>(seq);
-		packet.Write<u32>(clientHd == hit.seedOwnerHd ? hit.remoteID - 1 : hit.remoteID);
+		packet.Write<u32>(clientHd == hit.seedOwnerHd ? (hit.ownerSeed != 0 ? hit.ownerSeed : hit.remoteID - 1) : hit.remoteID);
 		packet.Write<u32>((u32)targetLocalID);
 		packet.Write<u32>((u32)GetLocalActorID(clientHd, hit.attackerUID));
 		packet.Write<u32>((u32)hit.remoteDoc);
@@ -2135,7 +2154,7 @@ void Replication::RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetD
 		SendPacketData<Sv::SN_RemoteSyncTarget>(clientHd, relaySize, &packet);
 	}
 }
-void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject, ClientHandle exclude)
+void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx doc, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, const wchar* fireObject, ClientHandle exclude, u8 flags)
 {
 	if(!frameCur->skillCastList.empty() || !frameCur->skillExecList.empty()) SendFrameSkillPackets();
 	if(!fireObject || !fireObject[0]) fireObject = FIRE_OBJECT_SCENE_ROOT;
@@ -2150,6 +2169,7 @@ void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx d
 	remote.fireObjectLen = (u16)EA::StdC::Strlen(fireObject);
 	remote.doc = doc;
 	remote.targetUID = targetUID;
+	remote.flags = flags;
 	SendRemoteCreate(remote, exclude);
 }
 void Replication::SendChildRemoteCreateToAll(ActorUID ownerUID, ActorUID parentUID, u32 parentRemoteID, ClientHandle parentSeedOwnerHd, u32 seed, RemoteIdx doc, u16 creator, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, ActorUID hitInvalidUID, const wchar* fireObject, u8 flags, ClientHandle exclude)
@@ -2284,6 +2304,15 @@ void Replication::SendMonsterStateToAll(ActorUID actorUID, ActionStateID action,
 		packet.Write(pos);
 		SendPacket(clientHd, packet);
 	}
+}
+
+void Replication::SendLevelIngame(ClientHandle clientHd, UserID userID, i32 expToLevelUp, i32 level)
+{
+	Sv::SN_LevelIngame packet;
+	packet.usn = (u32)userID;
+	packet.expForLevelUp = (u16)expToLevelUp;
+	packet.currentLevel = (u8)level;
+	SendPacketData<Sv::SN_LevelIngame>(clientHd, sizeof(packet), &packet);
 }
 
 void Replication::SendLevelIngameToAll(UserID userID, i32 expToLevelUp, i32 level)
@@ -2819,6 +2848,25 @@ void Replication::SendActionStateOnlyToAll(ActorUID actorUID, ActionStateID stat
 	}
 }
 
+void Replication::SendPlayerActionStateToAll(ActorUID actorUID, ActionStateID state, i32 param1, i32 param2, f32 worldYaw, f32 worldUpperYaw)
+{
+	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
+		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
+		const ClientHandle clientHd = clientHandle[clientID];
+		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+		if(localID == LocalActorID::INVALID || playerLocalInfo[clientID].hiddenActors.count(actorUID)) continue;
+		Sv::SN_PlayerSyncActionStateOnly packet;
+		memset(&packet, 0, sizeof(packet));
+		packet.characterID = localID;
+		packet.state = state;
+		packet.param1 = param1;
+		packet.param2 = param2;
+		packet.rotate = WorldYawToMxmYaw(worldYaw);
+		packet.upperRotate = WorldYawToMxmYaw(worldUpperYaw);
+		SendPacket(clientHd, packet);
+	}
+}
+
 void Replication::SendAddStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, f32 durationSec, const vec3& from, const vec3& to, f32 graphDuration, i32 overlap, f32 scale, f32 nominalDist, bool withGraph, bool refresh, u8 customValue)
 {
 	if(!frameCur->skillCastList.empty() || !frameCur->skillExecList.empty()) SendFrameSkillPackets();
@@ -3301,13 +3349,16 @@ void Replication::SendToggleSkill(ActorUID casterUID, ClientHandle casterHd, Ski
 		u8 buf[24] = {};
 		u32 words[3] = { (u32)localID, 0, (u32)skillID };
 		memcpy(buf, words, sizeof(words));
+		const u32 act = on ? (u32)action : 0u;
 		if(clientHd == casterHd) {
-			const u32 act = (u32)action;
 			memcpy(buf + 12, &act, 4);
 			if(on) SendPacketData<Sv::SA_SwitchOnToggleSkill>(clientHd, 16, buf);
 			else SendPacketData<Sv::SA_SwitchOffToggleSkill>(clientHd, 16, buf);
 		}
-		else if(on) SendPacketData<Sv::SN_SwitchOnToggleSkill>(clientHd, 18, buf);
+		else if(on) {
+			memcpy(buf + 14, &act, 4);
+			SendPacketData<Sv::SN_SwitchOnToggleSkill>(clientHd, 18, buf);
+		}
 		else SendPacketData<Sv::SN_SwitchOffToggleSkill>(clientHd, 16, buf);
 	}
 }
@@ -4149,7 +4200,7 @@ void Replication::SendFrameSkillPackets()
 					packet.Write<float3>(v2f(exec.startPos)); // startPos
 					packet.Write<float3>(v2f(exec.endPos)); // endPos
 					packet.Write<f32>(exec.moveDuration); // durationTimeS
-					packet.Write<f32>(glm::distance(exec.startPos, exec.endPos)); // originDistance
+					packet.Write<f32>(exec.originDist > 0 ? exec.originDist : glm::distance(exec.startPos, exec.endPos));
 				}
 				else {
 					// graphMove

@@ -379,6 +379,47 @@ vec3 PhysicsScene::FindMovePos(PhysicsDynamicBody* body, const vec3& disp, f32 t
 	return end;
 }
 
+vec3 PhysicsScene::ClimbMove(PhysicsDynamicBody* body, const vec2& disp, f32 time)
+{
+	const f32 z0 = body->GetWorldPos().z;
+	Move(body, vec3(0, 0, MaxWalkRise(glm::length(disp))), time);
+	const f32 up = body->GetWorldPos().z - z0;
+	Move(body, vec3(disp, 0), time);
+	return Move(body, vec3(0, 0, -up), time);
+}
+
+static const f32 HYP_SKILL_MOVE_SUBSTEP = 50.0f;
+
+vec3 PhysicsScene::FindSkillMovePos(PhysicsDynamicBody* body, const vec2& dir, f32 dist, f32 time, f32 lift)
+{
+	ASSERT(dist >= 0 && lift >= 0);
+	const PxExtendedVec3 start = body->collider->getFootPosition();
+	const vec2 from = vec2(body->GetWorldPos());
+	const i32 steps = MAX((i32)ceilf(dist / HYP_SKILL_MOVE_SUBSTEP), 1);
+	const f32 stepLen = dist / (f32)steps;
+	const f32 stepTime = time / (f32)steps;
+	if(lift > 0) Move(body, vec3(0, 0, lift), stepTime);
+	f32 done = 0;
+	for(i32 i = 0; i < steps; i++) {
+		const PxExtendedVec3 stepStart = body->collider->getFootPosition();
+		const vec2 before = vec2(body->GetWorldPos());
+		vec3 after = Move(body, vec3(dir * stepLen, 0), stepTime);
+		if(lift <= 0 && glm::dot(vec2(after) - before, dir) < stepLen - 1.0f) {
+			body->collider->setFootPosition(stepStart);
+			after = ClimbMove(body, dir * stepLen, stepTime);
+		}
+		const f32 along = glm::dot(vec2(after) - before, dir);
+		if(along < stepLen - 1.0f) {
+			done += MAX(along, 0.0f);
+			break;
+		}
+		done += stepLen;
+	}
+	const vec3 end = vec3(from + dir * done, body->GetWorldPos().z);
+	body->collider->setFootPosition(start);
+	return end;
+}
+
 static const u32 BODY_BLOCKER_WORD = 1;
 
 struct IgnoreTeamWalls: PxQueryFilterCallback

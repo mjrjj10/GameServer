@@ -35,6 +35,9 @@
     <ATTACK target="master" state="SKILL_10_BEHAVIORSTATE" kind="special" range="680" cooldown="21.55" remote="1430250011" delay="0.1" multiplier="1" speed="0" status="0" radius="0" hits="1" interval="0" hitRemote="1430250011" />
     <ATTACK target="master" state="SKILL_11_BEHAVIORSTATE" kind="special" range="680" cooldown="21.55" remote="1430250012" delay="0.28" multiplier="1" speed="0" status="0" radius="0" hits="1" interval="0" hitRemote="1430250012" />
   </INFO>
+  <INFO ID="100013000" class="AI_STRIKER" walk="0" run="0" perception="9000" lost="12000" tag="" enemies="" destroy="0.1" radius="45" estimated="1" />
+  <INFO ID="100013001" class="AI_SNIPER" walk="0" run="0" perception="9000" lost="12000" tag="" enemies="" destroy="0.1" radius="45" estimated="1" />
+  <INFO ID="100013002" class="AI_ARTILLERY" walk="0" run="0" perception="9000" lost="12000" tag="" enemies="" destroy="0.1" radius="89" estimated="1" />
   <INFO ID="100013003" class="NPC_MezzanineGuard_T" walk="550" run="550" perception="100" lost="100" tag="" enemies="" destroy="30" radius="80" estimated="1">
     <ATTACK target="master" state="ATTACK_BEHAVIORSTATE" kind="basic" range="100" cooldown="3.48" remote="1401223001" delay="0" multiplier="0.3" speed="2000" status="0" radius="0" hits="1" interval="0" hitRemote="1401223001" />
     <ATTACK target="master" state="SKILL_1_BEHAVIORSTATE" kind="special" range="100" cooldown="21.55" remote="1401223001" delay="0" multiplier="0.3" speed="2000" status="0" radius="0" hits="1" interval="0" hitRemote="1401223001" />

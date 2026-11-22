@@ -205,6 +205,16 @@ static const FireNodeRule FIRE_NODE_RULES[] = {
 	{ RemoteIdx(1440370050), 95.0f, 8.0f, 131.0f },
 };
 
+static const FireNodeRule MEASURED_HIT_TARGET_FIRE_NODES[] = {
+	{ RemoteIdx(1440180040), 70.0f, 0.0f, 109.0f },
+};
+
+static inline const FireNodeRule* FindHitTargetFireNode(RemoteIdx remote)
+{
+	for(const FireNodeRule& rule : MEASURED_HIT_TARGET_FIRE_NODES) if(rule.remote == remote) return &rule;
+	return nullptr;
+}
+
 static inline const FireNodeRule* FindFireNodeRule(RemoteIdx remote)
 {
 	for(const FireNodeRule& rule : FIRE_NODE_RULES) {
@@ -298,6 +308,29 @@ static inline bool BurstsBackAfterThrough(SkillID skill)
 {
 	for(SkillID s : TESTER_BURST_BACK_AFTER_THROUGH) if(s == skill) return true;
 	return false;
+}
+
+struct SkillMoveLiftRule
+{
+	SkillID skill;
+	f32 lift;
+};
+
+static const SkillMoveLiftRule MEASURED_SKILL_MOVE_LIFTS[] = {
+	{ SkillID(180080020), 350.0f },
+	{ SkillID(180120030), 350.0f },
+	{ SkillID(180140030), 322.0f },
+	{ SkillID(180180020), 330.0f },
+	{ SkillID(180220030), 297.0f },
+	{ SkillID(180280030), 294.0f },
+	{ SkillID(180350020), 300.0f },
+	{ SkillID(189000020), 350.0f },
+};
+
+static inline f32 SkillMoveLift(SkillID skill)
+{
+	for(const SkillMoveLiftRule& r : MEASURED_SKILL_MOVE_LIFTS) if(r.skill == skill) return r.lift;
+	return 0.0f;
 }
 
 struct PvpRewardRule
@@ -456,6 +489,25 @@ static inline bool IsChainedZoneRemote(RemoteIdx remote)
 	return false;
 }
 
+struct LongJumpRiseRule
+{
+	ClassType master;
+	f32 rise;
+};
+
+static const LongJumpRiseRule MEASURED_LONG_JUMP_RISES[] = {
+	{ ClassType::LILU, 297.0f },
+	{ ClassType::RODMASTER, 322.3f },
+};
+
+static inline f32 LongJumpRise(ClassType master)
+{
+	for(const LongJumpRiseRule& rule : MEASURED_LONG_JUMP_RISES) {
+		if(rule.master == master) return rule.rise;
+	}
+	return 0.0f;
+}
+
 enum class PassiveTrigger: u8
 {
 	SKILL_USE,
@@ -505,6 +557,17 @@ struct LowHpFireRateRule
 {
 	ClassType master;
 	f32 fireDelayScale;
+};
+
+struct LowHpStatRule
+{
+	i32 status;
+	StatusMod::Stat stat;
+	f32 value;
+};
+
+static const LowHpStatRule TOOLTIP_LOW_HP_STATS[] = {
+	{ 1230310000, StatusMod::DEFENCE, 25.0f },
 };
 
 static const LowHpFireRateRule MEASURED_LOW_HP_FIRE_RATES[] = {

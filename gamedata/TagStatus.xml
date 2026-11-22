@@ -12,7 +12,9 @@
   <INFO ID="1200070917" mode="DROP" cases="3/3" />
   <INFO ID="1200082420" mode="DROP" cases="10/10" />
   <INFO ID="1200100000" mode="DROP" cases="6/6" />
+  <INFO ID="1200100003" mode="BOTH" cases="54/54" />
   <INFO ID="1200100005" mode="DROP" cases="6/6" />
+  <INFO ID="1200100006" mode="BOTH" cases="49/49" />
   <INFO ID="1200100010" mode="DROP" cases="12/12" />
   <INFO ID="1200100011" mode="DROP" cases="8/8" />
   <INFO ID="1200100012" mode="DROP" cases="5/5" />

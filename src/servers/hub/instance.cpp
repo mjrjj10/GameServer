@@ -1256,6 +1256,7 @@ bool RoomInstance::ProhibitedFor(i32 team, ClassType classType) const
 
 bool RoomInstance::TryPickMaster(User* user, ClassType classType)
 {
+	if(!allowedMastersSet.count(classType)) return false;
 	if(ProhibitedFor(user->team, classType)) return false;
 	if(teamMasterPickCount[user->team][(i32)classType] < 2) {
 		const GameXmlContent& content = GetGameXmlContent();
@@ -1327,6 +1328,7 @@ bool RoomInstance::TryPickMaster(User* user, ClassType classType)
 
 void RoomInstance::UnpickMaster(User* user, ClassType classType)
 {
+	if(!allowedMastersSet.count(classType)) return;
 	u8& masterPickCount = teamMasterPickCount[user->team][(i32)classType];
 
 	foreach(m, user->masters) {

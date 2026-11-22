@@ -219,6 +219,8 @@ f32 World::BodyMidHeight(const Player& p) const
 	return (f32)GetGameXmlContent().GetMaster(p.Main().classType).character.getColliderHeight() * 0.5f;
 }
 
+static const f32 WEAK_ON_CRITICAL_BONUS = 100.0f;
+
 void World::CounterAttack(Player& attacker, Player& target, bool weaponHit)
 {
 	i32 stun = 0;
@@ -290,7 +292,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		f32 bonus = 0;
 		foreach_const(st, activeStatuses) {
 			if(st->targetIndex != target.index || !st->info || localTime >= st->until) continue;
-			if(st->info->type == StatusType::WEAK_ON_CRITICAL && attacker.team != target.team) bonus = 100.0f;
+			if(st->info->type == StatusType::WEAK_ON_CRITICAL && attacker.team != target.team) bonus = WEAK_ON_CRITICAL_BONUS;
 		}
 		if(proj && !proj->hitList.empty()) bonus += PierceCriticalBonus(doc, (u32)(proj->hitList.size() - 1 + proj->npcHitList.size()));
 		const f32 critMul = RollCritical(attacker, weaponHit, doc, bonus);
@@ -301,12 +303,13 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	}
 
 	foreach(it, activeStatuses) {
-		if(it->targetIndex == target.index && it->info && it->info->nextCondition == StatusInfo::NextCondition::REMOVE_ONHIT) it->removeOnHit = true;
+		if(it->targetIndex == target.index && it->info && it->info->nextCondition == StatusInfo::NextCondition::REMOVE_ONHIT && it->shieldHits <= 0) it->removeOnHit = true;
 	}
 
 	foreach(it, activeStatuses) {
 		if(it->targetIndex != target.index || it->shieldHits <= 0 || it->until <= localTime || attacker.team == target.team) continue;
 		it->shieldHits--;
+		if(it->shieldHits <= 0 && it->info && it->info->nextCondition == StatusInfo::NextCondition::REMOVE_ONHIT) it->removeOnHit = true;
 		LOG("Status :: %ls shield %d absorbs a hit (%d left)", target.name.data(), it->statusID, it->shieldHits);
 		CounterAttack(attacker, target, proj != nullptr);
 		return;
@@ -333,6 +336,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	if(ShowcaseKeepsAlive(target)) chara.hp = MAX(chara.hp, 1);
 	if(chara.hp == 0) PassiveOnLethal(target);
 	if(damage > 0 && target.casting.skillID != SkillID::INVALID && target.casting.interruptByAttacked) CancelCast(target, "attacked");
+	if(damage > 0 && target.interactSlot >= 0) CancelMapInteraction(target);
 	if(!reflecting && attacker.team != target.team && attacker.index != target.index && (proj || skillID != SkillID::INVALID)) {
 		const f32 ratio = StatusModSum(target, StatusMod::REFLECT_DAMAGE_RATIO);
 		if(ratio > 0 && !attacker.dead) {
@@ -404,6 +408,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		hit.hp = chara.hp;
 		hit.hpMax = chara.hpMax;
 		hit.seedOwnerHd = damageSeedOwnerOverride;
+		hit.ownerSeed = damageOwnerSeedOverride;
 		replication->SendRemoteDamageToAll(hit);
 	}
 	else {
@@ -422,6 +427,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		DropMasterSoul(target);
 		const bool targetWasTitan = target.titanForm >= 0;
 		RevertTitan(target);
+		EnterDeathSafeZone(target);
 		target.occupyStreak = 0;
 		i32 teamKills = 0;
 		i32 victimTeamKills = 0;
@@ -512,7 +518,7 @@ bool World::NpcHittableBy(const ActorNpc& npc, const Player& attacker) const
 		if(npc.faction == Faction::RED || npc.faction == Faction::BLUE) return npc.faction != (Faction)attacker.team;
 		return npc.faction == Faction::ORANGE || npc.faction == Faction::MONSTER;
 	}
-	return players[npc.ownerIndex].team != attacker.team;
+	return !OneHitSummon((i32)npc.docID) && players[npc.ownerIndex].team != attacker.team;
 }
 
 f32 World::NpcHitRadius(const ActorNpc& npc) const
@@ -590,19 +596,16 @@ f32 World::RollCritical(const Player& attacker, bool weapon, RemoteIdx doc, f32 
 void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage, const Replication::RemoteDamage* remoteHit)
 {
 	if(damage <= 0 || !NpcHittableBy(npc, attacker)) return;
-	if(npc.ownerUID != ActorUID::INVALID && OneHitSummon((i32)npc.docID)) {
-		npc.hp = 0;
-		replication->SendHpToAll(npc.UID, 0, npc.hpMax);
-		npc.killerUID = attacker.Main().UID;
-		npc.despawnAt = localTime;
-		GrantMonsterKillExp(npc, attacker.Main().UID);
-		LOG("Summon :: creature=%d destroyed by one hit from %ls", (i32)npc.docID, attacker.name.data());
-		return;
-	}
 	if(npc.ownerUID == ActorUID::INVALID && NpcHasStatusType(npc, StatusType::GODMODE)) return;
 	if(npc.monsterEvadeUntil != Time::ZERO && localTime < npc.monsterEvadeUntil) return;
 	const f32 titanPen = skillID == SkillID::INVALID ? MAX(TitanDefencePenetration(attacker), 0.0f) : 0.0f;
-	const f32 critMul = remoteHit ? RollCritical(attacker, skillID == SkillID::INVALID, remoteHit->remoteDoc, PierceCriticalBonus(remoteHit->remoteDoc, remoteHit->pierceHits)) : 0.0f;
+	f32 weakBonus = 0;
+	if(remoteHit && NpcHasStatusType(npc, StatusType::WEAK_ON_CRITICAL)) {
+		static const u32 weakKey = StatusTypeKey("STATUS_TYPE_WEAK_ON_CRITICAL");
+		const GameXmlContent::ResistRule* rule = GetGameXmlContent().FindResist(GetGameXmlContent().CreatureDefenceStatus((i32)npc.docID), weakKey);
+		weakBonus = WEAK_ON_CRITICAL_BONUS * (1.0f - (rule ? (f32)rule->value : 0.0f) / 100.0f);
+	}
+	const f32 critMul = remoteHit ? RollCritical(attacker, skillID == SkillID::INVALID, remoteHit->remoteDoc, PierceCriticalBonus(remoteHit->remoteDoc, remoteHit->pierceHits) + weakBonus) : 0.0f;
 	const f32 remoteMul = remoteHit ? RemoteTargetDamageMul(attacker, remoteHit->remoteDoc, npc.pos, nullptr, &npc) : 1.0f;
 	const i32 dealt = MAX((i32)(damage * remoteMul * (critMul > 0 ? critMul : 1.0f) * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(npc.defence * (1.0f - titanPen), 0.0f)) * NpcStatusMul(npc, StatusMod::DAMAGE_TAKEN) + 0.5f), 1);
 	const i32 hpBefore = npc.hp;
@@ -614,7 +617,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	}
 	npc.hp = MAX(npc.hp - AbsorbNpcShield(npc, dealt), 0);
 	GainRageOnHit(attacker);
-	if(npc.monsterWeakUntil != Time::ZERO && localTime < npc.monsterWeakUntil && localTime >= npc.monsterWeakFrom) npc.monsterWeakHit = true;
+	if(npc.monsterWeakUntil != Time::ZERO && localTime < npc.monsterWeakUntil && localTime >= npc.monsterWeakFrom) AddNpcGroggy(npc, skillID, remoteHit ? remoteHit->remoteDoc : RemoteIdx::INVALID);
 	if(IsStructure(npc)) attacker.damageStats[END_DMG_BUILDING_DEALT] += (u32)(hpBefore - npc.hp);
 	static const u32 coreTag = StatusTypeKey("Core");
 	if(npc.monsterAi && npc.monsterAi->tagKey == coreTag) attacker.coreDamage += hpBefore - npc.hp;
@@ -731,8 +734,26 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 		foreach_const(d, target.hitByDocs) if(*d == (i32)attacker.docID) known = true;
 		if(!known) target.hitByDocs.push_back((i32)attacker.docID);
 	}
+	foreach(it, activeStatuses) {
+		if(it->targetIndex != target.index || it->shieldHits <= 0 || it->until <= localTime) continue;
+		it->shieldHits--;
+		if(it->shieldHits <= 0 && it->info && it->info->nextCondition == StatusInfo::NextCondition::REMOVE_ONHIT) it->removeOnHit = true;
+		LOG("Status :: %ls shield %d absorbs a creature hit (%d left)", target.name.data(), it->statusID, it->shieldHits);
+		if(status > 0) ApplyStatusFromNpc(attacker, target, status);
+		return;
+	}
 	const f32 def = (MasterStat(target.Main().classType, STAT_DEFENCE) + StatBonus(target, STAT_DEFENCE)) * MAX(1.0f + StatusModMulSum(target, StatusMod::DEFENCE) / 100.0f, 0.0f);
 	damage = MAX((i32)(damage * DEFENCE_SCALE / (DEFENCE_SCALE + MAX(def, 0.0f)) * MAX(1.0f + StatusModMulSum(target, StatusMod::DAMAGE_TAKEN) / 100.0f, 0.0f) + 0.5f), 1);
+	foreach(it, activeStatuses) {
+		if(it->targetIndex == target.index && it->info && it->info->nextCondition == StatusInfo::NextCondition::REMOVE_ONHIT && it->shieldHits <= 0) it->removeOnHit = true;
+	}
+	foreach(it, activeStatuses) {
+		if(it->targetIndex != target.index || it->shieldHits <= 0 || it->until <= localTime) continue;
+		it->shieldHits--;
+		LOG("Status :: %ls shield %d absorbs a hit from creature=%d (%d left)", target.name.data(), it->statusID, (i32)attacker.docID, it->shieldHits);
+		if(status > 0) ApplyStatusFromNpc(attacker, target, status);
+		return;
+	}
 	bool shieldHit = false;
 	foreach(it, activeStatuses) {
 		if(damage <= 0) break;
@@ -757,6 +778,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	if(ShowcaseKeepsAlive(target)) chara.hp = MAX(chara.hp, 1);
 	if(chara.hp == 0) PassiveOnLethal(target);
 	if(target.casting.skillID != SkillID::INVALID && target.casting.interruptByAttacked) CancelCast(target, "attacked");
+	if(target.interactSlot >= 0) CancelMapInteraction(target);
 	if((attacker.faction == Faction::RED || attacker.faction == Faction::BLUE) && (i32)attacker.faction != (i32)target.team) LightAttacker(attacker.pos, target.team);
 	SendNpcHit(attacker, chara.UID, target.body->GetWorldPos(), remote, remoteID, damage, chara.hp, chara.hpMax);
 	if(chara.hp > 0) {
@@ -781,6 +803,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	DropMasterSoul(target);
 	RewardMasterKill(credited, target);
 	RevertTitan(target);
+	EnterDeathSafeZone(target);
 	target.occupyStreak = 0;
 	i32 teamKills = 0;
 	i32 victimTeamKills = 0;

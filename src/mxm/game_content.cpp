@@ -425,9 +425,11 @@ void GameXmlContent::LoadAllSkills()
 			in.directionOnly = ux && EA::StdC::Strcmp(ux, "SKILL_CAST_MY_POSITION_DIRECTION") == 0;
 			in.selfPosition = self;
 			in.positionDirection = ux && EA::StdC::Strcmp(ux, "SKILL_CAST_TARGET_POSITION_DIRECTION") == 0;
+			in.positionRotation = ux && EA::StdC::Strcmp(ux, "SKILL_CAST_TARGET_POSITION_ROTATION") == 0;
 			pNodeCommonSkill->QueryIntAttribute("_CoolTimeID", &in.coolTimeID);
 			pNodeCommonSkill->QueryFloatAttribute("_CoolTime", &in.coolTime);
 			pNodeCommonSkill->QueryFloatAttribute("_GlobalCoolTime", &in.globalCoolTime);
+			pNodeCommonSkill->QueryFloatAttribute("_AddGroggy", &in.addGroggy);
 			pNodeCommonSkill->QueryIntAttribute("_ResetCoolTimeID", &in.resetCoolTimeID);
 			skillInput[skillID] = in;
 		}
@@ -2795,6 +2797,7 @@ bool GameXmlContent::LoadAnimationData()
 				cmd.entity.offsetFront = 0;
 				cmd.entity.offsetSide = 0;
 				if(Param2 && EA::StdC::Strchr(Param2, '|')) EA::StdC::Sscanf(Param2, "%f|%f", &cmd.entity.offsetFront, &cmd.entity.offsetSide);
+				else if(Param2 && EA::StdC::Sscanf(Param2, "%f", &cmd.entity.offsetFront) == 1) cmd.entity.offsetFront = -cmd.entity.offsetFront;
 			} break;
 
 			case ActionCommand::Type::STATUS:
@@ -3187,6 +3190,8 @@ bool GameXmlContent::LoadRemoteData()
 				remote.attachFireObject = XmlAttrTrue(pComp, "_AttachFireObject");
 				remote.attachTargetObject = XmlAttrTrue(pComp, "_AttachTargetObject");
 				pComp->QueryFloatAttribute("_CriticalRate", &remote.criticalRate);
+				pComp->QueryFloatAttribute("_AddGroggy", &remote.addGroggy);
+				remote.useSkillGroggy = XmlAttrTrue(pComp, "_UseSkillGroggy") || XmlAttrTrue(pComp, "_UseSKillGroggy");
 				pComp->QueryFloatAttribute("_HitCriticalRate", &remote.hitCriticalRate);
 				pComp->QueryFloatAttribute("_MaxHitCriticalRate", &remote.maxHitCriticalRate);
 				pComp->QueryAttribute("_OnHitOwnerStatusIndex", &remote.onHitOwnerStatus);
@@ -3241,8 +3246,13 @@ bool GameXmlContent::LoadRemoteData()
 				pComp->QueryFloatAttribute("_Sight", &remote.sight);
 				pComp->QueryFloatAttribute("_FOV", &remote.fov);
 				remote.targetOnly = XmlAttrTrue(pComp, "_TargetOnly");
+				if(XMLElement* pSearch = pComp->FirstChildElement("_Search")) remote.prioritySearchPC = XmlAttrTrue(pSearch, "_PrioritySearchingPC");
 				if(XMLElement* pHoming = pComp->FirstChildElement("_Homing")) ParseHoming(pHoming, remote);
-				if(XMLElement* pOrbit = pComp->FirstChildElement("_Orbit")) pOrbit->QueryFloatAttribute("_Radius", &remote.orbitRadius);
+				if(XMLElement* pOrbit = pComp->FirstChildElement("_Orbit")) {
+					pOrbit->QueryFloatAttribute("_Radius", &remote.orbitRadius);
+					pOrbit->QueryFloatAttribute("_InitDegree", &remote.orbitInitDeg);
+					pOrbit->QueryFloatAttribute("_DegreePerSec", &remote.orbitDegPerSec);
+				}
 			}
 			else if((EA::StdC::Strcmp("_Homing", compName) == 0)) {
 				ParseHoming(pComp, remote);
@@ -3294,6 +3304,7 @@ bool GameXmlContent::LoadRemoteData()
 				}
 				ParseRemoteSpawnRules(pComp->FirstChildElement("_Activate"), remote.onActivate);
 				if(XMLElement* pAct = pComp->FirstChildElement("_Activate")) {
+					remote.searchTarget = XmlAttrTrue(pAct, "_SearchTarget");
 					if(XMLElement* pCca = pAct->FirstChildElement("_ChangeCasterActionState")) {
 						const char* state = nullptr;
 						pCca->QueryStringAttribute("_ActionState", &state);
@@ -3742,6 +3753,9 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 
 	r = LoadMonsterRanks();
+	if(!r) return false;
+
+	r = LoadResist();
 	if(!r) return false;
 
 	r = LoadGameEvents();
@@ -4375,6 +4389,9 @@ static StatusMod::Stat StatusModStatFromName(const char* stat)
 		{ "STAT_TYPE_RAGE", StatusMod::RAGE },
 		{ "STAT_TYPE_SKILL_COOLTIME_DISCOUNT", StatusMod::SKILL_COOLTIME_DISCOUNT },
 		{ "STAT_TYPE_SKILLDAMAGE_REDUCE_RATIO", StatusMod::SKILLDAMAGE_REDUCE },
+		{ "SERVER_RESTORE_HEALTH_RATIO", StatusMod::RESTORE_HEALTH },
+		{ "SERVER_RESTORE_RESOURCES_RATIO", StatusMod::RESTORE_RESOURCES },
+		{ "STAT_TYPE_MANA", StatusMod::MANA },
 	};
 	for(const auto& n : NAMES) {
 		if(EA::StdC::Strcmp(stat, n.name) == 0) return n.stat;
@@ -4397,7 +4414,7 @@ bool GameXmlContent::LoadStatusStatMods()
 		mod.mul = pMod->BoolAttribute("mul");
 		mod.count = pMod->FloatAttribute("count");
 		mod.intervalSec = pMod->FloatAttribute("interval");
-		mod.regen = mod.stat == StatusMod::HEALTH || (mod.stat == StatusMod::RAGE && mod.count > 1);
+		mod.regen = mod.stat == StatusMod::HEALTH || mod.stat == StatusMod::MANA || (mod.stat == StatusMod::RAGE && mod.count > 1);
 		if(mod.stat == StatusMod::OTHER || mod.value == 0) continue;
 		found->second.mods.push_back(mod);
 		count++;
@@ -4681,6 +4698,19 @@ bool GameXmlContent::LoadSkillTooltips()
 		mod.count = 1;
 		st.mods.push_back(mod);
 		if(st.healMul <= 0) st.healMul = MEASURED_DESC_HEAL_SKILLPOWER_RATIO;
+		modCount++;
+	}
+	static const eastl::pair<i32,f32> TOOLTIP_AURA_HEALS_PER_SEC[] = { { 1230390003, 30.0f } };
+	static const f32 UNBOUNDED_HEAL_TICKS = 1.0e6f;
+	for(const eastl::pair<i32,f32>& th : TOOLTIP_AURA_HEALS_PER_SEC) {
+		auto f = statusMap.find(th.first);
+		if(f == statusMap.end() || !f->second.mods.empty()) continue;
+		StatusMod mod;
+		mod.stat = StatusMod::HEALTH;
+		mod.regen = true;
+		mod.value = th.second;
+		mod.count = UNBOUNDED_HEAL_TICKS;
+		f->second.mods.push_back(mod);
 		modCount++;
 	}
 	LOG("Loaded %d status stat modifiers from skilltt", modCount);
@@ -5414,6 +5444,70 @@ bool GameXmlContent::LoadMonsterRanks()
 	return true;
 }
 
+bool GameXmlContent::LoadResist()
+{
+	eastl::hash_map<u32, eastl::fixed_vector<u32,16,false>> groupTypes;
+	XMLDocument groups;
+	if(LoadXMLFile(L"/client/StatusGroup.xml", groups, true)) {
+		for(XMLElement* pInfo = groups.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+			for(XMLElement* g = pInfo->FirstChildElement("STATUS_GROUP_LIST"); g; g = g->NextSiblingElement("STATUS_GROUP_LIST")) {
+				const char* name = g->Attribute("_GroupName");
+				if(!name) continue;
+				auto& list = groupTypes[StatusTypeKey(name)];
+				for(XMLElement* s = g->FirstChildElement("_StatusList"); s && !list.full(); s = s->NextSiblingElement("_StatusList")) if(const char* t = s->Attribute("DATA")) list.push_back(StatusTypeKey(t));
+			}
+		}
+	}
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/client/RESIST.xml", doc, true)) {
+		LOG("WARNING(LoadResist): client/RESIST.xml missing, monster resistances use the measured fallback");
+		return true;
+	}
+	static const char* RULE_KINDS[] = { "_DF_GROUP", "_DF_STATUS" };
+	for(XMLElement* pInfo = doc.FirstChildElement()->FirstChildElement("INFO"); pInfo; pInfo = pInfo->NextSiblingElement("INFO")) {
+		XMLElement* df = pInfo->FirstChildElement("ST_DF_STATUS");
+		if(!df) continue;
+		auto& rules = resistRules[pInfo->IntAttribute("ID")];
+		for(i32 kind = 0; kind < (i32)ARRAY_COUNT(RULE_KINDS); kind++) {
+			for(XMLElement* e = df->FirstChildElement(RULE_KINDS[kind]); e; e = e->NextSiblingElement(RULE_KINDS[kind])) {
+				const char* key = e->Attribute("DATAKEY");
+				if(!key) continue;
+				eastl::fixed_vector<u32,16,false> keys;
+				if(kind == 1) keys.push_back(StatusTypeKey(key));
+				else {
+					auto g = groupTypes.find(StatusTypeKey(key));
+					if(g != groupTypes.end()) keys = g->second;
+				}
+				const u8 rate = (u8)MIN(MAX(e->IntAttribute("_Rate"), 0), 100);
+				const u8 value = (u8)MIN(MAX(e->IntAttribute("_Value"), 0), 100);
+				foreach_const(k, keys) {
+					ResistRule* rule = nullptr;
+					foreach(r, rules) if(r->typeKey == *k) { rule = &*r; break; }
+					if(!rule && !rules.full()) {
+						rules.push_back(ResistRule());
+						rule = &rules.back();
+						rule->typeKey = *k;
+					}
+					if(!rule) continue;
+					rule->rate = rate;
+					rule->value = value;
+				}
+			}
+		}
+	}
+	XMLDocument pve;
+	if(LoadXMLFile(L"/client/CREATURE_MONSTER_PvE.xml", pve, true)) {
+		for(XMLElement* pInfo = pve.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+			const i32 id = pInfo->IntAttribute("ID");
+			XMLElement* stats = pInfo->FirstChildElement("StatsComData");
+			const i32 defence = stats ? stats->IntAttribute("_DFStatusIndex", 0) : 0;
+			if(defence != 0 && creatureDefenceStatus.find(id) == creatureDefenceStatus.end()) creatureDefenceStatus[id] = defence;
+		}
+	}
+	LOG("Loaded %d resist tables, %d creature defence indexes", (i32)resistRules.size(), (i32)creatureDefenceStatus.size());
+	return true;
+}
+
 void GameXmlContent::RollDrop(i32 dropIndex, DropRollList* out, i32 depth) const
 {
 	const DropGroup* group = FindDropGroup(dropIndex);
@@ -6025,6 +6119,7 @@ bool GameXmlContent::LoadWeaponFiring()
 			if(XMLElement* pCharge = pData ? pData->FirstChildElement("_CHARGE") : nullptr) {
 				for(XMLElement* pLevel = pCharge->FirstChildElement("_LEVEL"); pLevel && !wf.chargeTime.full(); pLevel = pLevel->NextSiblingElement("_LEVEL")) {
 					wf.chargeTime.push_back(pLevel->FloatAttribute("_ChargingTime"));
+					wf.chargeStatus.push_back(pLevel->IntAttribute("_Status"));
 					const char* anim = pLevel->Attribute("_Animation");
 					wf.chargeAnimation.push_back(anim ? ActionStateFromString(anim) : wf.animation);
 				}
@@ -6096,7 +6191,7 @@ bool GameXmlContent::LoadWeaponFiring()
 		pGauge->QueryFloatAttribute("_AutoRegenDelayTime", &h.autoRegenDelay);
 		pGauge->QueryFloatAttribute("_OverHeatDurationTime", &h.overheatDuration);
 		pGauge->QueryFloatAttribute("_OverHeatResetGauge", &h.overheatResetGauge);
-		if(h.maxGauge > 0 && h.consumption > 0) byFiring[id] = h;
+		if(h.maxGauge > 0) byFiring[id] = h;
 	}
 	for(XMLElement* pInfo = xmlWeapon.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
 		i32 id = 0;
@@ -6107,7 +6202,7 @@ bool GameXmlContent::LoadWeaponFiring()
 			f32 pvpAttack = 0;
 			if(pComp->QueryFloatAttribute("_PvPAttack", &pvpAttack) == XML_SUCCESS && pvpAttack > 0) weaponAttack[id] = pvpAttack;
 			auto f = byFiring.find(firing);
-			if(f != byFiring.end()) weaponHeat[id] = f->second;
+			if(f != byFiring.end() && f->second.consumption > 0) weaponHeat[id] = f->second;
 			auto d = delayByFiring.find(firing);
 			if(d != delayByFiring.end()) weaponFireDelay[id] = d->second;
 			auto r = firingRemotes.find(firing);
@@ -6122,6 +6217,8 @@ bool GameXmlContent::LoadWeaponFiring()
 					weaponStanceFiring[((u32)id << 4) | (u32)stance] = sr->second;
 					auto sd = delayByFiring.find(stanceFiring);
 					if(sd != delayByFiring.end()) weaponStanceFireDelay[((u32)id << 4) | (u32)stance] = sd->second;
+					auto sh = byFiring.find(stanceFiring);
+					if(sh != byFiring.end()) weaponStanceHeat[((u32)id << 4) | (u32)stance] = sh->second;
 				}
 			}
 			break;
@@ -6255,7 +6352,7 @@ bool GameXmlContent::LoadInteractionReceivers()
 			if(id && ((dynType && EA::StdC::Strcmp(dynType, "DYNAMIC_TYPE_DESTROY") == 0) || jumpable) && pBalance && pBalance->IntAttribute("_BaseHitCount") > 0) {
 				dynamicDestroyHits[id] = pBalance->IntAttribute("_BaseHitCount");
 				if(jumpable) dynamicJumpable.insert(id);
-				if(XMLElement* pStats = pInfo->FirstChildElement("StatsComData")) if(pStats->FloatAttribute("_DestroyTime") > 0) dynamicRespawnSec[id] = pStats->FloatAttribute("_DestroyTime");
+				if(XMLElement* pStats = jumpable ? pInfo->FirstChildElement("StatsComData") : nullptr) if(pStats->FloatAttribute("_DestroyTime") > 0) dynamicRespawnSec[id] = pStats->FloatAttribute("_DestroyTime");
 			}
 		}
 		if(XMLElement* pKfm = pInfo->FirstChildElement("Kfm_ComData")) if(id && pKfm->Attribute("KeyName")) dynamicMeshKey[id] = pKfm->Attribute("KeyName");
@@ -6758,6 +6855,7 @@ bool GameXmlContent::LoadTagStatuses()
 		if(found == statusMap.end() || !mode) continue;
 		if(EA::StdC::Strcmp(mode, "MOVE") == 0) { found->second.tagMode = StatusInfo::TAG_MOVE; moved++; }
 		else if(EA::StdC::Strcmp(mode, "DROP") == 0) { found->second.tagMode = StatusInfo::TAG_DROP; dropped++; }
+		else if(EA::StdC::Strcmp(mode, "BOTH") == 0) found->second.tagMode = StatusInfo::TAG_BOTH;
 	}
 	LOG("Loaded tag statuses (%d follow the active master, %d end at tag)", moved, dropped);
 	return true;

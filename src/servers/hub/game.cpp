@@ -464,6 +464,12 @@ void HubGame::StartNextSweepStage(ClientHandle clientHd)
 
 void HubGame::OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID characterID, SkinIndex skinIndex)
 {
+	const ClassType classType = (ClassType)((u32)characterID - (u32)LocalActorID::FIRST_SELF_MASTER);
+	if(GetGameXmlContent().masterClassTypeMap.find(classType) == GetGameXmlContent().masterClassTypeMap.end()) {
+		WARN("[client%x] HubGame :: unknown leader character %u", clientHd, (u32)characterID);
+		if(playerActorUID[plidMap->Get(clientHd)] == ActorUID::INVALID) OnPlayerSetLeaderCharacter(clientHd, LocalActorID((u32)LocalActorID::FIRST_SELF_MASTER + (u32)DEFAULT_LEADER_CLASS), SkinIndex::DEFAULT);
+		return;
+	}
 	const i32 userID = plidMap->Get(clientHd);
 	if(playerAccountData[userID]) {
 		bool found = false;
@@ -472,8 +478,6 @@ void HubGame::OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID cha
 		}
 		if(!found && !lastLeaders.full()) lastLeaders.push_back({ playerAccountData[userID]->nickname, characterID, skinIndex });
 	}
-
-	const i32 leaderMasterContentID = (u32)characterID - (u32)LocalActorID::FIRST_SELF_MASTER - 1;
 
 	// select a spawn point at random
 	const SpawnPoint& spawnPoint = mapSpawnPoints[RandUint() % mapSpawnPoints.size()];
@@ -495,10 +499,6 @@ void HubGame::OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID cha
 
 	ASSERT(playerAccountData[userID]); // account data is not assigned
 	const Account* account = playerAccountData[userID];
-
-	// TODO: tie in account->leaderMasterID,skinIndex with class and model
-	const ClassType classType = GetGameXmlContent().masters[leaderMasterContentID].classType;
-	ASSERT((i32)classType == leaderMasterContentID+1);
 
 	WorldHub::ActorPlayer& actor = world.SpawnPlayerActor(userID, classType, skinIndex, account->nickname.data(), account->guildTag.data());
 	actor.pos = pos;
@@ -653,18 +653,19 @@ void HubGame::OnInventoryExpand(ClientHandle clientHd, i32 tab)
 		return;
 	}
 	const GameXmlContent::ServiceCost& cost = costs[step];
+	const i32 price = TESTER_FREE_ACCOUNT_SERVICES ? 0 : cost.amount;
 	const bool ccoin = cost.buyType == 2;
-	if((ccoin ? progress.ccoin : progress.gold) < cost.amount) {
+	if((ccoin ? progress.ccoin : progress.gold) < price) {
 		replication.SendInventoryExpand(clientHd, ccoin ? MEASURED_INVENTORY_EXPAND_NOT_ENOUGH_C_COIN : MEASURED_INVENTORY_EXPAND_NOT_ENOUGH_RON, tab, progress.inventoryLines[line]);
 		return;
 	}
-	if(ccoin) progress.ccoin -= cost.amount;
-	else progress.gold -= cost.amount;
+	if(ccoin) progress.ccoin -= price;
+	else progress.gold -= price;
 	progress.inventoryLines[line]++;
 	AccountProgressSave(account.nickname.data(), progress);
 	account.gold = progress.gold;
 	account.ccoin = progress.ccoin;
-	LOG("[client%x] HubGame :: %ls expands inventory tab %d to %d lines for %d %s", clientHd, account.nickname.data(), tab, progress.inventoryLines[line], cost.amount, ccoin ? "ccoin" : "gold");
+	LOG("[client%x] HubGame :: %ls expands inventory tab %d to %d lines for %d %s", clientHd, account.nickname.data(), tab, progress.inventoryLines[line], price, ccoin ? "ccoin" : "gold");
 	if(ccoin) replication.SendCCoin(clientHd, account.ccoin, MEASURED_CCOIN_REASON_SHOP);
 	else replication.SendMoney(clientHd, account.gold, MEASURED_MISSION_REWARD_MONEY_REASON);
 	replication.SendInventoryExpand(clientHd, 0, tab, progress.inventoryLines[line]);

@@ -11,6 +11,7 @@ static const f32 WEAPON_MELEE_MAX_RANGE = 600.0f;
 static const f32 PROJECTILE_TARGET_RADIUS = 70.0f;
 static const f32 WEAPON_SHOT_RELIABLE_DISTANCE = 100.0f;
 static const f32 WEAPON_SHOT_MAX_DISTANCE = 2500.0f;
+static const f32 SHOT_AIM_OFFSET_SCALE = 10.0f;
 
 static f32 WeaponReach(const Remote& remote, const WeaponFiring& wf)
 {
@@ -110,7 +111,7 @@ void World::BotWeaponLunge(Player& player, const GameXmlContent::Action& action,
 		}
 		if(duration <= 0.02f) return;
 		const vec3 from = player.body->GetWorldPos();
-		const vec3 end = physics.FindMovePos(player.body, vec3(dir * cmd->graphMoveHorz.distance, 0), duration);
+		const vec3 end = physics.FindSkillMovePos(player.body, dir, cmd->graphMoveHorz.distance, duration, 0.0f);
 		player.input.moveTo = from;
 		player.body->vel = vec3(0);
 		player.dashDir = dir;
@@ -175,8 +176,9 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	const bool friendChainShot = remote && remote->behaviorType == Remote::BehaviorType::CHAIN && remote->includeParty && !remote->friendlyStatuses.empty();
 	if((spawnAtAim || friendChainShot) && remote) {
 		f32 reach = friendChainShot ? 0.0f : MAX(MIN(distance > 1.0f ? distance : WeaponReach(*remote, wf), aimMax), aimMin);
-		const vec3 aimPos = vec3(vec2(origin) + dir * reach, player.body->GetWorldPos().z);
 		const bool bot = player.clientHd == ClientHandle::INVALID;
+		const Cl::CQ_GamePlayerSyncPhy* aimPhy = !bot && player.pendingShotRawSize >= (i32)offsetof(Cl::CQ_GamePlayerSyncPhy, charNameLen) ? (const Cl::CQ_GamePlayerSyncPhy*)player.pendingShotRaw.data() : nullptr;
+		const vec3 aimPos = vec3(vec2(origin) + dir * reach, aimPhy ? aimPhy->FirePosition.z + (f32)aimPhy->aimOffsetZ / SHOT_AIM_OFFSET_SCALE : player.body->GetWorldPos().z);
 		if(!bot) replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(dir.y, dir.x)), WeaponAttackState(player, wf));
 		u32 clientSeed = 0;
 		if(!bot && player.pendingShotRawSize > 0) {
@@ -190,7 +192,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 			marker->clientRemoteID = clientSeed + 1;
 			marker->seedOwnerHd = player.clientHd;
 		}
-		LOG("Shot :: %ls class=%d remote=%d at aimed point (%.0f, %.0f) reach=%.0f", player.name.data(), (i32)classType, (i32)remote->ID, aimPos.x, aimPos.y, reach);
+		LOG("Shot :: %ls class=%d remote=%d at aimed point (%.0f, %.0f, %.0f) reach=%.0f caster z %.0f", player.name.data(), (i32)classType, (i32)remote->ID, aimPos.x, aimPos.y, aimPos.z, reach, player.body->GetWorldPos().z);
 		return;
 	}
 
@@ -215,6 +217,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	proj.graph = graph;
 	proj.ignoreWalls = !remote || remote->ignoreGround;
 	proj.wallZ = player.body->GetWorldPos().z + BodyMidHeight(player);
+	proj.jumpClear = FIRE_NODE_HEIGHT + (remote ? (f32)remote->boundSize[2] * 0.5f : 0.0f);
 	proj.halfWidth = remote ? remote->boundSize[0] * 0.5f : 20.0f;
 	if(remote && remote->boundType == Remote::BoundType::E_BOUND_SPHERE && remote->angle > 0 && remote->angle < 180.0f && !graph) {
 		proj.coneRadius = remote->boundSize[0] * 0.5f;
@@ -634,6 +637,7 @@ void World::UpdateProjectiles(f32 delta)
 				const f32 lagDist = LagDistToSegment(*it, from, to);
 				proj->closest = MIN(proj->closest, lagDist);
 				if(fabsf(pos.z - proj->pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
+				if(proj->jumpClear > 0 && !it->body->grounded && pos.z > proj->pos.z + proj->jumpClear) continue;
 				if(!LagSegmentHits(*it, from, to, proj->halfWidth + HitRadius(*it) + PROJECTILE_HIT_TOLERANCE, lastStep ? proj->forwardReach + HitRadius(*it) : HitRadius(*it))) continue;
 				if(!ProjectileConeHolds(*proj, vec2(pos), HitRadius(*it))) continue;
 
@@ -941,6 +945,11 @@ void World::OnWeaponState(Player& player, i32 state, u8 chargeLevel, u8 firingCo
 		}
 	}
 	if(state != WEAPON_STATE_CHARGE && player.weaponState == WEAPON_STATE_CHARGE) {
+		const WeaponFiring& endFiring = ActiveWeaponFiring(player, player.Main().stance);
+		foreach_const(cs, endFiring.chargeStatus) {
+			const StatusInfo* aura = GetGameXmlContent().FindStatus(*cs);
+			if(aura && aura->auraStatus != 0) EndPlayerStatus(player, *cs);
+		}
 		const GameXmlContent::Action* charge = GetGameXmlContent().FindSkillAction(ActionClass(player), ActionStateID::ATTACKCHARGE_BEHAVIORSTATE, player.Main().stance);
 		if(charge) foreach_const(cmd, charge->commands) {
 			if(cmd->type != ActionCommand::Type::STATUS || cmd->status.statusIndex == 0 || !cmd->status.removeAtEnd) continue;
@@ -977,6 +986,13 @@ void World::UpdateWeaponCharges()
 		}
 		while(it->chargeAnnounced < wf.chargeTime.size() && it->chargeAnnounced < wf.charge.size() && held >= wf.chargeTime[it->chargeAnnounced]) {
 			it->chargeAnnounced++;
+			if(it->chargeAnnounced <= wf.chargeStatus.size()) {
+				const StatusInfo* aura = GetGameXmlContent().FindStatus(wf.chargeStatus[it->chargeAnnounced - 1]);
+				if(aura && aura->auraStatus != 0) {
+					if(it->chargeAnnounced > 1) EndPlayerStatus(*it, wf.chargeStatus[it->chargeAnnounced - 2]);
+					ApplyStatus(*it, *it, aura->ID, 0, STATUS_INFINITE_DURATION_SEC);
+				}
+			}
 			replication->RelayWeaponState(ClientHandle::INVALID, it->Main().UID, MEASURED_WEAPON_STATE_WEAPON_ID, WEAPON_STATE_CHARGE, it->chargeAnnounced, it->firingCombo);
 			LOG("Shot :: %ls charge level %d after %.2fs", it->name.data(), (i32)it->chargeAnnounced, held);
 		}

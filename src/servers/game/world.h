@@ -229,6 +229,7 @@ struct World
 		Time titanModeAt = Time::ZERO;
 		i32 titanSavedHp = 0;
 		Time titanVoteBlockedUntil = Time::ZERO;
+		Time titanTransformAt = Time::ZERO;
 		Time nextSkillPointAt = Time::ZERO;
 		u8 botUpgradeTurn = 0;
 		i8 botUpgradePlan = -1;
@@ -276,6 +277,7 @@ struct World
 		Time multiHitPassiveReady = Time::ZERO;
 		Time botStageSkillReady = Time::ZERO;
 		Time botReturnReady = Time::ZERO;
+		Time botTagReadyAt = Time::ZERO;
 		Time lastDamagedAt = Time::ZERO;
 		ActorUID botAimTarget = ActorUID::INVALID;
 		f32 ultGauge = -1.0f;
@@ -391,6 +393,7 @@ struct World
 		f32 dashDone = 0;
 		const GameXmlContent::MoveCurve* dashCurve = nullptr;
 		bool dashFly = false;
+		f32 dashLift = 0;
 		bool dashAwaitClientStart = false;
 		Time ccImmuneUntil = Time::ZERO;
 		Time dodgeRageReadyAt = Time::ZERO;
@@ -617,6 +620,7 @@ struct World
 		Time stateEndAt = Time::ZERO;
 		f32 speedMul = 1.0f;
 		f32 statusSpeedMul = 1.0f;
+		u8 ccControl = 0;
 		u8 victoryStep = 0;
 		u8 hpBuffLevel = 0;
 		u8 allyBuffLevel = 0;
@@ -632,7 +636,7 @@ struct World
 		u8 monsterScriptStep = 0;
 		u8 monsterScriptAlt = 0;
 		u32 fogHiddenFrom = 0;
-		bool monsterWeakHit = false;
+		f32 monsterGroggy = 0;
 		vec2 dashFrom = vec2(0);
 		vec2 dashDir = vec2(0);
 		f32 dashDist = 0;
@@ -807,6 +811,7 @@ struct World
 		bool graph;
 		bool ignoreWalls = true;
 		f32 wallZ = 0;
+		f32 jumpClear = 0;
 		f32 angularVel = 0;
 		f32 homingLength = 0;
 		f32 homingHalfCos = -1.0f;
@@ -912,6 +917,7 @@ struct World
 		u32 reflectGroupSeed = 0;
 		bool casterLocal = false;
 		ClientHandle seedOwnerHd = ClientHandle::INVALID;
+		u32 ownerSeed = 0;
 		u32 damageRemoteID = 0;
 		f32 landZ = 0;
 		vec3 graphStart = vec3(0);
@@ -1173,7 +1179,8 @@ struct World
 	struct MonsterRemote { ActorUID owner; ActorUID target; const Remote* remote; vec3 pos; vec2 dir; Time expire; Time nextTime; i32 activations; f32 travelled; bool impacted; u32 seed = 0; f32 syncIn = MEASURED_REMOTE_SYNC_FIRST_SEC; eastl::fixed_vector<eastl::pair<ActorUID,Time>,24,true> hitUntil; };
 	eastl::fixed_vector<MonsterRemote,128,true> monsterRemotes;
 	void SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed = 0, u32 parentSeed = 0);
-	void SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, const Remote::SpawnRule& rule, const vec3& pos, const vec2& dir, ActorUID target, u32 parentSeed = 0);
+	void SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, const Remote::SpawnRule& rule, const vec3& pos, const vec2& dir, ActorUID target, u32 parentSeed = 0, bool viaCreator = false);
+	bool SendMonsterRemoteCreator(const ActorNpc& npc, const Remote::SpawnRules& rules, u16 creator, u32 parentSeed, const vec3& pos, const vec2& dir, ActorUID target);
 	void RetargetMonsters(ActorUID from, ActorUID to);
 	u32 SendRemoteCreator(const RemoteInst& parent, u16 creator, const vec3& pos, u32 childCount, ActorUID spawnerActor, const vec3& aimPos, bool hitInvalidParent);
 	void SpawnProjectileHitRemotes(const Projectile& proj, const Remote& shot, const vec3& at, i32 hitIndex, ActorUID hitNpc);
@@ -1207,7 +1214,7 @@ struct World
 	void UpdateGatlingPreview(Player& human);
 	void UpdateGxEmpTest(Player& human);
 	ShowcaseState showcase;
-	void RunSummonState(ActorNpc& npc, i32 state);
+	void RunSummonState(ActorNpc& npc, i32 state, const f32* yawOverride = nullptr);
 	void RelayPassive(ActorNpc& npc, const SummonInfo& info, Player& owner);
 	void RelayWarp(ActorNpc& npc, const vec3& to);
 	void ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos);
@@ -1216,9 +1223,11 @@ struct World
 	bool statusNoCaster = false;
 	ActorUID damageAttackerOverride = ActorUID::INVALID;
 	ClientHandle damageSeedOwnerOverride = ClientHandle::INVALID;
+	u32 damageOwnerSeedOverride = 0;
 	struct ClientRemoteSeed { u32 playerIndex; RemoteIdx doc; u32 seed; Time at; };
 	eastl::fixed_vector<ClientRemoteSeed,32,false> clientRemoteSeeds;
 	void BindClientRemote(Player& player, RemoteIdx doc, u32 seed);
+	void BindMeleeSeed(Player& player, u32 seed);
 	ActorUID remoteParentOverride = ActorUID::INVALID;
 	u32 remoteSendParentID = 0;
 	ClientHandle remoteSendParentSeedHd = ClientHandle::INVALID;
@@ -1260,6 +1269,7 @@ struct World
 	void ApplyAttachedRemote(RemoteInst& inst, Player& instOwner);
 	void SweepFireNodePath(RemoteInst& inst, Player& instOwner);
 	bool UpdateTargetRemote(RemoteInst& inst, f32 delta);
+	bool BounceRemote(RemoteInst& inst);
 	bool UpdateGraphRemote(RemoteInst& inst, f32 delta);
 	bool SteerRemote3D(RemoteInst& inst, const vec3& aim, f32 groundZ, f32 hitReach, f32 delta, bool* reached);
 	bool AdvanceSteeredRemote(RemoteInst& inst, f32 delta);
@@ -1331,6 +1341,8 @@ public:
 	void GrantSkillPoint(Player& player);
 	bool UpgradeSkillSlot(Player& player, i32 slot);
 	void SendSkillLevel(const Player& player, u32 masterIndex, SkillID skill);
+	void ResendSkillState(const Player& viewer);
+	i32 MaxSkillPoints(const Player& player) const;
 	void RespawnPlayer(Player& player);
 	void RemovePlayer(Player& player);
 	void ClearMapContent();
@@ -1375,6 +1387,7 @@ public:
 	void SyncNpcLeg(ActorNpc& npc, const vec3& goal, f32 speed);
 	void StopNpcLeg(ActorNpc& npc);
 	void WanderNpc(ActorNpc& npc, f32 moveSpeed, f32 delta);
+	void FleeOnSelfFear(ActorNpc& npc, f32 delta);
 	bool IsCarrying(const Player& player) const;
 	f32 PushCurveProgress(f32 t) const;
 	void PassiveCooldownsOnKill(Player& killer);
@@ -1391,6 +1404,7 @@ public:
 	void RemoteHitNpcs(RemoteInst& inst);
 	bool RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist);
 	bool RemoteFriendNpc(RemoteInst& inst, ActorNpc& npc);
+	void RemoteFriendTargetNpc(RemoteInst& inst, ActorNpc& npc);
 	void ChangeCasterActionOnHit(RemoteInst& inst, Player& owner, ActorUID targetUID, const vec3& targetPos);
 	void StartLevelEvents();
 	void StartTimeRecord();
@@ -1418,8 +1432,11 @@ public:
 	void UpdateCore(ActorNpc& npc);
 	void UpdateMonsterAllyBuffs(ActorNpc& npc);
 	void CancelNpcPendingHits(const ActorNpc& npc);
+	void AddNpcGroggy(ActorNpc& npc, SkillID skillID, RemoteIdx doc);
 	f32 NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info);
-	enum : u8 { NPC_DASH_CURVE_LINEAR = 0, NPC_DASH_CURVE_PUSH = 1, NPC_DASH_CURVE_HOOK = 2 };
+	void HoldNpcForControl(ActorNpc& npc, f32 sec);
+	enum : u8 { NPC_DASH_CURVE_LINEAR = 0, NPC_DASH_CURVE_PUSH = 1, NPC_DASH_CURVE_HOOK = 2, NPC_DASH_CURVE_FLEE = 3 };
+	enum : u8 { NPC_CONTROL_ROOT = 1, NPC_CONTROL_SILENCE = 2 };
 	struct NpcCcGraph { vec3 to = vec3(0); f32 duration = 0; f32 graphSec = 0; f32 nominal = -1.0f; bool graph = false; };
 	NpcCcGraph StartNpcCc(ActorNpc& npc, const StatusInfo* info, const vec3& source, const vec2& dragCenter, const vec3& casterPos, f32 hold);
 	void MonsterStopIfHeld(ActorNpc& npc);
@@ -1437,6 +1454,7 @@ public:
 	void OnMonsterDeath(ActorNpc& npc, ActorUID killerUID);
 	void CountTagDeath(i32 tagID, Faction killerTeam, i32 killerIndex);
 	void DestroyDynamic(ActorDynamic& dynamic, i32 killerIndex);
+	void AttachDynamicCollider(ActorDynamic& dynamic, f32 scale);
 	void OnMonsterDamaged(ActorNpc& npc, i32 hpBefore);
 	void FireGameEndTriggers(i32 winnerTeam);
 	struct DefenceState
@@ -1481,6 +1499,7 @@ public:
 	void RefreshMasterHealth(Player& player, ActorMaster& chara);
 	u32 UpgradeTraits(Player& player, ActorUID characterUID, const u8* indices, i32 count);
 	void BotSpendTraits(Player& player);
+	void EnterDeathSafeZone(Player& player);
 	u32 ResetTraits(Player& player, ActorUID characterUID);
 	void ApplyLevelStats(Player& player);
 	u32 KillPoints() const;
@@ -1512,6 +1531,7 @@ public:
 	void RevertTitan(Player& player);
 	void UpdateTitans();
 	void TitanOnCast(Player& player, SkillID skill);
+	bool TitanSkillAllowed(const Player& player, SkillID skill) const;
 	void UpdateBoundTriggers();
 	void UpdateCreatureEnterTrigger(const GameXmlContent::LevelEventNode& node, i32 slot, const GameXmlContent::Map::Area& area);
 	void OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos, ActorDynamic* known = nullptr, i32 ownerIndex = -1, i32 damage = 0, RemoteIdx remoteDoc = RemoteIdx::INVALID);
@@ -1591,6 +1611,7 @@ public:
 	vec2 BotNavStep(Player& bot, const vec2& goal);
 	bool BotLaneGoal(Player& bot, vec2* goal);
 	bool BotRetreat(Player& bot, vec2* goal);
+	bool BotWantsTag(const Player& bot) const;
 	bool BotSiegeOk(const Player& bot, const ActorNpc& tower) const;
 	bool BotChiefGoal(const Player& bot, vec2* goal) const;
 	bool BotBossGoal(const Player& bot, vec2* goal);
@@ -1624,6 +1645,7 @@ public:
 	bool hostileMonsters = false;
 	f32 killZ = -1000000.0f;
 	bool ingameSkillPoints = true;
+	bool fullSkillPoints = false;
 	u8 difficultyBit = GameXmlContent::ALL_DIFFICULTIES;
 	bool portalRequested = false;
 	f32 monsterStatScale = 1.0f;

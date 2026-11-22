@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ENTITY_FILE>
+  <INFO>
+    <STATUS_GROUP_LIST _GroupName="STATUS_GROUP_DEFEAT_BOUNCE">
+      <_StatusList DATA="STATUS_TYPE_FLY" />
+      <_StatusList DATA="STATUS_TYPE_AIRBORNE" />
+      <_StatusList DATA="STATUS_TYPE_PUSH" />
+      <_StatusList DATA="STATUS_TYPE_KNOCKDOWN" />
+      <_StatusList DATA="STATUS_TYPE_FORCEBACK" />
+    </STATUS_GROUP_LIST>
+    <STATUS_GROUP_LIST _GroupName="STATUS_GROUP_DEFEAT_SYNC">
+      <_StatusList DATA="STATUS_TYPE_STUN" />
+      <_StatusList DATA="STATUS_TYPE_FREEZE" />
+      <_StatusList DATA="STATUS_TYPE_SHOCKED" />
+      <_StatusList DATA="STATUS_TYPE_DANCE" />
+    </STATUS_GROUP_LIST>
+    <STATUS_GROUP_LIST _GroupName="STATUS_GROUP_DEFEAT_CONTROL">
+      <_StatusList DATA="STATUS_TYPE_FEAR" />
+      <_StatusList DATA="STATUS_TYPE_MORPH" />
+    </STATUS_GROUP_LIST>
+    <STATUS_GROUP_LIST _GroupName="STATUS_GROUP_DEFEAT_DRAGGED">
+      <_StatusList DATA="STATUS_TYPE_DRAGGED" />
+      <_StatusList DATA="STATUS_TYPE_DRAGGEDBYFORCE" />
+      <_StatusList DATA="STATUS_TYPE_DRAGGEDDIR" />
+    </STATUS_GROUP_LIST>
+    <STATUS_GROUP_LIST _GroupName="STATUS_GROUP_DEFEAT_ALL">
+      <_StatusList DATA="STATUS_TYPE_FLY" />
+      <_StatusList DATA="STATUS_TYPE_AIRBORNE" />
+      <_StatusList DATA="STATUS_TYPE_PUSH" />
+      <_StatusList DATA="STATUS_TYPE_KNOCKDOWN" />
+      <_StatusList DATA="STATUS_TYPE_FORCEBACK" />
+      <_StatusList DATA="STATUS_TYPE_STUN" />
+      <_StatusList DATA="STATUS_TYPE_FREEZE" />
+      <_StatusList DATA="STATUS_TYPE_SHOCKED" />
+      <_StatusList DATA="STATUS_TYPE_FEAR" />
+      <_StatusList DATA="STATUS_TYPE_MORPH" />
+      <_StatusList DATA="STATUS_TYPE_DRAGGED" />
+      <_StatusList DATA="STATUS_TYPE_DRAGGEDBYFORCE" />
+      <_StatusList DATA="STATUS_TYPE_DRAGGEDDIR" />
+      <_StatusList DATA="STATUS_TYPE_DANCE" />
+    </STATUS_GROUP_LIST>
+    <STATUS_GROUP_LIST _GroupName="STATUS_GROUP_DOT">
+      <_StatusList DATA="STATUS_TYPE_POISON" />
+      <_StatusList DATA="STATUS_TYPE_BURNING" />
+      <_StatusList DATA="STATUS_TYPE_BLEEDING" />
+    </STATUS_GROUP_LIST>
+    <STATUS_GROUP_LIST _GroupName="STATUS_GROUP_SILENCE">
+      <_StatusList DATA="STATUS_TYPE_SILENCE" />
+      <_StatusList DATA="STATUS_TYPE_WEAPONJAM" />
+    </STATUS_GROUP_LIST>
+    <STATUS_GROUP_LIST _GroupName="STATUS_GROUP_DEBUFF_ALL">
+      <_StatusList DATA="STATUS_TYPE_BIGAGGRO" />
+      <_StatusList DATA="STATUS_TYPE_COLD" />
+      <_StatusList DATA="STATUS_TYPE_ROOT" />
+      <_StatusList DATA="STATUS_TYPE_SLOW" />
+      <_StatusList DATA="STATUS_TYPE_STAT" />
+      <_StatusList DATA="STATUS_TYPE_SUICIDE" />
+      <_StatusList DATA="STATUS_TYPE_DISPEL" />
+      <_StatusList DATA="STATUS_TYPE_FLASH_HIT" />
+      <_StatusList DATA="STATUS_TYPE_CASTER" />
+      <_StatusList DATA="STATUS_TYPE_TARGET" />
+    </STATUS_GROUP_LIST>
+  </INFO>
+</ENTITY_FILE>

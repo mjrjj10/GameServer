@@ -630,8 +630,11 @@ void Coordinator::ClientHandlePacket(ClientHandle clientHd, const NetHeader& hea
 		HANDLE_CASE(CQ_Authenticate);
 
 		default: {
+			if(!instancePool.IsClientInsideAnInstance(clientHd)) {
+				WARN("Dropping packet from a client outside any instance (netID=%d size=%d)", header.netID, header.size);
+				break;
+			}
 			WARN("Unhandled packet (netID=%d size=%d)", header.netID, header.size);
-			ASSERT(instancePool.IsClientInsideAnInstance(clientHd));
 			instancePool.QueueRogueCoordinatorPacket(clientHd, header, packetData);
 		} break;
 	}
@@ -744,6 +747,8 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 		if(ProgressGainExp(&progress, reward.exp)) LOG("[client%x] Account :: %ls reaches level %u", clientHd, account.nickname.data(), (u32)progress.level);
 		LOG("[client%x] Account :: %ls rewards of %d game(s): %lld gold, %u exp -> level %u (%u exp), %lld gold", clientHd, account.nickname.data(), reward.games, reward.gold, reward.exp, (u32)progress.level, progress.levelExp, progress.gold);
 	}
+	progress.gold = MAX(progress.gold, TESTER_MIN_GOLD);
+	progress.ccoin = MAX(progress.ccoin, TESTER_MIN_CCOIN);
 	AchieveOnLogin(account, progress);
 	ActivityRefresh(&progress, (i64)time(nullptr));
 	if(reward.playSeconds > 0) progress.activityPoint = MIN(progress.activityPoint + (i32)reward.playSeconds, GetGameXmlContent().activityMaxPoint);
@@ -758,6 +763,17 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 				AccountInventoryAdd(&inventory, ri->first, ri->second, info->maxStack, nullptr, info->firstSlot);
 				LOG("[client%x] Account :: %ls receives reward item %d x%d", clientHd, account.nickname.data(), ri->first, ri->second);
 			}
+			AccountInventorySave(account.nickname.data(), inventory);
+		}
+	}
+	{
+		const i32 medalDoc = GetGameXmlContent().pvpMedalItem;
+		const GameXmlContent::ItemInfo* medalInfo = GetGameXmlContent().FindItemInfo(medalDoc);
+		AccountInventory inventory = AccountInventoryLoad(account.nickname.data());
+		i32 held = 0;
+		foreach_const(it, inventory.items) if(it->docIndex == medalDoc) held += it->count;
+		if(medalInfo && held < TESTER_MIN_PVP_MEDALS) {
+			AccountInventoryAdd(&inventory, medalDoc, TESTER_MIN_PVP_MEDALS - held, medalInfo->maxStack, nullptr, medalInfo->firstSlot);
 			AccountInventorySave(account.nickname.data(), inventory);
 		}
 	}
