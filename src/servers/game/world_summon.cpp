@@ -258,7 +258,7 @@ void World::RelayPassive(ActorNpc& npc, const SummonInfo& info, Player& owner)
 		Player* target = nullptr;
 		f32 best = reach;
 		foreach(e, players) {
-			if(e->dead || e->team == owner.team) continue;
+			if(e->dead || e->untargetable || e->team == owner.team || !(e->fogSeenBy & (1u << owner.team))) continue;
 			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(npc.pos));
 			if(d < best) { best = d; target = &*e; }
 		}
@@ -330,13 +330,13 @@ void World::UpdateSummonAttack(ActorNpc& npc, f32 delta)
 	if(!info || npc.spawnedAt >= localTime) return;
 	const Player& owner = players[npc.ownerIndex];
 	ActorMaster* tm = FindMasterActor(npc.chaseTarget);
-	Player* target = tm && !tm->parent->dead && tm->parent->team != owner.team ? tm->parent : nullptr;
+	Player* target = tm && !tm->parent->dead && tm->parent->team != owner.team && (tm->parent->fogSeenBy & (1u << owner.team)) ? tm->parent : nullptr;
 	const f32 lost = info->targetLost > 0 ? info->targetLost : info->perception;
 	if(target && glm::length(vec2(target->body->GetWorldPos()) - vec2(npc.pos)) > lost) target = nullptr;
 	if(!target) {
 		f32 best = info->perception;
 		foreach(e, players) {
-			if(e->dead || e->team == owner.team) continue;
+			if(e->dead || e->untargetable || e->team == owner.team || !(e->fogSeenBy & (1u << owner.team))) continue;
 			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(npc.pos));
 			if(d < best) { best = d; target = &*e; }
 		}
@@ -456,14 +456,14 @@ void World::UpdateSummonAi(f32 delta)
 				continue;
 			}
 			const f32 keepRange = info->targetLost > 0 ? info->targetLost : info->perception;
-			const bool lost = target ? (target->dead || glm::length(vec2(target->body->GetWorldPos()) - vec2(npc.pos)) > keepRange) : (!npcTarget || glm::length(vec2(npcTarget->pos) - vec2(npc.pos)) > keepRange);
+			const bool lost = target ? (target->dead || !(target->fogSeenBy & (1u << owner.team)) || glm::length(vec2(target->body->GetWorldPos()) - vec2(npc.pos)) > keepRange) : (!npcTarget || glm::length(vec2(npcTarget->pos) - vec2(npc.pos)) > keepRange);
 			if(lost) {
 				target = nullptr;
 				npcTarget = nullptr;
 				f32 best = info->perception;
 				ActorUID chosen = ActorUID::INVALID;
 				foreach(e, players) {
-					if(e->dead || e->team == owner.team) continue;
+					if(e->dead || e->untargetable || e->team == owner.team || !(e->fogSeenBy & (1u << owner.team))) continue;
 					bool taken = false;
 					foreach_const(o, actorNpcList) {
 						if(&*o != &npc && o->ownerIndex == npc.ownerIndex && o->docID == npc.docID && o->chaseTarget == e->Main().UID) taken = true;

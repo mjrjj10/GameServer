@@ -614,4 +614,34 @@
       <STAT type="5" perPoint="0.4" />
     </TRAIT>
   </INFO>
+  <INFO class="41" source="HYP_TRAIT_PROFILE 30">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="2.14" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="8" perPoint="37" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="0" perPoint="58" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="14" perPoint="1.4" />
+      <STAT type="5" perPoint="0.4" />
+    </TRAIT>
+  </INFO>
+  <INFO class="43" source="HYP_TRAIT_PROFILE 11">
+    <TRAIT index="0">
+      <STAT type="6" perPoint="3.95" />
+    </TRAIT>
+    <TRAIT index="1">
+      <STAT type="8" perPoint="45.5" />
+    </TRAIT>
+    <TRAIT index="2">
+      <STAT type="0" perPoint="53" />
+    </TRAIT>
+    <TRAIT index="3">
+      <STAT type="14" perPoint="1.4" />
+      <STAT type="5" perPoint="0.4" />
+    </TRAIT>
+  </INFO>
 </MASTER_TRAITS>

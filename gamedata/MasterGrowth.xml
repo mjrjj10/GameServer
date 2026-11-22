@@ -175,4 +175,39 @@
     <STAT type="6" linear="1.7211" quadratic="0.73614" increments="17" kept="6" />
     <STAT type="8" linear="4.3750" quadratic="1.87500" increments="17" kept="17" />
   </INFO>
+  <INFO class="23" source="HYP_GROWTH_PROFILE 20,25,30">
+    <STAT type="0" linear="105.0000" quadratic="0.00000" increments="0" kept="0" />
+    <STAT type="6" linear="3.7229" quadratic="-0.10633" increments="0" kept="0" />
+    <STAT type="8" linear="18.0000" quadratic="0.00000" increments="0" kept="0" />
+  </INFO>
+  <INFO class="28" source="HYP_GROWTH_PROFILE 12,18,19,21,29">
+    <STAT type="0" linear="37.0000" quadratic="0.00000" increments="0" kept="0" />
+    <STAT type="6" linear="9.6186" quadratic="0.00000" increments="0" kept="0" />
+    <STAT type="8" linear="31.2000" quadratic="0.00000" increments="0" kept="0" />
+  </INFO>
+  <INFO class="37" source="HYP_GROWTH_PROFILE 2,24">
+    <STAT type="0" linear="35.0000" quadratic="0.00000" increments="0" kept="0" />
+    <STAT type="6" linear="1.3812" quadratic="0.59205" increments="0" kept="0" />
+    <STAT type="8" linear="4.3750" quadratic="1.87500" increments="0" kept="0" />
+  </INFO>
+  <INFO class="38" source="HYP_GROWTH_PROFILE 33">
+    <STAT type="0" linear="97.1035" quadratic="-2.77190" increments="0" kept="0" />
+    <STAT type="6" linear="18.2749" quadratic="-0.34848" increments="0" kept="0" />
+    <STAT type="8" linear="40.4339" quadratic="-0.54540" increments="0" kept="0" />
+  </INFO>
+  <INFO class="39" source="HYP_GROWTH_PROFILE 32,40">
+    <STAT type="0" linear="39.0000" quadratic="0.00000" increments="0" kept="0" />
+    <STAT type="6" linear="9.6200" quadratic="0.00000" increments="0" kept="0" />
+    <STAT type="8" linear="31.2000" quadratic="0.00000" increments="0" kept="0" />
+  </INFO>
+  <INFO class="41" source="HYP_GROWTH_PROFILE 30">
+    <STAT type="0" linear="183.4529" quadratic="-5.24706" increments="0" kept="0" />
+    <STAT type="6" linear="3.7229" quadratic="-0.10633" increments="0" kept="0" />
+    <STAT type="8" linear="31.5000" quadratic="-0.90000" increments="0" kept="0" />
+  </INFO>
+  <INFO class="43" source="HYP_GROWTH_PROFILE 11">
+    <STAT type="0" linear="39.0000" quadratic="0.00000" increments="0" kept="0" />
+    <STAT type="6" linear="4.0300" quadratic="0.00000" increments="0" kept="0" />
+    <STAT type="8" linear="31.2000" quadratic="0.00000" increments="0" kept="0" />
+  </INFO>
 </MASTER_GROWTH>
