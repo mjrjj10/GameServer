@@ -4,6 +4,7 @@
 #include <mxm/game_content.h>
 
 static const f64 NO_RESPAWN_MS = 1.0e12;
+static const i32 HYP_GEAR_RESPAWN_MIN_MS = 1000;
 static const i32 STAT_CRITICALRATE = 9;
 static const i32 STAT_CRITICALDAMAGE = 10;
 static const i32 STAT_RAGE_ATTACK_RECOVERY_VALUE = 51;
@@ -109,6 +110,12 @@ static const i32 RESPAWN_BASE_MS[] = { 3000, 4000, 5000 };
 static const i32 RESPAWN_LEAD_MIN[] = { 1, 2, 4 };
 static const i32 RESPAWN_LEAD_BONUS_MS[] = { 2000, 4000, 7000 };
 
+static i32 GearRespawnMs(const World::Player& p, i32 ms)
+{
+	const f32 pct = MIN(p.Main().gearRespawnReducePct, 100.0f);
+	return pct > 0 ? MAX((i32)(ms * (1.0f - pct / 100.0f)), HYP_GEAR_RESPAWN_MIN_MS) : ms;
+}
+
 static i32 RespawnDelayMs(f64 elapsedSec, i32 lead)
 {
 	i32 step = 0;
@@ -191,6 +198,16 @@ void World::PassiveOnFriendlyHit(Player& owner)
 	if(manaMax <= 0 || owner.mana >= manaMax) return;
 	owner.mana = MIN(owner.mana + st->info->hitEffectValue, manaMax);
 	owner.manaDirty = true;
+}
+
+void World::GearStaminaOnHit(Player& target, i32 damage)
+{
+	const f32 regen = target.Main().gearStaminaOnHit;
+	if(damage <= 0 || regen <= 0 || target.stamina < 0 || target.dead) return;
+	const f32 staminaMax = MasterStat(target.Main().classType, STAT_STAMINA);
+	if(staminaMax <= 0 || target.stamina >= staminaMax) return;
+	target.stamina = MIN(target.stamina + regen, staminaMax);
+	target.staminaDirty = true;
 }
 
 void World::HealPlayer(Player& healer, Player& target, i32 amount)
@@ -334,6 +351,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	target.lastDamagedAt = localTime;
 	chara.hp = MAX(chara.hp - damage, (HasStatusType(target, StatusType::NEARLY_IMMORTAL) || HasStatusType(target, StatusType::UNDEAD)) ? 1 : 0);
 	if(ShowcaseKeepsAlive(target)) chara.hp = MAX(chara.hp, 1);
+	GearStaminaOnHit(target, damage);
 	if(chara.hp == 0) PassiveOnLethal(target);
 	if(damage > 0 && target.casting.skillID != SkillID::INVALID && target.casting.interruptByAttacked) CancelCast(target, "attacked");
 	if(damage > 0 && target.interactSlot >= 0) CancelMapInteraction(target);
@@ -435,7 +453,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			if(it->team == attacker.team) teamKills += it->kills;
 			if(it->team == target.team) victimTeamKills += it->kills;
 		}
-		const i32 respawnMs = fixedRespawnMs > 0 ? fixedRespawnMs : map && map->ingameLevels ? IngameRespawnDelayMs(target) : gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills);
+		const i32 respawnMs = fixedRespawnMs > 0 ? fixedRespawnMs : GearRespawnMs(target, map && map->ingameLevels ? IngameRespawnDelayMs(target) : gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills));
 		target.tRespawn = TimeAdd(localTime, TimeMsToTime(noRespawn ? NO_RESPAWN_MS : (f64)respawnMs));
 		LOG("Death :: %ls killed by %ls (respawn %d ms)", target.name.data(), attacker.name.data(), respawnMs);
 		if(target.hiddenUID != ActorUID::INVALID) {
@@ -769,6 +787,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	target.lastDamagedAt = localTime;
 	chara.hp = MAX(chara.hp - damage, (HasStatusType(target, StatusType::NEARLY_IMMORTAL) || HasStatusType(target, StatusType::UNDEAD)) ? 1 : 0);
 	if(ShowcaseKeepsAlive(target)) chara.hp = MAX(chara.hp, 1);
+	GearStaminaOnHit(target, damage);
 	if(chara.hp == 0) PassiveOnLethal(target);
 	if(target.casting.skillID != SkillID::INVALID && target.casting.interruptByAttacked) CancelCast(target, "attacked");
 	if(target.interactSlot >= 0) CancelMapInteraction(target);
@@ -804,7 +823,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 		if(it->team == target.team) victimTeamKills += it->kills;
 		else teamKills += it->kills;
 	}
-	const i32 respawnMs = fixedRespawnMs > 0 ? fixedRespawnMs : map && map->ingameLevels ? IngameRespawnDelayMs(target) : gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills);
+	const i32 respawnMs = fixedRespawnMs > 0 ? fixedRespawnMs : GearRespawnMs(target, map && map->ingameLevels ? IngameRespawnDelayMs(target) : gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills));
 	target.tRespawn = TimeAdd(localTime, TimeMsToTime(noRespawn ? NO_RESPAWN_MS : (f64)respawnMs));
 	target.killStreak = 0;
 	target.recentDamage.clear();

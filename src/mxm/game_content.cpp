@@ -66,6 +66,11 @@ bool GameXmlContent::LoadMasterDefinitions()
 
 		XMLElement* pEquip = pNodeMaster->FirstChildElement("EquipComData");
 		if(pEquip) {
+			static const char* const GEAR_COMPAT_TYPES[3] = { "GEAR_TYPE_ATT", "GEAR_TYPE_DEF", "GEAR_TYPE_UTIL" };
+			for(XMLElement* pGear = pEquip->FirstChildElement("_EffectiveGearCount"); pGear; pGear = pGear->NextSiblingElement("_EffectiveGearCount")) {
+				const char* gearType = pGear->Attribute("_Type");
+				for(i32 g = 0; g < 3; g++) if(gearType && EA::StdC::Strcmp(gearType, GEAR_COMPAT_TYPES[g]) == 0) master.gearCompat[g] = pGear->IntAttribute("_Count", 6);
+			}
 			for(XMLElement* pDef = pEquip->FirstChildElement("_DefaultWeaponIndex"); pDef; pDef = pDef->NextSiblingElement("_DefaultWeaponIndex")) {
 				i32 wid = 0;
 				if(pDef->QueryIntAttribute("DATA", &wid) == XML_SUCCESS && master.defaultWeaponIDs.size() < master.defaultWeaponIDs.capacity()) {
@@ -2256,6 +2261,10 @@ bool GameXmlContent::LoadServiceRule()
 	XMLElement* gear = rule ? rule->FirstChildElement("_MasterGearInfo") : nullptr;
 	spActionJump = rule ? rule->FloatAttribute("_SPActionJump") : 0.0f;
 	for(XMLElement* p = rule ? rule->FirstChildElement("_AchievementTierPoint") : nullptr; p && !achievementTierPoints.full(); p = p->NextSiblingElement("_AchievementTierPoint")) achievementTierPoints.push_back({ (u8)p->IntAttribute("_Tier"), p->IntAttribute("_MinPoint") });
+	for(XMLElement* p = gear ? gear->FirstChildElement("_OverPenalty") : nullptr; p; p = p->NextSiblingElement("_OverPenalty")) {
+		const i32 over = p->IntAttribute("DATAKEY");
+		if(over >= 1 && over < (i32)gearOverPenalty.size()) gearOverPenalty[over] = p->FloatAttribute("DATA");
+	}
 	for(XMLElement* p = gear ? gear->FirstChildElement("_PvPGearPowerPercent") : nullptr; p; p = p->NextSiblingElement("_PvPGearPowerPercent")) {
 		const char* type = p->Attribute("_GameType");
 		for(const auto& t : GAME_TYPES) if(type && EA::StdC::Strcmp(type, t.name) == 0) gearPowerPercent[(i32)t.type] = p->IntAttribute("DATA", 100);

@@ -503,6 +503,9 @@ struct World
 		Time traitResetAt = Time::ZERO;
 		i32 seed;
 		eastl::fixed_vector<eastl::pair<u8,f32>,12,false> gearBonus;
+		f32 gearOverheatPct = 0;
+		f32 gearStaminaOnHit = 0;
+		f32 gearRespawnReducePct = 0;
 		eastl::fixed_vector<StatValue,40,false> initStats;
 		f32 GearBonus(u8 statType) const { f32 sum = 0; foreach_const(g, gearBonus) if(g->first == statType) sum += g->second; return sum; }
 		i32 spawnAnim = -1;
@@ -1745,6 +1748,7 @@ private:
 	bool BotReleaseHold(Player& bot);
 	const ActorNpc* BotRepairTarget(const Player& bot, f32 range) const;
 	void HealPlayer(Player& healer, Player& target, i32 amount);
+	void GearStaminaOnHit(Player& target, i32 damage);
 	bool RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includeOwner) const;
 	f32 HitRadius(const Player& p) const;
 	f32 BodyMidHeight(const Player& p) const;

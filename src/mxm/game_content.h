@@ -697,6 +697,7 @@ struct GameXmlContent
 	{
 		CreatureIndex ID;
 		ClassType classType;
+		eastl::array<i32,3> gearCompat = { 6, 6, 6 };
 		eastl::fixed_string<char,64,false> className;
 		eastl::fixed_vector<SkillID,32,false> skillIDs;
 		SkillID shirkSkill = SkillID::INVALID;
@@ -717,6 +718,10 @@ struct GameXmlContent
 		CharacterModel character;
 	};
 
+	static const u8 ITEM_PROPERTY_STAT = 0;
+	static const u8 ITEM_PROPERTY_OVERHEAT = 1;
+	static const u8 ITEM_PROPERTY_REDUCE_PVP_DEADTIME = 2;
+	static const u8 ITEM_PROPERTY_REGEN_STAMINA_ON_HIT = 3;
 	struct ItemProperty
 	{
 		u8 type = 0;
@@ -735,6 +740,7 @@ struct GameXmlContent
 	eastl::hash_map<i32, GearItem> gearItems;
 	eastl::array<i32,(i32)GameType::MAX> gearPowerPercent;
 	f32 spActionJump = 0;
+	eastl::array<f32,6> gearOverPenalty = { 0, 0, 0, 0, 0, 0 };
 	eastl::fixed_vector<eastl::pair<u8,i32>,16,false> achievementTierPoints;
 	u8 AchievementTier(i32 score) const;
 	i32 GearPowerPercent(GameType type) const { return type > GameType::INVALID && type < GameType::MAX ? gearPowerPercent[(i32)type] : 100; }

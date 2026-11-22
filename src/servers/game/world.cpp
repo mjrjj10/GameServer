@@ -33,18 +33,41 @@ static void AddTitleBonus(World::ActorMaster& chara, i32 title, WeaponIndex weap
 static void ComputeGearBonus(World::ActorMaster& chara, const eastl::fixed_vector<i32,6,false>& docs, WeaponIndex weapon, i32 powerPercent)
 {
 	chara.gearBonus.clear();
+	chara.gearOverheatPct = 0;
+	chara.gearStaminaOnHit = 0;
+	chara.gearRespawnReducePct = 0;
 	auto add = [&chara](u8 type, f32 value) {
 		foreach(g, chara.gearBonus) if(g->first == type) { g->second += value; return; }
 		if(!chara.gearBonus.full()) chara.gearBonus.push_back(eastl::make_pair(type, value));
 	};
-	foreach_const(d, docs) {
-		const GameXmlContent::GearItem* gear = GetGameXmlContent().FindGearItem(*d);
-		if(!gear) continue;
-		foreach_const(m, gear->statMul) {
-			const f32 base = m->type == STAT_ATTACK ? GetGameXmlContent().GetWeaponAttack((i32)weapon) : MasterStat(chara.classType, m->type);
-			add(m->type, base * m->value / 100.0f * (f32)powerPercent / 100.0f);
+	const auto& content = GetGameXmlContent();
+	auto gearKind = [](const GameXmlContent::GearItem& g) { return g.slotType == 60 ? 0 : g.slotType == 70 ? 1 : g.slotType == 80 ? 2 : -1; };
+	i32 counts[3] = { 0, 0, 0 };
+	foreach_const(d, docs) if(const GameXmlContent::GearItem* g = content.FindGearItem(*d)) { const i32 k = gearKind(*g); if(k >= 0) counts[k]++; }
+	f32 efficiency[3] = { 1.0f, 1.0f, 1.0f };
+	if(chara.classType != ClassType::NONE) {
+		const auto& compat = content.GetMaster(chara.classType).gearCompat;
+		for(i32 k = 0; k < 3; k++) {
+			const i32 over = MIN(counts[k] - compat[k], (i32)content.gearOverPenalty.size() - 1);
+			if(over > 0) efficiency[k] = MAX(100.0f - content.gearOverPenalty[over], 0.0f) / 100.0f;
 		}
-		foreach_const(a, gear->statAdd) add(a->type, a->value * (f32)powerPercent / 100.0f);
+	}
+	foreach_const(d, docs) {
+		const GameXmlContent::GearItem* gear = content.FindGearItem(*d);
+		if(!gear) continue;
+		const i32 kind = gearKind(*gear);
+		const f32 k = (f32)powerPercent / 100.0f * (kind >= 0 ? efficiency[kind] : 1.0f);
+		foreach_const(m, gear->statMul) {
+			const f32 base = m->type == STAT_ATTACK ? content.GetWeaponAttack((i32)weapon) : MasterStat(chara.classType, m->type);
+			add(m->type, base * m->value / 100.0f * k);
+		}
+		foreach_const(a, gear->statAdd) add(a->type, a->value * k);
+		foreach_const(p, gear->properties) {
+			const f32 v = p->value * k;
+			if(p->type == GameXmlContent::ITEM_PROPERTY_OVERHEAT) chara.gearOverheatPct += v;
+			else if(p->type == GameXmlContent::ITEM_PROPERTY_REDUCE_PVP_DEADTIME) chara.gearRespawnReducePct += v;
+			else if(p->type == GameXmlContent::ITEM_PROPERTY_REGEN_STAMINA_ON_HIT) chara.gearStaminaOnHit += v;
+		}
 	}
 }
 
@@ -695,7 +718,7 @@ void World::CreatePlayerMasters(Player& player)
 	AddTitleBonus(main, player.statTitle, player.mainWeapon);
 	const bool botGear = player.botGear[0] || player.botGear[1];
 	AddMeasuredBotGear(main, player.mainWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType), player.botGear[0]);
-	if(!player.gearDocs[0].empty()) LOG("Gear :: %ls power %d%% attack +%.1f skill power +%.1f health +%.1f defence +%.1f", player.name.data(), GetGameXmlContent().GearPowerPercent(replication->gameType), main.GearBonus(STAT_ATTACK), main.GearBonus(STAT_SKILLPOWER), main.GearBonus(STAT_HEALTH), main.GearBonus((u8)StatType::STAT_TYPE_DEFENCE));
+	if(!player.gearDocs[0].empty()) LOG("Gear :: %ls power %d%% attack +%.1f skill power +%.1f health +%.1f defence +%.1f overheat +%.1f%% stamina on hit +%.2f respawn -%.1f%%", player.name.data(), GetGameXmlContent().GearPowerPercent(replication->gameType), main.GearBonus(STAT_ATTACK), main.GearBonus(STAT_SKILLPOWER), main.GearBonus(STAT_HEALTH), main.GearBonus((u8)StatType::STAT_TYPE_DEFENCE), main.gearOverheatPct, main.gearStaminaOnHit, main.gearRespawnReducePct);
 	main.hpMax = (i32)(MasterStat(main.classType, STAT_HEALTH) + main.GearBonus(STAT_HEALTH));
 	main.hp = main.hpMax;
 	main.seed = (i32)RandUint();

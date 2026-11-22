@@ -1096,7 +1096,7 @@ void World::RunWeaponActionStatuses(Player& player, i8 stance, const vec3* aimPo
 
 f32 World::WeaponHeatScale(const Player& player) const
 {
-	f32 scale = 1.0f;
+	f32 scale = 1.0f / (1.0f + MAX(player.Main().gearOverheatPct, 0.0f) / 100.0f);
 	foreach_const(it, activeStatuses) {
 		if(it->targetIndex != player.index || !it->info || it->info->type != StatusType::WEAPON_GAUGE || it->until <= localTime) continue;
 		if(it->info->paramRatio > 0) scale *= it->info->paramRatio;
