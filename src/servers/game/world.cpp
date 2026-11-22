@@ -848,6 +848,11 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		if(player.clientHd != ClientHandle::INVALID) replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_SKILL_INVALID_STATE_BLOCK, player.body->GetWorldPos(), player.input.rot.upperYaw, player.input.speed, clientTime);
 		return;
 	}
+	if(forcedAction == ActionStateID::INVALID && !ActiveMasterSkillAllowed(player, skillID)) {
+		LOG("Skill :: %ls cast %d refused (skill of the tagged-out master)", player.name.data(), (i32)skillID);
+		if(player.clientHd != ClientHandle::INVALID) replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_SKILL_INVALID_STATE_BLOCK, player.body->GetWorldPos(), player.input.rot.upperYaw, player.input.speed, clientTime);
+		return;
+	}
 	if(forcedAction == ActionStateID::INVALID) TitanOnCast(player, skillIn);
 	MarkInBattle(player);
 	const ActorUID hitEventTarget = player.memorizedTarget;

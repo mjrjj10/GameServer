@@ -647,6 +647,17 @@ bool World::TitanSkillAllowed(const Player& player, SkillID skill) const
 	return true;
 }
 
+bool World::ActiveMasterSkillAllowed(const Player& player, SkillID skill) const
+{
+	const ClassType mainClass = player.Main().classType;
+	const ClassType subClass = player.Sub().classType;
+	if(subClass == ClassType::NONE || subClass == mainClass) return true;
+	const auto& content = GetGameXmlContent();
+	if(mainClass != ClassType::NONE) foreach_const(sid, content.GetMaster(mainClass).skillIDs) if(*sid == skill) return true;
+	foreach_const(sid, content.GetMaster(subClass).skillIDs) if(*sid == skill) return false;
+	return true;
+}
+
 void World::UpdateTitans()
 {
 	foreach(p, players) {

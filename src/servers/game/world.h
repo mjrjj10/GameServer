@@ -1532,6 +1532,7 @@ public:
 	void UpdateTitans();
 	void TitanOnCast(Player& player, SkillID skill);
 	bool TitanSkillAllowed(const Player& player, SkillID skill) const;
+	bool ActiveMasterSkillAllowed(const Player& player, SkillID skill) const;
 	void UpdateBoundTriggers();
 	void UpdateCreatureEnterTrigger(const GameXmlContent::LevelEventNode& node, i32 slot, const GameXmlContent::Map::Area& area);
 	void OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos, ActorDynamic* known = nullptr, i32 ownerIndex = -1, i32 damage = 0, RemoteIdx remoteDoc = RemoteIdx::INVALID);
