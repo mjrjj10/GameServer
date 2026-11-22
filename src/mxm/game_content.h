@@ -717,11 +717,20 @@ struct GameXmlContent
 		CharacterModel character;
 	};
 
+	struct ItemProperty
+	{
+		u8 type = 0;
+		i32 typeDetail = 0;
+		u8 valueType = 0;
+		f32 value = 0;
+	};
 	struct GearItem
 	{
 		i32 slotType = -1;
 		eastl::fixed_vector<StatValue,4,false> statMul;
 		eastl::fixed_vector<StatValue,4,false> statAdd;
+		i32 optionGroup = -1;
+		eastl::fixed_vector<ItemProperty,2,false> properties;
 	};
 	eastl::hash_map<i32, GearItem> gearItems;
 	eastl::array<i32,(i32)GameType::MAX> gearPowerPercent;

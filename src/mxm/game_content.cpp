@@ -5568,6 +5568,46 @@ bool GameXmlContent::LoadGroundItems()
 {
 	XMLDocument items;
 	if(!LoadXMLFile(L"/client/ITEM_BASIC.xml", items)) return false;
+	eastl::hash_map<i32, ItemProperty> propertyGroups;
+	XMLDocument propertyDoc;
+	if(LoadXMLFile(L"/client/ITEM_PROPERTY_GROUP.xml", propertyDoc, true) && propertyDoc.FirstChildElement()) {
+		static const struct { const char* name; i32 type; } PROPERTY_TYPES[] = {
+			{ "ITEM_PROPERTY_TYPE_STAT_TYPE", 0 }, { "ITEM_PROPERTY_TYPE_OVERHEAT", 1 }, { "ITEM_PROPERTY_TYPE_REDUCE_PVP_DEADTIME", 2 }, { "ITEM_PROPERTY_TYPE_REGEN_STAMINA_ON_HIT", 3 },
+		};
+		static const struct { const char* name; StatType type; } PROPERTY_STATS[] = {
+			{ "STAT_TYPE_HEALTH", StatType::STAT_TYPE_HEALTH }, { "STAT_TYPE_STAMINA", StatType::STAT_TYPE_STAMINA }, { "STAT_TYPE_HEALTHREGEN", StatType::STAT_TYPE_HEALTHREGEN },
+			{ "STAT_TYPE_STAMINAREGEN", StatType::STAT_TYPE_STAMINAREGEN }, { "STAT_TYPE_ATTACK", StatType::STAT_TYPE_ATTACK }, { "STAT_TYPE_DEFENCE", StatType::STAT_TYPE_DEFENCE },
+			{ "STAT_TYPE_SKILLPOWER", StatType::STAT_TYPE_SKILLPOWER }, { "STAT_TYPE_CRITICALRATE", StatType::STAT_TYPE_CRITICALRATE }, { "STAT_TYPE_LIFESTEAL", StatType::STAT_TYPE_LIFESTEAL },
+			{ "STAT_TYPE_MOVESPEED", StatType::STAT_TYPE_MOVESPEED }, { "STAT_TYPE_ENERGY", StatType::STAT_TYPE_ENERGY }, { "STAT_TYPE_DEFENCE_PENETRATION", StatType::STAT_TYPE_DEFENCE_PENETRATION },
+			{ "STAT_TYPE_SKILL_DEFENCE_PENETRATION", StatType::STAT_TYPE_SKILL_DEFENCE_PENETRATION }, { "STAT_TYPE_TAG_HEALTHREGEN_VALUE", StatType::STAT_TYPE_TAG_HEALTHREGEN_VALUE },
+			{ "STAT_TYPE_TAG_COOLTIME", StatType::STAT_TYPE_TAG_COOLTIME }, { "STAT_TYPE_MANA", StatType::STAT_TYPE_MANA }, { "STAT_TYPE_MANAREGEN", StatType::STAT_TYPE_MANAREGEN },
+			{ "STAT_TYPE_ENERGYREGEN", StatType::STAT_TYPE_ENERGYREGEN }, { "STAT_TYPE_TAG_MANAREGEN_VALUE", StatType::STAT_TYPE_TAG_MANAREGEN_VALUE },
+			{ "STAT_TYPE_SKILL_COOLTIME_DISCOUNT", StatType::STAT_TYPE_SKILL_COOLTIME_DISCOUNT }, { "STAT_TYPE_ELEMENT_DAMAGE_BONUS", StatType::STAT_TYPE_ELEMENT_DAMAGE_BONUS },
+			{ "STAT_TYPE_ELEMENT_SKILL_DAMAGE_BONUS", StatType::STAT_TYPE_ELEMENT_SKILL_DAMAGE_BONUS }, { "STAT_TYPE_SKILL_LIFESTEAL", StatType::STAT_TYPE_SKILL_LIFESTEAL },
+			{ "STAT_TYPE_SKILL_CRITICALRATE", StatType::STAT_TYPE_SKILL_CRITICALRATE }, { "STAT_TYPE_TOUGHNESS", StatType::STAT_TYPE_TOUGHNESS },
+		};
+		for(XMLElement* pGroup = propertyDoc.FirstChildElement()->FirstChildElement("INFO"); pGroup; pGroup = pGroup->NextSiblingElement("INFO")) {
+			XMLElement* body = pGroup->FirstChildElement("ST_ITEMPROPERTY_GROUP");
+			XMLElement* fixed = body ? body->FirstChildElement("_Fixed") : nullptr;
+			if(!fixed) continue;
+			const char* type = fixed->Attribute("_Type");
+			const char* detail = fixed->Attribute("_TypeDetail");
+			const char* valueType = fixed->Attribute("_ValueType");
+			ItemProperty prop;
+			bool known = false;
+			for(const auto& t : PROPERTY_TYPES) if(type && EA::StdC::Strcmp(type, t.name) == 0) { prop.type = (u8)t.type; known = true; }
+			if(!known) continue;
+			if(prop.type == 0) {
+				known = false;
+				for(const auto& s : PROPERTY_STATS) if(detail && EA::StdC::Strcmp(detail, s.name) == 0) { prop.typeDetail = (i32)s.type; known = true; }
+				if(!known) continue;
+			}
+			prop.valueType = valueType && EA::StdC::Strcmp(valueType, "MUL") == 0 ? 1 : 0;
+			prop.value = fixed->FloatAttribute("_ValueMin");
+			propertyGroups[pGroup->IntAttribute("ID")] = prop;
+		}
+		LOG("Loaded %d item property groups", (i32)propertyGroups.size());
+	}
 	LoadItemInfos(items);
 	const wchar* extraItemFiles[] = { L"/client/ITEM_SUPPORT.xml", L"/client/ITEM_RON.xml" };
 	for(const wchar* file : extraItemFiles) {
@@ -5596,6 +5636,17 @@ bool GameXmlContent::LoadGroundItems()
 			static const i32 MEASURED_GEAR_SLOT_TYPES[] = { 60, 70, 80 };
 			GearItem& g = gearItems[pInfo->IntAttribute("ID")];
 			if(key >= 0) g.slotType = MEASURED_GEAR_SLOT_TYPES[key / 5];
+			const i32 optionGroup = itemData->IntAttribute("_OptionGroupIndex", -1);
+			auto prop = optionGroup > 0 ? propertyGroups.find(optionGroup) : propertyGroups.end();
+			if(prop != propertyGroups.end()) {
+				g.optionGroup = optionGroup;
+				g.properties.push_back(prop->second);
+				if(prop->second.type == 0) {
+					StatValue v = { (u8)prop->second.typeDetail, prop->second.value };
+					if(prop->second.valueType == 1 && !g.statMul.full()) g.statMul.push_back(v);
+					else if(prop->second.valueType == 0 && !g.statAdd.full()) g.statAdd.push_back(v);
+				}
+			}
 			if(XMLElement* effect = itemData->FirstChildElement("_Effect")) {
 				for(XMLElement* e = effect->FirstChildElement(); e; e = e->NextSiblingElement()) {
 					const u8 type = GearStatType(e->Attribute("DATAKEY"));

@@ -2556,9 +2556,9 @@
     </SkillComData>
     <EquipComData>
       <_AttachNode DATAKEY="ITEM_SLOT_WEAPON_PRIMARY" _NodeName="R_WEAPONPOS" />
-      <_EffectiveGearCount _Type="GEAR_TYPE_ATT" _Count="2" />
+      <_EffectiveGearCount _Type="GEAR_TYPE_ATT" _Count="1" />
       <_EffectiveGearCount _Type="GEAR_TYPE_DEF" _Count="2" />
-      <_EffectiveGearCount _Type="GEAR_TYPE_UTIL" _Count="2" />
+      <_EffectiveGearCount _Type="GEAR_TYPE_UTIL" _Count="3" />
       <_DefaultWeaponIndex DATA="131141011" />
       <_DefaultWeaponIndex DATA="131141021" />
       <_DefaultWeaponIndex DATA="131141031" />

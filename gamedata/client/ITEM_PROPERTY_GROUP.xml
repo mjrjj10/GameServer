@@ -1,0 +1,1431 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ENTITY_FILE>
+  <INFO ID="721000101">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="MUL" _ValueMin="1" _ValueMax="1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ATTACK" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000102">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_CRITICALRATE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000103">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="1.7" _ValueMax="1.7" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000104">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="0.4" _ValueMax="0.4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_LIFESTEAL" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000105">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ELEMENT_DAMAGE_BONUS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000106">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="MUL" _ValueMin="3" _ValueMax="3" _Type="ITEM_PROPERTY_TYPE_OVERHEAT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000201">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="MUL" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ATTACK" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000202">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="4" _ValueMax="4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_CRITICALRATE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000203">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="3.4" _ValueMax="3.4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000204">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="1" _ValueMax="1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_LIFESTEAL" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000205">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="4" _ValueMax="4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ELEMENT_DAMAGE_BONUS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000206">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="MUL" _ValueMin="6" _ValueMax="6" _Type="ITEM_PROPERTY_TYPE_OVERHEAT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000301">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="3" _ValueMax="3" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ATTACK" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000302">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="6" _ValueMax="6" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_CRITICALRATE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000303">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="4.8" _ValueMax="4.8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000304">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="1.4" _ValueMax="1.4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_LIFESTEAL" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000305">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="6" _ValueMax="6" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ELEMENT_DAMAGE_BONUS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000306">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="9" _ValueMax="9" _Type="ITEM_PROPERTY_TYPE_OVERHEAT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000401">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="4" _ValueMax="4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ATTACK" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000402">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="8.1" _ValueMax="8.1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_CRITICALRATE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000403">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="6.2" _ValueMax="6.2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000404">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_LIFESTEAL" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000405">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="8" _ValueMax="8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ELEMENT_DAMAGE_BONUS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000406">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="12" _ValueMax="12" _Type="ITEM_PROPERTY_TYPE_OVERHEAT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000501">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="5" _ValueMax="5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ATTACK" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000502">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="10.1" _ValueMax="10.1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_CRITICALRATE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000503">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="7.5" _ValueMax="7.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000504">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="2.5" _ValueMax="2.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_LIFESTEAL" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000505">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="10" _ValueMax="10" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ELEMENT_DAMAGE_BONUS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721000506">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="15" _ValueMax="15" _Type="ITEM_PROPERTY_TYPE_OVERHEAT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000101">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="MUL" _ValueMin="0.8" _ValueMax="0.8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000102">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="MUL" _ValueMin="0.4" _ValueMax="0.4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_HEALTH" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000103">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="0.7" _ValueMax="0.7" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_HEALTHREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000104">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="MUL" _ValueMin="4" _ValueMax="4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_STAMINA" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000105">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="0.4" _ValueMax="0.4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_STAMINAREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000106">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="MUL" _ValueMin="6.7" _ValueMax="6.7" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_HEALTHREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000107">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TOUGHNESS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000108">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="0.3" _ValueMax="0.3" _Type="ITEM_PROPERTY_TYPE_REGEN_STAMINA_ON_HIT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000201">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="MUL" _ValueMin="1.6" _ValueMax="1.6" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000202">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="MUL" _ValueMin="0.9" _ValueMax="0.9" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_HEALTH" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000203">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="1.3" _ValueMax="1.3" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_HEALTHREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000204">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="MUL" _ValueMin="8" _ValueMax="8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_STAMINA" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000205">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="0.8" _ValueMax="0.8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_STAMINAREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000206">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="MUL" _ValueMin="12.8" _ValueMax="12.8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_HEALTHREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000207">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="4" _ValueMax="4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TOUGHNESS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000208">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="0.6" _ValueMax="0.6" _Type="ITEM_PROPERTY_TYPE_REGEN_STAMINA_ON_HIT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000301">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="2.5" _ValueMax="2.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000302">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="1.3" _ValueMax="1.3" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_HEALTH" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000303">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="1.9" _ValueMax="1.9" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_HEALTHREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000304">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="12" _ValueMax="12" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_STAMINA" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000305">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="1.2" _ValueMax="1.2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_STAMINAREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000306">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="18.2" _ValueMax="18.2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_HEALTHREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000307">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="6" _ValueMax="6" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TOUGHNESS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000308">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="0.9" _ValueMax="0.9" _Type="ITEM_PROPERTY_TYPE_REGEN_STAMINA_ON_HIT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000401">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="3.3" _ValueMax="3.3" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000402">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="1.7" _ValueMax="1.7" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_HEALTH" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000403">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="2.4" _ValueMax="2.4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_HEALTHREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000404">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="16" _ValueMax="16" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_STAMINA" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000405">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="1.6" _ValueMax="1.6" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_STAMINAREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000406">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="23.1" _ValueMax="23.1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_HEALTHREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000407">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="8" _ValueMax="8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TOUGHNESS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000408">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="1.2" _ValueMax="1.2" _Type="ITEM_PROPERTY_TYPE_REGEN_STAMINA_ON_HIT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000501">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="4.1" _ValueMax="4.1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000502">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_HEALTH" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000503">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="2.8" _ValueMax="2.8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_HEALTHREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000504">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="20" _ValueMax="20" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_STAMINA" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000505">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_STAMINAREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000506">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="27.5" _ValueMax="27.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_HEALTHREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000507">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="10" _ValueMax="10" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TOUGHNESS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722000508">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="1.5" _ValueMax="1.5" _Type="ITEM_PROPERTY_TYPE_REGEN_STAMINA_ON_HIT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000101">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="10" _ValueMax="10" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILLPOWER" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000102">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="0.6" _ValueMax="0.6" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MOVESPEED" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000103">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="MUL" _ValueMin="-2" _ValueMax="-2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_COOLTIME" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000104">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="MUL" _ValueMin="5" _ValueMax="5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MANA" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000105">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="1" _ValueMax="1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MANAREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000106">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="1.7" _ValueMax="1.7" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_COOLTIME_DISCOUNT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000107">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="0.4" _ValueMax="0.4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_LIFESTEAL" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000108">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="1" _ValueMax="1" _Type="ITEM_PROPERTY_TYPE_REDUCE_PVP_DEADTIME" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000109">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_CRITICALRATE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000110">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="1.7" _ValueMax="1.7" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000111">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="MUL" _ValueMin="2.5" _ValueMax="2.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ENERGY" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000112">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="0.2" _ValueMax="0.2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ENERGYREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000113">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_MANAREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000114">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ELEMENT_SKILL_DAMAGE_BONUS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000201">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="20" _ValueMax="20" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILLPOWER" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000202">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="1.2" _ValueMax="1.2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MOVESPEED" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000203">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="MUL" _ValueMin="-4" _ValueMax="-4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_COOLTIME" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000204">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="MUL" _ValueMin="10" _ValueMax="10" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MANA" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000205">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MANAREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000206">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="3.5" _ValueMax="3.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_COOLTIME_DISCOUNT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000207">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="1" _ValueMax="1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_LIFESTEAL" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000208">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_REDUCE_PVP_DEADTIME" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000209">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="4" _ValueMax="4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_CRITICALRATE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000210">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="3.5" _ValueMax="3.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000211">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="MUL" _ValueMin="5" _ValueMax="5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ENERGY" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000212">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="0.4" _ValueMax="0.4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ENERGYREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000213">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="4" _ValueMax="4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_MANAREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000214">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="4" _ValueMax="4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ELEMENT_SKILL_DAMAGE_BONUS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000301">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="30" _ValueMax="30" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILLPOWER" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000302">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="1.8" _ValueMax="1.8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MOVESPEED" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000303">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="-6" _ValueMax="-6" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_COOLTIME" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000304">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="15" _ValueMax="15" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MANA" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000305">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="3" _ValueMax="3" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MANAREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000306">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="5.2" _ValueMax="5.2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_COOLTIME_DISCOUNT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000307">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="1.4" _ValueMax="1.4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_LIFESTEAL" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000308">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="3" _ValueMax="3" _Type="ITEM_PROPERTY_TYPE_REDUCE_PVP_DEADTIME" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000309">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="6" _ValueMax="6" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_CRITICALRATE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000310">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="5.2" _ValueMax="5.2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000311">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="7.5" _ValueMax="7.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ENERGY" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000312">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="0.6" _ValueMax="0.6" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ENERGYREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000313">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="6" _ValueMax="6" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_MANAREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000314">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="6" _ValueMax="6" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ELEMENT_SKILL_DAMAGE_BONUS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000401">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="40" _ValueMax="40" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILLPOWER" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000402">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="2.4" _ValueMax="2.4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MOVESPEED" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000403">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="-8" _ValueMax="-8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_COOLTIME" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000404">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="20" _ValueMax="20" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MANA" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000405">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="4" _ValueMax="4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MANAREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000406">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="7" _ValueMax="7" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_COOLTIME_DISCOUNT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000407">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_LIFESTEAL" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000408">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="4" _ValueMax="4" _Type="ITEM_PROPERTY_TYPE_REDUCE_PVP_DEADTIME" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000409">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="8.1" _ValueMax="8.1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_CRITICALRATE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000410">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="6.9" _ValueMax="6.9" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000411">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="10" _ValueMax="10" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ENERGY" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000412">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="0.8" _ValueMax="0.8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ENERGYREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000413">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="8" _ValueMax="8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_MANAREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000414">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="8" _ValueMax="8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ELEMENT_SKILL_DAMAGE_BONUS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000501">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="50" _ValueMax="50" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILLPOWER" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000502">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="3" _ValueMax="3" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MOVESPEED" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000503">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="-10" _ValueMax="-10" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_COOLTIME" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000504">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="25" _ValueMax="25" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MANA" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000505">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="5" _ValueMax="5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MANAREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000506">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="8.7" _ValueMax="8.7" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_COOLTIME_DISCOUNT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000507">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="2.5" _ValueMax="2.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_LIFESTEAL" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000508">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="5" _ValueMax="5" _Type="ITEM_PROPERTY_TYPE_REDUCE_PVP_DEADTIME" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000509">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="10.1" _ValueMax="10.1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_CRITICALRATE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000510">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="8.5" _ValueMax="8.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000511">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="12.5" _ValueMax="12.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ENERGY" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000512">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="1" _ValueMax="1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ENERGYREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000513">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="10" _ValueMax="10" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_MANAREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723000514">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="10" _ValueMax="10" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ELEMENT_SKILL_DAMAGE_BONUS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721001301">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="3" _ValueMax="3" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ATTACK" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721001303">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="4.8" _ValueMax="4.8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721001305">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="6" _ValueMax="6" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ELEMENT_DAMAGE_BONUS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721001306">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="9" _ValueMax="9" _Type="ITEM_PROPERTY_TYPE_OVERHEAT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721001401">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="4" _ValueMax="4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ATTACK" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721001402">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="8.1" _ValueMax="8.1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_CRITICALRATE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721001403">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="6.2" _ValueMax="6.2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721001404">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_LIFESTEAL" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721001405">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="8" _ValueMax="8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ELEMENT_DAMAGE_BONUS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721001406">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="12" _ValueMax="12" _Type="ITEM_PROPERTY_TYPE_OVERHEAT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721001501">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="5" _ValueMax="5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ATTACK" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721001502">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="10.1" _ValueMax="10.1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_CRITICALRATE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721001503">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="7.5" _ValueMax="7.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721001504">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="2.5" _ValueMax="2.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_LIFESTEAL" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721001505">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="10" _ValueMax="10" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ELEMENT_DAMAGE_BONUS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721001506">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="15" _ValueMax="15" _Type="ITEM_PROPERTY_TYPE_OVERHEAT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001301">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="2.5" _ValueMax="2.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001302">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="1.3" _ValueMax="1.3" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_HEALTH" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001304">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="12" _ValueMax="12" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_STAMINA" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001306">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="18.2" _ValueMax="18.2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_HEALTHREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001401">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="3.3" _ValueMax="3.3" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001402">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="1.7" _ValueMax="1.7" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_HEALTH" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001404">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="16" _ValueMax="16" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_STAMINA" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001405">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="1.6" _ValueMax="1.6" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_STAMINAREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001406">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="23.1" _ValueMax="23.1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_HEALTHREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001407">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="8" _ValueMax="8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TOUGHNESS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001408">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="1.2" _ValueMax="1.2" _Type="ITEM_PROPERTY_TYPE_REGEN_STAMINA_ON_HIT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001501">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="4.1" _ValueMax="4.1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001502">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_HEALTH" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001504">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="20" _ValueMax="20" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_STAMINA" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001505">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_STAMINAREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001506">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="27.5" _ValueMax="27.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_HEALTHREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001507">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="10" _ValueMax="10" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TOUGHNESS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722001508">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="1.5" _ValueMax="1.5" _Type="ITEM_PROPERTY_TYPE_REGEN_STAMINA_ON_HIT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001301">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="30" _ValueMax="30" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILLPOWER" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001303">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="-6" _ValueMax="-6" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_COOLTIME" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001306">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="5.2" _ValueMax="5.2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_COOLTIME_DISCOUNT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001310">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="5.2" _ValueMax="5.2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001401">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="40" _ValueMax="40" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILLPOWER" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001402">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="2.4" _ValueMax="2.4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MOVESPEED" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001403">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="-8" _ValueMax="-8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_COOLTIME" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001404">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="20" _ValueMax="20" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MANA" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001405">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="4" _ValueMax="4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MANAREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001406">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="7" _ValueMax="7" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_COOLTIME_DISCOUNT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001407">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_LIFESTEAL" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001408">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="4" _ValueMax="4" _Type="ITEM_PROPERTY_TYPE_REDUCE_PVP_DEADTIME" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001409">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="8.1" _ValueMax="8.1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_CRITICALRATE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001410">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="6.9" _ValueMax="6.9" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001411">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="MUL" _ValueMin="10" _ValueMax="10" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ENERGY" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001412">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="0.8" _ValueMax="0.8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ENERGYREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001413">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="8" _ValueMax="8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_MANAREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001414">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_HEROIC" />
+      <_Fixed _ValueType="ADD" _ValueMin="8" _ValueMax="8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ELEMENT_SKILL_DAMAGE_BONUS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001501">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="50" _ValueMax="50" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILLPOWER" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001502">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="3" _ValueMax="3" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MOVESPEED" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001503">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="-10" _ValueMax="-10" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_COOLTIME" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001504">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="25" _ValueMax="25" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MANA" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001505">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="5" _ValueMax="5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MANAREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001506">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="8.7" _ValueMax="8.7" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_COOLTIME_DISCOUNT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001507">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="2.5" _ValueMax="2.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_LIFESTEAL" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001508">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="5" _ValueMax="5" _Type="ITEM_PROPERTY_TYPE_REDUCE_PVP_DEADTIME" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001509">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="10.1" _ValueMax="10.1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_CRITICALRATE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001510">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="8.5" _ValueMax="8.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001511">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="12.5" _ValueMax="12.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ENERGY" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001512">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="1" _ValueMax="1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ENERGYREGEN" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001513">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="10" _ValueMax="10" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_MANAREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723001514">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="10" _ValueMax="10" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ELEMENT_SKILL_DAMAGE_BONUS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721002301">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="2.4" _ValueMax="2.4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ATTACK" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723002202">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="1" _ValueMax="1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MOVESPEED" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721002101">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="MUL" _ValueMin="1" _ValueMax="1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ATTACK" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722002101">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="MUL" _ValueMin="0.8" _ValueMax="0.8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723002101">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="10" _ValueMax="10" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILLPOWER" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721003101">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="MUL" _ValueMin="0.8" _ValueMax="0.8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ATTACK" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722003101">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="MUL" _ValueMin="0.6" _ValueMax="0.6" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723003101">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_NORMAL" />
+      <_Fixed _ValueType="ADD" _ValueMin="8" _ValueMax="8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILLPOWER" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721003201">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="MUL" _ValueMin="1.6" _ValueMax="1.6" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ATTACK" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721003203">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="2.7" _ValueMax="2.7" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722003201">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="MUL" _ValueMin="1.2" _ValueMax="1.2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722003202">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="MUL" _ValueMin="0.7" _ValueMax="0.7" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_HEALTH" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723003201">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="16" _ValueMax="16" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILLPOWER" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723003210">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_RARE" />
+      <_Fixed _ValueType="ADD" _ValueMin="2.8" _ValueMax="2.8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721003301">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="2.4" _ValueMax="2.4" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ATTACK" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721003303">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="3.8" _ValueMax="3.8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721003305">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="4.8" _ValueMax="4.8" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ELEMENT_DAMAGE_BONUS" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722003301">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722003302">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="1" _ValueMax="1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_HEALTH" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722003306">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="MUL" _ValueMin="14.5" _ValueMax="14.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_HEALTHREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723003301">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="24" _ValueMax="24" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILLPOWER" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723003310">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="4.1" _ValueMax="4.1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723003306">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_UNIQUE" />
+      <_Fixed _ValueType="ADD" _ValueMin="4.1" _ValueMax="4.1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_COOLTIME_DISCOUNT" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721002501">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="5" _ValueMax="5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_ATTACK" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721002502">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="10.1" _ValueMax="10.1" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_CRITICALRATE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="721002503">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_ATT" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="7.5" _ValueMax="7.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722003502">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="2" _ValueMax="2" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_HEALTH" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722003506">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="27.5" _ValueMax="27.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_TAG_HEALTHREGEN_VALUE" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="722003504">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_DEF" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="MUL" _ValueMin="20" _ValueMax="20" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_STAMINA" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723003501">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="50" _ValueMax="50" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILLPOWER" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723003502">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="3" _ValueMax="3" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_MOVESPEED" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+  <INFO ID="723003510">
+    <ST_ITEMPROPERTY_GROUP>
+      <_Target _ItemType="GEAR_TYPE_UTIL" _ItemRank="ITEM_RANK_LEGENDARY" />
+      <_Fixed _ValueType="ADD" _ValueMin="8.5" _ValueMax="8.5" _Type="ITEM_PROPERTY_TYPE_STAT_TYPE" _TypeDetail="STAT_TYPE_SKILL_DEFENCE_PENETRATION" />
+    </ST_ITEMPROPERTY_GROUP>
+  </INFO>
+</ENTITY_FILE>
