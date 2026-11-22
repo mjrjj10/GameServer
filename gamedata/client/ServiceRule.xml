@@ -48,8 +48,8 @@
 			<_OverPenalty DATAKEY="4"	DATA="37"/>
 			<_OverPenalty DATAKEY="5"	DATA="42"/>
 			
-			<_PvPGearPowerPercent _GameType="PVP_NORMAL"		DATA="50"/>
-			<_PvPGearPowerPercent _GameType="PVP_AI"			DATA="50"/>
+			<_PvPGearPowerPercent _GameType="PVP_NORMAL"		DATA="100"/>
+			<_PvPGearPowerPercent _GameType="PVP_AI"			DATA="100"/>
 			<_PvPGearPowerPercent _GameType="PVP_NORMAL_FFA"	DATA="0"/>
 			<_PvPGearPowerPercent _GameType="PVP_RANK"			DATA="100"/>
 		</_MasterGearInfo>

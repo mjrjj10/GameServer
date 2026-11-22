@@ -2029,7 +2029,7 @@ void HubGame::MmOnMatchFound(const In::MN_MatchingPartyFound& matchingParty)
 		regameData.Write<u32>(ownerRow);
 		regameData.Write<AreaIndex>(pveGame ? party.areaIndex : AreaIndex(0));
 		replication.SendWriter(clientHd, regameData);
-		{
+		if(pveGame) {
 			static const u8 MEASURED_ETC_TYPE_SUPPORTKIT = 6;
 			const AccountInventory inventory = AccountInventoryLoad(playerAccountData[userID]->nickname.data());
 			eastl::fixed_vector<eastl::pair<i32,i32>,16,false> kits;

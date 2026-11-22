@@ -2564,6 +2564,14 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			return true;
 		}
 
+		if(EA::StdC::Strcmp(msg, L"ult") == 0) {
+			World::Player& playerActor = world.GetPlayer(p.playerIndex);
+			playerActor.ultGauge = 100.0f;
+			playerActor.ultDirty = true;
+			SendDbgMsg(clientHd, L"Ultimate gauge full");
+			return true;
+		}
+
 		i32 piecesTeam = 0, piecesAdd = 0;
 		if(EA::StdC::Sscanf(msg, L"pieces %d %d", &piecesTeam, &piecesAdd) == 2 && (piecesTeam == 0 || piecesTeam == 1)) {
 			world.AddTeamPieces(piecesTeam, piecesAdd);
