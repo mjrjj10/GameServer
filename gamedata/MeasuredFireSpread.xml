@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MEASURED_FIRE_SPREAD source="MEASURED fx732 client_probe drawn bullets, L/R pair divergence per firingCombo, 16 bursts">
+	<SPREAD class="43">
+		<COMBO index="0" half="0" />
+		<COMBO index="1" half="0" />
+		<COMBO index="2" half="0" />
+		<COMBO index="3" half="0" />
+		<COMBO index="4" half="7.5" />
+		<COMBO index="5" half="20" />
+		<COMBO index="6" half="30" />
+		<COMBO index="7" half="30" />
+		<COMBO index="8" half="20" />
+		<COMBO index="9" half="7.5" />
+	</SPREAD>
+</MEASURED_FIRE_SPREAD>

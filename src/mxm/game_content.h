@@ -410,6 +410,7 @@ struct WeaponFiring
 	eastl::fixed_vector<f32,10,false> comboDelay;
 	ActionStateID animation = ActionStateID::ATTACK_BEHAVIORSTATE;
 	eastl::fixed_vector<ActionStateID,10,false> comboAnimation;
+	u8 comboRepeat = 0;
 	eastl::fixed_vector<ActionStateID,4,false> chargeAnimation;
 	ActionStateID AttackState(u8 firingCombo, u8 chargeLevel) const
 	{
@@ -1671,6 +1672,8 @@ struct GameXmlContent
 	struct MeasuredSwingNode { f32 forward = 0; f32 side = 0; };
 	eastl::hash_map<i32, MeasuredSwingNode> measuredSwingNodes;
 	const MeasuredSwingNode* FindMeasuredSwingNode(RemoteIdx remote) const { auto f = measuredSwingNodes.find((i32)remote); return f == measuredSwingNodes.end() ? nullptr : &f->second; }
+	eastl::hash_map<i32, eastl::fixed_vector<f32,12,false>> measuredFireSpread;
+	f32 FindMeasuredFireSpread(i32 classType, u8 firingCombo) const { auto f = measuredFireSpread.find(classType); return f == measuredFireSpread.end() || firingCombo >= f->second.size() ? 0.0f : f->second[firingCombo]; }
 	const eastl::array<i32,5>* FindBotSkills(i32 creature) const { auto f = botSkills.find(creature); return f == botSkills.end() ? nullptr : &f->second; }
 	bool IsChildOnExisting(ClassType c, ActionStateID a) const { return childOnExisting.find(((u32)c << 16) | ((u32)a & 0xFFFF)) != childOnExisting.end(); }
 	i32 GetChildSkill(ClassType c, ActionStateID a) const { auto f = childSkill.find(((u32)c << 16) | ((u32)a & 0xFFFF)); return f == childSkill.end() ? 0 : f->second; }
@@ -1952,6 +1955,7 @@ private:
 	bool LoadStatusStatMods();
 	bool LoadMeasuredFireNodes();
 	bool LoadMeasuredSwingNodes();
+	bool LoadMeasuredFireSpread();
 	bool LoadMeasuredBotGear();
 	bool LoadMeasuredBotTraits();
 	bool LoadMeasuredWalkCells();

@@ -3686,6 +3686,7 @@ bool GameXmlContent::Load()
 	if(!r) return false;
 	r = LoadMeasuredFireNodes();
 	if(r) r = LoadMeasuredSwingNodes();
+	if(r) r = LoadMeasuredFireSpread();
 	if(r) r = LoadMeasuredBotGear();
 	if(r) r = LoadMeasuredBotTraits();
 	if(r) r = LoadMeasuredWalkCells();
@@ -4463,6 +4464,18 @@ bool GameXmlContent::LoadMeasuredSwingNodes()
 		measuredSwingNodes[pSwing->IntAttribute("remote")] = node;
 	}
 	LOG("Loaded %d measured swing nodes", (i32)measuredSwingNodes.size());
+	return true;
+}
+
+bool GameXmlContent::LoadMeasuredFireSpread()
+{
+	XMLDocument doc;
+	if(!LoadXMLFile(L"/MeasuredFireSpread.xml", doc, true) || !doc.FirstChildElement()) return true;
+	for(XMLElement* pSpread = doc.FirstChildElement()->FirstChildElement("SPREAD"); pSpread; pSpread = pSpread->NextSiblingElement("SPREAD")) {
+		eastl::fixed_vector<f32,12,false>& half = measuredFireSpread[pSpread->IntAttribute("class")];
+		for(XMLElement* pCombo = pSpread->FirstChildElement("COMBO"); pCombo && !half.full(); pCombo = pCombo->NextSiblingElement("COMBO")) half.push_back(pCombo->FloatAttribute("half"));
+	}
+	LOG("Loaded %d measured fire spreads", (i32)measuredFireSpread.size());
 	return true;
 }
 
@@ -6110,6 +6123,7 @@ bool GameXmlContent::LoadWeaponFiring()
 			}
 			if(const char* anim = pData ? pData->Attribute("_Animation") : nullptr) wf.animation = ActionStateFromString(anim);
 			if(XMLElement* pCombo = pData ? pData->FirstChildElement("_COMBO") : nullptr) {
+				wf.comboRepeat = (u8)pCombo->IntAttribute("_RepeatSectionIndex");
 				for(XMLElement* pLevel = pCombo->FirstChildElement("_LEVEL"); pLevel && !wf.comboValid.full(); pLevel = pLevel->NextSiblingElement("_LEVEL")) {
 					wf.comboValid.push_back(pLevel->FloatAttribute("_ValidTime"));
 					wf.comboDelay.push_back(pLevel->FloatAttribute("_FireDelayTime"));

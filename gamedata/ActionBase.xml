@@ -2092,5 +2092,6 @@
   <ActionBase _DocID="100000043" Class="GATLING" BehaviorState="SKILL_5_BEHAVIORSTATE" AnimationIndex="2" AnimationId="17070" />
   <ActionBase _DocID="100000043" Class="GATLING" BehaviorState="SHIRK_BEHAVIORSTATE" AnimationIndex="0" AnimationId="16010" Delay="0.4" CommandType="STATE_BLOCK" />
   <ActionBase _DocID="100000043" Class="GATLING" BehaviorState="SHIRK_BEHAVIORSTATE" AnimationIndex="0" AnimationId="16010" CommandType="REMOTE" RemoteIndex="1440430060" TargetPreset="TARGET_SELF_TFF" NodeName="Scene Root" />
+  <ActionBase _DocID="100000043" Class="GATLING" BehaviorState="SHIRK_BEHAVIORSTATE" AnimationIndex="0" AnimationId="16010" CommandType="ENTITY" EntityIndex="100041020" TargetPreset="TARGET_SELF_TFF" NodeName="Scene Root" />
   <ActionBase _DocID="100000043" Class="GATLING" BehaviorState="SHIRK_BEHAVIORSTATE" AnimationIndex="0" AnimationId="16010" CommandType="GRAPH_MOVE_HORZ" Param1="600" Param2="0|1" />
 </ENTITY_FILE>

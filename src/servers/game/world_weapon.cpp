@@ -204,6 +204,10 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	proj.ownerIndex = player.index;
 	proj.pos = reliable ? vec3(vec2(origin), player.body->GetWorldPos().z) : player.body->GetWorldPos();
 	proj.dir = reliable ? dir : vec2(cosf(player.weaponAimYaw), sinf(player.weaponAimYaw));
+	const vec2 aimDir = proj.dir;
+	const f32 spreadHalf = wf.extraRemotes.empty() ? 0.0f : content.FindMeasuredFireSpread((i32)classType, player.firingCombo) * PI / 180.0f;
+	if(spreadHalf > 0) proj.dir = vec2(aimDir.x * cosf(-spreadHalf) - aimDir.y * sinf(-spreadHalf), aimDir.x * sinf(-spreadHalf) + aimDir.y * cosf(-spreadHalf));
+	const vec2 spreadDir = vec2(aimDir.x * cosf(spreadHalf) - aimDir.y * sinf(spreadHalf), aimDir.x * sinf(spreadHalf) + aimDir.y * cosf(spreadHalf));
 	proj.travelled = 0;
 	proj.start = proj.pos;
 	proj.speed = (remote && remote->maxSpeed > 0) ? remote->maxSpeed : WEAPON_PROJECTILE_SPEED;
@@ -266,6 +270,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		const u16 creator = DefaultWeaponCreator(player, wf);
 		if(creator != 0 && !fireObject.empty()) replication->SendWeaponCreatorShotToAll(player.Main().UID, seed, remote->ID, firePos, atan2f(proj.dir.y, proj.dir.x), target, fireObject.c_str(), creator, player.chargeLevel, player.firingCombo, (u16)player.shotCount[player.mainCharaID & 1]);
 		else replication->SendRemoteCreateToAll(player.Main().UID, seed, remote->ID, firePos, atan2f(proj.dir.y, proj.dir.x), target, ActorUID::INVALID, fireObject.empty() ? FIRE_OBJECT_SCENE_ROOT : fireObject.c_str());
+		if(spreadHalf > 0 && (creator == 0 || fireObject.empty())) replication->SendRemoteCreateToAll(player.Main().UID, seed + 1, wf.extraRemotes[0], firePos, atan2f(spreadDir.y, spreadDir.x), vec3(vec2(firePos) + spreadDir * proj.range, firePos.z), ActorUID::INVALID, fireObject.empty() ? FIRE_OBJECT_SCENE_ROOT : fireObject.c_str());
 	}
 	proj.damage = bomb && remote->attackMultiplier <= 0 ? 0 : (i32)WeaponHitDamage(player, remote);
 	proj.aoeDamage = (i32)WeaponHitDamage(player, bomb && bomb->attackMultiplier > 0 ? bomb : remote);
@@ -335,6 +340,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 				continue;
 			}
 			Projectile p = proj;
+			if(spreadHalf > 0 && k == 0) p.dir = spreadDir;
 			p.remoteDoc = extra->ID;
 			p.damage = (i32)WeaponHitDamage(player, extra);
 			p.halfWidth = extra->boundSize[0] * 0.5f;
@@ -913,7 +919,8 @@ RemoteIdx World::SelectWeaponRemote(Player& player, const WeaponFiring& wf)
 	const u32 m = player.mainCharaID & 1;
 	if(player.clientHd == ClientHandle::INVALID) {
 		const bool chained = player.firingCombo < wf.comboValid.size() && player.botComboShotAt != Time::ZERO && (wf.comboValid[player.firingCombo] <= 0 || localTime <= TimeAdd(player.botComboShotAt, TimeMsToTime(wf.comboValid[player.firingCombo] * 1000.0)));
-		player.firingCombo = chained ? player.firingCombo + 1 : 0;
+		const bool repeat = !chained && wf.comboRepeat > 0 && !wf.comboValid.empty() && player.firingCombo == wf.comboValid.size() && player.botComboShotAt != Time::ZERO && localTime <= TimeAdd(player.botComboShotAt, TimeMsToTime(wf.comboValid.back() * 1000.0));
+		player.firingCombo = chained ? player.firingCombo + 1 : repeat ? wf.comboRepeat : 0;
 		player.botComboShotAt = wf.comboValid.empty() ? Time::ZERO : localTime;
 	}
 	RemoteIdx idx = wf.base;
