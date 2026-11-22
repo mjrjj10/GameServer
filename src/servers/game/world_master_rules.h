@@ -248,12 +248,13 @@ struct SummonAttackRule
 	f32 attackRange;
 	f64 cooldownMs;
 	f64 firstDelayMs;
+	bool followOwner;
 };
 
 static const SummonAttackRule SUMMON_ATTACK_RULES[] = {
-	{ "PC_MissileTurret", 1000.0f, 420.0, 400.0 },
-	{ "SOULMASTER_GIANTSOUL", 400.0f, 2000.0, 1500.0 },
-	{ "SLIME_MINI", 1000.0f, 2200.0, 140.0 },
+	{ "PC_MissileTurret", 1000.0f, 420.0, 400.0, false },
+	{ "SOULMASTER_GIANTSOUL", 400.0f, 2000.0, 1500.0, false },
+	{ "SLIME_MINI", 1000.0f, 2200.0, 140.0, true },
 };
 
 static inline const SummonAttackRule* FindSummonAttackRule(const char* summonClass)

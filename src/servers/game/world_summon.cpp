@@ -229,6 +229,27 @@ void World::ChildSkillOnExisting(Player& owner, i32 child, const vec3& pos)
 		}
 		LOG("Summon :: %ls carried to (%.0f, %.0f)", carried.name.data(), pos.x, pos.y);
 	}
+	foreach_const(ns, npcStatuses) {
+		if(localTime >= ns->until || (ns->casterUID != owner.Main().UID && ns->casterUID != npc->UID)) continue;
+		const StatusInfo* carryInfo = GetGameXmlContent().FindStatus(ns->statusID);
+		if(!carryInfo || carryInfo->type != StatusType::TARGET) continue;
+		ActorNpc* carried = FindNpcActor(ns->npcUID);
+		if(!carried || !carried->monsterAi || carried->hp <= 0) continue;
+		const vec2 toDrop = vec2(pos) - vec2(carried->pos);
+		const f32 carryDist = glm::length(toDrop);
+		const f32 carryTime = MAX(travel, 0.05f);
+		HoldNpcForControl(*carried, carryTime);
+		if(carryDist > 1.0f) {
+			carried->dashFrom = vec2(carried->pos);
+			carried->dashDir = toDrop / carryDist;
+			carried->dashDist = carryDist;
+			carried->dashStart = localTime;
+			carried->dashEnd = TimeAdd(localTime, TimeMsToTime(carryTime * 1000.0));
+			carried->dashCurve = NPC_DASH_CURVE_HOOK;
+			carried->ccNextMove = localTime;
+		}
+		LOG("Summon :: creature=%d carried to (%.0f, %.0f) over %.0f", (i32)carried->docID, pos.x, pos.y, carryDist);
+	}
 	const vec3 from = npc->pos;
 	npc->pos = goal;
 	npc->aimPos = pos;
@@ -373,10 +394,11 @@ void World::UpdateSummonAttack(ActorNpc& npc, f32 delta)
 	const Player& owner = players[npc.ownerIndex];
 	ActorMaster* tm = FindMasterActor(npc.chaseTarget);
 	Player* target = tm && !tm->parent->dead && !tm->parent->untargetable && tm->parent->team != owner.team && (tm->parent->fogSeenBy & (1u << owner.team)) ? tm->parent : nullptr;
-	const f32 lost = info->targetLost > 0 ? info->targetLost : info->perception;
+	const bool follow = npc.attackRule->followOwner && !owner.dead;
+	const f32 lost = follow ? npc.attackRule->attackRange : info->targetLost > 0 ? info->targetLost : info->perception;
 	if(target && glm::length(vec2(target->body->GetWorldPos()) - vec2(npc.pos)) > lost) target = nullptr;
 	if(!target) {
-		f32 best = info->perception;
+		f32 best = follow ? npc.attackRule->attackRange : info->perception;
 		foreach(e, players) {
 			if(e->dead || e->untargetable || e->team == owner.team || !(e->fogSeenBy & (1u << owner.team))) continue;
 			const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(npc.pos));
@@ -385,19 +407,30 @@ void World::UpdateSummonAttack(ActorNpc& npc, f32 delta)
 	}
 	ActorNpc* targetNpc = nullptr;
 	if(!target) {
-		f32 best = info->perception;
+		f32 best = follow ? npc.attackRule->attackRange : info->perception;
 		foreach(e, actorNpcList) {
 			if(&*e == &npc || !NpcHittableBy(*e, owner)) continue;
 			const f32 d = glm::length(vec2(e->pos) - vec2(npc.pos));
 			if(d < best) { best = d; targetNpc = &*e; }
 		}
 	}
-	const ActorUID chosen = target ? target->Main().UID : (targetNpc ? targetNpc->UID : ActorUID::INVALID);
+	const ActorUID chosen = target ? target->Main().UID : (targetNpc ? targetNpc->UID : (follow ? owner.Main().UID : ActorUID::INVALID));
 	if(chosen != npc.chaseTarget) {
 		replication->SendAiSetTargetToAll(npc.UID, chosen);
 		npc.chaseTarget = chosen;
 	}
-	if(!target && !targetNpc) { StopNpcLeg(npc); return; }
+	if(!target && !targetNpc) {
+		const vec3 home = owner.body->GetWorldPos();
+		const vec2 back = vec2(home) - vec2(npc.pos);
+		const f32 away = glm::length(back);
+		const f32 keep = MAX(info->aiDistance, 1.0f);
+		if(!follow || info->moveSpeed <= 0 || away <= keep) { StopNpcLeg(npc); return; }
+		const f32 step = MIN(info->moveSpeed * delta, away - keep);
+		SyncNpcLeg(npc, vec3(vec2(home) - back / away * keep, home.z), info->moveSpeed);
+		npc.pos = vec3(vec2(npc.pos) + back / away * step, npc.pos.z);
+		npc.rot.z = atan2f(back.y, back.x);
+		return;
+	}
 	if(npc.standAt != Time::ZERO && localTime < npc.standAt) return;
 	const vec3 goal = target ? target->body->GetWorldPos() : targetNpc->pos;
 	const vec2 rel = vec2(goal) - vec2(npc.pos);
