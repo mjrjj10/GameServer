@@ -305,6 +305,23 @@ static inline f32 TesterSkillDamageMul(SkillID skill)
 	return 1.0f;
 }
 
+struct TesterSummonDamageRule
+{
+	i32 ownerClass;
+	SkillID skill;
+	f32 mul;
+};
+
+static const TesterSummonDamageRule TESTER_SUMMON_DAMAGE_MULS[] = {
+	{ 43, SkillID(180020020), 0.0f },
+};
+
+static inline f32 TesterSummonDamageMul(i32 ownerClass, SkillID skill)
+{
+	for(const TesterSummonDamageRule& r : TESTER_SUMMON_DAMAGE_MULS) if(r.ownerClass == ownerClass && r.skill == skill) return r.mul;
+	return 1.0f;
+}
+
 static inline bool BurstsBackAfterThrough(SkillID skill)
 {
 	for(SkillID s : TESTER_BURST_BACK_AFTER_THROUGH) if(s == skill) return true;

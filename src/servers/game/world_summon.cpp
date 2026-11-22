@@ -837,7 +837,7 @@ void World::UpdateSummons()
 				const SummonInfo* sourceInfo = sourceNpc ? GetGameXmlContent().FindSummon((i32)sourceNpc->docID) : nullptr;
 				f32 sourceAttack = 0;
 				if(sourceInfo) foreach_const(st, sourceInfo->baseStats) if(st->type == STAT_ATTACK) sourceAttack = st->value;
-				if(summonRemote && summonRemote->skillIndex != 0) pr.damage = (i32)PlayerSkillDamage(owner, SkillID(summonRemote->skillIndex));
+				if(summonRemote && summonRemote->skillIndex != 0) pr.damage = (i32)(PlayerSkillDamage(owner, SkillID(summonRemote->skillIndex)) * TesterSummonDamageMul((i32)owner.Main().classType, SkillID(summonRemote->skillIndex)));
 				else if(summonRemote && sourceAttack > 0) pr.damage = (i32)sourceAttack;
 				else pr.damage = pc->skill != 0 ? (i32)PlayerSkillDamage(owner, SkillID(pc->skill)) : 0;
 				pr.castPos = aimedGraph ? pc->aim : pc->pos;
