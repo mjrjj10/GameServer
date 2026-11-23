@@ -307,6 +307,15 @@
         <_SFX _baseEffectResName="STATUS_SFX_PC_Destroyer_Root" _skinEffectResName="STATUS_SFX_PC_Destroyer_Root_Mecha" />
       </_SFXResource>
     </_Skin>
+    <_Skin DATAKEY="SKIN_DESTROYER_07" _Purchase="True" _ClassType="CLASS_TYPE_DESTROYER" _SkinIndex="5" _ReleaseDate="20171215" _SkinType="SKIN_TYPE_UNIQUE" _NCoinPrice="3280" _Name="STR_SKIN_DESTROYER_07" _IconAlias="skin_destroyer_07" _ColorTone="SKIN_COLOR_TONE_BLUE">
+      <_SkinEffect _Count="5">
+        <_Effect _Type="SKIN_EFFECT_TYPE_GOLD_AMOUNT" _Data="600" />
+      </_SkinEffect>
+      <_SkinResource>
+        <_Resource _BaseKFMKeyName="DESTROYER" _SkinKFMFile="Graphic\Creature\Pc\Destroyer\Destroyer_Santa\Destroyer_Santa.kfm" _ConstantSFX="Status_Fx_Pc_Snow" _AnimationKeyName="Destroyer_Santa" />
+        <_Resource _BaseKFMKeyName="AI_DESTROYER_Titan" _SkinKFMFile="Graphic\Creature\Pc\Destroyer\Destroyer_Santa\Destroyer_Santa.kfm" _AnimationKeyName="Destroyer_Santa" />
+      </_SkinResource>
+    </_Skin>
     <_Skin DATAKEY="SKIN_MECHANIC_01" _Purchase="True" _ClassType="CLASS_TYPE_MECHANIC" _SkinIndex="0" _ReleaseDate="20130301" _SkinType="SKIN_TYPE_BASE" _Display="SHOW" _Name="STR_SKIN_MECHANIC_01" _IconAlias="skin_mechanic_01" _ColorTone="SKIN_COLOR_TONE_NONE">
       <_SkinResource>
         <_Resource _BaseKFMKeyName="MECHANIC" _SkinKFMFile="Graphic\Creature\Pc\Mechanic\Mechanic\Mechanic.kfm" />
@@ -720,6 +729,15 @@
         <_Resource _BaseKFMKeyName="AI_POHWARAN_Titan" _SkinKFMFile="Graphic\Creature\Pc\Pohwaran\Pohwaran_Nurse\Pohwaran_Nurse.kfm" />
       </_SkinResource>
     </_Skin>
+    <_Skin DATAKEY="SKIN_POHWARAN_04" _Purchase="True" _ClassType="CLASS_TYPE_POHWARAN" _SkinIndex="3" _ReleaseDate="20160930" _SkinType="SKIN_TYPE_RARE" _Name="STR_SKIN_POHWARAN_04" _IconAlias="skin_pohwaran_04" _ColorTone="SKIN_COLOR_TONE_RED">
+      <_SkinEffect _Count="5">
+        <_Effect _Type="SKIN_EFFECT_TYPE_GOLD_AMOUNT" _Data="300" />
+      </_SkinEffect>
+      <_SkinResource>
+        <_Resource _BaseKFMKeyName="POHWARAN" _SkinKFMFile="Graphic\Creature\Pc\Pohwaran\Pohwaran_Xmaself\Pohwaran_Xmaself.kfm" _ConstantSFX="Status_Fx_Pc_Snow" _AnimationKeyName="POHWARAN_XmasElf" />
+        <_Resource _BaseKFMKeyName="AI_POHWARAN_Titan" _SkinKFMFile="Graphic\Creature\Pc\Pohwaran\Pohwaran_Xmaself\Pohwaran_Xmaself.kfm" _AnimationKeyName="POHWARAN_XmasElf" />
+      </_SkinResource>
+    </_Skin>
     <_Skin DATAKEY="SKIN_DEATHKNIGHT_01" _Purchase="True" _ClassType="CLASS_TYPE_DEATHKNIGHT" _SkinIndex="0" _ReleaseDate="20141016" _SkinType="SKIN_TYPE_BASE" _Display="SHOW" _Name="STR_SKIN_DEATHKNIGHT_01" _IconAlias="skin_deathknight_01" _ColorTone="SKIN_COLOR_TONE_NONE">
       <_SkinResource>
         <_Resource _BaseKFMKeyName="DEATHKNIGHT" _SkinKFMFile="Graphic\Creature\Pc\Deathknight\Deathknight\Deathknight.kfm" _ConstantSFX="Pc_Fx_DeathKnight_Always_Head" />
@@ -794,6 +812,30 @@
       </_SkinResource>
       <_SFXResource>
         <_SFX _baseEffectResName="STATUS_SFX_PC_Slime_Skill1_Common" _skinEffectResName="STATUS_SFX_PC_Slime_Skill1_Common_Uncle" />
+      </_SFXResource>
+    </_Skin>
+    <_Skin DATAKEY="SKIN_SLIME_02" _Purchase="True" _ClassType="CLASS_TYPE_SLIME" _SkinIndex="2" _ReleaseDate="20141104" _SkinType="SKIN_TYPE_UNIQUE" _NCoinPrice="3280" _Name="STR_SKIN_SLIME_02" _IconAlias="skin_slime_02" _ColorTone="SKIN_COLOR_TONE_BLUE">
+      <_SkinEffect _Count="5">
+        <_Effect _Type="SKIN_EFFECT_TYPE_GOLD_AMOUNT" _Data="600" />
+      </_SkinEffect>
+      <_SkinResource>
+        <_Resource _BaseKFMKeyName="SLIME" _SkinKFMFile="Graphic\Creature\Pc\Slime\Slime_Snow\Slime_Snow.kfm" _ConstantSFX="Status_Fx_Pc_Slime_Always_Snow" _AnimationKeyName="Slime_Snow" />
+        <_Resource _BaseKFMKeyName="AI_SLIME_Titan" _SkinKFMFile="Graphic\Creature\Pc\Slime\Slime_Snow\Slime_Snow.kfm" _ConstantSFX="Pc_Fx_Slime_Always" _AnimationKeyName="Slime_Snow" />
+        <_Resource _BaseKFMKeyName="SLIME_MINI" _SkinKFMFile="Graphic\Creature\Pc\Slime\Slime_Snow\Slime_Snow.kfm" _ConstantSFX="Pc_Fx_Slime_Always" _AnimationKeyName="SLIME_MINI_SNOW" />
+      </_SkinResource>
+      <_SFXResource>
+        <_SFX _baseEffectResName="STATUS_SFX_PC_SLIME_SKILL1_MARK" _skinEffectResName="STATUS_SFX_PC_SLIME_SKILL1_MARK_SNOW" />
+        <_SFX _baseEffectResName="SLIME_ATTACK_REMOTE" _skinEffectResName="SLIME_ATTACK_REMOTE_SNOW" />
+        <_SFX _baseEffectResName="SLIME_ATTACK_HITRANGE" _skinEffectResName="SLIME_ATTACK_HITRANGE_SNOW" />
+        <_SFX _baseEffectResName="SLIME_ATTACK_Hit" _skinEffectResName="SLIME_ATTACK_Hit_SNOW" />
+        <_SFX _baseEffectResName="SLIME_ATTACK_CHARGE_Remote" _skinEffectResName="SLIME_ATTACK_CHARGE_Remote_SNOW" />
+        <_SFX _baseEffectResName="SLIME_ATTACK_CHARGE_HITRANGE" _skinEffectResName="SLIME_ATTACK_CHARGE_HITRANGE_SNOW" />
+        <_SFX _baseEffectResName="SLIME_SKILL1_REMOTE" _skinEffectResName="SLIME_SKILL1_REMOTE_SNOW" />
+        <_SFX _baseEffectResName="SLIME_SKILL2_REMOTE" _skinEffectResName="SLIME_SKILL2_REMOTE_SNOW" />
+        <_SFX _baseEffectResName="STATUS_SFX_PC_SLIME_SKILL1_HEAL" _skinEffectResName="STATUS_SFX_PC_SLIME_SKILL1_HEAL_SNOW" />
+        <_SFX _baseEffectResName="STATUS_SFX_PC_SLIME_SKILL1_HP_ABSORBING" _skinEffectResName="STATUS_SFX_PC_SLIME_SKILL1_HP_ABSORBING_SNOW" />
+        <_SFX _baseEffectResName="STATUS_SFX_PC_SLIME_SKILL4_MARK" _skinEffectResName="STATUS_SFX_PC_SLIME_SKILL4_MARK_SNOW" />
+        <_SFX _baseEffectResName="STATUS_SFX_PC_SLIME_SKILL4_KNOCKDOWN" _skinEffectResName="STATUS_SFX_PC_SLIME_SKILL4_KNOCKDOWN_SNOW" />
       </_SFXResource>
     </_Skin>
     <_Skin DATAKEY="SKIN_MONDOZAX_01" _Purchase="True" _ClassType="CLASS_TYPE_MONDOZAX" _SkinIndex="0" _ReleaseDate="20141204" _SkinType="SKIN_TYPE_BASE" _Display="SHOW" _Name="STR_SKIN_MONDOZAX_01" _IconAlias="skin_mondozax_01" _ColorTone="SKIN_COLOR_TONE_NONE">
