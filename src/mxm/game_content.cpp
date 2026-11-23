@@ -1238,6 +1238,8 @@ void GameXmlContent::LoadMonsterFires()
 {
 	static const wchar* FILES[] = { L"/client/ActionBase_Monster.xml", L"/client/ActionBase_Monster_MOB_A.xml", L"/client/ActionBase_Monster_MOB_B.xml", L"/client/ActionBase_Monster_MOB_C.xml", L"/client/ActionBase_Monster_MOB_D.xml", L"/client/ActionBase_Monster_MOB_PUBLIC.xml", L"/client/ActionBase_Monster_MOB_PvP.xml" };
 	eastl::hash_map<u64, eastl::fixed_vector<MonsterFire,24,false>> fires;
+	eastl::hash_map<u64, eastl::fixed_vector<eastl::pair<i32,f32>,4,false>> targetStatuses;
+	eastl::hash_map<u64, eastl::fixed_vector<eastl::fixed_string<wchar,48,true>,8,false>> fireNodeOrder;
 	struct Dash { f32 dist = 0; f32 time = 0; i32 pass = -1; eastl::fixed_vector<i32,4,false> anims; eastl::fixed_vector<i32,4,false> loops; };
 	eastl::hash_map<u64, Dash> dashes;
 	for(i32 f = 0; f < (i32)ARRAY_COUNT(FILES); f++) {
@@ -1260,6 +1262,12 @@ void GameXmlContent::LoadMonsterFires()
 					if(param && EA::StdC::Sscanf(param, "%f|%f", &dash.dist, &dash.time) >= 1) dash.pass = pass;
 				}
 			}
+			if(type && cls && state && EA::StdC::Strcmp(type, "STATUS") == 0 && e->IntAttribute("StatusIndex") > 0) {
+				const char* preset = e->Attribute("TargetPreset");
+				const char* removeParam = e->Attribute("Param2");
+				auto& list = targetStatuses[((u64)StatusTypeKey(cls) << 32) | (u32)ActionStateFromString(state)];
+				if(preset && EA::StdC::Strncmp(preset, "TARGET_CURRENT", 14) == 0 && !(removeParam && EA::StdC::Strcmp(removeParam, "Remove") == 0) && !list.full()) list.push_back({ e->IntAttribute("StatusIndex"), e->FloatAttribute("Delay") });
+			}
 			if(!type || !cls || !state || EA::StdC::Strcmp(type, "REMOTE") != 0 || e->IntAttribute("RemoteIndex") <= 0) continue;
 			const char* rowParam2 = e->Attribute("Param2");
 			if(rowParam2 && EA::StdC::Strcmp(rowParam2, "Remove") == 0) continue;
@@ -1268,9 +1276,14 @@ void GameXmlContent::LoadMonsterFires()
 			fire.remote = e->IntAttribute("RemoteIndex");
 			const char* preset = e->Attribute("TargetPreset");
 			fire.atTarget = preset && EA::StdC::Strncmp(preset, "TARGET_POS", 10) == 0;
+			fire.removeAtAnimEnd = rowParam2 && EA::StdC::Strcmp(rowParam2, "RemoveWhenAniEnd") == 0;
 			fire.pass = (u8)MAX(MIN(e->IntAttribute("AnimationIndex"), 3), 0);
 			const char* node = e->Attribute("NodeName");
 			for(const char* c = node ? node : "Scene Root"; *c && !fire.node.full(); c++) fire.node.push_back((wchar)*c);
+			auto& nodeOrder = fireNodeOrder[((u64)StatusTypeKey(cls) << 32) | (u32)fire.remote];
+			auto known = eastl::find(nodeOrder.begin(), nodeOrder.end(), fire.node);
+			if(known == nodeOrder.end() && !nodeOrder.full()) { nodeOrder.push_back(fire.node); known = nodeOrder.end() - 1; }
+			fire.nodeIndex = known != nodeOrder.end() ? (u8)(known - nodeOrder.begin()) : 0;
 			const char* param = e->Attribute("Param1");
 			const char* times = param ? EA::StdC::Strchr(param, '|') : nullptr;
 			if(times) {
@@ -1302,6 +1315,13 @@ void GameXmlContent::LoadMonsterFires()
 				attack->dashDist = dash->second.dist;
 				attack->dashTime = dash->second.time;
 				for(i32 p = 0; p <= dash->second.pass && p < (i32)dash->second.anims.size(); p++) attack->dashPassAnims.push_back(dash->second.anims[p]);
+			}
+			auto statuses = targetStatuses.find(classKey | (u32)attack->state);
+			if(statuses != targetStatuses.end() && attack->target != MonsterAttack::ALLY) {
+				for(const auto& st : statuses->second) {
+					if(eastl::find(attack->allyStatuses.begin(), attack->allyStatuses.end(), st.first) != attack->allyStatuses.end() || eastl::find(attack->selfStatuses.begin(), attack->selfStatuses.end(), st.first) != attack->selfStatuses.end()) continue;
+					if(!attack->targetStatuses.full()) attack->targetStatuses.push_back(st);
+				}
 			}
 			auto found = fires.find(classKey | (u32)attack->state);
 			if(found == fires.end()) continue;
@@ -1344,6 +1364,8 @@ bool GameXmlContent::LoadMonsterAi()
 			ai.groggyTime = pInfo->FloatAttribute("groggyTime");
 			ai.spawnTime = pInfo->FloatAttribute("spawnTime");
 			ai.chaseRing = pInfo->FloatAttribute("chaseRing");
+			ai.anchorHp = pInfo->FloatAttribute("anchorHp");
+			ai.anchor = vec2(pInfo->FloatAttribute("anchorX"), pInfo->FloatAttribute("anchorY"));
 			ai.chaseArc = pInfo->FloatAttribute("chaseArc") * PI / 180.0f;
 			ai.turnLock = pInfo->BoolAttribute("turnLock");
 			ai.turnEvery = pInfo->FloatAttribute("turnEvery");
@@ -1466,6 +1488,7 @@ bool GameXmlContent::LoadMonsterAi()
 				attack.evade = pAttack->FloatAttribute("evade");
 				attack.selfCentered = pAttack->BoolAttribute("selfCentered");
 				attack.share = pAttack->FloatAttribute("share", 1.0f);
+				attack.anchorShare = pAttack->FloatAttribute("anchorShare", -1.0f);
 				ParseIdList(pAttack->Attribute("selfStatus"), attack.selfStatuses);
 				ParseIdList(pAttack->Attribute("allyStatus"), attack.allyStatuses);
 				ai.attacks.push_back(attack);

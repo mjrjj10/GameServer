@@ -676,7 +676,9 @@ bool Game::LoadMap()
 	world.killZ = map->groundPlane ? -1000000.0f : map->killZ;
 	foreach_const(c, map->colliders) {
 		if(!c->walk) continue;
-		world.physics.CreateStaticCollider(c->mesh.data(), c->pos, c->rot, c->scale);
+		const bool mobGuardrail = EA::StdC::Stristr(c->mesh.data(), "Guardrailmob") != nullptr;
+		const bool blocksSight = !mobGuardrail || EA::StdC::Stristr(c->mesh.data(), "UnSightable") != nullptr;
+		world.physics.NameActor(world.physics.CreateStaticCollider(c->mesh.data(), c->pos, c->rot, c->scale, blocksSight), c->mesh.data());
 	}
 
 	foreach(it, map->creatures) {
@@ -2568,10 +2570,50 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			}
 			else {
 				static const f32 DEV_TPMON_OFFSET = 350.0f;
-				const vec3 to = best->pos + vec3(DEV_TPMON_OFFSET, 0, 0);
+				static const f32 DEV_TPMON_EYE = 100.0f;
+				const vec2 homeRel = vec2(best->home) - vec2(best->pos);
+				const f32 homeAngle = glm::length(homeRel) > 1.0f ? atan2f(homeRel.y, homeRel.x) : 0.0f;
+				vec3 to = best->pos + vec3(DEV_TPMON_OFFSET, 0, 0);
+				for(i32 k = 0; k < 8; k++) {
+					const f32 a = homeAngle + (k % 2 ? 1.0f : -1.0f) * (f32)((k + 1) / 2) * PI / 4.0f;
+					const vec3 candidate = best->pos + vec3(cosf(a) * DEV_TPMON_OFFSET, sinf(a) * DEV_TPMON_OFFSET, 0);
+					f32 hit = 0;
+					if(world.physics.RaycastStatic(best->pos + vec3(0, 0, DEV_TPMON_EYE), candidate + vec3(0, 0, DEV_TPMON_EYE), &hit)) continue;
+					to = candidate;
+					break;
+				}
 				world.TeleportPlayer(playerActor, to, playerActor.input.rot.bodyYaw);
 				replication.SendTeleportRequest(clientHd, playerActor.Main().UID, to);
 				SendDbgMsg(clientHd, LFMT(L"Teleported near monster %d (local %d)", monDoc, best->localID));
+			}
+			return true;
+		}
+
+		i32 skillDoc = 0, skillNum = 0;
+		if(EA::StdC::Sscanf(msg, L"monskill %d %d", &skillDoc, &skillNum) == 2) {
+			char stateName[64];
+			snprintf(stateName, sizeof(stateName), "SKILL_%d_BEHAVIORSTATE", skillNum);
+			const ActionStateID state = ActionStateFromString(stateName);
+			const World::Player& caller = world.GetPlayer(p.playerIndex);
+			i32 forced = 0;
+			foreach(npc, world.actorNpcList) {
+				if((i32)npc->docID != skillDoc || npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
+				npc->monsterForcedState = state;
+				if(npc->monsterTarget == ActorUID::INVALID && caller.body) npc->monsterTarget = caller.Main().UID;
+				forced++;
+			}
+			LOG("Scenario :: monster %d forced to %s (%d)", skillDoc, stateName, forced);
+			SendDbgMsg(clientHd, LFMT(L"%d monster(s) %d will use SKILL_%d", forced, skillDoc, skillNum));
+			return true;
+		}
+
+		i32 hpDoc = 0, hpPct = 0;
+		if(EA::StdC::Sscanf(msg, L"monhp %d %d", &hpDoc, &hpPct) == 2) {
+			foreach(npc, world.actorNpcList) {
+				if((i32)npc->docID != hpDoc || npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
+				npc->hp = MAX(1, (i32)((i64)npc->hpMax * MAX(1, MIN(hpPct, 100)) / 100));
+				replication.SendHpToAll(npc->UID, npc->hp, npc->hpMax);
+				LOG("Scenario :: monster %d hp %d/%d", hpDoc, npc->hp, npc->hpMax);
 			}
 			return true;
 		}

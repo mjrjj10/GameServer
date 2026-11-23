@@ -1312,7 +1312,7 @@ struct GameXmlContent
 	const Map* FindPvpMap(MapIndex index) const;
 	eastl::hash_map<i32,i32> pvpMapAliases;
 
-	struct MonsterFire { i32 remote = 0; eastl::fixed_string<wchar,48,true> node; f32 at = 0; u8 pass = 0; bool atTarget = false; };
+	struct MonsterFire { i32 remote = 0; eastl::fixed_string<wchar,48,true> node; f32 at = 0; u8 pass = 0; u8 nodeIndex = 0; bool atTarget = false; bool removeAtAnimEnd = false; };
 
 	struct MonsterAttack
 	{
@@ -1350,8 +1350,10 @@ struct GameXmlContent
 		f32 evade = 0;
 		bool selfCentered = false;
 		f32 share = 1;
+		f32 anchorShare = -1;
 		eastl::fixed_vector<i32,4,false> selfStatuses;
 		eastl::fixed_vector<i32,4,false> allyStatuses;
+		eastl::fixed_vector<eastl::pair<i32,f32>,4,false> targetStatuses;
 		eastl::fixed_vector<MonsterFire,24,false> fires;
 		f32 dashDist = 0;
 		f32 dashTime = 0;
@@ -1370,6 +1372,8 @@ struct GameXmlContent
 		f32 radius = 0;
 		f32 returnSpeedRate = 1;
 		f32 bodyBlockRadius = 0;
+		f32 anchorHp = 0;
+		vec2 anchor = vec2(0);
 		u8 sizeRank = 0;
 		i32 density = 0;
 		f32 bodyBlockHeight = 0;

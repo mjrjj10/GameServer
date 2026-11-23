@@ -20,6 +20,7 @@ static f32 YawGap(f32 a, f32 b)
 }
 static const f32 MONSTER_WAYPOINT_REACHED = 60.0f;
 static const u32 MEASURED_MONSTER_HIT_ID_OFFSET = 1;
+static const f32 MEASURED_ATTACHED_TARGET_REMOTE_HEIGHT = 145.0f;
 static const f64 MEASURED_NPC_DIE_STAND_MS = 90.0;
 static const f32 HYP_MONSTER_REMOTE_WALL_HEIGHT = 100.0f;
 static const f32 MONSTER_REMOTE_MIN_LIFE_SEC = 0.05f;
@@ -710,6 +711,15 @@ void World::HideMonster(ActorNpc& npc)
 
 void World::UpdateMonsterHits()
 {
+	for(i32 i = 0; i < (i32)monsterTargetStatuses.size(); ) {
+		if(localTime < monsterTargetStatuses[i].at) { i++; continue; }
+		const MonsterTargetStatus ts = monsterTargetStatuses[i];
+		monsterTargetStatuses.erase(monsterTargetStatuses.begin() + i);
+		auto caster = actorNpcMap.find(ts.npc);
+		ActorMaster* master = FindMasterActor(ts.target);
+		if(caster == actorNpcMap.end() || caster->second->hp <= 0 || !master || !master->parent || master->parent->dead) continue;
+		ApplyStatusFromNpc(*caster->second, *master->parent, ts.status);
+	}
 	for(i32 i = 0; i < (i32)deathHits.size(); ) {
 		if(localTime < deathHits[i].at) { i++; continue; }
 		const DeathHit hit = deathHits[i];
@@ -759,15 +769,17 @@ void World::FireMonsterRemote(const MonsterFireEvent& fire)
 	const vec3 firePos = atTarget ? vec3(vec2(targetPos), npc.pos.z) : npc.pos;
 	vec3 sentFirePos = firePos;
 	if(!atTarget) {
-		if(const GameXmlContent::MeasuredFireNode* node = GetGameXmlContent().FindMeasuredFireNode((i32)npc.docID, fire.fire->remote, 0)) {
+		const GameXmlContent::MeasuredFireNode* indexed = fire.fire->nodeIndex > 0 ? GetGameXmlContent().FindMeasuredFireNode((i32)npc.docID, fire.fire->remote, fire.fire->nodeIndex) : nullptr;
+		if(const GameXmlContent::MeasuredFireNode* node = indexed ? indexed : GetGameXmlContent().FindMeasuredFireNode((i32)npc.docID, fire.fire->remote, 0)) {
 			const vec2 fwd = vec2(cosf(npc.rot.z), sinf(npc.rot.z));
 			sentFirePos += vec3(fwd * node->forward + Perp(fwd) * node->side, node->up);
 		}
 	}
 	const Remote* remote = GetGameXmlContent().FindRemote((RemoteIdx)fire.fire->remote);
 	const u32 spawned = remote ? MonsterSpawnerChildren(*remote) : 0;
+	u32 creatorSeed = 0;
 	if(spawned > 0) {
-		const u32 creatorSeed = MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID & MONSTER_REMOTE_ID_MASK);
+		creatorSeed = MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID & MONSTER_REMOTE_ID_MASK);
 		nextMonsterRemoteID += (spawned + 2) & ~1u;
 		replication->SendChildRemoteCreateToAll(npc.UID, npc.UID, 0, ClientHandle::INVALID, creatorSeed, RemoteIdx::INVALID, remote->spawnerCreator, sentFirePos, npc.rot.z, targetPos, fire.target, ActorUID::INVALID, fire.fire->node.c_str(), 0, ClientHandle::INVALID);
 	}
@@ -777,7 +789,26 @@ void World::FireMonsterRemote(const MonsterFireEvent& fire)
 		const f32 len = glm::length(rel);
 		const bool follows = remote->behaviorType == Remote::BehaviorType::HOMING || remote->behaviorType == Remote::BehaviorType::TARGET;
 		const vec2 dir = !follows ? vec2(cosf(fire.castYaw), sinf(fire.castYaw)) : (len > 1.0f ? rel / len : vec2(cosf(npc.rot.z), sinf(npc.rot.z)));
-		SpawnMonsterRemote(npc, *remote, firePos, dir, fire.target, false, spawned > 0 ? 0 : fire.seed);
+		const bool parentOfChildren = spawned > 0 || !remote->onTime.empty() || !remote->onDestroy.empty();
+		struct MeasuredSpin { i32 remote; f32 degPerSec; f32 spacingDeg; f32 startDeg; };
+		static const MeasuredSpin MEASURED_MONSTER_REMOTE_SPIN[] = { { 1480011061, -49.2f, 120.0f, 29.0f } };
+		f32 spin = 0;
+		vec2 spunDir = dir;
+		for(const MeasuredSpin& s : MEASURED_MONSTER_REMOTE_SPIN) {
+			if(s.remote != fire.fire->remote) continue;
+			spin = s.degPerSec * PI / 180.0f;
+			const f32 a = atan2f(dir.y, dir.x) + (s.startDeg + (f32)fire.fire->nodeIndex * s.spacingDeg) * PI / 180.0f;
+			spunDir = vec2(cosf(a), sinf(a));
+		}
+		const size_t before = monsterRemotes.size();
+		SpawnMonsterRemote(npc, *remote, parentOfChildren ? vec3(vec2(sentFirePos), firePos.z) : firePos, spunDir, fire.target, false, spawned > 0 ? 0 : fire.seed, 0, parentOfChildren ? sentFirePos.z - firePos.z : 0.0f);
+		if(monsterRemotes.size() > before) {
+			MonsterRemote& spawnedRemote = monsterRemotes.back();
+			spawnedRemote.creatorSeed = creatorSeed;
+			spawnedRemote.spin = spin;
+			if(spin != 0) LOG("Monster :: creature=%d spinning remote %d node %d starts at %.1f deg, %.1f deg/s", (i32)npc.docID, fire.fire->remote, (i32)fire.fire->nodeIndex, atan2f(spunDir.y, spunDir.x) * 180.0f / PI, spin * 180.0f / PI);
+			if(fire.passEnd != Time::ZERO && fire.passEnd < spawnedRemote.expire) spawnedRemote.expire = fire.passEnd;
+		}
 		return;
 	}
 	if(remote && remote->maxSpeed > 0 && remote->destroyCreateRemote != RemoteIdx::INVALID && !monsterChains.full()) {
@@ -805,39 +836,40 @@ bool World::MonsterAttackUsesRemotes(const GameXmlContent::MonsterAttack& attack
 	return false;
 }
 
-bool World::SendMonsterRemoteCreator(const ActorNpc& npc, const Remote::SpawnRules& rules, u16 creator, u32 parentSeed, const vec3& pos, const vec2& dir, ActorUID target)
+u32 World::SendMonsterRemoteCreator(const ActorNpc& npc, const Remote::SpawnRules& rules, u16 creator, u32 parentSeed, const vec3& pos, const vec2& dir, ActorUID target)
 {
 	const u32 children = MonsterCreatorChildren(rules);
-	if(creator == 0 || parentSeed == 0 || children == 0) return false;
+	if(creator == 0 || parentSeed == 0 || children == 0) return 0;
 	const u32 seed = MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID & MONSTER_REMOTE_ID_MASK);
 	nextMonsterRemoteID += (children + 2) & ~1u;
 	replication->SendChildRemoteCreateToAll(npc.UID, npc.UID, parentSeed + 1, ClientHandle::INVALID, seed, RemoteIdx::INVALID, creator, pos, atan2f(dir.y, dir.x), pos, target, ActorUID::INVALID, L"Scene Root", MEASURED_REMOTE_CREATE_FLAG_PARENT_REMOTE, ClientHandle::INVALID);
-	return true;
+	return seed;
 }
 
-void World::SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, const Remote::SpawnRule& rule, const vec3& pos, const vec2& dir, ActorUID target, u32 parentSeed, bool viaCreator)
+void World::SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, const Remote::SpawnRule& rule, const vec3& pos, const vec2& dir, ActorUID target, u32 parentSeed, bool viaCreator, u32 childSeedBase, f32 lift, ActorUID spared)
 {
 	if(rule.kind != Remote::SPAWN_RADIATE || rule.maxNum <= 1) {
-		SpawnMonsterRemote(npc, child, pos, dir, target, rule.kind != Remote::SPAWN_RADIATE && !(viaCreator && rule.kind != Remote::SPAWN_SINGLE), 0, parentSeed);
+		SpawnMonsterRemote(npc, child, pos, dir, target, rule.kind != Remote::SPAWN_RADIATE && !(viaCreator && rule.kind != Remote::SPAWN_SINGLE), 0, parentSeed, lift, spared);
 		return;
 	}
 	for(i32 n = 0; n < rule.maxNum; n++) {
 		const f32 deg = ((f32)n - (f32)(rule.maxNum - 1) * 0.5f) * rule.maxAngle / (f32)rule.maxNum;
 		const f32 a = deg * PI / 180.0f;
 		const vec2 d = vec2(dir.x * cosf(a) - dir.y * sinf(a), dir.x * sinf(a) + dir.y * cosf(a));
-		SpawnMonsterRemote(npc, child, pos, d, target, false);
+		SpawnMonsterRemote(npc, child, pos, d, target, false, viaCreator && childSeedBase != 0 ? childSeedBase + (u32)n : 0, 0, lift, spared);
 	}
 }
 
-void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed, u32 parentSeed)
+void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed, u32 parentSeed, f32 lift, ActorUID spared)
 {
+	const vec3 shown = pos + vec3(0, 0, lift);
 	const u32 spawned = send ? MonsterSpawnerChildren(remote) : 0;
 	if(send) {
 		seed = MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID & MONSTER_REMOTE_ID_MASK);
 		nextMonsterRemoteID += MAX(MEASURED_MONSTER_REMOTE_SEED_STEP, (spawned + 2) & ~1u);
-		if(spawned > 0) replication->SendChildRemoteCreateToAll(npc.UID, npc.UID, parentSeed != 0 ? parentSeed + 1 : 0, ClientHandle::INVALID, seed, RemoteIdx::INVALID, remote.spawnerCreator, pos, atan2f(dir.y, dir.x), pos, target, ActorUID::INVALID, L"Scene Root", parentSeed != 0 ? MEASURED_REMOTE_CREATE_FLAG_PARENT_REMOTE : 0, ClientHandle::INVALID);
-		else if(parentSeed != 0) replication->SendChildRemoteCreateToAll(npc.UID, npc.UID, parentSeed + 1, ClientHandle::INVALID, seed, remote.ID, 0, pos, atan2f(dir.y, dir.x), pos, target, ActorUID::INVALID, L"Scene Root", MEASURED_REMOTE_CREATE_FLAG_PARENT_REMOTE, ClientHandle::INVALID);
-		else replication->SendRemoteCreateToAll(npc.UID, seed, remote.ID, pos, atan2f(dir.y, dir.x), pos, target);
+		if(spawned > 0) replication->SendChildRemoteCreateToAll(npc.UID, npc.UID, parentSeed != 0 ? parentSeed + 1 : 0, ClientHandle::INVALID, seed, RemoteIdx::INVALID, remote.spawnerCreator, shown, atan2f(dir.y, dir.x), shown, target, ActorUID::INVALID, L"Scene Root", parentSeed != 0 ? MEASURED_REMOTE_CREATE_FLAG_PARENT_REMOTE : 0, ClientHandle::INVALID);
+		else if(parentSeed != 0) replication->SendChildRemoteCreateToAll(npc.UID, npc.UID, parentSeed + 1, ClientHandle::INVALID, seed, remote.ID, 0, shown, atan2f(dir.y, dir.x), shown, target, ActorUID::INVALID, L"Scene Root", MEASURED_REMOTE_CREATE_FLAG_PARENT_REMOTE, ClientHandle::INVALID);
+		else replication->SendRemoteCreateToAll(npc.UID, seed, remote.ID, shown, atan2f(dir.y, dir.x), shown, target);
 	}
 	if(spawned > 0) seed = 0;
 	if(monsterRemotes.full()) return;
@@ -855,6 +887,8 @@ void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const 
 	mr.travelled = 0;
 	mr.impacted = false;
 	mr.seed = seed;
+	mr.lift = lift + remote.offsetZ;
+	mr.spared = spared;
 	monsterRemotes.push_back(mr);
 	if(remote.maxSpeed <= 0) {
 		auto it = actorNpcMap.find(npc.UID);
@@ -899,7 +933,7 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 	const i32 damage = (i32)(MonsterAttackPower(owner) * NpcStatusMul(owner, StatusMod::ATTACK) * remote.attackMultiplier + 0.5f);
 	const bool hitsEnemies = remote.damageGroup == Remote::DamageGroup::eENEMY || remote.damageGroup == Remote::DamageGroup::eALL;
 	const bool hitsAllies = remote.damageGroup == Remote::DamageGroup::eFRIEND || remote.damageGroup == Remote::DamageGroup::eALL;
-	const vec2 origin = vec2(mr.pos) + mr.dir * (remote.attachFireObject ? -RemoteBoundOffset(remote) : RemoteBoundOffset(remote));
+	const vec2 origin = vec2(mr.pos) + mr.dir * (mr.spin != 0 || !remote.attachFireObject ? RemoteBoundOffset(remote) : -RemoteBoundOffset(remote));
 	const bool sphere = remote.boundType == Remote::BoundType::E_BOUND_SPHERE || remote.angle > 0;
 	auto inside = [&](const vec2& at, f32 r) {
 		const vec2 rel = at - origin;
@@ -936,7 +970,7 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 			else ApplyStatusToNpcFromNpc(owner, *n, st->statusID);
 		}
 	};
-	const u32 remoteID = mr.seed != 0 ? mr.seed : (MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID++ & MONSTER_REMOTE_ID_MASK));
+	const u32 remoteID = mr.seed != 0 ? mr.seed + (remote.homingLength > 0 ? MEASURED_MONSTER_HIT_ID_OFFSET : 0) : (MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID++ & MONSTER_REMOTE_ID_MASK));
 	const bool targetOnly = remote.targetOnly && mr.target != ActorUID::INVALID;
 	const ActorMaster* targetMaster = targetOnly ? FindMasterActor(mr.target) : nullptr;
 	const Player* targetPlayer = targetMaster ? targetMaster->parent : nullptr;
@@ -945,6 +979,7 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 			if(mr.activations <= 0) break;
 			if(p->dead || p->untargetable || p->removed || !p->body) continue;
 			if(targetOnly && targetPlayer != &*p) continue;
+			if(mr.spared != ActorUID::INVALID && p->Main().UID == mr.spared) continue;
 			const bool enemy = FactionsOppose(owner.faction, (Faction)p->team, hostileMonsters) || MonsterNeutral(owner, hostileMonsters);
 			const bool ally = !enemy && owner.faction == (Faction)p->team;
 			if(!((enemy && hitsEnemies) || (ally && hitsAllies)) || !inside(vec2(p->body->GetWorldPos()), HitRadius(*p)) || !ready(p->Main().UID)) continue;
@@ -995,8 +1030,19 @@ void World::UpdateMonsterRemotes(f32 delta)
 		ActorNpc& owner = *ownerIt->second;
 		MonsterRemote& mr = monsterRemotes[i];
 		const Remote& remote = *mr.remote;
-		if(remote.attachFireObject && remote.maxSpeed <= 0) mr.dir = vec2(cosf(owner.rot.z), sinf(owner.rot.z));
+		if(mr.spin != 0) {
+			const f32 a = atan2f(mr.dir.y, mr.dir.x) + mr.spin * delta;
+			mr.dir = vec2(cosf(a), sinf(a));
+		}
+		else if(remote.attachFireObject && remote.maxSpeed <= 0) mr.dir = vec2(cosf(owner.rot.z), sinf(owner.rot.z));
 		if(remote.attachFireObject) mr.pos = vec3(vec2(owner.pos) + mr.dir * remote.offsetY, owner.pos.z);
+		if(remote.attachTargetObject && remote.maxSpeed <= 0 && mr.target != ActorUID::INVALID) {
+			const ActorMaster* followed = FindMasterActor(mr.target);
+			if(followed && followed->parent && !followed->parent->dead && followed->parent->body) {
+				mr.pos = followed->parent->body->GetWorldPos();
+				mr.lift = MEASURED_ATTACHED_TARGET_REMOTE_HEIGHT;
+			}
+		}
 		bool expired = localTime >= mr.expire;
 		if(remote.maxSpeed > 0 && !mr.impacted) {
 			const vec3 goal = MonsterFireTargetPos(owner, mr.target);
@@ -1042,21 +1088,26 @@ void World::UpdateMonsterRemotes(f32 delta)
 				mr.syncIn -= delta;
 				if(mr.syncIn <= 0) {
 					mr.syncIn += MEASURED_REMOTE_SYNC_PERIOD_SEC;
-					replication->SendRemoteSyncTargetToAll(mr.seed + MEASURED_MONSTER_HIT_ID_OFFSET, locked ? mr.target : ActorUID::INVALID, mr.pos, &mr.dir);
+					replication->SendRemoteSyncTargetToAll(mr.seed + MEASURED_MONSTER_HIT_ID_OFFSET, locked ? mr.target : ActorUID::INVALID, mr.pos + vec3(0, 0, mr.lift), &mr.dir);
 				}
 			}
 			MonsterRemoteApply(mr, owner);
 		}
 		else if(remote.lifeTime > MONSTER_REMOTE_MIN_LIFE_SEC) MonsterRemoteApply(mr, owner);
+		if(mr.activations <= 0 && remote.activateCount > 0 && remote.boundType != Remote::BoundType::E_BOUND_NONE && remote.damageGroup != Remote::DamageGroup::eNONE) expired = true;
 		if(mr.nextTime != Time::ZERO && localTime >= mr.nextTime) {
 			const vec3 at = mr.pos;
 			const vec2 dir = mr.dir;
 			const ActorUID target = mr.target;
 			const u32 parentSeed = mr.seed;
+			const f32 lift = mr.lift;
+			const ActorUID spared = remote.attachTargetObject ? mr.target : ActorUID::INVALID;
 			mr.nextTime = remote.timeEventRecycle ? TimeAdd(mr.nextTime, TimeMsToTime(MAX(remote.timeEventDelay, MONSTER_REMOTE_MIN_LIFE_SEC) * 1000.0)) : Time::ZERO;
 			const eastl::fixed_vector<Remote::SpawnRule,4,false> rules = remote.onTime;
-			const bool viaCreator = (remote.spawnerFromTime && MonsterSpawnerChildren(remote) > 0) || SendMonsterRemoteCreator(owner, rules, remote.creatorOnTime, parentSeed, at, dir, target);
-			foreach_const(r, rules) if(const Remote* child = content.FindRemote(r->idx)) SpawnMonsterChildRemotes(owner, *child, *r, at, dir, target, parentSeed, viaCreator);
+			const bool fromSpawner = remote.spawnerFromTime && MonsterSpawnerChildren(remote) > 0;
+			const u32 childBase = fromSpawner ? mr.creatorSeed : SendMonsterRemoteCreator(owner, rules, remote.creatorOnTime, parentSeed, at, dir, target);
+			const bool viaCreator = fromSpawner || childBase != 0;
+			foreach_const(r, rules) if(const Remote* child = content.FindRemote(r->idx)) SpawnMonsterChildRemotes(owner, *child, *r, at, dir, target, parentSeed, viaCreator, childBase, lift, spared);
 		}
 		if(expired) {
 			const vec3 at = monsterRemotes[i].pos;
@@ -1065,9 +1116,14 @@ void World::UpdateMonsterRemotes(f32 delta)
 			const u32 parentSeed = monsterRemotes[i].seed;
 			const eastl::fixed_vector<Remote::SpawnRule,4,false> rules = monsterRemotes[i].remote->onDestroy;
 			const Remote& dying = *monsterRemotes[i].remote;
+			const u32 dyingCreatorSeed = monsterRemotes[i].creatorSeed;
+			const f32 dyingLift = monsterRemotes[i].lift;
+			const ActorUID dyingSpared = monsterRemotes[i].remote->attachTargetObject ? monsterRemotes[i].target : ActorUID::INVALID;
 			monsterRemotes.erase(monsterRemotes.begin() + i);
-			const bool viaCreator = (!dying.spawnerFromTime && MonsterSpawnerChildren(dying) > 0) || SendMonsterRemoteCreator(owner, rules, dying.creatorOnDestroy, parentSeed, at, dir, target);
-			foreach_const(r, rules) if(const Remote* child = content.FindRemote(r->idx)) SpawnMonsterChildRemotes(owner, *child, *r, at, dir, target, parentSeed, viaCreator);
+			const bool fromSpawner = !dying.spawnerFromTime && MonsterSpawnerChildren(dying) > 0;
+			const u32 childBase = fromSpawner ? dyingCreatorSeed : SendMonsterRemoteCreator(owner, rules, dying.creatorOnDestroy, parentSeed, at, dir, target);
+			const bool viaCreator = fromSpawner || childBase != 0;
+			foreach_const(r, rules) if(const Remote* child = content.FindRemote(r->idx)) SpawnMonsterChildRemotes(owner, *child, *r, at, dir, target, parentSeed, viaCreator, childBase, dyingLift, dyingSpared);
 			continue;
 		}
 		i++;
@@ -1263,16 +1319,18 @@ void World::UpdateMonsterDash(ActorNpc& npc)
 	const vec2 step = next - here;
 	const f32 len = glm::length(step);
 	bool blocked = false;
-	if(len > 1.0f && physics.RaycastStatic(vec3(here, npc.pos.z + MONSTER_DASH_RAY_HEIGHT), vec3(next + step / len * radius, npc.pos.z + MONSTER_DASH_RAY_HEIGHT), &hit)) {
+	const PxRigidActor* wall = nullptr;
+	if(len > 1.0f && physics.RaycastStatic(vec3(here, npc.pos.z + MONSTER_DASH_RAY_HEIGHT), vec3(next + step / len * radius, npc.pos.z + MONSTER_DASH_RAY_HEIGHT), &hit, -1, &wall)) {
+		const bool mobGuardrail = physics.IsMobGuardrail(wall);
 		const vec3 probe = vec3(next, npc.pos.z + NPC_GROUND_PROBE_UP);
 		const vec3 under = vec3(here, npc.pos.z + NPC_GROUND_PROBE_UP);
 		f32 down = 0;
 		f32 hereDown = 0;
 		const f32 hereGround = physics.RaycastStatic(under, under - vec3(0, 0, NPC_GROUND_PROBE_UP + NPC_GROUND_PROBE_DOWN), &hereDown) ? under.z - hereDown : npc.pos.z;
 		const bool ground = physics.RaycastStatic(probe, probe - vec3(0, 0, NPC_GROUND_PROBE_UP + NPC_GROUND_PROBE_DOWN), &down);
-		if(ground && fabsf(probe.z - down - hereGround) <= len * NPC_GROUND_MAX_SLOPE) npc.pos = vec3(next, probe.z - down);
+		if(!mobGuardrail && ground && fabsf(probe.z - down - hereGround) <= len * NPC_GROUND_MAX_SLOPE) npc.pos = vec3(next, probe.z - down);
 		else {
-			LOG("Monster :: creature=%d dash blocked, ground %.0f -> %.0f over %.0f (z %.0f)", (i32)npc.docID, hereGround, ground ? probe.z - down : -99999.0f, len, npc.pos.z);
+			LOG("Monster :: creature=%d dash blocked%s, ground %.0f -> %.0f over %.0f (z %.0f)", (i32)npc.docID, mobGuardrail ? " by a mob guardrail" : "", hereGround, ground ? probe.z - down : -99999.0f, len, npc.pos.z);
 			npc.pos = vec3(here + step / len * MAX(hit - radius, 0.0f), npc.pos.z);
 			blocked = true;
 		}
@@ -1282,6 +1340,7 @@ void World::UpdateMonsterDash(ActorNpc& npc)
 	if(t >= 1.0f || blocked) {
 		npc.dashEnd = Time::ZERO;
 		LOG("Monster :: creature=%d (local %d) dash ends at (%.0f, %.0f)%s", (i32)npc.docID, npc.localID, npc.pos.x, npc.pos.y, blocked ? " on a wall" : "");
+		npc.anchorDone = false;
 	}
 }
 
@@ -1423,6 +1482,9 @@ void World::StartMonsterAttack(ActorNpc& npc,const GameXmlContent::MonsterAi& ai
 		if(npc.monsterHoldUntil < npc.stateEndAt) npc.monsterHoldUntil = npc.stateEndAt;
 	}
 	foreach_const(st, attack->selfStatuses) ApplyMonsterStatus(npc, *st, true);
+	if(npc.monsterTarget != ActorUID::INVALID && FindMasterActor(npc.monsterTarget)) {
+		foreach_const(st, attack->targetStatuses) if(!monsterTargetStatuses.full()) monsterTargetStatuses.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime(st->second * 1000.0)), st->first });
+	}
 	if(attack->weakTime > 0) {
 		npc.monsterWeakFrom = TimeAdd(localTime, TimeMsToTime(attack->weakAt * 1000.0));
 		npc.monsterWeakUntil = TimeAdd(localTime, TimeMsToTime((attack->weakAt + attack->weakTime) * 1000.0));
@@ -1465,7 +1527,8 @@ void World::StartMonsterAttack(ActorNpc& npc,const GameXmlContent::MonsterAi& ai
 	if(visual) {
 		u32 fireSeed = seed;
 		foreach_const(f, attack->fires) {
-			monsterFires.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime((passStart[f->pass] + f->at) * 1000.0)), &*f, fireSeed, byRemotes, npc.rot.z });
+			const bool passKnown = f->removeAtAnimEnd && f->pass + 1 < 4 && f->pass < (i32)attack->passes.size();
+			monsterFires.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime((passStart[f->pass] + f->at) * 1000.0)), &*f, fireSeed, byRemotes, npc.rot.z, passKnown ? TimeAdd(localTime, TimeMsToTime(passStart[f->pass + 1] * 1000.0)) : Time::ZERO });
 			fireSeed += MEASURED_MONSTER_FIRE_SEED_STEP;
 		}
 	}
@@ -2019,6 +2082,28 @@ void World::UpdateMonsterAi(f32 delta)
 			const f32 yaw = dist > 1.0f ? atan2f(rel.y, rel.x) : npc.rot.z;
 			const f32 hitReach = titanMode && ai.tagKey == titanTag && attack->target == GameXmlContent::MonsterAttack::MASTER ? MonsterAttackHitReach(*attack) - HYP_MINION_ATTACK_SPACING : 0.0f;
 			const f32 reach = hitReach > 0 && hitReach < attack->range ? hitReach : attack->range;
+			static const f32 MONSTER_ANCHOR_TOLERANCE = 5.0f;
+			const bool anchored = ai.anchorHp > 0 && npc.hpMax > 0 && (f32)npc.hp <= ai.anchorHp * (f32)npc.hpMax;
+			if(anchored && !npc.anchorDone && run > 0 && !(npc.ccControl & NPC_CONTROL_ROOT) && localTime >= npc.monsterNextAttack) {
+				const vec2 toAnchor = ai.anchor - vec2(npc.pos);
+				const f32 anchorDist = glm::length(toAnchor);
+				if(anchorDist > MONSTER_ANCHOR_TOLERANCE) {
+					const f32 anchorYaw = atan2f(toAnchor.y, toAnchor.x);
+					if(!npc.monsterChasing || glm::length(npc.monsterLegGoal - ai.anchor) > 1.0f) {
+						npc.monsterChasing = true;
+						npc.monsterWalking = false;
+						npc.monsterLegGoal = ai.anchor;
+						npc.monsterSyncYaw = anchorYaw;
+						npc.monsterLastTurn = localTime;
+						replication->SendMonsterMoveToAll(npc.UID, npc.pos, vec3(ai.anchor, npc.pos.z), anchorYaw, run);
+						LOG("Monster :: creature=%d (local %d) walks to its anchor (%.0f, %.0f) at hp %d/%d", (i32)npc.docID, npc.localID, ai.anchor.x, ai.anchor.y, npc.hp, npc.hpMax);
+					}
+					npc.pos = vec3(vec2(npc.pos) + toAnchor / anchorDist * MIN(run * delta, anchorDist), npc.pos.z);
+					npc.rot.z = anchorYaw;
+					continue;
+				}
+				npc.anchorDone = true;
+			}
 			const bool laneWalk = npc.path && ai.tagKey == StatusTypeKey("Titan") && npc.pathPoint < (i32)npc.path->size() && walk > 0 && (attack->target == GameXmlContent::MonsterAttack::MASTER || attack->target == GameXmlContent::MonsterAttack::MINION);
 			if(npc.monsterDashHold && localTime < npc.monsterDashTurnAt) continue;
 			const bool heldInReach = npc.monsterSpreading || (!IsStructure(npc) && !npc.monsterChasing && !npc.monsterWalking && dist <= reach + HYP_MINION_ATTACK_SPACING && npc.monsterInReachTarget == npc.monsterTarget);
@@ -2028,6 +2113,7 @@ void World::UpdateMonsterAi(f32 delta)
 					const f32 hpNow = npc.hpMax > 0 ? (f32)npc.hp / (f32)npc.hpMax : 1.0f;
 					i32 farIndex = -1;
 					eastl::fixed_vector<i32,16,false> farReady;
+					bool anchorSkipped = false;
 					f32 farShare = 0;
 					for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)npc.monsterSkillReady.size(); s++) {
 						const GameXmlContent::MonsterAttack& special = ai.attacks[s];
@@ -2036,15 +2122,18 @@ void World::UpdateMonsterAi(f32 delta)
 						if(npc.monsterSkillReady[s] == Time::ZERO) npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime((special.firstAt >= 0 ? special.firstAt : special.cooldown) * 1000.0));
 						if(localTime < npc.monsterSkillReady[s]) continue;
 						if(MonsterDashNeedsTurn(npc, special, yaw)) continue;
+						if(anchored && special.anchorShare >= 0 && special.share > 0 && (f32)Randf01() * special.share >= special.anchorShare) { anchorSkipped = true; continue; }
 						farReady.push_back(s);
-						farShare += special.share;
+						farShare += anchored && special.anchorShare >= 0 ? special.anchorShare : special.share;
 					}
 					f32 farRoll = (f32)(RandUint() % 10000) / 10000.0f * farShare;
 					foreach_const(s, farReady) {
-						if(farRoll < ai.attacks[*s].share) { farIndex = *s; break; }
-						farRoll -= ai.attacks[*s].share;
+						const f32 farPart = anchored && ai.attacks[*s].anchorShare >= 0 ? ai.attacks[*s].anchorShare : ai.attacks[*s].share;
+						if(farRoll < farPart) { farIndex = *s; break; }
+						farRoll -= farPart;
 					}
 					if(farIndex < 0 && !farReady.empty()) farIndex = farReady.back();
+					if(farIndex < 0 && anchorSkipped) npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime(attack->cooldown * 1000.0));
 					if(farIndex >= 0) {
 						const GameXmlContent::MonsterAttack& farAttack = ai.attacks[farIndex];
 						MonsterStateCooldown(npc.monsterSkillReady, ai, farAttack.state, TimeAdd(localTime, TimeMsToTime(farAttack.cooldown * 1000.0)));
@@ -2061,6 +2150,15 @@ void World::UpdateMonsterAi(f32 delta)
 					}
 				}
 				if(run <= 0 || (npc.ccControl & NPC_CONTROL_ROOT) || (npc.monsterDashHold && localTime < npc.monsterDashTurnAt)) continue;
+				if(anchored) {
+					if(npc.monsterChasing || npc.monsterWalking) {
+						npc.monsterChasing = false;
+						npc.monsterWalking = false;
+						replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, yaw, 0.0f);
+					}
+					if(YawGap(yaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD && TimeDurationMs(npc.monsterLastTurn, localTime) >= HYP_MONSTER_TURN_RESYNC_MS) TurnMonster(npc, yaw);
+					continue;
+				}
 				if(ai.tagKey == chiefTag && FindMasterActor(npc.monsterTarget)) {
 					if(npc.monsterChasing || npc.monsterWalking) {
 						npc.monsterChasing = false;
@@ -2170,6 +2268,19 @@ void World::UpdateMonsterAi(f32 delta)
 				const ActorMaster* evadingMaster = FindMasterActor(npc.monsterTarget);
 				if(evadingMaster && evadingMaster->parent && HasStatusType(*evadingMaster->parent, StatusType::EVADE)) continue;
 				if((npc.ccControl & NPC_CONTROL_ROOT) && attack->dashDist > 0 && !attack->dashPassAnims.empty()) continue;
+				if(npc.monsterForcedState != ActionStateID::INVALID) {
+					const ActionStateID forced = npc.monsterForcedState;
+					npc.monsterForcedState = ActionStateID::INVALID;
+					foreach_const(f, ai.attacks) {
+						if(f->state != forced) continue;
+						MonsterStateCooldown(npc.monsterSkillReady, ai, f->state, TimeAdd(localTime, TimeMsToTime(f->cooldown * 1000.0)));
+						npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime(MAX(f->after, attack->cooldown) * 1000.0));
+						LOG("Monster :: creature=%d (local %d) uses %s (forced)", (i32)npc.docID, npc.localID, ActionStateToString(f->state));
+						StartMonsterAttack(npc, ai, &*f, targetPos, dist, yaw, run);
+						break;
+					}
+					continue;
+				}
 				npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime(attack->cooldown * 1000.0));
 				const GameXmlContent::MonsterAttack* basic = attack;
 				const bool paced = basic->after > 0;
@@ -2188,7 +2299,7 @@ void World::UpdateMonsterAi(f32 delta)
 					if(dist > special.range + MONSTER_REACH_TOLERANCE || dist < special.minRange) continue;
 					if(MonsterDashNeedsTurn(npc, special, yaw)) continue;
 					if(!ready.full()) ready.push_back(s);
-					totalShare += special.share;
+					totalShare += anchored && special.anchorShare >= 0 ? special.anchorShare : special.share;
 				}
 				if(!basicReady && ready.empty()) {
 					npc.monsterNextAttack = npc.monsterBasicReady;
@@ -2197,7 +2308,8 @@ void World::UpdateMonsterAi(f32 delta)
 				f32 roll = (f32)(RandUint() % 10000) / 10000.0f * totalShare - (basicReady ? attack->share : 0.0f);
 				foreach_const(s, ready) {
 					const GameXmlContent::MonsterAttack& special = ai.attacks[*s];
-					if(roll >= special.share) { roll -= special.share; continue; }
+					const f32 part = anchored && special.anchorShare >= 0 ? special.anchorShare : special.share;
+					if(roll >= part) { roll -= part; continue; }
 					if(roll < 0) break;
 					MonsterStateCooldown(npc.monsterSkillReady, ai, special.state, TimeAdd(localTime, TimeMsToTime(special.cooldown * 1000.0)));
 					attack = &special;

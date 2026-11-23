@@ -2017,6 +2017,15 @@ void World::UpdateNpcFog()
 			const u32 bit = 1u << viewer->index;
 			const bool hidden = (npc->fogHiddenFrom & bit) != 0;
 			if(!sees[viewer->team] && !hidden && !viewer->devVision) {
+				if(viewer->body) {
+					const vec3 from = viewer->body->GetWorldPos() + vec3(0, 0, FOG_EYE_HEIGHT);
+					const vec3 to = npc->pos + vec3(0, 0, FOG_EYE_HEIGHT);
+					f32 hit = -1;
+					const PxRigidActor* blocker = nullptr;
+					const bool blocked = physics.RaycastSight(from, to, &hit, &blocker);
+					const vec3 at = blocked ? from + glm::normalize(to - from) * hit : to;
+					LOG("Fog :: creature=%d hidden from %ls at %.0f, sight %s at %.0f (%.0f, %.0f, %.0f) %s", (i32)npc->docID, viewer->name.data(), glm::length(vec2(npc->pos) - vec2(viewer->body->GetWorldPos())), blocked ? "blocked" : "clear", hit, at.x, at.y, at.z, blocker && blocker->getName() ? blocker->getName() : (blocker ? "unnamed" : "-"));
+				}
 				replication->SendLeaveActor(viewer->clientHd, npc->UID);
 				npc->fogHiddenFrom |= bit;
 			}

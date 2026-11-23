@@ -452,6 +452,16 @@ bool PhysicsScene::RaycastStatic(const vec3& from, const vec3& to, f32* hitDist,
 	return true;
 }
 
+void PhysicsScene::NameActor(PxRigidStatic* actor, const char* persistentName)
+{
+	if(actor) actor->setName(persistentName);
+}
+
+bool PhysicsScene::IsMobGuardrail(const PxRigidActor* actor) const
+{
+	return actor && actor->getName() && EA::StdC::Stristr(actor->getName(), "Guardrailmob") != nullptr;
+}
+
 bool PhysicsScene::RaycastSight(const vec3& from, const vec3& to, f32* hitDist, const PxRigidActor** hitActor)
 {
 	const vec3 d = to - from;

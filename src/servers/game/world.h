@@ -640,6 +640,7 @@ struct World
 		u8 monsterScriptStep = 0;
 		u8 monsterScriptAlt = 0;
 		u32 fogHiddenFrom = 0;
+		bool anchorDone = false;
 		f32 monsterGroggy = 0;
 		vec2 dashFrom = vec2(0);
 		vec2 dashDir = vec2(0);
@@ -655,6 +656,7 @@ struct World
 		bool monsterWalking = false;
 		bool monsterChasing = false;
 		ActorUID monsterTarget = ActorUID::INVALID;
+		ActionStateID monsterForcedState = ActionStateID::INVALID;
 		Time monsterNextAttack = Time::ZERO;
 		Time monsterBasicReady = Time::ZERO;
 		eastl::array<Time,24> monsterSkillReady = {};
@@ -1179,14 +1181,16 @@ struct World
 	eastl::fixed_vector<DeathHit,32,true> deathHits;
 	void ApplyDeathHit(const DeathHit& hit);
 	eastl::fixed_vector<MonsterHit,256,true> monsterHits;
-	struct MonsterFireEvent { ActorUID npc; ActorUID target; Time at; const GameXmlContent::MonsterFire* fire; u32 seed; bool byRemotes = false; f32 castYaw = 0; };
+	struct MonsterTargetStatus { ActorUID npc; ActorUID target; Time at; i32 status; };
+	eastl::fixed_vector<MonsterTargetStatus,64,true> monsterTargetStatuses;
+	struct MonsterFireEvent { ActorUID npc; ActorUID target; Time at; const GameXmlContent::MonsterFire* fire; u32 seed; bool byRemotes = false; f32 castYaw = 0; Time passEnd = Time::ZERO; };
 	eastl::fixed_vector<MonsterFireEvent,64,true> monsterFires;
 	void FireMonsterRemote(const MonsterFireEvent& fire);
-	struct MonsterRemote { ActorUID owner; ActorUID target; const Remote* remote; vec3 pos; vec2 dir; Time expire; Time nextTime; i32 activations; f32 travelled; bool impacted; u32 seed = 0; vec2 graphStart = vec2(0); vec2 graphDir = vec2(1, 0); f32 syncIn = MEASURED_REMOTE_SYNC_FIRST_SEC; eastl::fixed_vector<eastl::pair<ActorUID,Time>,24,true> hitUntil; };
+	struct MonsterRemote { ActorUID owner; ActorUID target; const Remote* remote; vec3 pos; vec2 dir; Time expire; Time nextTime; i32 activations; f32 travelled; bool impacted; u32 seed = 0; u32 creatorSeed = 0; f32 lift = 0; f32 spin = 0; ActorUID spared = ActorUID::INVALID; vec2 graphStart = vec2(0); vec2 graphDir = vec2(1, 0); f32 syncIn = MEASURED_REMOTE_SYNC_FIRST_SEC; eastl::fixed_vector<eastl::pair<ActorUID,Time>,24,true> hitUntil; };
 	eastl::fixed_vector<MonsterRemote,128,true> monsterRemotes;
-	void SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed = 0, u32 parentSeed = 0);
-	void SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, const Remote::SpawnRule& rule, const vec3& pos, const vec2& dir, ActorUID target, u32 parentSeed = 0, bool viaCreator = false);
-	bool SendMonsterRemoteCreator(const ActorNpc& npc, const Remote::SpawnRules& rules, u16 creator, u32 parentSeed, const vec3& pos, const vec2& dir, ActorUID target);
+	void SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed = 0, u32 parentSeed = 0, f32 lift = 0, ActorUID spared = ActorUID::INVALID);
+	void SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, const Remote::SpawnRule& rule, const vec3& pos, const vec2& dir, ActorUID target, u32 parentSeed = 0, bool viaCreator = false, u32 childSeedBase = 0, f32 lift = 0, ActorUID spared = ActorUID::INVALID);
+	u32 SendMonsterRemoteCreator(const ActorNpc& npc, const Remote::SpawnRules& rules, u16 creator, u32 parentSeed, const vec3& pos, const vec2& dir, ActorUID target);
 	void RetargetMonsters(ActorUID from, ActorUID to);
 	u32 SendRemoteCreator(const RemoteInst& parent, u16 creator, const vec3& pos, u32 childCount, ActorUID spawnerActor, const vec3& aimPos, bool hitInvalidParent);
 	void SpawnProjectileHitRemotes(const Projectile& proj, const Remote& shot, const vec3& at, i32 hitIndex, ActorUID hitNpc);
