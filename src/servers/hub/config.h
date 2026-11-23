@@ -14,6 +14,7 @@ struct CConfigHub
 	i32 DevAutoQueueGames = 0;
 	i32 DevAutoParty = 0;
 	i32 DevPickMasters[2] = { 0, 0 };
+	i32 DevPickSkins[2] = { -1, -1 };
 	i32 DevStageSweep = 0;
 	i32 DevShowcaseStart = 0;
 	i32 DevShowcaseSlices = 1;

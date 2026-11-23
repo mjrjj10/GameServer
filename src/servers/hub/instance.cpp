@@ -660,8 +660,12 @@ void RoomInstance::Update(Time localTime_)
 				if(u->Main().classType != ClassType::NONE && u->Sub().classType != ClassType::NONE) break;
 				TryPickMaster(u, *m);
 			}
+			for(int pi = 0; pi < 2; pi++) {
+				if(Config().DevPickSkins[pi] < 0) continue;
+				for(int mi = 0; mi < 2; mi++) if((i32)u->masters[mi].classType == Config().DevPickMasters[pi]) u->masters[mi].skin = (SkinIndex)Config().DevPickSkins[pi];
+			}
 			SetReady(u);
-			LOG("[Room] %ls dev picks masters %d and %d", u->name.data(), Config().DevPickMasters[0], Config().DevPickMasters[1]);
+			LOG("[Room] %ls dev picks masters %d and %d (skins %d %d)", u->name.data(), Config().DevPickMasters[0], Config().DevPickMasters[1], Config().DevPickSkins[0], Config().DevPickSkins[1]);
 		}
 		Replicate();
 	}
