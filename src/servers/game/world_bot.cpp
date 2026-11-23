@@ -1042,13 +1042,23 @@ bool World::BotDangerAt(const Player& bot, const vec2& at, vec2* towerPos, f32* 
 	return false;
 }
 
+bool World::StatusBlocksBotMove(Player& bot)
+{
+	foreach_const(st, activeStatuses) {
+		if(st->targetIndex != bot.index || !st->info || !st->info->blockMove || localTime >= st->until) continue;
+		bot.input.moveTo = bot.body->GetWorldPos();
+		return true;
+	}
+	return false;
+}
+
 void World::UpdateBotMovement()
 {
 	if(Config().DevShowcase) return;
 	foreach(it, players) {
 		Player& bot = *it;
 		if(bot.clientHd != ClientHandle::INVALID || bot.dead || bot.trainingDummy || bot.Main().classType == ClassType::NONE) continue;
-		const char* held = localTime < bot.ccUntil ? "cc" : localTime < bot.dashUntil ? "dash" : bot.casting.skillID != SkillID::INVALID ? "casting" : AttachedToCaster(bot) ? "attached" : bot.interactSlot >= 0 ? "interaction" : localTime < bot.botSkillStillUntil ? "skill still" : nullptr;
+		const char* held = localTime < bot.ccUntil ? "cc" : localTime < bot.dashUntil ? "dash" : bot.casting.skillID != SkillID::INVALID ? "casting" : AttachedToCaster(bot) ? "attached" : bot.interactSlot >= 0 ? "interaction" : localTime < bot.botSkillStillUntil ? "skill still" : StatusBlocksBotMove(bot) ? "move blocked" : nullptr;
 		if(held) {
 			if(bot.botHeldSince == Time::ZERO) bot.botHeldSince = localTime;
 			if(TimeDiffSec(TimeDiff(bot.botHeldSince, localTime)) > 10.0 && localTime >= bot.botIdleLogAt) {

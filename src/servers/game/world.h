@@ -1093,6 +1093,7 @@ struct World
 	void UpdateBotCombat();
 	void BotIdleCharge(Player& bot);
 	void UpdateBotMovement();
+	bool StatusBlocksBotMove(Player& bot);
 	void UpdateObserver();
 	void BuildTeamGates();
 	bool teamGatesBuilt = false;
