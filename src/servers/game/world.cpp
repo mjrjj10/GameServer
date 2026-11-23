@@ -1124,7 +1124,7 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		rpExec.moveDir = moveDir;
 		rpExec.endPos = endPos;
 		rpExec.originDist = fabsf(distance);
-		if(glm::length(vec2(endPos) - vec2(rpExec.startPos)) < fabsf(distance) - 1.0f || fabsf(endPos.z - rpExec.startPos.z) > 1.0f) LOG("Dash :: %ls skill=%d graph end %.0f of %.0f, z %+.0f", player.name.data(), (i32)skillID, glm::length(vec2(endPos) - vec2(rpExec.startPos)), fabsf(distance), endPos.z - rpExec.startPos.z);
+		if(glm::length(vec2(endPos) - vec2(rpExec.startPos)) < fabsf(distance) - 1.0f || fabsf(endPos.z - rpExec.startPos.z) > 1.0f) LOG("Dash :: %ls skill=%d graph end %.0f of %.0f, z %+.0f from (%.0f, %.0f) dir (%.2f, %.2f)", player.name.data(), (i32)skillID, glm::length(vec2(endPos) - vec2(rpExec.startPos)), fabsf(distance), endPos.z - rpExec.startPos.z, rpExec.startPos.x, rpExec.startPos.y, distance < 0 ? -moveDir.x : moveDir.x, distance < 0 ? -moveDir.y : moveDir.y);
 	}
 
 	if(actionOnly) replication->SendActionStateOnlyToAll(player.Main().UID, actionState, WorldYawToMxmYaw(angle), distance != 0, rpExec.startPos, distance != 0 ? rpExec.endPos : rpExec.startPos, moveDuration);

@@ -1654,6 +1654,7 @@ public:
 	f32 killZ = -1000000.0f;
 	bool ingameSkillPoints = true;
 	bool fullSkillPoints = false;
+	bool devLevels = false;
 	u8 difficultyBit = GameXmlContent::ALL_DIFFICULTIES;
 	bool portalRequested = false;
 	f32 monsterStatScale = 1.0f;

@@ -174,6 +174,8 @@ struct Game
 	Time tNextStageRank = Time::ZERO;
 	void OnTitanIncarnate(ClientHandle clientHd, i32 formDoc);
 	eastl::fixed_vector<u32,MAX_PLAYERS,false> trainingBots;
+	vec3 trainingDummyHome = vec3(0);
+	f32 trainingDummyYaw = 0;
 	eastl::array<eastl::array<u16,2>,MAX_PLAYERS> guildBoost = {};
 	void OnPlayerReturnToChannel(ClientHandle clientHd);
 	void OnPlayerJump(ClientHandle clientHd, ActorUID actorUID, f32 rotate, f32 moveDirX, f32 moveDirY);

@@ -1661,7 +1661,10 @@ void Game::SpawnTrainingDummy(ClassType mainClass, ClassType subClass, u8 team)
 	dummy.devGod = true;
 	const World::Player& owner = world.GetPlayer(0);
 	const vec2 dir = vec2(cosf(owner.input.rot.bodyYaw), sinf(owner.input.rot.bodyYaw));
-	world.TeleportPlayer(dummy, owner.body->GetWorldPos() + vec3(dir * HYP_TRAINING_DUMMY_DISTANCE, 0), owner.input.rot.bodyYaw + PI);
+	trainingDummyHome = owner.body->GetWorldPos() + vec3(dir * HYP_TRAINING_DUMMY_DISTANCE, 0);
+	trainingDummyYaw = owner.input.rot.bodyYaw + PI;
+	dummy.spawnPos = trainingDummyHome;
+	world.TeleportPlayer(dummy, trainingDummyHome, trainingDummyYaw);
 	LOG("Training :: dummy masters=(%d, %d)", (i32)mainClass, (i32)subClass);
 }
 
@@ -2620,6 +2623,43 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			World::Player& playerActor = world.GetPlayer(p.playerIndex);
 			playerActor.devGod = !playerActor.devGod;
 			SendDbgMsg(clientHd, playerActor.devGod ? L"God mode on" : L"God mode off");
+			return true;
+		}
+
+		f32 homeX = 0, homeY = 0;
+		const bool homeAt = EA::StdC::Sscanf(msg, L"dummyhome %f %f", &homeX, &homeY) == 2;
+		if(homeAt || EA::StdC::Strcmp(msg, L"dummyhome") == 0) {
+			if(homeAt) trainingDummyHome = vec3(homeX, homeY, trainingDummyHome.z);
+			foreach(b, world.players) {
+				if(!b->trainingDummy || !b->body) continue;
+				b->spawnPos = trainingDummyHome;
+				if(b->dead) continue;
+				world.TeleportPlayer(*b, trainingDummyHome, trainingDummyYaw);
+				LOG("Scenario :: dummy back home (%.0f, %.0f)", trainingDummyHome.x, trainingDummyHome.y);
+			}
+			return true;
+		}
+
+		i32 devLevel = 0;
+		if(EA::StdC::Sscanf(msg, L"level %d", &devLevel) == 1) {
+			const i32 maxLevel = GetGameXmlContent().ingameLevel.maxLevel;
+			world.devLevels = true;
+			foreach(b, world.players) {
+				if(!b->body) continue;
+				b->ingameLevel = MAX(1, MIN(devLevel, maxLevel));
+				world.ApplyLevelStats(*b);
+			}
+			LOG("Scenario :: level %d for every player", MAX(1, MIN(devLevel, maxLevel)));
+			return true;
+		}
+
+		i32 mortal = 0;
+		if(EA::StdC::Sscanf(msg, L"dummymortal %d", &mortal) == 1) {
+			foreach(b, world.players) {
+				if(!b->trainingDummy) continue;
+				b->devGod = mortal == 0;
+				LOG("Scenario :: dummy %s", mortal ? "mortal" : "immortal");
+			}
 			return true;
 		}
 

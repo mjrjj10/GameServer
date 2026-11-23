@@ -146,7 +146,7 @@ i32 World::IngameRespawnDelayMs(const Player& player) const
 
 f32 World::LevelBonus(const Player& player, ClassType classType, u8 statType) const
 {
-	if(!map || !map->ingameLevels) return 0;
+	if(!map || (!map->ingameLevels && !devLevels)) return 0;
 	return GetGameXmlContent().MasterLevelBonus(classType, statType, player.ingameLevel);
 }
 
