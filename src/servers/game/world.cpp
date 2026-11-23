@@ -1341,15 +1341,15 @@ void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType
 		else if(order == 0 && (i32)skillID % 10 != 0) slot = MEASURED_COMBO_SLOT_SHIRK;
 		const bool chained = slot < 0 && chainSlot >= 0;
 		if(chained) slot = chainSlot;
-		if(slot >= 0) {
+		const i32 windowMs = slot >= 0 ? content.GetComboDurationMs(combo) : 0;
+		if(slot >= 0 && windowMs <= 0) LOG("Combo :: %ls skill %d next %d has no combo window, no slot change", player.name.data(), (i32)skillID, combo);
+		if(slot >= 0 && windowMs > 0) {
 			player.comboPending = SkillID(combo);
 			player.comboSkill = SkillID(combo);
 			player.comboSendAt = TimeAdd(localTime, TimeMsToTime(50.0));
 			player.comboSlot = slot;
 			player.comboBase = chained ? chainBase : skillID;
 			player.comboCastPos = castPos;
-			const i32 windowMs = content.GetComboDurationMs(combo);
-			ASSERT(windowMs > 0);
 			player.comboUntil = TimeAdd(localTime, TimeMsToTime((f64)windowMs));
 			LOG("Combo :: %ls slot %d -> %d", player.name.data(), slot, combo);
 			const i32 autoMs = content.GetComboAutoCastMs(combo);
