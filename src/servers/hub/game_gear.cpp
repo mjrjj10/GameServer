@@ -76,13 +76,10 @@ void HubGame::OnGearUnequip(ClientHandle clientHd, u8 pageNo, u32 slot)
 	const u32 uid = gears.pages[pageNo - 1].items[slot];
 	gears.pages[pageNo - 1].items[slot] = 0;
 	if(AccountItem* item = FindItem(inventory, uid)) {
-		i32 free = MEASURED_INVENTORY_FIRST_SLOT;
-		for(bool used = true; used; ) {
-			used = false;
-			foreach_const(it, inventory.items) if(it->invenType == 0 && it->slot == free) { used = true; free++; break; }
-		}
+		const GameXmlContent::ItemInfo* info = GetGameXmlContent().FindItemInfo(item->docIndex);
 		item->invenType = 0;
-		item->slot = free;
+		item->slot = -1;
+		item->slot = AccountInventoryFreeSlot(inventory, info ? info->firstSlot : MEASURED_INVENTORY_FIRST_SLOT);
 		AccountInventorySave(account->nickname.data(), inventory);
 		replication.SendItemsUpdate(clientHd, item, 1, MEASURED_ITEM_UPDATE_REASON_GEAR);
 	}
