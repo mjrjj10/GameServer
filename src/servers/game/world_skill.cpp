@@ -338,10 +338,10 @@ u32 World::PlayerPaySkillCost(Player& player, i32 skillID)
 	return 0;
 }
 
-void World::RunStanceOut(Player& player, i8 oldStance)
+void World::RunStanceOut(Player& player, i8 oldStance, ClassType cls)
 {
 	const auto& content = GetGameXmlContent();
-	const GameXmlContent::Action* action = content.FindSkillAction(ActionClass(player), ActionStateID::STANCE_OUT_BEHAVIORSTATE, oldStance);
+	const GameXmlContent::Action* action = content.FindSkillAction(cls, ActionStateID::STANCE_OUT_BEHAVIORSTATE, oldStance);
 	if(!action) return;
 	foreach_const(cmd, action->commands) {
 		if(cmd->type == ActionCommand::Type::STATUS && cmd->status.statusIndex != 0) {
@@ -375,7 +375,7 @@ void World::SetStance(ActorMaster& master, i8 stance, f32 duration, i32 weaponFi
 		if(master.parent->overheatUntil[m] != Time::ZERO) master.parent->overheatUntil[m] = localTime;
 	}
 	LOG("Stance :: %ls stance=%d duration=%.1f weaponFireCount=%d", master.parent ? master.parent->name.data() : L"?", (i32)stance, duration, weaponFireCount);
-	if(oldStance != 0 && stance == 0 && master.parent) RunStanceOut(*master.parent, oldStance);
+	if(oldStance != 0 && stance == 0 && master.parent) RunStanceOut(*master.parent, oldStance, &master.parent->Main() == &master ? ActionClass(*master.parent) : master.classType);
 }
 
 void World::MarkPlayerStatsDirty()
@@ -1095,9 +1095,11 @@ void World::UpdateStances()
 {
 	foreach(it, players) {
 		if(!it->body) continue;
-		ActorMaster& m = it->Main();
-		if(m.stance == 0) continue;
-		if((m.stanceUntil != Time::ZERO && localTime >= m.stanceUntil) || (it->dead && m.stanceCancelByDefeat)) SetStance(m, 0, 0, 0, false);
+		foreach(c, it->characters) {
+			ActorMaster& m = **c;
+			if(m.stance == 0) continue;
+			if((m.stanceUntil != Time::ZERO && localTime >= m.stanceUntil) || (it->dead && m.stanceCancelByDefeat)) SetStance(m, 0, 0, 0, false);
+		}
 	}
 }
 

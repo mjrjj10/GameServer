@@ -1363,7 +1363,7 @@ public:
 	bool StatusConditionMet(const Player& caster, ActorUID targetUID, ActionCommand::StatusCondition condition) const;
 	i32 UpgradeSummon(const Player& player, i32 skillID) const;
 	f32 ComboPassOffset(const Player& player, SkillID skillID) const;
-	void RunStanceOut(Player& player, i8 oldStance);
+	void RunStanceOut(Player& player, i8 oldStance, ClassType cls);
 	void RunWeaponActionStatuses(Player& player, i8 stance, const vec3* aimPos = nullptr);
 	f32 WeaponHeatScale(const Player& player) const;
 	f32 WeaponFireDelayScale(const Player& player) const;
