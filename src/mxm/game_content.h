@@ -1317,7 +1317,7 @@ struct GameXmlContent
 	const Map* FindPvpMap(MapIndex index) const;
 	eastl::hash_map<i32,i32> pvpMapAliases;
 
-	struct MonsterFire { i32 remote = 0; eastl::fixed_string<wchar,48,true> node; f32 at = 0; u8 pass = 0; u8 nodeIndex = 0; bool atTarget = false; bool removeAtAnimEnd = false; };
+	struct MonsterFire { i32 remote = 0; eastl::fixed_string<wchar,48,true> node; f32 at = 0; u8 pass = 0; u8 nodeIndex = 0; bool atTarget = false; bool removeAtAnimEnd = false; i8 removePass = -1; f32 removeAt = 0; };
 
 	struct MonsterAttack
 	{

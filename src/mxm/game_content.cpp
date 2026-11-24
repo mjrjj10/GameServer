@@ -1271,7 +1271,11 @@ void GameXmlContent::LoadMonsterFires()
 			}
 			if(!type || !cls || !state || EA::StdC::Strcmp(type, "REMOTE") != 0 || e->IntAttribute("RemoteIndex") <= 0) continue;
 			const char* rowParam2 = e->Attribute("Param2");
-			if(rowParam2 && EA::StdC::Strcmp(rowParam2, "Remove") == 0) continue;
+			if(rowParam2 && EA::StdC::Strcmp(rowParam2, "Remove") == 0) {
+				auto removed = fires.find(((u64)StatusTypeKey(cls) << 32) | (u32)ActionStateFromString(state));
+				if(removed != fires.end()) foreach(rf, removed->second) if(rf->remote == e->IntAttribute("RemoteIndex") && rf->removePass < 0) { rf->removePass = (i8)MAX(MIN(e->IntAttribute("AnimationIndex"), 3), 0); rf->removeAt = e->FloatAttribute("Delay"); }
+				continue;
+			}
 			auto& list = fires[((u64)StatusTypeKey(cls) << 32) | (u32)ActionStateFromString(state)];
 			MonsterFire fire;
 			fire.remote = e->IntAttribute("RemoteIndex");

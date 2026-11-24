@@ -1230,7 +1230,7 @@ const World::MonsterRemote* World::FindMonsterRemoteBlocker(u32 ownerIndex, f32 
 	foreach_const(mr, monsterRemotes) {
 		if(!mr->remote || !mr->remote->vsRemote || localTime >= mr->expire) continue;
 		const ActorNpc* owner = FindNpcActor(mr->owner);
-		if(!owner || owner->hp <= 0 || (owner->faction != Faction::RED && owner->faction != Faction::BLUE) || owner->faction == (Faction)shooter.team) continue;
+		if(!owner || owner->hp <= 0 || owner->faction == (Faction)shooter.team) continue;
 		const Remote& r = *mr->remote;
 		for(i32 k = 0; k <= steps; k++) {
 			const vec2 p = from + (to - from) * ((f32)k / (f32)steps);

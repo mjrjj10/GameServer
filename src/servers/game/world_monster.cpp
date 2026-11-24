@@ -1615,7 +1615,8 @@ void World::StartMonsterAttack(ActorNpc& npc,const GameXmlContent::MonsterAi& ai
 		u32 fireSeed = seed;
 		foreach_const(f, attack->fires) {
 			const bool passKnown = f->removeAtAnimEnd && f->pass + 1 < 4 && f->pass < (i32)attack->passes.size();
-			monsterFires.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime((passStart[f->pass] + f->at) * 1000.0)), &*f, fireSeed, byRemotes, npc.rot.z, passKnown ? TimeAdd(localTime, TimeMsToTime(passStart[f->pass + 1] * 1000.0)) : Time::ZERO });
+			const bool removeKnown = f->removePass >= 0 && f->removePass < 4 && f->removePass <= (i32)attack->passes.size();
+			monsterFires.push_back({ npc.UID, npc.monsterTarget, TimeAdd(localTime, TimeMsToTime((passStart[f->pass] + f->at) * 1000.0)), &*f, fireSeed, byRemotes, npc.rot.z, passKnown ? TimeAdd(localTime, TimeMsToTime(passStart[f->pass + 1] * 1000.0)) : (removeKnown ? TimeAdd(localTime, TimeMsToTime((passStart[f->removePass] + f->removeAt) * 1000.0)) : Time::ZERO) });
 			fireSeed += MEASURED_MONSTER_FIRE_SEED_STEP;
 		}
 	}
