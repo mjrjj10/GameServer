@@ -5556,6 +5556,9 @@ bool GameXmlContent::LoadResist()
 			XMLElement* stats = pInfo->FirstChildElement("StatsComData");
 			const i32 defence = stats ? stats->IntAttribute("_DFStatusIndex", 0) : 0;
 			if(defence != 0 && creatureDefenceStatus.find(id) == creatureDefenceStatus.end()) creatureDefenceStatus[id] = defence;
+			XMLElement* entity = pInfo->FirstChildElement("EntityComData");
+			const char* targetable = entity ? entity->Attribute("_IsTargetable") : nullptr;
+			if(targetable && EA::StdC::Stricmp(targetable, "false") == 0) creatureUntargetable[id] = true;
 		}
 	}
 	LOG("Loaded %d resist tables, %d creature defence indexes", (i32)resistRules.size(), (i32)creatureDefenceStatus.size());

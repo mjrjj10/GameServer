@@ -692,13 +692,13 @@
         <_SFX _baseEffectResName="Pc_Fx_Jinseoyeon_Passive_Sword_5" _skinEffectResName="Pc_Fx_Jinseoyeon_Passive_Sword_5_Faora" />
       </_SFXResource>
     </_Skin>
-    <_Skin DATAKEY="SKIN_JINSEOYEON_04" _Purchase="True" _ClassType="CLASS_TYPE_JINSEOYEON" _SkinIndex="3" _ReleaseDate="20180115" _SkinType="SKIN_TYPE_PREMIUM" _Name="STR_SKIN_JINSEOYEON_04" _IconAlias="skin_jinseoyeon_04" _ColorTone="SKIN_COLOR_TONE_BLUE">
+    <_Skin DATAKEY="SKIN_JINSEOYEON_04" _Purchase="True" _ClassType="CLASS_TYPE_JINSEOYEON" _SkinIndex="3" _ReleaseDate="20180115" _SkinType="SKIN_TYPE_SPECIAL" _Name="STR_SKIN_JINSEOYEON_04" _IconAlias="skin_jinseoyeon_04" _ColorTone="SKIN_COLOR_TONE_BLUE">
       <_SkinResource>
         <_Resource _BaseKFMKeyName="JINSEOYEON" _SkinKFMFile="Graphic\Creature\Pc\Jinseoyeon\Jinseoyeon_Chinesedress\Jinseoyeon_Chinesedress.kfm" _ConstantSFX="Pc_Fx_Jinseoyeon_Always_Sword_Trail" _AnimationKeyName="Jinseoyeon_Chinesedress" />
         <_Resource _BaseKFMKeyName="AI_JINSEOYEON_Titan" _SkinKFMFile="Graphic\Creature\Pc\Jinseoyeon\Jinseoyeon_Chinesedress\Jinseoyeon_Chinesedress.kfm" _ConstantSFX="Pc_Fx_Jinseoyeon_Always_Sword_Trail" _AnimationKeyName="Jinseoyeon_Chinesedress" />
       </_SkinResource>
     </_Skin>
-    <_Skin DATAKEY="SKIN_JINSEOYEON_05" _Purchase="True" _ClassType="CLASS_TYPE_JINSEOYEON" _SkinIndex="4" _ReleaseDate="20180315" _SkinType="SKIN_TYPE_PREMIUM" _Name="STR_SKIN_JINSEOYEON_05" _IconAlias="skin_jinseoyeon_05" _ColorTone="SKIN_COLOR_TONE_BLUE">
+    <_Skin DATAKEY="SKIN_JINSEOYEON_05" _Purchase="True" _ClassType="CLASS_TYPE_JINSEOYEON" _SkinIndex="4" _ReleaseDate="20180315" _SkinType="SKIN_TYPE_SPECIAL" _Name="STR_SKIN_JINSEOYEON_05" _IconAlias="skin_jinseoyeon_05" _ColorTone="SKIN_COLOR_TONE_BLUE">
       <_SkinResource>
         <_Resource _BaseKFMKeyName="JINSEOYEON" _SkinKFMFile="Graphic\Creature\Pc\Jinseoyeon\Jinseoyeon_Jeannedarc\Jinseoyeon_Jeannedarc.kfm" _ConstantSFX="Pc_Fx_Jinseoyeon_Always_Sword_Trail" />
         <_Resource _BaseKFMKeyName="AI_JINSEOYEON_Titan" _SkinKFMFile="Graphic\Creature\Pc\Jinseoyeon\Jinseoyeon_Jeannedarc\Jinseoyeon_Jeannedarc.kfm" _ConstantSFX="Pc_Fx_Jinseoyeon_Always_Sword_Trail" />

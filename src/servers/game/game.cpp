@@ -250,6 +250,8 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 		world.ingameSkillPoints = !pve;
 		world.fullSkillPoints = stage->gameMode == GameModeType::GAME_MODE_MASTER_TRAINING;
 		replication.pveTeams = pve;
+		replication.trainingTeams = stage->gameMode == GameModeType::GAME_MODE_MASTER_TRAINING;
+		world.trainingMonsterTeam = replication.trainingTeams;
 		world.occupyMode = stage->gameMode == GameModeType::GAME_MODE_OCCUPY;
 		replication.occupyMode = world.occupyMode;
 		if(pve) world.difficultyBit = stage->difficultyBit;
@@ -373,6 +375,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 		}
 	}
 
+	ReserveTrainingSlots();
 	dbgGameUID = Dbg::PushNewGame("PVP_DeathMatch");
 }
 
@@ -1441,6 +1444,8 @@ static const u8 MEASURED_TRAINING_EVENT_RESET_SKILLS = 0;
 static const i32 HYP_TRAINING_BOT_SUB_OFFSET = 3;
 static const f32 HYP_TRAINING_DUMMY_DISTANCE = 500.0f;
 static const wchar* MEASURED_TRAINING_BOT_NAME = L"BOT_NAME_02";
+static const wchar* MEASURED_TRAINING_SLOT_NAMES[2] = { L"BOT_NAME_05", L"BOT_NAME_06" };
+static const u32 MEASURED_TRAINING_SLOT_USER_IDS[2] = { 10, 11 };
 static const i32 MEASURED_MASTER_CREATURE_BASE = 100000000;
 static const u8 MEASURED_MASTER_GEAR_SETS = 11;
 
@@ -1670,6 +1675,31 @@ void Game::SpawnTrainingDummy(ClassType mainClass, ClassType subClass, u8 team)
 	LOG("Training :: dummy masters=(%d, %d)", (i32)mainClass, (i32)subClass);
 }
 
+void Game::ReserveTrainingSlots()
+{
+	const GameXmlContent& xml = GetGameXmlContent();
+	const GameXmlContent::StageMaps* stage = xml.FindStageMaps(replication.stageIndex);
+	const auto* classes = xml.FindStageBots(replication.stageIndex);
+	const auto* docs = xml.FindStageBotDocs(replication.stageIndex);
+	if(!stage || stage->gameMode != GameModeType::GAME_MODE_MASTER_TRAINING || !classes || !docs || classes->empty() || docs->size() != classes->size()) return;
+	const u32 n = (u32)classes->size();
+	const u32 picks[2] = { 0, HYP_TRAINING_BOT_SUB_OFFSET % n };
+	for(u32 s = 0; s < 2; s++) {
+		Replication::TrainingSlot slot;
+		slot.userID = UserID(MEASURED_TRAINING_SLOT_USER_IDS[s]);
+		slot.name.assign(MEASURED_TRAINING_SLOT_NAMES[s]);
+		for(int mi = 0; mi < 2; mi++) {
+			slot.uids[mi] = world.ReserveActorUID();
+			slot.docs[mi] = (*docs)[picks[mi]];
+			slot.classes[mi] = (*classes)[picks[mi]];
+			slot.hp[mi] = 0;
+			foreach_const(st, xml.GetMaster(slot.classes[mi]).baseStats) if(st->type == (u8)StatType::STAT_TYPE_HEALTH) slot.hp[mi] = (i32)st->value;
+		}
+		replication.trainingSlots.push_back(slot);
+	}
+	LOG("Training :: %d AI slots reserved", (i32)replication.trainingSlots.size());
+}
+
 void Game::SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team)
 {
 	if(world.players.full()) return;
@@ -1693,23 +1723,37 @@ void Game::SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team)
 		desc.colliderSize[mi] = { (u16)master.character.getColliderRadius(), (u16)master.character.getColliderHeight() };
 	}
 	desc.stageSkills = { SkillID::INVALID, SkillID::INVALID };
-	const auto* stageClasses = xml.FindStageBots(replication.stageIndex);
-	const auto* stageDocs = xml.FindStageBotDocs(replication.stageIndex);
-	if(stageClasses && stageDocs) {
-		for(int mi = 0; mi < 2; mi++) {
-			for(u32 i = 0; i < stageClasses->size() && i < stageDocs->size(); i++) if((*stageClasses)[i] == classes[mi]) desc.creatureDocs[mi] = (*stageDocs)[i];
-		}
-	}
 	RollBotGear(desc);
 	const auto& spawnPoints = mapSpawnPoints[team];
 	const vec3 pos = spawnPoints.empty() ? world.GetPlayer(0).spawnPos : spawnPoints[0].pos;
 	const f32 yaw = spawnPoints.empty() ? 0.f : MxmYawToWorldYaw(spawnPoints[0].rot.z);
-	World::Player& worldPlayer = world.CreatePlayer(desc, pos, RotationHumanoid{0.f, 0.f, yaw});
-	playerList.emplace_back(desc.clientHd, AccountUID::INVALID, desc.name, worldPlayer.index);
+	i32 slot = -1;
+	for(i32 s = 0; s < (i32)replication.trainingSlots.size() && slot < 0; s++) {
+		if(trainingSlotPlayers[s] < 0 || world.GetPlayer(trainingSlotPlayers[s]).removed) slot = s;
+	}
+	if(slot >= 0) {
+		const Replication::TrainingSlot& ts = replication.trainingSlots[slot];
+		desc.userID = ts.userID;
+		desc.name = ts.name;
+		desc.reservedUIDs = ts.uids;
+	}
+	World::Player* spawned = nullptr;
+	if(slot >= 0 && trainingSlotPlayers[slot] >= 0) {
+		spawned = &world.GetPlayer(trainingSlotPlayers[slot]);
+		world.ReplacePlayerMasters(*spawned, desc);
+		spawned->spawnPos = pos;
+		world.TeleportPlayer(*spawned, pos, yaw);
+	}
+	else {
+		spawned = &world.CreatePlayer(desc, pos, RotationHumanoid{0.f, 0.f, yaw});
+		playerList.emplace_back(desc.clientHd, AccountUID::INVALID, desc.name, spawned->index);
+		if(slot >= 0) trainingSlotPlayers[slot] = (i32)spawned->index;
+	}
+	World::Player& worldPlayer = *spawned;
 	botList.emplace_back(worldPlayer.index);
 	worldPlayer.trainingBot = true;
 	if(!trainingBots.full()) trainingBots.push_back(worldPlayer.index);
-	LOG("Training :: bot masters=(%d, %d) docs=(%d, %d) team=%d", (i32)mainClass, (i32)subClass, (i32)desc.creatureDocs[0], (i32)desc.creatureDocs[1], (i32)team);
+	LOG("Training :: bot %ls masters=(%d, %d) team=%d slot=%d", desc.name.data(), (i32)mainClass, (i32)subClass, (i32)team, slot);
 }
 
 void Game::OnPlayerTag(ClientHandle clientHd, ActorUID actorUID)

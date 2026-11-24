@@ -507,7 +507,6 @@ void World::Replicate()
 			rch.playerIndex = player.index;
 			rch.classType = chara.classType;
 			rch.skinIndex = chara.skinIndex;
-			rch.creatureDoc = chara.creatureDoc;
 			rch.hp = chara.hp;
 			rch.hpMax = chara.hpMax;
 			rch.seed = chara.seed;
@@ -552,7 +551,6 @@ void World::Replicate()
 			rch.playerIndex = player.index;
 			rch.classType = chara.classType;
 			rch.skinIndex = chara.skinIndex;
-			rch.creatureDoc = chara.creatureDoc;
 			rch.hp = chara.hp;
 			rch.hpMax = chara.hpMax;
 			rch.seed = chara.seed;
@@ -696,8 +694,8 @@ World::Player& World::CreatePlayer(const PlayerDescription& desc, const vec3& po
 
 void World::CreatePlayerMasters(Player& player)
 {
-	const ActorUID mainUID = NewActorUID();
-	const ActorUID subUID = NewActorUID();
+	const ActorUID mainUID = player.reservedUIDs[0] != ActorUID::INVALID ? player.reservedUIDs[0] : NewActorUID();
+	const ActorUID subUID = player.reservedUIDs[1] != ActorUID::INVALID ? player.reservedUIDs[1] : NewActorUID();
 
 	actorMasterList.emplace_back(mainUID);
 	ActorMaster& main = actorMasterList.back();
@@ -717,7 +715,6 @@ void World::CreatePlayerMasters(Player& player)
 	main.parent = &player;
 	main.classType = player.mainClass;
 	main.skinIndex = player.mainSkin;
-	main.creatureDoc = player.creatureDocs[0];
 	ComputeGearBonus(main, player.gearDocs[0], player.mainWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType));
 	AddTitleBonus(main, player.statTitle, player.mainWeapon);
 	const bool botGear = player.botGear[0] || player.botGear[1];
@@ -733,7 +730,6 @@ void World::CreatePlayerMasters(Player& player)
 	sub.parent = &player;
 	sub.classType = player.subClass;
 	sub.skinIndex = player.subSkin;
-	sub.creatureDoc = player.creatureDocs[1];
 	ComputeGearBonus(sub, player.gearDocs[1], player.subWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType));
 	AddTitleBonus(sub, player.statTitle, player.subWeapon);
 	AddMeasuredBotGear(sub, player.subWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType), player.botGear[1]);

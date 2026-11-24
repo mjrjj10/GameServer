@@ -95,7 +95,6 @@ struct Replication
 		u32 playerIndex;
 		ClassType classType;
 		SkinIndex skinIndex;
-		CreatureIndex creatureDoc = CreatureIndex::Invalid;
 		i32 hp;
 		i32 hpMax;
 		i32 seed;
@@ -262,6 +261,16 @@ struct Replication
 		LOADED
 	};
 
+	struct TrainingSlot
+	{
+		UserID userID;
+		WideString name;
+		eastl::array<ActorUID,2> uids;
+		eastl::array<CreatureIndex,2> docs;
+		eastl::array<ClassType,2> classes;
+		eastl::array<i32,2> hp;
+	};
+
 	struct PlayerLocalInfo
 	{
 		eastl::fixed_map<ActorUID,LocalActorID,2048> localActorIDMap;
@@ -273,6 +282,7 @@ struct Replication
 		eastl::fixed_set<ActorUID,256> hiddenActors;
 		eastl::fixed_map<ActorUID,ActorUID,32> shownMain;
 		eastl::fixed_map<ActorUID,u16,512> monsterSpeedSent;
+		eastl::fixed_map<ActorUID,LocalActorID,8> reservedLocalIDs;
 
 		void Reset();
 	};
@@ -318,6 +328,7 @@ struct Replication
 
 	i32 inGameID = 0;
 	GameType gameType = GameType::INVALID;
+	eastl::fixed_vector<TrainingSlot,2,false> trainingSlots;
 	AreaIndex areaIndex = AreaIndex(0);
 	StageIndex stageIndex = StageIndex(0);
 	MapIndex mapIndex = MapIndex(0);
@@ -327,8 +338,15 @@ struct Replication
 	bool titanMode = false;
 	bool occupyMode = false;
 	bool pveTeams = false;
-	i32 PlayerTeamType(i32 team) const { return pveTeams ? (i32)TeamType::PLAYER : (i32)TeamType::RED + team; }
-	TeamType ActorTeamType(Faction faction) const { return pveTeams && (faction == Faction::RED || faction == Faction::BLUE) ? TeamType::PLAYER : FactionTeamType(faction); }
+	bool trainingTeams = false;
+	i32 PlayerTeamType(i32 team) const { return pveTeams ? (i32)TeamType::PLAYER : trainingTeams ? (i32)(team == 0 ? TeamType::PLAYER : TeamType::MONSTER) : (i32)TeamType::RED + team; }
+	TeamType ActorTeamType(Faction faction) const
+	{
+		if(pveTeams && (faction == Faction::RED || faction == Faction::BLUE)) return TeamType::PLAYER;
+		if(trainingTeams && faction == Faction::RED) return TeamType::PLAYER;
+		if(trainingTeams && faction == Faction::BLUE) return TeamType::MONSTER;
+		return FactionTeamType(faction);
+	}
 	i8 titanNextIndex = 0;
 	i32 supportKitIndex = -1;
 
@@ -400,6 +418,8 @@ struct Replication
 	void SendAccountDataPvp(ClientHandle clientHd);
 
 	void SendPvpLoadingComplete(ClientHandle clientHd);
+	void ReserveTrainingSlotIDs(i32 clientID);
+	bool TrainingSlotActive(const TrainingSlot& slot) const;
 	void SendGameReady(ClientHandle clientHd, i32 waitTime, i32 elapsed, UserID userId);
 	void SendActivatedSupportKit(ClientHandle clientHd, LocalActorID chara, i32 kit, i32 coolTimeID, f32 coolTime);
 	void SendKitConsumed(ClientHandle clientHd, u32 uid, u8 invenType, i32 slot, i32 doc, i32 count);

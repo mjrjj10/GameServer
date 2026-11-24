@@ -121,6 +121,7 @@ struct Game
 	void OnTrainingEquipSkill(ClientHandle clientHd, LocalActorID chara, SkillID skill, u32 slot);
 	void OnGamePing(ClientHandle clientHd, LocalActorID chara, const float3& pos, LocalActorID target, u32 ping);
 	void SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team);
+	void ReserveTrainingSlots();
 	void RemoveTrainingBots();
 	void SpawnTrainingDummy(ClassType mainClass, ClassType subClass, u8 team);
 	void FlushTrainingLoadouts();
@@ -174,6 +175,7 @@ struct Game
 	Time tNextStageRank = Time::ZERO;
 	void OnTitanIncarnate(ClientHandle clientHd, i32 formDoc);
 	eastl::fixed_vector<u32,MAX_PLAYERS,false> trainingBots;
+	eastl::array<i32,2> trainingSlotPlayers = { -1, -1 };
 	vec3 trainingDummyHome = vec3(0);
 	f32 trainingDummyYaw = 0;
 	eastl::array<eastl::array<u16,2>,MAX_PLAYERS> guildBoost = {};

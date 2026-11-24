@@ -26,3 +26,26 @@ inline void WriteInventoryItem(Writer& packet, const AccountItem& item)
 		}
 	}
 }
+
+template<typename Writer>
+inline void WriteMasterGearPages(Writer& packet, const wchar* nickname)
+{
+	const AccountGears gears = AccountGearsLoad(nickname);
+	const AccountInventory inventory = AccountInventoryLoad(nickname);
+	packet.template Write<u16>((u16)gears.pages.size());
+	for(i32 i = 0; i < (i32)gears.pages.size(); i++) {
+		const AccountGearPage& page = gears.pages[i];
+		packet.template Write<u8>((u8)(i + 1));
+		packet.WriteStringObj(page.name.data());
+		packet.template Write<u16>((u16)page.items.size());
+		for(u32 uid : page.items) {
+			i32 type = -1;
+			foreach_const(it, inventory.items) {
+				if(uid == 0 || it->uid != uid) continue;
+				if(const GameXmlContent::GearItem* gear = GetGameXmlContent().FindGearItem(it->docIndex)) type = gear->slotType;
+			}
+			packet.template Write<i32>(type);
+			packet.template Write<u32>(type >= 0 ? uid : 0);
+		}
+	}
+}

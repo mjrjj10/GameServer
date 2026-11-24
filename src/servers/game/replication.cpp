@@ -56,6 +56,7 @@ void Replication::PlayerLocalInfo::Reset()
 	hiddenActors.clear();
 	shownMain.clear();
 	monsterSpeedSent.clear();
+	reservedLocalIDs.clear();
 	nextPlayerLocalActorID = LocalActorID::FIRST_OTHER_PLAYER;
 	nextNpcLocalActorID = LocalActorID::FIRST_NPC;
 	nextMonsterLocalActorID = LocalActorID::INVALID;
@@ -954,11 +955,25 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 		SendPacket(clientHd, packet);
 	}
 
+	if(fullRoster) {
+		PacketWriter<Sv::SN_MasterRotationInfo> packet;
+		packet.Write<i32>(0);
+		eastl::fixed_vector<CreatureIndex,100,false> freeList;
+		foreach_const(m, content.masters) {
+			if(m->skillIDs.empty() || m->skinIDs.empty() || m->defaultWeaponIDs.empty() || freeList.full()) continue;
+			freeList.push_back(CreatureIndex(100000000 + (i32)m->classType));
+		}
+		packet.WriteVec(freeList.data(), freeList.size());
+		packet.WriteVec((CreatureIndex*)nullptr, 0);
+		packet.WriteVec((CreatureIndex*)nullptr, 0);
+		SendPacket(clientHd, packet);
+	}
+
 	// SN_ProfileMasterGears
 	{
 		PacketWriter<Sv::SN_ProfileMasterGears,4096> packet;
 
-		packet.Write<u16>(0);
+		WriteMasterGearPages(packet, player->name.data());
 
 		SendPacket(clientHd, packet);
 	}
@@ -998,6 +1013,17 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 			packet.Write<CreatureIndex>((CreatureIndex)(100000000 + (i32)pit->mainClass)); //activeCreatureIndex
 			packet.Write<CreatureIndex>((CreatureIndex)(100000000 + (i32)pit->subClass)); //inactiveCreatureIndex
 			packet.Write<u8>(pit->team == 2); // isSpectator
+			SendPacket(clientHd, packet);
+		}
+		foreach_const(slot, trainingSlots) {
+			if(TrainingSlotActive(*slot)) continue;
+			PacketWriter<Sv::SN_LoadingProgressData> packet;
+			packet.Write(slot->userID);
+			packet.WriteStringObj(slot->name.data());
+			packet.Write<u8>(0);
+			packet.Write<CreatureIndex>(slot->docs[0]);
+			packet.Write<CreatureIndex>(slot->docs[1]);
+			packet.Write<u8>(0);
 			SendPacket(clientHd, packet);
 		}
 	}
@@ -1051,6 +1077,23 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 	}
 }
 
+void Replication::ReserveTrainingSlotIDs(i32 clientID)
+{
+	PlayerLocalInfo& localInfo = playerLocalInfo[clientID];
+	foreach_const(slot, trainingSlots) {
+		for(int mi = 0; mi < 2; mi++) {
+			if(localInfo.reservedLocalIDs.find(slot->uids[mi]) != localInfo.reservedLocalIDs.end()) continue;
+			localInfo.reservedLocalIDs[slot->uids[mi]] = localInfo.nextPlayerLocalActorID;
+			localInfo.nextPlayerLocalActorID = (LocalActorID)((u32)localInfo.nextPlayerLocalActorID + 1);
+		}
+	}
+}
+
+bool Replication::TrainingSlotActive(const TrainingSlot& slot) const
+{
+	return frameCur->FindMaster(slot.uids[0]) != nullptr || frameCur->FindMaster(slot.uids[1]) != nullptr;
+}
+
 void Replication::SendPvpLoadingComplete(ClientHandle clientHd)
 {
 	const u32 playerIndex = playerMap.at(clientHd);
@@ -1060,7 +1103,10 @@ void Replication::SendPvpLoadingComplete(ClientHandle clientHd)
 	{
 		PacketWriter<Sv::SN_NotifyPcDetailInfos,1024> packet;
 
-		packet.Write<u16>((u16)frameCur->playerList.size());
+		ReserveTrainingSlotIDs(playerIndex);
+		u16 slotCount = 0;
+		foreach_const(slot, trainingSlots) if(!TrainingSlotActive(*slot)) slotCount++;
+		packet.Write<u16>((u16)frameCur->playerList.size() + slotCount);
 
 		foreach_const(pl, frameCur->playerList) {
 			const Player& p = *pl;
@@ -1082,6 +1128,20 @@ void Replication::SendPvpLoadingComplete(ClientHandle clientHd)
 			packet.Write<i32>(sub->hp);
 			packet.Write<i32>(sub->hpMax);
 
+			packet.Write<i32>(0);
+			packet.Write<u8>(0);
+		}
+		auto& reserved = playerLocalInfo[playerIndex].reservedLocalIDs;
+		foreach_const(slot, trainingSlots) {
+			if(TrainingSlotActive(*slot)) continue;
+			packet.Write<UserID>(slot->userID);
+			for(int mi = 0; mi < 2; mi++) {
+				packet.Write<LocalActorID>(reserved.at(slot->uids[mi]));
+				packet.Write<CreatureIndex>(slot->docs[mi]);
+				packet.Write<ClassType>(slot->classes[mi]);
+				packet.Write<i32>(slot->hp[mi]);
+				packet.Write<i32>(slot->hp[mi]);
+			}
 			packet.Write<i32>(0);
 			packet.Write<u8>(0);
 		}
@@ -3824,6 +3884,7 @@ void Replication::UpdatePlayersLocalState()
 			DeleteLocalActorID(pi, actorUID, deadNpc);
 		}
 
+		ReserveTrainingSlotIDs(pi);
 		// send new spawns
 		foreach(setIt, addedList) {
 			const ActorUID actorUID = *setIt;
@@ -3831,7 +3892,9 @@ void Replication::UpdatePlayersLocalState()
 			// Create a LocalActorID link if none exists already
 			// If one exists already, we have pre-allocated it (like with leader master)
 			if(GetLocalActorID(clientHd, actorUID) == LocalActorID::INVALID) {
-				CreateLocalActorID(pi, actorUID);
+				auto reserved = localInfo.reservedLocalIDs.find(actorUID);
+				if(reserved != localInfo.reservedLocalIDs.end()) PlayerForceLocalActorID(pi, actorUID, reserved->second);
+				else CreateLocalActorID(pi, actorUID);
 			}
 
 			auto type = frameCur->actorType.find(actorUID);
@@ -4241,7 +4304,7 @@ void Replication::SendActorMasterSpawn(ClientHandle clientHd, const ActorMaster&
 
 			packet.Write<LocalActorID>(localActorID); // objectID
 			packet.Write<EntityType>(EntityType::CREATURE); // nType
-			packet.Write<CreatureIndex>(actor.creatureDoc != CreatureIndex::Invalid ? actor.creatureDoc : (CreatureIndex)(100000000 + (i32)actor.classType));
+			packet.Write<CreatureIndex>((CreatureIndex)(100000000 + (i32)actor.classType)); // nIDX
 			packet.Write<i32>(-1);
 			packet.Write(actor.pos);
 			packet.Write(WorldYawToMxmYaw(actor.rotation.upperYaw));
@@ -4288,7 +4351,7 @@ void Replication::SendActorMasterSpawn(ClientHandle clientHd, const ActorMaster&
 			packet.Write<LocalActorID>(localActorID); // objectID
 			packet.Write<LocalActorID>(parentLocalActorID); // mainEntityID
 			packet.Write<EntityType>(EntityType::CREATURE); // nType
-			packet.Write<CreatureIndex>(actor.creatureDoc != CreatureIndex::Invalid ? actor.creatureDoc : (CreatureIndex)(100000000 + (i32)actor.classType));
+			packet.Write<CreatureIndex>((CreatureIndex)(100000000 + (i32)actor.classType)); // nIDX
 			packet.Write<i32>(-1);
 			packet.Write(actor.pos);
 			packet.Write(WorldYawToMxmYaw(actor.rotation.upperYaw));
