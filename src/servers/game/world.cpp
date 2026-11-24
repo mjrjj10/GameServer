@@ -746,8 +746,11 @@ void World::ReplacePlayerMasters(Player& player, const PlayerDescription& desc)
 {
 	ToggleOff(player);
 	const u32 index = player.index;
+	struct KeptStatus { i32 statusID; f32 remainingSec; };
+	eastl::fixed_vector<KeptStatus,16,false> worldStatuses;
 	for(auto it = activeStatuses.begin(); it != activeStatuses.end();) {
 		if(it->targetIndex != index) { ++it; continue; }
+		if(it->casterUID == ActorUID::INVALID && it->until > localTime && !worldStatuses.full()) worldStatuses.push_back({ it->statusID, (f32)TimeDiffSec(TimeDiff(localTime, it->until)) });
 		if(it->info && it->info->auraStatus != 0) EndAura(index, *it->info);
 		it = activeStatuses.erase_unsorted(it);
 	}
@@ -781,6 +784,11 @@ void World::ReplacePlayerMasters(Player& player, const PlayerDescription& desc)
 	CreatePlayerMasters(player);
 	if(ingameSkillPoints && player.clientHd != ClientHandle::INVALID) replication->SendSkillPoints(player.clientHd, player.userID, player.skillPoints);
 	ApplyPassives(player);
+	foreach_const(ks, worldStatuses) {
+		statusNoCaster = true;
+		ApplyStatus(player, player, ks->statusID, 0, ks->remainingSec);
+		statusNoCaster = false;
+	}
 	LOG("Loadout :: %ls masters=(%d, %d) skills=(%d, %d, %d, %d)", player.name.data(), (i32)player.mainClass, (i32)player.subClass, (i32)player.skills[0], (i32)player.skills[1], (i32)player.skills[2], (i32)player.skills[3]);
 }
 

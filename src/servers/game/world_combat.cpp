@@ -454,11 +454,19 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 			if(it->team == target.team) victimTeamKills += it->kills;
 		}
 		const i32 respawnMs = fixedRespawnMs > 0 ? fixedRespawnMs : GearRespawnMs(target, map && map->ingameLevels ? IngameRespawnDelayMs(target) : gameStartedAt == Time::ZERO ? RESPAWN_BASE_MS[ARRAY_COUNT(RESPAWN_BASE_MS) - 1] : RespawnDelayMs(TimeDiffSec(TimeDiff(gameStartedAt, localTime)), victimTeamKills - teamKills));
-		target.tRespawn = TimeAdd(localTime, TimeMsToTime(noRespawn ? NO_RESPAWN_MS : (f64)respawnMs));
-		LOG("Death :: %ls killed by %ls (respawn %d ms)", target.name.data(), attacker.name.data(), respawnMs);
+		const bool trainingDeath = trainingMonsterTeam;
+		const bool stayDead = noRespawn || (trainingDeath && target.trainingBot);
+		target.tRespawn = TimeAdd(localTime, TimeMsToTime(stayDead ? NO_RESPAWN_MS : (f64)respawnMs));
+		LOG("Death :: %ls killed by %ls (respawn %d ms)", target.name.data(), attacker.name.data(), stayDead ? -1 : respawnMs);
 		if(target.hiddenUID != ActorUID::INVALID) {
 			ShowHiddenToEnemies(target, target.hiddenUID, ActorUID::INVALID);
 			target.hiddenUID = ActorUID::INVALID;
+		}
+		if(trainingDeath) {
+			target.recentDamage.clear();
+			SyncPassivesOnDeath(target);
+			replication->SendDeathToAll(attacker.Main().UID, chara.UID, CreatureIndex(100000000 + (i32)attacker.Main().classType), proj ? proj->remoteID : remoteID, proj ? proj->remoteDoc : remoteDoc, target.userID, target.trainingBot ? -1 : respawnMs);
+			return;
 		}
 		bool specialAnnounced = false;
 		if(attacker.team != target.team) {

@@ -31,6 +31,7 @@ struct HubGame
 		SortieUID resultSortieUID = SortieUID::INVALID;
 		SortieUID suspendedSortieUID = SortieUID::INVALID;
 		AccountUID suspendedAccountUID = AccountUID::INVALID;
+		Time stageLeftLobbyAt = Time::ZERO;
 
 		Player(): clientHd(ClientHandle::INVALID) {}
 
@@ -172,6 +173,7 @@ struct HubGame
 	void OnGiftFriends(ClientHandle clientHd);
 	SortieRoster* FindResultRoster(i32 userID, SortieMember** member);
 	void UpdateStayAsTeam();
+	void UpdateStageLeftLobbies();
 	void OnRegame(ClientHandle clientHd);
 	i32 PartyTeamCapacity(const Party& party, u32 team) const;
 	bool PartyPlaceMember(Party& party, Party::Member* member) const;

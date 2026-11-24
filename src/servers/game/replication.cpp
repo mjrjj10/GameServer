@@ -1150,7 +1150,7 @@ void Replication::SendPvpLoadingComplete(ClientHandle clientHd)
 		SendPacket(clientHd, packet);
 	}
 
-	{
+	if(!trainingTeams) {
 		PacketWriter<Sv::SN_InitScoreBoard,4096> packet;
 
 		packet.Write<u16>(frameCur->playerList.size());
@@ -3373,7 +3373,7 @@ void Replication::RelayPlayerMove(ClientHandle fromHd, ActorUID actorUID, const 
 	for(int pi = 0; pi < MAX_PLAYERS; pi++) {
 		if(playerState[pi].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[pi];
-		if(clientHd != fromHd && playerLocalInfo[pi].hiddenActors.count(actorUID)) continue;
+		if(clientHd == fromHd ? trainingTeams : playerLocalInfo[pi].hiddenActors.count(actorUID) != 0) continue;
 		sync.entityID = GetLocalActorID(clientHd, actorUID);
 		if(sync.entityID == LocalActorID::INVALID) continue;
 		SendPacket(clientHd, sync);
@@ -3388,7 +3388,7 @@ void Replication::RelayPlayerTurn(ClientHandle fromHd, ActorUID actorUID, const 
 	for(int pi = 0; pi < MAX_PLAYERS; pi++) {
 		if(playerState[pi].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[pi];
-		if(clientHd != fromHd && playerLocalInfo[pi].hiddenActors.count(actorUID)) continue;
+		if(clientHd == fromHd ? trainingTeams : playerLocalInfo[pi].hiddenActors.count(actorUID) != 0) continue;
 		sync.entityID = GetLocalActorID(clientHd, actorUID);
 		if(sync.entityID == LocalActorID::INVALID) continue;
 		SendPacket(clientHd, sync);
@@ -3740,6 +3740,7 @@ void Replication::SendDeathToAll(ActorUID killerUID, ActorUID targetUID, Creatur
 		dead.dwRemoteDocIndex = remoteDoc != RemoteIdx::INVALID ? (u32)remoteDoc : 0;
 		dead.isPast = 0;
 		SendPacket(clientHd, dead);
+		if(respawnDelayMs < 0) continue;
 
 		Sv::SN_RespawnDelaytime delay;
 		delay.usn = (u32)targetUserID;

@@ -1584,6 +1584,7 @@ void Game::OnMasterTrainingEvent(ClientHandle clientHd, const u8* data, i32 size
 		auto pl = playerMap.find(clientHd);
 		const u8 humanTeam = pl != playerMap.end() ? world.GetPlayer(pl->second->playerIndex).team : 0;
 		SpawnTrainingBot(mainClass, subClass, humanTeam ^ 1);
+		RemoveDeadTrainingBots();
 	}
 	if(eventType == MEASURED_TRAINING_EVENT_REMOVE_AI) RemoveTrainingBots();
 	if(eventType == MEASURED_TRAINING_EVENT_RESET_SKILLS) {
@@ -1603,6 +1604,21 @@ void Game::RemoveTrainingBots()
 		}
 	}
 	trainingBots.clear();
+}
+
+void Game::RemoveDeadTrainingBots()
+{
+	for(i32 i = 0; i < (i32)trainingBots.size(); ) {
+		World::Player& bot = world.GetPlayer(trainingBots[i]);
+		if(!bot.dead || bot.removed) { i++; continue; }
+		world.RemovePlayer(bot);
+		for(auto b = botList.begin(); b != botList.end(); ++b) {
+			if(b->playerIndex != bot.index) continue;
+			botList.erase(b);
+			break;
+		}
+		trainingBots.erase(trainingBots.begin() + i);
+	}
 }
 
 void Game::FlushTrainingLoadouts()

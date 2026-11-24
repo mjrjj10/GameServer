@@ -123,6 +123,7 @@ struct Game
 	void SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team);
 	void ReserveTrainingSlots();
 	void RemoveTrainingBots();
+	void RemoveDeadTrainingBots();
 	void SpawnTrainingDummy(ClassType mainClass, ClassType subClass, u8 team);
 	void FlushTrainingLoadouts();
 	bool TrainingLoadoutCommand(ClientHandle clientHd, const i32* classes, const i32* skillSuffix);
