@@ -1564,9 +1564,27 @@ void World::RetargetMonsters(ActorUID from, ActorUID to)
 		npc->monsterTarget = to;
 		replication->SendAiSetTargetToAll(npc->UID, to);
 	}
-	foreach(h, monsterHits) if(h->target == from) h->target = to;
+	for(i32 i = 0; i < (i32)monsterHits.size(); ) {
+		MonsterHit& h = monsterHits[i];
+		const Remote* attached = h.target == from && h.attack && h.attack->remote > 0 ? GetGameXmlContent().FindRemote((RemoteIdx)h.attack->remote) : nullptr;
+		if(attached && attached->attachTargetObject) {
+			monsterHits.erase(monsterHits.begin() + i);
+			continue;
+		}
+		if(h.target == from) h.target = to;
+		i++;
+	}
 	foreach(f, monsterFires) if(f->target == from) f->target = to;
-	foreach(r, monsterRemotes) if(r->target == from) r->target = to;
+	for(i32 i = 0; i < (i32)monsterRemotes.size(); ) {
+		MonsterRemote& r = monsterRemotes[i];
+		if(r.target == from && r.remote && r.remote->attachTargetObject) {
+			LOG("Tag :: creature remote %d attached to %d ends with the outgoing master", (i32)r.remote->ID, (i32)from);
+			monsterRemotes.erase(monsterRemotes.begin() + i);
+			continue;
+		}
+		if(r.target == from) r.target = to;
+		i++;
+	}
 	foreach(c, monsterChains) if(c->target == from) c->target = to;
 }
 
