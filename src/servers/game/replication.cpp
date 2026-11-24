@@ -3159,14 +3159,20 @@ void Replication::SendEnterNpc(ClientHandle clientHd, ActorUID actorUID, Creatur
 	packet.Write<ActionStateID>(action);
 	packet.Write<i32>(0);
 	const auto* stats = GetGameXmlContent().FindMonsterStats((i32)docID);
-	for(int list = 0; list < 2; list++) {
-		packet.Write<u16>(stats ? (u16)stats->size() : 0);
-		if(!stats) continue;
+	f32 groggyMax = 0;
+	packet.Write<u16>(stats ? (u16)stats->size() : 0);
+	if(stats) {
 		for(const auto& st : *stats) {
 			packet.Write<u8>(st.type);
 			const f32 value = st.value + GetGameXmlContent().MonsterGrowth((i32)docID, st.type) * growthLevel;
-			packet.Write<f32>(list == 1 && st.type == (u8)StatType::STAT_TYPE_HEALTH ? (f32)hp : (list == 1 && st.type == (u8)StatType::STAT_TYPE_GROGGY ? groggy : value));
+			if(st.type == (u8)StatType::STAT_TYPE_GROGGY) groggyMax = value;
+			packet.Write<f32>(value);
 		}
+	}
+	packet.Write<u16>(stats ? 1 : 0);
+	if(stats) {
+		packet.Write<u8>((u8)StatType::STAT_TYPE_HEALTH);
+		packet.Write<f32>((f32)hp);
 	}
 	packet.Write<u16>(0);
 	packet.Write<u16>(0);
@@ -3178,6 +3184,12 @@ void Replication::SendEnterNpc(ClientHandle clientHd, ActorUID actorUID, Creatur
 	stat._MAX = (f32)hpMax;
 	stat._ReasonCode = 0;
 	SendPacket(clientHd, stat);
+	if(groggy > 0 && groggyMax > 0) {
+		stat._STAT_TYPE = (u32)StatType::STAT_TYPE_GROGGY;
+		stat._CUR = groggy;
+		stat._MAX = groggyMax;
+		SendPacket(clientHd, stat);
+	}
 }
 
 void Replication::SendEnterDynamic(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, f32 yaw, ActionStateID action, bool jumpWall, f32 curHp, f32 maxHp)
@@ -4505,15 +4517,9 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 				packet.Write<u8>(st->type);
 				packet.Write<f32>((st->value + GetGameXmlContent().MonsterGrowth((i32)actor.docID, st->type) * actor.growthLevel) * (scaled ? actor.statScale : 1.0f));
 			}
-			bool groggyStat = false;
-			foreach_const(st, statList) if(st->type == (u8)StatType::STAT_TYPE_GROGGY) groggyStat = true;
-			packet.Write<u16>(groggyStat ? 2 : 1);
+			packet.Write<u16>(1);
 			packet.Write<u8>((u8)StatType::STAT_TYPE_HEALTH);
 			packet.Write<f32>((f32)actor.hp);
-			if(groggyStat) {
-				packet.Write<u8>((u8)StatType::STAT_TYPE_GROGGY);
-				packet.Write<f32>(0.0f);
-			}
 		}
 		else if(summon && !summon->baseStats.empty()) {
 			f32 hp = 1.0f;
