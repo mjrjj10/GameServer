@@ -286,6 +286,18 @@ static inline const HitRecoverRule* FindHitRecoverRule(i32 status)
 	return nullptr;
 }
 
+struct TurretCannonPair { CreatureIndex tower; CreatureIndex cannon; ActionStateID allowed; };
+static const TurretCannonPair MEASURED_TURRET_CANNONS[] = { { CreatureIndex(105000308), CreatureIndex(105000309), ActionStateID::SKILL_4_BEHAVIORSTATE } };
+static const f32 MEASURED_TURRET_CANNON_OFFSET = 5.0f;
+
+static const CreatureIndex MEASURED_SPECIAL_FIRST_CREATURES[] = { CreatureIndex(105001200) };
+
+static inline bool IsMeasuredSpecialFirst(CreatureIndex doc)
+{
+	for(CreatureIndex c : MEASURED_SPECIAL_FIRST_CREATURES) if(c == doc) return true;
+	return false;
+}
+
 static const i32 MEASURED_RAGE_ON_STATUS[] = { 1230330003, 1230330040, 1230330042, 1230330046 };
 
 static inline bool IsMeasuredRageOnStatus(i32 status)

@@ -54,6 +54,7 @@ bool World::RemoteCanAffect(const RemoteInst& inst, const Player& p, bool includ
 	const auto group = remote.damageGroup;
 	const bool friendContact = group == Remote::DamageGroup::eFRIEND || group == Remote::DamageGroup::eALL || remote.contactFriend || (remote.includeParty && !remote.friendlyStatuses.empty());
 	if(p.index == owner.index) {
+		if(remote.ignoreOwnerActivate) return false;
 		if(!includeOwner && !remote.vsOwner) return false;
 		if(!remote.vsOwner && (remote.attachFireObject || remote.activateCount == 1)) return false;
 		return remote.vsOwner || group == Remote::DamageGroup::eFRIEND || group == Remote::DamageGroup::eALL;

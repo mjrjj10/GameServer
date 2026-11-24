@@ -905,6 +905,11 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	const bool displacement = info && (info->type == StatusType::PUSH || info->type == StatusType::FORCEBACK ||
 		info->type == StatusType::KNOCKDOWN || info->type == StatusType::AIRBORNE || info->type == StatusType::FLY || info->type == StatusType::DRAGGED || dragForce);
 	const bool hostileHardCc = info && hostileSource && (info->kind == StatusInfo::Kind::HARD_CC || info->kind == StatusInfo::Kind::ROOT || info->type == StatusType::SILENCE) && info->type != StatusType::ACTIONBLOCK;
+	if(info && hostileSource && info->reaction && target.titanForm >= 0) {
+		LOG("Status :: %ls resisted %d (titan form)", target.name.data(), statusID);
+		replication->SendResistStatusToAll(target.Main().UID, npcSource ? npcSource->UID : caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);
+		return;
+	}
 	if((displacement || hostileHardCc) && HasStatusType(target, StatusType::SUPERARMOR)) {
 		LOG("Status :: %ls resisted %d (superarmor)", target.name.data(), statusID);
 		replication->SendResistStatusToAll(target.Main().UID, npcSource ? npcSource->UID : caster.Main().UID, STATUS_RESIST_EVENT_PROTECTED);

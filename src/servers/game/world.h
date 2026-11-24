@@ -1459,6 +1459,7 @@ public:
 	struct NpcCcGraph { vec3 to = vec3(0); f32 duration = 0; f32 graphSec = 0; f32 nominal = -1.0f; bool graph = false; };
 	NpcCcGraph StartNpcCc(ActorNpc& npc, const StatusInfo* info, const vec3& source, const vec2& dragCenter, const vec3& casterPos, f32 hold);
 	void MonsterStopIfHeld(ActorNpc& npc);
+	bool TurretCannonBusy(const ActorNpc& tower, ActionStateID state) const;
 	bool MonsterDashNeedsTurn(ActorNpc& npc, const GameXmlContent::MonsterAttack& attack, f32 yaw);
 	void SendNpcCcMove(ActorNpc& npc, bool ended);
 	vec2 NpcPullGoal(const ActorNpc& npc, const vec2& center) const;

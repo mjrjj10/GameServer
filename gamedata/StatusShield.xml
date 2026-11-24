@@ -4,4 +4,5 @@
   <STATUS ID="1200100027" shield="1000" samples="32" source="STR_STATUS_MOB_TOOLTIP_1200100027 (1000 absorbed); MEASURED 7 official 5v5 captures: SN_UpdateStat 19 = 1000 on add (31 of 32)" />
   <STATUS ID="1230410061" shield="450" source="TESTER Malachi 22/11: GX-09 Plasma Shield 250 (passive tooltip 180410000) + 200" />
   <STATUS ID="1230170001" shield="400" source="Vita passive tooltip (400 damage); MEASURED official captures: SN_UpdateStat 19 = 404 to 423 on add (41 casts) = 400 + skill power x 0.05 (_ShieldMultiplier)" />
+  <STATUS ID="1239100020" shield="2000" source="MEASURED official 5v5 captures: Titan Hammer E shield, SN_UpdateStat 19 = 2000 on add (mode of 48 reads, 39 casts on allies)" />
 </STATUS_SHIELD>

@@ -147,13 +147,14 @@ void World::ApplyDeathHit(const DeathHit& hit)
 	if(!helper) return;
 	const GameXmlContent::DeathRemote& d = *hit.remote;
 	const bool teamed = helper->faction == Faction::RED || helper->faction == Faction::BLUE;
+	const Faction origin = teamed ? (helper->faction == Faction::RED ? Faction::BLUE : Faction::RED) : helper->faction;
 	const i32 damage = (i32)(MonsterAttackPower(*helper) * NpcStatusMul(*helper, StatusMod::ATTACK) * d.multiplier + 0.5f);
 	const i32 firstStatus = d.statuses.empty() ? 0 : d.statuses[0];
 	replication->SendRemoteCreateToAll(helper->UID, MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID++ & MONSTER_REMOTE_ID_MASK), (RemoteIdx)d.remote, helper->pos, helper->rot.z, helper->pos, ActorUID::INVALID);
 	if(d.pc) {
 		foreach(p, players) {
 			if(p->dead || !p->body || p->untargetable) continue;
-			const bool ally = teamed && (Faction)p->team == helper->faction;
+			const bool ally = teamed && (Faction)p->team == origin;
 			if(ally != d.ally || (!teamed && d.ally)) continue;
 			if(glm::length(vec2(p->body->GetWorldPos()) - vec2(helper->pos)) > d.radius) continue;
 			if(damage > 0 && !d.ally) DamagePlayerFromNpc(*helper, *p, damage, d.remote, firstStatus, hit.remoteID);
@@ -164,7 +165,7 @@ void World::ApplyDeathHit(const DeathHit& hit)
 	if(d.npc) {
 		foreach(o, actorNpcList) {
 			if(&*o == helper || o->hp <= 0 || o->removeAt != Time::ZERO || !o->monsterAi || (o->faction != Faction::RED && o->faction != Faction::BLUE)) continue;
-			const bool ally = teamed && o->faction == helper->faction;
+			const bool ally = teamed && o->faction == origin;
 			if(ally != d.ally) continue;
 			if(glm::length(vec2(o->pos) - vec2(helper->pos)) > d.radius + o->monsterAi->radius) continue;
 			if(damage > 0 && !d.ally) DamageNpcFromNpc(*helper, *o, damage, d.remote, hit.remoteID, firstStatus);
@@ -802,7 +803,8 @@ void World::FireMonsterRemote(const MonsterFireEvent& fire)
 			spunDir = vec2(cosf(a), sinf(a));
 		}
 		const size_t before = monsterRemotes.size();
-		SpawnMonsterRemote(npc, *remote, parentOfChildren ? vec3(vec2(sentFirePos), firePos.z) : firePos, spunDir, fire.target, false, spawned > 0 ? 0 : fire.seed, 0, parentOfChildren ? sentFirePos.z - firePos.z : 0.0f);
+		const bool fromFireNode = parentOfChildren || (follows && remote->maxSpeed > 0);
+		SpawnMonsterRemote(npc, *remote, fromFireNode ? vec3(vec2(sentFirePos), firePos.z) : firePos, spunDir, fire.target, false, spawned > 0 ? 0 : fire.seed, 0, fromFireNode ? sentFirePos.z - firePos.z : 0.0f);
 		if(monsterRemotes.size() > before) {
 			MonsterRemote& spawnedRemote = monsterRemotes.back();
 			spawnedRemote.creatorSeed = creatorSeed;
@@ -1295,6 +1297,18 @@ void World::MonsterStopIfHeld(ActorNpc& npc)
 	if(!npc.monsterAi || localTime >= npc.monsterHoldUntil || npc.monsterAi->walk <= 0 || (npc.dashEnd != Time::ZERO && npc.dashCurve == NPC_DASH_CURVE_FLEE)) return;
 	npc.monsterStopSpeed = npc.monsterAi->walk * npc.speedMul;
 	replication->SendMonsterStopWithSpeedToAll(npc.UID, npc.pos, npc.monsterStopSpeed);
+}
+
+bool World::TurretCannonBusy(const ActorNpc& tower, ActionStateID state) const
+{
+	for(const TurretCannonPair& pair : MEASURED_TURRET_CANNONS) {
+		if(pair.tower != tower.docID || state == pair.allowed) continue;
+		foreach_const(c, actorNpcList) {
+			if(c->docID != pair.cannon || c->hp <= 0 || c->removeAt != Time::ZERO || c->monsterTarget == ActorUID::INVALID) continue;
+			if(glm::length(vec2(c->pos) - vec2(tower.pos)) <= MEASURED_TURRET_CANNON_OFFSET) return true;
+		}
+	}
+	return false;
 }
 
 bool World::MonsterDashNeedsTurn(ActorNpc& npc, const GameXmlContent::MonsterAttack& attack, f32 yaw)
@@ -2312,6 +2326,7 @@ void World::UpdateMonsterAi(f32 delta)
 				const bool basicReady = !paced || localTime >= npc.monsterBasicReady;
 				eastl::fixed_vector<i32,16,false> ready;
 				f32 totalShare = basicReady ? attack->share : 0.0f;
+				bool dashTurning = false;
 				const f32 hpRatio = npc.hpMax > 0 ? (f32)npc.hp / (f32)npc.hpMax : 1.0f;
 				for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)npc.monsterSkillReady.size(); s++) {
 					const GameXmlContent::MonsterAttack& special = ai.attacks[s];
@@ -2322,15 +2337,18 @@ void World::UpdateMonsterAi(f32 delta)
 						if(localTime < npc.monsterSkillReady[s]) continue;
 					}
 					if(dist > special.range + MONSTER_REACH_TOLERANCE || dist < special.minRange) continue;
-					if(MonsterDashNeedsTurn(npc, special, yaw)) continue;
+					if(MonsterDashNeedsTurn(npc, special, yaw)) { if(!(npc.ccControl & NPC_CONTROL_ROOT)) dashTurning = true; continue; }
 					if(!ready.full()) ready.push_back(s);
 					totalShare += anchored && special.anchorShare >= 0 ? special.anchorShare : special.share;
 				}
+				if(dashTurning) continue;
+				const bool basicInRoll = basicReady && !(IsMeasuredSpecialFirst(npc.docID) && !ready.empty());
+				if(basicReady && !basicInRoll) totalShare -= attack->share;
 				if(!basicReady && ready.empty()) {
 					npc.monsterNextAttack = npc.monsterBasicReady;
 					continue;
 				}
-				f32 roll = (f32)(RandUint() % 10000) / 10000.0f * totalShare - (basicReady ? attack->share : 0.0f);
+				f32 roll = (f32)(RandUint() % 10000) / 10000.0f * totalShare - (basicInRoll ? attack->share : 0.0f);
 				foreach_const(s, ready) {
 					const GameXmlContent::MonsterAttack& special = ai.attacks[*s];
 					const f32 part = anchored && special.anchorShare >= 0 ? special.anchorShare : special.share;
@@ -2344,6 +2362,10 @@ void World::UpdateMonsterAi(f32 delta)
 				if(paced) {
 					npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime((attack->after > 0 ? attack->after : basic->after) * 1000.0));
 					if(attack == basic) npc.monsterBasicReady = TimeAdd(localTime, TimeMsToTime(basic->cooldown * 1000.0));
+				}
+				if(TurretCannonBusy(npc, attack->state)) {
+					LOG("Monster :: creature=%d (local %d) holds %s while its cannon fires", (i32)npc.docID, npc.localID, ActionStateToString(attack->state));
+					continue;
 				}
 				StartMonsterAttack(npc, ai, attack, targetPos, dist, yaw, run);
 				continue;

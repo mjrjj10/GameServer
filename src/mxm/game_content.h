@@ -539,6 +539,7 @@ struct Remote
 	bool targetOnly = false;
 	bool prioritySearchPC = false;
 	bool vsRemote = false;
+	bool ignoreOwnerActivate = false;
 	bool canReflect = false;
 	bool reflectUse = false;
 	bool reflectBack = false;

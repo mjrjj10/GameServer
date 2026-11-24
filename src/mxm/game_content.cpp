@@ -3238,6 +3238,7 @@ bool GameXmlContent::LoadRemoteData()
 				pComp->QueryAttribute("_OnHitOwnerStatusIndex", &remote.onHitOwnerStatus);
 				pComp->QueryAttribute("_SkillIndex", &remote.skillIndex);
 				remote.activateCount = _ActivateCount;
+				remote.ignoreOwnerActivate = XmlAttrTrue(pComp, "_IgnoreOwnerActivate");
 				pComp->QueryAttribute("_PenetrationCount", &remote.penetrationCount);
 				remote.lifeTime = _LifeTime;
 				pComp->QueryFloatAttribute("_AttackMultiplier", &remote.attackMultiplier);
