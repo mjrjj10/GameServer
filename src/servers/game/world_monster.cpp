@@ -823,17 +823,13 @@ void World::FireMonsterRemote(const MonsterFireEvent& fire)
 		}
 		const size_t before = monsterRemotes.size();
 		const bool fromFireNode = parentOfChildren || (follows && remote->maxSpeed > 0);
-		SpawnMonsterRemote(npc, *remote, fromFireNode ? vec3(vec2(sentFirePos), firePos.z) : firePos, spunDir, fire.target, false, spawned > 0 ? 0 : fire.seed, 0, fromFireNode ? sentFirePos.z - firePos.z : 0.0f);
+		const vec3 spinOrigin = spinIndex >= 0 ? vec3(MeasuredSpinOrigin(MEASURED_MONSTER_REMOTE_SPIN[spinIndex], npc.pos, npc.rot.z), firePos.z) : firePos;
+		SpawnMonsterRemote(npc, *remote, fromFireNode ? vec3(vec2(sentFirePos), firePos.z) : firePos, spunDir, fire.target, false, spawned > 0 ? 0 : fire.seed, 0, fromFireNode ? sentFirePos.z - firePos.z : 0.0f, ActorUID::INVALID, false, spinIndex, remote->attachFireObject ? spinAngle : npc.rot.z + spinAngle, spinIndex >= 0 ? &spinOrigin : nullptr);
 		if(monsterRemotes.size() > before) {
 			MonsterRemote& spawnedRemote = monsterRemotes.back();
 			spawnedRemote.creatorSeed = creatorSeed;
 			if(spinIndex >= 0) {
-				const MeasuredSpin& s = MEASURED_MONSTER_REMOTE_SPIN[spinIndex];
-				spawnedRemote.spinIndex = spinIndex;
-				spawnedRemote.spinAngle = remote->attachFireObject ? spinAngle : npc.rot.z + spinAngle;
-				spawnedRemote.spinFrom = localTime;
-				const vec2 origin = MeasuredSpinOrigin(s, npc.pos, npc.rot.z);
-				spawnedRemote.pos = vec3(origin, spawnedRemote.pos.z);
+				const vec2 origin = vec2(spawnedRemote.pos);
 				LOG("Monster :: creature=%d spinning remote %d node %d starts at %.1f deg from (%.0f, %.0f), boss yaw %.1f", (i32)npc.docID, fire.fire->remote, (i32)fire.fire->nodeIndex, atan2f(spunDir.y, spunDir.x) * 180.0f / PI, origin.x, origin.y, npc.rot.z * 180.0f / PI);
 			}
 			if(fire.passEnd != Time::ZERO && fire.passEnd < spawnedRemote.expire) spawnedRemote.expire = fire.passEnd;
@@ -889,7 +885,7 @@ void World::SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, c
 	}
 }
 
-void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed, u32 parentSeed, f32 lift, ActorUID spared, bool sceneRoot)
+void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed, u32 parentSeed, f32 lift, ActorUID spared, bool sceneRoot, i32 spinIndex, f32 spinAngle, const vec3* spinOrigin)
 {
 	const vec3 shown = pos + vec3(0, 0, lift);
 	const u32 spawned = send ? MonsterSpawnerChildren(remote) : 0;
@@ -919,6 +915,10 @@ void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const 
 	mr.seed = seed;
 	mr.lift = lift + remote.offsetZ;
 	mr.spared = spared;
+	mr.spinIndex = spinIndex;
+	mr.spinAngle = spinAngle;
+	mr.spinFrom = localTime;
+	if(spinOrigin) mr.pos = *spinOrigin;
 	monsterRemotes.push_back(mr);
 	if(remote.maxSpeed <= 0) {
 		auto it = actorNpcMap.find(npc.UID);
