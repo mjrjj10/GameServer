@@ -2139,6 +2139,8 @@ void World::UpdateMonsterAi(f32 delta)
 				foreach_const(st, ai.wakeStatuses) ApplyMonsterStatus(npc, *st, true);
 				npc.monsterWakeEnd = npc.monsterHoldUntil;
 			}
+			npc.monsterOpening = true;
+			npc.monsterLastSpecial = false;
 			LOG("Monster :: creature=%d (local %d) wakes up", (i32)npc.docID, npc.localID);
 			continue;
 		}
@@ -2412,7 +2414,7 @@ void World::UpdateMonsterAi(f32 delta)
 				}
 				static const f32 MEASURED_SPECIAL_FIRST_BASIC_REPEAT = 6.0f / 36.0f;
 				const bool specialFirstTurn = IsMeasuredSpecialFirst(npc.docID) && !ready.empty() && !npc.monsterLastSpecial;
-				const bool repeatBasic = specialFirstTurn && basicReady && (f32)Randf01() < MEASURED_SPECIAL_FIRST_BASIC_REPEAT;
+				const bool repeatBasic = specialFirstTurn && basicReady && !npc.monsterOpening && (f32)Randf01() < MEASURED_SPECIAL_FIRST_BASIC_REPEAT;
 				const bool basicInRoll = basicReady && (!specialFirstTurn || repeatBasic);
 				if(basicReady && !basicInRoll) totalShare -= attack->share;
 				if(!basicReady && ready.empty()) {
@@ -2432,6 +2434,7 @@ void World::UpdateMonsterAi(f32 delta)
 				}
 				if(attack == basic && IsMeasuredSpecialFirst(npc.docID)) LOG("Monster :: creature=%d (local %d) uses basic %s at %.0f (ready %d, basic in roll %d, t %.2f)", (i32)npc.docID, npc.localID, ActionStateToString(basic->state), dist, (i32)ready.size(), (i32)basicInRoll, TimeDiffSec(localTime));
 				npc.monsterLastSpecial = attack != basic;
+				npc.monsterOpening = false;
 				if(paced) {
 					npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime((attack->after > 0 ? attack->after : basic->after) * 1000.0));
 					if(attack == basic) npc.monsterBasicReady = TimeAdd(localTime, TimeMsToTime(basic->cooldown * 1000.0));
