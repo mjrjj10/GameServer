@@ -2382,6 +2382,7 @@ void World::UpdateMonsterAi(f32 delta)
 					totalShare += anchored && special.anchorShare >= 0 ? special.anchorShare : special.share;
 				}
 				if(dashTurning) {
+					npc.monsterNextAttack = npc.monsterDashTurnAt;
 					if(IsMeasuredSpecialFirst(npc.docID)) LOG("Monster :: creature=%d (local %d) turns before a dash at %.0f (t %.2f)", (i32)npc.docID, npc.localID, dist, TimeDiffSec(localTime));
 					continue;
 				}
