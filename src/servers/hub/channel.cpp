@@ -1227,12 +1227,12 @@ void HubPacketHandler::HandlePacket_CQ_ItemChange(ClientHandle clientHd, const N
 void HubPacketHandler::HandlePacket_CQ_InventoryRearrange(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
 {
 	ConstBuffer buff(packetData, packetSize);
-	if(!buff.CanRead(8)) {
+	if(!buff.CanRead(4)) {
 		WARN("[client%x] WARNING: invalid CQ_InventoryRearrange (size=%d)", clientHd, packetSize);
 		return;
 	}
 	const u32 a = buff.Read<u32>();
-	const u32 b = buff.Read<u32>();
+	const u32 b = buff.CanRead(4) ? buff.Read<u32>() : 0;
 	NT_LOG("[client%x] Client :: CQ_InventoryRearrange :: a=%u b=%u", clientHd, a, b);
 	game->OnInventoryRearrange(clientHd, a, b);
 }

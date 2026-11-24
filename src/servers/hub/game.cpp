@@ -848,13 +848,17 @@ void HubGame::OnInventoryRearrange(ClientHandle clientHd, u32 a, u32 b)
 	const wchar* nickname = playerAccountData[userID]->nickname.data();
 	AccountInventory inventory = AccountInventoryLoad(nickname);
 	eastl::fixed_vector<i32,256,false> tabItems;
-	for(i32 i = 0; i < (i32)inventory.items.size(); i++) if(inventory.items[i].invenType == (u8)a && inventory.items[i].count > 0) tabItems.push_back(i);
+	static const i32 MEASURED_INVENTORY_TAB_SLOTS = 100;
+	const i32 tabFirst = (i32)a * MEASURED_INVENTORY_TAB_SLOTS;
+	for(i32 i = 0; i < (i32)inventory.items.size(); i++) {
+		const AccountItem& it = inventory.items[i];
+		if(it.invenType == 0 && it.count > 0 && it.slot >= tabFirst && it.slot < tabFirst + MEASURED_INVENTORY_TAB_SLOTS) tabItems.push_back(i);
+	}
 	if(tabItems.empty()) {
 		LOG("[client%x] HubGame :: %ls sorts tab %u (option %u): nothing to sort", clientHd, nickname, a, b);
 		return;
 	}
-	i32 base = inventory.items[tabItems[0]].slot;
-	foreach_const(i, tabItems) base = MIN(base, inventory.items[*i].slot);
+	const i32 base = tabFirst;
 	eastl::sort(tabItems.begin(), tabItems.end(), [&inventory](i32 x, i32 y) {
 		const AccountItem& ix = inventory.items[x];
 		const AccountItem& iy = inventory.items[y];

@@ -322,11 +322,15 @@ void HubReplication::SendFriendStateChangeResult(ClientHandle clientHd, u32 resu
 
 void HubReplication::SendItemsUpdate(ClientHandle clientHd, const AccountItem* items, i32 count, u32 reason)
 {
-	PacketWriter<Sv::SN_ItemUpdate> packet;
-	packet.Write<u16>((u16)count);
-	for(i32 i = 0; i < count; i++) WriteInventoryItem(packet, items[i]);
-	packet.Write<u32>(reason);
-	SendPacket(clientHd, packet);
+	static const i32 ITEMS_PER_UPDATE = 32;
+	for(i32 first = 0; first < count; first += ITEMS_PER_UPDATE) {
+		const i32 n = MIN(count - first, ITEMS_PER_UPDATE);
+		PacketWriter<Sv::SN_ItemUpdate,8192> packet;
+		packet.Write<u16>((u16)n);
+		for(i32 i = 0; i < n; i++) WriteInventoryItem(packet, items[first + i]);
+		packet.Write<u32>(reason);
+		SendPacket(clientHd, packet);
+	}
 }
 
 void HubReplication::SendProfileMasterGears(ClientHandle clientHd, const wchar* nickname)
