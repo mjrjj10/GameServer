@@ -285,6 +285,7 @@ struct MQ_CreateGame
 	MapIndex mapIndex;
 	u8 canEscape;
 	i32 surrenderAbleTime;
+	u8 customGame;
 };
 
 PUSH_PACKED

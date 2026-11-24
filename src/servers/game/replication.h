@@ -328,6 +328,7 @@ struct Replication
 
 	i32 inGameID = 0;
 	GameType gameType = GameType::INVALID;
+	bool customGame = false;
 	eastl::fixed_vector<TrainingSlot,2,false> trainingSlots;
 	AreaIndex areaIndex = AreaIndex(0);
 	StageIndex stageIndex = StageIndex(0);

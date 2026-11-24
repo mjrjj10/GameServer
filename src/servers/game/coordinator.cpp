@@ -710,6 +710,7 @@ void Coordinator::CreateDevGame()
 	game.gameType = GameType::PVP_AI;
 	game.canEscape = GameTypeCanEscape(game.gameType);
 	game.surrenderAbleTime = 180000;
+	game.customGame = 0;
 
 	auto& p = game.players[0];
 	p.name.Copy(WideString(L"LordSk"));

@@ -232,6 +232,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 	ASSERT(gameInfo.mapIndex != MapIndex(0));
 	replication.inGameID = (i32)(u64)gameInfo.sortieUID;
 	replication.gameType = gameInfo.gameType;
+	replication.customGame = gameInfo.customGame != 0;
 	replication.areaIndex = gameInfo.areaIndex;
 	replication.stageIndex = gameInfo.stageIndex;
 	replication.mapIndex = gameInfo.mapIndex;
@@ -1894,9 +1895,13 @@ void Game::EndGame()
 		record.classTypes = { (i32)p.mainClass, (i32)p.subClass };
 		record.playSeconds = tGameStarted != Time::ZERO ? (u32)TimeDiffSec(TimeDiff(tGameStarted, localTime)) : 0;
 		record.guildPoints = (i32)(e->guildBase + e->guildBonus);
+		if(replication.customGame) {
+			record.stageIndex = 0;
+			record.pvpSaveType = 0;
+		}
 		AccountGameRecordAppend(e->name, record);
 		if(e->medals > 0 && GetGameXmlContent().pvpMedalItem > 0) AccountRewardItemAppend(e->name, GetGameXmlContent().pvpMedalItem, (i32)e->medals);
-		world.FinishProgress(p, record);
+		if(!replication.customGame) world.FinishProgress(p, record);
 		LOG("Game :: %ls reward %u gold %u exp (+%u / +%u bonus, %u min, %s)", e->name, e->gold, e->exp, RewardBonusTotal(e->bonusRon), RewardBonusTotal(e->bonusExp), minutes, won ? "win" : (own == other ? "draw" : "loss"));
 	}
 	Replication::EndGot got;

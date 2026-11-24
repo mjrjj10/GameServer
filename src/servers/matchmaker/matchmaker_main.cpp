@@ -126,6 +126,7 @@ struct Matchmaker
 		StageIndex stageIndex = StageIndex(0);
 		MapIndex mapIndex = MapIndex(0);
 		GameType gameType = GameType::PVP_NORMAL;
+		bool customGame = false;
 		u8 draft = 0;
 		Time tCreated = Time::ZERO;
 		eastl::fixed_vector<Player,16,false> playerList;
@@ -614,6 +615,7 @@ struct Matchmaker
 		room.stageIndex = firstParty.stageIndex;
 		room.mapIndex = firstParty.mapIndex;
 		room.gameType = firstParty.gameType;
+		room.customGame = custom;
 		room.draft = firstParty.draft;
 		room.tCreated = now;
 
@@ -802,6 +804,7 @@ struct Matchmaker
 		packet.mapIndex = room.mapIndex;
 		packet.canEscape = GameTypeCanEscape(packet.gameType);
 		packet.surrenderAbleTime = 180000;
+		packet.customGame = room.customGame ? 1 : 0;
 
 		foreach_const(p, room.playerList) {
 			if(p->team == Team::SPECTATOR) {
