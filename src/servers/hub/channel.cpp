@@ -100,6 +100,9 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CQ_GetUserInfo);
 		HANDLE_CASE(CQ_ItemTrade);
 		HANDLE_CASE(CQ_ItemUse);
+		HANDLE_CASE(CQ_ItemChange);
+		HANDLE_CASE(CQ_InventoryRearrange);
+		HANDLE_CASE(CQ_SellShopItem);
 		HANDLE_CASE(CQ_SkinChipDissolve);
 		HANDLE_CASE(CQ_GearEquip);
 		HANDLE_CASE(CQ_PvpDetailRecord);
@@ -1206,6 +1209,55 @@ void HubPacketHandler::HandlePacket_CQ_ItemUse(ClientHandle clientHd, const NetH
 	const Cl::CQ_ItemUse& packet = SafeCast<Cl::CQ_ItemUse>(packetData, packetSize);
 	NT_LOG("[client%x] Client :: CQ_ItemUse :: item=%u", clientHd, (u32)packet.itemInstanceUID);
 	game->OnItemUse(clientHd, (u32)packet.itemInstanceUID);
+}
+
+void HubPacketHandler::HandlePacket_CQ_ItemChange(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	ConstBuffer buff(packetData, packetSize);
+	if(!buff.CanRead(8)) {
+		WARN("[client%x] WARNING: invalid CQ_ItemChange (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const u32 a = buff.Read<u32>();
+	const u32 b = buff.Read<u32>();
+	NT_LOG("[client%x] Client :: CQ_ItemChange :: a=%u (0x%x) b=%u (0x%x)", clientHd, a, a, b, b);
+	game->OnItemChange(clientHd, a, b);
+}
+
+void HubPacketHandler::HandlePacket_CQ_InventoryRearrange(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	ConstBuffer buff(packetData, packetSize);
+	if(!buff.CanRead(8)) {
+		WARN("[client%x] WARNING: invalid CQ_InventoryRearrange (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const u32 a = buff.Read<u32>();
+	const u32 b = buff.Read<u32>();
+	NT_LOG("[client%x] Client :: CQ_InventoryRearrange :: a=%u b=%u", clientHd, a, b);
+	game->OnInventoryRearrange(clientHd, a, b);
+}
+
+void HubPacketHandler::HandlePacket_CQ_SellShopItem(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	ConstBuffer buff(packetData, packetSize);
+	if(!buff.CanRead(6)) {
+		WARN("[client%x] WARNING: invalid CQ_SellShopItem (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const u32 shopRef = buff.Read<u32>();
+	const u16 count = buff.Read<u16>();
+	if(count > 64 || !buff.CanRead(count * 8)) {
+		WARN("[client%x] WARNING: invalid CQ_SellShopItem count %u (size=%d)", clientHd, (u32)count, packetSize);
+		return;
+	}
+	eastl::fixed_vector<eastl::pair<u32,u32>,64,false> entries;
+	for(u16 i = 0; i < count; i++) {
+		const u32 uid = buff.Read<u32>();
+		const u32 n = buff.Read<u32>();
+		entries.push_back(eastl::make_pair(uid, n));
+	}
+	NT_LOG("[client%x] Client :: CQ_SellShopItem :: shop=%u count=%u first=(%u, %u)", clientHd, shopRef, (u32)count, count ? entries[0].first : 0, count ? entries[0].second : 0);
+	game->OnSellShopItem(clientHd, entries.data(), (i32)entries.size());
 }
 
 void HubPacketHandler::HandlePacket_CQ_GetUserInfo(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

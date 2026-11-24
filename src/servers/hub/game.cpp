@@ -10,6 +10,7 @@
 #include <mxm/mission_rules.h>
 #include "town_rules.h"
 #include <EASTL/algorithm.h>
+#include <EASTL/sort.h>
 #include <EAStdC/EASprintf.h>
 #include <mxm/account_progress.h>
 #include <time.h>
@@ -799,6 +800,118 @@ void HubGame::OnItemTrade(ClientHandle clientHd, i32 tradeID, i32 count, bool cr
 	LOG("[client%x] HubGame :: %ls trades %d x%d into %s %d (%d stack(s))", clientHd, account.nickname.data(), tradeID, count, trade->buyDrop ? "drop" : "item", trade->buyItem, (i32)granted.size());
 	if(craft) replication.SendItemCraftResult(clientHd, craftType, 0, granted.data(), (i32)granted.size());
 	else replication.SendItemTradeResult(clientHd, 0, 0, granted.data(), (i32)granted.size());
+}
+
+static const u32 HYP_ITEM_CHANGE_FAILED = 1;
+
+void HubGame::OnItemChange(ClientHandle clientHd, u32 a, u32 b)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	if(!playerAccountData[userID]) return;
+	const wchar* nickname = playerAccountData[userID]->nickname.data();
+	AccountInventory inventory = AccountInventoryLoad(nickname);
+	i32 src = -1;
+	for(i32 i = 0; i < (i32)inventory.items.size(); i++) if(inventory.items[i].uid == a) src = i;
+	Sv::SA_ItemChange answer;
+	answer.nEquipKey = a;
+	answer.nESlot = 0;
+	answer.nErrorType = HYP_ITEM_CHANGE_FAILED;
+	if(src < 0) {
+		WARN("[client%x] HubGame :: %ls item change: no item %u", clientHd, nickname, a);
+		replication.server->SendPacket(clientHd, answer);
+		return;
+	}
+	AccountItem& moved = inventory.items[src];
+	i32 dst = -1;
+	for(i32 i = 0; i < (i32)inventory.items.size(); i++) if(i != src && inventory.items[i].uid == b && inventory.items[i].invenType == moved.invenType) dst = i;
+	const i32 targetSlot = dst >= 0 ? inventory.items[dst].slot : (i32)b;
+	if(dst < 0) for(i32 i = 0; i < (i32)inventory.items.size(); i++) if(i != src && inventory.items[i].invenType == moved.invenType && inventory.items[i].slot == targetSlot) dst = i;
+	eastl::fixed_vector<AccountItem,2,false> changed;
+	if(dst >= 0) {
+		inventory.items[dst].slot = moved.slot;
+		changed.push_back(inventory.items[dst]);
+	}
+	moved.slot = targetSlot;
+	changed.push_back(moved);
+	AccountInventorySave(nickname, inventory);
+	replication.SendItemsUpdate(clientHd, changed.data(), (i32)changed.size(), MEASURED_ITEM_UPDATE_REASON_TRADE);
+	answer.nESlot = (u32)targetSlot;
+	answer.nErrorType = 0;
+	replication.server->SendPacket(clientHd, answer);
+	LOG("[client%x] HubGame :: %ls moves item %u to slot %d (tab %u, swapped %d)", clientHd, nickname, a, targetSlot, (u32)moved.invenType, dst >= 0 ? 1 : 0);
+}
+
+void HubGame::OnInventoryRearrange(ClientHandle clientHd, u32 a, u32 b)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	if(!playerAccountData[userID]) return;
+	const wchar* nickname = playerAccountData[userID]->nickname.data();
+	AccountInventory inventory = AccountInventoryLoad(nickname);
+	eastl::fixed_vector<i32,256,false> tabItems;
+	for(i32 i = 0; i < (i32)inventory.items.size(); i++) if(inventory.items[i].invenType == (u8)a && inventory.items[i].count > 0) tabItems.push_back(i);
+	if(tabItems.empty()) {
+		LOG("[client%x] HubGame :: %ls sorts tab %u (option %u): nothing to sort", clientHd, nickname, a, b);
+		return;
+	}
+	i32 base = inventory.items[tabItems[0]].slot;
+	foreach_const(i, tabItems) base = MIN(base, inventory.items[*i].slot);
+	eastl::sort(tabItems.begin(), tabItems.end(), [&inventory](i32 x, i32 y) {
+		const AccountItem& ix = inventory.items[x];
+		const AccountItem& iy = inventory.items[y];
+		return ix.docIndex != iy.docIndex ? ix.docIndex < iy.docIndex : ix.uid < iy.uid;
+	});
+	eastl::fixed_vector<AccountItem,256,false> changed;
+	for(i32 k = 0; k < (i32)tabItems.size(); k++) {
+		AccountItem& it = inventory.items[tabItems[k]];
+		if(it.slot == base + k) continue;
+		it.slot = base + k;
+		changed.push_back(it);
+	}
+	AccountInventorySave(nickname, inventory);
+	if(!changed.empty()) replication.SendItemsUpdate(clientHd, changed.data(), (i32)changed.size(), MEASURED_ITEM_UPDATE_REASON_TRADE);
+	LOG("[client%x] HubGame :: %ls sorts tab %u (option %u): %d items, %d moved", clientHd, nickname, a, b, (i32)tabItems.size(), (i32)changed.size());
+}
+
+void HubGame::OnSellShopItem(ClientHandle clientHd, const eastl::pair<u32,u32>* entries, i32 count)
+{
+	const i32 userID = plidMap->Get(clientHd);
+	if(!playerAccountData[userID]) return;
+	auto found = GetAccountManager().accountMap.find(playerAccountData[userID]->UID);
+	if(found == GetAccountManager().accountMap.end()) return;
+	Account& account = *found->second;
+	AccountInventory inventory = AccountInventoryLoad(account.nickname.data());
+	i64 amount = 0;
+	eastl::fixed_vector<i32,64,false> soldDocs;
+	for(i32 e = 0; e < count; e++) {
+		for(i32 i = 0; i < (i32)inventory.items.size(); i++) {
+			AccountItem& it = inventory.items[i];
+			if(it.uid != entries[e].first || it.count <= 0) continue;
+			const GameXmlContent::ItemInfo* info = GetGameXmlContent().FindItemInfo(it.docIndex);
+			if(!info || info->sellValue <= 0) break;
+			const i32 n = MIN((i32)MAX(entries[e].second, 1u), it.count);
+			amount += (i64)info->sellValue * n;
+			it.count -= n;
+			if(!soldDocs.full()) soldDocs.push_back(it.docIndex);
+			replication.SendItemUpdate(clientHd, it, MEASURED_ITEM_UPDATE_REASON_TRADE);
+			if(it.count <= 0) inventory.items.erase(inventory.items.begin() + i);
+			break;
+		}
+	}
+	AccountInventorySave(account.nickname.data(), inventory);
+	if(amount > 0) {
+		AccountProgress progress = AccountProgressLoad(account.nickname.data());
+		progress.gold += amount;
+		AccountProgressSave(account.nickname.data(), progress);
+		account.gold = progress.gold;
+		replication.SendMoney(clientHd, account.gold, 0);
+	}
+	PacketWriter<Sv::SA_SellShopItem,512> packet;
+	packet.Write<u32>(soldDocs.empty() ? HYP_ITEM_CHANGE_FAILED : 0);
+	packet.Write<u16>((u16)soldDocs.size());
+	foreach_const(d, soldDocs) packet.Write<i32>(*d);
+	packet.Write<i64>(amount);
+	replication.SendWriter(clientHd, packet);
+	LOG("[client%x] HubGame :: %ls sells %d item(s) for %lld gold", clientHd, account.nickname.data(), (i32)soldDocs.size(), amount);
 }
 
 void HubGame::OnItemUse(ClientHandle clientHd, u32 itemUID)
