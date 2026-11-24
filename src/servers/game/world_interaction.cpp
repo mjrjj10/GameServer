@@ -404,10 +404,11 @@ f32 World::NpcDefeatReaction(ActorNpc& npc, const StatusInfo* info)
 		const bool takes = eastl::find(npc.monsterAi->ccTypes.begin(), npc.monsterAi->ccTypes.end(), info->type) != npc.monsterAi->ccTypes.end();
 		return takes || HypPveMonsterTakesCc(npc) ? 0.0f : -1.0f;
 	}
-	const bool control = info->type == StatusType::FEAR || info->type == StatusType::ROOT || info->type == StatusType::SILENCE || (info->type == StatusType::TARGET && info->blockMove && info->durationSec > 0);
+	const bool fearLike = info->type == StatusType::FEAR || info->type == StatusType::FLASH_HIT;
+	const bool control = fearLike || info->type == StatusType::ROOT || info->type == StatusType::SILENCE || (info->type == StatusType::TARGET && info->blockMove && info->durationSec > 0);
 	if(control) {
 		if(!HypPveMonsterTakesCc(npc) || IsStructure(npc) || NpcHasStatusType(npc, StatusType::SUPERARMOR)) return -1.0f;
-		if(npc.removeAt != Time::ZERO || (info->type != StatusType::FEAR && info->type != StatusType::TARGET) || info->durationSec <= 0) return 0.0f;
+		if(npc.removeAt != Time::ZERO || (!fearLike && info->type != StatusType::TARGET) || info->durationSec <= 0) return 0.0f;
 		HoldNpcForControl(npc, info->durationSec);
 		return info->durationSec;
 	}
@@ -527,7 +528,7 @@ World::NpcCcGraph World::StartNpcCc(ActorNpc& npc, const StatusInfo* info, const
 		}
 		return cc;
 	}
-	if(npc.monsterAi && info->type == StatusType::FEAR && cc.duration > 0) {
+	if(npc.monsterAi && (info->type == StatusType::FEAR || info->type == StatusType::FLASH_HIT) && cc.duration > 0) {
 		const f32 speed = npc.monsterAi->run * npc.speedMul;
 		if(speed <= 0) return cc;
 		vec2 dir = vec2(npc.pos) - vec2(source);

@@ -339,7 +339,7 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		it->shieldHits--;
 		if(it->shieldHits <= 0 && it->info && it->info->nextCondition == StatusInfo::NextCondition::REMOVE_ONHIT) it->removeOnHit = true;
 		LOG("Status :: %ls shield %d absorbs a hit (%d left)", target.name.data(), it->statusID, it->shieldHits);
-		CounterAttack(attacker, target, proj != nullptr);
+		CounterAttack(attacker, target, proj != nullptr || skillID == SkillID::INVALID);
 		return;
 	}
 	bool shieldHit = false;

@@ -1900,6 +1900,13 @@ bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack, f3
 		const PxRigidActor* blocker = nullptr;
 		const bool forwardClear = !physics.RaycastSight(from + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit, &blocker) || hit >= dist - slack || (ignoreActor && (const void*)blocker == ignoreActor);
 		if(!forwardClear) continue;
+		static const f32 MEASURED_FOG_LEVEL_EYE = 200.0f;
+		if(at.z > from.z + MEASURED_FOG_LEVEL_EYE) {
+			const vec3 levelFrom = from + vec3(0, 0, MEASURED_FOG_LEVEL_EYE);
+			const vec3 levelTo = vec3(at.x, at.y, levelFrom.z);
+			const PxRigidActor* levelBlocker = nullptr;
+			if(physics.RaycastSight(levelFrom, levelTo, &hit, &levelBlocker) && hit < dist - slack && !(ignoreActor && (const void*)levelBlocker == ignoreActor)) continue;
+		}
 		if(ignoreActor) return true;
 		const PxRigidActor* backBlocker = nullptr;
 		if(!physics.RaycastSight(eye, from + vec3(0, 0, FOG_EYE_HEIGHT), &hit, &backBlocker) || hit >= dist - slack) return true;
@@ -2507,8 +2514,13 @@ i32 World::PlayerUpgradedStatus(const Player& player, i32 statusID, f32* duratio
 
 const GameXmlContent::CostLevel* World::UpgradeCastMods(Player& player, SkillID skillID, const GameXmlContent::CostLevel* costLevel)
 {
-	auto f = player.skillLevels.find((i32)skillID);
-	const auto* ups = GetGameXmlContent().FindSkillUpgrades((i32)skillID);
+	i32 levelSkill = (i32)skillID;
+	if(!costLevel && player.skillLevels.find(levelSkill) == player.skillLevels.end()) {
+		const i32 comboBase = GetGameXmlContent().GetComboBaseSkill(levelSkill);
+		if(comboBase != 0) levelSkill = comboBase;
+	}
+	auto f = player.skillLevels.find(levelSkill);
+	const auto* ups = GetGameXmlContent().FindSkillUpgrades(levelSkill);
 	if(f == player.skillLevels.end() || f->second == 0 || !ups) return costLevel;
 	const auto* levels = costLevel ? GetGameXmlContent().FindSkillCostLevels((i32)skillID) : nullptr;
 	const i32 costIndex = levels ? (i32)(costLevel - levels->data()) : -1;

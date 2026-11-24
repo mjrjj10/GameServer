@@ -187,6 +187,7 @@ struct World
 		Time chargeStart = Time::ZERO;
 		u8 chargeAnnounced = 0;
 		u32 chargeDelayedDone = 0;
+		i32 chargeAuraPending = 0;
 		eastl::fixed_vector<u32,4,false> weaponAniEndStatuses;
 		u8 botChargeGoal = 0;
 		f32 botIdleResourceGoal = -1;
@@ -1544,7 +1545,7 @@ public:
 	eastl::hash_map<i32,i32> deadCountsDone;
 	eastl::fixed_vector<i32,32,true> hpTriggersFired;
 	i32 winnerTeam = -1;
-	struct TeamVote { bool active = false; u32 type = 0; i32 requestor = -1; Time endAt = Time::ZERO; Time cooldownUntil = Time::ZERO; f32 periodMs = 0; eastl::array<i8,10> choices; };
+	struct TeamVote { bool active = false; u32 type = 0; i32 requestor = -1; Time endAt = Time::ZERO; Time cooldownUntil = Time::ZERO; Time botVotesAt = Time::ZERO; f32 periodMs = 0; eastl::array<i8,10> choices; };
 	eastl::array<TeamVote,2> teamVotes;
 	void RequestVote(Player& player, u32 type);
 	void CastVote(Player& player, u32 choice);

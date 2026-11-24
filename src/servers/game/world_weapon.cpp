@@ -595,8 +595,17 @@ void World::UpdateProjectiles(f32 delta)
 			f32 wallDist = 0;
 			const vec2 a = vec2(proj->pos);
 			if(RaycastShot(vec3(a, proj->wallZ), vec3(a + proj->dir * step, proj->wallZ), (i32)players[proj->ownerIndex].team, &wallDist, &wallActor, &wallGate)) {
-				step = wallDist;
-				hitWall = true;
+				const PxRigidActor* aimActor = nullptr;
+				ActorDynamic* aimGate = nullptr;
+				f32 aimDist = 0;
+				const bool aimedAbove = proj->aimZ - proj->wallZ > WEAPON_PROJECTILE_HIT_HEIGHT;
+				if(aimedAbove && !wallGate && !RaycastShot(vec3(a, proj->aimZ), vec3(a + proj->dir * step, proj->aimZ), (i32)players[proj->ownerIndex].team, &aimDist, &aimActor, &aimGate)) {
+					wallActor = nullptr;
+				}
+				else {
+					step = wallDist;
+					hitWall = true;
+				}
 			}
 		}
 		const bool lastStep = hitWall || proj->travelled + step >= proj->range - 0.01f;
@@ -769,7 +778,7 @@ void World::UpdateProjectiles(f32 delta)
 			}
 			if(nearPlayer) {
 				const vec2 rel = vec2(nearPlayer->body->GetWorldPos()) - vec2(proj->start);
-				LOG("ProjectileEnd :: start=(%.0f, %.0f, %.0f) dir=(%.2f, %.2f) travelled=%.0f hit=%d nearest=%ls at (%.0f, %.0f, %.0f) along=%.0f side=%.0f lagClosest=%.0f", proj->start.x, proj->start.y, proj->start.z, proj->dir.x, proj->dir.y, proj->travelled, proj->hitsLeft <= 0, nearPlayer->name.data(), nearPlayer->body->GetWorldPos().x, nearPlayer->body->GetWorldPos().y, nearPlayer->body->GetWorldPos().z, glm::dot(rel, proj->dir), glm::dot(rel, vec2(-proj->dir.y, proj->dir.x)), proj->closest);
+				LOG("ProjectileEnd :: start=(%.0f, %.0f, %.0f) aimZ=%.0f dir=(%.2f, %.2f) travelled=%.0f hit=%d nearest=%ls at (%.0f, %.0f, %.0f) along=%.0f side=%.0f lagClosest=%.0f", proj->start.x, proj->start.y, proj->start.z, proj->aimZ, proj->dir.x, proj->dir.y, proj->travelled, proj->hitsLeft <= 0, nearPlayer->name.data(), nearPlayer->body->GetWorldPos().x, nearPlayer->body->GetWorldPos().y, nearPlayer->body->GetWorldPos().z, glm::dot(rel, proj->dir), glm::dot(rel, vec2(-proj->dir.y, proj->dir.x)), proj->closest);
 			}
 			if(proj->zoneRemote != RemoteIdx::INVALID) {
 				SpawnRemote(proj->ownerIndex, proj->zoneRemote, proj->pos, proj->dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, proj->zoneDamage, true, nullptr, proj->nodeName);
@@ -951,6 +960,7 @@ void World::OnWeaponState(Player& player, i32 state, u8 chargeLevel, u8 firingCo
 		player.chargeStart = localTime;
 		player.chargeAnnounced = 0;
 		player.chargeDelayedDone = 0;
+		player.chargeAuraPending = 0;
 		const WeaponFiring& chargeFiring = ActiveWeaponFiring(player, player.Main().stance);
 		player.firingMoveSpeedMul = chargeFiring.firingStatDuration > 0 ? chargeFiring.firingMoveSpeedMul : 0.0f;
 		const GameXmlContent::Action* charge = GetGameXmlContent().FindSkillAction(ActionClass(player), ActionStateID::ATTACKCHARGE_BEHAVIORSTATE, player.Main().stance);
@@ -960,6 +970,7 @@ void World::OnWeaponState(Player& player, i32 state, u8 chargeLevel, u8 firingCo
 		}
 	}
 	if(state != WEAPON_STATE_CHARGE && player.weaponState == WEAPON_STATE_CHARGE) {
+		player.chargeAuraPending = 0;
 		const WeaponFiring& endFiring = ActiveWeaponFiring(player, player.Main().stance);
 		foreach_const(cs, endFiring.chargeStatus) {
 			const StatusInfo* aura = GetGameXmlContent().FindStatus(*cs);
@@ -985,6 +996,10 @@ void World::UpdateWeaponCharges()
 {
 	foreach(it, players) {
 		if(it->weaponState != WEAPON_STATE_CHARGE || it->dead) continue;
+		if(it->chargeAuraPending != 0) {
+			ApplyStatus(*it, *it, it->chargeAuraPending, 0, STATUS_INFINITE_DURATION_SEC);
+			it->chargeAuraPending = 0;
+		}
 		const WeaponFiring& wf = ActiveWeaponFiring(*it, it->Main().stance);
 		const f64 held = TimeDiffSec(TimeDiff(it->chargeStart, localTime));
 		const GameXmlContent::Action* charge = GetGameXmlContent().FindSkillAction(ActionClass(*it), ActionStateID::ATTACKCHARGE_BEHAVIORSTATE, it->Main().stance);
@@ -1004,8 +1019,11 @@ void World::UpdateWeaponCharges()
 			if(it->chargeAnnounced <= wf.chargeStatus.size()) {
 				const StatusInfo* aura = GetGameXmlContent().FindStatus(wf.chargeStatus[it->chargeAnnounced - 1]);
 				if(aura && aura->auraStatus != 0) {
-					if(it->chargeAnnounced > 1) EndPlayerStatus(*it, wf.chargeStatus[it->chargeAnnounced - 2]);
-					ApplyStatus(*it, *it, aura->ID, 0, STATUS_INFINITE_DURATION_SEC);
+					if(it->chargeAnnounced > 1) {
+						EndPlayerStatus(*it, wf.chargeStatus[it->chargeAnnounced - 2]);
+						it->chargeAuraPending = aura->ID;
+					}
+					else ApplyStatus(*it, *it, aura->ID, 0, STATUS_INFINITE_DURATION_SEC);
 				}
 			}
 			replication->RelayWeaponState(ClientHandle::INVALID, it->Main().UID, MEASURED_WEAPON_STATE_WEAPON_ID, WEAPON_STATE_CHARGE, it->chargeAnnounced, it->firingCombo);

@@ -19,7 +19,7 @@ static f32 YawGap(f32 a, f32 b)
 	return fabsf(d);
 }
 static const f32 MONSTER_WAYPOINT_REACHED = 60.0f;
-static const u32 MEASURED_MONSTER_HIT_ID_OFFSET = 1;
+static const u32 MEASURED_CREATOR_FIRST_CHILD_OFFSET = 1;
 static const f32 MEASURED_ATTACHED_TARGET_REMOTE_HEIGHT = 145.0f;
 static const f64 MEASURED_NPC_DIE_STAND_MS = 90.0;
 static const f32 HYP_MONSTER_REMOTE_WALL_HEIGHT = 100.0f;
@@ -859,7 +859,7 @@ void World::SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, c
 		const f32 deg = ((f32)n - (f32)(rule.maxNum - 1) * 0.5f) * rule.maxAngle / (f32)rule.maxNum;
 		const f32 a = deg * PI / 180.0f;
 		const vec2 d = vec2(dir.x * cosf(a) - dir.y * sinf(a), dir.x * sinf(a) + dir.y * cosf(a));
-		SpawnMonsterRemote(npc, child, pos, d, target, false, viaCreator && childSeedBase != 0 ? childSeedBase + (u32)n : 0, 0, lift, spared);
+		SpawnMonsterRemote(npc, child, pos, d, target, false, viaCreator && childSeedBase != 0 ? childSeedBase + MEASURED_CREATOR_FIRST_CHILD_OFFSET + (u32)n : 0, 0, lift, spared);
 	}
 }
 
@@ -973,7 +973,7 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 			else ApplyStatusToNpcFromNpc(owner, *n, st->statusID);
 		}
 	};
-	const u32 remoteID = mr.seed != 0 ? mr.seed + (remote.homingLength > 0 ? MEASURED_MONSTER_HIT_ID_OFFSET : 0) : (MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID++ & MONSTER_REMOTE_ID_MASK));
+	const u32 remoteID = mr.seed != 0 ? mr.seed : (MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID++ & MONSTER_REMOTE_ID_MASK));
 	const bool targetOnly = remote.targetOnly && mr.target != ActorUID::INVALID;
 	const ActorMaster* targetMaster = targetOnly ? FindMasterActor(mr.target) : nullptr;
 	const Player* targetPlayer = targetMaster ? targetMaster->parent : nullptr;
@@ -1115,7 +1115,7 @@ void World::UpdateMonsterRemotes(f32 delta)
 				mr.syncIn -= delta;
 				if(mr.syncIn <= 0) {
 					mr.syncIn += MEASURED_REMOTE_SYNC_PERIOD_SEC;
-					replication->SendRemoteSyncTargetToAll(mr.seed + MEASURED_MONSTER_HIT_ID_OFFSET, locked ? mr.target : ActorUID::INVALID, mr.pos + vec3(0, 0, mr.lift), &mr.dir);
+					replication->SendRemoteSyncTargetToAll(mr.seed, locked ? mr.target : ActorUID::INVALID, mr.pos + vec3(0, 0, mr.lift), &mr.dir);
 				}
 			}
 			if(!blocked) MonsterRemoteApply(mr, owner);

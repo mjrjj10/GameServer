@@ -234,6 +234,7 @@ enum class StatusType: u8
 	EVADE,
 	FEAR,
 	FIREDELAY,
+	FLASH_HIT,
 	FLY,
 	FORCEBACK,
 	FREEZE,

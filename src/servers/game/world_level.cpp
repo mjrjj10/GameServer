@@ -308,6 +308,7 @@ static const u32 VOTE_REASON_PASSED = 1;
 static const u32 VOTE_REASON_REJECTED = 2;
 static const i8 VOTE_YES = 0;
 static const i8 VOTE_NONE = -1;
+static const f64 HYP_BOT_VOTE_DELAY_MS = 1000.0;
 
 void World::RequestVote(Player& player, u32 type)
 {
@@ -336,15 +337,12 @@ void World::RequestVote(Player& player, u32 type)
 		if(p->team != player.team || (type == VOTE_TYPE_TITAN && p->index == player.index)) continue;
 		voters++;
 	}
-	foreach(p, players) {
-		if(p->team == player.team && (p->index == player.index || p->clientHd == ClientHandle::INVALID)) vote.choices[p->index] = VOTE_YES;
-	}
+	vote.choices[player.index] = VOTE_YES;
+	vote.botVotesAt = TimeAdd(localTime, TimeMsToTime(HYP_BOT_VOTE_DELAY_MS));
 	foreach(p, players) {
 		if(p->team == player.team && p->clientHd != ClientHandle::INVALID) replication->SendRequestVoting(p->clientHd, player.userID, type, (u32)periodMs, voters, false);
 	}
-	foreach(voter, players) {
-		if(voter->team != player.team || vote.choices[voter->index] != VOTE_YES) continue;
-		if(type == VOTE_TYPE_TITAN && voter->index == player.index) continue;
+	if(type == VOTE_TYPE_SURRENDER) {
 		foreach(p, players) {
 			if(p->team == player.team && p->clientHd != ClientHandle::INVALID) replication->SendVote(p->clientHd, type, (u32)VOTE_YES);
 		}
@@ -385,7 +383,15 @@ void World::FinishVote(i32 team, bool passed)
 		if(p->team == team && p->clientHd != ClientHandle::INVALID) replication->SendVotingResult(p->clientHd, requestor, vote.type, passed ? VOTE_STATE_PASSED : VOTE_STATE_FAILED, reason, playerCool, teamCool);
 	}
 	LOG("Vote :: team %d vote %d %s", team, vote.type, passed ? "passed" : "rejected");
-	if(vote.type == VOTE_TYPE_TITAN && vote.requestor >= 0) ConsumeStatus((u32)vote.requestor, TITAN_READY_STATUS);
+	if(vote.type == VOTE_TYPE_TITAN && vote.requestor >= 0) {
+		foreach(st, activeStatuses) {
+			if(st->targetIndex != (u32)vote.requestor || st->statusID != TITAN_READY_STATUS || st->until <= localTime) continue;
+			replication->SendRemoveStatusToAll(st->statusID, st->targetUID, st->casterUID);
+			activeStatuses.erase(st);
+			LOG("Vote :: %ls titan ready status removed before the transform", players[vote.requestor].name.data());
+			break;
+		}
+	}
 	if(!passed) return;
 	if(vote.type == VOTE_TYPE_SURRENDER && winnerTeam < 0) winnerTeam = team == 0 ? 1 : 0;
 	if(vote.type == VOTE_TYPE_TITAN && vote.requestor >= 0) players[vote.requestor].titanTransformAt = localTime;
@@ -396,6 +402,16 @@ void World::UpdateVotes()
 	for(i32 team = 0; team < 2; team++) {
 		TeamVote& vote = teamVotes[team];
 		if(!vote.active) continue;
+		if(vote.botVotesAt != Time::ZERO && localTime >= vote.botVotesAt) {
+			vote.botVotesAt = Time::ZERO;
+			foreach(voter, players) {
+				if(voter->team != team || voter->clientHd != ClientHandle::INVALID || (i32)voter->index == vote.requestor || vote.choices[voter->index] != VOTE_NONE) continue;
+				vote.choices[voter->index] = VOTE_YES;
+				foreach(p, players) {
+					if(p->team == team && p->clientHd != ClientHandle::INVALID) replication->SendVote(p->clientHd, vote.type, (u32)VOTE_YES);
+				}
+			}
+		}
 		i32 voters = 0, yes = 0, no = 0;
 		foreach_const(p, players) {
 			if(p->team != team) continue;
