@@ -286,6 +286,15 @@ static inline const HitRecoverRule* FindHitRecoverRule(i32 status)
 	return nullptr;
 }
 
+struct MeasuredLeap { i32 skill; f32 durationSec; f32 endRise; };
+static const MeasuredLeap MEASURED_LEAPS[] = { { 189000020, 1.5f, 350.0f } };
+
+static inline const MeasuredLeap* FindMeasuredLeap(SkillID skill)
+{
+	for(const MeasuredLeap& l : MEASURED_LEAPS) if(l.skill == (i32)skill) return &l;
+	return nullptr;
+}
+
 struct FogExcludeBox { i32 map; f32 minX, minY, minZ, maxX, maxY, maxZ; };
 static const FogExcludeBox MEASURED_FOG_EXCLUDE_BOXES[] = {
 	{ 160000050, 45692.0f, 5328.0f, -167.0f, 48578.0f, 8336.0f, 3408.0f },

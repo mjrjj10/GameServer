@@ -1141,11 +1141,17 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	rpExec.speed = player.input.speed; // FIXME: should not come from input
 
 	if(distance > 0 && glm::length(gotoDir) < 0.5f && glm::length(vec2(castPos)) > 1.0f) TargetPositionMove(player, skillID, action, castPos, &distance, &gotoDir);
+	const MeasuredLeap* leap = distance != 0 ? FindMeasuredLeap(skillID) : nullptr;
+	if(leap) {
+		moveDuration = leap->durationSec;
+		rpExec.moveDuration = moveDuration;
+	}
 	if(distance != 0) {
 		const vec2 moveDir = glm::length(gotoDir) > 0.5f ? gotoDir : dir;
 		const vec3 endPos = physics.FindSkillMovePos(player.body, distance < 0 ? -moveDir : moveDir, fabsf(distance), moveDuration, SkillMoveLift(skillID));
 		rpExec.moveDir = moveDir;
 		rpExec.endPos = endPos;
+		if(leap) rpExec.endPos.z = rpExec.startPos.z + leap->endRise;
 		rpExec.originDist = fabsf(distance);
 		if(glm::length(vec2(endPos) - vec2(rpExec.startPos)) < fabsf(distance) - 1.0f || fabsf(endPos.z - rpExec.startPos.z) > 1.0f) LOG("Dash :: %ls skill=%d graph end %.0f of %.0f, z %+.0f from (%.0f, %.0f) dir (%.2f, %.2f)", player.name.data(), (i32)skillID, glm::length(vec2(endPos) - vec2(rpExec.startPos)), fabsf(distance), endPos.z - rpExec.startPos.z, rpExec.startPos.x, rpExec.startPos.y, distance < 0 ? -moveDir.x : moveDir.x, distance < 0 ? -moveDir.y : moveDir.y);
 	}
