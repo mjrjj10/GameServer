@@ -2385,13 +2385,16 @@ void World::UpdateMonsterAi(f32 delta)
 					if(IsMeasuredSpecialFirst(npc.docID)) LOG("Monster :: creature=%d (local %d) turns before a dash at %.0f (t %.2f)", (i32)npc.docID, npc.localID, dist, TimeDiffSec(localTime));
 					continue;
 				}
-				const bool basicInRoll = basicReady && !(IsMeasuredSpecialFirst(npc.docID) && !ready.empty() && !npc.monsterLastSpecial);
+				static const f32 MEASURED_SPECIAL_FIRST_BASIC_REPEAT = 6.0f / 36.0f;
+				const bool specialFirstTurn = IsMeasuredSpecialFirst(npc.docID) && !ready.empty() && !npc.monsterLastSpecial;
+				const bool repeatBasic = specialFirstTurn && basicReady && (f32)Randf01() < MEASURED_SPECIAL_FIRST_BASIC_REPEAT;
+				const bool basicInRoll = basicReady && (!specialFirstTurn || repeatBasic);
 				if(basicReady && !basicInRoll) totalShare -= attack->share;
 				if(!basicReady && ready.empty()) {
 					npc.monsterNextAttack = npc.monsterBasicReady;
 					continue;
 				}
-				f32 roll = (f32)(RandUint() % 10000) / 10000.0f * totalShare - (basicInRoll ? attack->share : 0.0f);
+				f32 roll = repeatBasic ? -1.0f : (f32)(RandUint() % 10000) / 10000.0f * totalShare - (basicInRoll ? attack->share : 0.0f);
 				foreach_const(s, ready) {
 					const GameXmlContent::MonsterAttack& special = ai.attacks[*s];
 					const f32 part = anchored && special.anchorShare >= 0 ? special.anchorShare : special.share;
