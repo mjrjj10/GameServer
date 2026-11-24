@@ -761,7 +761,7 @@ void World::UpdateMonsterHits()
 
 static const f32 MEASURED_S11_SPIN_CURVE_DEG[] = { 0, -1, -4, -10, -20, -35, -54, -77, -102, -128, -152, -178, -205, -232, -258, -281, -301, -319, -334, -347, -353, -356 };
 struct MeasuredSpin { i32 remote; f32 spacingDeg; f32 startDeg; f32 originDist; f32 originDeg; const f32* curveDeg; i32 curveCount; f32 curveStepSec; };
-static const MeasuredSpin MEASURED_MONSTER_REMOTE_SPIN[] = { { 1480011061, 120.0f, -23.4f, 355.0f, -117.9f, MEASURED_S11_SPIN_CURVE_DEG, (i32)(sizeof(MEASURED_S11_SPIN_CURVE_DEG) / sizeof(MEASURED_S11_SPIN_CURVE_DEG[0])), 0.5f } };
+static const MeasuredSpin MEASURED_MONSTER_REMOTE_SPIN[] = { { 1480011061, 120.0f, -19.5f, 355.0f, -117.9f, MEASURED_S11_SPIN_CURVE_DEG, (i32)(sizeof(MEASURED_S11_SPIN_CURVE_DEG) / sizeof(MEASURED_S11_SPIN_CURVE_DEG[0])), 0.5f } };
 
 static f32 MeasuredSpinTurnRad(const MeasuredSpin& s, f32 sec)
 {
