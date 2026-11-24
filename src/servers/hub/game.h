@@ -189,6 +189,7 @@ struct HubGame
 	void OnPartyInviteAccept(ClientHandle clientHd, i32 partyID);
 	void OnPartyBreakUp(ClientHandle clientHd);
 	void OnPartyLeave(ClientHandle clientHd);
+	void OnPartyKickAll(ClientHandle clientHd);
 	void OnCancelMatching(ClientHandle clientHd);
 	void OnGuildPacket(ClientHandle clientHd, u16 netID, const u8* data, i32 size);
 	void GuildOnConnect(i32 userID);

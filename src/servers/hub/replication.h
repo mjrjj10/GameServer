@@ -310,6 +310,8 @@ struct HubReplication
 	void SendPartyBreakupAnswer(ClientHandle clientHd, i32 remainMemberCount);
 	void SendPartyBreakup(ClientHandle clientHd);
 	void SendPartyLeaveAnswer(ClientHandle clientHd);
+	void SendPartyKickAllAnswer(ClientHandle clientHd);
+	void SendPartyKicked(ClientHandle clientHd, u32 partyID, u32 reason);
 	void SendPartyCancelInvite(ClientHandle clientHd, i32 partyID);
 	void SendCancelMatchingQueue(ClientHandle clientHd);
 	struct FriendEntry { const wchar* nickname; i32 leaderCreature; u8 state; u16 level; u8 favorite; };

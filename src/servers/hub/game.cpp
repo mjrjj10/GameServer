@@ -1674,6 +1674,29 @@ void HubGame::OnPartyLeave(ClientHandle clientHd)
 	BroadcastFriendState(userID, MEASURED_FRIEND_STATE_ONLINE);
 }
 
+void HubGame::OnPartyKickAll(ClientHandle clientHd)
+{
+	static const u32 HYP_PARTY_KICK_REASON = 0;
+	const i32 userID = plidMap->Get(clientHd);
+	Party* party = FindPlayerParty(userID);
+	i32 kicked = 0;
+	if(party && party->memberList.front().accountUID == playerAccountData[userID]->UID) {
+		eastl::fixed_vector<AccountUID,8,false> humans;
+		foreach_const(m, party->memberList) if(!m->isBot && m->accountUID != playerAccountData[userID]->UID) humans.push_back(m->accountUID);
+		for(const AccountUID member : humans) {
+			auto h = accountClientHandleMap.find(member);
+			if(h == accountClientHandleMap.end()) continue;
+			const i32 memberID = plidMap->Get(h->second);
+			replication.SendPartyKicked(h->second, (u32)party->UID, HYP_PARTY_KICK_REASON);
+			LeaveParty(memberID, true);
+			BroadcastFriendState(memberID, MEASURED_FRIEND_STATE_ONLINE);
+			kicked++;
+		}
+	}
+	replication.SendPartyKickAllAnswer(clientHd);
+	LOG("[client%x] HubGame :: party kick all, %d members kicked", clientHd, kicked);
+}
+
 void HubGame::OnCancelMatching(ClientHandle clientHd)
 {
 	const i32 userID = plidMap->Get(clientHd);

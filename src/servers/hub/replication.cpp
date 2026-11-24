@@ -1813,6 +1813,21 @@ void HubReplication::SendPartyBreakupAnswer(ClientHandle clientHd, i32 remainMem
 	SendPacket(clientHd, packet);
 }
 
+void HubReplication::SendPartyKickAllAnswer(ClientHandle clientHd)
+{
+	PacketWriter<Sv::SA_PartyKickAll> packet;
+	packet.Write<i32>(0);
+	SendPacket(clientHd, packet);
+}
+
+void HubReplication::SendPartyKicked(ClientHandle clientHd, u32 partyID, u32 reason)
+{
+	PacketWriter<Sv::SN_PartyKicked> packet;
+	packet.Write<u32>(partyID);
+	packet.Write<u32>(reason);
+	SendPacket(clientHd, packet);
+}
+
 void HubReplication::SendPartyLeaveAnswer(ClientHandle clientHd)
 {
 	PacketWriter<Sv::SA_PartyLeave> packet;

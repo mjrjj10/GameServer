@@ -63,6 +63,7 @@ void HubPacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& heade
 		HANDLE_CASE(CQ_PartyInviteAccept);
 		HANDLE_CASE(CQ_BreakUpPartyRoom);
 		HANDLE_CASE(CQ_LeavePartyRoom);
+		HANDLE_CASE(CQ_PartyKickAll);
 		HANDLE_CASE(CQ_CancelMatching);
 		HANDLE_CASE(CQ_FriendRequest);
 		HANDLE_CASE(CQ_FriendRequestRespond);
@@ -413,6 +414,14 @@ void HubPacketHandler::HandlePacket_CQ_LeavePartyRoom(ClientHandle clientHd, con
 {
 	NT_LOG("[client%x] Client :: CQ_LeavePartyRoom :: size=%d", clientHd, packetSize);
 	game->OnPartyLeave(clientHd);
+}
+
+void HubPacketHandler::HandlePacket_CQ_PartyKickAll(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	ConstBuffer buff(packetData, packetSize);
+	const u32 partyID = buff.CanRead(4) ? buff.Read<u32>() : 0;
+	NT_LOG("[client%x] Client :: CQ_PartyKickAll :: size=%d partyID=%u", clientHd, packetSize, partyID);
+	game->OnPartyKickAll(clientHd);
 }
 
 void HubPacketHandler::HandlePacket_CQ_CancelMatching(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
