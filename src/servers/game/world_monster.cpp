@@ -2142,6 +2142,7 @@ void World::UpdateMonsterAi(f32 delta)
 			}
 			npc.monsterOpening = true;
 			npc.monsterLastSpecial = false;
+			if(ai.anchorHp > 0) npc.home = vec3(ai.anchor, npc.home.z);
 			LOG("Monster :: creature=%d (local %d) wakes up", (i32)npc.docID, npc.localID);
 			continue;
 		}
