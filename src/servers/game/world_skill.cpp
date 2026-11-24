@@ -1434,7 +1434,9 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	if(teleportToChild) {
 		const ActorNpc* child = FindNpcActor(player.lastChildUID);
 		if(child && localTime < child->despawnAt) {
-			const vec3 to = vec3(vec2(child->pos), MAX(child->pos.z, player.body->GetWorldPos().z));
+			vec3 to = vec3(vec2(child->pos), MAX(child->pos.z, player.body->GetWorldPos().z));
+			f32 ground = 0;
+			if(GroundBelow(vec2(to), to.z, &ground)) to.z = ground;
 			LOG("Teleport :: %ls to its last entity %d at (%.0f, %.0f)", player.name.data(), (i32)child->docID, to.x, to.y);
 			TeleportPlayer(player, to, player.input.rot.upperYaw);
 			replication->SendPlayerSyncTeleportToAll(player.Main().UID, to);
@@ -1544,6 +1546,9 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 		if(moveDist > 999990.0f) moveDist = 0;
 		const f32 lift = flyLift > 0 ? flyLift : SkillMoveLift(prog.skillID);
 		const bool fly = lift > 0 || (longJump && mover.clientHd != ClientHandle::INVALID);
+		const GameXmlContent::SkillInput* moveIn = GetGameXmlContent().FindSkillInput((i32)prog.skillID);
+		mover.dashJumpable = moveIn && moveIn->obstructMove == 1;
+		mover.body->passJumpable = mover.dashJumpable;
 		if(moveDuration > 0.02f && moveDist > 0 && (lift > 0 || !fly)) {
 			const vec3 reach = physics.FindSkillMovePos(mover.body, moveDir, moveDist, moveDuration, lift);
 			const f32 along = glm::dot(vec2(reach) - from, moveDir);
@@ -1857,19 +1862,36 @@ bool World::TeamSees(i32 team, const Player& target)
 	return TeamSeesAt(team, target.body->GetWorldPos(), target.bushUID);
 }
 
+bool World::InFogExclude(const vec3& at) const
+{
+	if(!map) return false;
+	for(const FogExcludeBox& b : MEASURED_FOG_EXCLUDE_BOXES) {
+		if(b.map != (i32)map->index) continue;
+		if(at.x >= b.minX && at.x <= b.maxX && at.y >= b.minY && at.y <= b.maxY && at.z >= b.minZ && at.z <= b.maxZ) return true;
+	}
+	return false;
+}
+
 bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack, f32 sightMargin, const void* ignoreActor)
 {
 	const auto& content = GetGameXmlContent();
 	const vec3 eye = at + vec3(0, 0, FOG_EYE_HEIGHT);
+	const bool targetExcluded = InFogExclude(at);
 	f32 hit = 0;
 	foreach_const(p, players) {
 		if(p->team != (u8)team || p->dead || !p->body) continue;
 		if(bushUID != ActorUID::INVALID && p->bushUID != bushUID) continue;
 		const vec3 from = p->body->GetWorldPos();
 		const f32 sight = content.CreatureSight(100000000 + (i32)p->Main().classType);
-		if(glm::length(vec2(from) - vec2(at)) > (sight > 0 ? sight : FOG_DEFAULT_SIGHT) + sightMargin) continue;
+		const f32 dist = glm::length(vec2(from) - vec2(at));
+		if(dist > (sight > 0 ? sight : FOG_DEFAULT_SIGHT) + sightMargin) continue;
+		if(bushUID == ActorUID::INVALID && targetExcluded && InFogExclude(from)) return true;
 		const PxRigidActor* blocker = nullptr;
-		if(!physics.RaycastSight(from + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit, &blocker) || hit >= glm::length(vec2(from) - vec2(at)) - slack || (ignoreActor && (const void*)blocker == ignoreActor)) return true;
+		const bool forwardClear = !physics.RaycastSight(from + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit, &blocker) || hit >= dist - slack || (ignoreActor && (const void*)blocker == ignoreActor);
+		if(!forwardClear) continue;
+		if(ignoreActor) return true;
+		const PxRigidActor* backBlocker = nullptr;
+		if(!physics.RaycastSight(eye, from + vec3(0, 0, FOG_EYE_HEIGHT), &hit, &backBlocker) || hit >= dist - slack) return true;
 	}
 	if(bushUID != ActorUID::INVALID) return false;
 	foreach_const(lit, litCells) {
@@ -1974,7 +1996,10 @@ void World::UpdateSummonBushes()
 
 void World::UpdateFog()
 {
-	if(!replication->titanMode) return;
+	if(!replication->titanMode) {
+		foreach(p, players) p->fogSeenBy = p->body && !p->dead && p->hiddenUID != ActorUID::INVALID ? (u8)(p->team == 0 ? 1 : 2) : (u8)3;
+		return;
+	}
 	UpdateLitCells();
 	if(localTime < nextFogUpdate) return;
 	nextFogUpdate = TimeAdd(localTime, TimeMsToTime(FOG_UPDATE_MS));
@@ -2061,7 +2086,8 @@ void World::UpdateNpcFog()
 		if(!summon && (!npc->monsterAi || IsStructure(*npc))) continue;
 		const i32 npcTeam = summon ? (i32)players[npc->ownerIndex].team : (npc->faction == Faction::RED ? 0 : npc->faction == Faction::BLUE ? 1 : -1);
 		bool sees[2];
-		for(i32 team = 0; team < 2; team++) sees[team] = team == npcTeam || TeamSeesAt(team, npc->pos, ActorUID::INVALID);
+		const f32 npcSlack = !summon && npc->monsterAi ? npc->monsterAi->radius : 0.0f;
+		for(i32 team = 0; team < 2; team++) sees[team] = team == npcTeam || TeamSeesAt(team, npc->pos, ActorUID::INVALID, npcSlack);
 		foreach(viewer, players) {
 			if(viewer->clientHd == ClientHandle::INVALID) continue;
 			const u32 bit = 1u << viewer->index;

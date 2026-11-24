@@ -705,7 +705,9 @@ void World::UpdateSummons()
 			const f32 life = relay ? RELAY_LIFE_SEC : info && info->lifeTime > 0 ? info->lifeTime : 5.0f;
 			if(!reuse) {
 				actor.pos = ps->pos;
-				actor.home = ps->pos;
+				f32 ground = 0;
+				if(map && map->ingameLevels && GroundBelow(vec2(actor.pos), actor.pos.z, &ground)) actor.pos.z = ground;
+				actor.home = actor.pos;
 				actor.rot = ps->rot;
 				actor.faction = owner.team == 0 ? Faction::RED : Faction::BLUE;
 				actor.ownerUID = owner.Main().UID;

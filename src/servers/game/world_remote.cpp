@@ -1069,7 +1069,7 @@ void World::UpdateRemotes(f32 delta)
 			}
 		}
 
-		if(!destroyed && remote.homingLength > 0 && inst.speed > 0 && inst.clientRemoteID != 0 && inst.seedOwnerHd == ClientHandle::INVALID) {
+		if(!destroyed && (remote.homingLength > 0 || remote.behaviorType == Remote::BehaviorType::CASTER_TARGET) && inst.speed > 0 && inst.clientRemoteID != 0 && inst.seedOwnerHd == ClientHandle::INVALID) {
 			if(!inst.syncedInit) { inst.syncedInit = true; inst.syncedTarget = inst.target; }
 			inst.syncIn -= delta;
 			const bool retarget = inst.target != inst.syncedTarget;

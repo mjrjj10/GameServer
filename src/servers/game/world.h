@@ -381,6 +381,7 @@ struct World
 		f32 dragElapsed = 0;
 		Time fearNextTurn = Time::ZERO;
 		Time dashUntil = Time::ZERO;
+		bool dashJumpable = false;
 		Time weaponLungeUntil = Time::ZERO;
 		vec2 dashDir = vec2(1, 0);
 		f32 dashSpeed = 0;
@@ -621,6 +622,7 @@ struct World
 		Time monsterHoldUntil = Time::ZERO;
 		Time defeatLieAt = Time::ZERO;
 		vec2 groundCheckedAt = vec2(0);
+		vec2 groundSnappedAt = vec2(0);
 		i32 drainPerTick = 0;
 		f32 drainInterval = 0;
 		Time nextDrainAt = Time::ZERO;
@@ -1702,7 +1704,9 @@ public:
 	f32 GroupingDamageMul(const Player& attacker, const Player& target) const;
 	void GroupingSummonKill(Player& killer, const ActorNpc& summon);
 	bool TeamSees(i32 team, const Player& target);
+	bool GroundBelow(const vec2& at, f32 refZ, f32* ground);
 	bool TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack = 0, f32 sightMargin = 0, const void* ignoreActor = nullptr);
+	bool InFogExclude(const vec3& at) const;
 	void UpdateDynamicFog();
 	bool PlayerHasActiveStatus(const Player& player, i32 statusID) const;
 	void EndPlayerStatus(Player& player, i32 statusID);

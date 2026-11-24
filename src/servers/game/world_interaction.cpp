@@ -763,7 +763,7 @@ void World::AttachDynamicCollider(ActorDynamic& dynamic, f32 scale)
 	if(dynamic.collider || !map || meshKey == content.dynamicMeshKey.end() || (!map->ingameLevels && !content.dynamicDestroyHits.count(doc))) return;
 	eastl::fixed_string<char,100,false> meshName;
 	meshName.sprintf("%s/%s", meshKey->second.c_str(), meshKey->second.c_str());
-	if(physics.HasStaticMesh(meshName.c_str())) dynamic.collider = physics.CreateStaticCollider(meshName.c_str(), dynamic.pos, dynamic.rot, scale, content.dynamicBlockSight.count(doc) > 0);
+	if(physics.HasStaticMesh(meshName.c_str())) dynamic.collider = physics.CreateStaticCollider(meshName.c_str(), dynamic.pos, dynamic.rot, scale, content.dynamicBlockSight.count(doc) > 0, content.dynamicJumpable.count(doc) > 0);
 	else if(content.dynamicDestroyHits.count(doc)) LOG("LevelEvent :: dynamic %d (doc %d) has no collision mesh %s", dynamic.localID, doc, meshName.c_str());
 }
 

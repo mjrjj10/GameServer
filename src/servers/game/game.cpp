@@ -679,7 +679,11 @@ bool Game::LoadMap()
 	world.killZ = map->groundPlane ? -1000000.0f : map->killZ;
 	foreach_const(c, map->colliders) {
 		if(!c->walk) continue;
-		const bool mobGuardrail = EA::StdC::Stristr(c->mesh.data(), "Guardrailmob") != nullptr;
+		if(!world.physics.HasStaticMesh(c->mesh.data())) {
+			LOG("Map :: collider mesh %s not found", c->mesh.data());
+			continue;
+		}
+		const bool mobGuardrail = EA::StdC::Stristr(c->mesh.data(), "Guardrailmob") != nullptr || EA::StdC::Stristr(c->mesh.data(), "Jumpguard") != nullptr;
 		const bool blocksSight = !mobGuardrail || EA::StdC::Stristr(c->mesh.data(), "UnSightable") != nullptr;
 		world.physics.NameActor(world.physics.CreateStaticCollider(c->mesh.data(), c->pos, c->rot, c->scale, blocksSight), c->mesh.data());
 	}

@@ -286,6 +286,11 @@ static inline const HitRecoverRule* FindHitRecoverRule(i32 status)
 	return nullptr;
 }
 
+struct FogExcludeBox { i32 map; f32 minX, minY, minZ, maxX, maxY, maxZ; };
+static const FogExcludeBox MEASURED_FOG_EXCLUDE_BOXES[] = {
+	{ 160000050, 45692.0f, 5328.0f, -167.0f, 48578.0f, 8336.0f, 3408.0f },
+};
+
 struct TurretCannonPair { CreatureIndex tower; CreatureIndex cannon; ActionStateID allowed; };
 static const TurretCannonPair MEASURED_TURRET_CANNONS[] = { { CreatureIndex(105000308), CreatureIndex(105000309), ActionStateID::SKILL_4_BEHAVIORSTATE } };
 static const f32 MEASURED_TURRET_CANNON_OFFSET = 5.0f;

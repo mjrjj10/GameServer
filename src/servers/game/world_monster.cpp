@@ -1702,7 +1702,11 @@ void World::SnapNpcToGround(ActorNpc& npc)
 	f32 dist = 0;
 	if(!physics.RaycastStatic(from, from - vec3(0, 0, NPC_GROUND_PROBE_UP + NPC_GROUND_PROBE_DOWN), &dist)) return;
 	const f32 ground = from.z - dist;
-	if(fabsf(ground - npc.pos.z) <= moved * NPC_GROUND_MAX_SLOPE) npc.pos.z = ground;
+	const f32 sinceSnap = glm::length(vec2(npc.pos) - npc.groundSnappedAt);
+	if(fabsf(ground - npc.pos.z) <= MAX(moved, sinceSnap) * NPC_GROUND_MAX_SLOPE) {
+		npc.pos.z = ground;
+		npc.groundSnappedAt = vec2(npc.pos);
+	}
 }
 
 void World::UpdateMonsterAi(f32 delta)

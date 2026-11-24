@@ -65,11 +65,14 @@ struct CCT_CollisionFilterCallback: PxControllerFilterCallback
 static CCT_CollisionFilterCallback g_cctCollisionFilterCallback; // weird that we have to instantiate this but ok
 
 static const f32 WALL_EXIT_MARGIN = 1.0f;
+static const u32 NO_SIGHT_WORD = 1;
+static const u32 JUMPABLE_WORD = 1;
 
 struct WallFilter: PxQueryFilterCallback
 {
 	u32 passTeamWord = 0;
 	u32 ownTeamWord = 0;
+	bool passJumpable = false;
 	PxCapsuleGeometry capsule;
 	PxTransform pose;
 
@@ -84,7 +87,9 @@ struct WallFilter: PxQueryFilterCallback
 
 	PxQueryHitType::Enum preFilter(const PxFilterData&, const PxShape* shape, const PxRigidActor* actor, PxHitFlags&) override
 	{
-		const u32 team = shape->getQueryFilterData().word0;
+		const PxFilterData data = shape->getQueryFilterData();
+		if(passJumpable && data.word3 == JUMPABLE_WORD) return PxQueryHitType::eNONE;
+		const u32 team = data.word0;
 		if(team == 0) return PxQueryHitType::eBLOCK;
 		if(team == passTeamWord || team == ownTeamWord) return PxQueryHitType::eNONE;
 		return PxGeometryQuery::overlap(capsule, pose, shape->getGeometry().any(), PxShapeExt::getGlobalPose(*shape, *actor)) ? PxQueryHitType::eNONE : PxQueryHitType::eBLOCK;
@@ -300,9 +305,7 @@ void PhysicsScene::Destroy()
     }
 }
 
-static const u32 NO_SIGHT_WORD = 1;
-
-PxRigidStatic* PhysicsScene::CreateStaticCollider(const char* meshName, const vec3& pos, const vec3& rot, f32 scale, bool blocksSight)
+PxRigidStatic* PhysicsScene::CreateStaticCollider(const char* meshName, const vec3& pos, const vec3& rot, f32 scale, bool blocksSight, bool jumpable)
 {
 	auto& ctx = PhysContext();
 
@@ -310,7 +313,7 @@ PxRigidStatic* PhysicsScene::CreateStaticCollider(const char* meshName, const ve
 
 	PxShape* shape = ctx.physics->createShape(geometry, *ctx.matMapSurface);
 	ASSERT(shape); // createShape failed
-	if(!blocksSight) shape->setQueryFilterData(PxFilterData(0, 0, NO_SIGHT_WORD, 0));
+	if(!blocksSight || jumpable) shape->setQueryFilterData(PxFilterData(0, 0, blocksSight ? 0 : NO_SIGHT_WORD, jumpable ? JUMPABLE_WORD : 0));
 
 	PxRigidStatic* ground = ctx.physics->createRigidStatic(PxTransform{PxIdentity});
 	ground->attachShape(*shape);
@@ -390,6 +393,7 @@ vec3 PhysicsScene::Move(PhysicsDynamicBody* body, const vec3& disp, f32 time)
 	PxControllerFilters filter;
 	filter.mCCTFilterCallback = &ignoreCharacters;
 	UseWallFilter(filter, walls, *body->collider, body->passWallTeam, body->team);
+	walls.passJumpable = body->passJumpable;
 	//filter.mFilterFlags = PxQueryFlag::eSTATIC; // only collide with static colliders
 	PxControllerCollisionFlags collisionFlags = body->collider->move(PxVec3(disp.x, disp.y, disp.z), 0, time, filter, nullptr /* obstacles? */);
 	return body->GetWorldPos();

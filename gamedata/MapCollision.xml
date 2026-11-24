@@ -21,6 +21,7 @@
     <_Collider _Mesh="FogCheck_PVP_Titan_Ruins_Water_Collision" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
     <_Collider _Mesh="PVP_Titan_Ruins_Guardrailmob" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
     <_Collider _Mesh="PVP_Titan_Ruins_Guardrailmob_UnSightable" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
+    <_Collider _Mesh="PVP_Titan_Ruins_sidewall_Jumpguard" x="15768.33" y="14783.71" z="29.1" angx="0" angy="0" angz="0" scale="1" />
     <_Collider _Mesh="PVP_GOT_ENV_Boss_01_Guardrailmob" x="47200.47" y="6759.74" z="0" angx="0" angy="0" angz="0" scale="1" />
     <_Collider _Mesh="PVP_GOT_ENV_Boss_02_Collision01" x="47353.73" y="6757.69" z="0" angx="0" angy="0" angz="0" scale="1" />
     <_Collider _Mesh="PVP_GOT_Stone_CaveStA01_01_Collision" x="12432.43" y="13783.57" z="-87.75" angx="0.2069889" angy="-0.1881465" angz="2.488136" scale="1.41" />

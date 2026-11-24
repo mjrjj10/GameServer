@@ -186,6 +186,7 @@ void World::Update(Time localTime_)
 
 		if(p.body) p.body->team = p.team;
 		if(p.body) p.body->passWallTeam = !p.dead && p.clientHd == ClientHandle::INVALID && localTime < p.pushUntil && p.pushPassWallTeam >= 0 ? p.pushPassWallTeam : -1;
+		if(p.body) p.body->passJumpable = p.dashJumpable && localTime < p.dashUntil;
 		if(!p.dead && p.clientHd == ClientHandle::INVALID && localTime < p.ccUntil) {
 			const ActiveStatus* fear = nullptr;
 			foreach_const(st, activeStatuses) {
@@ -429,6 +430,7 @@ void World::Update(Time localTime_)
 		else if(it->hasGroundPos && it->body->GetWorldPos().z < killZ) {
 			LOG("Fall :: %ls below KillZ %.0f, back to (%.0f, %.0f, %.0f)", it->name.data(), killZ, it->lastGroundPos.x, it->lastGroundPos.y, it->lastGroundPos.z);
 			TeleportPlayer(*it, it->lastGroundPos, it->input.rot.bodyYaw);
+			replication->SendPlayerSyncTeleportToAll(it->Main().UID, it->lastGroundPos);
 		}
 	}
 
@@ -1401,6 +1403,17 @@ void World::QueueChildSkill(Player& player, ActionStateID actionState, const vec
 		player.pendingChildPos = castPos;
 		player.pendingChildTarget = targets.size() > 0 ? targets[0] : ActorUID::INVALID;
 	}
+}
+
+bool World::GroundBelow(const vec2& at, f32 refZ, f32* ground)
+{
+	static const f32 TELEPORT_GROUND_PROBE_UP = 400.0f;
+	static const f32 TELEPORT_GROUND_PROBE_DOWN = 1500.0f;
+	const vec3 from = vec3(at, refZ + TELEPORT_GROUND_PROBE_UP);
+	f32 dist = 0;
+	if(!physics.RaycastStatic(from, from - vec3(0, 0, TELEPORT_GROUND_PROBE_UP + TELEPORT_GROUND_PROBE_DOWN), &dist)) return false;
+	*ground = from.z - dist;
+	return true;
 }
 
 void World::TeleportPlayer(Player& p, const vec3& pos, f32 yaw)
