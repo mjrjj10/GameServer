@@ -1862,6 +1862,12 @@ bool World::TeamSees(i32 team, const Player& target)
 	return TeamSeesAt(team, target.body->GetWorldPos(), target.bushUID);
 }
 
+bool World::NpcHasPendingFire(ActorUID npc) const
+{
+	foreach_const(f, monsterFires) if(f->npc == npc) return true;
+	return false;
+}
+
 bool World::InFogExclude(const vec3& at) const
 {
 	if(!map) return false;
@@ -2092,7 +2098,7 @@ void World::UpdateNpcFog()
 			if(viewer->clientHd == ClientHandle::INVALID) continue;
 			const u32 bit = 1u << viewer->index;
 			const bool hidden = (npc->fogHiddenFrom & bit) != 0;
-			if(!sees[viewer->team] && !hidden && !viewer->devVision) {
+			if(!sees[viewer->team] && !hidden && !viewer->devVision && !NpcHasPendingFire(npc->UID)) {
 				if(viewer->body) {
 					const vec3 from = viewer->body->GetWorldPos() + vec3(0, 0, FOG_EYE_HEIGHT);
 					const vec3 to = npc->pos + vec3(0, 0, FOG_EYE_HEIGHT);

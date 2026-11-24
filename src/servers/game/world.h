@@ -1707,6 +1707,7 @@ public:
 	bool GroundBelow(const vec2& at, f32 refZ, f32* ground);
 	bool TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack = 0, f32 sightMargin = 0, const void* ignoreActor = nullptr);
 	bool InFogExclude(const vec3& at) const;
+	bool NpcHasPendingFire(ActorUID npc) const;
 	void UpdateDynamicFog();
 	bool PlayerHasActiveStatus(const Player& player, i32 statusID) const;
 	void EndPlayerStatus(Player& player, i32 statusID);
