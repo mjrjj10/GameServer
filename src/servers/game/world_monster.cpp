@@ -763,6 +763,8 @@ static const f32 MEASURED_S11_SPIN_CURVE_DEG[] = { 0, -1, -4, -10, -20, -35, -54
 struct MeasuredSpin { i32 remote; f32 spacingDeg; f32 startDeg; f32 originDist; f32 originDeg; const f32* curveDeg; i32 curveCount; f32 curveStepSec; };
 static const MeasuredSpin MEASURED_MONSTER_REMOTE_SPIN[] = { { 1480011061, 120.0f, -19.5f, 355.0f, -117.9f, MEASURED_S11_SPIN_CURVE_DEG, (i32)(sizeof(MEASURED_S11_SPIN_CURVE_DEG) / sizeof(MEASURED_S11_SPIN_CURVE_DEG[0])), 0.5f } };
 
+static const f32 MEASURED_SPIN_BEAM_BODY_RADIUS = 0.0f;
+
 static f32 MeasuredSpinTurnRad(const MeasuredSpin& s, f32 sec)
 {
 	const f32 at = MAX(sec, 0.0f) / s.curveStepSec;
@@ -1012,7 +1014,7 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 			if(mr.spared != ActorUID::INVALID && p->Main().UID == mr.spared) continue;
 			const bool enemy = FactionsOppose(owner.faction, (Faction)p->team, hostileMonsters) || MonsterNeutral(owner, hostileMonsters);
 			const bool ally = !enemy && owner.faction == (Faction)p->team;
-			if(!((enemy && hitsEnemies) || (ally && hitsAllies)) || !inside(vec2(p->body->GetWorldPos()), HitRadius(*p)) || !ready(p->Main().UID)) continue;
+			if(!((enemy && hitsEnemies) || (ally && hitsAllies)) || !inside(vec2(p->body->GetWorldPos()), mr.spinIndex >= 0 ? MEASURED_SPIN_BEAM_BODY_RADIUS : HitRadius(*p)) || !ready(p->Main().UID)) continue;
 			if(enemy) {
 				const bool evaded = HasStatusType(*p, StatusType::EVADE);
 				if(damage > 0) { npcHitCenter = vec3(origin, mr.pos.z); npcHitCenterSet = true; DamagePlayerFromNpc(owner, *p, damage, (i32)remote.ID, 0, remoteID); npcHitCenterSet = false; }
