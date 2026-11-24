@@ -553,6 +553,7 @@ struct Remote
 	f32 distPenaltyRate = 0;
 	f32 penaltyApplyDistance = 0;
 	f32 boundOffsetY = 0;
+	f32 boundOffsetZ = 0;
 	f32 angle = 0;
 	u8 evadeBound = 0;
 	f32 evadeLengthX = 0;

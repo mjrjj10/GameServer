@@ -3204,6 +3204,7 @@ bool GameXmlContent::LoadRemoteData()
 
 				remote.boundSize = { (u16)_LengthX, (u16)_LengthY, (u16)_LengthZ };
 				pComp->QueryFloatAttribute("_OffsetY", &remote.boundOffsetY);
+				pComp->QueryFloatAttribute("_OffsetZ", &remote.boundOffsetZ);
 				pComp->QueryFloatAttribute("_Angle", &remote.angle);
 				const char* _AddContactGroup = nullptr;
 				pComp->QueryStringAttribute("_AddContactGroup", &_AddContactGroup);

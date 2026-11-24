@@ -760,8 +760,8 @@ void World::UpdateMonsterHits()
 }
 
 static const f32 MEASURED_S11_SPIN_CURVE_DEG[] = { 0, -1, -4, -10, -20, -35, -54, -77, -102, -128, -152, -178, -205, -232, -258, -281, -301, -319, -334, -347, -353, -356 };
-struct MeasuredSpin { i32 remote; f32 spacingDeg; f32 startDeg; f32 originDist; f32 originDeg; const f32* curveDeg; i32 curveCount; f32 curveStepSec; };
-static const MeasuredSpin MEASURED_MONSTER_REMOTE_SPIN[] = { { 1480011061, 120.0f, 70.5f, 355.0f, -27.9f, MEASURED_S11_SPIN_CURVE_DEG, (i32)(sizeof(MEASURED_S11_SPIN_CURVE_DEG) / sizeof(MEASURED_S11_SPIN_CURVE_DEG[0])), 0.5f } };
+struct MeasuredSpin { i32 remote; f32 spacingDeg; f32 startDeg; f32 originDist; f32 originDeg; f32 nodeUp; const f32* curveDeg; i32 curveCount; f32 curveStepSec; };
+static const MeasuredSpin MEASURED_MONSTER_REMOTE_SPIN[] = { { 1480011061, 120.0f, 70.5f, 355.0f, -27.9f, 210.0f, MEASURED_S11_SPIN_CURVE_DEG, (i32)(sizeof(MEASURED_S11_SPIN_CURVE_DEG) / sizeof(MEASURED_S11_SPIN_CURVE_DEG[0])), 0.5f } };
 
 static const f32 MEASURED_SPIN_BEAM_BODY_RADIUS = 0.0f;
 
@@ -1015,6 +1015,13 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 			const bool enemy = FactionsOppose(owner.faction, (Faction)p->team, hostileMonsters) || MonsterNeutral(owner, hostileMonsters);
 			const bool ally = !enemy && owner.faction == (Faction)p->team;
 			if(!((enemy && hitsEnemies) || (ally && hitsAllies)) || !inside(vec2(p->body->GetWorldPos()), mr.spinIndex >= 0 ? MEASURED_SPIN_BEAM_BODY_RADIUS : HitRadius(*p)) || !ready(p->Main().UID)) continue;
+			if(mr.spinIndex >= 0 && remote.boundSize[2] > 0) {
+				const f32 top = owner.pos.z + MEASURED_MONSTER_REMOTE_SPIN[mr.spinIndex].nodeUp + remote.boundOffsetZ + (f32)remote.boundSize[2] * 0.5f;
+				if(p->body->GetWorldPos().z > top) {
+					LOG("Monster :: %ls jumps over creature remote %d (feet %.0f, top %.0f)", p->name.data(), (i32)remote.ID, p->body->GetWorldPos().z, top);
+					continue;
+				}
+			}
 			if(enemy) {
 				const bool evaded = HasStatusType(*p, StatusType::EVADE);
 				if(damage > 0) { npcHitCenter = vec3(origin, mr.pos.z); npcHitCenterSet = true; DamagePlayerFromNpc(owner, *p, damage, (i32)remote.ID, 0, remoteID); npcHitCenterSet = false; }
