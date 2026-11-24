@@ -286,6 +286,14 @@ static inline const HitRecoverRule* FindHitRecoverRule(i32 status)
 	return nullptr;
 }
 
+static const i32 MEASURED_RAGE_ON_STATUS[] = { 1230330003, 1230330040, 1230330042, 1230330046 };
+
+static inline bool IsMeasuredRageOnStatus(i32 status)
+{
+	for(i32 s : MEASURED_RAGE_ON_STATUS) if(s == status) return true;
+	return false;
+}
+
 static const i32 MEASURED_BOT_SKILL_FIRST_UPGRADES = 6;
 
 static const SkillID TESTER_BURST_BACK_AFTER_THROUGH[] = { SkillID(180430020) };

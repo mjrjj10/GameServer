@@ -740,6 +740,7 @@ static f32 StatusShieldLayer(const StatusInfo& info, f32 skillPower, f32 power)
 void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power, f32 durationOverride)
 {
 	if(target.dead || target.untargetable) return;
+	if(IsMeasuredRageOnStatus(statusID) && !caster.dead) GainRageOnHit(caster);
 	const ActorNpc* npcSource = &caster == &target && statusCasterOverride != ActorUID::INVALID ? FindNpcActor(statusCasterOverride) : nullptr;
 	const bool hostileSource = &caster != &target ? caster.team != target.team : npcSource && (npcSource->ownerUID != ActorUID::INVALID ? npcSource->ownerIndex < players.size() && players[npcSource->ownerIndex].team != target.team : npcSource->faction != (Faction)target.team);
 	if(caster.team != target.team) target.statusesTaken++;
