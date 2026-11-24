@@ -686,6 +686,7 @@ void World::AddNpcGroggy(ActorNpc& npc, SkillID skillID, RemoteIdx doc)
 	if(const auto* stats = content.FindMonsterStats((i32)npc.docID)) for(const auto& st : *stats) if(st.type == (u8)StatType::STAT_TYPE_GROGGY) max = st.value;
 	if(add <= 0 || max <= 0) return;
 	npc.monsterGroggy = MIN(npc.monsterGroggy + add, max);
+	LOG("Monster :: creature=%d (local %d) groggy +%.0f -> %.0f/%.0f", (i32)npc.docID, npc.localID, add, npc.monsterGroggy, max);
 	replication->SendStatToAll(npc.UID, (i32)StatType::STAT_TYPE_GROGGY, npc.monsterGroggy, max);
 	if(npc.monsterGroggy < max) return;
 	npc.monsterGroggy = 0;
@@ -1997,6 +1998,12 @@ void World::UpdateMonsterAi(f32 delta)
 				}
 				if(!titanMode) replication->SendHpToAll(npc.UID, npc.hp, npc.hpMax);
 				npc.monsterSkillReady.fill(Time::ZERO);
+				if(npc.monsterGroggy > 0) {
+					npc.monsterGroggy = 0;
+					f32 groggyMax = 0;
+					if(const auto* stats = GetGameXmlContent().FindMonsterStats((i32)npc.docID)) for(const auto& st : *stats) if(st.type == (u8)StatType::STAT_TYPE_GROGGY) groggyMax = st.value;
+					replication->SendStatToAll(npc.UID, (i32)StatType::STAT_TYPE_GROGGY, 0.0f, groggyMax);
+				}
 				LOG("Monster :: neutral creature=%d (local %d) back home%s", (i32)npc.docID, npc.localID, titanMode ? "" : ", healed");
 				replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, npc.rot.z, 0.0f);
 			}
