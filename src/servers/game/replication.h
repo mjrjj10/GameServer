@@ -443,7 +443,7 @@ struct Replication
 	void SendUltReady(ClientHandle clientHd, ActorUID actorUID, bool ready);
 	void SendTeamPointsToAll(u8 team, i32 teamPoints);
 	struct EnterGraph { vec3 start = vec3(0); vec3 end = vec3(0); f32 dist = 0; f32 originDist = 0; f32 totalSec = 0; f32 curSec = 0; };
-	void SendEnterNpc(ClientHandle clientHd, ActorUID actorUID, CreatureIndex docID, const vec3& pos, f32 yaw, f32 speed, ActionStateID action, i32 hp, i32 hpMax, f32 growthLevel, const EnterGraph* graph = nullptr);
+	void SendEnterNpc(ClientHandle clientHd, ActorUID actorUID, CreatureIndex docID, const vec3& pos, f32 yaw, f32 speed, ActionStateID action, i32 hp, i32 hpMax, f32 growthLevel, const EnterGraph* graph = nullptr, f32 groggy = 0);
 	void SendEnterDynamic(ClientHandle clientHd, ActorUID actorUID, const vec3& pos, f32 yaw, ActionStateID action, bool jumpWall, f32 curHp, f32 maxHp);
 	void SendDoConnectChannel(ClientHandle clientHd, const wchar* nickname, const i32 hubIP[4], u16 hubPort);
 	struct EndPlayer
