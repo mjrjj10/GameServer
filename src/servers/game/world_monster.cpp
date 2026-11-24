@@ -1299,6 +1299,21 @@ void World::MonsterStopIfHeld(ActorNpc& npc)
 	replication->SendMonsterStopWithSpeedToAll(npc.UID, npc.pos, npc.monsterStopSpeed);
 }
 
+vec2 World::MonsterWalkGuardrailStop(const ActorNpc& npc, const vec2& goal)
+{
+	static const f32 GUARDRAIL_PROBE_HEIGHT = 100.0f;
+	const vec2 to = goal - vec2(npc.pos);
+	const f32 len = glm::length(to);
+	if(len < 1.0f) return goal;
+	const vec2 dir = to / len;
+	const f32 radius = npc.monsterAi ? npc.monsterAi->radius : 0.0f;
+	const vec3 from = npc.pos + vec3(0, 0, GUARDRAIL_PROBE_HEIGHT);
+	f32 hit = 0;
+	const PxRigidActor* blocker = nullptr;
+	if(!physics.RaycastStatic(from, from + vec3(dir * (len + radius), 0), &hit, -1, &blocker) || !physics.IsMobGuardrail(blocker)) return goal;
+	return vec2(npc.pos) + dir * MAX(hit - radius, 0.0f);
+}
+
 bool World::TurretCannonBusy(const ActorNpc& tower, ActionStateID state) const
 {
 	for(const TurretCannonPair& pair : MEASURED_TURRET_CANNONS) {
@@ -2231,6 +2246,13 @@ void World::UpdateMonsterAi(f32 delta)
 						freshGoal = sideLen > MEASURED_TITAN_CHASE_GOAL_OFFSET ? lane + side / sideLen * MEASURED_TITAN_CHASE_GOAL_OFFSET : vec2(*targetPos);
 					}
 					freshGoal = DetourDeadStructures(npc, freshGoal);
+					const MeasuredRoom* room = FindMeasuredRoom(npc.docID);
+					if(room) {
+						const vec2 fromAnchor = freshGoal - ai.anchor;
+						const f32 out = glm::length(fromAnchor);
+						if(out > room->radius) freshGoal = ai.anchor + fromAnchor / out * room->radius;
+						freshGoal = MonsterWalkGuardrailStop(npc, freshGoal);
+					}
 					const vec2 toFresh = freshGoal - vec2(npc.pos);
 					const f32 freshYaw = glm::length(toFresh) > 1.0f ? atan2f(toFresh.y, toFresh.x) : yaw;
 					const bool turned = npc.monsterChasing && YawGap(freshYaw, npc.monsterSyncYaw) > HYP_MONSTER_TURN_RESYNC_RAD && TimeDurationMs(npc.monsterLastTurn, localTime) >= HYP_MONSTER_TURN_RESYNC_MS;

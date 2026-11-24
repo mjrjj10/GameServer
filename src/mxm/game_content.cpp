@@ -414,6 +414,7 @@ void GameXmlContent::LoadAllSkills()
 				in.lockOn = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_MULTI_LOCKON") == 0;
 				in.minHpFriend = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_FRIENDLY_PC_MIN_HP") == 0;
 				in.minimapFriendPc = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_PICKED_MINIMAP") == 0 && pTarget->BoolAttribute("_Friendly") && pTarget->BoolAttribute("_PC");
+				in.minimapFriendTower = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_PICKED_MINIMAP") == 0 && pTarget->BoolAttribute("_Friendly") && pTarget->BoolAttribute("_Tower");
 				const char* casterType = pTarget->Attribute("_CasterType");
 				in.petCaster = casterType && EA::StdC::Strcmp(casterType, "SKILL_CASTER_TYPE_PET") == 0;
 				in.takesTarget = in.pickedEntity || in.lockOn || in.teleportEntity || (selectType && (EA::StdC::Strcmp(selectType, "SKILL_TARGET_USE_HIT_EVENT_TARGET") == 0 || EA::StdC::Strcmp(selectType, "SKILL_TARGET_PICKED_MINIMAP") == 0));

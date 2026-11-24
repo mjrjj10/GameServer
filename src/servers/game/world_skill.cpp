@@ -1856,10 +1856,12 @@ void World::UpdateLitCells()
 	}
 }
 
+static const f32 HYP_FOG_SIGHT_MARGIN = 150.0f;
+
 bool World::TeamSees(i32 team, const Player& target)
 {
 	if(target.fogRevealUntil[team] != Time::ZERO && localTime < target.fogRevealUntil[team]) return true;
-	return TeamSeesAt(team, target.body->GetWorldPos(), target.bushUID);
+	return TeamSeesAt(team, target.body->GetWorldPos(), target.bushUID, 0, HYP_FOG_SIGHT_MARGIN);
 }
 
 bool World::NpcHasPendingFire(ActorUID npc) const
@@ -2093,7 +2095,7 @@ void World::UpdateNpcFog()
 		const i32 npcTeam = summon ? (i32)players[npc->ownerIndex].team : (npc->faction == Faction::RED ? 0 : npc->faction == Faction::BLUE ? 1 : -1);
 		bool sees[2];
 		const f32 npcSlack = !summon && npc->monsterAi ? npc->monsterAi->radius : 0.0f;
-		for(i32 team = 0; team < 2; team++) sees[team] = team == npcTeam || TeamSeesAt(team, npc->pos, ActorUID::INVALID, npcSlack);
+		for(i32 team = 0; team < 2; team++) sees[team] = team == npcTeam || TeamSeesAt(team, npc->pos, ActorUID::INVALID, npcSlack, HYP_FOG_SIGHT_MARGIN);
 		foreach(viewer, players) {
 			if(viewer->clientHd == ClientHandle::INVALID) continue;
 			const u32 bit = 1u << viewer->index;

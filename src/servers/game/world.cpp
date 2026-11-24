@@ -924,6 +924,28 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 				LOG("Skill :: %ls skill=%d picks the ally %ls clicked near (%.0f, %.0f)", player.name.data(), (i32)skillID, picked->name.data(), castPos.x, castPos.y);
 			}
 		}
+		if(selIn->minimapFriendTower) {
+			const Faction own = player.team == 0 ? Faction::RED : Faction::BLUE;
+			const ActorNpc* tower = targets.size() > 0 ? FindNpcActor(targets[0]) : nullptr;
+			if(tower && (tower->faction != own || tower->hp <= 0 || tower->removeAt != Time::ZERO || !IsStructure(*tower))) tower = nullptr;
+			if(!tower && glm::length(vec2(castPos)) > 1.0f) {
+				f32 best = HYP_MINIMAP_ALLY_PICK_RADIUS;
+				foreach_const(n, actorNpcList) {
+					if(n->faction != own || n->hp <= 0 || n->removeAt != Time::ZERO || !IsStructure(*n)) continue;
+					const f32 d = glm::length(vec2(n->pos) - vec2(castPos));
+					if(d < best) { best = d; tower = &*n; }
+				}
+			}
+			if(!tower) {
+				LOG("Skill :: %ls cast %d refused (no allied tower or core at (%.0f, %.0f))", player.name.data(), (i32)skillID, castPos.x, castPos.y);
+				if(player.clientHd != ClientHandle::INVALID) replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_SKILL_INVALID_STATE_BLOCK, player.body->GetWorldPos(), player.input.rot.upperYaw, player.input.speed, clientTime);
+				return;
+			}
+			selectedTargets.clear();
+			selectedTargets.push_back(tower->UID);
+			targets = Slice<const ActorUID>(selectedTargets.data(), selectedTargets.size());
+			castPos = tower->pos;
+		}
 		if(selIn->minimapFriendPc && targets.size() > 0) {
 			const ActorMaster* ally = FindMasterActor(targets[0]);
 			if(ally && ally->parent && ally->parent->team == player.team && !ally->parent->dead) castPos = ally->parent->body->GetWorldPos();

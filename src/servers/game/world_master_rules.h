@@ -286,6 +286,15 @@ static inline const HitRecoverRule* FindHitRecoverRule(i32 status)
 	return nullptr;
 }
 
+struct MeasuredRoom { CreatureIndex creature; f32 radius; };
+static const MeasuredRoom MEASURED_BOSS_ROOMS[] = { { CreatureIndex(105001200), 1429.0f } };
+
+static inline const MeasuredRoom* FindMeasuredRoom(CreatureIndex doc)
+{
+	for(const MeasuredRoom& r : MEASURED_BOSS_ROOMS) if(r.creature == doc) return &r;
+	return nullptr;
+}
+
 struct MeasuredLeap { i32 skill; f32 durationSec; f32 endRise; };
 static const MeasuredLeap MEASURED_LEAPS[] = { { 189000020, 1.5f, 350.0f } };
 

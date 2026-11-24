@@ -1462,6 +1462,7 @@ public:
 	NpcCcGraph StartNpcCc(ActorNpc& npc, const StatusInfo* info, const vec3& source, const vec2& dragCenter, const vec3& casterPos, f32 hold);
 	void MonsterStopIfHeld(ActorNpc& npc);
 	bool TurretCannonBusy(const ActorNpc& tower, ActionStateID state) const;
+	vec2 MonsterWalkGuardrailStop(const ActorNpc& npc, const vec2& goal);
 	bool MonsterDashNeedsTurn(ActorNpc& npc, const GameXmlContent::MonsterAttack& attack, f32 yaw);
 	void SendNpcCcMove(ActorNpc& npc, bool ended);
 	vec2 NpcPullGoal(const ActorNpc& npc, const vec2& center) const;
