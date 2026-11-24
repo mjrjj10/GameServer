@@ -471,11 +471,16 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 		castHits.push_back(h);
 	}
 	if(enemy || remote.damageGroup != Remote::DamageGroup::eENEMY) AddRemoteActivation(target, inst.pos.z);
-	statusFromBehind = remote.offsetY < 0;
+	statusFromBehind = false;
 	statusForceCenter = inst.pos;
 	statusForceCenterSet = true;
 	statusPushDir = inst.dir;
 	statusPushDirSet = glm::length(inst.dir) > 0.5f;
+	if(statusPushDirSet && remote.forceFixedAngle != 0) {
+		const f32 fa = remote.forceFixedAngle * PI / 180.0f;
+		const vec2 d = glm::normalize(inst.dir);
+		statusPushDir = vec2(d.x * cosf(fa) - d.y * sinf(fa), d.x * sinf(fa) + d.y * cosf(fa));
+	}
 	const f32 falloff = RemoteDistanceFalloff(remote, glm::length(vec2(target.body->GetWorldPos()) - vec2(inst.pos)));
 
 	if(amount > 0) {
@@ -1401,14 +1406,16 @@ void World::SweepFireNodePath(RemoteInst& inst, Player& instOwner)
 		const vec2 center = vec2(base) + fwd * p.x + left * p.y;
 		inst.pos = vec3(center, base.z + p.z);
 		RemoteHitWalls(inst, radius);
+		const bool chain = remote.boundType == Remote::BoundType::E_BOUND_HAMMER;
+		auto sweepDist = [&](const vec2& at) { return chain ? SegmentPointDist2D(vec2(base), center, at) : glm::length(at - center); };
 		foreach(it, players) {
 			if(it->dead || !it->body || !RemoteCanAffect(inst, *it, false)) continue;
-			if(glm::length(vec2(it->body->GetWorldPos()) - center) <= radius + HitRadius(*it)) RemoteHit(inst, *it);
+			if(sweepDist(vec2(it->body->GetWorldPos())) <= radius + HitRadius(*it)) RemoteHit(inst, *it);
 		}
 		{
 			foreach(npc, actorNpcList) {
 				if(!NpcHittableBy(*npc, instOwner)) continue;
-				const f32 dist = glm::length(vec2(npc->pos) - center);
+				const f32 dist = sweepDist(vec2(npc->pos));
 				if(dist <= radius + NpcHitRadius(*npc)) RemoteDamageNpc(inst, *npc, dist);
 			}
 		}

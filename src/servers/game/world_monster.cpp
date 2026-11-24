@@ -1045,6 +1045,7 @@ void World::UpdateMonsterRemotes(f32 delta)
 			}
 		}
 		bool expired = localTime >= mr.expire;
+		bool blocked = false;
 		if(remote.maxSpeed > 0 && !mr.impacted) {
 			const vec3 goal = MonsterFireTargetPos(owner, mr.target);
 			const bool homing = remote.behaviorType == Remote::BehaviorType::FOLLOW_TARGET || remote.behaviorType == Remote::BehaviorType::HOMING;
@@ -1085,6 +1086,29 @@ void World::UpdateMonsterRemotes(f32 delta)
 				else mr.pos += vec3(mr.dir * move, 0);
 				if(limit > 0 && mr.travelled >= limit) expired = true;
 			}
+			if(!expired && !remote.vsRemote) {
+				const f32 halfWidth = remote.boundSize[0] * 0.5f;
+				foreach_const(inst, remoteInsts) {
+					if(!inst->remote || !inst->remote->vsRemote || inst->killNow || players[inst->ownerIndex].dead) continue;
+					if(fabsf(inst->pos.z - mr.pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT + FIRE_NODE_HEIGHT) continue;
+					const Remote& r = *inst->remote;
+					const vec2 rel = vec2(mr.pos) - vec2(inst->pos) - inst->dir * RemoteBoundOffset(r);
+					bool inside;
+					if(r.boundType == Remote::BoundType::E_BOUND_SPHERE) inside = glm::length(rel) <= r.boundSize[0] * 0.5f + halfWidth;
+					else {
+						const f32 length = r.boundSize[1];
+						const vec2 local = rel + inst->dir * (length * 0.5f);
+						const f32 along = glm::dot(local, inst->dir);
+						inside = along >= -halfWidth && along <= length + halfWidth && fabsf(glm::dot(local, Perp(inst->dir))) <= r.boundSize[0] * 0.5f + halfWidth;
+					}
+					if(!inside) continue;
+					LOG("Monster :: remote %d of creature %d stopped by %ls's remote %d", (i32)remote.ID, (i32)owner.docID, players[inst->ownerIndex].name.data(), (i32)r.ID);
+					mr.impacted = true;
+					expired = true;
+					blocked = true;
+					break;
+				}
+			}
 			if(mr.seed != 0 && remote.homingLength > 0 && !expired) {
 				mr.syncIn -= delta;
 				if(mr.syncIn <= 0) {
@@ -1092,7 +1116,7 @@ void World::UpdateMonsterRemotes(f32 delta)
 					replication->SendRemoteSyncTargetToAll(mr.seed + MEASURED_MONSTER_HIT_ID_OFFSET, locked ? mr.target : ActorUID::INVALID, mr.pos + vec3(0, 0, mr.lift), &mr.dir);
 				}
 			}
-			MonsterRemoteApply(mr, owner);
+			if(!blocked) MonsterRemoteApply(mr, owner);
 		}
 		else if(remote.lifeTime > MONSTER_REMOTE_MIN_LIFE_SEC) MonsterRemoteApply(mr, owner);
 		if(mr.activations <= 0 && remote.activateCount > 0 && remote.boundType != Remote::BoundType::E_BOUND_NONE && remote.damageGroup != Remote::DamageGroup::eNONE) expired = true;
