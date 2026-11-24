@@ -795,11 +795,13 @@ void World::FireMonsterRemote(const MonsterFireEvent& fire)
 		struct MeasuredSpin { i32 remote; f32 degPerSec; f32 spacingDeg; f32 startDeg; };
 		static const MeasuredSpin MEASURED_MONSTER_REMOTE_SPIN[] = { { 1480011061, -49.2f, 120.0f, 29.0f } };
 		f32 spin = 0;
+		f32 spinAngle = 0;
 		vec2 spunDir = dir;
 		for(const MeasuredSpin& s : MEASURED_MONSTER_REMOTE_SPIN) {
 			if(s.remote != fire.fire->remote) continue;
 			spin = s.degPerSec * PI / 180.0f;
-			const f32 a = atan2f(dir.y, dir.x) + (s.startDeg + (f32)fire.fire->nodeIndex * s.spacingDeg) * PI / 180.0f;
+			spinAngle = (s.startDeg + (f32)fire.fire->nodeIndex * s.spacingDeg) * PI / 180.0f;
+			const f32 a = npc.rot.z + spinAngle;
 			spunDir = vec2(cosf(a), sinf(a));
 		}
 		const size_t before = monsterRemotes.size();
@@ -809,6 +811,7 @@ void World::FireMonsterRemote(const MonsterFireEvent& fire)
 			MonsterRemote& spawnedRemote = monsterRemotes.back();
 			spawnedRemote.creatorSeed = creatorSeed;
 			spawnedRemote.spin = spin;
+			spawnedRemote.spinAngle = remote->attachFireObject ? spinAngle : npc.rot.z + spinAngle;
 			if(spin != 0) LOG("Monster :: creature=%d spinning remote %d node %d starts at %.1f deg, %.1f deg/s", (i32)npc.docID, fire.fire->remote, (i32)fire.fire->nodeIndex, atan2f(spunDir.y, spunDir.x) * 180.0f / PI, spin * 180.0f / PI);
 			if(fire.passEnd != Time::ZERO && fire.passEnd < spawnedRemote.expire) spawnedRemote.expire = fire.passEnd;
 		}
@@ -1035,7 +1038,8 @@ void World::UpdateMonsterRemotes(f32 delta)
 		MonsterRemote& mr = monsterRemotes[i];
 		const Remote& remote = *mr.remote;
 		if(mr.spin != 0) {
-			const f32 a = atan2f(mr.dir.y, mr.dir.x) + mr.spin * delta;
+			mr.spinAngle += mr.spin * delta;
+			const f32 a = (remote.attachFireObject ? owner.rot.z : 0.0f) + mr.spinAngle;
 			mr.dir = vec2(cosf(a), sinf(a));
 		}
 		else if(remote.attachFireObject && remote.maxSpeed <= 0) mr.dir = vec2(cosf(owner.rot.z), sinf(owner.rot.z));
@@ -1055,7 +1059,9 @@ void World::UpdateMonsterRemotes(f32 delta)
 			const vec2 rel = vec2(goal) - vec2(mr.pos);
 			const f32 dist = glm::length(rel);
 			const bool steered = homing && remote.angularVel > 0;
-			const bool locked = homing && dist > 1.0f && (remote.homingLength <= 0 || dist <= remote.homingLength);
+			const f32 life = MAX(remote.lifeTime, MONSTER_REMOTE_MIN_LIFE_SEC);
+			const bool forceDelayed = steered && remote.forceDelay > 0 && life - (f32)TimeDiffSec(TimeDiff(localTime, mr.expire)) < remote.forceDelay;
+			const bool locked = homing && !forceDelayed && dist > 1.0f && (remote.homingLength <= 0 || dist <= remote.homingLength);
 			if(locked && !steered) mr.dir = rel / dist;
 			else if(locked) mr.dir = SteerToward(mr.dir, rel, remote.angularVel * delta);
 			const f32 step = remote.maxSpeed * delta;
@@ -2375,7 +2381,10 @@ void World::UpdateMonsterAi(f32 delta)
 					if(!ready.full()) ready.push_back(s);
 					totalShare += anchored && special.anchorShare >= 0 ? special.anchorShare : special.share;
 				}
-				if(dashTurning) continue;
+				if(dashTurning) {
+					if(IsMeasuredSpecialFirst(npc.docID)) LOG("Monster :: creature=%d (local %d) turns before a dash at %.0f (t %.2f)", (i32)npc.docID, npc.localID, dist, TimeDiffSec(localTime));
+					continue;
+				}
 				const bool basicInRoll = basicReady && !(IsMeasuredSpecialFirst(npc.docID) && !ready.empty() && !npc.monsterLastSpecial);
 				if(basicReady && !basicInRoll) totalShare -= attack->share;
 				if(!basicReady && ready.empty()) {
@@ -2390,9 +2399,10 @@ void World::UpdateMonsterAi(f32 delta)
 					if(roll < 0) break;
 					MonsterStateCooldown(npc.monsterSkillReady, ai, special.state, TimeAdd(localTime, TimeMsToTime(special.cooldown * 1000.0)));
 					attack = &special;
-					LOG("Monster :: creature=%d (local %d) uses %s", (i32)npc.docID, npc.localID, ActionStateToString(special.state));
+					LOG("Monster :: creature=%d (local %d) uses %s (ready %d, basic in roll %d, t %.2f)", (i32)npc.docID, npc.localID, ActionStateToString(special.state), (i32)ready.size(), (i32)basicInRoll, TimeDiffSec(localTime));
 					break;
 				}
+				if(attack == basic && IsMeasuredSpecialFirst(npc.docID)) LOG("Monster :: creature=%d (local %d) uses basic %s at %.0f (ready %d, basic in roll %d, t %.2f)", (i32)npc.docID, npc.localID, ActionStateToString(basic->state), dist, (i32)ready.size(), (i32)basicInRoll, TimeDiffSec(localTime));
 				npc.monsterLastSpecial = attack != basic;
 				if(paced) {
 					npc.monsterNextAttack = TimeAdd(localTime, TimeMsToTime((attack->after > 0 ? attack->after : basic->after) * 1000.0));

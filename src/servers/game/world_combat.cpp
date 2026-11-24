@@ -823,7 +823,7 @@ void World::DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, 
 	if((attacker.faction == Faction::RED || attacker.faction == Faction::BLUE) && (i32)attacker.faction != (i32)target.team) LightAttacker(attacker.pos, target.team);
 	SendNpcHit(attacker, chara.UID, target.body->GetWorldPos(), remote, remoteID, damage, chara.hp, chara.hpMax);
 	if(chara.hp > 0) {
-		LOG("Damage :: creature %d -> %ls damage=%d hp=%d/%d", (i32)attacker.docID, target.name.data(), damage, chara.hp, chara.hpMax);
+		LOG("Damage :: creature %d -> %ls damage=%d hp=%d/%d remote=%d id=%u t %.2f", (i32)attacker.docID, target.name.data(), damage, chara.hp, chara.hpMax, remote, remoteID, TimeDiffSec(localTime));
 		PassiveOnDamaged(target);
 		if(status > 0) ApplyStatusFromNpc(attacker, target, status);
 		CheckSupportKit(target);
