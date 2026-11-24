@@ -389,6 +389,14 @@ static inline const TesterRemoteFuse* FindTesterRemoteFuse(RemoteIdx remote)
 	return nullptr;
 }
 
+static const RemoteIdx TESTER_TAG_OUT_STAYS_REMOTES[] = { RemoteIdx(1440430041) };
+
+static inline bool StaysWhereTargetTaggedOut(RemoteIdx remote)
+{
+	for(RemoteIdx r : TESTER_TAG_OUT_STAYS_REMOTES) if(r == remote) return true;
+	return false;
+}
+
 static inline bool BurstsBackAfterThrough(SkillID skill)
 {
 	for(SkillID s : TESTER_BURST_BACK_AFTER_THROUGH) if(s == skill) return true;

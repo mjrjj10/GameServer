@@ -247,6 +247,7 @@ void World::UpdateBotSkills()
 		if(IsBlocked(bot, false, true, false) || BotHoldsHide(bot) || BotEvadeZone(bot, &zoneAway, &zoneDepth)) continue;
 		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(500));
 		if(bot.casting.skillID != SkillID::INVALID || BotReturnSkill(bot) || BotStageSkill(bot)) continue;
+		if(bot.Main().stance != 0 && bot.Main().stanceShotsLeft > 0) continue;
 
 		const ActorMaster& master = bot.Main();
 		const bool titan = bot.titanForm >= 0 && bot.titanForm < (i32)content.titan.forms.size();
@@ -1825,7 +1826,16 @@ void World::UpdateBotCombat()
 		}
 		if(!WeaponHeatShot(bot, localTime, replication, WeaponHeatScale(bot))) continue;
 		const vec2 rel = vec2(aim) - vec2(pos);
-		const vec2 dir = glm::length(rel) > 1.0f ? glm::normalize(rel) : vec2(1, 0);
+		const vec2 exact = glm::length(rel) > 1.0f ? glm::normalize(rel) : vec2(1, 0);
+		const f32 margin = GetGameXmlContent().BotConstant("BOTLOGIC_STAGELEVEL_KEY_ATTACKRATE_MARGIN_IN_DEGREE");
+		f32 aimError = 0;
+		if(margin > 0) {
+			const f32 u1 = MAX((f32)(RandUint() % 10000 + 1) / 10001.0f, 0.0001f);
+			const f32 u2 = (f32)(RandUint() % 10000) / 10000.0f;
+			const f32 gauss = GetGameXmlContent().BotConstant("BOTLOGIC_STAGELEVEL_KEY_ATTACKRATE_MU") + GetGameXmlContent().BotConstant("BOTLOGIC_STAGELEVEL_KEY_ATTACKRATE_STD") * sqrtf(-2.0f * logf(u1)) * cosf(2.0f * PI * u2);
+			aimError = (RandUint() % 2 ? 1.0f : -1.0f) * margin * gauss * PI / 180.0f;
+		}
+		const vec2 dir = vec2(exact.x * cosf(aimError) - exact.y * sinf(aimError), exact.x * sinf(aimError) + exact.y * cosf(aimError));
 		bot.weaponAimYaw = atan2f(dir.y, dir.x);
 		PlayerWeaponShot(bot, pos, dir, best);
 		bot.botIdleResourceGoal = -1;
@@ -1857,6 +1867,8 @@ u8 World::BotRollChargeLevel(const Player& bot, const WeaponFiring& wf) const
 
 f32 World::BotNextFireDelay(const Player& bot, u32 combo) const
 {
+	static const f32 MEASURED_BOT_STANCE_SHOT_GAP_SEC = 1.8f;
+	if(bot.Main().stance != 0 && bot.Main().stanceShotsLeft > 0) return MEASURED_BOT_STANCE_SHOT_GAP_SEC;
 	const WeaponFiring& wf = ActiveWeaponFiring(bot, bot.Main().stance);
 	f32 delay = wf.fireDelay;
 	if(combo < wf.comboDelay.size() && wf.comboDelay[combo] > 0 && wf.comboDelay[combo] <= wf.comboValid[combo]) delay = wf.comboDelay[combo];

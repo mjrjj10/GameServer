@@ -67,12 +67,14 @@ static CCT_CollisionFilterCallback g_cctCollisionFilterCallback; // weird that w
 static const f32 WALL_EXIT_MARGIN = 1.0f;
 static const u32 NO_SIGHT_WORD = 1;
 static const u32 JUMPABLE_WORD = 1;
+static const u32 GUARDRAIL_WORD = 2;
 
 struct WallFilter: PxQueryFilterCallback
 {
 	u32 passTeamWord = 0;
 	u32 ownTeamWord = 0;
 	bool passJumpable = false;
+	bool passGuardrail = false;
 	PxCapsuleGeometry capsule;
 	PxTransform pose;
 
@@ -88,7 +90,8 @@ struct WallFilter: PxQueryFilterCallback
 	PxQueryHitType::Enum preFilter(const PxFilterData&, const PxShape* shape, const PxRigidActor* actor, PxHitFlags&) override
 	{
 		const PxFilterData data = shape->getQueryFilterData();
-		if(passJumpable && data.word3 == JUMPABLE_WORD) return PxQueryHitType::eNONE;
+		if(passJumpable && (data.word3 & JUMPABLE_WORD)) return PxQueryHitType::eNONE;
+		if(passGuardrail && (data.word3 & GUARDRAIL_WORD)) return PxQueryHitType::eNONE;
 		const u32 team = data.word0;
 		if(team == 0) return PxQueryHitType::eBLOCK;
 		if(team == passTeamWord || team == ownTeamWord) return PxQueryHitType::eNONE;
@@ -305,7 +308,7 @@ void PhysicsScene::Destroy()
     }
 }
 
-PxRigidStatic* PhysicsScene::CreateStaticCollider(const char* meshName, const vec3& pos, const vec3& rot, f32 scale, bool blocksSight, bool jumpable)
+PxRigidStatic* PhysicsScene::CreateStaticCollider(const char* meshName, const vec3& pos, const vec3& rot, f32 scale, bool blocksSight, bool jumpable, bool guardrail)
 {
 	auto& ctx = PhysContext();
 
@@ -313,7 +316,7 @@ PxRigidStatic* PhysicsScene::CreateStaticCollider(const char* meshName, const ve
 
 	PxShape* shape = ctx.physics->createShape(geometry, *ctx.matMapSurface);
 	ASSERT(shape); // createShape failed
-	if(!blocksSight || jumpable) shape->setQueryFilterData(PxFilterData(0, 0, blocksSight ? 0 : NO_SIGHT_WORD, jumpable ? JUMPABLE_WORD : 0));
+	if(!blocksSight || jumpable || guardrail) shape->setQueryFilterData(PxFilterData(0, 0, blocksSight ? 0 : NO_SIGHT_WORD, (jumpable ? JUMPABLE_WORD : 0) | (guardrail ? GUARDRAIL_WORD : 0)));
 
 	PxRigidStatic* ground = ctx.physics->createRigidStatic(PxTransform{PxIdentity});
 	ground->attachShape(*shape);
@@ -394,6 +397,7 @@ vec3 PhysicsScene::Move(PhysicsDynamicBody* body, const vec3& disp, f32 time)
 	filter.mCCTFilterCallback = &ignoreCharacters;
 	UseWallFilter(filter, walls, *body->collider, body->passWallTeam, body->team);
 	walls.passJumpable = body->passJumpable;
+	walls.passGuardrail = body->passGuardrail;
 	//filter.mFilterFlags = PxQueryFlag::eSTATIC; // only collide with static colliders
 	PxControllerCollisionFlags collisionFlags = body->collider->move(PxVec3(disp.x, disp.y, disp.z), 0, time, filter, nullptr /* obstacles? */);
 	return body->GetWorldPos();
@@ -428,7 +432,13 @@ vec3 PhysicsScene::FindSkillMovePos(PhysicsDynamicBody* body, const vec2& dir, f
 	const i32 steps = MAX((i32)ceilf(dist / HYP_SKILL_MOVE_SUBSTEP), 1);
 	const f32 stepLen = dist / (f32)steps;
 	const f32 stepTime = time / (f32)steps;
-	if(lift > 0) Move(body, vec3(0, 0, lift), stepTime);
+	static const f32 MEASURED_LONG_JUMP_CLEARANCE = 37.0f;
+	const f32 baseZ = body->GetWorldPos().z;
+	const bool prevGuardrail = body->passGuardrail;
+	if(lift > 0) {
+		body->passGuardrail = true;
+		Move(body, vec3(0, 0, lift + MEASURED_LONG_JUMP_CLEARANCE), stepTime);
+	}
 	f32 done = 0;
 	for(i32 i = 0; i < steps; i++) {
 		const PxExtendedVec3 stepStart = body->collider->getFootPosition();
@@ -445,8 +455,9 @@ vec3 PhysicsScene::FindSkillMovePos(PhysicsDynamicBody* body, const vec2& dir, f
 		}
 		done += stepLen;
 	}
-	const vec3 end = vec3(from + dir * done, body->GetWorldPos().z);
+	const vec3 end = vec3(from + dir * done, lift > 0 ? MIN(body->GetWorldPos().z, baseZ + lift) : body->GetWorldPos().z);
 	body->collider->setFootPosition(start);
+	body->passGuardrail = prevGuardrail;
 	return end;
 }
 
@@ -511,7 +522,7 @@ PxRigidStatic* PhysicsScene::CreateWall(const vec3& pos, f32 width, f32 depth, f
 	auto& ctx = PhysContext();
 	PxShape* shape = ctx.physics->createShape(PxBoxGeometry(depth * 0.5f, width * 0.5f, height * 0.5f), *ctx.matMapSurface, true);
 	if(!shape) return nullptr;
-	shape->setQueryFilterData(PxFilterData((u32)(team + 1), 0, 0, 0));
+	shape->setQueryFilterData(PxFilterData((u32)(team + 1), 0, NO_SIGHT_WORD, 0));
 	const glm::quat quat = glm::angleAxis(yaw, vec3(0, 0, 1));
 	PxRigidStatic* wall = ctx.physics->createRigidStatic(PxTransform(PxVec3(pos.x, pos.y, pos.z + height * 0.5f), PxQuat(quat.x, quat.y, quat.z, quat.w)));
 	wall->attachShape(*shape);

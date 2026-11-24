@@ -377,6 +377,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 	}
 
 	ReserveTrainingSlots();
+	SpawnTrainingAlly();
 	dbgGameUID = Dbg::PushNewGame("PVP_DeathMatch");
 }
 
@@ -686,7 +687,7 @@ bool Game::LoadMap()
 		}
 		const bool mobGuardrail = EA::StdC::Stristr(c->mesh.data(), "Guardrailmob") != nullptr || EA::StdC::Stristr(c->mesh.data(), "Jumpguard") != nullptr;
 		const bool blocksSight = !mobGuardrail || EA::StdC::Stristr(c->mesh.data(), "UnSightable") != nullptr;
-		world.physics.NameActor(world.physics.CreateStaticCollider(c->mesh.data(), c->pos, c->rot, c->scale, blocksSight), c->mesh.data());
+		world.physics.NameActor(world.physics.CreateStaticCollider(c->mesh.data(), c->pos, c->rot, c->scale, blocksSight, false, mobGuardrail), c->mesh.data());
 	}
 
 	foreach(it, map->creatures) {
@@ -1451,6 +1452,7 @@ static const f32 HYP_TRAINING_DUMMY_DISTANCE = 500.0f;
 static const wchar* MEASURED_TRAINING_BOT_NAME = L"BOT_NAME_02";
 static const wchar* MEASURED_TRAINING_SLOT_NAMES[2] = { L"BOT_NAME_05", L"BOT_NAME_06" };
 static const u32 MEASURED_TRAINING_SLOT_USER_IDS[2] = { 10, 11 };
+static const i32 MEASURED_TRAINING_ALLY_SLOT = 1;
 static const i32 MEASURED_MASTER_CREATURE_BASE = 100000000;
 static const u8 MEASURED_MASTER_GEAR_SETS = 11;
 
@@ -1721,7 +1723,23 @@ void Game::ReserveTrainingSlots()
 	LOG("Training :: %d AI slots reserved", (i32)replication.trainingSlots.size());
 }
 
-void Game::SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team)
+void Game::SpawnTrainingAlly()
+{
+	if((i32)replication.trainingSlots.size() <= MEASURED_TRAINING_ALLY_SLOT || world.players.empty()) return;
+	const Replication::TrainingSlot& ts = replication.trainingSlots[MEASURED_TRAINING_ALLY_SLOT];
+	const u8 humanTeam = world.GetPlayer(0).team;
+	const size_t before = trainingBots.size();
+	SpawnTrainingBot(ts.classes[0], ts.classes[1], humanTeam, MEASURED_TRAINING_ALLY_SLOT);
+	if(trainingBots.size() == before) return;
+	trainingAllyIndex = trainingBots.back();
+	trainingBots.pop_back();
+	World::Player& ally = world.GetPlayer(trainingAllyIndex);
+	ally.trainingDummy = true;
+	ally.devGod = true;
+	LOG("Training :: ally %ls on team %d for ally-target skills", ally.name.data(), (i32)humanTeam);
+}
+
+void Game::SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team, i32 forcedSlot)
 {
 	const GameXmlContent& xml = GetGameXmlContent();
 	World::PlayerDescription desc;
@@ -1747,8 +1765,9 @@ void Game::SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team)
 	const auto& spawnPoints = mapSpawnPoints[team];
 	const vec3 pos = spawnPoints.empty() ? world.GetPlayer(0).spawnPos : spawnPoints[0].pos;
 	const f32 yaw = spawnPoints.empty() ? 0.f : MxmYawToWorldYaw(spawnPoints[0].rot.z);
-	i32 slot = -1;
-	for(i32 s = 0; s < (i32)replication.trainingSlots.size() && slot < 0; s++) {
+	i32 slot = forcedSlot >= 0 && forcedSlot < (i32)replication.trainingSlots.size() ? forcedSlot : -1;
+	for(i32 s = 0; s < (i32)replication.trainingSlots.size() && slot < 0 && forcedSlot < 0; s++) {
+		if(s == MEASURED_TRAINING_ALLY_SLOT && trainingAllyIndex >= 0) continue;
 		if(trainingSlotPlayers[s] < 0 || world.GetPlayer(trainingSlotPlayers[s]).removed) slot = s;
 	}
 	if(slot >= 0) {

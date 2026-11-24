@@ -120,7 +120,8 @@ struct Game
 	void ChangeTrainingLoadout(ClientHandle clientHd, const Cl::CN_UNKNOWN_60296::SlotPairData& slots);
 	void OnTrainingEquipSkill(ClientHandle clientHd, LocalActorID chara, SkillID skill, u32 slot);
 	void OnGamePing(ClientHandle clientHd, LocalActorID chara, const float3& pos, LocalActorID target, u32 ping);
-	void SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team);
+	void SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team, i32 forcedSlot = -1);
+	void SpawnTrainingAlly();
 	void ReserveTrainingSlots();
 	void RemoveTrainingBots();
 	void RemoveDeadTrainingBots();
@@ -177,6 +178,7 @@ struct Game
 	void OnTitanIncarnate(ClientHandle clientHd, i32 formDoc);
 	eastl::fixed_vector<u32,MAX_PLAYERS,false> trainingBots;
 	eastl::array<i32,2> trainingSlotPlayers = { -1, -1 };
+	i32 trainingAllyIndex = -1;
 	vec3 trainingDummyHome = vec3(0);
 	f32 trainingDummyYaw = 0;
 	eastl::array<eastl::array<u16,2>,MAX_PLAYERS> guildBoost = {};

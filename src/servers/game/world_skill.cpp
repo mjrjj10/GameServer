@@ -290,6 +290,7 @@ u32 World::PlayerPaySkillCost(Player& player, i32 skillID)
 {
 	const auto& content = GetGameXmlContent();
 	f32 mp = PlayerSkillConsumeMP(player, skillID);
+	bool noCostUsed = false;
 	foreach(it, activeStatuses) {
 		if(it->targetIndex != player.index || !it->info || it->info->type != StatusType::NOCOST || it->until <= localTime) continue;
 		const bool listed = eastl::find(it->info->costSkills.begin(), it->info->costSkills.end(), skillID) != it->info->costSkills.end();
@@ -299,6 +300,10 @@ u32 World::PlayerPaySkillCost(Player& player, i32 skillID)
 		}
 		if(!listed && !ownSkill) continue;
 		if(listed) mp = MAX(mp * (1.0f + it->info->costRatioMP / 100.0f), 0.0f);
+		else {
+			mp = 0;
+			noCostUsed = true;
+		}
 		it->until = localTime;
 		LOG("Passive :: %ls skill %d mana cost %.0f (status %d used)", player.name.data(), skillID, mp, it->statusID);
 		break;
@@ -307,7 +312,7 @@ u32 World::PlayerPaySkillCost(Player& player, i32 skillID)
 		const auto& list = stacking->info->costSkills;
 		if(player.skillStacks > 0 && localTime < player.skillStacksUntil && eastl::find(list.begin(), list.end(), skillID) != list.end()) mp = MAX(mp * (1.0f + stacking->info->costRatioMP * player.skillStacks / 100.0f), 0.0f);
 	}
-	const f32 ug = PlayerSkillConsume(player, skillID, 4);
+	const f32 ug = noCostUsed ? 0.0f : PlayerSkillConsume(player, skillID, 4);
 	const f32 st = content.GetSkillConsumeStamina(skillID);
 	const f32 resCost[3] = { PlayerSkillConsume(player, skillID, 0), PlayerSkillConsume(player, skillID, 1), PlayerSkillConsume(player, skillID, 2) };
 	const f32 hpCost = PlayerSkillConsume(player, skillID, 3);
@@ -372,6 +377,8 @@ void World::SetStance(ActorMaster& master, i8 stance, f32 duration, i32 weaponFi
 	master.stanceUntil = stance != 0 && duration > 0 ? TimeAdd(localTime, TimeMsToTime((i64)(duration * 1000.0f))) : Time::ZERO;
 	master.stanceShotsLeft = stance != 0 && weaponFireCount > 0 ? weaponFireCount : -1;
 	master.stanceCancelByDefeat = stance != 0 && cancelByDefeat;
+	static const f64 MEASURED_BOT_STANCE_FIRST_SHOT_MS = 1400.0;
+	if(master.stanceShotsLeft > 0 && master.parent && master.parent->clientHd == ClientHandle::INVALID) master.parent->tNextBotShot = TimeAdd(localTime, TimeMsToTime(MEASURED_BOT_STANCE_FIRST_SHOT_MS));
 	if(stance == 0 && oldStance != 0) replication->SendStanceToAll(master.UID, 0, STANCE_EXIT_DURATION);
 	if(stance != oldStance && master.parent && &master.parent->Main() == &master && FindPassiveOfType(*master.parent, StatusType::DOUBLEGUN)) {
 		const u32 m = master.parent->mainCharaID & 1;
@@ -580,6 +587,7 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	Time prevTick = Time::ZERO;
 	const StatusInfo* known = GetGameXmlContent().FindStatus(statusID);
 	if(!remove && known && ((known->reaction && npc.monsterAi && npc.monsterAi->reactionImmune) || NpcResistsDebuff(npc, known, npc.faction != (caster.team == 0 ? Faction::RED : Faction::BLUE)))) {
+		LOG("Status :: creature=%d resists %d from %ls (%s)", (i32)npc.docID, statusID, caster.name.data(), known->reaction && npc.monsterAi && npc.monsterAi->reactionImmune ? "reaction immune" : "resist roll");
 		replication->SendResistStatusToAll(npc.UID, caster.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
 		return;
 	}
@@ -618,6 +626,7 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	if(info) ApplySummonDrainLife(npc, *info);
 	const f32 reaction = NpcDefeatReaction(npc, info);
 	if(reaction < 0) {
+		LOG("Status :: creature=%d resists %d from %ls (cc type not taken)", (i32)npc.docID, statusID, caster.name.data());
 		replication->SendResistStatusToAll(npc.UID, caster.Main().UID, STATUS_RESIST_EVENT_PASSIVE);
 		return;
 	}
@@ -675,6 +684,25 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 		}
 	}
 	npcStatuses.push_back(ns);
+	if(info && info->auraStatus != 0 && info->targetingRange > 0 && npc.ownerUID != ActorUID::INVALID) {
+		GroundAura* carried = nullptr;
+		foreach(ga, groundAuras) if(ga->followSource && ga->sourceUID == npc.UID && ga->auraStatus == statusID) carried = &*ga;
+		if(!carried && !groundAuras.full()) {
+			groundAuras.push_back(GroundAura());
+			carried = &groundAuras.back();
+			carried->nextPulse = localTime;
+		}
+		if(carried) {
+			carried->ownerIndex = caster.index;
+			carried->auraStatus = statusID;
+			carried->range = info->targetingRange;
+			carried->pos = npc.pos;
+			carried->until = ns.until;
+			carried->sourceUID = npc.UID;
+			carried->followSource = true;
+			LOG("Status :: creature=%d carries aura %d from %ls (range %.0f)", (i32)npc.docID, statusID, caster.name.data(), info->targetingRange);
+		}
+	}
 	if(ns.shieldMax > 0) SendNpcShieldStat(npc.UID);
 	if(info && info->maxOverlap > 1 && overlap >= info->maxOverlap) {
 		i32 full = 0;
@@ -1864,7 +1892,15 @@ static const f32 HYP_FOG_SIGHT_MARGIN = 150.0f;
 bool World::TeamSees(i32 team, const Player& target)
 {
 	if(target.fogRevealUntil[team] != Time::ZERO && localTime < target.fogRevealUntil[team]) return true;
-	return TeamSeesAt(team, target.body->GetWorldPos(), target.bushUID, 0, HYP_FOG_SIGHT_MARGIN);
+	bool bushRevealed = false;
+	if(target.bushUID != ActorUID::INVALID) {
+		foreach_const(st, activeStatuses) {
+			if(st->targetIndex != target.index || !st->info || st->info->type != StatusType::BUSH_REVEAL || st->until <= localTime || players[st->casterIndex].team != (u8)team) continue;
+			bushRevealed = true;
+			break;
+		}
+	}
+	return TeamSeesAt(team, target.body->GetWorldPos(), bushRevealed ? ActorUID::INVALID : target.bushUID, 0, HYP_FOG_SIGHT_MARGIN);
 }
 
 bool World::NpcHasPendingFire(ActorUID npc) const
@@ -1890,7 +1926,7 @@ bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack, f3
 	const bool targetExcluded = InFogExclude(at);
 	f32 hit = 0;
 	foreach_const(p, players) {
-		if(p->team != (u8)team || p->dead || !p->body) continue;
+		if(p->team != (u8)team || p->removed || !p->body) continue;
 		if(bushUID != ActorUID::INVALID && p->bushUID != bushUID) continue;
 		const vec3 from = p->body->GetWorldPos();
 		const f32 sight = content.CreatureSight(100000000 + (i32)p->Main().classType);
@@ -1900,7 +1936,6 @@ bool World::TeamSeesAt(i32 team, const vec3& at, ActorUID bushUID, f32 slack, f3
 		const PxRigidActor* blocker = nullptr;
 		const bool forwardClear = !physics.RaycastSight(from + vec3(0, 0, FOG_EYE_HEIGHT), eye, &hit, &blocker) || hit >= dist - slack || (ignoreActor && (const void*)blocker == ignoreActor);
 		if(!forwardClear) continue;
-		static const f32 MEASURED_FOG_LEVEL_EYE = 200.0f;
 		if(at.z > from.z + MEASURED_FOG_LEVEL_EYE) {
 			const vec3 levelFrom = from + vec3(0, 0, MEASURED_FOG_LEVEL_EYE);
 			const vec3 levelTo = vec3(at.x, at.y, levelFrom.z);
@@ -2404,6 +2439,9 @@ i32 World::ComboSkillFor(const Player& player, i32 skillID) const
 		for(i32 i = MIN((i32)f->second, (i32)ups->size()) - 1; i >= 0; i--) {
 			if((*ups)[i].nextCombo != 0) return (*ups)[i].nextCombo;
 		}
+	}
+	if(ups && GetGameXmlContent().GetNextComboSkill(skillID) == 0) {
+		for(const GameXmlContent::SkillUpgrade& up : *ups) if(up.nextCombo != 0) return 0;
 	}
 	return GetGameXmlContent().GetFirstComboSkill(skillID);
 }

@@ -3416,11 +3416,13 @@ void Replication::SendToggleSkill(ActorUID casterUID, ClientHandle casterHd, Ski
 		memcpy(buf, words, sizeof(words));
 		const u32 act = on ? (u32)action : 0u;
 		if(clientHd == casterHd) {
-			memcpy(buf + 12, &act, 4);
-			if(on) SendPacketData<Sv::SA_SwitchOnToggleSkill>(clientHd, 16, buf);
-			else SendPacketData<Sv::SA_SwitchOffToggleSkill>(clientHd, 16, buf);
+			u8 answer[16] = {};
+			memcpy(answer, words, sizeof(words));
+			memcpy(answer + 12, &act, 4);
+			if(on) SendPacketData<Sv::SA_SwitchOnToggleSkill>(clientHd, 16, answer);
+			else SendPacketData<Sv::SA_SwitchOffToggleSkill>(clientHd, 16, answer);
 		}
-		else if(on) {
+		if(on) {
 			memcpy(buf + 14, &act, 4);
 			SendPacketData<Sv::SN_SwitchOnToggleSkill>(clientHd, 18, buf);
 		}

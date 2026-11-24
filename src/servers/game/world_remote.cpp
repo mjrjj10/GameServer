@@ -123,7 +123,11 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	inst.castID = castID;
 	inst.damage = damage;
 	inst.pos = pos;
-	if(child && remote->groundMoveOffsetZ >= 0) inst.pos.z = players[ownerIndex].body->GetWorldPos().z + remote->groundMoveOffsetZ;
+	if(child && remote->groundMoveOffsetZ >= 0) {
+		const auto& groundOwner = players[ownerIndex];
+		const bool lifted = groundOwner.dashFly && groundOwner.dashLift > 0 && groundOwner.dashDone < groundOwner.dashDist;
+		inst.pos.z = (lifted ? groundOwner.dashOrigin.z : groundOwner.body->GetWorldPos().z) + remote->groundMoveOffsetZ;
+	}
 	inst.dir = dir;
 	inst.travelled = 0;
 	inst.wallZ = players[ownerIndex].body->GetWorldPos().z + BodyMidHeight(players[ownerIndex]);
@@ -449,7 +453,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 	if(enemy && remote.memorizeTarget) owner.memorizedTarget = target.Main().UID;
 	if(enemy) ChangeCasterActionOnHit(inst, owner, target.Main().UID, target.body->GetWorldPos());
 	if(amount <= 0 && remote.statuses.empty() && remote.friendlyStatuses.empty() && remote.onActivate.empty() && remote.onHitCharacter.empty() && remote.onHitOwnerStatus == 0) {
-		if(enemy || remote.damageGroup != Remote::DamageGroup::eENEMY) AddRemoteActivation(target, inst.pos.z);
+		if(enemy || remote.damageGroup != Remote::DamageGroup::eENEMY || remote.contactFriend) AddRemoteActivation(target, inst.pos.z);
 		if(enemy) TriggerSkillHitEvent(inst, owner, target.Main().UID, target.body->GetWorldPos());
 		return true;
 	}
@@ -471,7 +475,7 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 		h.until = TimeAdd(localTime, TimeMsToTime(MAX(remote.hitInvalidTime, 0.1f) * 1000.0));
 		castHits.push_back(h);
 	}
-	if(enemy || remote.damageGroup != Remote::DamageGroup::eENEMY) AddRemoteActivation(target, inst.pos.z);
+	if(enemy || remote.damageGroup != Remote::DamageGroup::eENEMY || remote.contactFriend) AddRemoteActivation(target, inst.pos.z);
 	statusFromBehind = false;
 	statusForceCenter = inst.pos;
 	statusForceCenterSet = true;
@@ -839,6 +843,13 @@ bool World::RemoteFriendNpc(RemoteInst& inst, ActorNpc& npc)
 	}
 	if(!recorded) inst.npcHits.push_back({ npc.UID, until });
 	ApplyFriendlyRemoteStatuses(owner, remote, nullptr, &npc);
+	if(remote.contactFriend && inst.hitsLeft > 0) {
+		inst.hitsLeft--;
+		if(inst.clientRemoteID != 0) {
+			inst.npcActivation += NpcDensity(npc);
+			replication->SendRemoteActivatedToAll(inst.clientRemoteID, inst.seedOwnerHd, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, npc.UID, inst.npcActivation, inst.pos);
+		}
+	}
 	return true;
 }
 
@@ -999,9 +1010,15 @@ void World::UpdateRemotes(f32 delta)
 		if(remote.attachTargetObject && inst.target != ActorUID::INVALID) {
 			const ActorMaster* targetMaster = FindMasterActor(inst.target);
 			const ActorNpc* targetNpc = targetMaster ? nullptr : FindNpcActor(inst.target);
-			if(targetMaster && !targetMaster->parent->dead) inst.pos = vec3(vec2(targetMaster->parent->body->GetWorldPos()), inst.pos.z);
-			else if(targetNpc && targetNpc->hp > 0 && targetNpc->removeAt == Time::ZERO) inst.pos = vec3(vec2(targetNpc->pos), inst.pos.z);
-			else destroyed = true;
+			if(targetMaster && !inst.targetLeft && &targetMaster->parent->Main() != targetMaster && StaysWhereTargetTaggedOut(remote.ID)) {
+				inst.targetLeft = true;
+				LOG("Remote :: %d target tagged out, stays at (%.0f, %.0f)", (i32)remote.ID, inst.pos.x, inst.pos.y);
+			}
+			if(!inst.targetLeft) {
+				if(targetMaster && !targetMaster->parent->dead) inst.pos = vec3(vec2(targetMaster->parent->body->GetWorldPos()), inst.pos.z);
+				else if(targetNpc && targetNpc->hp > 0 && targetNpc->removeAt == Time::ZERO) inst.pos = vec3(vec2(targetNpc->pos), inst.pos.z);
+				else destroyed = true;
+			}
 		}
 		if(remote.behaviorType == Remote::BehaviorType::CASTER_TARGET && !instOwner.dead) MoveCasterTargetRemote(inst, instOwner, delta);
 		const bool attached = remote.attachFireObject || remote.behaviorType == Remote::BehaviorType::ORBIT ||
@@ -1029,7 +1046,8 @@ void World::UpdateRemotes(f32 delta)
 				if(elapsed >= fuse->fuseSec && !instOwner.dead) {
 					const f32 radius = remote.boundSize[0] * 0.5f;
 					const vec3 center = inst.pos;
-					replication->SendRemoteCreateToAll(instOwner.Main().UID, nextRemoteSeed, fuse->visual, center, atan2f(inst.dir.y, inst.dir.x), center, ActorUID::INVALID, FIRE_OBJECT_SCENE_ROOT);
+					if(inst.clientRemoteID != 0) replication->SendChildRemoteCreateToAll(instOwner.Main().UID, instOwner.Main().UID, inst.clientRemoteID - (inst.sentByDoc ? 1 : 0), inst.seedOwnerHd, nextRemoteSeed, fuse->visual, 0, center, atan2f(inst.dir.y, inst.dir.x), center, ActorUID::INVALID, ActorUID::INVALID, FIRE_OBJECT_SCENE_ROOT, MEASURED_REMOTE_CREATE_FLAG_PARENT_REMOTE, ClientHandle::INVALID);
+					else replication->SendRemoteCreateToAll(instOwner.Main().UID, nextRemoteSeed, fuse->visual, center, atan2f(inst.dir.y, inst.dir.x), center, ActorUID::INVALID, FIRE_OBJECT_SCENE_ROOT);
 					nextRemoteSeed += 2;
 					Explode(instOwner, center, radius, fuse->damage, nullptr);
 					foreach(it, players) {
@@ -1437,10 +1455,12 @@ void World::ApplyAttachedRemote(RemoteInst& inst, Player& instOwner)
 		const vec2 at = vec2(instOwner.body->GetWorldPos()) + vec2(cosf(orbitYaw), sinf(orbitYaw)) * remote.orbitRadius;
 		const f32 radius = remote.boundSize[0] * 0.5f;
 		foreach(it, players) {
+			if(inst.hitsLeft <= 0) break;
 			if(!RemoteCanAffect(inst, *it, false)) continue;
 			if(glm::length(vec2(it->body->GetWorldPos()) - at) <= radius + HitRadius(*it)) RemoteHit(inst, *it);
 		}
 		foreach(npc, actorNpcList) {
+			if(inst.hitsLeft <= 0) break;
 			const bool hittable = NpcHittableBy(*npc, instOwner);
 			if(!hittable && remote.friendlyStatuses.empty()) continue;
 			const f32 dist = glm::length(vec2(npc->pos) - at);
@@ -1560,6 +1580,7 @@ bool World::UpdateTargetRemote(RemoteInst& inst, f32 delta)
 		}
 		inst.dir = rel / dist;
 		inst.pos += vec3(inst.dir * step, 0);
+		RemoteHitAlongPath(inst);
 		return false;
 	}
 	if(targetMaster->parent->dead) {
@@ -1640,6 +1661,8 @@ bool World::UpdateGraphRemote(RemoteInst& inst, f32 delta)
 	const Remote& remote = *inst.remote;
 	const f32 total = inst.graphArc > 0 ? inst.graphArc : inst.range;
 	const f32 step = MIN(inst.speed * delta, total - inst.travelled);
+	const vec3 before = inst.pos;
+	const f32 uBefore = total > 0 ? MIN(inst.travelled / total, 1.0f) : 1.0f;
 	inst.travelled += step;
 	if(remote.bezier && inst.range > 0) {
 		const vec2 f = inst.graphDir;
@@ -1660,6 +1683,27 @@ bool World::UpdateGraphRemote(RemoteInst& inst, f32 delta)
 	}
 	else {
 		inst.pos += vec3(inst.dir * step, 0);
+	}
+	if(remote.bezier && !remote.ignoreGround && inst.range > 0 && step > 0) {
+		const auto arcHeight = [&](f32 u) {
+			const f32 v = 1.0f - u;
+			return 3 * v * v * u * remote.bezierUp[0] * cosf(remote.bezierRotate[0] * PI / 180.0f) + 3 * v * u * u * remote.bezierUp[1] * cosf(remote.bezierRotate[1] * PI / 180.0f);
+		};
+		const f32 uAfter = total > 0 ? MIN(inst.travelled / total, 1.0f) : 1.0f;
+		const vec3 rayFrom = vec3(vec2(before), inst.wallZ + arcHeight(uBefore));
+		const vec3 rayTo = vec3(vec2(inst.pos), inst.wallZ + arcHeight(uAfter));
+		f32 wallDist = 0;
+		const PxRigidActor* wallActor = nullptr;
+		ActorDynamic* wallGate = nullptr;
+		if(RaycastShot(rayFrom, rayTo, (i32)players[inst.ownerIndex].team, &wallDist, &wallActor, &wallGate)) {
+			const f32 len = glm::length(rayTo - rayFrom);
+			const f32 k = len > 0.001f ? wallDist / len : 0.0f;
+			inst.pos = vec3(vec2(before) + (vec2(inst.pos) - vec2(before)) * k, inst.pos.z);
+			LOG("Remote :: %d lobbed into a wall at (%.0f, %.0f)", (i32)remote.ID, inst.pos.x, inst.pos.y);
+			RemoteHitAlongPath(inst);
+			inst.travelled = total;
+			return true;
+		}
 	}
 	RemoteHitAlongPath(inst);
 	const bool arrived = inst.travelled >= total - 0.01f;

@@ -72,7 +72,10 @@ void World::PlayerWeaponFire(Player& player)
 		LOG("Shot :: %ls melee swing remote %d (stance %d)", player.name.data(), (i32)swing, (i32)swingStance);
 		const GameXmlContent::MeasuredSwingNode* node = GetGameXmlContent().FindMeasuredSwingNode(swing);
 		const vec2 at = dir * (swingRemote->offsetY + (node ? node->forward : 0)) + Perp(dir) * (node ? node->side : 0);
-		RemoteInst* swingInst = SpawnRemote(player.index, swing, origin + vec3(at, 0), dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), true, nullptr, 0, player.clientHd != ClientHandle::INVALID);
+		static const f64 HYP_SWING_CLIENT_POS_FRESH_MS = 200.0;
+		const bool clientFresh = player.clientHd != ClientHandle::INVALID && player.lastClientPosAt != Time::ZERO && TimeDiffMs(TimeDiff(player.lastClientPosAt, localTime)) <= HYP_SWING_CLIENT_POS_FRESH_MS;
+		const vec3 swingFrom = clientFresh ? vec3(vec2(player.lastClientPos), origin.z) : origin;
+		RemoteInst* swingInst = SpawnRemote(player.index, swing, swingFrom + vec3(at, 0), dir, ActorUID::INVALID, SkillID::INVALID, nextCastID++, (i32)WeaponHitDamage(player, nullptr), true, nullptr, 0, player.clientHd != ClientHandle::INVALID);
 		if(swingInst && node && swingRemote->attachFireObject) {
 			swingInst->attachForward = node->forward;
 			swingInst->attachSide = node->side;
@@ -642,18 +645,43 @@ void World::UpdateProjectiles(f32 delta)
 					if(SegmentPointDist2D(from, to, vec2(pos)) > proj->halfWidth + HitRadius(*it)) continue;
 					proj->friendHitList.push_back(it->index);
 					ApplyFriendlyRemoteStatuses(owner, *shotRemote, &*it, nullptr);
+					if(shotRemote->contactFriend) {
+						const vec3 friendHit = vec3(vec2(pos), proj->pos.z);
+						if(proj->remoteID != 0) replication->SendRemoteActivatedToAll(proj->remoteID, proj->seedOwnerHd, ClientHandle::INVALID, it->Main().UID, (u32)PenetrationCost(*it), friendHit);
+						SpawnProjectileHitRemotes(*proj, *shotRemote, friendHit, (i32)it->index, ActorUID::INVALID);
+						if(--proj->hitsLeft <= 0) {
+							proj->pos = ProjectileContact(*proj, vec2(friendHit), HitRadius(*it));
+							destroyed = true;
+							break;
+						}
+					}
 				}
 				const Faction ownFaction = owner.team == 0 ? Faction::RED : Faction::BLUE;
 				foreach(npc, actorNpcList) {
+					if(destroyed) break;
 					if(npc->faction != ownFaction || npc->hp <= 0 || npc->removeAt != Time::ZERO || proj->friendNpcHitList.full()) continue;
 					if(eastl::find(proj->friendNpcHitList.begin(), proj->friendNpcHitList.end(), npc->UID) != proj->friendNpcHitList.end()) continue;
 					if(SegmentPointDist2D(from, to, vec2(npc->pos)) > proj->halfWidth + NpcHitRadius(*npc)) continue;
 					proj->friendNpcHitList.push_back(npc->UID);
 					ApplyFriendlyRemoteStatuses(owner, *shotRemote, nullptr, &*npc);
+					if(shotRemote->contactFriend) {
+						const vec3 friendHit = vec3(vec2(npc->pos), proj->pos.z);
+						if(proj->remoteID != 0) {
+							proj->npcActivation += NpcDensity(*npc);
+							replication->SendRemoteActivatedToAll(proj->remoteID, proj->seedOwnerHd, ClientHandle::INVALID, npc->UID, proj->npcActivation, friendHit);
+						}
+						SpawnProjectileHitRemotes(*proj, *shotRemote, friendHit, -1, npc->UID);
+						if(--proj->hitsLeft <= 0) {
+							proj->pos = ProjectileContact(*proj, vec2(friendHit), NpcHitRadius(*npc));
+							destroyed = true;
+							break;
+						}
+					}
 				}
 			}
 			const bool singleActivation = proj->hitsLeft == 1;
 			foreach(it, players) {
+				if(destroyed) break;
 				if(it->team == owner.team || it->dead || it->untargetable) continue;
 				if(eastl::find(proj->hitList.begin(), proj->hitList.end(), it->index) != proj->hitList.end()) continue;
 				const vec3 pos = it->body->GetWorldPos();

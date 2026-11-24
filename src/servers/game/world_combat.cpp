@@ -334,12 +334,13 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		if(it->targetIndex == target.index && it->info && it->info->nextCondition == StatusInfo::NextCondition::REMOVE_ONHIT && it->shieldHits <= 0) it->removeOnHit = true;
 	}
 
+	const bool statusTick = damageStatusID != 0;
 	foreach(it, activeStatuses) {
-		if(it->targetIndex != target.index || it->shieldHits <= 0 || it->until <= localTime || attacker.team == target.team) continue;
+		if(it->targetIndex != target.index || it->shieldHits <= 0 || it->until <= localTime || (attacker.team == target.team && !statusTick)) continue;
 		it->shieldHits--;
 		if(it->shieldHits <= 0 && it->info && it->info->nextCondition == StatusInfo::NextCondition::REMOVE_ONHIT) it->removeOnHit = true;
 		LOG("Status :: %ls shield %d absorbs a hit (%d left)", target.name.data(), it->statusID, it->shieldHits);
-		CounterAttack(attacker, target, proj != nullptr || skillID == SkillID::INVALID);
+		CounterAttack(attacker, target, proj != nullptr || (skillID == SkillID::INVALID && !statusTick));
 		return;
 	}
 	bool shieldHit = false;

@@ -61,9 +61,13 @@ static inline bool ProjectileConeHolds(const World::Projectile& proj, const vec2
 	return dist <= radius || glm::dot(rel / dist, proj.dir) >= proj.coneHalfCos;
 }
 
+static const f32 MEASURED_FOG_LEVEL_EYE = 200.0f;
+
 static inline f32 CapsuleOrSphereRadius(const Remote& remote)
 {
-	return remote.boundType == Remote::BoundType::E_BOUND_CAPSULE ? remote.boundSize[0] : remote.boundSize[0] * 0.5f;
+	if(remote.boundType == Remote::BoundType::E_BOUND_CAPSULE) return remote.boundSize[0];
+	if(remote.boundType == Remote::BoundType::E_BOUND_BOX && remote.angle > 0 && remote.angle < 180.0f) return remote.boundSize[1] * 0.5f;
+	return remote.boundSize[0] * 0.5f;
 }
 
 static inline f32 RemoteBoundOffset(const Remote& remote)

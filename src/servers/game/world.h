@@ -912,6 +912,7 @@ struct World
 		bool wallHitDone = false;
 		u32 clientRemoteID = 0;
 		bool sentByDoc = false;
+		bool targetLeft = false;
 		vec3 casterDest = vec3(0);
 		bool casterDestSet = false;
 		u32 npcActivation = 0;
@@ -1066,6 +1067,7 @@ struct World
 		Time until;
 		Time nextPulse;
 		ActorUID sourceUID = ActorUID::INVALID;
+		bool followSource = false;
 	};
 	eastl::fixed_vector<GroundAura,64,false> groundAuras;
 	i32 nextSummonLocalID = 900000;

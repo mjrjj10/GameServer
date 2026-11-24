@@ -4104,6 +4104,7 @@ StatusType StatusTypeFromString(const char* str)
 		"STATUS_TYPE_AIRBORNE",
 		"STATUS_TYPE_ARTILLERY",
 		"STATUS_TYPE_BURROW",
+		"STATUS_TYPE_BUSH_REVEAL",
 		"STATUS_TYPE_CASTER",
 		"STATUS_TYPE_COMA",
 		"STATUS_TYPE_COUNTERSTATUS",
@@ -6520,6 +6521,7 @@ bool GameXmlContent::LoadBotBrain()
 			if(EA::StdC::Strcmp(k, "BOTLOGIC_STAGELEVEL_KEY_NORMALSKILL_COOLTIME") == 0) botNormalSkillCoolTime = v;
 			else if(EA::StdC::Strcmp(k, "BOTLOGIC_STAGELEVEL_KEY_UGSKILL_COOLTIME") == 0) botUgSkillCoolTime = v;
 			else if(EA::StdC::Strcmp(k, "BOTLOGIC_STAGELEVEL_KEY_AFTER_SKILL_DELAY") == 0) botAfterSkillDelay = v;
+			else botConstants[StatusTypeKey(k)] = v;
 		}
 	}
 	for(XMLElement* p = pRoot ? pRoot->FirstChildElement("_ConstantData") : nullptr; p; p = p->NextSiblingElement("_ConstantData")) {

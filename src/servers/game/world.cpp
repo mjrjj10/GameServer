@@ -212,7 +212,7 @@ void World::Update(Time localTime_)
 					p.fearNextTurn = TimeAdd(localTime, TimeMsToTime(MAX(fear->info->intervalSec, 0.1f) * 1000.0));
 				}
 				p.input.moveTo = body.GetWorldPos() + vec3(p.fearDir * 500.0f, 0);
-				p.input.speed = MasterStat(p.Main().classType, STAT_MOVESPEED);
+				p.input.speed = PlayerMoveSpeed(p);
 				const f32 yaw = atan2f(p.fearDir.y, p.fearDir.x);
 				p.input.rot.upperYaw = yaw;
 				p.input.rot.bodyYaw = yaw;
@@ -902,6 +902,15 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	if(forcedAction == ActionStateID::INVALID) TitanOnCast(player, skillIn);
 	MarkInBattle(player);
 	const ActorUID hitEventTarget = player.memorizedTarget;
+	if(GetGameXmlContent().UsesHitEventTarget((i32)skillID)) {
+		const bool recastOpen = player.comboSkill == skillID && player.comboSlot >= 0 && localTime < player.comboUntil;
+		if(!recastOpen) {
+			LOG("Skill :: %ls cast %d refused (no open recast)", player.name.data(), (i32)skillID);
+			if(player.clientHd != ClientHandle::INVALID) replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_SKILL_INVALID_STATE_BLOCK, player.body->GetWorldPos(), player.input.rot.upperYaw, player.input.speed, clientTime);
+			return;
+		}
+		player.memorizedTarget = ActorUID::INVALID;
+	}
 	if(targets.size() == 0 && hitEventTarget != ActorUID::INVALID && GetGameXmlContent().UsesHitEventTarget((i32)skillID)) targets = Slice<const ActorUID>(&hitEventTarget, 1);
 	eastl::fixed_vector<ActorUID,10,false> selectedTargets;
 	if(const GameXmlContent::SkillInput* selIn = GetGameXmlContent().FindSkillInput((i32)skillID)) {
@@ -1298,6 +1307,11 @@ bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos
 					f32 hitDist = 0;
 					const bool hit = physics.RaycastStatic(vec3(vec2(from) + side * off, from.z + height), vec3(vec2(to) + side * off, from.z + height), &hitDist);
 					if(hit) blocked = true;
+				}
+				if(!blocked && obIn->obstructSight && to.z > from.z + MEASURED_FOG_LEVEL_EYE) {
+					f32 levelDist = 0;
+					const vec3 levelFrom = from + vec3(0, 0, MEASURED_FOG_LEVEL_EYE);
+					if(physics.RaycastSight(levelFrom, vec3(vec2(to), levelFrom.z), &levelDist) && levelDist < glm::length(vec2(to) - vec2(from))) blocked = true;
 				}
 				if(blocked) {
 					LOG("Blocked :: %ls skill=%d obstacle between caster and target", player.name.data(), (i32)skillID);

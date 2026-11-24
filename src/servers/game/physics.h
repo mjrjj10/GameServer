@@ -84,6 +84,7 @@ struct PhysicsDynamicBody
 	Time lockedMoveUntil = Time::ZERO;
 	i32 passWallTeam = -1;
 	bool passJumpable = false;
+	bool passGuardrail = false;
 	i32 team = -1;
 
 	inline vec3 GetWorldPos() const { return tov3(collider->getFootPosition()); }
@@ -107,7 +108,7 @@ struct PhysicsScene
 	void Step();
 	void Destroy();
 
-	PxRigidStatic* CreateStaticCollider(const char* meshName, const vec3& pos, const vec3& rot = vec3(0), f32 scale = 1.0f, bool blocksSight = true, bool jumpable = false);
+	PxRigidStatic* CreateStaticCollider(const char* meshName, const vec3& pos, const vec3& rot = vec3(0), f32 scale = 1.0f, bool blocksSight = true, bool jumpable = false, bool guardrail = false);
 	void SetStaticEnabled(PxRigidStatic* actor, bool enabled);
 	PhysicsDynamicBody* CreateDynamicBody(f32 radius, f32 height, const vec3& pos);
 	vec3 Move(PhysicsDynamicBody* body, const vec3& disp, f32 time /* seconds */);

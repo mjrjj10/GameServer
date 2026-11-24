@@ -885,6 +885,11 @@ void World::UpdateSummons()
 	}
 
 	for(auto ga = groundAuras.begin(); ga != groundAuras.end(); ) {
+		if(ga->followSource) {
+			const ActorNpc* bearer = FindNpcActor(ga->sourceUID);
+			if(!bearer || bearer->hp <= 0 || bearer->removeAt != Time::ZERO || (bearer->despawnAt != Time::ZERO && localTime >= bearer->despawnAt)) ga->until = localTime;
+			else ga->pos = bearer->pos;
+		}
 		if(localTime >= ga->until) {
 			if(const StatusInfo* aura = GetGameXmlContent().FindStatus(ga->auraStatus)) EndAura(ga->ownerIndex, *aura, ga->sourceUID);
 			ga = groundAuras.erase_unsorted(ga);
