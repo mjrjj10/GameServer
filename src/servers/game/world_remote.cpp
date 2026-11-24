@@ -1687,6 +1687,12 @@ bool World::UpdateLinearRemote(RemoteInst& inst, f32 delta, f32 elapsed)
 		const vec2 from = vec2(inst.pos);
 		const vec2 to = from + inst.dir * step;
 		const f32 halfWidth = remote.boundSize[0] * 0.5f;
+		if(remote.canReflect && !remote.attachFireObject) {
+			if(const MonsterRemote* blocker = FindMonsterRemoteBlocker(inst.ownerIndex, halfWidth, from, to)) {
+				LOG("Remote :: %d blocked by creature remote %d", (i32)remote.ID, (i32)blocker->remote->ID);
+				return true;
+			}
+		}
 		const f32 boxFront = remote.boundType == Remote::BoundType::E_BOUND_BOX ? MAX(remote.offsetY + RemoteBoundOffset(remote) + remote.boundSize[1] * 0.5f, 0.0f) : 0.0f;
 		const Player* stopPos = nullptr;
 		if(remote.damageGroup != Remote::DamageGroup::eNONE && remote.damageGroup != Remote::DamageGroup::INVALID) {

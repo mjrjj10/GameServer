@@ -863,7 +863,7 @@ void World::SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, c
 	}
 }
 
-void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed, u32 parentSeed, f32 lift, ActorUID spared)
+void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed, u32 parentSeed, f32 lift, ActorUID spared, bool sceneRoot)
 {
 	const vec3 shown = pos + vec3(0, 0, lift);
 	const u32 spawned = send ? MonsterSpawnerChildren(remote) : 0;
@@ -880,10 +880,11 @@ void World::SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const 
 	mr.owner = npc.UID;
 	mr.target = target;
 	mr.remote = &remote;
-	mr.pos = vec3(vec2(pos) + dir * remote.offsetY, pos.z);
+	mr.offsetY = sceneRoot ? -remote.offsetY : remote.offsetY;
+	mr.pos = vec3(vec2(pos) + dir * mr.offsetY, pos.z);
 	mr.dir = dir;
 	mr.graphDir = dir;
-	mr.graphStart = vec2(pos) + dir * remote.offsetY;
+	mr.graphStart = vec2(pos) + dir * mr.offsetY;
 	mr.expire = TimeAdd(localTime, TimeMsToTime(MAX(remote.lifeTime, MONSTER_REMOTE_MIN_LIFE_SEC) * 1000.0));
 	mr.nextTime = !remote.onTime.empty() && remote.timeEventDelay >= 0 ? TimeAdd(localTime, TimeMsToTime(MAX(remote.timeEventDelay, MONSTER_REMOTE_MIN_LIFE_SEC) * 1000.0)) : Time::ZERO;
 	mr.activations = MAX(remote.activateCount, 1);
@@ -1038,7 +1039,7 @@ void World::UpdateMonsterRemotes(f32 delta)
 			mr.dir = vec2(cosf(a), sinf(a));
 		}
 		else if(remote.attachFireObject && remote.maxSpeed <= 0) mr.dir = vec2(cosf(owner.rot.z), sinf(owner.rot.z));
-		if(remote.attachFireObject) mr.pos = vec3(vec2(owner.pos) + mr.dir * remote.offsetY, owner.pos.z);
+		if(remote.attachFireObject) mr.pos = vec3(vec2(owner.pos) + mr.dir * mr.offsetY, owner.pos.z);
 		if(remote.attachTargetObject && remote.maxSpeed <= 0 && mr.target != ActorUID::INVALID) {
 			const ActorMaster* followed = FindMasterActor(mr.target);
 			if(followed && followed->parent && !followed->parent->dead && followed->parent->body) {
@@ -1787,7 +1788,7 @@ void World::UpdateMonsterAi(f32 delta)
 			npc.monsterStarted = true;
 			if(map && map->ingameLevels) foreach_const(st, ai.spawnStatuses) ApplyMonsterStatus(npc, *st, true);
 			if(map && map->ingameLevels) foreach_const(r, ai.spawnRemotes) {
-				if(const Remote* remote = GetGameXmlContent().FindRemote((RemoteIdx)*r)) SpawnMonsterRemote(npc, *remote, npc.pos, vec2(cosf(npc.rot.z), sinf(npc.rot.z)), ActorUID::INVALID, true);
+				if(const Remote* remote = GetGameXmlContent().FindRemote((RemoteIdx)r->first)) SpawnMonsterRemote(npc, *remote, npc.pos, vec2(cosf(npc.rot.z), sinf(npc.rot.z)), ActorUID::INVALID, true, 0, 0, 0, ActorUID::INVALID, r->second);
 			}
 			npc.actionState = ActionStateID::NONE_BEHAVIORSTATE;
 			if(ai.idle != ActionStateID::INVALID) {

@@ -1558,7 +1558,9 @@ bool GameXmlContent::LoadMonsterAi()
 			const bool spawnRemote = remoteCmd && EA::StdC::Strcmp(state, "SPAWN_BEHAVIORSTATE") == 0;
 			if(spawnRemote) {
 				const i32 remoteIndex = pA->IntAttribute("RemoteIndex");
-				foreach(it, monsterAi) if(it->second.className == cls && remoteIndex != 0 && !it->second.spawnRemotes.full()) it->second.spawnRemotes.push_back(remoteIndex);
+				const char* node = pA->Attribute("NodeName");
+				const bool sceneRoot = node && EA::StdC::Strcmp(node, "Scene Root") == 0;
+				foreach(it, monsterAi) if(it->second.className == cls && remoteIndex != 0 && !it->second.spawnRemotes.full()) it->second.spawnRemotes.push_back({ remoteIndex, sceneRoot });
 				continue;
 			}
 			if(!selfStatus && !dieRemote) continue;

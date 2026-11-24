@@ -1385,7 +1385,7 @@ struct GameXmlContent
 		f32 movingBodyHeight = 0;
 		eastl::fixed_vector<i32,8,false> spawnStatuses;
 		eastl::fixed_vector<i32,4,false> dieRemotes;
-		eastl::fixed_vector<i32,4,false> spawnRemotes;
+		eastl::fixed_vector<eastl::pair<i32,bool>,4,false> spawnRemotes;
 		eastl::fixed_vector<i32,4,false> lowHpRemoveRemotes;
 		struct StateStatus { ActionStateID state; i32 statusID; bool remove; };
 		eastl::fixed_vector<StateStatus,8,false> stateStatuses;

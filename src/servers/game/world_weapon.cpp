@@ -1188,7 +1188,12 @@ World::RemoteInst* World::FindProjectileReflector(const Projectile& proj, const 
 
 const World::MonsterRemote* World::FindMonsterProjectileBlocker(const Projectile& proj, const vec2& from, const vec2& to)
 {
-	const Player& shooter = players[proj.ownerIndex];
+	return FindMonsterRemoteBlocker(proj.ownerIndex, proj.halfWidth, from, to);
+}
+
+const World::MonsterRemote* World::FindMonsterRemoteBlocker(u32 ownerIndex, f32 halfWidth, const vec2& from, const vec2& to)
+{
+	const Player& shooter = players[ownerIndex];
 	const f32 len = glm::length(to - from);
 	const i32 steps = MAX((i32)(len / REFLECT_SAMPLE_STEP), 1);
 	foreach_const(mr, monsterRemotes) {
@@ -1200,12 +1205,12 @@ const World::MonsterRemote* World::FindMonsterProjectileBlocker(const Projectile
 			const vec2 p = from + (to - from) * ((f32)k / (f32)steps);
 			const vec2 rel = p - vec2(mr->pos) - mr->dir * RemoteBoundOffset(r);
 			bool inside;
-			if(r.boundType == Remote::BoundType::E_BOUND_SPHERE) inside = glm::length(rel) <= r.boundSize[0] * 0.5f + proj.halfWidth;
+			if(r.boundType == Remote::BoundType::E_BOUND_SPHERE) inside = glm::length(rel) <= r.boundSize[0] * 0.5f + halfWidth;
 			else {
 				const f32 length = r.boundSize[1];
 				const vec2 local = rel + mr->dir * (length * 0.5f);
 				const f32 along = glm::dot(local, mr->dir);
-				inside = along >= -proj.halfWidth && along <= length + proj.halfWidth && fabsf(glm::dot(local, Perp(mr->dir))) <= r.boundSize[0] * 0.5f + proj.halfWidth;
+				inside = along >= -halfWidth && along <= length + halfWidth && fabsf(glm::dot(local, Perp(mr->dir))) <= r.boundSize[0] * 0.5f + halfWidth;
 			}
 			if(inside) return &*mr;
 		}
