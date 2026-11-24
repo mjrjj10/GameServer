@@ -194,7 +194,7 @@ void World::PassiveOnFriendlyHit(Player& owner)
 	if(owner.dead || owner.mana < 0) return;
 	const ActiveStatus* st = FindPassiveOfType(owner, StatusType::ELECTRO);
 	if(!st || !st->info || st->info->hitEffectValue <= 0) return;
-	const f32 manaMax = MasterStat(owner.Main().classType, STAT_MANA);
+	const f32 manaMax = ResourceMax(owner.Main(), STAT_MANA);
 	if(manaMax <= 0 || owner.mana >= manaMax) return;
 	owner.mana = MIN(owner.mana + st->info->hitEffectValue, manaMax);
 	owner.manaDirty = true;
@@ -204,7 +204,7 @@ void World::GearStaminaOnHit(Player& target, i32 damage)
 {
 	const f32 regen = target.Main().gearStaminaOnHit;
 	if(damage <= 0 || regen <= 0 || target.stamina < 0 || target.dead) return;
-	const f32 staminaMax = MasterStat(target.Main().classType, STAT_STAMINA);
+	const f32 staminaMax = ResourceMax(target.Main(), STAT_STAMINA);
 	if(staminaMax <= 0 || target.stamina >= staminaMax) return;
 	target.stamina = MIN(target.stamina + regen, staminaMax);
 	target.staminaDirty = true;
@@ -613,7 +613,7 @@ f32 World::RollCritical(const Player& attacker, bool weapon, RemoteIdx doc, f32 
 {
 	const ClassType ac = attacker.Main().classType;
 	const Remote* critRemote = doc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(doc) : nullptr;
-	const f32 rate = MasterStat(ac, weapon ? STAT_CRITICALRATE : STAT_SKILL_CRITICALRATE) + (weapon ? StatBonus(attacker, STAT_CRITICALRATE) : 0.0f) + (critRemote ? critRemote->criticalRate : 0) +
+	const f32 rate = MasterStat(ac, weapon ? STAT_CRITICALRATE : STAT_SKILL_CRITICALRATE) + (weapon ? StatBonus(attacker, STAT_CRITICALRATE) : attacker.Main().GearBonus(STAT_SKILL_CRITICALRATE)) + (critRemote ? critRemote->criticalRate : 0) +
 		StatusModSum(attacker, weapon ? StatusMod::CRITICALRATE : StatusMod::SKILL_CRITICALRATE);
 	if(rate + bonus <= 0 || (RandUint() % 10000) >= (u32)((rate + bonus) * 100.0f)) return 0.0f;
 	const f32 critDamage = MasterStat(ac, weapon ? STAT_CRITICALDAMAGE : STAT_SKILL_CRITICALDAMAGE);

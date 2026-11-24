@@ -214,6 +214,10 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	const vec2 spreadDir = vec2(aimDir.x * cosf(spreadHalf) - aimDir.y * sinf(spreadHalf), aimDir.x * sinf(spreadHalf) + aimDir.y * cosf(spreadHalf));
 	proj.travelled = 0;
 	proj.start = proj.pos;
+	{
+		const Cl::CQ_GamePlayerSyncPhy* shotPhy = player.clientHd != ClientHandle::INVALID && player.pendingShotRawSize >= (i32)offsetof(Cl::CQ_GamePlayerSyncPhy, charNameLen) ? (const Cl::CQ_GamePlayerSyncPhy*)player.pendingShotRaw.data() : nullptr;
+		proj.aimZ = shotPhy ? shotPhy->FirePosition.z + (f32)shotPhy->aimOffsetZ / SHOT_AIM_OFFSET_SCALE : proj.pos.z;
+	}
 	proj.speed = (remote && remote->maxSpeed > 0) ? remote->maxSpeed : WEAPON_PROJECTILE_SPEED;
 
 	f32 remoteRange = classRange;
@@ -487,7 +491,7 @@ void World::Explode(Player& owner, const vec3& center, f32 radius, i32 damage, c
 	}
 	if(mastersHit + npcsHit >= 2 && owner.mana >= 0 && localTime >= owner.multiHitPassiveReady) {
 		if(const ActiveStatus* st = FindPassiveOfType(owner, StatusType::ARTILLERY)) {
-			owner.mana = MIN(owner.mana + st->info->Param(mastersHit > 0 ? "_AddValuePC" : "_AddValueNPC"), MasterStat(owner.Main().classType, STAT_MANA));
+			owner.mana = MIN(owner.mana + st->info->Param(mastersHit > 0 ? "_AddValuePC" : "_AddValueNPC"), ResourceMax(owner.Main(), STAT_MANA));
 			owner.manaDirty = true;
 			owner.multiHitPassiveReady = TimeAdd(localTime, TimeMsToTime(st->info->Param("_Duration")));
 			LOG("Passive :: %ls hit %d masters %d creatures -> mana %.0f", owner.name.data(), mastersHit, npcsHit, owner.mana);
@@ -646,7 +650,7 @@ void World::UpdateProjectiles(f32 delta)
 				const vec3 pos = it->body->GetWorldPos();
 				const f32 lagDist = LagDistToSegment(*it, from, to);
 				proj->closest = MIN(proj->closest, lagDist);
-				if(fabsf(pos.z - proj->pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
+				if(fabsf(pos.z - proj->pos.z) > WEAPON_PROJECTILE_HIT_HEIGHT && fabsf(pos.z - proj->aimZ) > WEAPON_PROJECTILE_HIT_HEIGHT) continue;
 				if(proj->jumpClear > 0 && !it->body->grounded && pos.z > proj->pos.z + proj->jumpClear) continue;
 				if(!LagSegmentHits(*it, from, to, proj->halfWidth + HitRadius(*it) + PROJECTILE_HIT_TOLERANCE, lastStep ? proj->forwardReach + HitRadius(*it) : HitRadius(*it))) continue;
 				if(!ProjectileConeHolds(*proj, vec2(pos), HitRadius(*it))) continue;

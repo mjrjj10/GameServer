@@ -485,7 +485,7 @@ void World::PassiveOnSkillCast(Player& player, i32 skillID)
 		if(st->info->customMax > 0 && counter.custom >= st->info->customMax) counter.custom = 0;
 		SendPassiveCounter(counter, counter.custom);
 		if(counter.custom == 0) {
-			const f32 staminaMax = MasterStat(player.Main().classType, STAT_STAMINA);
+			const f32 staminaMax = ResourceMax(player.Main(), STAT_STAMINA);
 			if(staminaMax > 0) {
 				player.stamina = staminaMax;
 				player.staminaDirty = true;
@@ -891,7 +891,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		target.staminaDirty = true;
 	}
 	if(const StatusStaminaRule* gain = FindStatusStaminaRule(statusID)) {
-		const f32 staminaMax = MasterStat(target.Main().classType, STAT_STAMINA);
+		const f32 staminaMax = ResourceMax(target.Main(), STAT_STAMINA);
 		if(caster.team == target.team && staminaMax > 0 && target.stamina < staminaMax) {
 			const f32 before = target.stamina;
 			target.stamina = MIN(target.stamina + gain->amount, staminaMax);
@@ -925,15 +925,15 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 			continue;
 		}
 		const ClassType cls = target.Main().classType;
-		const f32 manaMax = MasterStat(cls, STAT_MANA);
-		const f32 staminaMax = MasterStat(cls, STAT_STAMINA);
+		const f32 manaMax = ResourceMax(target.Main(), STAT_MANA);
+		const f32 staminaMax = ResourceMax(target.Main(), STAT_STAMINA);
 		const f32 ultMax = MasterStat(cls, STAT_ULTIMATE);
 		if(manaMax > 0 && target.mana >= 0) { target.mana = MIN(target.mana + manaMax * ratio, manaMax); target.manaDirty = true; }
 		if(staminaMax > 0 && target.stamina >= 0) { target.stamina = MIN(target.stamina + staminaMax * ratio, staminaMax); target.staminaDirty = true; }
 		if(ultMax > 0 && target.ultGauge >= 0) { target.ultGauge = MIN(target.ultGauge + ultMax * ratio, ultMax); target.ultDirty = true; }
 	}
 	if(info && target.mana >= 0 && !target.dead) {
-		const f32 manaMax = MasterStat(target.Main().classType, STAT_MANA);
+		const f32 manaMax = ResourceMax(target.Main(), STAT_MANA);
 		bool ticked = false;
 		foreach_const(h, info->mods) if(h->stat == StatusMod::HEALTH && h->regen) ticked = true;
 		foreach_const(m, info->mods) {
@@ -1393,12 +1393,12 @@ void World::UpdateStatuses()
 				}
 				foreach_const(mm, it->info->mods) {
 					if(mm->stat != StatusMod::MANA) continue;
-					const f32 manaMax = MasterStat(target.Main().classType, STAT_MANA);
+					const f32 manaMax = ResourceMax(target.Main(), STAT_MANA);
 					if(manaMax > 0 && target.mana >= 0 && target.mana < manaMax) {
 						target.mana = MIN(target.mana + (mm->mul ? manaMax * mm->value / 100.0f : mm->value), manaMax);
 						target.manaDirty = true;
 					}
-					const f32 benchManaMax = MasterStat(target.Sub().classType, STAT_MANA);
+					const f32 benchManaMax = ResourceMax(target.Sub(), STAT_MANA);
 					if(it->info->bothCharacters && benchManaMax > 0 && target.benchMana >= 0 && target.benchMana < benchManaMax) {
 						target.benchMana = MIN(target.benchMana + (mm->mul ? benchManaMax * mm->value / 100.0f : mm->value), benchManaMax);
 						replication->SendStatToAll(target.Sub().UID, STAT_MANA, target.benchMana, benchManaMax);

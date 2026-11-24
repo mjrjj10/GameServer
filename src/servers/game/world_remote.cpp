@@ -958,9 +958,15 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 		statusPushDir = vec2(d.x * cosf(a) - d.y * sinf(a), d.x * sinf(a) + d.y * cosf(a));
 		statusPushDirSet = true;
 	}
+	const bool prevCenterSet = statusForceCenterSet;
+	const vec3 prevCenter = statusForceCenter;
+	statusForceCenter = inst.pos;
+	statusForceCenterSet = true;
 	foreach_const(st, remote.statuses) {
 		if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(players[inst.ownerIndex], npc, st->statusID, false);
 	}
+	statusForceCenter = prevCenter;
+	statusForceCenterSet = prevCenterSet;
 	if(fixedForce) statusPushDirSet = false;
 	statusCasterOverride = prevCaster;
 	return true;

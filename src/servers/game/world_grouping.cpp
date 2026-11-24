@@ -64,7 +64,7 @@ void World::GroupingSummonKill(Player& killer, const ActorNpc& summon)
 		if(!u || u->effect != MasterGrouping::CONSUMABLE_STAT || !GroupingHasPartner(*g, *u, (ClassType)summon.ownerClass)) continue;
 		foreach_const(m, u->mods) {
 			if(m->statType != (i32)StatType::STAT_TYPE_MANA || killer.mana < 0) continue;
-			killer.mana = MIN(killer.mana + m->value, MasterStat(killer.Main().classType, STAT_MANA));
+			killer.mana = MIN(killer.mana + m->value, ResourceMax(killer.Main(), STAT_MANA));
 			killer.manaDirty = true;
 			LOG("Grouping :: %ls gains %.0f mana from grouping %d (summon %d)", killer.name.data(), m->value, g->id, (i32)summon.docID);
 		}

@@ -72,8 +72,8 @@ void World::UpdateUltimateGauges(f32 delta)
 		}
 
 		const f32 ultMax = MAX(MasterStat(cls, STAT_ULTIMATE), 1.0f);
-		const f32 staminaMax = MasterStat(cls, STAT_STAMINA);
-		const f32 manaMax = MasterStat(cls, STAT_MANA);
+		const f32 staminaMax = ResourceMax(it->Main(), STAT_STAMINA);
+		const f32 manaMax = ResourceMax(it->Main(), STAT_MANA);
 		eastl::array<f32,3> resMax;
 		for(int r = 0; r < 3; r++) resMax[r] = MasterStat(cls, RESOURCES[r].maxStat);
 		if(it->ultGauge < 0) { it->ultGauge = 0; it->ultDirty = true; }
@@ -84,8 +84,8 @@ void World::UpdateUltimateGauges(f32 delta)
 		}
 
 		const ActorMaster& sub = it->Sub();
-		const f32 benchStaminaMax = MasterStat(benchCls, STAT_STAMINA);
-		const f32 benchManaMax = MasterStat(benchCls, STAT_MANA);
+		const f32 benchStaminaMax = ResourceMax(sub, STAT_STAMINA);
+		const f32 benchManaMax = ResourceMax(sub, STAT_MANA);
 		eastl::array<f32,3> benchResMax;
 		for(int r = 0; r < 3; r++) benchResMax[r] = MasterStat(benchCls, RESOURCES[r].maxStat);
 		if(benchStaminaMax > 0 && it->benchStamina < 0) {
@@ -168,11 +168,11 @@ void World::UpdateUltimateGauges(f32 delta)
 		}
 
 		{
-			static const StatusMod::Stat COMBAT_STAT_MODS[2] = { StatusMod::ATTACK, StatusMod::DEFENCE };
-			static const u8 COMBAT_STAT_TYPES[2] = { (u8)StatType::STAT_TYPE_ATTACK, (u8)StatType::STAT_TYPE_DEFENCE };
+			static const StatusMod::Stat COMBAT_STAT_MODS[4] = { StatusMod::ATTACK, StatusMod::DEFENCE, StatusMod::SKILLPOWER, StatusMod::CRITICALRATE };
+			static const u8 COMBAT_STAT_TYPES[4] = { (u8)StatType::STAT_TYPE_ATTACK, (u8)StatType::STAT_TYPE_DEFENCE, (u8)StatType::STAT_TYPE_SKILLPOWER, (u8)StatType::STAT_TYPE_CRITICALRATE };
 			const ActorMaster& main = it->Main();
 			const bool mainChanged = it->combatStatMain != main.UID;
-			for(i32 k = 0; k < 2; k++) {
+			for(i32 k = 0; k < 4; k++) {
 				if(mainChanged && it->combatStatMain != ActorUID::INVALID) {
 					for(u32 m = 0; m < it->characters.size(); m++) {
 						const ActorMaster& old = *it->characters[m];
@@ -1767,7 +1767,7 @@ void World::SendTagCooltimeToTeam(const Player& owner, u32 ms)
 {
 	if(!replication->titanMode) return;
 	foreach_const(p, players) {
-		if(p->clientHd != ClientHandle::INVALID && p->team == owner.team) replication->SendTagCooltime(p->clientHd, owner.Sub().UID, ms);
+		if(p->clientHd != ClientHandle::INVALID && p->team == owner.team && p->index != owner.index) replication->SendTagCooltime(p->clientHd, owner.Sub().UID, ms);
 	}
 }
 
@@ -2337,7 +2337,7 @@ f32 World::SkillCoolTime(const Player& player, i32 skillID) const
 		if(chara.classType == ClassType::NONE) continue;
 		foreach_const(sid, content.GetMaster(chara.classType).skillIDs) {
 			if((i32)*sid != skillID) continue;
-			const f32 discount = content.MasterTraitBonus(chara.classType, chara.traits, STAT_SKILL_COOLTIME_DISCOUNT) + StatusModSum(player, StatusMod::SKILL_COOLTIME_DISCOUNT);
+			const f32 discount = content.MasterTraitBonus(chara.classType, chara.traits, STAT_SKILL_COOLTIME_DISCOUNT) + chara.GearBonus(STAT_SKILL_COOLTIME_DISCOUNT) + StatusModSum(player, StatusMod::SKILL_COOLTIME_DISCOUNT);
 			return base * MAX(1.0f - discount / 100.0f, 0.0f);
 		}
 	}

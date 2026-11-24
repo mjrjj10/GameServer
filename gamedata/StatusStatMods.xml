@@ -111,6 +111,8 @@
   <MOD status="1230340052" stat="STAT_TYPE_MOVESPEED" value="5" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 4/5" />
   <MOD status="1230340053" stat="STAT_TYPE_MOVESPEED" value="5" mul="1" source="MEASURED official captures, Tools/pcap/measure_status_stats.py: stat change when the status is added, mode 4/7" />
   <MOD status="1230330011" stat="STAT_TYPE_ATTACK" value="35" mul="1" source="STR_SKILL_DESC_180330010: [High Roller] instead increases weapon damage by 35%" />
+  <MOD status="1230330031" stat="STAT_TYPE_SKILLPOWER" value="20" source="MEASURED official captures: Nanu Manastone Bundle skill power stone, SN_UpdateStat 8 +20.0 per stack (27 cases, mode)" />
+  <MOD status="1230330032" stat="STAT_TYPE_CRITICALRATE" value="2" source="MEASURED official captures: Nanu Manastone Bundle critical stone, SN_UpdateStat 9 +2.0 per stack (22 cases, mode)" />
   <MOD status="1230330011" stat="STAT_TYPE_SKILLPOWER" value="350" source="STR_SKILL_DESC_180330010: [High Roller] and skill power by 350" />
   <MOD status="1230330041" stat="STAT_TYPE_MOVESPEED" value="30" mul="1" source="STR_SKILL_DESC_180330040: [High Roller] grants its effects (skilltt 1230330040 movespeed +30%); official captures delta +29.7" />
   <MOD status="1230210047" stat="STAT_TYPE_MOVESPEED" value="-30" mul="1" source="STATUS_PC _Description: -30% slow, 1 s" />

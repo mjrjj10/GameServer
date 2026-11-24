@@ -322,6 +322,7 @@ void World::DestroyTeamCore(i32 team)
 void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDoc)
 {
 	if(npc.removeAt != Time::ZERO) return;
+	CancelNpcPendingHits(npc);
 	SetMonsterBattle(npc, false);
 	npc.hp = 0;
 	npc.killerUID = killerUID;

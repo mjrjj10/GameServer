@@ -181,6 +181,11 @@ f32 World::CombatStatBase(const Player& player, const ActorMaster& chara, u8 sta
 	return base + LevelBonus(player, chara.classType, statType) + content.MasterTraitBonus(chara.classType, chara.traits, statType) + chara.GearBonus(statType);
 }
 
+f32 World::ResourceMax(const ActorMaster& chara, u8 statType) const
+{
+	return MasterStat(chara.classType, statType) + chara.GearBonus(statType);
+}
+
 f32 World::StatBonus(const Player& player, u8 statType) const
 {
 	const ActorMaster& chara = player.Main();

@@ -213,6 +213,7 @@ struct World
 		i32 ingameExp = 0;
 		i32 points = 0;
 		bool inSafeZone = false;
+		Time zoneRetriggerAfter = Time::ZERO;
 		i32 titanPieces = 0;
 		i32 savedPieces = 0;
 		i32 interactSlot = -1;
@@ -337,7 +338,7 @@ struct World
 		eastl::array<f32,2> tagStatSent = { -1, -1 };
 		eastl::array<f32,2> statusStatSent = { 0, 0 };
 		ActorUID statusStatMain = ActorUID::INVALID;
-		eastl::array<f32,2> combatStatSent = { 0, 0 };
+		eastl::array<f32,4> combatStatSent = { 0, 0, 0, 0 };
 		ActorUID combatStatMain = ActorUID::INVALID;
 		bool regenResend = false;
 		f32 shotLeadSec = 0;
@@ -793,6 +794,7 @@ struct World
 		u16 nodeName = 0;
 		vec3 pos;
 		vec2 dir;
+		f32 aimZ = 0;
 		f32 travelled;
 		f32 range;
 		f32 aoeRadius;
@@ -1506,6 +1508,7 @@ public:
 	i32 IngameRespawnDelayMs(const Player& player) const;
 	f32 LevelBonus(const Player& player, ClassType classType, u8 statType) const;
 	f32 StatBonus(const Player& player, u8 statType) const;
+	f32 ResourceMax(const ActorMaster& chara, u8 statType) const;
 	f32 TitanDefencePenetration(const Player& p) const;
 	f32 RollCritical(const Player& attacker, bool weapon, RemoteIdx doc, f32 bonus);
 	bool HasStatusTypeKey(const Player* player, const ActorNpc* npc, u32 key, const Player* caster) const;

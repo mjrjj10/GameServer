@@ -275,7 +275,7 @@ void World::Update(Time localTime_)
 			if(p.weaponState == WEAPON_STATE_CHARGE) OnWeaponState(p, 0, 0, 0);
 			ToggleOff(p);
 			SwapMainMaster(p);
-			foreach(s, boundTriggerStates) if(s->playerIndex == p.index && map && map->levelEvents[s->node].ownTeamOnly) s->inside = false;
+			p.zoneRetriggerAfter = localTime;
 			if(!p.dead) {
 				statusNoCaster = true;
 				ApplyStatus(p, p, STATUS_PC_TAG_GODMODE);
@@ -369,6 +369,17 @@ void World::Update(Time localTime_)
 	UpdateFog();
 	UpdateMasterGroupings();
 	UpdateNpcStatuses();
+	foreach(p, players) {
+		if(p->zoneRetriggerAfter == Time::ZERO || localTime <= p->zoneRetriggerAfter) continue;
+		p->zoneRetriggerAfter = Time::ZERO;
+		bool retriggered = false;
+		foreach(s, boundTriggerStates) {
+			if(s->playerIndex != p->index || !map || !map->levelEvents[s->node].ownTeamOnly || !s->inside) continue;
+			s->inside = false;
+			retriggered = true;
+		}
+		if(retriggered && p->inSafeZone && p->clientHd != ClientHandle::INVALID) replication->SendSafeZone(p->clientHd, p->userID, false);
+	}
 	UpdateLevelEvents();
 	UpdateToggles();
 	UpdateChases();
@@ -1444,6 +1455,13 @@ void World::SwapMainMaster(Player& p)
 {
 	AccumulateMasterScore(p);
 	const ActorUID oldMain = p.Main().UID;
+	if(p.comboSlot >= 0) {
+		if(p.clientHd != ClientHandle::INVALID) replication->SendChangeSkillSlot(p.clientHd, oldMain, p.comboSlot, p.comboBase, 0);
+		LOG("Combo :: %ls slot %d given back to the outgoing master at tag", p.name.data(), p.comboSlot);
+		p.comboSlot = -1;
+		p.comboPending = SkillID::INVALID;
+		p.comboAutoAt = Time::ZERO;
+	}
 	p.mainCharaID ^= 1;
 	p.firingCombo = 0;
 	p.botComboShotAt = Time::ZERO;
