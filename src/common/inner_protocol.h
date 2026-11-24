@@ -302,6 +302,7 @@ struct MN_GameEnded
 	enum { NET_ID = 3009 };
 
 	SortieUID sortieUID;
+	u8 serverLost;
 };
 
 struct MN_RoomCancelled

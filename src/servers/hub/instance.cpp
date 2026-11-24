@@ -139,6 +139,15 @@ bool FindSortieGameServer(SortieUID sortieUID, eastl::array<u8,4>* ip, u16* port
 	return false;
 }
 
+void ForgetSortieSentToGame(SortieUID sortieUID)
+{
+	std::lock_guard<std::mutex> lock(g_sentToGameMutex);
+	for(auto it = g_sentToGame.begin(); it != g_sentToGame.end();) {
+		if(it->sortieUID == sortieUID) it = g_sentToGame.erase(it);
+		else ++it;
+	}
+}
+
 bool TakeAccountReturningFromGame(const WideString& nickname, SortieUID* sortieUID, AccountUID* gameAccountUID)
 {
 	std::lock_guard<std::mutex> lock(g_sentToGameMutex);

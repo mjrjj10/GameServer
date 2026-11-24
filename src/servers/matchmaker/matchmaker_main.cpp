@@ -146,6 +146,7 @@ struct Matchmaker
 
 	eastl::fixed_list<Room,2048> roomList;
 	hash_map<SortieUID, decltype(roomList)::iterator, 2048> roomMap;
+	hash_map<SortieUID, ClientHandle, 2048> sortieGameServer;
 
 	GrowableBuffer recvDataBuff;
 
@@ -189,6 +190,20 @@ struct Matchmaker
 			const ClientHandle clientHd = *cl;
 			const auto found = connMap.find(clientHd);
 			if(found == connMap.end()) continue;
+
+			if(found->second->type == Connection::Type::GameServer) {
+				for(auto s = sortieGameServer.begin(); s != sortieGameServer.end();) {
+					if(s->second != clientHd) { ++s; continue; }
+					LOG("[game%x] Game server lost, game ended (sortieUID=%llu)", clientHd, (u64)s->first);
+					In::MN_GameEnded notify;
+					notify.sortieUID = s->first;
+					notify.serverLost = 1;
+					foreach_const(c, connList) {
+						if(c->type == Connection::Type::HubServer) SendPacket(c->clientHd, notify);
+					}
+					s = sortieGameServer.erase(s);
+				}
+			}
 
 			connList.erase(found->second);
 			connMap.erase(found);
@@ -488,8 +503,10 @@ struct Matchmaker
 			case In::GN_GameEnded::NET_ID: {
 				const In::GN_GameEnded& packet = SafeCast<In::GN_GameEnded>(packetData, packetSize);
 				LOG("[game%x] Game ended (sortieUID=%llu)", conn.clientHd, (u64)packet.sortieUID);
+				sortieGameServer.erase(packet.sortieUID);
 				In::MN_GameEnded notify;
 				notify.sortieUID = packet.sortieUID;
+				notify.serverLost = 0;
 				foreach_const(c, connList) {
 					if(c->type == Connection::Type::HubServer) SendPacket(c->clientHd, notify);
 				}
@@ -501,6 +518,7 @@ struct Matchmaker
 
 				// TODO: validate args?
 
+				sortieGameServer[packet.sortieUID] = conn.clientHd;
 				if(roomMap.find(packet.sortieUID) == roomMap.end()) {
 					WARN("Room not found (sortieUID=%llu) // if you run dev mode this is normal", packet.sortieUID);
 					return;

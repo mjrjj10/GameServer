@@ -2652,6 +2652,7 @@ inline const char* PacketSerialize<In::MN_GameEnded>(const void* packetData, con
 
 	SER("MN_GameEnded(%d, %d) :: {", In::MN_GameEnded::NET_ID, packetSize);
 	SER("	sortieUID=%llu", packet.sortieUID);
+	SER("	serverLost=%d", packet.serverLost);
 	SER("}");
 
 	return str.data();

@@ -1940,10 +1940,11 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 	pendingRegame[userID] = false;
 }
 
-void HubGame::MmOnGameEnded(SortieUID sortieUID)
+void HubGame::MmOnGameEnded(SortieUID sortieUID, bool serverLost)
 {
 	if(eastl::find(endedSorties.begin(), endedSorties.end(), sortieUID) == endedSorties.end()) endedSorties.push_back(sortieUID);
-	LOG("HubGame :: game %llu ended", (u64)sortieUID);
+	if(serverLost) ForgetSortieSentToGame(sortieUID);
+	LOG("HubGame :: game %llu ended%s", (u64)sortieUID, serverLost ? " (game server lost)" : "");
 }
 
 void HubGame::MmOnRoomCancelled(SortieUID sortieUID)

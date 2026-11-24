@@ -34,6 +34,7 @@ void MarkAccountSentToGame(const WideString& nickname, SortieUID sortieUID, Acco
 void MarkSortieGameServer(SortieUID sortieUID, const eastl::array<u8,4>& ip, u16 port);
 bool FindSortieGameServer(SortieUID sortieUID, eastl::array<u8,4>* ip, u16* port);
 bool TakeAccountReturningFromGame(const WideString& nickname, SortieUID* sortieUID, AccountUID* gameAccountUID);
+void ForgetSortieSentToGame(SortieUID sortieUID);
 
 struct RoomInstance
 {

@@ -1702,7 +1702,6 @@ void Game::ReserveTrainingSlots()
 
 void Game::SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team)
 {
-	if(world.players.full()) return;
 	const GameXmlContent& xml = GetGameXmlContent();
 	World::PlayerDescription desc;
 	desc.userID = UserID(world.players.size() + 1);
@@ -1737,10 +1736,14 @@ void Game::SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team)
 		desc.name = ts.name;
 		desc.reservedUIDs = ts.uids;
 	}
+	if((slot < 0 || trainingSlotPlayers[slot] < 0) && world.players.full()) return;
 	World::Player* spawned = nullptr;
 	if(slot >= 0 && trainingSlotPlayers[slot] >= 0) {
 		spawned = &world.GetPlayer(trainingSlotPlayers[slot]);
 		world.ReplacePlayerMasters(*spawned, desc);
+		spawned->devGod = false;
+		spawned->devVision = false;
+		spawned->trainingDummy = false;
 		spawned->spawnPos = pos;
 		world.TeleportPlayer(*spawned, pos, yaw);
 	}

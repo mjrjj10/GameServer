@@ -241,7 +241,7 @@ struct HubGame
 	void MmOnPartyCreated(PartyUID partyUID, AccountUID leader);
 	void MmOnPartyEnqueued(PartyUID partyUID);
 	void MmOnMatchFound(const In::MN_MatchingPartyFound& matchingParty);
-	void MmOnGameEnded(SortieUID sortieUID);
+	void MmOnGameEnded(SortieUID sortieUID, bool serverLost);
 	void MmOnRoomCancelled(SortieUID sortieUID);
 
 	bool ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 len);
