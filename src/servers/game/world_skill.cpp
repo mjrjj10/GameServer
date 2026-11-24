@@ -1136,7 +1136,10 @@ void World::UpdateCasts()
 			}
 		}
 		if(localTime < it->casting.executeAt) continue;
-		if(!bot && it->casting.type == GameXmlContent::SkillCast::LIMIT) CancelCast(*it, "window ended");
+		if(!bot && it->casting.type == GameXmlContent::SkillCast::LIMIT) {
+			RefundUltimateOnCancel(*it);
+			CancelCast(*it, "window ended");
+		}
 		else ReleaseCast(*it);
 	}
 }

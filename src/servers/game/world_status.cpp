@@ -1392,8 +1392,10 @@ void World::UpdateStatuses()
 				if(m->stat == StatusMod::STAMINA) {
 					const f32 staminaMax = ResourceMax(target.Main(), STAT_STAMINA);
 					if(staminaMax > 0 && target.stamina >= 0 && target.stamina < staminaMax) {
-						target.stamina = MIN(target.stamina + (m->mul ? staminaMax * m->value / 100.0f : m->value) * it->overlap, staminaMax);
+						const f32 gain = (m->mul ? staminaMax * m->value / 100.0f : m->value) * it->overlap;
+						target.stamina = MIN(target.stamina + gain, staminaMax);
 						target.staminaDirty = true;
+						LOG("Status :: %ls stamina +%.0f by %d tick %d -> %.0f", target.name.data(), gain, it->statusID, it->healTicksDone, target.stamina);
 					}
 					continue;
 				}
