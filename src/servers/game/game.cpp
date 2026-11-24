@@ -1693,6 +1693,13 @@ void Game::SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team)
 		desc.colliderSize[mi] = { (u16)master.character.getColliderRadius(), (u16)master.character.getColliderHeight() };
 	}
 	desc.stageSkills = { SkillID::INVALID, SkillID::INVALID };
+	const auto* stageClasses = xml.FindStageBots(replication.stageIndex);
+	const auto* stageDocs = xml.FindStageBotDocs(replication.stageIndex);
+	if(stageClasses && stageDocs) {
+		for(int mi = 0; mi < 2; mi++) {
+			for(u32 i = 0; i < stageClasses->size() && i < stageDocs->size(); i++) if((*stageClasses)[i] == classes[mi]) desc.creatureDocs[mi] = (*stageDocs)[i];
+		}
+	}
 	RollBotGear(desc);
 	const auto& spawnPoints = mapSpawnPoints[team];
 	const vec3 pos = spawnPoints.empty() ? world.GetPlayer(0).spawnPos : spawnPoints[0].pos;
@@ -1700,8 +1707,9 @@ void Game::SpawnTrainingBot(ClassType mainClass, ClassType subClass, u8 team)
 	World::Player& worldPlayer = world.CreatePlayer(desc, pos, RotationHumanoid{0.f, 0.f, yaw});
 	playerList.emplace_back(desc.clientHd, AccountUID::INVALID, desc.name, worldPlayer.index);
 	botList.emplace_back(worldPlayer.index);
+	worldPlayer.trainingBot = true;
 	if(!trainingBots.full()) trainingBots.push_back(worldPlayer.index);
-	LOG("Training :: bot masters=(%d, %d) team=%d", (i32)mainClass, (i32)subClass, (i32)team);
+	LOG("Training :: bot masters=(%d, %d) docs=(%d, %d) team=%d", (i32)mainClass, (i32)subClass, (i32)desc.creatureDocs[0], (i32)desc.creatureDocs[1], (i32)team);
 }
 
 void Game::OnPlayerTag(ClientHandle clientHd, ActorUID actorUID)

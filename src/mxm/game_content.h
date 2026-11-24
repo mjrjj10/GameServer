@@ -1274,6 +1274,7 @@ struct GameXmlContent
 	f32 DifficultyMonsterStat(u8 bit) const { auto f = difficultyMonsterStat.find((i32)bit); return f == difficultyMonsterStat.end() ? 1.0f : f->second; }
 	CreatureIndex FindDeathMatchBotIndex(ClassType classType) const;
 	eastl::hash_map<i32,eastl::fixed_vector<ClassType,16,false>> stageBotClasses;
+	eastl::hash_map<i32,eastl::fixed_vector<CreatureIndex,16,false>> stageBotDocs;
 	bool LoadStageBots();
 
 	struct DefencePhase
@@ -1303,6 +1304,7 @@ struct GameXmlContent
 	eastl::fixed_vector<PvpPraise,32,false> pvpPraises;
 	bool LoadPvpPraises();
 	const eastl::fixed_vector<ClassType,16,false>* FindStageBots(StageIndex stage) const { auto f = stageBotClasses.find((i32)stage); return f == stageBotClasses.end() ? nullptr : &f->second; }
+	const eastl::fixed_vector<CreatureIndex,16,false>* FindStageBotDocs(StageIndex stage) const { auto f = stageBotDocs.find((i32)stage); return f == stageBotDocs.end() ? nullptr : &f->second; }
 
 	eastl::vector<FileBuffer> collisionFiles;
 	FileBuffer fileCylinderCollision;

@@ -95,6 +95,7 @@ struct Replication
 		u32 playerIndex;
 		ClassType classType;
 		SkinIndex skinIndex;
+		CreatureIndex creatureDoc = CreatureIndex::Invalid;
 		i32 hp;
 		i32 hpMax;
 		i32 seed;

@@ -73,6 +73,7 @@ struct World
 		eastl::array<u8,2> masterGearNo;
 		eastl::array<i32,2> characterType;
 		eastl::array<eastl::fixed_vector<i32,6,false>,2> gearDocs;
+		eastl::array<CreatureIndex,2> creatureDocs = { CreatureIndex::Invalid, CreatureIndex::Invalid };
 		eastl::fixed_vector<eastl::pair<i32,u8>,12,false> stageSkillLevels;
 		i32 statTitle = -1;
 		i32 displayTitle = -1;
@@ -122,6 +123,7 @@ struct World
 		const i32 subWeaponGrade;
 		const u8 mainMasterGearNo;
 		const eastl::array<eastl::fixed_vector<i32,6,false>,2> gearDocs;
+		const eastl::array<CreatureIndex,2> creatureDocs;
 		const eastl::array<const GameXmlContent::MeasuredBotGear*,2> botGear;
 		const i32 statTitle;
 		const i32 displayTitle;
@@ -159,6 +161,7 @@ struct World
 		i64 damageDealt = 0;
 		bool devGod = false;
 		bool trainingDummy = false;
+		bool trainingBot = false;
 		bool devVision = false;
 		ActorUID bushUID = ActorUID::INVALID;
 		ActorUID fogHiddenUID = ActorUID::INVALID;
@@ -474,6 +477,7 @@ struct World
 			mainCharacterType(desc.characterType[0]),
 			subCharacterType(desc.characterType[1]),
 			gearDocs(desc.gearDocs),
+			creatureDocs(desc.creatureDocs),
 			botGear(desc.botGear),
 			statTitle(desc.statTitle),
 			displayTitle(desc.displayTitle),
@@ -495,6 +499,7 @@ struct World
 		Player* parent;
 		ClassType classType;
 		SkinIndex skinIndex;
+		CreatureIndex creatureDoc = CreatureIndex::Invalid;
 		i32 hp;
 		i32 hpMax;
 		eastl::array<u8,4> traits = {};

@@ -2370,11 +2370,14 @@ bool GameXmlContent::LoadStageBots()
 		XMLElement* pTable = pInfo->FirstChildElement("ST_BOT_TABLE");
 		if(!pTable) continue;
 		auto& classes = stageBotClasses[pTable->IntAttribute("_StageIndex")];
+		auto& docs = stageBotDocs[pTable->IntAttribute("_StageIndex")];
 		for(XMLElement* pBot = pTable->FirstChildElement("_BOT_INFO"); pBot && !classes.full(); pBot = pBot->NextSiblingElement("_BOT_INFO")) {
 			const char* className = pBot->Attribute("_Class");
 			if(!className) continue;
 			auto found = masterClassStringMap.find(strHash(className));
-			if(found != masterClassStringMap.end()) classes.push_back(found->second->classType);
+			if(found == masterClassStringMap.end()) continue;
+			classes.push_back(found->second->classType);
+			docs.push_back((CreatureIndex)pBot->IntAttribute("_Index"));
 		}
 	}
 	LOG("Loaded %d stage bot tables", (i32)stageBotClasses.size());

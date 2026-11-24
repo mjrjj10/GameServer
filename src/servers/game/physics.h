@@ -83,6 +83,7 @@ struct PhysicsDynamicBody
 	f32 stepOffset = 0;
 	Time lockedMoveUntil = Time::ZERO;
 	i32 passWallTeam = -1;
+	i32 team = -1;
 
 	inline vec3 GetWorldPos() const { return tov3(collider->getFootPosition()); }
 	inline vec2 GetBoundSize() const { return { radius, height + radius * 2 }; }

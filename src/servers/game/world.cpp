@@ -184,6 +184,7 @@ void World::Update(Time localTime_)
 			p.input.moveTo = body.GetWorldPos();
 		}
 
+		if(p.body) p.body->team = p.team;
 		if(p.body) p.body->passWallTeam = !p.dead && p.clientHd == ClientHandle::INVALID && localTime < p.pushUntil && p.pushPassWallTeam >= 0 ? p.pushPassWallTeam : -1;
 		if(!p.dead && p.clientHd == ClientHandle::INVALID && localTime < p.ccUntil) {
 			const ActiveStatus* fear = nullptr;
@@ -260,7 +261,7 @@ void World::Update(Time localTime_)
 		}
 
 		// tag
-		if(p.clientHd == ClientHandle::INVALID && !p.dead && BotWantsTag(p)) p.input.tag = 1;
+		if(p.clientHd == ClientHandle::INVALID && !p.dead && !p.trainingBot && BotWantsTag(p)) p.input.tag = 1;
 		if(p.input.tag && p.titanForm >= 0) p.input.tag = 0;
 		if(p.input.tag && p.clientHd == ClientHandle::INVALID) {
 			if(p.casting.skillID != SkillID::INVALID || localTime < p.dashUntil || localTime < p.botTagReadyAt) p.input.tag = 0;
@@ -506,6 +507,7 @@ void World::Replicate()
 			rch.playerIndex = player.index;
 			rch.classType = chara.classType;
 			rch.skinIndex = chara.skinIndex;
+			rch.creatureDoc = chara.creatureDoc;
 			rch.hp = chara.hp;
 			rch.hpMax = chara.hpMax;
 			rch.seed = chara.seed;
@@ -550,6 +552,7 @@ void World::Replicate()
 			rch.playerIndex = player.index;
 			rch.classType = chara.classType;
 			rch.skinIndex = chara.skinIndex;
+			rch.creatureDoc = chara.creatureDoc;
 			rch.hp = chara.hp;
 			rch.hpMax = chara.hpMax;
 			rch.seed = chara.seed;
@@ -714,6 +717,7 @@ void World::CreatePlayerMasters(Player& player)
 	main.parent = &player;
 	main.classType = player.mainClass;
 	main.skinIndex = player.mainSkin;
+	main.creatureDoc = player.creatureDocs[0];
 	ComputeGearBonus(main, player.gearDocs[0], player.mainWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType));
 	AddTitleBonus(main, player.statTitle, player.mainWeapon);
 	const bool botGear = player.botGear[0] || player.botGear[1];
@@ -729,6 +733,7 @@ void World::CreatePlayerMasters(Player& player)
 	sub.parent = &player;
 	sub.classType = player.subClass;
 	sub.skinIndex = player.subSkin;
+	sub.creatureDoc = player.creatureDocs[1];
 	ComputeGearBonus(sub, player.gearDocs[1], player.subWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType));
 	AddTitleBonus(sub, player.statTitle, player.subWeapon);
 	AddMeasuredBotGear(sub, player.subWeapon, GetGameXmlContent().GearPowerPercent(replication->gameType), player.botGear[1]);

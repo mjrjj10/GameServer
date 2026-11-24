@@ -4241,7 +4241,7 @@ void Replication::SendActorMasterSpawn(ClientHandle clientHd, const ActorMaster&
 
 			packet.Write<LocalActorID>(localActorID); // objectID
 			packet.Write<EntityType>(EntityType::CREATURE); // nType
-			packet.Write<CreatureIndex>((CreatureIndex)(100000000 + (i32)actor.classType)); // nIDX
+			packet.Write<CreatureIndex>(actor.creatureDoc != CreatureIndex::Invalid ? actor.creatureDoc : (CreatureIndex)(100000000 + (i32)actor.classType));
 			packet.Write<i32>(-1);
 			packet.Write(actor.pos);
 			packet.Write(WorldYawToMxmYaw(actor.rotation.upperYaw));
@@ -4288,7 +4288,7 @@ void Replication::SendActorMasterSpawn(ClientHandle clientHd, const ActorMaster&
 			packet.Write<LocalActorID>(localActorID); // objectID
 			packet.Write<LocalActorID>(parentLocalActorID); // mainEntityID
 			packet.Write<EntityType>(EntityType::CREATURE); // nType
-			packet.Write<CreatureIndex>((CreatureIndex)(100000000 + (i32)actor.classType)); // nIDX
+			packet.Write<CreatureIndex>(actor.creatureDoc != CreatureIndex::Invalid ? actor.creatureDoc : (CreatureIndex)(100000000 + (i32)actor.classType));
 			packet.Write<i32>(-1);
 			packet.Write(actor.pos);
 			packet.Write(WorldYawToMxmYaw(actor.rotation.upperYaw));
