@@ -1906,6 +1906,7 @@ bool World::TeamSees(i32 team, const Player& target)
 bool World::NpcHasPendingFire(ActorUID npc) const
 {
 	foreach_const(f, monsterFires) if(f->npc == npc) return true;
+	foreach_const(mr, monsterRemotes) if(mr->owner == npc && mr->remote && (mr->nextTime != Time::ZERO || !mr->remote->onDestroy.empty())) return true;
 	return false;
 }
 

@@ -687,7 +687,8 @@ bool Game::LoadMap()
 		}
 		const bool mobGuardrail = EA::StdC::Stristr(c->mesh.data(), "Guardrailmob") != nullptr || EA::StdC::Stristr(c->mesh.data(), "Jumpguard") != nullptr;
 		const bool blocksSight = !mobGuardrail || EA::StdC::Stristr(c->mesh.data(), "UnSightable") != nullptr;
-		world.physics.NameActor(world.physics.CreateStaticCollider(c->mesh.data(), c->pos, c->rot, c->scale, blocksSight, false, mobGuardrail), c->mesh.data());
+		const bool flightGuardrail = EA::StdC::Stristr(c->mesh.data(), "Guardrailmob") != nullptr;
+		world.physics.NameActor(world.physics.CreateStaticCollider(c->mesh.data(), c->pos, c->rot, c->scale, blocksSight, false, flightGuardrail), c->mesh.data());
 	}
 
 	foreach(it, map->creatures) {

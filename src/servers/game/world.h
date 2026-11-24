@@ -666,6 +666,7 @@ struct World
 		ActorUID monsterTarget = ActorUID::INVALID;
 		ActionStateID monsterForcedState = ActionStateID::INVALID;
 		Time monsterNextAttack = Time::ZERO;
+		bool monsterLastSpecial = false;
 		Time monsterBasicReady = Time::ZERO;
 		eastl::array<Time,24> monsterSkillReady = {};
 		Time monsterNextSearch = Time::ZERO;
