@@ -1400,6 +1400,7 @@ public:
 	void EndCastStatuses(Player& player, const Player::Casting& c);
 	void EndActionStatuses(Player& player);
 	void CancelCast(Player& player, const char* reason, ClientHandle skipHd = ClientHandle::INVALID);
+	void RefundUltimateOnCancel(Player& player);
 	void PlayerCancelStance(Player& player);
 	void MarkPlayerStatsDirty();
 	void SyncNpcLeg(ActorNpc& npc, const vec3& goal, f32 speed);

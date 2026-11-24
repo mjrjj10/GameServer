@@ -1377,12 +1377,20 @@ void World::UpdateStatuses()
 				GainResource(target, 1, m->value * it->overlap);
 			}
 			foreach_const(m, it->info->mods) {
-				if(!m->regen || m->stat != StatusMod::HEALTH) continue;
+				if(!m->regen || (m->stat != StatusMod::HEALTH && m->stat != StatusMod::STAMINA)) continue;
 				const f32 ticks = MAX(m->count, 1.0f);
 				const f32 interval = it->info->intervalSec > 0 ? it->info->intervalSec : MAX(it->info->durationSec, 0.1f) / ticks;
 				if(it->healTicksDone >= (i32)ticks || localTime < it->nextHealTick) continue;
 				it->nextHealTick = TimeAdd(localTime, TimeMsToTime(interval * 1000.0));
 				it->healTicksDone++;
+				if(m->stat == StatusMod::STAMINA) {
+					const f32 staminaMax = ResourceMax(target.Main(), STAT_STAMINA);
+					if(staminaMax > 0 && target.stamina >= 0 && target.stamina < staminaMax) {
+						target.stamina = MIN(target.stamina + (m->mul ? staminaMax * m->value / 100.0f : m->value) * it->overlap, staminaMax);
+						target.staminaDirty = true;
+					}
+					continue;
+				}
 				const i32 amount = (i32)(m->mul ? target.Main().hpMax * m->value / 100.0f : m->value + it->skillPower * it->info->healMul);
 				HealPlayer(players[it->casterIndex], target, amount * it->overlap);
 				ActorMaster& bench = target.Sub();

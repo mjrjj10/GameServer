@@ -181,7 +181,18 @@ void World::PassiveOnWeaponHit(Player& attacker, bool npcTarget)
 	const ActiveStatus* st = FindPassiveOfType(attacker, StatusType::HIT_RECOVER);
 	const HitRecoverRule* rule = st ? FindHitRecoverRule(st->statusID) : nullptr;
 	ActorMaster& chara = attacker.Main();
-	if(!rule || chara.hp >= chara.hpMax) return;
+	if(!rule) return;
+	const f32 stamina = npcTarget ? rule->npcStamina : rule->stamina;
+	if(stamina > 0 && attacker.stamina >= 0) {
+		const f32 staminaMax = ResourceMax(chara, STAT_STAMINA);
+		if(attacker.stamina < staminaMax) {
+			attacker.stamina = MIN(attacker.stamina + stamina, staminaMax);
+			attacker.staminaDirty = true;
+			LOG("Passive :: %ls weapon hit recovers %.0f stamina (status %d)", attacker.name.data(), stamina, st->statusID);
+		}
+	}
+	if(rule->hpRatio <= 0 && rule->npcHpRatio <= 0) return;
+	if(chara.hp >= chara.hpMax) return;
 	attacker.hitRecoverReadyAt = TimeAdd(localTime, TimeMsToTime(rule->cooldownMs));
 	const i32 amount = (i32)(chara.hpMax * (npcTarget ? rule->npcHpRatio : rule->hpRatio));
 	chara.hp = MIN(chara.hp + amount, chara.hpMax);

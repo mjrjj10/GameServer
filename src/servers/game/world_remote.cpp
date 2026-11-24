@@ -574,7 +574,13 @@ void World::TriggerSkillHitEvent(const RemoteInst& inst, Player& owner, ActorUID
 {
 	const auto& content = GetGameXmlContent();
 	const i32 hitEventRemote = content.FindSkillHitEventRemote((i32)inst.skillID);
-	if(hitEventRemote == 0 || hitEventRemote != (i32)inst.remote->ID || owner.Main().UID != inst.casterMasterUID) return;
+	bool eventRemote = hitEventRemote != 0 && hitEventRemote == (i32)inst.remote->ID;
+	if(!eventRemote && hitEventRemote != 0) {
+		if(const GameXmlContent::SkillUpgradeList* ups = content.FindSkillUpgrades((i32)inst.skillID)) {
+			for(const GameXmlContent::SkillUpgrade& up : *ups) for(const auto& rr : up.remoteReplace) if(rr.first == hitEventRemote && rr.second == (i32)inst.remote->ID) eventRemote = true;
+		}
+	}
+	if(!eventRemote || owner.Main().UID != inst.casterMasterUID) return;
 	if(eastl::find(comboTriggeredCasts.begin(), comboTriggeredCasts.end(), inst.castID) != comboTriggeredCasts.end()) return;
 	if(comboTriggeredCasts.full()) comboTriggeredCasts.erase(comboTriggeredCasts.begin());
 	comboTriggeredCasts.push_back(inst.castID);

@@ -350,7 +350,11 @@ void World::RunStanceOut(Player& player, i8 oldStance, ClassType cls)
 					if(it->targetIndex == player.index && it->statusID == cmd->status.statusIndex && localTime < it->until) it->until = localTime;
 				}
 			}
-			else if(!player.dead) ApplyStatus(player, player, cmd->status.statusIndex);
+			else if(!player.dead) {
+				f32 upgradedDuration = -1;
+				const i32 upgraded = PlayerUpgradedStatus(player, cmd->status.statusIndex, &upgradedDuration);
+				ApplyStatus(player, player, upgraded != 0 ? upgraded : cmd->status.statusIndex, 0, upgradedDuration);
+			}
 		}
 		else if(cmd->type == ActionCommand::Type::REMOTE && cmd->remote.remove) {
 			foreach(ri, remoteInsts) {
@@ -810,7 +814,23 @@ void World::UpdateNpcStatuses()
 {
 	UpdateNpcDots();
 	static const u32 coreTag = StatusTypeKey("Core");
-	eastl::fixed_vector<eastl::pair<ActorUID,i32>,8,false> nextStatuses;
+	struct NextNpcStatus { ActorUID npc; i32 status; ActorUID caster; };
+	eastl::fixed_vector<NextNpcStatus,16,false> nextStatuses;
+	foreach(ls, npcStatuses) {
+		if(localTime >= ls->until) continue;
+		const StatusInfo* linkInfo = GetGameXmlContent().FindStatus(ls->statusID);
+		if(!linkInfo || linkInfo->type != StatusType::LINK) continue;
+		const ActorMaster* linkerMaster = FindMasterActor(ls->casterUID);
+		const ActorNpc* linkedNpc = FindNpcActor(ls->npcUID);
+		if(!linkerMaster || !linkerMaster->parent || !linkedNpc) continue;
+		const Player& linker = *linkerMaster->parent;
+		const f32 linkMax = SkillMaxDistance(linker, linkInfo->skillIndex);
+		if(linkMax > 0 && (linker.dead || glm::length(vec2(linker.body->GetWorldPos()) - vec2(linkedNpc->pos)) > linkMax)) {
+			LOG("Status :: link %d between %ls and creature %d snapped", ls->statusID, linker.name.data(), (i32)linkedNpc->docID);
+			ls->until = localTime;
+			foreach(own, activeStatuses) if(own->targetIndex == linker.index && own->info && own->info->skillIndex == linkInfo->skillIndex && localTime < own->until) own->until = localTime;
+		}
+	}
 	for(i32 i = 0; i < (i32)npcStatuses.size(); ) {
 		const NpcStatus& ns = npcStatuses[i];
 		bool linked = false;
@@ -833,10 +853,12 @@ void World::UpdateNpcStatuses()
 		if((linked || !ns.linked) && !pairCasterGone && localTime < ns.until && holder && (holder->hp > 0 || holder->hpMax <= 0)) { i++; continue; }
 		replication->SendRemoveStatusToAll(ns.statusID, ns.npcUID, ns.casterUID);
 		const StatusInfo* motionStatus = GetGameXmlContent().FindStatus(ns.statusID);
-		if(motionStatus && motionStatus->nextStatus != 0 && holder && holder->hp > 0 && holder->monsterAi && holder->monsterAi->tagKey == coreTag && !nextStatuses.full()) {
+		const bool coreChain = holder && holder->monsterAi && holder->monsterAi->tagKey == coreTag;
+		const bool masterChain = FindMasterActor(ns.casterUID) != nullptr;
+		if(motionStatus && motionStatus->nextStatus != 0 && holder && holder->hp > 0 && (coreChain || masterChain) && !nextStatuses.full()) {
 			const auto cond = motionStatus->nextCondition;
 			const bool timeOver = localTime >= ns.until && !ns.removedOnHit;
-			if(cond == StatusInfo::NextCondition::ALL || (cond == StatusInfo::NextCondition::TIMEOVER && timeOver) || (cond == StatusInfo::NextCondition::REMOVE_ONHIT && ns.removedOnHit)) nextStatuses.push_back({ ns.npcUID, motionStatus->nextStatus });
+			if(cond == StatusInfo::NextCondition::ALL || (cond == StatusInfo::NextCondition::TIMEOVER && timeOver) || (cond == StatusInfo::NextCondition::REMOVE_ONHIT && ns.removedOnHit)) nextStatuses.push_back({ ns.npcUID, motionStatus->nextStatus, coreChain ? ActorUID::INVALID : ns.casterUID });
 		}
 		ActorNpc* released = motionStatus && motionStatus->npcMotion != ActionStateID::INVALID ? FindNpcActor(ns.npcUID) : nullptr;
 		if(released && released->ownerUID != ActorUID::INVALID && released->actionState == motionStatus->npcMotion && (released->hp > 0 || released->hpMax <= 0) && released->removeAt == Time::ZERO) {
@@ -848,7 +870,13 @@ void World::UpdateNpcStatuses()
 		npcStatuses.erase(npcStatuses.begin() + i);
 		if(shieldedUID != ActorUID::INVALID && FindNpcActor(shieldedUID)) SendNpcShieldStat(shieldedUID);
 	}
-	foreach_const(n, nextStatuses) if(ActorNpc* npc = FindNpcActor(n->first)) ApplyMonsterStatus(*npc, n->second, true);
+	foreach_const(n, nextStatuses) {
+		ActorNpc* npc = FindNpcActor(n->npc);
+		if(!npc) continue;
+		const ActorMaster* casterMaster = n->caster != ActorUID::INVALID ? FindMasterActor(n->caster) : nullptr;
+		if(casterMaster && casterMaster->parent) ApplyStatusToNpc(*casterMaster->parent, *npc, n->status, false);
+		else ApplyMonsterStatus(*npc, n->status, true);
+	}
 	foreach(st, activeStatuses) {
 		if(!st->info || st->info->type != StatusType::CASTER || st->info->casterStatus == 0 || st->until <= localTime || FindMasterActor(st->casterUID) || !NpcPairCasterGone(st->casterUID)) continue;
 		st->until = localTime;
@@ -1023,6 +1051,19 @@ void World::InterruptSkills(Player& player)
 	if(player.casting.skillID != SkillID::INVALID) CancelCast(player, "interrupted");
 }
 
+void World::RefundUltimateOnCancel(Player& player)
+{
+	const i32 skill = (i32)player.casting.skillID;
+	if(skill % 100 != ULTIMATE_SKILL_ID_SUFFIX) return;
+	const f32 ug = GetGameXmlContent().GetSkillConsumeUG(skill);
+	if(ug <= 0 || player.ultGauge < 0) return;
+	const f32 ultMax = MAX(MasterStat(player.Main().classType, STAT_ULTIMATE), 1.0f);
+	player.ultGauge = MIN(player.ultGauge + ug, ultMax);
+	player.ultDirty = true;
+	player.ultCooldownUntil = localTime;
+	LOG("Cast :: %ls skill=%d cancelled before execution, %.0f ultimate gauge given back", player.name.data(), skill, ug);
+}
+
 void World::CancelCast(Player& player, const char* reason, ClientHandle skipHd)
 {
 	LOG("Cast :: %ls skill=%d cancelled (%s)", player.name.data(), (i32)player.casting.skillID, reason);
@@ -1084,6 +1125,15 @@ void World::UpdateCasts()
 				continue;
 			}
 			if(!lost && it->casting.lifted) TeleportPlayer(*it, tm ? tm->parent->body->GetWorldPos() : tn->pos, it->input.rot.upperYaw);
+		}
+		if(!bot && it->casting.interruptByLostTarget && it->casting.target != ActorUID::INVALID) {
+			const ActorMaster* tm = FindMasterActor(it->casting.target);
+			const ActorNpc* tn = tm ? nullptr : FindNpcActor(it->casting.target);
+			const bool lost = tm ? (tm->parent->dead || tm->parent->untargetable) : !(tn && tn->hp > 0 && tn->removeAt == Time::ZERO);
+			if(lost) {
+				CancelCast(*it, "target lost");
+				continue;
+			}
 		}
 		if(localTime < it->casting.executeAt) continue;
 		if(!bot && it->casting.type == GameXmlContent::SkillCast::LIMIT) CancelCast(*it, "window ended");
@@ -2405,13 +2455,15 @@ i32 World::PlayerUpgradedStatus(const Player& player, i32 statusID, f32* duratio
 	foreach_const(lv, player.skillLevels) {
 		const auto* ups = GetGameXmlContent().FindSkillUpgrades(lv->first);
 		if(!ups) continue;
+		i32 found = 0;
 		for(u8 i = 0; i < lv->second && i < ups->size(); i++) {
 			foreach_const(sr, (*ups)[i].statusReplace) {
 				if(sr->statusID != statusID) continue;
 				if(duration && sr->durationSec > 0) *duration = sr->durationSec;
-				return sr->replaceID;
+				found = sr->replaceID;
 			}
 		}
+		if(found != 0) return found;
 	}
 	return statusID;
 }

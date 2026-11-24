@@ -4456,7 +4456,7 @@ bool GameXmlContent::LoadStatusStatMods()
 		mod.mul = pMod->BoolAttribute("mul");
 		mod.count = pMod->FloatAttribute("count");
 		mod.intervalSec = pMod->FloatAttribute("interval");
-		mod.regen = mod.stat == StatusMod::HEALTH || mod.stat == StatusMod::MANA || (mod.stat == StatusMod::RAGE && mod.count > 1);
+		mod.regen = mod.stat == StatusMod::HEALTH || mod.stat == StatusMod::MANA || ((mod.stat == StatusMod::RAGE || mod.stat == StatusMod::STAMINA) && mod.count > 1);
 		if(mod.stat == StatusMod::OTHER || mod.value == 0) continue;
 		found->second.mods.push_back(mod);
 		count++;
