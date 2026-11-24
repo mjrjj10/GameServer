@@ -3160,19 +3160,16 @@ void Replication::SendEnterNpc(ClientHandle clientHd, ActorUID actorUID, Creatur
 	packet.Write<i32>(0);
 	const auto* stats = GetGameXmlContent().FindMonsterStats((i32)docID);
 	f32 groggyMax = 0;
-	packet.Write<u16>(stats ? (u16)stats->size() : 0);
-	if(stats) {
+	for(int list = 0; list < 2; list++) {
+		packet.Write<u16>(stats ? (u16)stats->size() : 0);
+		if(!stats) continue;
 		for(const auto& st : *stats) {
 			packet.Write<u8>(st.type);
 			const f32 value = st.value + GetGameXmlContent().MonsterGrowth((i32)docID, st.type) * growthLevel;
 			if(st.type == (u8)StatType::STAT_TYPE_GROGGY) groggyMax = value;
-			packet.Write<f32>(value);
+			if(list == 0 && st.type == (u8)StatType::STAT_TYPE_GROGGY) packet.Write<f32>(groggy);
+			else packet.Write<f32>(list == 1 && st.type == (u8)StatType::STAT_TYPE_HEALTH ? (f32)hp : value);
 		}
-	}
-	packet.Write<u16>(stats ? 1 : 0);
-	if(stats) {
-		packet.Write<u8>((u8)StatType::STAT_TYPE_HEALTH);
-		packet.Write<f32>((f32)hp);
 	}
 	packet.Write<u16>(0);
 	packet.Write<u16>(0);
