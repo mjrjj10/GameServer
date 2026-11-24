@@ -682,6 +682,7 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 	ConstBuffer request(packetData, packetSize);
 	const u16 nickLen = request.Read<u16>();
 	const wchar* nick = (wchar*)request.ReadRaw(nickLen * sizeof(wchar));
+	const i32 channelVar = request.Read<i32>();
 	NT_LOG("[client%x] Client :: %s", clientHd, PacketSerialize<Cl::CQ_Authenticate>(packetData, packetSize));
 
 	const i32 clientID = plidMap.Get(clientHd);
@@ -794,18 +795,28 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 	clientAccountUID[clientID] = accountUID;
 
 	// send account data
-	ClientSendAccountData(clientHd); // TODO: move this to hub instance
+	LOG("[client%x] Coordinator :: authenticated from %s, settings %s", clientHd, channelVar == Sv::CHANNEL_VAR_FROM_GAME ? "a game" : "the login", channelVar == Sv::CHANNEL_VAR_FROM_GAME ? "kept" : "sent");
+	ClientSendAccountData(clientHd, channelVar != Sv::CHANNEL_VAR_FROM_GAME); // TODO: move this to hub instance
 
 	PushClientToHubInstance(clientHd);
 }
 
-void Coordinator::ClientSendAccountData(ClientHandle clientHd)
+void Coordinator::ClientSendAccountData(ClientHandle clientHd, bool sendSettings)
 {
 	const AccountUID settingsAccount = clientAccountUID[plidMap.Get(clientHd)];
 	auto settingsFound = GetAccountManager().accountMap.find(settingsAccount);
 	const wchar* accountNick = settingsFound != GetAccountManager().accountMap.end() ? settingsFound->second->nickname.data() : L"";
-	// SN_ClientSettings
 	{
+		const AccountLeader stored = AccountLeaderLoad(accountNick);
+		if(stored.classType >= 0 && GetGameXmlContent().masterClassTypeMap.find((ClassType)stored.classType) != GetGameXmlContent().masterClassTypeMap.end()) {
+			Sv::SN_LeaderCharacter leader;
+			leader.leaderID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (u32)stored.classType);
+			leader.skinIndex = (SkinIndex)stored.skin;
+			SendPacket(clientHd, leader);
+		}
+	}
+	// SN_ClientSettings
+	if(sendSettings) {
 		PacketWriter<Sv::SN_ClientSettings,2048> packet;
 
 		const char* src = R"foo(
@@ -940,7 +951,7 @@ void Coordinator::ClientSendAccountData(ClientHandle clientHd)
 	}
 
 	// SN_ClientSettings
-	{
+	if(sendSettings) {
 		PacketWriter<Sv::SN_ClientSettings,2048> packet;
 
 		const char* src =
@@ -1043,7 +1054,7 @@ void Coordinator::ClientSendAccountData(ClientHandle clientHd)
 	}
 
 	// SN_ClientSettings
-	{
+	if(sendSettings) {
 		PacketWriter<Sv::SN_ClientSettings,2048> packet;
 
 		const char* src =
@@ -1180,7 +1191,7 @@ void Coordinator::ClientSendAccountData(ClientHandle clientHd)
 	}
 
 	const AccountSettingsBlob smartCast = AccountSettingsLoad(accountNick, 3);
-	if(!smartCast.data.empty()) {
+	if(sendSettings && !smartCast.data.empty()) {
 		PacketWriter<Sv::SN_ClientSettings,4096> packet;
 		packet.Write<u8>(3);
 		packet.Write<u16>((u16)smartCast.data.size());

@@ -3938,6 +3938,9 @@ POP_PACKED
 ASSERT_SIZE(SN_DoConnectGameServer, 22);
 ;
 
+static const i32 CHANNEL_VAR_FROM_LOGIN = 537;
+static const i32 CHANNEL_VAR_FROM_GAME = 536;
+
 PUSH_PACKED
 struct SN_DoConnectChannelServer
 {

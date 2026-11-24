@@ -110,6 +110,7 @@ struct RoomInstance
 
 	enum class Phase: u8 {
 		Picking = 0,
+		Countdown,
 		StartingMatch,
 		MatchReady,
 		Banning

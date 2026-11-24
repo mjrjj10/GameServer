@@ -215,7 +215,7 @@ bool World::LoadProgress(const Player& player)
 		summaries[player.index] = AccountSummariesLoad(player.name.data());
 		missionSaved[player.index] = AccountMissionsLoad(player.name.data());
 		missions[player.index].clear();
-		MissionBuildActive(player.name.data(), AccountProgressLoad(player.name.data()).level, (i64)time(nullptr), missionSaved[player.index], &missions[player.index]);
+		MissionBuildActive(player.name.data(), AccountProgressLoad(player.name.data()).level, !player.guildTag.empty(), (i64)time(nullptr), missionSaved[player.index], &missions[player.index]);
 		progressLoaded[player.index] = 1;
 	}
 	return true;

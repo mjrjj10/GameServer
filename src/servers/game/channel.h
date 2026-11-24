@@ -62,6 +62,7 @@ private:
 	void HandlePacket_CQ_SwitchOffToggleSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_RemoteSyncCreateFromRemoteDoc(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_RemoteSyncTarget(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
+	void HandlePacket_CQ_SaveSettings(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_PlayerCastSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_CancelCastSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_PlayerCancelStance(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);

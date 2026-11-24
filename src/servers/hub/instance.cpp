@@ -687,43 +687,8 @@ void RoomInstance::Update(Time localTime_)
 
 		// when every player is ready, create a game
 		if(allReady) {
-			phase = Phase::StartingMatch;
+			phase = Phase::Countdown;
 			matchWaitTime = localTime;
-
-			MatchmakerConnector& mm = Matchmaker();
-
-			eastl::fixed_vector<MatchmakerConnector::RoomPlayer,16,false> rpList;
-			foreach_const(u, userList) {
-				MatchmakerConnector::RoomPlayer rp;
-				rp.accountUID = u->accountUID;
-				rp.team = u->team;
-				rp.isBot = u->isBot;
-				rp.masters[0] = u->masters[0].classType;
-				rp.masters[1] = u->masters[1].classType;
-				rp.skins[0] = u->masters[0].skin;
-				rp.skins[1] = u->masters[1].skin;
-				rp.skills[0] = u->masters[0].skills[0];
-				rp.skills[1] = u->masters[0].skills[1];
-				rp.skills[2] = u->masters[1].skills[0];
-				rp.skills[3] = u->masters[1].skills[1];
-				rp.weapons[0] = u->masters[0].weapon;
-				rp.weapons[1] = u->masters[1].weapon;
-				rp.weaponGrades[0] = u->masters[0].weaponGrade;
-				rp.weaponGrades[1] = u->masters[1].weaponGrade;
-				rp.masterGearNo[0] = u->masters[0].masterGearNo;
-				rp.masterGearNo[1] = u->masters[1].masterGearNo;
-				rp.characterType[0] = u->masters[0].characterType;
-				rp.characterType[1] = u->masters[1].characterType;
-				rp.guildTag.len = 0;
-				rp.stageSkill = u->stageSkill;
-				auto account = GetAccountManager().accountMap.find(u->accountUID);
-				if(!u->isBot && account != GetAccountManager().accountMap.end() && account->second->guildTag.size() <= ARRAY_COUNT(rp.guildTag.data)) rp.guildTag.Copy(account->second->guildTag);
-				if(!u->isBot && account != GetAccountManager().accountMap.end()) GuildRewardBoost(account->second->nickname, &rp.guildBoostGold, &rp.guildBoostExp);
-				rpList.push_back(rp);
-			}
-
-			mm.QueryRoomCreateGame(sortieUID, rpList.data(), rpList.size());
-
 			// update clients
 			Sv::SN_SortieMasterPickPhaseStep packetStep;
 			packetStep.isRandomPick = randomPick ? 1 : 0;
@@ -738,6 +703,44 @@ void RoomInstance::Update(Time localTime_)
 				SendPacket((*cu)->clientHd, packetCountdown);
 			}
 		}
+	}
+
+	if(phase == Phase::Countdown && TimeDurationSec(matchWaitTime, localTime) > MATCH_WAIT_TIME) {
+		phase = Phase::StartingMatch;
+		MatchmakerConnector& mm = Matchmaker();
+
+		eastl::fixed_vector<MatchmakerConnector::RoomPlayer,16,false> rpList;
+		foreach_const(u, userList) {
+			MatchmakerConnector::RoomPlayer rp;
+			rp.accountUID = u->accountUID;
+			rp.team = u->team;
+			rp.isBot = u->isBot;
+			rp.masters[0] = u->masters[0].classType;
+			rp.masters[1] = u->masters[1].classType;
+			rp.skins[0] = u->masters[0].skin;
+			rp.skins[1] = u->masters[1].skin;
+			rp.skills[0] = u->masters[0].skills[0];
+			rp.skills[1] = u->masters[0].skills[1];
+			rp.skills[2] = u->masters[1].skills[0];
+			rp.skills[3] = u->masters[1].skills[1];
+			rp.weapons[0] = u->masters[0].weapon;
+			rp.weapons[1] = u->masters[1].weapon;
+			rp.weaponGrades[0] = u->masters[0].weaponGrade;
+			rp.weaponGrades[1] = u->masters[1].weaponGrade;
+			rp.masterGearNo[0] = u->masters[0].masterGearNo;
+			rp.masterGearNo[1] = u->masters[1].masterGearNo;
+			rp.characterType[0] = u->masters[0].characterType;
+			rp.characterType[1] = u->masters[1].characterType;
+			rp.guildTag.len = 0;
+			rp.stageSkill = u->stageSkill;
+			auto account = GetAccountManager().accountMap.find(u->accountUID);
+			if(!u->isBot && account != GetAccountManager().accountMap.end() && account->second->guildTag.size() <= ARRAY_COUNT(rp.guildTag.data)) rp.guildTag.Copy(account->second->guildTag);
+			if(!u->isBot && account != GetAccountManager().accountMap.end()) GuildRewardBoost(account->second->nickname, &rp.guildBoostGold, &rp.guildBoostExp);
+			rpList.push_back(rp);
+		}
+
+		mm.QueryRoomCreateGame(sortieUID, rpList.data(), rpList.size());
+		LOG("[Room(%llu)] countdown over, loadouts sent to the matchmaker", (u64)sortieUID);
 	}
 
 	if(phase == Phase::MatchReady && TimeDurationSec(matchWaitTime, localTime) > MATCH_WAIT_TIME) {

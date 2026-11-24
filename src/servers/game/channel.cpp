@@ -181,6 +181,7 @@ void GamePacketHandler::OnNewPacket(ClientHandle clientHd, const NetHeader& head
 		CASE(CQ_SwitchOffToggleSkill);
 		CASE(CQ_RemoteSyncCreateFromRemoteDoc);
 		CASE(CQ_RemoteSyncTarget);
+		CASE(CQ_SaveSettings);
 
 		default: {
 			char hex[97] = {0};
@@ -616,6 +617,23 @@ void GamePacketHandler::HandlePacket_CQ_RemoteSyncTarget(ClientHandle clientHd, 
 	replication->RelayRemoteSyncTarget(clientHd, packetData, packetSize);
 	const Cl::CQ_RemoteSyncTarget& sync = *(const Cl::CQ_RemoteSyncTarget*)packetData;
 	game->OnRemoteSyncTarget(clientHd, sync.remoteID, f2v(sync.DestPos));
+}
+
+void GamePacketHandler::HandlePacket_CQ_SaveSettings(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
+{
+	ConstBuffer buff(packetData, packetSize);
+	if(!buff.CanRead(3)) {
+		WARN("[client%x] WARNING: invalid CQ_SaveSettings (size=%d)", clientHd, packetSize);
+		return;
+	}
+	const u8 settingType = buff.Read<u8>();
+	const u16 len = buff.Read<u16>();
+	if(!buff.CanRead(len)) {
+		WARN("[client%x] WARNING: invalid CQ_SaveSettings length %d (size=%d)", clientHd, (i32)len, packetSize);
+		return;
+	}
+	NT_LOG("[client%x] Client :: CQ_SaveSettings :: type=%u len=%u", clientHd, (u32)settingType, (u32)len);
+	game->OnSaveSettings(clientHd, settingType, (const u8*)buff.ReadRaw(len), len);
 }
 
 void GamePacketHandler::HandlePacket_CQ_CancelCastSkill(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)

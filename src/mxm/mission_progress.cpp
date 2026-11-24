@@ -69,7 +69,7 @@ static void RefreshCleared(ActiveMissionList* listPtr)
 	foreach(a, list) a->cleared = a->mission->count > 0 && a->progress >= a->mission->count;
 }
 
-MissionTimers MissionBuildActive(const wchar* nickname, u16 level, i64 nowUtc, const AccountMissions& saved, ActiveMissionList* out)
+MissionTimers MissionBuildActive(const wchar* nickname, u16 level, bool inGuild, i64 nowUtc, const AccountMissions& saved, ActiveMissionList* out)
 {
 	ActiveMissionList& list = *out;
 	const MissionCalendar cal = ComputeMissionCalendar(nowUtc);
@@ -97,7 +97,7 @@ MissionTimers MissionBuildActive(const wchar* nickname, u16 level, i64 nowUtc, c
 	pushList(MEASURED_WEEKLY_MISSIONS_COMMON, (i32)ARRAY_COUNT(MEASURED_WEEKLY_MISSIONS_COMMON));
 	pushList(MEASURED_WEEKLY_MISSIONS[cal.weeklySet], (i32)ARRAY_COUNT(MEASURED_WEEKLY_MISSIONS[cal.weeklySet]));
 	pushList(MEASURED_MONTHLY_MISSIONS, (i32)ARRAY_COUNT(MEASURED_MONTHLY_MISSIONS));
-	pushList(MEASURED_GUILD_MISSIONS[cal.weeklySet], (i32)ARRAY_COUNT(MEASURED_GUILD_MISSIONS[cal.weeklySet]));
+	if(inGuild) pushList(MEASURED_GUILD_MISSIONS[cal.weeklySet], (i32)ARRAY_COUNT(MEASURED_GUILD_MISSIONS[cal.weeklySet]));
 	eastl::sort(list.begin(), list.end(), [](const ActiveMission& a, const ActiveMission& b) { return a.mission->ID < b.mission->ID; });
 	RefreshCleared(out);
 
@@ -226,7 +226,7 @@ bool MissionChangeDaily(const wchar* nickname, u16 level, i64 nowUtc, i32 step, 
 {
 	if(step <= 0 || step > MISSION_DAILY_STEPS) return false;
 	ActiveMissionList list;
-	MissionBuildActive(nickname, level, nowUtc, *saved, &list);
+	MissionBuildActive(nickname, level, false, nowUtc, *saved, &list);
 	const ActiveMission* current = nullptr;
 	foreach_const(a, list) if(a->mission->category == Mission::Category::DAILY && a->mission->step == step) current = &*a;
 	if(!current || current->rewarded) return false;

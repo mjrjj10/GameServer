@@ -195,7 +195,7 @@ private:
 	void HandlePacket_CQ_FirstHello(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 	void HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize);
 
-	void ClientSendAccountData(ClientHandle clientHd);
+	void ClientSendAccountData(ClientHandle clientHd, bool sendSettings);
 
 	template<typename Packet>
 	inline void SendPacket(ClientHandle clientHd, const Packet& packet)

@@ -179,7 +179,18 @@ struct AccountSettingsBlob
 };
 
 AccountSettingsBlob AccountSettingsLoad(const wchar* nickname, u8 settingType);
+static const u8 MEASURED_SETTING_TYPE_COUNT = 4;
+static const i32 SETTINGS_MAX_BYTES = 2040;
 void AccountSettingsSave(const wchar* nickname, u8 settingType, const u8* data, i32 size);
+
+struct AccountLeader
+{
+	i32 classType = -1;
+	i32 skin = 0;
+};
+
+AccountLeader AccountLeaderLoad(const wchar* nickname);
+void AccountLeaderSave(const wchar* nickname, i32 classType, i32 skin);
 AccountStages AccountStagesLoad(const wchar* nickname);
 void AccountStagesSave(const wchar* nickname, const AccountStages& stages);
 AccountProgress AccountProgressLoad(const wchar* nickname);

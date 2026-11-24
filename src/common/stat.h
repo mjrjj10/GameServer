@@ -9,7 +9,7 @@ struct StatValue
 };
 
 template<typename W>
-inline void WriteInitStat(W& packet, const StatValue* stats, u16 count)
+inline void WriteInitStat(W& packet, const StatValue* stats, u16 count, bool healthAndStaminaOnly = false)
 {
 	ASSERT(stats);
 	ASSERT(count > 0);
@@ -45,8 +45,8 @@ inline void WriteInitStat(W& packet, const StatValue* stats, u16 count)
 		}
 	}
 	cur[n++] = { (u8)StatType::STAT_TYPE_HEALTH, health };
-	if(hasUlt) cur[n++] = { (u8)StatType::STAT_TYPE_ULTIMATE, 0.f };
-	if(hasRes) cur[n++] = { resourceType, resourceVal };
+	if(hasUlt && !healthAndStaminaOnly) cur[n++] = { (u8)StatType::STAT_TYPE_ULTIMATE, 0.f };
+	if(hasRes && !healthAndStaminaOnly) cur[n++] = { resourceType, resourceVal };
 	if(stamina != 0.f) cur[n++] = { (u8)StatType::STAT_TYPE_STAMINA, stamina };
 
 	packet.Write<u16>(n);
@@ -57,7 +57,7 @@ inline void WriteInitStat(W& packet, const StatValue* stats, u16 count)
 }
 
 template<typename W, typename Stats>
-inline void WriteInitStat(W& packet, const Stats& stats)
+inline void WriteInitStat(W& packet, const Stats& stats, bool healthAndStaminaOnly = false)
 {
-	WriteInitStat(packet, stats.data(), (u16)stats.size());
+	WriteInitStat(packet, stats.data(), (u16)stats.size(), healthAndStaminaOnly);
 }

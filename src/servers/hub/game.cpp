@@ -445,6 +445,11 @@ void HubGame::OnPlayerEnterCity(ClientHandle clientHd)
 	foreach_const(it, lastLeaders) {
 		if(it->nickname == playerAccountData[userID]->nickname) { characterID = it->characterID; skin = it->skin; }
 	}
+	const AccountLeader stored = AccountLeaderLoad(playerAccountData[userID]->nickname.data());
+	if(stored.classType >= 0) {
+		characterID = LocalActorID((u32)LocalActorID::FIRST_SELF_MASTER + (u32)stored.classType);
+		skin = (SkinIndex)stored.skin;
+	}
 	LOG("[client%x] HubGame :: entered the city without a leader character, spawning the last one", clientHd);
 	OnPlayerSetLeaderCharacter(clientHd, characterID, skin);
 }
@@ -485,6 +490,7 @@ void HubGame::OnPlayerSetLeaderCharacter(ClientHandle clientHd, LocalActorID cha
 			if(it->nickname == playerAccountData[userID]->nickname) { it->characterID = characterID; it->skin = skinIndex; found = true; }
 		}
 		if(!found && !lastLeaders.full()) lastLeaders.push_back({ playerAccountData[userID]->nickname, characterID, skinIndex });
+		AccountLeaderSave(playerAccountData[userID]->nickname.data(), (i32)classType, (i32)skinIndex);
 	}
 
 	// select a spawn point at random
@@ -691,8 +697,6 @@ void HubGame::OnInventoryExpand(ClientHandle clientHd, i32 tab)
 	replication.SendInventoryExpand(clientHd, 0, tab, progress.inventoryLines[line]);
 }
 
-static const u8 MEASURED_SETTING_TYPE_COUNT = 4;
-static const i32 SETTINGS_MAX_BYTES = 2040;
 
 void HubGame::OnSaveSettings(ClientHandle clientHd, u8 settingType, const u8* data, i32 size)
 {
@@ -2351,7 +2355,7 @@ void HubGame::OnMissionReward(ClientHandle clientHd, i32 missionID)
 	Account& account = *found->second;
 	AccountMissions saved = AccountMissionsLoad(account.nickname.data());
 	ActiveMissionList list;
-	MissionBuildActive(account.nickname.data(), account.level, (i64)time(nullptr), saved, &list);
+	MissionBuildActive(account.nickname.data(), account.level, !account.guildTag.empty(), (i64)time(nullptr), saved, &list);
 	ActiveMission* mission = MissionFind(&list, missionID);
 	if(!mission || !mission->cleared || mission->rewarded) {
 		WARN("[client%x] HubGame :: mission %d reward refused", clientHd, missionID);

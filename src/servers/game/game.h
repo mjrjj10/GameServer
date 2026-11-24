@@ -203,6 +203,7 @@ struct Game
 	void OnPlayerCancelCast(ClientHandle clientHd, SkillID skillID);
 	void OnPlayerCancelStance(ClientHandle clientHd);
 	void OnRemoteSyncTarget(ClientHandle clientHd, u32 remoteID, const vec3& dest);
+	void OnSaveSettings(ClientHandle clientHd, u8 settingType, const u8* data, i32 size);
 
 	bool ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 len);
 	void SendDbgMsg(ClientHandle clientHd, const wchar* msg);

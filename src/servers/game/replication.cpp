@@ -1500,7 +1500,7 @@ void Replication::SendDoConnectChannel(ClientHandle clientHd, const wchar* nickn
 	packet.Write<u16>(10);
 	packet.WriteRaw(serverName, 10 * sizeof(wchar));
 	packet.WriteStringObj(nickname, (i32)EA::StdC::Strlen(nickname));
-	packet.Write<i32>(536);
+	packet.Write<i32>(Sv::CHANNEL_VAR_FROM_GAME);
 	packet.Write<i32>(1);
 	LOG("[client%x] Replication :: SendDoConnectChannel (return to bridge)", clientHd);
 	SendPacket(clientHd, packet);

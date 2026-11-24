@@ -1329,7 +1329,7 @@ void HubReplication::SendMissionList(ClientHandle clientHd, const Account& accou
 	const i64 now = (i64)time(nullptr);
 	const AccountMissions saved = AccountMissionsLoad(account.nickname.data());
 	ActiveMissionList list;
-	const MissionTimers timers = MissionBuildActive(account.nickname.data(), account.level, now, saved, &list);
+	const MissionTimers timers = MissionBuildActive(account.nickname.data(), account.level, !account.guildTag.empty(), now, saved, &list);
 
 	PacketWriter<Sv::SN_MissionList,2048> packet;
 	packet.Write<u16>((u16)list.size());
@@ -2482,7 +2482,7 @@ void HubReplication::SendActorPlayerSpawn(ClientHandle clientHd, const ActorPlay
 			packet.Write<i32>(actor.seed);
 
 
-			WriteInitStat(packet, GetGameXmlContent().GetMaster(actor.classType).baseStats);
+			WriteInitStat(packet, GetGameXmlContent().GetMaster(actor.classType).baseStats, true);
 
 
 
@@ -2523,7 +2523,7 @@ void HubReplication::SendActorPlayerSpawn(ClientHandle clientHd, const ActorPlay
 			packet.Write<i32>(actor.seed);
 
 
-			WriteInitStat(packet, GetGameXmlContent().GetMaster(actor.classType).baseStats);
+			WriteInitStat(packet, GetGameXmlContent().GetMaster(actor.classType).baseStats, true);
 
 
 

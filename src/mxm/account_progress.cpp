@@ -50,6 +50,38 @@ void AccountSettingsSave(const wchar* nickname, u8 settingType, const u8* data, 
 	SafeFileCommit(f, tmp, path);
 }
 
+AccountLeader AccountLeaderLoad(const wchar* nickname)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	AccountLeader leader;
+	char path[512];
+	AccountPath(nickname, "leader", path, sizeof(path));
+	FILE* f = fopen(path, "rb");
+	if(!f) return leader;
+	i32 v[2] = { -1, 0 };
+	if(fread(v, sizeof(i32), 2, f) == 2) {
+		leader.classType = v[0];
+		leader.skin = v[1];
+	}
+	fclose(f);
+	return leader;
+}
+
+void AccountLeaderSave(const wchar* nickname, i32 classType, i32 skin)
+{
+	std::lock_guard<std::mutex> lock(g_accountFileMutex);
+	_mkdir(ACCOUNT_DIR);
+	char path[512];
+	char tmp[520];
+	AccountPath(nickname, "leader", path, sizeof(path));
+	snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+	FILE* f = SafeFileOpen(path, tmp, sizeof(tmp));
+	ASSERT(f);
+	const i32 v[2] = { classType, skin };
+	fwrite(v, sizeof(i32), 2, f);
+	SafeFileCommit(f, tmp, path);
+}
+
 static const i32 NEW_ACCOUNT_CLEARED_STAGES[] = { 200003200, 200007101, 200008000 };
 
 AccountStages AccountStagesLoad(const wchar* nickname)

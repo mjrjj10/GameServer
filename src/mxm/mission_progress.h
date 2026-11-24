@@ -23,7 +23,7 @@ struct MissionTimers
 	i64 monthlyRemainSec;
 };
 
-MissionTimers MissionBuildActive(const wchar* nickname, u16 level, i64 nowUtc, const AccountMissions& saved, ActiveMissionList* out);
+MissionTimers MissionBuildActive(const wchar* nickname, u16 level, bool inGuild, i64 nowUtc, const AccountMissions& saved, ActiveMissionList* out);
 typedef eastl::fixed_vector<i32,64,true> MissionChanges;
 void MissionApplyGame(const AccountGameRecord& record, ActiveMissionList* list, MissionChanges* changed = nullptr);
 void MissionApplyCombat(i32 kills, i32 assists, const AccountGameRecord& section, ActiveMissionList* list, MissionChanges* changed);

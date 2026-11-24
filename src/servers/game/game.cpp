@@ -2411,6 +2411,15 @@ void Game::OnPlayerExecuteSkill(ClientHandle clientHd, SkillID skillID, const ve
 	if(player.casting.skillID == skillID) world.ReleaseCast(player);
 }
 
+void Game::OnSaveSettings(ClientHandle clientHd, u8 settingType, const u8* data, i32 size)
+{
+	auto pl = playerMap.find(clientHd);
+	if(pl == playerMap.end() || settingType >= MEASURED_SETTING_TYPE_COUNT || size <= 0 || size > SETTINGS_MAX_BYTES) return;
+	const World::Player& player = world.GetPlayer(pl->second->playerIndex);
+	AccountSettingsSave(player.name.data(), settingType, data, size);
+	LOG("[client%x] Game :: %ls saves settings %u (%d bytes)", clientHd, player.name.data(), (u32)settingType, size);
+}
+
 void Game::OnRemoteSyncTarget(ClientHandle clientHd, u32 remoteID, const vec3& dest)
 {
 	auto found = playerMap.find(clientHd);

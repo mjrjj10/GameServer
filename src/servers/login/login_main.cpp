@@ -307,7 +307,7 @@ struct Client
 
 				packet.WriteStringObj(nickname.data(), nickname.size()); // nick
 
-				packet.Write<i32>(536);
+				packet.Write<i32>(Sv::CHANNEL_VAR_FROM_LOGIN);
 				packet.Write<i32>(1);
 
 				NT_LOG("[client%x] Server :: %s", clientID, PacketSerialize<Sv::SN_DoConnectChannelServer>(packet.data, packet.size));
