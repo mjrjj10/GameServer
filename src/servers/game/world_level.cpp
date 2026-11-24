@@ -339,6 +339,7 @@ void World::RequestVote(Player& player, u32 type)
 	}
 	vote.choices[player.index] = VOTE_YES;
 	vote.botVotesAt = TimeAdd(localTime, TimeMsToTime(HYP_BOT_VOTE_DELAY_MS));
+	if(player.clientHd != ClientHandle::INVALID) replication->SendRequestVotingAnswer(player.clientHd, player.userID, type);
 	foreach(p, players) {
 		if(p->team == player.team && p->clientHd != ClientHandle::INVALID) replication->SendRequestVoting(p->clientHd, player.userID, type, (u32)periodMs, voters, false);
 	}

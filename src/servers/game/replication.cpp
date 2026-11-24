@@ -2434,6 +2434,16 @@ void Replication::SendRequestVoting(ClientHandle clientHd, UserID requestor, u32
 	SendPacket(clientHd, packet);
 }
 
+void Replication::SendRequestVotingAnswer(ClientHandle clientHd, UserID requestor, u32 type)
+{
+	Sv::SA_RequestVoting packet;
+	packet.usn = (u32)requestor;
+	packet.votingType = type;
+	packet.errorType = 0;
+	packet.coolTime = 0;
+	SendPacket(clientHd, packet);
+}
+
 void Replication::SendVote(ClientHandle clientHd, u32 type, u32 choice)
 {
 	Sv::SN_Vote packet;

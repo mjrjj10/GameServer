@@ -913,6 +913,7 @@ struct World
 		u32 clientRemoteID = 0;
 		bool sentByDoc = false;
 		bool targetLeft = false;
+		ActorUID lastHitUID = ActorUID::INVALID;
 		vec3 casterDest = vec3(0);
 		bool casterDestSet = false;
 		u32 npcActivation = 0;
@@ -1563,7 +1564,7 @@ public:
 	bool ActiveMasterSkillAllowed(const Player& player, SkillID skill) const;
 	void UpdateBoundTriggers();
 	void UpdateCreatureEnterTrigger(const GameXmlContent::LevelEventNode& node, i32 slot, const GameXmlContent::Map::Area& area);
-	void OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos, ActorDynamic* known = nullptr, i32 ownerIndex = -1, i32 damage = 0, RemoteIdx remoteDoc = RemoteIdx::INVALID);
+	ActorUID OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos, ActorDynamic* known = nullptr, i32 ownerIndex = -1, i32 damage = 0, RemoteIdx remoteDoc = RemoteIdx::INVALID);
 	void DamageJumpWall(ActorDynamic& wall, i32 damage, bool exact, ActorUID attackerUID, i32 killerIndex, u32 remoteID, RemoteIdx remoteDoc, const vec3& pos, ClientHandle seedOwnerHd);
 	f32 LaneMinionDefence() const;
 	vec2 WallContactPoint(const ActorDynamic& wall, const vec2& from);

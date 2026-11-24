@@ -1645,11 +1645,14 @@ bool World::UpdateMonsterAllyBuff(ActorNpc& npc, const GameXmlContent::MonsterAi
 		if(npc.monsterSkillReady[s] == Time::ZERO) npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime((buff.firstAt >= 0 ? buff.firstAt : buff.cooldown) * 1000.0));
 		if(localTime < npc.monsterSkillReady[s]) continue;
 		Player* ally = nullptr;
-		f32 best = MAX(buff.range, ai.perception);
+		const f32 reach = MAX(buff.range, ai.perception);
+		f32 lowest = FLT_MAX;
 		foreach(p, players) {
 			if(p->dead || p->untargetable || p->removed || !p->body || (Faction)p->team != npc.faction) continue;
 			const f32 d = glm::length(vec2(p->body->GetWorldPos()) - vec2(npc.pos));
-			if(d <= best) { best = d; ally = &*p; }
+			if(d > reach) continue;
+			const f32 ratio = p->Main().hpMax > 0 ? (f32)p->Main().hp / (f32)p->Main().hpMax : 1.0f;
+			if(ratio < lowest) { lowest = ratio; ally = &*p; }
 		}
 		if(!ally) continue;
 		npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime(buff.cooldown * 1000.0));

@@ -3,6 +3,7 @@
   <MOD status="1200080002" stat="SERVER_RESTORE_HEALTH_RATIO" value="100" source="TESTER legomage15 22/11: the training room centre heals (STATUS_TRAINING_HEAL, 1 s, re-applied every 0.5 s by area 10); amount not in the data, full restore assumed" />
   <MOD status="1200080003" stat="SERVER_RESTORE_RESOURCES_RATIO" value="100" source="TESTER legomage15 22/11: the training room centre refills mana and ultimate gauge (STATUS_TRAINING_ST_UG, 1 s, area 10); amount not in the data, full restore assumed" />
   <MOD status="1264070031" stat="STAT_TYPE_HEALTH" value="3" mul="1" count="1800" source="MEASURED 7 official 5v5 captures: 3.0% of max HP every 0.2 s in the base recovery zone (2738 ticks)" />
+  <MOD status="1230360061" stat="STAT_TYPE_MANA" value="20" mul="1" source="Statesman Heroism (180360050) tooltip: regain 20% of your MP on activation; STATUS 1230360061 _Description mana 20% (no official ult capture)" />
   <MOD status="1264070031" stat="STAT_TYPE_MANA" value="15" mul="1" count="1800" source="MEASURED official 5v5 captures: mana +15% of max on the same 0.2 s ticks as the HP heal in the base recovery zone (21 full ticks, reason 0)" />
   <MOD status="1200100020" stat="STAT_TYPE_LIFESTEAL" value="20" source="GAMETIP_TITAN_LAYOUT_2_DESC_01" />
   <MOD status="1200100020" stat="STAT_TYPE_STAMINAREGEN" value="5" source="GAMETIP_TITAN_LAYOUT_2_DESC_01" />

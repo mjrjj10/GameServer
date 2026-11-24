@@ -1520,13 +1520,13 @@ bool World::TakeGroundItem(Player& player, u32 itemUID, GroundItem* taken)
 	return true;
 }
 
-void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos, ActorDynamic* known, i32 ownerIndex, i32 damage, RemoteIdx remoteDoc)
+ActorUID World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos, ActorDynamic* known, i32 ownerIndex, i32 damage, RemoteIdx remoteDoc)
 {
 	ActorDynamic* hit = known;
 	if(!hit && actor) foreach(d, actorDynamicList) {
 		if(d->collider && (const void*)d->collider == (const void*)actor) { hit = &*d; break; }
 	}
-	if(!hit || hit->destroyed) return;
+	if(!hit || hit->destroyed) return ActorUID::INVALID;
 	const auto& destroyHits = GetGameXmlContent().dynamicDestroyHits;
 	const auto destroyable = destroyHits.find((i32)hit->docID);
 	if(destroyable != destroyHits.end() && GetGameXmlContent().dynamicJumpable.count((i32)hit->docID)) {
@@ -1549,12 +1549,13 @@ void World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle s
 		while(!hit->hits.empty() && TimeDiffSec(TimeDiff(hit->hits.front(), localTime)) > n->delay) hit->hits.erase(hit->hits.begin());
 		if(hit->hits.full()) hit->hits.erase(hit->hits.begin());
 		hit->hits.push_back(localTime);
-		if((i32)hit->hits.size() < n->hitCount) return;
+		if((i32)hit->hits.size() < n->hitCount) return hit->UID;
 		hit->hits.clear();
 		LOG("LevelEvent :: dynamic %d hit %d times in %.0f s", hit->localID, n->hitCount, n->delay);
 		foreach_const(o, n->outputs) FireLevelEvent(*o, -1, n->id);
-		return;
+		return hit->UID;
 	}
+	return hit->UID;
 }
 
 void World::DamageJumpWall(ActorDynamic& wall, i32 rawDamage, bool exact, ActorUID attackerUID, i32 killerIndex, u32 remoteID, RemoteIdx remoteDoc, const vec3& pos, ClientHandle seedOwnerHd)

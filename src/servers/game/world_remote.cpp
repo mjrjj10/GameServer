@@ -361,7 +361,7 @@ u32 World::SendRemoteCreator(const RemoteInst& parent, u16 creator, const vec3& 
 	const bool fromRemote = spawnerActor == ActorUID::INVALID;
 	const ActorUID ownerUID = parent.sourceUID != ActorUID::INVALID && FindNpcActor(parent.sourceUID) ? parent.sourceUID : players[parent.ownerIndex].Main().UID;
 	const ActorMaster* targetMaster = parent.target != ActorUID::INVALID ? FindMasterActor(parent.target) : nullptr;
-	const ActorUID hitInvalid = fromRemote && hitInvalidParent && parent.lastHitIndex >= 0 ? players[parent.lastHitIndex].Main().UID : ActorUID::INVALID;
+	const ActorUID hitInvalid = !fromRemote || !hitInvalidParent ? ActorUID::INVALID : parent.lastHitIndex >= 0 ? players[parent.lastHitIndex].Main().UID : parent.lastHitUID;
 	replication->SendChildRemoteCreateToAll(ownerUID, fromRemote ? ownerUID : spawnerActor, fromRemote ? parent.clientRemoteID - (parent.sentByDoc ? 1 : 0) : 0, fromRemote ? parent.seedOwnerHd : ClientHandle::INVALID, seed, RemoteIdx::INVALID, creator, pos, atan2f(parent.dir.y, parent.dir.x), fromRemote ? pos : aimPos,
 		targetMaster ? parent.target : ActorUID::INVALID, hitInvalid, GetGameXmlContent().GetNodeName(parent.nodeName), fromRemote ? MEASURED_REMOTE_CREATE_FLAG_PARENT_REMOTE : 0, ClientHandle::INVALID);
 	return seed + 1;
@@ -385,6 +385,7 @@ void World::SpawnProjectileHitRemotes(const Projectile& proj, const Remote& shot
 	parent.clientRemoteID = proj.remoteID;
 	parent.seedOwnerHd = proj.seedOwnerHd;
 	parent.lastHitIndex = hitIndex;
+	parent.lastHitUID = hitNpc;
 	const u32 before = (u32)remoteInsts.size();
 	SpawnRemoteRules(*this, parent, shot.onHitCharacter, shot.creatorOnHitCharacter, at, hitIndex, RemoteIdx::INVALID);
 	if(hitNpc == ActorUID::INVALID) return;

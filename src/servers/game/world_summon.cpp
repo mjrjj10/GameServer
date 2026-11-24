@@ -170,6 +170,7 @@ void World::RunSummonState(ActorNpc& npc, i32 state, const f32* yawOverride)
 				ga.until = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
 				ga.nextPulse = localTime;
 				ga.sourceUID = npc.UID;
+				ga.followSource = true;
 				groundAuras.push_back(ga);
 			}
 		}
