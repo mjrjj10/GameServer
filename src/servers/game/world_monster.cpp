@@ -759,6 +759,24 @@ void World::UpdateMonsterHits()
 	}
 }
 
+static const f32 MEASURED_S11_SPIN_CURVE_DEG[] = { 0, -1, -4, -10, -20, -35, -54, -77, -102, -128, -152, -178, -205, -232, -258, -281, -301, -319, -334, -347, -353, -356 };
+struct MeasuredSpin { i32 remote; f32 spacingDeg; f32 startDeg; f32 originDist; f32 originDeg; const f32* curveDeg; i32 curveCount; f32 curveStepSec; };
+static const MeasuredSpin MEASURED_MONSTER_REMOTE_SPIN[] = { { 1480011061, 120.0f, -23.4f, 355.0f, -117.9f, MEASURED_S11_SPIN_CURVE_DEG, (i32)(sizeof(MEASURED_S11_SPIN_CURVE_DEG) / sizeof(MEASURED_S11_SPIN_CURVE_DEG[0])), 0.5f } };
+
+static f32 MeasuredSpinTurnRad(const MeasuredSpin& s, f32 sec)
+{
+	const f32 at = MAX(sec, 0.0f) / s.curveStepSec;
+	const i32 k = (i32)at;
+	if(k + 1 >= s.curveCount) return s.curveDeg[s.curveCount - 1] * PI / 180.0f;
+	return (s.curveDeg[k] + (s.curveDeg[k + 1] - s.curveDeg[k]) * (at - (f32)k)) * PI / 180.0f;
+}
+
+static vec2 MeasuredSpinOrigin(const MeasuredSpin& s, const vec3& pos, f32 yaw)
+{
+	const f32 a = yaw + s.originDeg * PI / 180.0f;
+	return vec2(pos) + vec2(cosf(a), sinf(a)) * s.originDist;
+}
+
 void World::FireMonsterRemote(const MonsterFireEvent& fire)
 {
 	auto it = actorNpcMap.find(fire.npc);
@@ -792,14 +810,13 @@ void World::FireMonsterRemote(const MonsterFireEvent& fire)
 		const bool follows = remote->behaviorType == Remote::BehaviorType::HOMING || remote->behaviorType == Remote::BehaviorType::TARGET;
 		const vec2 dir = !follows ? vec2(cosf(fire.castYaw), sinf(fire.castYaw)) : (len > 1.0f ? rel / len : vec2(cosf(npc.rot.z), sinf(npc.rot.z)));
 		const bool parentOfChildren = spawned > 0 || !remote->onTime.empty() || !remote->onDestroy.empty();
-		struct MeasuredSpin { i32 remote; f32 degPerSec; f32 spacingDeg; f32 startDeg; };
-		static const MeasuredSpin MEASURED_MONSTER_REMOTE_SPIN[] = { { 1480011061, -49.2f, 120.0f, 29.0f } };
-		f32 spin = 0;
+		i32 spinIndex = -1;
 		f32 spinAngle = 0;
 		vec2 spunDir = dir;
-		for(const MeasuredSpin& s : MEASURED_MONSTER_REMOTE_SPIN) {
+		for(i32 si = 0; si < (i32)(sizeof(MEASURED_MONSTER_REMOTE_SPIN) / sizeof(MEASURED_MONSTER_REMOTE_SPIN[0])); si++) {
+			const MeasuredSpin& s = MEASURED_MONSTER_REMOTE_SPIN[si];
 			if(s.remote != fire.fire->remote) continue;
-			spin = s.degPerSec * PI / 180.0f;
+			spinIndex = si;
 			spinAngle = (s.startDeg + (f32)fire.fire->nodeIndex * s.spacingDeg) * PI / 180.0f;
 			const f32 a = npc.rot.z + spinAngle;
 			spunDir = vec2(cosf(a), sinf(a));
@@ -810,9 +827,15 @@ void World::FireMonsterRemote(const MonsterFireEvent& fire)
 		if(monsterRemotes.size() > before) {
 			MonsterRemote& spawnedRemote = monsterRemotes.back();
 			spawnedRemote.creatorSeed = creatorSeed;
-			spawnedRemote.spin = spin;
-			spawnedRemote.spinAngle = remote->attachFireObject ? spinAngle : npc.rot.z + spinAngle;
-			if(spin != 0) LOG("Monster :: creature=%d spinning remote %d node %d starts at %.1f deg, %.1f deg/s", (i32)npc.docID, fire.fire->remote, (i32)fire.fire->nodeIndex, atan2f(spunDir.y, spunDir.x) * 180.0f / PI, spin * 180.0f / PI);
+			if(spinIndex >= 0) {
+				const MeasuredSpin& s = MEASURED_MONSTER_REMOTE_SPIN[spinIndex];
+				spawnedRemote.spinIndex = spinIndex;
+				spawnedRemote.spinAngle = remote->attachFireObject ? spinAngle : npc.rot.z + spinAngle;
+				spawnedRemote.spinFrom = localTime;
+				const vec2 origin = MeasuredSpinOrigin(s, npc.pos, npc.rot.z);
+				spawnedRemote.pos = vec3(origin, spawnedRemote.pos.z);
+				LOG("Monster :: creature=%d spinning remote %d node %d starts at %.1f deg from (%.0f, %.0f), boss yaw %.1f", (i32)npc.docID, fire.fire->remote, (i32)fire.fire->nodeIndex, atan2f(spunDir.y, spunDir.x) * 180.0f / PI, origin.x, origin.y, npc.rot.z * 180.0f / PI);
+			}
 			if(fire.passEnd != Time::ZERO && fire.passEnd < spawnedRemote.expire) spawnedRemote.expire = fire.passEnd;
 		}
 		return;
@@ -940,7 +963,7 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 	const i32 damage = (i32)(MonsterAttackPower(owner) * NpcStatusMul(owner, StatusMod::ATTACK) * remote.attackMultiplier + 0.5f);
 	const bool hitsEnemies = remote.damageGroup == Remote::DamageGroup::eENEMY || remote.damageGroup == Remote::DamageGroup::eALL;
 	const bool hitsAllies = remote.damageGroup == Remote::DamageGroup::eFRIEND || remote.damageGroup == Remote::DamageGroup::eALL;
-	const vec2 origin = vec2(mr.pos) + mr.dir * (mr.spin != 0 || !remote.attachFireObject ? RemoteBoundOffset(remote) : -RemoteBoundOffset(remote));
+	const vec2 origin = vec2(mr.pos) + mr.dir * (mr.spinIndex >= 0 || !remote.attachFireObject ? RemoteBoundOffset(remote) : -RemoteBoundOffset(remote));
 	const bool sphere = remote.boundType == Remote::BoundType::E_BOUND_SPHERE || remote.angle > 0;
 	auto inside = [&](const vec2& at, f32 r) {
 		const vec2 rel = at - origin;
@@ -1037,13 +1060,14 @@ void World::UpdateMonsterRemotes(f32 delta)
 		ActorNpc& owner = *ownerIt->second;
 		MonsterRemote& mr = monsterRemotes[i];
 		const Remote& remote = *mr.remote;
-		if(mr.spin != 0) {
-			mr.spinAngle += mr.spin * delta;
-			const f32 a = (remote.attachFireObject ? owner.rot.z : 0.0f) + mr.spinAngle;
+		if(mr.spinIndex >= 0) {
+			const MeasuredSpin& s = MEASURED_MONSTER_REMOTE_SPIN[mr.spinIndex];
+			const f32 a = (remote.attachFireObject ? owner.rot.z : 0.0f) + mr.spinAngle + MeasuredSpinTurnRad(s, (f32)TimeDiffSec(TimeDiff(mr.spinFrom, localTime)));
 			mr.dir = vec2(cosf(a), sinf(a));
+			if(remote.attachFireObject) mr.pos = vec3(MeasuredSpinOrigin(s, owner.pos, owner.rot.z), owner.pos.z);
 		}
 		else if(remote.attachFireObject && remote.maxSpeed <= 0) mr.dir = vec2(cosf(owner.rot.z), sinf(owner.rot.z));
-		if(remote.attachFireObject) mr.pos = vec3(vec2(owner.pos) + mr.dir * mr.offsetY, owner.pos.z);
+		if(remote.attachFireObject && mr.spinIndex < 0) mr.pos = vec3(vec2(owner.pos) + mr.dir * mr.offsetY, owner.pos.z);
 		if(remote.attachTargetObject && remote.maxSpeed <= 0 && mr.target != ActorUID::INVALID) {
 			const ActorMaster* followed = FindMasterActor(mr.target);
 			if(followed && followed->parent && !followed->parent->dead && followed->parent->body) {
