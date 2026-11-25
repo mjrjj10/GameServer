@@ -1740,6 +1740,12 @@ void Game::SpawnTrainingAlly()
 	World::Player& ally = world.GetPlayer(trainingAllyIndex);
 	ally.trainingDummy = true;
 	ally.devGod = true;
+	static const f32 HYP_TRAINING_ALLY_SIDE = 300.0f;
+	const World::Player& human = world.GetPlayer(0);
+	const f32 humanYaw = human.input.rot.bodyYaw;
+	const vec3 side = vec3(-sinf(humanYaw), cosf(humanYaw), 0.0f) * HYP_TRAINING_ALLY_SIDE;
+	ally.spawnPos = human.spawnPos + side;
+	world.TeleportPlayer(ally, ally.spawnPos, humanYaw);
 	LOG("Training :: ally %ls on team %d for ally-target skills", ally.name.data(), (i32)humanTeam);
 }
 
