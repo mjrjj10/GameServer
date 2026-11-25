@@ -1409,7 +1409,16 @@ void World::UpdateMonsterDash(ActorNpc& npc)
 	static const f32 MONSTER_DASH_RAY_HEIGHT = 100.0f;
 	const f32 total = (f32)TimeDiffSec(TimeDiff(npc.dashStart, npc.dashEnd));
 	const f32 t = total > 0 ? MIN((f32)TimeDiffSec(TimeDiff(npc.dashStart, localTime)) / total, 1.0f) : 1.0f;
-	const vec2 next = npc.dashFrom + npc.dashDir * npc.dashDist * NpcDashProgress(npc.dashCurve, t);
+	vec2 next = npc.dashFrom + npc.dashDir * npc.dashDist * NpcDashProgress(npc.dashCurve, t);
+	bool roomEdge = false;
+	if(const MeasuredRoom* room = npc.monsterAi && npc.monsterAi->anchorHp > 0 ? FindMeasuredRoom(npc.docID) : nullptr) {
+		const vec2 fromCentre = next - npc.monsterAi->anchor;
+		const f32 out = glm::length(fromCentre);
+		if(out > room->radius) {
+			next = npc.monsterAi->anchor + fromCentre / out * room->radius;
+			roomEdge = true;
+		}
+	}
 	const vec2 here = vec2(npc.pos);
 	f32 hit = 0;
 	const f32 radius = npc.monsterAi ? npc.monsterAi->radius : 0.0f;
@@ -1433,10 +1442,15 @@ void World::UpdateMonsterDash(ActorNpc& npc)
 		}
 	}
 	else npc.pos = vec3(next, npc.pos.z);
+	if(roomEdge && !blocked) {
+		blocked = true;
+		if(hostileMonsters) replication->SendNpcLegStopToAll(npc.UID, npc.pos, npc.rot.z, true);
+		else replication->SendMonsterMoveToAll(npc.UID, npc.pos, npc.pos, npc.rot.z, 0.0f, true);
+	}
 	if(npc.dashCurve == NPC_DASH_CURVE_PUSH || npc.dashCurve == NPC_DASH_CURVE_HOOK) SendNpcCcMove(npc, t >= 1.0f || blocked);
 	if(t >= 1.0f || blocked) {
 		npc.dashEnd = Time::ZERO;
-		LOG("Monster :: creature=%d (local %d) dash ends at (%.0f, %.0f)%s", (i32)npc.docID, npc.localID, npc.pos.x, npc.pos.y, blocked ? " on a wall" : "");
+		LOG("Monster :: creature=%d (local %d) dash ends at (%.0f, %.0f)%s", (i32)npc.docID, npc.localID, npc.pos.x, npc.pos.y, roomEdge ? " at the room edge" : (blocked ? " on a wall" : ""));
 		npc.anchorDone = false;
 	}
 }

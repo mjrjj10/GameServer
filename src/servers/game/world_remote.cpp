@@ -949,6 +949,7 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 		}
 		DamageNpc(players[inst.ownerIndex], npc, inst.skillID, (i32)(base * mul), &hit);
 	}
+	else if(npc.monsterWeakUntil != Time::ZERO && localTime < npc.monsterWeakUntil && localTime >= npc.monsterWeakFrom) AddNpcGroggy(npc, inst.skillID, (RemoteIdx)remote.ID);
 	Player& owner = players[inst.ownerIndex];
 	if(inst.clientRemoteID != 0) {
 		inst.npcActivation += NpcDensity(npc);
