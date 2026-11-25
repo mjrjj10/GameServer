@@ -644,6 +644,8 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 		const GameXmlContent::ResistRule* rule = GetGameXmlContent().FindResist(GetGameXmlContent().CreatureDefenceStatus((i32)npc.docID), weakKey);
 		weakBonus = WEAK_ON_CRITICAL_BONUS * (1.0f - (rule ? (f32)rule->value : 0.0f) / 100.0f);
 	}
+	static const f32 MEASURED_GROGGY_CRITICAL_BONUS = 100.0f;
+	if(npc.actionState == ActionStateID::DEFEAT_GROGGY_BEHAVIORSTATE && localTime < npc.monsterHoldUntil) weakBonus += MEASURED_GROGGY_CRITICAL_BONUS;
 	const f32 critMul = remoteHit ? RollCritical(attacker, skillID == SkillID::INVALID, remoteHit->remoteDoc, PierceCriticalBonus(remoteHit->remoteDoc, remoteHit->pierceHits) + weakBonus) : 0.0f;
 	const f32 remoteMul = remoteHit ? RemoteTargetDamageMul(attacker, remoteHit->remoteDoc, npc.pos, nullptr, &npc) : 1.0f;
 	f32 npcDefenceMod = 0;
