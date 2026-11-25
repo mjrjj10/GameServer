@@ -249,6 +249,17 @@ static RemoteIdx CostReplacedRemote(const GameXmlContent::CostLevel* level, Remo
 	return idx;
 }
 
+static i32 CostReplacedStatus(const GameXmlContent::CostLevel* level, i32 statusID, f32& durationOverride)
+{
+	i32 out = statusID;
+	if(level) foreach_const(sr, level->statusReplace) {
+		if(sr->statusID != statusID) continue;
+		out = sr->replaceID;
+		durationOverride = sr->durationSec;
+	}
+	return out;
+}
+
 static i32 ClientCreatorKindRank(u8 kind)
 {
 	switch(kind) {
@@ -560,7 +571,9 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 		}
 		if(!enemy) {
 			foreach_const(st, remote.friendlyStatuses) {
-				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) { statusCasterOverride = inst.sourceUID; ApplyStatus(owner, target, st->statusID, (f32)inst.damage); statusCasterOverride = ActorUID::INVALID; }
+				f32 durationOverride = 0;
+				const i32 statusID = CostReplacedStatus(inst.costLevel, st->statusID, durationOverride);
+				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) { statusCasterOverride = inst.sourceUID; ApplyStatus(owner, target, statusID, (f32)inst.damage, durationOverride); statusCasterOverride = ActorUID::INVALID; }
 			}
 			if(!remote.friendlyStatuses.empty() && &target != &owner) PassiveOnFriendlyHit(owner);
 		}
@@ -951,6 +964,7 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 	}
 	else if(npc.monsterWeakUntil != Time::ZERO && localTime < npc.monsterWeakUntil && localTime >= npc.monsterWeakFrom) AddNpcGroggy(npc, inst.skillID, (RemoteIdx)remote.ID);
 	Player& owner = players[inst.ownerIndex];
+	ApplyRemoteHitResourceGain(owner, remote.ID, inst.castID, (u32)npc.UID | VOLLEY_NPC_TARGET_BIT);
 	if(inst.clientRemoteID != 0) {
 		inst.npcActivation += NpcDensity(npc);
 		replication->SendRemoteActivatedToAll(inst.clientRemoteID, inst.seedOwnerHd, inst.casterLocal ? owner.clientHd : ClientHandle::INVALID, npc.UID, inst.npcActivation, inst.pos);
@@ -976,7 +990,8 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 	if(npc.hp <= 0 || npc.ownerUID != ActorUID::INVALID) return true;
 	const ActorUID prevCaster = statusCasterOverride;
 	if(inst.sourceUID != ActorUID::INVALID && FindNpcActor(inst.sourceUID)) statusCasterOverride = inst.sourceUID;
-	const bool fixedForce = remote.forceFixedAngle != 0 && glm::length(inst.dir) > 0.5f;
+	const bool centeredOnNpc = glm::length(vec2(npc.pos) - vec2(inst.pos)) < NpcHitRadius(npc);
+	const bool fixedForce = (remote.forceFixedAngle != 0 || centeredOnNpc) && glm::length(inst.dir) > 0.5f;
 	if(fixedForce) {
 		const f32 a = remote.forceFixedAngle * PI / 180.0f;
 		const vec2 d = glm::normalize(inst.dir);

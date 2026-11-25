@@ -880,7 +880,7 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 	const StatusDrainRule* drain = FindStatusDrainRule(statusID);
 	if(drain && caster.team != target.team) {
 		const f32 manaBefore = target.mana, energyBefore = target.res[0];
-		target.mana = MAX(target.mana, 0.0f) * (1.0f - drain->fraction);
+		if(target.mana > 0) target.mana *= 1.0f - drain->fraction;
 		if(target.res[0] > 0) target.res[0] *= 1.0f - drain->fraction;
 		target.manaDirty = true;
 		target.resDirty = true;

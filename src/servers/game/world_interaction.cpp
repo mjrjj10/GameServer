@@ -497,7 +497,11 @@ World::NpcCcGraph World::StartNpcCc(ActorNpc& npc, const StatusInfo* info, const
 		vec2 dir = vec2(npc.pos) - vec2(source);
 		const f32 len = glm::length(dir);
 		dir = len > 1.0f ? dir / len : vec2(cosf(npc.rot.z), sinf(npc.rot.z));
-		const f32 signedDist = forceBack ? info->distance : MEASURED_NPC_PUSH_BASE_DISTANCE * (info->distanceRatio != 0 ? info->distanceRatio : 1.0f);
+		f32 signedDist = forceBack ? info->distance : MEASURED_NPC_PUSH_BASE_DISTANCE * (info->distanceRatio != 0 ? info->distanceRatio : 1.0f);
+		if(const PushToEdgeRule* edge = FindPushToEdgeRule(info->ID)) {
+			const Remote* wave = GetGameXmlContent().FindRemote(edge->remote);
+			if(wave) signedDist = MAX(wave->boundSize[0] * 0.5f - len, 0.0f);
+		}
 		if(signedDist < 0) dir = -dir;
 		f32 dist = fabsf(signedDist);
 		cc.nominal = dist;

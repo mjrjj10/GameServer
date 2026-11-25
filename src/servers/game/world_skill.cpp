@@ -1403,7 +1403,7 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 					endAt = MAX(endAt, total);
 				}
 				ps.duration = MAX(endAt - t, 0.3f);
-				const StatusInfo* capInfo = content.FindStatus(cmd->status.statusIndex);
+				const StatusInfo* capInfo = content.FindStatus(ps.statusID);
 				if(capInfo && capInfo->durationSec > 0) ps.duration = MIN(ps.duration, capInfo->durationSec);
 			}
 			ps.power = (f32)damage;

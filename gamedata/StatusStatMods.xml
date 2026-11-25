@@ -155,4 +155,7 @@
   <MOD status="1200100016" stat="STAT_TYPE_DEFENCE" value="20" mul="1" source="STR_STATUS_MOB_TOOLTIP_1200100017; MEASURED 7 official 5v5 captures: SN_UpdateStat 7 +20% of class base defence on add (33/39)" />
   <MOD status="1200100016" stat="STAT_TYPE_SKILLDAMAGE_REDUCE_RATIO" value="20" source="MEASURED 7 official 5v5 captures: SN_UpdateStat 58 = 20 on add" />
   <MOD status="1200100017" stat="STAT_TYPE_HEALTH" value="120" count="20" interval="0.5" source="MEASURED 7 official 5v5 captures: +120 HP every 0.5 s (697 ticks), 10 s" />
+  <MOD status="1230410049" stat="STAT_TYPE_DEFENCE" value="100" mul="1" source="TOOLTIP STR_SKILL_PROPERTY_TOOLTIP1_280414006: Defense +100% in transport mode" />
+  <MOD status="1230410054" stat="STAT_TYPE_DEFENCE" value="15" mul="1" source="TOOLTIP STR_SKILL_PROPERTY_TOOLTIP1_280415003: allies at the teleporter defense +15%" />
+  <MOD status="1230410055" stat="STAT_TYPE_DEFENCE" value="15" mul="1" source="TOOLTIP STR_SKILL_PROPERTY_TOOLTIP1_280415006: allies at the teleporter defense +15%" />
 </STATUS_STAT_MODS>

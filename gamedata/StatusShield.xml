@@ -5,4 +5,6 @@
   <STATUS ID="1230410061" shield="450" source="TESTER Malachi 22/11: GX-09 Plasma Shield 250 (passive tooltip 180410000) + 200" />
   <STATUS ID="1230170001" shield="400" source="Vita passive tooltip (400 damage); MEASURED official captures: SN_UpdateStat 19 = 404 to 423 on add (41 casts) = 400 + skill power x 0.05 (_ShieldMultiplier)" />
   <STATUS ID="1239100020" shield="2000" source="MEASURED official 5v5 captures: Titan Hammer E shield, SN_UpdateStat 19 = 2000 on add (mode of 48 reads, 39 casts on allies)" />
+  <STATUS ID="1230410054" shield="100" source="TOOLTIP STR_SKILL_PROPERTY_TOOLTIP1_280415003: GX-09 ultimate rank 3, allies at the teleporter shield +100" />
+  <STATUS ID="1230410055" shield="200" source="TOOLTIP STR_SKILL_PROPERTY_TOOLTIP1_280415006: GX-09 ultimate max rank, allies at the teleporter shield +200" />
 </STATUS_SHIELD>

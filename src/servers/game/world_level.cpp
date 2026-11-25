@@ -643,6 +643,9 @@ void World::RevertTitan(Player& player)
 	}
 	replication->SendTitanFormToAll(false, chara.UID, 100000000 + (i32)chara.classType, 0, 0, -1, -1, -1, stats.data(), (u16)stats.size(), (f32)chara.hp, MasterStat(chara.classType, (u8)StatType::STAT_TYPE_STAMINA), MAX(player.ultGauge, 0.0f), master.moveSpeed);
 	replication->SendStatToAll(chara.UID, (u8)StatType::STAT_TYPE_HEALTH, (f32)chara.hp, (f32)chara.hpMax);
+	player.manaDirty = true;
+	player.staminaDirty = true;
+	player.resDirty = true;
 	LOG("Titan :: %ls back to master (%d/%d hp)", player.name.data(), chara.hp, chara.hpMax);
 }
 

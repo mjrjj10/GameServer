@@ -1736,6 +1736,7 @@ struct GameXmlContent
 	struct SkillUpgrade {
 		enum class Type: u8 { COST, DAMAGE, EFFECT, RANGE };
 		i32 propertyID = 0;
+		i32 priority = 0;
 		Type type = Type::COST;
 		f32 baseDamage = -1;
 		f32 attackMultiplier = 0;
@@ -1965,6 +1966,7 @@ private:
 	eastl::hash_map<i32, eastl::array<f32,4>> skillConsumeRes;
 	eastl::hash_map<i32, f32> skillBaseDamage;
 	eastl::hash_map<i32, f32> skillTooltipDamage;
+	eastl::hash_map<i32, eastl::fixed_vector<f32,8,false>> skillTooltipLevelBase;
 	eastl::hash_map<i32, f32> skillBasePowerMul;
 	eastl::hash_map<i32, f32> skillConsumeUG;
 	eastl::hash_map<i32, SummonInfo> summonMap;

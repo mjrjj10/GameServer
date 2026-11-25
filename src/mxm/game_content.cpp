@@ -3066,6 +3066,7 @@ bool GameXmlContent::LoadSkillUpgrades()
 		if(!type) continue;
 		SkillUpgrade up;
 		up.propertyID = pSP->IntAttribute("_Index");
+		up.priority = pSP->IntAttribute("_Priority");
 		if(EA::StdC::Strcmp(type, "E_SKILL_PROPERTY_DAMAGE") == 0) up.type = SkillUpgrade::Type::DAMAGE;
 		else if(EA::StdC::Strcmp(type, "E_SKILL_PROPERTY_EFFECT") == 0) up.type = SkillUpgrade::Type::EFFECT;
 		else if(EA::StdC::Strcmp(type, "E_SKILL_PROPERTY_RANGE") == 0) up.type = SkillUpgrade::Type::RANGE;
@@ -3134,6 +3135,20 @@ bool GameXmlContent::LoadSkillUpgrades()
 	foreach(it, skillUpgrades) {
 		if(!ported(it->first)) continue;
 		foreach(up, it->second) if(up->type == SkillUpgrade::Type::DAMAGE && up->baseDamage > 0 && up->attackMultiplier <= 0) up->attackMultiplier = up->baseDamage * HYP_PORTED_POWER_PER_DAMAGE;
+	}
+	static const f32 TOOLTIP_SCALE_MISMATCH = 1.5f;
+	foreach(it, skillUpgrades) {
+		const auto levels = skillTooltipLevelBase.find(it->first);
+		const auto mul = skillBasePowerMul.find(it->first);
+		if(levels == skillTooltipLevelBase.end() || mul == skillBasePowerMul.end()) continue;
+		foreach(up, it->second) {
+			if(up->type != SkillUpgrade::Type::DAMAGE || up->baseDamage <= 0 || up->priority < 0 || up->priority >= (i32)levels->second.size()) continue;
+			const f32 tt = levels->second[up->priority];
+			if(tt <= 0 || (up->baseDamage < tt * TOOLTIP_SCALE_MISMATCH && up->baseDamage * TOOLTIP_SCALE_MISMATCH > tt)) continue;
+			LOG("SkillUpgrade :: skill %d property %d level %d base damage %g x%g replaced by the tooltip ladder %g x%g", it->first, up->propertyID, up->priority, up->baseDamage, up->attackMultiplier, tt, mul->second);
+			up->baseDamage = tt;
+			up->attackMultiplier = mul->second;
+		}
 	}
 	LOG("Loaded in-game upgrades for %d skills, base skill power multipliers for %d", (i32)skillUpgrades.size(), (i32)skillBasePowerMul.size());
 	return true;
@@ -4360,6 +4375,10 @@ bool GameXmlContent::LoadStatusData()
 				}
 			}
 
+			static const struct { i32 status; StatusType type; } DESC_STATUS_TYPES[] = {
+				{ 1230410021, StatusType::FEAR },
+			};
+			for(const auto& r : DESC_STATUS_TYPES) if(st.ID == r.status) st.type = r.type;
 			switch(st.type) {
 				case StatusType::STUN: case StatusType::PUSH: case StatusType::KNOCKDOWN: case StatusType::AIRBORNE: case StatusType::FEAR:
 				case StatusType::FORCEBACK: case StatusType::DRAGGED: case StatusType::SHOCKED: case StatusType::ACTIONBLOCK: case StatusType::FLY:
@@ -4665,6 +4684,18 @@ bool GameXmlContent::LoadSkillTooltips()
 				if(dmg > 0 && skillBaseDamage.find(skillID) == skillBaseDamage.end()) {
 					skillBaseDamage[skillID] = dmg / remoteDelegateMul;
 					skillTooltipDamage[skillID] = dmg;
+				}
+			}
+			if(skillTooltipLevelBase.find(skillID) == skillTooltipLevelBase.end()) {
+				auto& ladder = skillTooltipLevelBase[skillID];
+				for(XMLElement* pLevel = pBase; pLevel && !ladder.full(); pLevel = pLevel->NextSiblingElement("data")) {
+					f32 dmg = 0;
+					for(XMLElement* pT = pLevel->FirstChildElement("tableDatas"); pT; pT = pT->NextSiblingElement("tableDatas")) {
+						const char* attrType = nullptr;
+						pT->QueryStringAttribute("attrType", &attrType);
+						if(attrType && EA::StdC::Strcmp(attrType, "TTATTR_REMOTE_DAMAGE") == 0) { pT->QueryFloatAttribute("value_1", &dmg); break; }
+					}
+					ladder.push_back(dmg / remoteDelegateMul);
 				}
 			}
 			for(XMLElement* pLevel = pBase; pLevel; pLevel = pLevel->NextSiblingElement("data")) {
