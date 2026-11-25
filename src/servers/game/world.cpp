@@ -891,6 +891,7 @@ World::ActorMasterHandle World::MasterInvalidHandle()
 
 static const f64 CAST_LOCK_MS = 500.0;
 static const u32 ERROR_TYPE_SKILL_INVALID_STATE_BLOCK = 563;
+static const u32 ERROR_TYPE_TOO_FEW_TARGET = 41;
 static const i32 ULTIMATE_SKILL_SUFFIX = 50;
 
 void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPosIn, Slice<const ActorUID> targets, f32 clientTime, ActionStateID forcedAction)
@@ -903,6 +904,16 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 			replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_SKILL_INVALID_STATE_BLOCK, player.body->GetWorldPos(), player.input.rot.upperYaw, player.input.speed, clientTime);
 		}
 		return;
+	}
+	if(forcedAction == ActionStateID::INVALID && player.clientHd != ClientHandle::INVALID) {
+		const GameXmlContent::SkillInput* pickIn = GetGameXmlContent().FindSkillInput((i32)skillID);
+		bool hasTarget = false;
+		foreach_const(t, targets) if(FindMasterActor(*t) || FindNpcActor(*t)) hasTarget = true;
+		if(pickIn && pickIn->pickedEntity && !pickIn->pickFriendly && pickIn->minTarget > 0 && !hasTarget && PickEntityAtCastPos(player, skillID, castPos) == ActorUID::INVALID) {
+			LOG("Skill :: %ls cast %d refused: no target picked (ERROR_TYPE_TOO_FEW_TARGET)", player.name.data(), (i32)skillID);
+			replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_TOO_FEW_TARGET, player.body->GetWorldPos(), player.input.rot.upperYaw, player.input.speed, clientTime);
+			return;
+		}
 	}
 	if(forcedAction == ActionStateID::INVALID && !TitanSkillAllowed(player, skillID)) {
 		LOG("Skill :: %ls cast %d refused (not a skill of the current form %d)", player.name.data(), (i32)skillID, player.titanForm);

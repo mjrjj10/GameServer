@@ -411,6 +411,8 @@ void GameXmlContent::LoadAllSkills()
 				in.teleportEntity = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_TELEPORT_ENTITY") == 0;
 				in.allEnemies = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_ENEMY_PC_ALL") == 0;
 				in.pickedEntity = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_PICKED_ENTITY") == 0;
+				in.minTarget = (u8)MAX(pTarget->IntAttribute("_MinTarget"), 0);
+				in.pickFriendly = pTarget->BoolAttribute("_Friendly");
 				in.lockOn = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_MULTI_LOCKON") == 0;
 				in.minHpFriend = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_FRIENDLY_PC_MIN_HP") == 0;
 				in.minimapFriendPc = selectType && EA::StdC::Strcmp(selectType, "SKILL_TARGET_PICKED_MINIMAP") == 0 && pTarget->BoolAttribute("_Friendly") && pTarget->BoolAttribute("_PC");
