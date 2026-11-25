@@ -977,6 +977,15 @@ bool GameXmlContent::LoadMapByID(Map* map, MapIndex index)
 			map->aiMarkers[pGroup->IntAttribute("id")] = vec3(pMarker->FloatAttribute("x"), pMarker->FloatAttribute("y"), pMarker->FloatAttribute("z"));
 		}
 	}
+	Path navPath = gameDataDir;
+	PathAppend(navPath, LFMT(L"/NavMesh/NavMesh_Map(%d).hkx", (i32)index));
+	i32 navSize = 0;
+	if(u8* navData = FileOpenAndReadAll(navPath.data(), &navSize)) {
+		defer(memFree(navData));
+		const bool loaded = map->navMesh.Load(navData, navSize);
+		ASSERT(loaded);
+		LOG("Map %d :: navmesh %d faces, %d edges, %d user edges", (i32)index, (i32)map->navMesh.faces.size(), (i32)map->navMesh.edges.size(), map->navMesh.userEdgeCount);
+	}
 	return true;
 }
 

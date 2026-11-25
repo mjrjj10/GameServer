@@ -1,5 +1,6 @@
 #pragma once
 #include "core.h"
+#include "nav_mesh.h"
 #include <tinyxml2.h>
 #include <common/protocol.h>
 #include <common/utils.h>
@@ -981,6 +982,7 @@ struct GameXmlContent
 		eastl::hash_map<i32, eastl::fixed_vector<vec3,48,true>> paths;
 		eastl::hash_set<i32> roundTripPaths;
 		eastl::hash_map<i32, vec3> aiMarkers;
+		NavMesh navMesh;
 
 		const Area* FindArea(i32 id) const { foreach_const(a, areas) if(a->ID == id) return &*a; return nullptr; }
 		const LevelEventNode* FindLevelEvent(i32 id) const { foreach_const(n, levelEvents) if(n->id == id) return &*n; return nullptr; }

@@ -328,6 +328,9 @@ struct World
 		bool botRetreat = false;
 		vec2 botRouteGoal = vec2(0);
 		eastl::fixed_vector<u16,64,false> botRoute;
+		NavMesh::Route botMeshRoute;
+		vec2 botMeshGoal = vec2(0);
+		Time botMeshPlannedAt = Time::ZERO;
 		f32 moveSpeedSent = -1.0f;
 		bool manaDirty = false;
 		eastl::array<f32,3> res = { -1, -1, -1 };
@@ -1667,6 +1670,9 @@ public:
 	eastl::array<eastl::vector<eastl::vector<vec2>>,2> botLanes;
 	bool botNavBuilt = false;
 	eastl::hash_map<u32,u8> botJumpFails;
+	eastl::hash_map<i32,u8> botMeshEdgeFails;
+	bool BotMeshStep(Player& bot, const vec2& goal, vec2* step);
+	void BotMeshStuck(Player& bot);
 	void BuildTitanSaveAreas();
 	void BuildBotNav();
 	bool BotSees(const vec3& from, const vec3& to);

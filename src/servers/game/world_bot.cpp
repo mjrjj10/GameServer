@@ -1141,8 +1141,71 @@ bool World::BotPassesStuckSpot(const Player& bot, const vec2& from, const vec2& 
 	return localTime < bot.botStuckAvoidUntil && SegmentPointDist2D(from, to, bot.botStuckPos) < HYP_BOT_STUCK_SPOT_RADIUS;
 }
 
+static const f64 HYP_BOT_MESH_REPLAN_MS = 3000.0;
+static const f32 HYP_BOT_MESH_REACHED = 120.0f;
+static const u8 HYP_BOT_MESH_EDGE_MAX_FAILS = 2;
+static const i32 BOT_MESH_SKIP_AHEAD = 4;
+
+bool World::BotMeshStep(Player& bot, const vec2& goal, vec2* step)
+{
+	const NavMesh& mesh = map->navMesh;
+	const vec3 pos = bot.body->GetWorldPos();
+	const vec2 here = vec2(pos);
+	const vec3 goal3 = vec3(goal, pos.z);
+	if(localTime >= bot.botRouteForceUntil && !BotPassesStuckSpot(bot, here, goal) && BotSees(pos, goal3) && BotWalkable(pos, goal3)) {
+		bot.botMeshRoute.clear();
+		*step = goal;
+		return true;
+	}
+	if(bot.botMeshRoute.empty() || glm::length(goal - bot.botMeshGoal) > BOT_NAV_REROUTE_DIST || localTime >= TimeAdd(bot.botMeshPlannedAt, TimeMsToTime(HYP_BOT_MESH_REPLAN_MS))) {
+		bot.botMeshGoal = goal;
+		bot.botMeshPlannedAt = localTime;
+		if(!mesh.FindRoute(pos, goal3, bot.botMeshRoute, &botMeshEdgeFails, HYP_BOT_MESH_EDGE_MAX_FAILS)) {
+			bot.botMeshRoute.clear();
+			return false;
+		}
+	}
+	while(!bot.botMeshRoute.empty()) {
+		const NavMesh::Waypoint& wp = bot.botMeshRoute.front();
+		if(glm::length(vec2(wp.pos) - here) >= HYP_BOT_MESH_REACHED || fabsf(wp.pos.z - pos.z) >= HYP_BOT_NAV_LEDGE) break;
+		bot.botMeshRoute.erase(bot.botMeshRoute.begin());
+	}
+	for(i32 k = 0; k < BOT_MESH_SKIP_AHEAD && bot.botMeshRoute.size() > 1; k++) {
+		const NavMesh::Waypoint& a = bot.botMeshRoute[0];
+		const NavMesh::Waypoint& b = bot.botMeshRoute[1];
+		if(a.userEdge >= 0 || b.userEdge >= 0 || fabsf(b.pos.z - pos.z) >= HYP_BOT_NAV_LEDGE || !BotSees(pos, b.pos) || !BotWalkable(pos, b.pos)) break;
+		bot.botMeshRoute.erase(bot.botMeshRoute.begin());
+	}
+	if(bot.botMeshRoute.empty()) {
+		*step = goal;
+		return true;
+	}
+	const NavMesh::Waypoint& next = bot.botMeshRoute.front();
+	if(next.userEdge >= 0 && bot.clientHd == ClientHandle::INVALID && bot.body->grounded && next.pos.z - pos.z >= HYP_BOT_NAV_LEDGE && glm::length(vec2(next.pos) - here) < HYP_BOT_NAV_JUMP_TRIGGER) {
+		bot.input.jump = 1;
+		LOG("BotNav :: %ls jumps navmesh user edge %d toward (%.0f, %.0f, %.0f) from z %.0f", bot.name.data(), next.userEdge, next.pos.x, next.pos.y, next.pos.z, pos.z);
+	}
+	*step = vec2(next.pos);
+	return true;
+}
+
+void World::BotMeshStuck(Player& bot)
+{
+	if(!bot.botMeshRoute.empty() && bot.botMeshRoute.front().userEdge >= 0) {
+		const i32 edge = bot.botMeshRoute.front().userEdge;
+		u8& fails = botMeshEdgeFails[edge];
+		fails++;
+		LOG("BotNav :: %ls failed navmesh user edge %d (%d failures)%s", bot.name.data(), edge, (i32)fails, fails >= HYP_BOT_MESH_EDGE_MAX_FAILS ? ", dropped" : "");
+	}
+	bot.botMeshRoute.clear();
+}
+
 vec2 World::BotNavStep(Player& bot, const vec2& goal)
 {
+	if(map && map->navMesh.Valid()) {
+		vec2 step;
+		if(BotMeshStep(bot, goal, &step)) return step;
+	}
 	if(!botNavBuilt) BuildBotNav();
 	const vec3 pos = bot.body->GetWorldPos();
 	const vec2 here = vec2(pos);
@@ -1479,6 +1542,7 @@ void World::UpdateBotMovement()
 					free.append_sprintf(" %.0f", glm::dot(vec2(reach) - here, d8));
 				}
 				LOG("BotNav :: %ls stuck at (%.0f, %.0f, %.0f), follows the walk graph, free%s, route %d", bot.name.data(), here.x, here.y, pos.z, free.c_str(), (i32)bot.botRoute.size());
+				BotMeshStuck(bot);
 				if(BotWallMoveSkill(bot, preNavGoal)) {
 					bot.botRoute.clear();
 					continue;
