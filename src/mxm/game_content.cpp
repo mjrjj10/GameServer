@@ -6655,9 +6655,9 @@ bool GameXmlContent::LoadBotBrain()
 	}
 	for(XMLElement* p = pRoot ? pRoot->FirstChildElement("_GotStrategyConstantData") : nullptr; p; p = p->NextSiblingElement("_GotStrategyConstantData")) {
 		const char* key = p->Attribute("DATAKEY");
-		const char* layerAt = key ? EA::StdC::Strstr(key, "_LAYER") : nullptr;
+		const char* layerAt = key ? EA::StdC::Strstr(key, "_KEY_LAYER") : nullptr;
 		if(!layerAt) continue;
-		const i32 layer = EA::StdC::AtoI32(layerAt + 6);
+		const i32 layer = EA::StdC::AtoI32(layerAt + 10);
 		ASSERT(layer >= 0 && layer < 64);
 		if((i32)botGotLayers.size() <= layer) botGotLayers.resize(layer + 1);
 		for(XMLElement* d = p->FirstChildElement("_Data"); d; d = d->NextSiblingElement("_Data")) {
@@ -6666,6 +6666,7 @@ bool GameXmlContent::LoadBotBrain()
 		}
 	}
 	LOG("GameContent :: %d Titan bot strategy layers", (i32)botGotLayers.size());
+	ASSERT(botGotLayers.size() == 53);
 	if(XMLElement* p = pRoot ? pRoot->FirstChildElement("_CommonSkillIndexData") : nullptr) {
 		for(i32 i = 0; i < (i32)botStageSkills.size(); i++) {
 			char attr[16];
