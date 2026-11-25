@@ -1901,9 +1901,27 @@ void World::DestroyRemote(i32 index)
 					childPos = copy.castOrigin + vec3(face * copy.measuredNode->childForward + Perp(face) * copy.measuredNode->childSide, copy.measuredNode->childUp);
 					childDir = RotateDir(face, copy.measuredNode->childRot);
 				}
+				ActorUID childTarget = copy.target;
+				ActorUID chainPre = ActorUID::INVALID;
+				bool skipChild = false;
+				if(nextRemote && nextRemote->behaviorType == Remote::BehaviorType::CHAIN) {
+					RemoteInst probe = copy;
+					probe.remote = nextRemote;
+					probe.pos = childPos;
+					probe.dir = childDir;
+					probe.excludeIndex = childExclude;
+					Player* hopPlayer = nullptr;
+					ActorNpc* hopNpc = nullptr;
+					ChainPickTarget(probe, &hopPlayer, &hopNpc);
+					if(hopPlayer || hopNpc) {
+						chainPre = hopPlayer ? hopPlayer->Main().UID : hopNpc->UID;
+						childTarget = chainPre;
+					}
+					else skipChild = true;
+				}
 				remoteSendParentID = copy.clientRemoteID - (copy.sentByDoc ? 1 : 0);
 				remoteSendParentSeedHd = copy.seedOwnerHd;
-				RemoteInst* child = SpawnRemote(copy.ownerIndex, CostReplacedRemote(copy.costLevel, next), childPos, childDir, copy.target, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, copy.nodeName, false, false, true);
+				RemoteInst* child = skipChild ? nullptr : SpawnRemote(copy.ownerIndex, CostReplacedRemote(copy.costLevel, next), childPos, childDir, childTarget, copy.skillID, copy.castID, copy.damage, copy.clientRemoteID != 0, nullptr, copy.nodeName, false, false, true);
 				if(child && copy.measuredNode && copy.measuredNode->hasChild) child->dirZ = copy.measuredNode->childDirZ;
 				remoteParentOverride = ActorUID::INVALID;
 				remoteSendParentID = 0;
@@ -1915,6 +1933,7 @@ void World::DestroyRemote(i32 index)
 					child->costLevel = copy.costLevel;
 					child->centeredBox = copy.centeredBox;
 					child->sourceUID = copy.sourceUID;
+					child->chainPreTarget = chainPre;
 				}
 			}
 			SpawnRemoteRules(*this, copy, remote.onDestroy, remote.creatorOnDestroy, copy.pos, childExclude, next);
