@@ -675,6 +675,7 @@ void World::Replicate()
 		rfl.tagID = actor.tagID;
 		rfl.seed = actor.seed;
 		rfl.entityType = actor.entityType;
+		rfl.immortal = actor.destroyHits == 0;
 
 
 		replication->FramePushDynamicActor(rfl);

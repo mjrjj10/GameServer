@@ -171,6 +171,7 @@ struct Replication
 		i32 tagID = -1;
 		i32 seed = 0;
 		i32 entityType = 3;
+		bool immortal = true;
 
 		vec3 pos;
 		vec3 rot;

@@ -4688,13 +4688,15 @@ void Replication::SendActorDynamicSpawn(ClientHandle clientHd, const ActorDynami
 		packet.Write<SkinIndex>(SkinIndex::DEFAULT);
 		packet.Write<i32>(actor.seed);
 
-
-		packet.Write<u16>(0);
-		packet.Write<u16>(0);
-
-
-
-
+		static const u8 MEASURED_DYNAMIC_HP_STAT = 0;
+		static const f32 MEASURED_IMMORTAL_DYNAMIC_HP = -1.0f;
+		for(i32 list = 0; list < 2; list++) {
+			packet.Write<u16>(actor.immortal ? 1 : 0);
+			if(actor.immortal) {
+				packet.Write<u8>(MEASURED_DYNAMIC_HP_STAT);
+				packet.Write<f32>(MEASURED_IMMORTAL_DYNAMIC_HP);
+			}
+		}
 
 		packet.Write<u8>(1); // isInSight
 		packet.Write<u8>(0); // isDead
