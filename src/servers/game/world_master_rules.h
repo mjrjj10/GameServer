@@ -529,6 +529,25 @@ struct SummonChaseSpeedRule
 	f32 spawnSec;
 };
 
+struct SummonChaseStopRule
+{
+	i32 creature;
+	f32 stopDist;
+};
+
+static const SummonChaseStopRule MEASURED_SUMMON_CHASE_STOPS[] = {
+	{ 100041030, 176.0f },
+	{ 100041031, 176.0f },
+	{ 100041032, 176.0f },
+	{ 100041033, 176.0f },
+};
+
+static inline f32 SummonChaseStopDist(i32 creature)
+{
+	for(const SummonChaseStopRule& r : MEASURED_SUMMON_CHASE_STOPS) if(r.creature == creature) return r.stopDist;
+	return 0.0f;
+}
+
 static const SummonChaseSpeedRule MEASURED_SUMMON_CHASE_SPEEDS[] = {
 	{ 100033841, 600.0f, 750.0f, 450.0f, 0.58f },
 	{ 100033842, 600.0f, 750.0f, 450.0f, 0.58f },

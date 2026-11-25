@@ -584,6 +584,7 @@ void World::UpdateSummonAi(f32 delta)
 				continue;
 			}
 			goal = target ? target->body->GetWorldPos() : npcTarget->pos;
+			stopDist = SummonChaseStopDist((i32)npc.docID);
 			const f32 d = glm::length(vec2(goal) - vec2(npc.pos));
 			if(d <= WEAPON_TARGET_RADIUS && !info->skillStates[1].empty()) {
 				LOG("Summon :: creature=%d reached its target", (i32)npc.docID);
