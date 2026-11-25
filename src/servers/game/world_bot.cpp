@@ -163,6 +163,38 @@ f32 World::BotWeaponAimYaw(Player& bot, const vec3& pos, const vec3& aim, const 
 	return WrapAngle(tracked + MIN(MAX(bot.botAimError, -cap), cap));
 }
 
+bool World::BotWallMoveSkill(Player& bot, const vec2& goal)
+{
+	const auto& content = GetGameXmlContent();
+	if(bot.casting.skillID != SkillID::INVALID || bot.titanForm >= 0 || localTime < bot.ccUntil || localTime < bot.dashUntil || IsBlocked(bot, false, true, false)) return false;
+	const auto* skills = content.FindBotSkills(100000000 + (i32)bot.Main().classType);
+	if(!skills) return false;
+	const vec2 here = vec2(bot.body->GetWorldPos());
+	const vec2 d = goal - here;
+	const f32 len = glm::length(d);
+	if(len < 1.0f) return false;
+	const i32 base = (i32)bot.mainCharaID * 2;
+	for(i32 i = 0; i < 4; i++) {
+		const i32 skill = (*skills)[i];
+		if(skill == 0 || !content.IsBotWallMoveSkill(skill) || localTime < bot.botSkillReady[i]) continue;
+		if((i32)bot.skills[base] != skill && (i32)bot.skills[base + 1] != skill) continue;
+		if(!SkillCostAffordable(bot, skill, PlayerSkillConsumeMP(bot, skill))) continue;
+		const f32 maxDist = content.GetBotSkillMaxDistance(skill);
+		const f32 reach = maxDist > 0 ? MIN(maxDist, len) : len;
+		const vec2 dir = d / len;
+		const vec3 tpos = vec3(here + dir * reach, bot.body->GetWorldPos().z);
+		const f32 yaw = atan2f(dir.y, dir.x);
+		bot.input.rot.upperYaw = yaw;
+		bot.input.rot.bodyYaw = yaw;
+		const f32 cd = MAX(SkillCoolTime(bot, skill), content.BotNormalSkillCoolTime());
+		bot.botSkillReady[i] = TimeAdd(localTime, TimeMsToTime(cd * 1000.0));
+		LOG("BotNav :: %ls crosses a wall with skill %d toward (%.0f, %.0f), reach %.0f", bot.name.data(), skill, tpos.x, tpos.y, reach);
+		PlayerCastSkill(bot, SkillID(skill), tpos, Slice<const ActorUID>(), 0);
+		return true;
+	}
+	return false;
+}
+
 f32 World::BotTitanSkillDistance(i32 skill) const
 {
 	const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput(skill);
@@ -1418,6 +1450,10 @@ void World::UpdateBotMovement()
 					free.append_sprintf(" %.0f", glm::dot(vec2(reach) - here, d8));
 				}
 				LOG("BotNav :: %ls stuck at (%.0f, %.0f, %.0f), follows the walk graph, free%s, route %d", bot.name.data(), here.x, here.y, pos.z, free.c_str(), (i32)bot.botRoute.size());
+				if(BotWallMoveSkill(bot, preNavGoal)) {
+					bot.botRoute.clear();
+					continue;
+				}
 				static const i32 HYP_BOT_BOSS_STUCK_EPISODES = 2;
 				static const f64 HYP_BOT_BOSS_UNREACHABLE_SEC = 60.0;
 				if(bot.botGoalKind == 'b' && bot.botStuckEpisodes >= HYP_BOT_BOSS_STUCK_EPISODES && botLastBossUID != ActorUID::INVALID) {

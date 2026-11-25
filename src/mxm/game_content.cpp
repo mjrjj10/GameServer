@@ -6466,6 +6466,7 @@ bool GameXmlContent::LoadSkillTargeting()
 				f32 d = 0;
 				if(pT->QueryFloatAttribute("_BotSkillMaxDistance", &d) == XML_SUCCESS && d > 0) botSkillMaxDistance[skillID] = d;
 			}
+			if(XmlBool(pSk->Attribute("_BotWallMove"), false)) botWallMoveSkills.insert(skillID);
 			for(XMLElement* pF = pSk->FirstChildElement("_BotSkillCondFeature"); pF; pF = pF->NextSiblingElement("_BotSkillCondFeature")) {
 				BotSkillFeature feature;
 				pF->QueryFloatAttribute("_Value", &feature.value);

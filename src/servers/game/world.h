@@ -1614,6 +1614,7 @@ public:
 	bool BotSkillCondHolds(const Player& bot, const BotSkillCond& cond, const Player* target, const ActorNpc* monster, f32 dist) const;
 	f32 BotSkillScore(const Player& bot, i32 skill, const Player* target, const ActorNpc* monster, f32 dist) const;
 	Player* BotLowestAlly(Player& bot, f32 maxDist);
+	bool BotWallMoveSkill(Player& bot, const vec2& goal);
 	bool BotFarmTarget(Player& bot, vec2* goal, f32 range);
 	bool BotStageSkill(Player& bot);
 	bool BotReturnSkill(Player& bot);
