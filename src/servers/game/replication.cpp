@@ -2924,7 +2924,7 @@ void Replication::SendAttackActionToOthers(ClientHandle senderHd, ActorUID actor
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
-		if(!echoSender && clientHd == senderHd) continue;
+		if((!echoSender || !echoOwnMoves) && clientHd == senderHd) continue;
 
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID || (clientHd != senderHd && playerLocalInfo[clientID].hiddenActors.count(actorUID))) continue;
@@ -3436,7 +3436,7 @@ void Replication::RelayPlayerMove(ClientHandle fromHd, ActorUID actorUID, const 
 	for(int pi = 0; pi < MAX_PLAYERS; pi++) {
 		if(playerState[pi].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[pi];
-		if(clientHd == fromHd ? trainingTeams : playerLocalInfo[pi].hiddenActors.count(actorUID) != 0) continue;
+		if(clientHd == fromHd ? !echoOwnMoves : playerLocalInfo[pi].hiddenActors.count(actorUID) != 0) continue;
 		sync.entityID = GetLocalActorID(clientHd, actorUID);
 		if(sync.entityID == LocalActorID::INVALID) continue;
 		SendPacket(clientHd, sync);
@@ -3451,7 +3451,7 @@ void Replication::RelayPlayerTurn(ClientHandle fromHd, ActorUID actorUID, const 
 	for(int pi = 0; pi < MAX_PLAYERS; pi++) {
 		if(playerState[pi].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[pi];
-		if(clientHd == fromHd ? trainingTeams : playerLocalInfo[pi].hiddenActors.count(actorUID) != 0) continue;
+		if(clientHd == fromHd ? !echoOwnMoves : playerLocalInfo[pi].hiddenActors.count(actorUID) != 0) continue;
 		sync.entityID = GetLocalActorID(clientHd, actorUID);
 		if(sync.entityID == LocalActorID::INVALID) continue;
 		SendPacket(clientHd, sync);

@@ -340,6 +340,7 @@ struct Replication
 	bool occupyMode = false;
 	bool pveTeams = false;
 	bool trainingTeams = false;
+	bool echoOwnMoves = false;
 	i32 PlayerTeamType(i32 team) const { return pveTeams ? (i32)TeamType::PLAYER : trainingTeams ? (i32)(team == 0 ? TeamType::PLAYER : TeamType::MONSTER) : (i32)TeamType::RED + team; }
 	TeamType ActorTeamType(Faction faction) const
 	{

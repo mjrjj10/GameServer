@@ -252,6 +252,7 @@ void Game::Init(Server* server_, const In::MQ_CreateGame& gameInfo, const eastl:
 		world.fullSkillPoints = stage->gameMode == GameModeType::GAME_MODE_MASTER_TRAINING;
 		replication.pveTeams = pve;
 		replication.trainingTeams = stage->gameMode == GameModeType::GAME_MODE_MASTER_TRAINING;
+		replication.echoOwnMoves = stage->gameMode == GameModeType::GAME_MODE_GOT;
 		world.trainingMonsterTeam = replication.trainingTeams;
 		world.occupyMode = stage->gameMode == GameModeType::GAME_MODE_OCCUPY;
 		replication.occupyMode = world.occupyMode;
