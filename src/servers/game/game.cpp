@@ -2728,6 +2728,21 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			return true;
 		}
 
+		i32 groggyDoc = 0;
+		f32 groggyValue = 0;
+		if(EA::StdC::Sscanf(msg, L"mongroggy %d %f", &groggyDoc, &groggyValue) == 2) {
+			foreach(npc, world.actorNpcList) {
+				if((i32)npc->docID != groggyDoc || npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
+				f32 groggyMax = 0;
+				if(const auto* stats = GetGameXmlContent().FindMonsterStats(groggyDoc)) for(const auto& st : *stats) if(st.type == (u8)StatType::STAT_TYPE_GROGGY) groggyMax = st.value;
+				npc->monsterGroggy = MAX(MIN(groggyValue, groggyMax - 1.0f), 0.0f);
+				replication.SendStatToAll(npc->UID, (i32)StatType::STAT_TYPE_GROGGY, npc->monsterGroggy, groggyMax);
+				LOG("Scenario :: monster %d groggy %.0f/%.0f", groggyDoc, npc->monsterGroggy, groggyMax);
+				SendDbgMsg(clientHd, LFMT(L"Monster %d groggy %.0f/%.0f", groggyDoc, npc->monsterGroggy, groggyMax));
+			}
+			return true;
+		}
+
 		i32 interactID = -1;
 		if(EA::StdC::Sscanf(msg, L"interact %d", &interactID) == 1 && world.GetPlayer(p.playerIndex).body) {
 			World::Player& playerActor = world.GetPlayer(p.playerIndex);
