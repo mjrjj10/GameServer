@@ -1628,6 +1628,7 @@ struct GameXmlContent
 		i32 skill2 = 0;
 		i32 ug = 0;
 		f32 moveSpeed = 0;
+		f32 colliderRadius = 0;
 		eastl::fixed_vector<StatValue,32,false> stats;
 		f32 Stat(u8 type) const { for(const StatValue& st : stats) if(st.type == type) return st.value; return 0; }
 	};

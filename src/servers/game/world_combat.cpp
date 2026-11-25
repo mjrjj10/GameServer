@@ -238,7 +238,9 @@ void World::HealPlayer(Player& healer, Player& target, i32 amount)
 f32 World::HitRadius(const Player& p) const
 {
 	if(p.Main().classType == ClassType::NONE) return 0;
-	return (f32)GetGameXmlContent().GetMaster(p.Main().classType).character.getColliderRadius();
+	const auto& content = GetGameXmlContent();
+	if(p.titanForm >= 0 && p.titanForm < (i32)content.titan.forms.size() && content.titan.forms[p.titanForm].colliderRadius > 0) return content.titan.forms[p.titanForm].colliderRadius;
+	return (f32)content.GetMaster(p.Main().classType).character.getColliderRadius();
 }
 
 f32 World::BodyMidHeight(const Player& p) const

@@ -520,8 +520,14 @@ void World::UpdateBotSkills()
 			monster = nullptr;
 			best = glm::length(vec2(ally->body->GetWorldPos()) - vec2(pos));
 		}
-		const vec3 tpos = monster ? monster->pos : target->body->GetWorldPos();
-		const f32 yaw = atan2f(tpos.y - pos.y, tpos.x - pos.x);
+		vec3 tpos = monster ? monster->pos : target->body->GetWorldPos();
+		const vec2 toTarget = vec2(tpos) - vec2(pos);
+		const f32 toLen = glm::length(toTarget);
+		if(titan && !monster && toLen > 1.0f) {
+			const f32 standoff = HitRadius(bot) + HitRadius(*target);
+			if(toLen > standoff) tpos = vec3(vec2(tpos) - toTarget / toLen * standoff, tpos.z);
+		}
+		const f32 yaw = toLen > 1.0f ? atan2f(toTarget.y, toTarget.x) : bot.input.rot.bodyYaw;
 		bot.input.rot.upperYaw = yaw;
 		bot.input.rot.bodyYaw = yaw;
 		bot.weaponAimYaw = yaw;
@@ -1443,7 +1449,7 @@ void World::UpdateBotMovement()
 			fighting = true;
 			mode = BOT_MODE_FIGHT;
 			const vec2 tp = vec2(target->body->GetWorldPos());
-			const f32 range = WeaponIsMelee(bot) ? BOT_MELEE_RANGE : MIN(WeaponRange(bot) * BOT_RANGE_FRACTION, BOT_RANGED_MAX);
+			const f32 range = WeaponIsMelee(bot) ? MAX(BOT_MELEE_RANGE, HitRadius(bot) + HitRadius(*target)) : MIN(WeaponRange(bot) * BOT_RANGE_FRACTION, BOT_RANGED_MAX);
 			const vec2 from = here - tp;
 			const f32 a = atan2f(from.y, from.x) + bot.botStrafe * BOT_STRAFE_STEP;
 			goal = tp + vec2(cosf(a), sinf(a)) * range;

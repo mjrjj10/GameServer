@@ -1642,6 +1642,7 @@ bool GameXmlContent::LoadTitan()
 		form.skill2 = (i32)f->UnsignedAttribute("skill2");
 		form.ug = (i32)f->UnsignedAttribute("ug");
 		form.moveSpeed = f->FloatAttribute("moveSpeed");
+		form.colliderRadius = f->FloatAttribute("colliderRadius");
 		for(XMLElement* st = f->FirstChildElement("STAT"); st && !form.stats.full(); st = st->NextSiblingElement("STAT")) form.stats.push_back({ (u8)st->IntAttribute("type"), st->FloatAttribute("value") });
 		titan.forms.push_back(form);
 	}

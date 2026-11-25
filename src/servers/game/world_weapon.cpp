@@ -66,6 +66,7 @@ void World::PlayerWeaponFire(Player& player)
 		if(player.chargeLevel > 0) ApplyResourceGain(player, ResourceEvent::CHARGED_SHOT);
 		const RemoteIdx swing = SelectWeaponRemote(player, wf);
 		BotWeaponAnimation(player, wf, replication);
+		BotHoldForWeaponAction(player, wf);
 		RunWeaponActionStatuses(player, swingStance);
 		const Remote* swingRemote = GetGameXmlContent().FindRemote(swing);
 		ASSERT(swingRemote);
@@ -83,6 +84,23 @@ void World::PlayerWeaponFire(Player& player)
 		if(player.clientHd == ClientHandle::INVALID) BotWeaponLunge(player, GetGameXmlContent().GetSkillAction(ActionClass(player), WeaponAttackState(player, wf), swingStance), dir);
 		else if(player.chargeLevel > 0) HumanWeaponLunge(player, GetGameXmlContent().GetSkillAction(ActionClass(player), WeaponAttackState(player, wf), swingStance), WeaponAttackState(player, wf), dir);
 	}
+}
+
+void World::BotHoldForWeaponAction(Player& player, const WeaponFiring& wf)
+{
+	if(player.clientHd != ClientHandle::INVALID) return;
+	const ActionStateID state = WeaponAttackState(player, wf);
+	const GameXmlContent::Action& action = GetGameXmlContent().GetSkillAction(ActionClass(player), state, player.Main().stance);
+	bool stops = false;
+	foreach_const(cmd, action.commands) if(cmd->type == ActionCommand::Type::MOVESPEED && cmd->moveSpeed.percent == 0) stops = true;
+	if(!stops) return;
+	const i32 animID = action.anims.empty() ? 0 : action.anims[0].animationId;
+	const f32 sec = animID != 0 ? GetGameXmlContent().GetAniSeqTime(ActionClassName(player), animID) : action.seqLength;
+	if(sec <= 0) return;
+	const Time until = TimeAdd(localTime, TimeMsToTime(sec * 1000.0));
+	if(player.botSkillStillUntil < until) player.botSkillStillUntil = until;
+	player.input.moveTo = player.body->GetWorldPos();
+	LOG("BotHold :: %ls stands still %.2fs for weapon state %d (MOVESPEED 0)", player.name.data(), sec, (i32)state);
 }
 
 void World::HumanWeaponLunge(Player& player, const GameXmlContent::Action& action, ActionStateID state, const vec2& dir)
@@ -171,6 +189,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	const bool spawnAtAim = wf.spawnAtAim;
 	const RemoteIdx idx = SelectWeaponRemote(player, wf);
 	BotWeaponAnimation(player, wf, replication);
+	BotHoldForWeaponAction(player, wf);
 	if(wf.firingStatDuration > 0) {
 		player.firingStatUntil = TimeAdd(localTime, TimeMsToTime(wf.firingStatDuration * 1000.0));
 		player.firingMoveSpeedMul = wf.firingMoveSpeedMul;

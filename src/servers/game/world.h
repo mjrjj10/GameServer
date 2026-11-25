@@ -1378,6 +1378,7 @@ private:
 	void PlayerWeaponFire(Player& player);
 	void HumanWeaponLunge(Player& player, const GameXmlContent::Action& action, ActionStateID state, const vec2& dir);
 	void BotWeaponLunge(Player& player, const GameXmlContent::Action& action, const vec2& dir);
+	void BotHoldForWeaponAction(Player& player, const WeaponFiring& wf);
 	void UpdateProjectiles(f32 delta);
 	void SteerProjectile(Projectile& proj, f32 delta);
 	void Explode(Player& owner, const vec3& center, f32 radius, i32 damage, const Projectile* source = nullptr);

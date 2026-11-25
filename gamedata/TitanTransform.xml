@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <TITAN cost="5" votePeriod="5000" teamCoolTime="10000" failPlayerCool="60000" endTeamCool="10000" endPlayerCool="0" giants="105001102 105001100 105001101">
-  <FORM doc="100000900" duration="25000" weapon="131190000" skill1="189000010" skill2="189000020" ug="189000050" moveSpeed="800">
+  <FORM doc="100000900" duration="25000" weapon="131190000" skill1="189000010" skill2="189000020" ug="189000050" moveSpeed="800" colliderRadius="200">
     <STAT type="0" value="12000" />
     <STAT type="2" value="200" />
     <STAT type="5" value="8" />
@@ -27,7 +27,7 @@
     <STAT type="63" value="3" />
     <STAT type="64" value="150" />
   </FORM>
-  <FORM doc="100000901" duration="0" weapon="131190001" skill1="189100010" skill2="189100020" ug="189100050" moveSpeed="540">
+  <FORM doc="100000901" duration="0" weapon="131190001" skill1="189100010" skill2="189100020" ug="189100050" moveSpeed="540" colliderRadius="200">
     <STAT type="0" value="12000" />
     <STAT type="2" value="200" />
     <STAT type="5" value="8" />
