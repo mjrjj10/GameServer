@@ -186,7 +186,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		const bool bot = player.clientHd == ClientHandle::INVALID;
 		const Cl::CQ_GamePlayerSyncPhy* aimPhy = !bot && player.pendingShotRawSize >= (i32)offsetof(Cl::CQ_GamePlayerSyncPhy, charNameLen) ? (const Cl::CQ_GamePlayerSyncPhy*)player.pendingShotRaw.data() : nullptr;
 		const vec3 aimPos = vec3(vec2(origin) + dir * reach, aimPhy ? aimPhy->FirePosition.z + (f32)aimPhy->aimOffsetZ / SHOT_AIM_OFFSET_SCALE : player.body->GetWorldPos().z);
-		if(!bot) replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(dir.y, dir.x)), WeaponAttackState(player, wf));
+		if(!bot) replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(dir.y, dir.x)), WeaponAttackState(player, wf), shotStance == 0);
 		u32 clientSeed = 0;
 		if(!bot && player.pendingShotRawSize > 0) {
 			const u16 creator = replication->RelayWeaponShot(player.clientHd, player.pendingShotRaw.data(), player.pendingShotRawSize, aimPos, remote->ID);
@@ -262,7 +262,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		proj.remoteID = ((const Cl::CQ_GamePlayerSyncPhy*)player.pendingShotRaw.data())->RemoteSeedID + 1;
 		proj.seedOwnerHd = player.clientHd;
 	}
-	replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(proj.dir.y, proj.dir.x)), WeaponAttackState(player, wf));
+	replication->SendAttackActionToOthers(player.clientHd, player.Main().UID, WorldYawToMxmYaw(atan2f(proj.dir.y, proj.dir.x)), WeaponAttackState(player, wf), shotStance == 0);
 
 	if(player.pendingShotRawSize > 0) {
 		const vec3 target = vec3(vec2(origin) + proj.dir * proj.range, proj.graph ? player.body->GetWorldPos().z : origin.z);
@@ -1148,6 +1148,7 @@ void World::RunWeaponActionStatuses(Player& player, i8 stance, const vec3* aimPo
 			pr.castPos = *aimPos;
 			pr.angle = atan2f(aimPos->y - player.body->GetWorldPos().y, aimPos->x - player.body->GetWorldPos().x);
 			pr.target = ActorUID::INVALID;
+			pr.casterLocal = player.clientHd != ClientHandle::INVALID;
 			pendingRemotes.push_back(pr);
 			continue;
 		}

@@ -1236,7 +1236,7 @@ void World::SpawnPendingRemotes()
 			spawnCostLevel = pr->costLevel;
 			remoteSendIdxOverride = pr->sendIdx;
 			remoteSendRootDir = pr->rootDummyDir;
-			RemoteInst* spawned = SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, false, pr->stopAtTarget, false, !remote || RemoteCreateSendsEntity((ActionCommand::TargetPreset)pr->preset, remote->behaviorType));
+			RemoteInst* spawned = SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, pr->casterLocal, pr->stopAtTarget, false, !remote || RemoteCreateSendsEntity((ActionCommand::TargetPreset)pr->preset, remote->behaviorType));
 			remoteParentOverride = ActorUID::INVALID;
 			spawnCostLevel = nullptr;
 			remoteSendIdxOverride = RemoteIdx::INVALID;

@@ -561,7 +561,7 @@ struct Replication
 	void SendTargetGraphMoveToAll(ActorUID casterUID, const vec3& casterPos, ActorUID targetUID, const vec3& targetPos, ActionStateID actionID);
 	void SendEvadeToAll(ActorUID attackerUID, ActorUID defenderUID, u32 remoteID, RemoteIdx remoteDoc, ClientHandle seedOwnerHd);
 	void SendModifyStatusToAll(i32 statusID, ActorUID targetUID, ActorUID casterUID, u8 overlap, u8 customValue, ActorUID replaceCasterUID = ActorUID::INVALID);
-	void SendAttackActionToOthers(ClientHandle senderHd, ActorUID actorUID, f32 mxmYaw, ActionStateID state);
+	void SendAttackActionToOthers(ClientHandle senderHd, ActorUID actorUID, f32 mxmYaw, ActionStateID state, bool echoSender = true);
 	void SendActionStateOnlyToAll(ActorUID actorUID, ActionStateID state, f32 mxmYaw, bool move, const vec3& startPos, const vec3& endPos, f32 durationSec);
 	void SendPlayerActionStateToAll(ActorUID actorUID, ActionStateID state, i32 param1, i32 param2, f32 worldYaw, f32 worldUpperYaw);
 	void SendDestroyRemoteToAll(u32 remoteID);

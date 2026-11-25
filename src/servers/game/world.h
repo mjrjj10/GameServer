@@ -880,6 +880,7 @@ struct World
 		bool rootDummyDir = false;
 		Time aniEndAt = Time::ZERO;
 		bool endWithSource = false;
+		bool casterLocal = false;
 	};
 
 	struct RemoteInst

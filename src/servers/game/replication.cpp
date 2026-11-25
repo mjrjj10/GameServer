@@ -2889,11 +2889,12 @@ void Replication::SendDestroyRemoteToAll(u32 remoteID)
 	}
 }
 
-void Replication::SendAttackActionToOthers(ClientHandle senderHd, ActorUID actorUID, f32 mxmYaw, ActionStateID state)
+void Replication::SendAttackActionToOthers(ClientHandle senderHd, ActorUID actorUID, f32 mxmYaw, ActionStateID state, bool echoSender)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
 		const ClientHandle clientHd = clientHandle[clientID];
+		if(!echoSender && clientHd == senderHd) continue;
 
 		const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
 		if(localID == LocalActorID::INVALID || (clientHd != senderHd && playerLocalInfo[clientID].hiddenActors.count(actorUID))) continue;
