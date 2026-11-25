@@ -353,6 +353,12 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 			Projectile p = proj;
 			if(spreadHalf > 0 && k == 0) p.dir = spreadDir;
 			p.remoteDoc = extra->ID;
+			if(extra->behaviorType == Remote::BehaviorType::GRAPH && extra->bezier && extra->fixedGraphLength > 0) {
+				p.curve = extra;
+				p.curveStart = vec2(p.pos);
+				p.curveDir = p.dir;
+				p.curveAdvance = 0;
+			}
 			p.damage = (i32)WeaponHitDamage(player, extra);
 			p.halfWidth = extra->boundSize[0] * 0.5f;
 			if(firstID != 0) p.remoteID = firstID + (u32)k + 1;
@@ -591,6 +597,22 @@ void World::UpdateProjectiles(f32 delta)
 		}
 		f32 step = MIN(proj->speed * delta + proj->pendingAdvance, proj->range - proj->travelled);
 		proj->pendingAdvance = 0;
+		if(proj->curve && step > 0) {
+			const Remote& c = *proj->curve;
+			const f32 limit = c.fixedGraphLength;
+			proj->curveAdvance += step;
+			const f32 u = MIN(proj->curveAdvance / limit, 1.0f);
+			const f32 v = 1.0f - u;
+			const vec2 side = -Perp(proj->curveDir);
+			vec2 ctrl[2];
+			for(int k = 0; k < 2; k++) ctrl[k] = proj->curveStart + proj->curveDir * (limit * (k + 1) / 3.0f + c.bezierFront[k]) + side * (c.bezierUp[k] * sinf(c.bezierRotate[k] * PI / 180.0f));
+			const vec2 end = proj->curveStart + proj->curveDir * limit;
+			const vec2 point = proj->curveStart * (v * v * v) + ctrl[0] * (3 * v * v * u) + ctrl[1] * (3 * v * u * u) + end * (u * u * u);
+			const vec2 move = point - vec2(proj->pos);
+			const f32 moveLen = glm::length(move);
+			if(moveLen > 0.001f) proj->dir = move / moveLen;
+			step = moveLen;
+		}
 		bool hitWall = false;
 		const PxRigidActor* wallActor = nullptr;
 		ActorDynamic* wallGate = nullptr;
@@ -777,7 +799,7 @@ void World::UpdateProjectiles(f32 delta)
 
 		if(!destroyed) {
 			proj->pos += vec3(proj->dir * step, 0);
-			proj->travelled += step;
+			proj->travelled = proj->curve ? proj->curveAdvance : proj->travelled + step;
 			destroyed = hitWall || proj->travelled >= proj->range - 0.01f;
 			if(hitWall) {
 				LOG("Shot :: projectile stopped by a wall after %.0f", proj->travelled);

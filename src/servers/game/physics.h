@@ -117,6 +117,7 @@ struct PhysicsScene
 	vec3 FindSkillMovePos(PhysicsDynamicBody* body, const vec2& dir, f32 dist, f32 time, f32 lift);
 	bool RaycastStatic(const vec3& from, const vec3& to, f32* hitDist, i32 ignoreTeam = -1, const PxRigidActor** hitActor = nullptr);
 	bool RaycastSight(const vec3& from, const vec3& to, f32* hitDist, const PxRigidActor** hitActor = nullptr);
+	bool InsideStatic(const vec3& at, f32 reach);
 	void NameActor(PxRigidStatic* actor, const char* persistentName);
 	bool IsMobGuardrail(const PxRigidActor* actor) const;
 	f32 MaxWalkRise(f32 horizontal) const;

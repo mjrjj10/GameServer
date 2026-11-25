@@ -158,6 +158,21 @@ void World::Update(Time localTime_)
 			}
 			else if(p.dashCurve ? fabsf(ahead) > 0.01f : ahead > 0) physics.ClimbMove(&body, p.dashDir * ahead, (f32)tdelta);
 			p.dashDone = frac >= 1.0f ? p.dashDist : (p.dashCurve ? MIN(fabsf(target), p.dashDist - 0.01f) : target);
+			if(frac >= 1.0f && p.dashFly) {
+				static const f32 HYP_WALL_EXIT_STEP = 25.0f;
+				static const f32 HYP_WALL_INSIDE_REACH = 600.0f;
+				const f32 midHeight = BodyMidHeight(p);
+				vec3 end = body.GetWorldPos();
+				f32 back = 0;
+				while(back < p.dashDist && physics.InsideStatic(vec3(vec2(end), end.z + midHeight), HYP_WALL_INSIDE_REACH)) {
+					back += HYP_WALL_EXIT_STEP;
+					end = vec3(vec2(end) - p.dashDir * HYP_WALL_EXIT_STEP, end.z);
+				}
+				if(back > 0) {
+					MovePlayer(p, end, p.input.rot.bodyYaw, false);
+					LOG("Dash :: %ls flight ended inside the scenery, moved back %.0f to (%.0f, %.0f)", p.name.data(), back, end.x, end.y);
+				}
+			}
 			if(frac >= 1.0f && p.dashFly && p.dashLift > 0) {
 				physics.Move(&body, vec3(0, 0, -p.dashLift), (f32)tdelta);
 				p.dashLift = 0;

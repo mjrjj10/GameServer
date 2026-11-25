@@ -475,6 +475,22 @@ struct IgnoreTeamWalls: PxQueryFilterCallback
 	PxQueryHitType::Enum postFilter(const PxFilterData&, const PxQueryHit&) override { return PxQueryHitType::eBLOCK; }
 };
 
+bool PhysicsScene::InsideStatic(const vec3& at, f32 reach)
+{
+	static const i32 INSIDE_MIN_BACK_HITS = 3;
+	IgnoreTeamWalls filterCb;
+	const PxQueryFilterData filter(PxQueryFlag::eSTATIC | PxQueryFlag::ePREFILTER);
+	i32 back = 0;
+	for(i32 k = 0; k < 4; k++) {
+		const f32 a = (f32)k * PxHalfPi;
+		const PxVec3 dir(cosf(a), sinf(a), 0.0f);
+		PxRaycastBuffer hit;
+		if(!scene->raycast(PxVec3(at.x, at.y, at.z), dir, reach, hit, PxHitFlag::eDEFAULT | PxHitFlag::eMESH_BOTH_SIDES, filter, &filterCb) || !hit.hasBlock) continue;
+		if(hit.block.normal.dot(dir) > 0.0f) back++;
+	}
+	return back >= INSIDE_MIN_BACK_HITS;
+}
+
 bool PhysicsScene::RaycastStatic(const vec3& from, const vec3& to, f32* hitDist, i32 ignoreTeam, const PxRigidActor** hitActor)
 {
 	const vec3 d = to - from;

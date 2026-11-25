@@ -827,6 +827,10 @@ struct World
 		vec3 start;
 		i32 hitsLeft;
 		bool graph;
+		const Remote* curve = nullptr;
+		vec2 curveStart = vec2(0);
+		vec2 curveDir = vec2(1, 0);
+		f32 curveAdvance = 0;
 		bool ignoreWalls = true;
 		f32 wallZ = 0;
 		f32 jumpClear = 0;
