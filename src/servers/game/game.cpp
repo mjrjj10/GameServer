@@ -2838,6 +2838,14 @@ bool Game::ParseChatCommand(ClientHandle clientHd, const wchar* msg, const i32 l
 			return true;
 		}
 
+		if(EA::StdC::Strcmp(msg, L"titan") == 0) {
+			const GameXmlContent::TitanInfo& titan = GetGameXmlContent().titan;
+			if(titan.forms.empty()) return true;
+			OnTitanIncarnate(clientHd, titan.forms[0].doc);
+			SendDbgMsg(clientHd, L"Titan incarnate");
+			return true;
+		}
+
 		i32 lo[2] = {}, ls[4] = {};
 		const i32 loCount = EA::StdC::Sscanf(msg, L"loadout %d %d %d %d %d %d", &lo[0], &lo[1], &ls[0], &ls[1], &ls[2], &ls[3]);
 		if(loCount == 2 || loCount == 6) {
