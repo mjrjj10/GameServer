@@ -2371,6 +2371,19 @@ void Replication::SendMonsterStateToAll(ActorUID actorUID, ActionStateID action,
 	}
 }
 
+void Replication::SendMonsterStateToClient(ClientHandle clientHd, ActorUID actorUID, ActionStateID action, const vec3& pos)
+{
+	const LocalActorID localID = GetLocalActorID(clientHd, actorUID);
+	if(localID == LocalActorID::INVALID) return;
+	PacketWriter<Sv::SN_AiSetActionState,32> packet;
+	packet.Write<u8>(MONSTER_STATE_NO_YAW);
+	packet.Write<LocalActorID>(localID);
+	packet.Write<i16>((i16)action);
+	packet.Write<u16>(0);
+	packet.Write(pos);
+	SendPacket(clientHd, packet);
+}
+
 void Replication::SendLevelIngame(ClientHandle clientHd, UserID userID, i32 expToLevelUp, i32 level)
 {
 	Sv::SN_LevelIngame packet;

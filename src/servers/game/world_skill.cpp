@@ -2173,6 +2173,7 @@ void World::UpdateNpcFog()
 				}
 				const f32 yaw = dashing ? atan2f(npc->dashDir.y, npc->dashDir.x) : npc->rot.z;
 				replication->SendEnterNpc(viewer->clientHd, npc->UID, npc->docID, npc->pos, yaw, speed, npc->actionState != ActionStateID::INVALID ? npc->actionState : ActionStateID::NONE_BEHAVIORSTATE, npc->hp, npc->hpMax, (f32)npc->growthLevel, dashing ? &graph : nullptr, npc->monsterGroggy);
+				if(npc->monsterAi && npc->monsterAi->idle != ActionStateID::INVALID && npc->actionState == npc->monsterAi->idle) replication->SendMonsterStateToClient(viewer->clientHd, npc->UID, npc->actionState, npc->pos);
 				npc->fogHiddenFrom &= ~bit;
 			}
 		}

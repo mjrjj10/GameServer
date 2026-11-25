@@ -568,6 +568,7 @@ struct Replication
 	void SendNpcMoveToAll(ActorUID actorUID, const vec3& pos, const vec3& goal, f32 worldYaw, f32 speed);
 	void SendNpcTurnToAll(ActorUID actorUID, f32 worldYaw);
 	void SendMonsterStateToAll(ActorUID actorUID, ActionStateID action, const vec3& pos, f32 speed);
+	void SendMonsterStateToClient(ClientHandle clientHd, ActorUID actorUID, ActionStateID action, const vec3& pos);
 	void SendLevelIngameToAll(UserID userID, i32 expToLevelUp, i32 level);
 	void SendLevelIngame(ClientHandle clientHd, UserID userID, i32 expToLevelUp, i32 level);
 	void SendExpIngame(ClientHandle clientHd, UserID userID, i32 gain, i32 current, ActorUID target);
