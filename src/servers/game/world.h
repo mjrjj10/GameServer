@@ -298,6 +298,13 @@ struct World
 		Time botMoveAt = Time::ZERO;
 		Time botJumpRollAt = Time::ZERO;
 		Time botSkillStillUntil = Time::ZERO;
+		Time botPredictUntil = Time::ZERO;
+		Time botPredictNext = Time::ZERO;
+		Time botAimTrackAt = Time::ZERO;
+		f32 botAimTrackYaw = 0;
+		ActorUID botAimTrackTarget = ActorUID::INVALID;
+		Time botAimErrorUntil = Time::ZERO;
+		f32 botAimError = 0;
 		Time botStuckCheck = Time::ZERO;
 		vec2 botLastPos = vec2(0);
 		f32 botStrafe = 1.0f;
@@ -1603,6 +1610,10 @@ public:
 	eastl::array<Time,2> teamTitanReadyAt = {{ Time::ZERO, Time::ZERO }};
 	void UpdateBotTitanVotes();
 	f32 BotTitanSkillDistance(i32 skill) const;
+	f32 BotWeaponAimYaw(Player& bot, const vec3& pos, const vec3& aim, const Player* target);
+	bool BotSkillCondHolds(const Player& bot, const BotSkillCond& cond, const Player* target, const ActorNpc* monster, f32 dist) const;
+	f32 BotSkillScore(const Player& bot, i32 skill, const Player* target, const ActorNpc* monster, f32 dist) const;
+	Player* BotLowestAlly(Player& bot, f32 maxDist);
 	bool BotFarmTarget(Player& bot, vec2* goal, f32 range);
 	bool BotStageSkill(Player& bot);
 	bool BotReturnSkill(Player& bot);

@@ -6410,6 +6410,29 @@ bool GameXmlContent::LoadWeaponFiring()
 	return true;
 }
 
+static bool XmlBool(const char* v, bool def)
+{
+	if(!v) return def;
+	if(EA::StdC::Stricmp(v, "true") == 0) return true;
+	if(EA::StdC::Stricmp(v, "false") == 0 || EA::StdC::Stricmp(v, "flase") == 0) return false;
+	return def;
+}
+
+static i32 BotSkillCondTypeFromString(const char* name, bool status)
+{
+	static const char* const NORMAL[] = { "NO_CONDITION", "DISTANCE", "HPRATIO", "SPRATIO", "UGRATIO", "OVERHEATRATIO", "FRIENDLY_PC_IN_RANGE", "ENEMY_PC_IN_RANGE", "FRIENDLY_CREATURE_IN_RANGE", "ENEMY_CREATURE_IN_RANGE" };
+	static const char* const CATEGORY[] = { "UNKNOWN", "EACH_TYPE", "EACH_INDEX", "CC_BLOCKALL", "CC_RESTRAIN", "CC_DISTURB", "DEBUFF", "INVINCIBLE" };
+	const char* prefix = status ? "BOT_SKILL_STATUSTYPE_CATEGORY_" : "BOT_SKILL_CONDITION_";
+	const size_t prefixLen = EA::StdC::Strlen(prefix);
+	if(EA::StdC::Strncmp(name, prefix, prefixLen) != 0) return -1;
+	eastl::string rest(name + prefixLen);
+	while(!rest.empty() && (rest.back() == ' ' || rest.back() == '	')) rest.pop_back();
+	const char* const* names = status ? CATEGORY : NORMAL;
+	const i32 count = status ? (i32)ARRAY_COUNT(CATEGORY) : (i32)ARRAY_COUNT(NORMAL);
+	for(i32 i = 0; i < count; i++) if(rest == names[i]) return i;
+	return -1;
+}
+
 bool GameXmlContent::LoadSkillTargeting()
 {
 	XMLDocument xmlSkillP;
@@ -6442,6 +6465,33 @@ bool GameXmlContent::LoadSkillTargeting()
 			if(XMLElement* pT = pSk->FirstChildElement("_Target")) {
 				f32 d = 0;
 				if(pT->QueryFloatAttribute("_BotSkillMaxDistance", &d) == XML_SUCCESS && d > 0) botSkillMaxDistance[skillID] = d;
+			}
+			for(XMLElement* pF = pSk->FirstChildElement("_BotSkillCondFeature"); pF; pF = pF->NextSiblingElement("_BotSkillCondFeature")) {
+				BotSkillFeature feature;
+				pF->QueryFloatAttribute("_Value", &feature.value);
+				bool valid = true;
+				for(XMLElement* pC = pF->FirstChildElement(); pC; pC = pC->NextSiblingElement()) {
+					BotSkillCond cond;
+					cond.status = EA::StdC::Strcmp(pC->Name(), "_StatusTypeConds") == 0;
+					if(!cond.status && EA::StdC::Strcmp(pC->Name(), "_NormalConds") != 0) continue;
+					const char* typeName = pC->Attribute(cond.status ? "_StatusCategory" : "_ConditionType");
+					const i32 type = typeName ? BotSkillCondTypeFromString(typeName, cond.status) : -1;
+					if(type < 0) {
+						LOG("WARNING(GameXmlContent): skill %d bot condition %s unknown", skillID, typeName ? typeName : "(none)");
+						valid = false;
+						continue;
+					}
+					if(cond.status) cond.category = (BotSkillStatustypeCategory)type;
+					else cond.type = (BotSkillCondition)type;
+					cond.below = XmlBool(pC->Attribute("_Below"), true);
+					cond.target = XmlBool(pC->Attribute("_Target"), true);
+					cond.rangeBelow = XmlBool(pC->Attribute("_RangeBelow"), true);
+					pC->QueryFloatAttribute(cond.status ? "_RemainTime" : "_ConditionValue", &cond.value);
+					pC->QueryFloatAttribute("_ConditionRange", &cond.range);
+					pC->QueryIntAttribute("_Index", &cond.index);
+					if(!feature.conds.full()) feature.conds.push_back(cond);
+				}
+				if(valid) botSkillFeatures[skillID].push_back(feature);
 			}
 		}
 		if(!type || !cls || !status || EA::StdC::Strcmp(type, "SKILL_TYPE_PASSIVE") != 0) continue;

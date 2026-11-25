@@ -640,6 +640,25 @@ struct Remote
 	f32 activateDelay = 0;
 };
 
+struct BotSkillCond
+{
+	BotSkillCondition type = BotSkillCondition::BOT_SKILL_CONDITION_NO_CONDITION;
+	BotSkillStatustypeCategory category = BotSkillStatustypeCategory::BOT_SKILL_STATUSTYPE_CATEGORY_UNKNOWN;
+	bool status = false;
+	bool below = true;
+	bool target = true;
+	bool rangeBelow = true;
+	f32 value = 0;
+	f32 range = 0;
+	i32 index = 0;
+};
+
+struct BotSkillFeature
+{
+	f32 value = 0;
+	eastl::fixed_vector<BotSkillCond,4,true> conds;
+};
+
 struct WeaponHeatInfo
 {
 	f32 maxGauge = 0;
@@ -1670,6 +1689,7 @@ struct GameXmlContent
 	f32 GetSkillTargetRange(i32 skill) const { auto f = skillTargetRangeX.find(skill); return f == skillTargetRangeX.end() ? 0 : f->second; }
 	f32 GetSkillRange(i32 skill) const { auto f = skillRangeX.find(skill); return f == skillRangeX.end() ? 0 : f->second; }
 	f32 GetBotSkillMaxDistance(i32 skill) const { auto f = botSkillMaxDistance.find(skill); return f == botSkillMaxDistance.end() ? 0 : f->second; }
+	const eastl::vector<BotSkillFeature>* FindBotSkillFeatures(i32 skill) const { auto f = botSkillFeatures.find(skill); return f == botSkillFeatures.end() ? nullptr : &f->second; }
 	f32 BotNormalSkillCoolTime() const { return botNormalSkillCoolTime; }
 	f32 BotUgSkillCoolTime() const { return botUgSkillCoolTime; }
 	f32 BotAfterSkillDelay() const { return botAfterSkillDelay; }
@@ -1961,6 +1981,7 @@ private:
 	eastl::hash_map<i32, SkillToggle> skillToggle;
 	eastl::hash_map<i32, SkillInput> skillInput;
 	eastl::hash_map<i32, f32> botSkillMaxDistance;
+	eastl::hash_map<i32, eastl::vector<BotSkillFeature>> botSkillFeatures;
 	eastl::hash_map<i32, f32> skillRangeX;
 	eastl::hash_map<i32, f32> skillTargetRangeX;
 	f32 botNormalSkillCoolTime = 0;

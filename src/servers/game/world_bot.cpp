@@ -6,6 +6,163 @@
 
 static const f32 BOT_TITAN_MELEE_SKILL_DIST = 400.0f;
 
+static const f32 HYP_BOT_SKILL_SCORE_WITHOUT_DATA = 0.5f;
+
+bool World::BotSkillCondHolds(const Player& bot, const BotSkillCond& cond, const Player* target, const ActorNpc* monster, f32 dist) const
+{
+	const Player* subject = cond.target ? target : &bot;
+	const bool npcSubject = cond.target && !target && monster;
+	if(cond.status) {
+		if(!subject) return false;
+		foreach_const(it, activeStatuses) {
+			if(it->targetIndex != subject->index || !it->info || localTime >= it->until) continue;
+			if(it->targetUID != subject->Main().UID && it->info->tagMode != StatusInfo::TAG_BOTH) continue;
+			bool match = false;
+			switch(cond.category) {
+				case BotSkillStatustypeCategory::BOT_SKILL_STATUSTYPE_CATEGORY_EACH_INDEX: match = it->statusID == cond.index; break;
+				case BotSkillStatustypeCategory::BOT_SKILL_STATUSTYPE_CATEGORY_CC_BLOCKALL: match = it->info->blockAttack && it->info->blockSkill && it->info->blockMove; break;
+				case BotSkillStatustypeCategory::BOT_SKILL_STATUSTYPE_CATEGORY_DEBUFF: match = it->info->isDebuff; break;
+				default: break;
+			}
+			if(!match) continue;
+			const f32 remain = (f32)TimeDurationSec(localTime, it->until);
+			if(cond.below ? remain <= cond.value : remain > cond.value) return true;
+		}
+		return false;
+	}
+	switch(cond.type) {
+		case BotSkillCondition::BOT_SKILL_CONDITION_NO_CONDITION: return true;
+		case BotSkillCondition::BOT_SKILL_CONDITION_DISTANCE: return cond.below ? dist <= cond.value : dist > cond.value;
+		case BotSkillCondition::BOT_SKILL_CONDITION_HPRATIO: {
+			f32 ratio = 1.0f;
+			if(npcSubject) ratio = (f32)monster->hp / (f32)MAX(monster->hpMax, 1);
+			else if(subject) ratio = (f32)subject->Main().hp / (f32)MAX(subject->Main().hpMax, 1);
+			else return false;
+			return cond.below ? ratio <= cond.value : ratio >= cond.value;
+		}
+		case BotSkillCondition::BOT_SKILL_CONDITION_SPRATIO: {
+			if(!subject) return false;
+			const f32 manaMax = ResourceMax(subject->Main(), STAT_MANA);
+			const f32 ratio = manaMax > 0 && subject->mana >= 0 ? subject->mana / manaMax : 1.0f;
+			return cond.below ? ratio <= cond.value : ratio >= cond.value;
+		}
+		case BotSkillCondition::BOT_SKILL_CONDITION_OVERHEADRATIO: {
+			if(!subject) return false;
+			const WeaponHeatInfo* h = ActiveWeaponHeat(*subject);
+			const f32 ratio = h && h->maxGauge > 0 ? CurrentHeat(*subject, *h, localTime) / h->maxGauge : 0.0f;
+			return cond.below ? ratio <= cond.value : ratio >= cond.value;
+		}
+		case BotSkillCondition::BOT_SKILL_CONDITION_FRIENDLY_PC_IN_RANGE:
+		case BotSkillCondition::BOT_SKILL_CONDITION_ENEMY_PC_IN_RANGE: {
+			vec2 center;
+			if(npcSubject) center = vec2(monster->pos);
+			else if(subject && subject->body) center = vec2(subject->body->GetWorldPos());
+			else return false;
+			const bool friendly = cond.type == BotSkillCondition::BOT_SKILL_CONDITION_FRIENDLY_PC_IN_RANGE;
+			i32 count = 0;
+			foreach_const(p, players) {
+				if(&*p == &bot || p->dead || !p->body || (p->team == bot.team) != friendly) continue;
+				if(!friendly && (p->untargetable || !(p->fogSeenBy & (1u << bot.team)))) continue;
+				const f32 d = glm::length(vec2(p->body->GetWorldPos()) - center);
+				if(cond.rangeBelow ? d <= cond.range : d > cond.range) count++;
+			}
+			return cond.below ? (f32)count <= cond.value : (f32)count >= cond.value;
+		}
+		default: return false;
+	}
+}
+
+f32 World::BotSkillScore(const Player& bot, i32 skill, const Player* target, const ActorNpc* monster, f32 dist) const
+{
+	const auto* features = GetGameXmlContent().FindBotSkillFeatures(skill);
+	if(!features || features->empty()) return HYP_BOT_SKILL_SCORE_WITHOUT_DATA;
+	f32 best = 0;
+	for(const BotSkillFeature& f : *features) {
+		if(f.value <= best) continue;
+		bool holds = true;
+		for(const BotSkillCond& c : f.conds) {
+			if(!BotSkillCondHolds(bot, c, target, monster, dist)) { holds = false; break; }
+		}
+		if(holds) best = f.value;
+	}
+	return best;
+}
+
+World::Player* World::BotLowestAlly(Player& bot, f32 maxDist)
+{
+	const vec2 pos = vec2(bot.body->GetWorldPos());
+	Player* ally = nullptr;
+	f32 lowest = 2.0f;
+	foreach(f, players) {
+		if(&*f == &bot || f->dead || f->untargetable || f->team != bot.team || !f->body) continue;
+		if(glm::length(vec2(f->body->GetWorldPos()) - pos) > maxDist) continue;
+		const f32 ratio = (f32)f->Main().hp / (f32)MAX(f->Main().hpMax, 1);
+		if(ratio < lowest) { lowest = ratio; ally = &*f; }
+	}
+	return ally;
+}
+
+static const f32 BOT_LOGIC_TICK_SEC = 0.1f;
+
+static f32 WrapAngle(f32 a)
+{
+	while(a > PI) a -= 2.0f * PI;
+	while(a < -PI) a += 2.0f * PI;
+	return a;
+}
+
+f32 World::BotWeaponAimYaw(Player& bot, const vec3& pos, const vec3& aim, const Player* target)
+{
+	const GameXmlContent& content = GetGameXmlContent();
+	vec2 point = vec2(aim);
+	const f32 dist = glm::length(point - vec2(pos));
+	if(target && target->body) {
+		const f32 cooltime = content.BotConstant("BOTLOGIC_STAGELEVEL_KEY_PREDICTED_ATTACK_COOLTIME");
+		const f32 duration = content.BotConstant("BOTLOGIC_STAGELEVEL_KEY_PREDICTED_ATTACK_DURATION");
+		const f32 ratio = content.BotConstant("BOTLOGIC_STAGELEVEL_KEY_PREDICTED_ATTACK_RATIO");
+		if(localTime >= bot.botPredictNext && duration > 0) {
+			bot.botPredictUntil = TimeAdd(localTime, TimeMsToTime(duration * 1000.0));
+			bot.botPredictNext = TimeAdd(bot.botPredictUntil, TimeMsToTime(cooltime * 1000.0));
+		}
+		if(localTime < bot.botPredictUntil && ratio > 0) {
+			const Remote* remote = content.FindRemote(ActiveWeaponFiring(bot, bot.Main().stance).base);
+			const f32 speed = remote && remote->maxSpeed > 0 ? remote->maxSpeed : 0.0f;
+			if(speed > 0) point += target->movement.moveDir * target->movement.moveSpeed * (dist / speed) * ratio;
+		}
+	}
+	const vec2 rel = point - vec2(pos);
+	const f32 wanted = glm::length(rel) > 1.0f ? atan2f(rel.y, rel.x) : bot.weaponAimYaw;
+
+	const ActorUID targetUID = target ? target->Main().UID : ActorUID::INVALID;
+	f32 tracked = wanted;
+	const f32 degPerTick = content.BotConstant("BOTLOGIC_STAGELEVEL_KEY_ATTACKRATE_ANGULAR_SPEED_IN_DEGREE");
+	if(degPerTick > 0 && bot.botAimTrackAt != Time::ZERO && bot.botAimTrackTarget == targetUID) {
+		const f32 elapsed = (f32)TimeDurationSec(bot.botAimTrackAt, localTime);
+		const f32 maxTurn = degPerTick * PI / 180.0f * MAX(elapsed / BOT_LOGIC_TICK_SEC, 1.0f);
+		const f32 delta = WrapAngle(wanted - bot.botAimTrackYaw);
+		tracked = WrapAngle(bot.botAimTrackYaw + MIN(MAX(delta, -maxTurn), maxTurn));
+	}
+	bot.botAimTrackYaw = tracked;
+	bot.botAimTrackAt = localTime;
+	bot.botAimTrackTarget = targetUID;
+
+	const f32 margin = content.BotConstant("BOTLOGIC_STAGELEVEL_KEY_ATTACKRATE_MARGIN_IN_DEGREE");
+	if(margin <= 0) return tracked;
+	if(localTime >= bot.botAimErrorUntil) {
+		const f32 u1 = MAX((f32)(RandUint() % 10000 + 1) / 10001.0f, 0.0001f);
+		const f32 u2 = (f32)(RandUint() % 10000) / 10000.0f;
+		const f32 gauss = content.BotConstant("BOTLOGIC_STAGELEVEL_KEY_ATTACKRATE_MU") + content.BotConstant("BOTLOGIC_STAGELEVEL_KEY_ATTACKRATE_STD") * sqrtf(-2.0f * logf(u1)) * cosf(2.0f * PI * u2);
+		bot.botAimError = (RandUint() % 2 ? 1.0f : -1.0f) * margin * gauss * PI / 180.0f;
+		const f32 adjust = content.BotConstant("BOTLOGIC_STAGELEVEL_KEY_ATTACKRATE_ADJUST_DURATION");
+		bot.botAimErrorUntil = TimeAdd(localTime, TimeMsToTime(MAX(adjust, 0.0f) * 1000.0));
+	}
+	const f32 degreeMax = content.BotConstant("BOTLOGIC_CONSTANT_KEY_ATTACKRATE_DEGREE_MAX");
+	const f32 arcLimit = content.BotConstant("BOTLOGIC_CONSTANT_KEY_ATTACKRATE_ARCLENGTH_LIMIT_FOR_DEGREE");
+	f32 cap = degreeMax > 0 ? degreeMax * PI / 180.0f : PI;
+	if(arcLimit > 0 && dist > 1.0f) cap = MIN(cap, arcLimit / dist);
+	return WrapAngle(tracked + MIN(MAX(bot.botAimError, -cap), cap));
+}
+
 f32 World::BotTitanSkillDistance(i32 skill) const
 {
 	const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput(skill);
@@ -276,6 +433,7 @@ void World::UpdateBotSkills()
 
 		i32 skill = 0;
 		f32 cd = 0;
+		f32 pickedScore = -1.0f;
 		if(bot.botComboSkill != SkillID::INVALID) {
 			const i32 combo = (i32)bot.botComboSkill;
 			const f32 comboDist = content.GetBotSkillMaxDistance(combo);
@@ -285,6 +443,8 @@ void World::UpdateBotSkills()
 		if(skill == 0) {
 			const i32 base = (i32)bot.mainCharaID * 2;
 			eastl::fixed_vector<i32,5,false> ready;
+			eastl::fixed_vector<f32,5,false> scores;
+			f32 scoreSum = 0;
 			for(i32 i = 0; i < 5; i++) {
 				const i32 skill = titan && i == 4 ? content.titan.forms[bot.titanForm].ug : (*skills)[i];
 				if(skill == 0 || localTime < bot.botSkillReady[i]) continue;
@@ -292,10 +452,26 @@ void World::UpdateBotSkills()
 				const f32 maxDist = titan ? BotTitanSkillDistance(skill) : content.GetBotSkillMaxDistance(skill);
 				if(maxDist <= 0 || best > maxDist) continue;
 				if(!Config().DevShowcase && !Config().DevMirror && !SkillCostAffordable(bot, skill, PlayerSkillConsumeMP(bot, skill))) continue;
+				const GameXmlContent::SkillInput* skillIn = content.FindSkillInput(skill);
+				const Player* subject = target;
+				f32 subjectDist = best;
+				if(skillIn && skillIn->friendlyOnly && skillIn->takesTarget) {
+					subject = BotLowestAlly(bot, maxDist);
+					if(!subject) continue;
+					subjectDist = glm::length(vec2(subject->body->GetWorldPos()) - vec2(pos));
+				}
+				const f32 score = Config().DevShowcase || Config().DevMirror ? 1.0f : BotSkillScore(bot, skill, subject, subject == target ? monster : nullptr, subjectDist);
+				if(score <= 0) continue;
 				ready.push_back(i);
+				scores.push_back(score);
+				scoreSum += score;
 			}
 			if(ready.empty()) continue;
-			const i32 slot = ready[RandUint() % ready.size()];
+			i32 pick = 0;
+			f32 roll = (f32)(RandUint() % 10000u) / 10000.0f * scoreSum;
+			while(pick + 1 < (i32)ready.size() && roll >= scores[pick]) { roll -= scores[pick]; pick++; }
+			const i32 slot = ready[pick];
+			pickedScore = scores[pick];
 			skill = titan && slot == 4 ? content.titan.forms[bot.titanForm].ug : (*skills)[slot];
 
 			const f32 botCd = slot == 4 ? content.BotUgSkillCoolTime() : content.BotNormalSkillCoolTime();
@@ -306,15 +482,7 @@ void World::UpdateBotSkills()
 		bot.tNextBotSkill = TimeAdd(localTime, TimeMsToTime(MAX(MAX(content.BotAfterSkillDelay(), 0.5f), in ? in->globalCoolTime : 0.0f) * 1000.0));
 
 		if(in && in->friendlyOnly && in->takesTarget) {
-			const f32 maxDist = content.GetBotSkillMaxDistance(skill);
-			Player* ally = nullptr;
-			f32 lowest = 2.0f;
-			foreach(f, players) {
-				if(&*f == &bot || f->dead || f->untargetable || f->team != bot.team || !f->body) continue;
-				if(glm::length(vec2(f->body->GetWorldPos()) - vec2(pos)) > maxDist) continue;
-				const f32 ratio = (f32)f->Main().hp / (f32)MAX(f->Main().hpMax, 1);
-				if(ratio < lowest) { lowest = ratio; ally = &*f; }
-			}
+			Player* ally = BotLowestAlly(bot, content.GetBotSkillMaxDistance(skill));
 			if(!ally) continue;
 			target = ally;
 			monster = nullptr;
@@ -327,8 +495,8 @@ void World::UpdateBotSkills()
 		bot.weaponAimYaw = yaw;
 		const ActorUID targetUID = monster ? monster->UID : target->Main().UID;
 		bot.botAimTarget = targetUID;
-		if(monster) LOG("BotSkill :: %ls casts %d at creature=%d (dist %.0f, cd %.0f)", bot.name.data(), skill, (i32)monster->docID, best, cd);
-		else LOG("BotSkill :: %ls casts %d at %ls (dist %.0f, cd %.0f)", bot.name.data(), skill, target->name.data(), best, cd);
+		if(monster) LOG("BotSkill :: %ls casts %d at creature=%d (dist %.0f, cd %.0f, score %.2f)", bot.name.data(), skill, (i32)monster->docID, best, cd, pickedScore);
+		else LOG("BotSkill :: %ls casts %d at %ls (dist %.0f, cd %.0f, score %.2f)", bot.name.data(), skill, target->name.data(), best, cd, pickedScore);
 		PlayerCastSkill(bot, SkillID(skill), tpos, Slice<const ActorUID>(&targetUID, in && in->takesTarget ? 1 : 0), 0);
 		i32 next = ComboSkillFor(bot, skill);
 		if(next == 0) next = content.GetNextComboSkill(skill);
@@ -1870,18 +2038,9 @@ void World::UpdateBotCombat()
 		}
 		const f32 overheatDelayMul = WeaponOverheatFireDelayMul(bot);
 		WeaponHeatShot(bot, localTime, replication, WeaponHeatScale(bot));
-		const vec2 rel = vec2(aim) - vec2(pos);
-		const vec2 exact = glm::length(rel) > 1.0f ? glm::normalize(rel) : vec2(1, 0);
-		const f32 margin = GetGameXmlContent().BotConstant("BOTLOGIC_STAGELEVEL_KEY_ATTACKRATE_MARGIN_IN_DEGREE");
-		f32 aimError = 0;
-		if(margin > 0) {
-			const f32 u1 = MAX((f32)(RandUint() % 10000 + 1) / 10001.0f, 0.0001f);
-			const f32 u2 = (f32)(RandUint() % 10000) / 10000.0f;
-			const f32 gauss = GetGameXmlContent().BotConstant("BOTLOGIC_STAGELEVEL_KEY_ATTACKRATE_MU") + GetGameXmlContent().BotConstant("BOTLOGIC_STAGELEVEL_KEY_ATTACKRATE_STD") * sqrtf(-2.0f * logf(u1)) * cosf(2.0f * PI * u2);
-			aimError = (RandUint() % 2 ? 1.0f : -1.0f) * margin * gauss * PI / 180.0f;
-		}
-		const vec2 dir = vec2(exact.x * cosf(aimError) - exact.y * sinf(aimError), exact.x * sinf(aimError) + exact.y * cosf(aimError));
-		bot.weaponAimYaw = atan2f(dir.y, dir.x);
+		const f32 aimYaw = BotWeaponAimYaw(bot, pos, aim, target);
+		const vec2 dir = vec2(cosf(aimYaw), sinf(aimYaw));
+		bot.weaponAimYaw = aimYaw;
 		PlayerWeaponShot(bot, pos, dir, best);
 		bot.botIdleResourceGoal = -1;
 		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot, bot.firingCombo) * overheatDelayMul * 1000.0));
