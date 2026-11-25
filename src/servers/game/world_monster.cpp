@@ -1092,6 +1092,13 @@ void World::UpdateMonsterRemotes(f32 delta)
 		bool expired = localTime >= mr.expire;
 		bool blocked = false;
 		if(remote.maxSpeed > 0 && !mr.impacted) {
+			if(mr.target != ActorUID::INVALID) {
+				const ActorMaster* chased = FindMasterActor(mr.target);
+				if(chased && chased->parent && &chased->parent->Main() != chased) {
+					LOG("Monster :: remote %d of creature=%d stops chasing %u (tagged out)", (i32)remote.ID, (i32)owner.docID, (u32)mr.target);
+					mr.target = ActorUID::INVALID;
+				}
+			}
 			const bool repick = remote.behaviorType == Remote::BehaviorType::HOMING && remote.homingLength > 0 && remote.homingTime > 0;
 			if(repick && localTime >= mr.retargetAt) {
 				mr.retargetAt = TimeAdd(localTime, TimeMsToTime(remote.homingTime * 1000.0));
@@ -1105,7 +1112,7 @@ void World::UpdateMonsterRemotes(f32 delta)
 				mr.target = nearest;
 			}
 			const vec3 goal = MonsterFireTargetPos(owner, mr.target);
-			const bool homing = (remote.behaviorType == Remote::BehaviorType::FOLLOW_TARGET || remote.behaviorType == Remote::BehaviorType::HOMING) && !(repick && mr.target == ActorUID::INVALID);
+			const bool homing = (remote.behaviorType == Remote::BehaviorType::FOLLOW_TARGET || remote.behaviorType == Remote::BehaviorType::HOMING) && mr.target != ActorUID::INVALID;
 			const vec2 rel = vec2(goal) - vec2(mr.pos);
 			const f32 dist = glm::length(rel);
 			const bool steered = homing && remote.angularVel > 0;

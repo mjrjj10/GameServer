@@ -152,6 +152,14 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 		return;
 	}
 	ShowcaseOnCast(player);
+	if(player.clientHd != ClientHandle::INVALID && player.Main().stance != 0) {
+		const u16 clientCreator = ClientShotCreator(player);
+		const u16 baseCreator = GetGameXmlContent().FindFiringCreator(ActiveWeaponFiring(player, 0).firingMethod);
+		if(clientCreator != 0 && clientCreator == baseCreator && clientCreator != GetGameXmlContent().FindFiringCreator(ActiveWeaponFiring(player, player.Main().stance).firingMethod)) {
+			LOG("Stance :: %ls client fires the base weapon (creator %u) while stance %d is set, stance dropped", player.name.data(), clientCreator, (i32)player.Main().stance);
+			SetStance(player.Main(), 0, 0.0f, 0, false);
+		}
+	}
 	const i8 shotStance = player.Main().stance;
 	StanceWeaponUse(player);
 	if(projectileList.full()) return;
@@ -353,6 +361,10 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 				pr.angle = atan2f(proj.dir.y, proj.dir.x);
 				pr.target = ActorUID::INVALID;
 				pr.nodeName = content.FindNodeName(LEFT_FIRE_DUMMY);
+				if(firstID != 0) {
+					pr.sendParentID = firstID + (u32)k + 1;
+					pr.sendParentSeedHd = proj.seedOwnerHd;
+				}
 				pendingRemotes.push_back(pr);
 				continue;
 			}
@@ -1215,6 +1227,18 @@ void World::RecoverWeaponHeat(Player& player, f32 amount)
 	player.heatLastShot[m] = localTime;
 	if(player.overheatUntil[m] != Time::ZERO && player.heat[m] < h->maxGauge) player.overheatUntil[m] = localTime;
 	LOG("Overheat :: %ls weapon gauge recovered %.0f", player.name.data(), amount);
+}
+
+u16 World::ClientShotCreator(const Player& player) const
+{
+	const i32 size = player.pendingShotRawSize;
+	if(size < (i32)offsetof(Cl::CQ_GamePlayerSyncPhy, charName)) return 0;
+	const Cl::CQ_GamePlayerSyncPhy* phy = (const Cl::CQ_GamePlayerSyncPhy*)player.pendingShotRaw.data();
+	const i32 at = (i32)offsetof(Cl::CQ_GamePlayerSyncPhy, charName) + (i32)phy->charNameLen * 2 + 10;
+	if(at + 2 > size) return 0;
+	u16 creator = 0;
+	memcpy(&creator, player.pendingShotRaw.data() + at, 2);
+	return creator;
 }
 
 f32 World::WeaponFireDelayScale(const Player& player) const

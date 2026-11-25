@@ -47,6 +47,7 @@ struct World
 {
 	friend struct WorldRemoteSpawner;
 	static constexpr f32 PLAYER_BODY_RADIUS = 110.0f;
+	static constexpr f32 PLAYER_BODY_HEIGHT = 70.0f;
 
 	struct Player;
 	struct ActorMaster;
@@ -891,6 +892,8 @@ struct World
 		Time aniEndAt = Time::ZERO;
 		bool endWithSource = false;
 		bool casterLocal = false;
+		u32 sendParentID = 0;
+		ClientHandle sendParentSeedHd = ClientHandle::INVALID;
 	};
 
 	struct RemoteInst
@@ -1403,6 +1406,7 @@ public:
 	void RunWeaponActionStatuses(Player& player, i8 stance, const vec3* aimPos = nullptr);
 	f32 WeaponHeatScale(const Player& player) const;
 	f32 WeaponFireDelayScale(const Player& player) const;
+	u16 ClientShotCreator(const Player& player) const;
 	f32 BotNextFireDelay(const Player& bot, u32 combo) const;
 	f32 OwnerRemoteSpeedRatio(const Player& player) const;
 	u16 DefaultWeaponCreator(const Player& player, const WeaponFiring& wf) const;
@@ -1648,6 +1652,7 @@ public:
 	eastl::vector<BotNavNode> botNav;
 	eastl::array<eastl::vector<eastl::vector<vec2>>,2> botLanes;
 	bool botNavBuilt = false;
+	eastl::hash_map<u32,u8> botJumpFails;
 	void BuildTitanSaveAreas();
 	void BuildBotNav();
 	bool BotSees(const vec3& from, const vec3& to);

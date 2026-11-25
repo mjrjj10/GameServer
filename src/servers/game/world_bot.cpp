@@ -745,8 +745,10 @@ void World::BuildBotNav()
 			if(h > HYP_BOT_NAV_JUMP_RANGE || rise <= physics.MaxWalkRise(h) || rise > jumpRise) continue;
 			if(eastl::find(botNav[a].links.begin(), botNav[a].links.end(), (u16)b) != botNav[a].links.end()) continue;
 			const f32 top = to.z + BOT_NAV_RAY_HEIGHT;
-			if(physics.RaycastStatic(vec3(vec2(from), from.z + BOT_NAV_RAY_HEIGHT), vec3(vec2(from), top), nullptr)) continue;
-			if(physics.RaycastStatic(vec3(vec2(from), top), vec3(vec2(to), top), nullptr)) continue;
+			const f32 head = to.z + 2.0f * PLAYER_BODY_RADIUS + PLAYER_BODY_HEIGHT;
+			if(physics.RaycastStatic(vec3(vec2(from), from.z + BOT_NAV_RAY_HEIGHT), vec3(vec2(from), head), nullptr, -1, nullptr, false, true)) continue;
+			if(physics.RaycastStatic(vec3(vec2(from), top), vec3(vec2(to), top), nullptr, -1, nullptr, false, true)) continue;
+			if(physics.RaycastStatic(vec3(vec2(from), head), vec3(vec2(to), head), nullptr, -1, nullptr, false, true)) continue;
 			botNav[a].jumps.push_back((u16)b);
 			jumps++;
 		}
@@ -1226,6 +1228,26 @@ void World::UpdateBotMovement()
 					free.append_sprintf(" %.0f", glm::dot(vec2(reach) - here, d8));
 				}
 				LOG("BotNav :: %ls stuck at (%.0f, %.0f, %.0f), follows the walk graph, free%s, route %d", bot.name.data(), here.x, here.y, pos.z, free.c_str(), (i32)bot.botRoute.size());
+				static const i32 HYP_BOT_BOSS_STUCK_EPISODES = 2;
+				static const f64 HYP_BOT_BOSS_UNREACHABLE_SEC = 60.0;
+				if(bot.botGoalKind == 'b' && bot.botStuckEpisodes >= HYP_BOT_BOSS_STUCK_EPISODES && botLastBossUID != ActorUID::INVALID) {
+					if(bot.botFarmSkips.full()) bot.botFarmSkips.erase(bot.botFarmSkips.begin());
+					bot.botFarmSkips.push_back(eastl::make_pair(botLastBossUID, TimeAdd(localTime, TimeMsToTime(HYP_BOT_BOSS_UNREACHABLE_SEC * 1000.0))));
+					LOG("BotNav :: %ls gives up boss %u for %.0f s (stuck %d times)", bot.name.data(), (u32)botLastBossUID, HYP_BOT_BOSS_UNREACHABLE_SEC, bot.botStuckEpisodes);
+				}
+				static const u8 HYP_BOT_JUMP_LINK_MAX_FAILS = 2;
+				if(!bot.botRoute.empty() && botNav[bot.botRoute.front()].pos.z - pos.z >= HYP_BOT_NAV_LEDGE) {
+					const u16 n = bot.botRoute.front();
+					for(i32 a = 0; a < (i32)botNav.size(); a++) {
+						auto& jumps = botNav[a].jumps;
+						auto it = eastl::find(jumps.begin(), jumps.end(), n);
+						if(it == jumps.end() || glm::length(vec2(botNav[a].pos) - here) > HYP_BOT_NAV_JUMP_RANGE) continue;
+						u8& fails = botJumpFails[((u32)a << 16) | n];
+						if(++fails < HYP_BOT_JUMP_LINK_MAX_FAILS) continue;
+						LOG("BotNav :: jump link (%.0f, %.0f, %.0f) -> (%.0f, %.0f, %.0f) dropped after %d failures", botNav[a].pos.x, botNav[a].pos.y, botNav[a].pos.z, botNav[n].pos.x, botNav[n].pos.y, botNav[n].pos.z, (i32)fails);
+						jumps.erase(it);
+					}
+				}
 			}
 			bot.botRoute.clear();
 			const vec2 d = goal - here;

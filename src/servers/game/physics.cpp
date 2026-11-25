@@ -492,7 +492,7 @@ bool PhysicsScene::InsideStatic(const vec3& at, f32 reach)
 	return back >= INSIDE_MIN_BACK_HITS;
 }
 
-bool PhysicsScene::RaycastStatic(const vec3& from, const vec3& to, f32* hitDist, i32 ignoreTeam, const PxRigidActor** hitActor, bool passGuardrail)
+bool PhysicsScene::RaycastStatic(const vec3& from, const vec3& to, f32* hitDist, i32 ignoreTeam, const PxRigidActor** hitActor, bool passGuardrail, bool bothSides)
 {
 	const vec3 d = to - from;
 	const f32 len = glm::length(d);
@@ -502,7 +502,7 @@ bool PhysicsScene::RaycastStatic(const vec3& from, const vec3& to, f32* hitDist,
 	teamFilter.teamWord = ignoreTeam >= 0 ? (u32)ignoreTeam + 1 : 0;
 	teamFilter.passGuardrail = passGuardrail;
 	const PxQueryFilterData filter(PxQueryFlag::eSTATIC | PxQueryFlag::ePREFILTER);
-	if(!scene->raycast(PxVec3(from.x, from.y, from.z), PxVec3(d.x / len, d.y / len, d.z / len), len, hit, PxHitFlag::eDEFAULT, filter, &teamFilter)) return false;
+	if(!scene->raycast(PxVec3(from.x, from.y, from.z), PxVec3(d.x / len, d.y / len, d.z / len), len, hit, bothSides ? PxHitFlag::eDEFAULT | PxHitFlag::eMESH_BOTH_SIDES : PxHitFlag::eDEFAULT, filter, &teamFilter)) return false;
 	if(!hit.hasBlock) return false;
 	if(hitDist) *hitDist = hit.block.distance;
 	if(hitActor) *hitActor = hit.block.actor;

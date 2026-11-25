@@ -642,7 +642,16 @@ void World::RevertTitan(Player& player)
 		if(v.type == (u8)StatType::STAT_TYPE_HEALTH) v.value = (f32)chara.hpMax;
 		if(!stats.full()) stats.push_back(v);
 	}
-	replication->SendTitanFormToAll(false, chara.UID, 100000000 + (i32)chara.classType, 0, 0, -1, -1, -1, stats.data(), (u16)stats.size(), (f32)chara.hp, MasterStat(chara.classType, (u8)StatType::STAT_TYPE_STAMINA), MAX(player.ultGauge, 0.0f), master.moveSpeed);
+	eastl::fixed_vector<StatValue,4,false> current;
+	if(player.mana >= 0) { StatValue v; v.type = (u8)STAT_MANA; v.value = player.mana; current.push_back(v); }
+	for(i32 r = 0; r < 3; r++) {
+		if(MasterStat(chara.classType, RESOURCES[r].maxStat) <= 0 || player.res[r] < 0) continue;
+		StatValue v;
+		v.type = (u8)RESOURCES[r].maxStat;
+		v.value = player.res[r];
+		current.push_back(v);
+	}
+	replication->SendTitanFormToAll(false, chara.UID, 100000000 + (i32)chara.classType, 0, 0, -1, -1, -1, stats.data(), (u16)stats.size(), (f32)chara.hp, MasterStat(chara.classType, (u8)StatType::STAT_TYPE_STAMINA), MAX(player.ultGauge, 0.0f), master.moveSpeed, current.data(), (u16)current.size(), player.dead ? 0 : 1);
 	replication->SendStatToAll(chara.UID, (u8)StatType::STAT_TYPE_HEALTH, (f32)chara.hp, (f32)chara.hpMax);
 	player.manaDirty = true;
 	player.staminaDirty = true;

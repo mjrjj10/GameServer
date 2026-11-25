@@ -1254,11 +1254,15 @@ void World::SpawnPendingRemotes()
 			spawnCostLevel = pr->costLevel;
 			remoteSendIdxOverride = pr->sendIdx;
 			remoteSendRootDir = pr->rootDummyDir;
+			remoteSendParentID = pr->sendParentID;
+			remoteSendParentSeedHd = pr->sendParentSeedHd;
 			RemoteInst* spawned = SpawnRemote(pr->ownerIndex, pr->idx, pos, dir, pr->target, pr->skillID, pr->castID, pr->damage, true, &pr->castPos, pr->nodeName, pr->casterLocal, pr->stopAtTarget, false, !remote || RemoteCreateSendsEntity((ActionCommand::TargetPreset)pr->preset, remote->behaviorType));
 			remoteParentOverride = ActorUID::INVALID;
 			spawnCostLevel = nullptr;
 			remoteSendIdxOverride = RemoteIdx::INVALID;
 			remoteSendRootDir = false;
+			remoteSendParentID = 0;
+			remoteSendParentSeedHd = ClientHandle::INVALID;
 			remoteTargetEntityOverride = ActorUID::INVALID;
 			remoteSendFromSet = false;
 			if(spawned) {
@@ -1311,10 +1315,17 @@ void World::MoveCasterTargetRemote(RemoteInst& inst, Player& instOwner, f32 delt
 	vec2 desired;
 	const ActorMaster* tm = inst.target != ActorUID::INVALID ? FindMasterActor(inst.target) : nullptr;
 	if(inst.casterDestSet) desired = vec2(inst.casterDest);
-	else if(instOwner.clientHd == ClientHandle::INVALID && tm && !tm->parent->dead) desired = vec2(tm->parent->body->GetWorldPos());
+	else if(instOwner.clientHd == ClientHandle::INVALID && tm && !tm->parent->dead && TeamSees(instOwner.team, *tm->parent)) desired = vec2(tm->parent->body->GetWorldPos());
+	else if(instOwner.clientHd == ClientHandle::INVALID) desired = vec2(inst.pos);
 	else {
 		const f32 yaw = instOwner.input.rot.upperYaw;
 		desired = ownerPos + vec2(cosf(yaw), sinf(yaw)) * inst.followDist;
+	}
+	if(instOwner.clientHd == ClientHandle::INVALID) {
+		const GameXmlContent::SkillInput* in = GetGameXmlContent().FindSkillInput((i32)inst.skillID);
+		const f32 maxDist = in ? in->maxDistance : 0.0f;
+		const vec2 off = desired - ownerPos;
+		if(maxDist > 0 && glm::length(off) > maxDist) desired = ownerPos + off / glm::length(off) * maxDist;
 	}
 	const vec2 rel = desired - vec2(inst.pos);
 	const f32 len = glm::length(rel);

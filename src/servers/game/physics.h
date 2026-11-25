@@ -115,7 +115,7 @@ struct PhysicsScene
 	vec3 FindMovePos(PhysicsDynamicBody* body, const vec3& disp, f32 time);
 	vec3 ClimbMove(PhysicsDynamicBody* body, const vec2& disp, f32 time);
 	vec3 FindSkillMovePos(PhysicsDynamicBody* body, const vec2& dir, f32 dist, f32 time, f32 lift);
-	bool RaycastStatic(const vec3& from, const vec3& to, f32* hitDist, i32 ignoreTeam = -1, const PxRigidActor** hitActor = nullptr, bool passGuardrail = false);
+	bool RaycastStatic(const vec3& from, const vec3& to, f32* hitDist, i32 ignoreTeam = -1, const PxRigidActor** hitActor = nullptr, bool passGuardrail = false, bool bothSides = false);
 	bool RaycastSight(const vec3& from, const vec3& to, f32* hitDist, const PxRigidActor** hitActor = nullptr);
 	bool InsideStatic(const vec3& at, f32 reach);
 	void NameActor(PxRigidStatic* actor, const char* persistentName);

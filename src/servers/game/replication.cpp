@@ -2525,7 +2525,7 @@ void Replication::SendTransformAnswer(ClientHandle clientHd, ActorUID charUID, i
 	SendPacket(clientHd, packet);
 }
 
-void Replication::SendTitanFormToAll(bool modeChange, ActorUID charUID, i32 doc, u32 durationMs, i32 weapon, i32 skill1, i32 skill2, i32 ug, const StatValue* stats, u16 count, f32 curHp, f32 curStamina, f32 curUlt, f32 moveSpeed)
+void Replication::SendTitanFormToAll(bool modeChange, ActorUID charUID, i32 doc, u32 durationMs, i32 weapon, i32 skill1, i32 skill2, i32 ug, const StatValue* stats, u16 count, f32 curHp, f32 curStamina, f32 curUlt, f32 moveSpeed, const StatValue* extraCur, u16 extraCount, u8 action)
 {
 	for(int clientID = 0; clientID < MAX_PLAYERS; clientID++) {
 		if(playerState[clientID].cur < PlayerState::IN_GAME) continue;
@@ -2543,15 +2543,19 @@ void Replication::SendTitanFormToAll(bool modeChange, ActorUID charUID, i32 doc,
 				packet.Write<u8>(stats[i].type);
 				packet.Write<f32>(stats[i].value);
 			}
-			packet.Write<u16>(3);
+			packet.Write<u16>((u16)(3 + extraCount));
 			packet.Write<u8>((u8)StatType::STAT_TYPE_HEALTH);
 			packet.Write<f32>(curHp);
 			packet.Write<u8>((u8)StatType::STAT_TYPE_ULTIMATE);
 			packet.Write<f32>(curUlt);
 			packet.Write<u8>((u8)StatType::STAT_TYPE_STAMINA);
 			packet.Write<f32>(curStamina);
+			for(u16 i = 0; i < extraCount; i++) {
+				packet.Write<u8>(extraCur[i].type);
+				packet.Write<f32>(extraCur[i].value);
+			}
 			packet.Write<f32>(moveSpeed);
-			packet.Write<u8>(1);
+			packet.Write<u8>(action);
 			SendPacket(clientHd, packet);
 		};
 		if(modeChange) { PacketWriter<Sv::SN_ChangeCharacterMode,512> packet; write(packet); }
