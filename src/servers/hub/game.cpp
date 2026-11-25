@@ -18,7 +18,7 @@
 #include <common/utils.h>
 
 static const ClassType DEFAULT_LEADER_CLASS = ClassType::LAUNCHER;
-static const f64 HYP_STAGE_LEFT_LOBBY_FALLBACK_MS = 5000.0;
+static const f64 MEASURED_STAGE_LEFT_LOBBY_MS = 1000.0;
 
 
 void HubGame::Init(Server* server_, const ClientLocalMapping* plidMap_)
@@ -232,7 +232,7 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 	}
 	if(stageLeft) {
 		LOG("[client%x] HubGame :: left stage %llu before its end, lobby on client ready", clientHd, (u64)resultSortieUID);
-		playerMap[userID]->stageLeftLobbyAt = TimeAdd(localTime, TimeMsToTime(HYP_STAGE_LEFT_LOBBY_FALLBACK_MS));
+		playerMap[userID]->stageLeftLobbyAt = TimeAdd(localTime, TimeMsToTime(MEASURED_STAGE_LEFT_LOBBY_MS));
 	}
 	else if(stillRunning) {
 		LOG("[client%x] HubGame :: back while game %llu is still running, offering to return", clientHd, (u64)resultSortieUID);

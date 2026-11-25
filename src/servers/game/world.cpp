@@ -899,6 +899,15 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 {
 	const SkillID skillID = ResolveComboRecast(player, skillIn, forcedAction);
 	vec3 castPos = ResolveCastPos(player, skillID, castPosIn, forcedAction);
+	if(targets.size() > 0 && FindGroupTeleportPassive(player, skillID)) {
+		if(const ActorMaster* ally = FindMasterActor(targets[0])) {
+			const Player& owner = *ally->parent;
+			if(owner.index != player.index && owner.team == player.team && owner.body) {
+				castPos = owner.body->GetWorldPos();
+				LOG("Skill :: %ls skill=%d teleporter placed on ally %ls at (%.0f, %.0f)", player.name.data(), (i32)skillID, owner.name.data(), castPos.x, castPos.y);
+			}
+		}
+	}
 	if(frozen || combatLocked || !SkillTargetsAllowed(player, skillID, targets)) {
 		if(forcedAction == ActionStateID::INVALID && player.clientHd != ClientHandle::INVALID) {
 			LOG("Skill :: %ls cast %d refused (frozen %d, locked %d)", player.name.data(), (i32)skillID, (i32)frozen, (i32)combatLocked);

@@ -1966,7 +1966,8 @@ bool Replication::SendRemoteCreateToClient(i32 clientID, const RemoteCreate& rem
 	const ClientHandle clientHd = clientHandle[clientID];
 
 	const LocalActorID ownerLocal = GetLocalActorID(clientHd, remote.ownerUID);
-	const bool throughFog = remote.doc != RemoteIdx::INVALID && (i32)remote.doc == GetGameXmlContent().respawnFlyRemote;
+	const Remote* remoteData = remote.doc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(remote.doc) : nullptr;
+	const bool throughFog = remote.doc != RemoteIdx::INVALID && ((i32)remote.doc == GetGameXmlContent().respawnFlyRemote || (remoteData && remoteData->behaviorType == Remote::BehaviorType::CASTER_TARGET));
 	if(ownerLocal == LocalActorID::INVALID || (!throughFog && playerLocalInfo[clientID].hiddenActors.count(remote.ownerUID))) return false;
 	u32 parentField = 0;
 	if(remote.parentRemoteID != 0) parentField = clientHd == remote.parentSeedOwnerHd ? remote.parentRemoteID - 1 : remote.parentRemoteID;
