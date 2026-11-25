@@ -222,11 +222,12 @@ void HubGame::OnPlayerConnect(ClientHandle clientHd, const Account* accountData)
 	const bool returning = TakeAccountReturningFromGame(accountData->nickname, &resultSortieUID, &gameAccountUID);
 	const bool stillRunning = returning && eastl::find(endedSorties.begin(), endedSorties.end(), resultSortieUID) == endedSorties.end();
 	bool stageLeft = false;
-	if(stillRunning) {
+	if(returning) {
 		foreach_const(r, sortieRosters) {
 			if(r->sortieUID != resultSortieUID) continue;
 			const GameXmlContent::StageMaps* maps = GetGameXmlContent().FindStageMaps(r->stage);
-			stageLeft = maps && (maps->gameMode == GameModeType::GAME_MODE_STAGE || maps->gameMode == GameModeType::GAME_MODE_DEFENCE || maps->gameMode == GameModeType::GAME_MODE_MASTER_TRAINING);
+			const bool training = maps && maps->gameMode == GameModeType::GAME_MODE_MASTER_TRAINING;
+			stageLeft = training || (stillRunning && maps && (maps->gameMode == GameModeType::GAME_MODE_STAGE || maps->gameMode == GameModeType::GAME_MODE_DEFENCE));
 		}
 	}
 	if(stageLeft) {
