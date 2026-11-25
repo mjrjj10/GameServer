@@ -54,6 +54,16 @@ static inline bool ResourceStartsFull(ClassType master, i32 slot, bool startFull
 	return startFull;
 }
 
+static const ClassType TESTER_RAGE_FROM_WEAPON_ONLY[] = {
+	ClassType::EFREET,
+};
+
+static inline bool RageFromWeaponOnly(ClassType master)
+{
+	for(ClassType c : TESTER_RAGE_FROM_WEAPON_ONLY) if(c == master) return true;
+	return false;
+}
+
 struct MeasuredStatusStat
 {
 	i32 status;

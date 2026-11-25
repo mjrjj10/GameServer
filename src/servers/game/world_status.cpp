@@ -992,7 +992,8 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 					LOG("Passive :: %ls full stack of %d on %ls -> %d", caster.name.data(), statusID, target.name.data(), full);
 					replication->SendRemoveStatusToAll(it->statusID, it->targetUID, it->casterUID);
 					activeStatuses.erase_unsorted(it);
-					ApplyStatus(caster, target, full);
+					const StatusInfo* fullInfo = GetGameXmlContent().FindStatus(full);
+					if(!(fullInfo && fullInfo->typeKey == StatusTypeKey("STATUS_TYPE_FLAG") && FindActiveStatus(target.index, full))) ApplyStatus(caster, target, full);
 				}
 			}
 			return;

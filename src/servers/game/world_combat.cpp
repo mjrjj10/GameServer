@@ -377,10 +377,10 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		}
 	}
 
-	GainRageOnHit(attacker);
+	const bool weaponHit = skillID == SkillID::INVALID && damageStatusID == 0 && damageAttackerOverride == ActorUID::INVALID && (proj || remoteDoc != RemoteIdx::INVALID);
+	if(weaponHit || !RageFromWeaponOnly(attacker.Main().classType)) GainRageOnHit(attacker);
 	if(attacker.index != target.index) GainRageOnDamage(target, damage);
 
-	const bool weaponHit = skillID == SkillID::INVALID && damageStatusID == 0 && damageAttackerOverride == ActorUID::INVALID && (proj || remoteDoc != RemoteIdx::INVALID);
 	LOG("Damage :: %ls -> %ls skill=%d damage=%d%s hp=%d/%d in=%d remote=%u element=%d", attacker.name.data(), target.name.data(), (i32)skillID, damage, damageType == PACKET_DAMAGE_TYPE_CRITICAL ? " CRIT" : "", chara.hp, chara.hpMax,
 		damageIn, (u32)(proj ? proj->remoteDoc : remoteDoc), (i32)(elementMul * 100.0f));
 	if(attacker.team != target.team) {
@@ -665,7 +665,7 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 		attacker.bestHitCombo = MAX(attacker.bestHitCombo, attacker.stageHitCombo);
 	}
 	npc.hp = MAX(npc.hp - AbsorbNpcShield(npc, dealt), 0);
-	GainRageOnHit(attacker);
+	if((skillID == SkillID::INVALID && damageStatusID == 0 && damageAttackerOverride == ActorUID::INVALID) || !RageFromWeaponOnly(attacker.Main().classType)) GainRageOnHit(attacker);
 	if(npc.monsterWeakUntil != Time::ZERO && localTime < npc.monsterWeakUntil && localTime >= npc.monsterWeakFrom) AddNpcGroggy(npc, skillID, remoteHit ? remoteHit->remoteDoc : RemoteIdx::INVALID);
 	if(IsStructure(npc)) attacker.damageStats[END_DMG_BUILDING_DEALT] += (u32)(hpBefore - npc.hp);
 	static const u32 coreTag = StatusTypeKey("Core");

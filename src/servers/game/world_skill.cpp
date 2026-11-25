@@ -721,7 +721,10 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 				}
 				else i++;
 			}
-			ApplyStatusToNpc(caster, npc, full, false);
+			const StatusInfo* fullInfo = GetGameXmlContent().FindStatus(full);
+			bool marked = false;
+			if(fullInfo && fullInfo->typeKey == StatusTypeKey("STATUS_TYPE_FLAG")) foreach_const(s, npcStatuses) if(s->npcUID == npc.UID && s->statusID == full && localTime < s->until) marked = true;
+			if(!marked) ApplyStatusToNpc(caster, npc, full, false);
 		}
 	}
 	LOG("Status :: %ls gives creature=%d status=%d for %.1fs shield=%.0f", caster.name.data(), (i32)npc.docID, statusID, duration, ns.shieldHP);
@@ -1227,6 +1230,8 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 		if(picked != ActorUID::INVALID) liveTargets.push_back(picked);
 	}
 	const ActorUID currentTarget = liveTargets.size() > 0 ? liveTargets[0] : ActorUID::INVALID;
+	const GameXmlContent::SkillInput* castInput = content.FindSkillInput((i32)skillID);
+	const i32 markStatus = castInput ? castInput->checkStatus : 0;
 	const ActorUID teleportTarget = currentTarget != ActorUID::INVALID || targets.empty() ? currentTarget : targets[0];
 	u32 lockOnIndex = 0;
 	const i32 upgradeSummon = UpgradeSummon(player, (i32)skillID);
@@ -1310,12 +1315,10 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			pr.remove = cmd->remote.remove != 0;
 			pr.nodeName = cmd->nodeName;
 			pr.rootDummyDir = cmd->rootDummyDir != 0;
-			{
-				u8* count = nullptr;
-				foreach(dc, docCounts) if(dc->first == (i32)cmd->remote.idx) count = &dc->second;
-				if(!count) { docCounts.push_back(eastl::make_pair((i32)cmd->remote.idx, (u8)0)); count = &docCounts.back().second; }
-				pr.docIndex = (*count)++;
-			}
+			u8* count = nullptr;
+			foreach(dc, docCounts) if(dc->first == (i32)cmd->remote.idx) count = &dc->second;
+			if(!count) { docCounts.push_back(eastl::make_pair((i32)cmd->remote.idx, (u8)0)); count = &docCounts.back().second; }
+			pr.docIndex = (*count)++;
 			if(cmd->remote.removeAtAnimEnd) {
 				i32 animId = 0, loop = 1;
 				foreach_const(st, action.anims) if(st->index == curAnim) { animId = st->animationId; loop = MAX(st->loop, 1); }
@@ -1323,6 +1326,14 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 				if(passEnd > t) pr.aniEndAt = TimeAdd(localTime, TimeMsToTime(passEnd * 1000.0));
 			}
 			pendingRemotes.push_back(pr);
+			if(cmd->type == ActionCommand::Type::REMOTE_SKILL_TARGET && markStatus != 0) {
+				for(u32 k = 1; k < (u32)liveTargets.size() && !pendingRemotes.full(); k++) {
+					PendingRemote each = pr;
+					each.target = liveTargets[k];
+					each.docIndex = (*count)++;
+					pendingRemotes.push_back(each);
+				}
+			}
 			scheduled = true;
 		}
 		if(cmd->type == ActionCommand::Type::TELEPORT && cmd->teleport.toLastChild && t <= 0.001f) teleportToChild = true;
@@ -1426,6 +1437,13 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 			else if(ps.targetUID != ActorUID::INVALID) pendingStatuses.push_back(ps);
 		}
 	}
+	}
+
+	if(markStatus != 0 && forceAnim < 0) {
+		foreach_const(lt, liveTargets) {
+			if(const ActorMaster* m = FindMasterActor(*lt)) ConsumeStatus(m->parent->index, markStatus);
+			else if(ActorNpc* n = FindNpcActor(*lt)) ApplyStatusToNpc(player, *n, markStatus, true);
+		}
 	}
 
 	if(player.clientHd == ClientHandle::INVALID && !player.dead) {

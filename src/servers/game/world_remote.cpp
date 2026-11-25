@@ -1190,7 +1190,9 @@ void World::SpawnPendingRemotes()
 		}
 		if(pr->atTarget) {
 			const ActorMaster* targetMaster = pr->target != ActorUID::INVALID ? FindMasterActor(pr->target) : nullptr;
+			const ActorNpc* targetNpc = !targetMaster && pr->target != ActorUID::INVALID ? FindNpcActor(pr->target) : nullptr;
 			if(targetMaster) pos = targetMaster->parent->body->GetWorldPos();
+			else if(targetNpc) pos = targetNpc->pos;
 			else if(glm::length(vec2(pr->castPos)) > 1.0f) pos = pr->castPos;
 		}
 
