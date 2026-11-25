@@ -668,6 +668,7 @@ struct World
 		Time monsterNextAttack = Time::ZERO;
 		bool monsterLastSpecial = false;
 		bool monsterOpening = true;
+		Time monsterGroggyEnd = Time::ZERO;
 		Time monsterBasicReady = Time::ZERO;
 		eastl::array<Time,24> monsterSkillReady = {};
 		Time monsterNextSearch = Time::ZERO;

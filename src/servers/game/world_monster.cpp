@@ -699,6 +699,7 @@ void World::AddNpcGroggy(ActorNpc& npc, SkillID skillID, RemoteIdx doc)
 	replication->SendMonsterStateToAll(npc.UID, ActionStateID::DEFEAT_GROGGY_BEHAVIORSTATE, npc.pos, 0.0f);
 	foreach_const(st, npc.monsterAi->groggyStatuses) ApplyMonsterStatus(npc, *st, true);
 	npc.monsterHoldUntil = TimeAdd(localTime, TimeMsToTime(npc.monsterAi->groggyTime * 1000.0));
+	npc.monsterGroggyEnd = npc.monsterHoldUntil;
 }
 
 void World::HideMonster(ActorNpc& npc)
@@ -2175,6 +2176,10 @@ void World::UpdateMonsterAi(f32 delta)
 			if(ai.anchorHp > 0) npc.home = vec3(ai.anchor, npc.home.z);
 			LOG("Monster :: creature=%d (local %d) wakes up", (i32)npc.docID, npc.localID);
 			continue;
+		}
+		if(npc.monsterGroggyEnd != Time::ZERO && localTime >= npc.monsterGroggyEnd) {
+			npc.monsterGroggyEnd = Time::ZERO;
+			foreach_const(st, ai.groggyStatuses) ApplyMonsterStatus(npc, *st, false);
 		}
 		if(npc.monsterWeakStatus != 0 && npc.monsterWeakUntil != Time::ZERO && localTime >= npc.monsterWeakFrom) {
 			ApplyMonsterStatus(npc, npc.monsterWeakStatus, true);
