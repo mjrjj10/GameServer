@@ -1331,7 +1331,7 @@ struct World
 	void DestroyRemote(i32 index);
 	void ExpireHitRecords();
 	void GainResource(Player& player, i32 slot, f32 amount);
-	void ApplyResourceGain(Player& player, ResourceEvent event);
+	void ApplyResourceGain(Player& player, ResourceEvent event, i32 status = 0);
 	void ApplyRemoteHitResourceGain(Player& owner, RemoteIdx remote, u32 castID, u32 targetIndex);
 	void GroupTeleport(Player& caster, SkillID skillID, const vec3& from);
 	struct PendingInteraction { Time time; u32 ownerIndex; i32 interactionID; ActorUID teleportTarget = ActorUID::INVALID; };

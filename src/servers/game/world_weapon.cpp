@@ -63,7 +63,7 @@ void World::PlayerWeaponFire(Player& player)
 		const i8 swingStance = player.Main().stance;
 		StanceWeaponUse(player);
 		const WeaponFiring& wf = ActiveWeaponFiring(player, swingStance);
-		if(player.chargeLevel > 0) ApplyResourceGain(player, ResourceEvent::CHARGED_SHOT);
+		if(player.chargeLevel > 0) ApplyResourceGain(player, ResourceEvent::CHARGED_SHOT, player.chargeLevel <= (i32)wf.chargeStatus.size() ? wf.chargeStatus[player.chargeLevel - 1] : 0);
 		const RemoteIdx swing = SelectWeaponRemote(player, wf);
 		BotWeaponAnimation(player, wf, replication);
 		BotHoldForWeaponAction(player, wf);
@@ -164,7 +164,10 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	MarkInBattle(player);
 	const ClassType classType = player.Main().classType;
 	if(WeaponIsMelee(player)) return;
-	if(player.chargeLevel > 0) ApplyResourceGain(player, ResourceEvent::CHARGED_SHOT);
+	if(player.chargeLevel > 0) {
+		const WeaponFiring& chargedFiring = ActiveWeaponFiring(player, player.Main().stance);
+		ApplyResourceGain(player, ResourceEvent::CHARGED_SHOT, player.chargeLevel <= (i32)chargedFiring.chargeStatus.size() ? chargedFiring.chargeStatus[player.chargeLevel - 1] : 0);
+	}
 	if(player.clientHd != ClientHandle::INVALID && player.casting.skillID != SkillID::INVALID && player.casting.type == GameXmlContent::SkillCast::LIMIT) {
 		ReleaseCast(player);
 		return;

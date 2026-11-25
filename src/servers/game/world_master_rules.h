@@ -21,8 +21,17 @@ struct ResourceGainRule
 	i32 status = 0;
 };
 
+static const f32 HYP_GX_FUEL_RECOVERY_RANK1 = 22.0f;
+static const f32 HYP_GX_FUEL_RECOVERY_RANK2 = 24.0f;
+static const f32 HYP_GX_FUEL_RECOVERY_RANK3 = 26.0f;
+static const f32 HYP_GX_FUEL_RECOVERY_RANK4 = 28.0f;
+
 static const ResourceGainRule RESOURCE_GAIN_RULES[] = {
 	{ ClassType::SHUTTLE, ResourceEvent::CHARGED_SHOT, 1, 20.0f, RemoteIdx::INVALID },
+	{ ClassType::SHUTTLE, ResourceEvent::CHARGED_SHOT, 1, HYP_GX_FUEL_RECOVERY_RANK1, RemoteIdx::INVALID, 1230410001 },
+	{ ClassType::SHUTTLE, ResourceEvent::CHARGED_SHOT, 1, HYP_GX_FUEL_RECOVERY_RANK2, RemoteIdx::INVALID, 1230410002 },
+	{ ClassType::SHUTTLE, ResourceEvent::CHARGED_SHOT, 1, HYP_GX_FUEL_RECOVERY_RANK3, RemoteIdx::INVALID, 1230410003 },
+	{ ClassType::SHUTTLE, ResourceEvent::CHARGED_SHOT, 1, HYP_GX_FUEL_RECOVERY_RANK4, RemoteIdx::INVALID, 1230410004 },
 	{ ClassType::SHUTTLE, ResourceEvent::CHARGING_PER_SEC, 1, 5.0f, RemoteIdx::INVALID },
 	{ ClassType::SHUTTLE, ResourceEvent::REMOTE_HIT_ENEMY, 1, 22.0f, RemoteIdx(1440410000) },
 	{ ClassType::JINSEOYEON, ResourceEvent::SELF_STATUS, 2, 1.0f, RemoteIdx::INVALID, 1230120011 },

@@ -1707,9 +1707,11 @@ void World::GainResource(Player& player, i32 slot, f32 amount)
 	LOG("Resource :: %ls slot %d +%.0f -> %.0f", player.name.data(), slot, amount, player.res[slot]);
 }
 
-void World::ApplyResourceGain(Player& player, ResourceEvent event)
+void World::ApplyResourceGain(Player& player, ResourceEvent event, i32 status)
 {
-	if(const ResourceGainRule* rule = FindResourceGainRule(player.Main().classType, event)) GainResource(player, rule->slot, rule->amount);
+	const ResourceGainRule* rule = status != 0 ? FindResourceGainRule(player.Main().classType, event, RemoteIdx::INVALID, status) : nullptr;
+	if(!rule) rule = FindResourceGainRule(player.Main().classType, event);
+	if(rule) GainResource(player, rule->slot, rule->amount);
 }
 
 void World::ApplyRemoteHitResourceGain(Player& owner, RemoteIdx remote, u32 castID, u32 targetIndex)
