@@ -331,6 +331,23 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 				} break;
 			}
 			ActorUID childTarget = parent.target;
+			ActorUID chainPre = ActorUID::INVALID;
+			if(child->behaviorType == Remote::BehaviorType::CHAIN && !rule->targetOwner) {
+				World::RemoteInst probe = parent;
+				probe.remote = child;
+				probe.pos = at;
+				probe.dir = dir;
+				probe.excludeIndex = excludeIndex;
+				World::Player* hopPlayer = nullptr;
+				World::ActorNpc* hopNpc = nullptr;
+				world.ChainPickTarget(probe, &hopPlayer, &hopNpc);
+				if(!hopPlayer && !hopNpc) {
+					if(fromCreator) childID++;
+					continue;
+				}
+				chainPre = hopPlayer ? hopPlayer->Main().UID : hopNpc->UID;
+				childTarget = chainPre;
+			}
 			if(rule->targetOwner) {
 				World::Player& owner = world.GetPlayer(parent.ownerIndex);
 				childTarget = owner.Main().UID;
@@ -355,6 +372,7 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 				inst->costLevel = parent.costLevel;
 				inst->centeredBox = parent.centeredBox;
 				inst->sourceUID = parent.sourceUID;
+				inst->chainPreTarget = chainPre;
 				if(fromCreator) {
 					inst->clientRemoteID = childID;
 					inst->damageRemoteID = 0;
@@ -1347,6 +1365,45 @@ void World::RunRemoteTimeEvent(RemoteInst& inst, f32 elapsed)
 	SpawnRemoteRules(*this, copy, remote.onTime, remote.creatorOnTime, copy.pos, copy.excludeIndex, RemoteIdx::INVALID);
 }
 
+void World::ChainPickTarget(const RemoteInst& inst, Player** outBest, ActorNpc** outNpc)
+{
+	const Remote& remote = *inst.remote;
+	const f32 sight = remote.sight > 0 ? remote.sight : 1450.0f;
+	Player* best = nullptr;
+	const u32 ownerTeam = players[inst.ownerIndex].team;
+	const f32 halfCos = remote.fov > 0 && remote.fov < 360 ? cosf(remote.fov * 0.5f * PI / 180.0f) : -2.0f;
+	const auto inCone = [&](const vec2& at) {
+		const vec2 rel = at - vec2(inst.pos);
+		const f32 len = glm::length(rel);
+		return len < 1.0f || glm::dot(rel / len, inst.dir) >= halfCos;
+	};
+	ActorNpc* bestNpc = nullptr;
+	const bool friendChain = remote.includeParty && !remote.friendlyStatuses.empty();
+	const bool firstHop = inst.chainHitMask == 0 && inst.chainNpcHit == ActorUID::INVALID;
+	for(i32 pass = 0; pass < (friendChain ? 2 : 4) && !best && !bestNpc; pass++) {
+		f32 bestDist = sight + WEAPON_TARGET_RADIUS;
+		foreach(it, players) {
+			if(friendChain ? (firstHop && it->index == inst.ownerIndex) : (it->team != ownerTeam) != (pass < 2)) continue;
+			if(!RemoteCanAffect(inst, *it, remote.vsOwner)) continue;
+			if(pass % 2 == 0 && ((inst.chainHitMask >> it->index) & 1)) continue;
+			if(!inCone(vec2(it->body->GetWorldPos()))) continue;
+			const f32 d = glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos));
+			if(d < bestDist) { bestDist = d; best = &*it; }
+		}
+		if(pass < 2 && !(remote.prioritySearchPC && best)) {
+			const Faction ownFaction = ownerTeam == 0 ? Faction::RED : Faction::BLUE;
+			foreach(npc, actorNpcList) {
+				const bool ally = friendChain && npc->faction == ownFaction && npc->removeAt == Time::ZERO && !GetGameXmlContent().CreatureUntargetable((i32)npc->docID);
+				if(npc->hp <= 0 || !(ally || NpcHittableBy(*npc, players[inst.ownerIndex])) || npc->UID == inst.chainNpcHit || !inCone(vec2(npc->pos))) continue;
+				const f32 d = glm::length(vec2(npc->pos) - vec2(inst.pos));
+				if(d < bestDist) { bestDist = d; bestNpc = &*npc; best = nullptr; }
+			}
+		}
+	}
+	*outBest = best;
+	*outNpc = bestNpc;
+}
+
 bool World::UpdateChainRemote(RemoteInst& inst)
 {
 	const Remote& remote = *inst.remote;
@@ -1354,38 +1411,14 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 	if(hopWait && TimeDiffSec(TimeDiff(inst.spawnTime, localTime)) < MEASURED_CHAIN_HOP_SEC) return false;
 	if(!inst.areaDone) {
 		inst.areaDone = true;
-		const f32 sight = remote.sight > 0 ? remote.sight : 1450.0f;
 		Player* best = nullptr;
-		const u32 ownerTeam = players[inst.ownerIndex].team;
-		const f32 halfCos = remote.fov > 0 && remote.fov < 360 ? cosf(remote.fov * 0.5f * PI / 180.0f) : -2.0f;
-		const auto inCone = [&](const vec2& at) {
-			const vec2 rel = at - vec2(inst.pos);
-			const f32 len = glm::length(rel);
-			return len < 1.0f || glm::dot(rel / len, inst.dir) >= halfCos;
-		};
 		ActorNpc* bestNpc = nullptr;
-		const bool friendChain = remote.includeParty && !remote.friendlyStatuses.empty();
-		const bool firstHop = inst.chainHitMask == 0 && inst.chainNpcHit == ActorUID::INVALID;
-		for(i32 pass = 0; pass < (friendChain ? 2 : 4) && !best && !bestNpc; pass++) {
-			f32 bestDist = sight + WEAPON_TARGET_RADIUS;
-			foreach(it, players) {
-				if(friendChain ? (firstHop && it->index == inst.ownerIndex) : (it->team != ownerTeam) != (pass < 2)) continue;
-				if(!RemoteCanAffect(inst, *it, remote.vsOwner)) continue;
-				if(pass % 2 == 0 && ((inst.chainHitMask >> it->index) & 1)) continue;
-				if(!inCone(vec2(it->body->GetWorldPos()))) continue;
-				const f32 d = glm::length(vec2(it->body->GetWorldPos()) - vec2(inst.pos));
-				if(d < bestDist) { bestDist = d; best = &*it; }
-			}
-			if(pass < 2 && !(remote.prioritySearchPC && best)) {
-				const Faction ownFaction = ownerTeam == 0 ? Faction::RED : Faction::BLUE;
-				foreach(npc, actorNpcList) {
-					const bool ally = friendChain && npc->faction == ownFaction && npc->removeAt == Time::ZERO && !GetGameXmlContent().CreatureUntargetable((i32)npc->docID);
-					if(npc->hp <= 0 || !(ally || NpcHittableBy(*npc, players[inst.ownerIndex])) || npc->UID == inst.chainNpcHit || !inCone(vec2(npc->pos))) continue;
-					const f32 d = glm::length(vec2(npc->pos) - vec2(inst.pos));
-					if(d < bestDist) { bestDist = d; bestNpc = &*npc; best = nullptr; }
-				}
-			}
+		if(inst.chainPreTarget != ActorUID::INVALID) {
+			if(const ActorMaster* pm = FindMasterActor(inst.chainPreTarget)) { if(!pm->parent->dead && pm->parent->Main().UID == inst.chainPreTarget) best = pm->parent; }
+			else if(ActorNpc* pn = FindNpcActor(inst.chainPreTarget)) { if(pn->hp > 0) bestNpc = pn; }
 		}
+		if(!best && !bestNpc) ChainPickTarget(inst, &best, &bestNpc);
+		const bool friendChain = remote.includeParty && !remote.friendlyStatuses.empty();
 		const vec2 beamFrom = vec2(inst.pos);
 		const ActorUID prevNpc = inst.chainNpcHit;
 		if(bestNpc) {

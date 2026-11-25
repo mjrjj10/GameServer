@@ -958,6 +958,7 @@ struct World
 		i32 lastHitIndex = -1;
 		u32 chainHitMask = 0;
 		ActorUID chainNpcHit = ActorUID::INVALID;
+		ActorUID chainPreTarget = ActorUID::INVALID;
 		bool chainEnded = false;
 		struct NpcHit { ActorUID uid; Time until; };
 		eastl::fixed_vector<NpcHit,16,true> npcHits;
@@ -1318,6 +1319,7 @@ struct World
 	void SetCasterRemoteDest(u32 ownerIndex, u32 clientRemoteID, const vec3& dest);
 	void RunRemoteTimeEvent(RemoteInst& inst, f32 elapsed);
 	bool UpdateChainRemote(RemoteInst& inst);
+	void ChainPickTarget(const RemoteInst& inst, Player** outBest, ActorNpc** outNpc);
 	f32 PierceCriticalBonus(RemoteIdx doc, u32 earlierHits) const;
 	void ChainBeamPassThrough(RemoteInst& inst, const vec2& from, const vec2& to, ActorUID skipNpc, ActorUID prevNpc);
 	void ApplyAttachedRemote(RemoteInst& inst, Player& instOwner);
