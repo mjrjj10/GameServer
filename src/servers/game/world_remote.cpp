@@ -369,6 +369,7 @@ static void SpawnRemoteRules(World& world, const World::RemoteInst& parent, cons
 				inst->excludeIndex = excludeIndex;
 				inst->chainHitMask = parent.chainHitMask;
 				inst->chainNpcHit = parent.chainNpcHit;
+				inst->chainNpcsHit = parent.chainNpcsHit;
 				inst->costLevel = parent.costLevel;
 				inst->centeredBox = parent.centeredBox;
 				inst->sourceUID = parent.sourceUID;
@@ -1394,7 +1395,7 @@ void World::ChainPickTarget(const RemoteInst& inst, Player** outBest, ActorNpc**
 			const Faction ownFaction = ownerTeam == 0 ? Faction::RED : Faction::BLUE;
 			foreach(npc, actorNpcList) {
 				const bool ally = friendChain && npc->faction == ownFaction && npc->removeAt == Time::ZERO && !GetGameXmlContent().CreatureUntargetable((i32)npc->docID);
-				if(npc->hp <= 0 || !(ally || NpcHittableBy(*npc, players[inst.ownerIndex])) || npc->UID == inst.chainNpcHit || !inCone(vec2(npc->pos))) continue;
+				if(npc->hp <= 0 || !(ally || NpcHittableBy(*npc, players[inst.ownerIndex])) || npc->UID == inst.chainNpcHit || eastl::find(inst.chainNpcsHit.begin(), inst.chainNpcsHit.end(), npc->UID) != inst.chainNpcsHit.end() || !inCone(vec2(npc->pos))) continue;
 				const f32 d = glm::length(vec2(npc->pos) - vec2(inst.pos));
 				if(d < bestDist) { bestDist = d; bestNpc = &*npc; best = nullptr; }
 			}
@@ -1427,6 +1428,7 @@ bool World::UpdateChainRemote(RemoteInst& inst)
 			if(NpcHittableBy(*bestNpc, players[inst.ownerIndex])) RemoteDamageNpc(inst, *bestNpc, 0.0f);
 			else RemoteFriendNpc(inst, *bestNpc);
 			inst.chainNpcHit = bestNpc->UID;
+			if(!inst.chainNpcsHit.full()) inst.chainNpcsHit.push_back(bestNpc->UID);
 			if(friendChain) inst.excludeIndex = -1;
 			ChainBeamPassThrough(inst, beamFrom, vec2(bestNpc->pos), bestNpc->UID, prevNpc);
 		}
@@ -1462,10 +1464,12 @@ void World::ChainBeamPassThrough(RemoteInst& inst, const vec2& from, const vec2&
 	}
 	foreach(npc, actorNpcList) {
 		if(npc->UID == skipNpc || npc->UID == prevNpc || npc->hp <= 0 || !NpcHittableBy(*npc, owner)) continue;
+		if(eastl::find(inst.chainNpcsHit.begin(), inst.chainNpcsHit.end(), npc->UID) != inst.chainNpcsHit.end()) continue;
 		const f32 dist = SegmentPointDist2D(from, to, vec2(npc->pos));
 		if(dist > halfWidth + NpcHitRadius(*npc)) continue;
 		LOG("Chain :: remote %d beam passes through creature %d", (i32)inst.remote->ID, (i32)npc->docID);
 		RemoteDamageNpc(inst, *npc, dist);
+		if(!inst.chainNpcsHit.full()) inst.chainNpcsHit.push_back(npc->UID);
 	}
 }
 
@@ -1930,6 +1934,7 @@ void World::DestroyRemote(i32 index)
 					child->excludeIndex = childExclude;
 					child->chainHitMask = copy.chainHitMask;
 					child->chainNpcHit = copy.chainNpcHit;
+					child->chainNpcsHit = copy.chainNpcsHit;
 					child->costLevel = copy.costLevel;
 					child->centeredBox = copy.centeredBox;
 					child->sourceUID = copy.sourceUID;

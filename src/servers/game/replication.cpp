@@ -2266,7 +2266,9 @@ void Replication::SendRemoteCreateToAll(ActorUID ownerUID, u32 seed, RemoteIdx d
 }
 void Replication::SendChildRemoteCreateToAll(ActorUID ownerUID, ActorUID parentUID, u32 parentRemoteID, ClientHandle parentSeedOwnerHd, u32 seed, RemoteIdx doc, u16 creator, const vec3& firePos, f32 worldYaw, const vec3& targetPos, ActorUID targetUID, ActorUID hitInvalidUID, const wchar* fireObject, u8 flags, ClientHandle exclude)
 {
-	if(!fireObject || !fireObject[0]) fireObject = FIRE_OBJECT_SCENE_ROOT;
+	const Remote* chainDoc = doc != RemoteIdx::INVALID ? GetGameXmlContent().FindRemote(doc) : nullptr;
+	const bool chainHop = chainDoc && chainDoc->behaviorType == Remote::BehaviorType::CHAIN && fireObject && !fireObject[0];
+	if(!chainHop && (!fireObject || !fireObject[0])) fireObject = FIRE_OBJECT_SCENE_ROOT;
 	RemoteCreate remote;
 	remote.parentUID = parentUID;
 	remote.ownerUID = ownerUID;

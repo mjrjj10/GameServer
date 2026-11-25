@@ -958,6 +958,7 @@ struct World
 		i32 lastHitIndex = -1;
 		u32 chainHitMask = 0;
 		ActorUID chainNpcHit = ActorUID::INVALID;
+		eastl::fixed_vector<ActorUID,6,false> chainNpcsHit;
 		ActorUID chainPreTarget = ActorUID::INVALID;
 		bool chainEnded = false;
 		struct NpcHit { ActorUID uid; Time until; };
