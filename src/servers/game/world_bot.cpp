@@ -723,6 +723,21 @@ void World::BuildBotNav()
 			botNav.back().pos = *c;
 		}
 	}
+	eastl::fixed_vector<eastl::pair<u16,u16>,8,false> markerJumps;
+	const auto& sightMarkers = GetGameXmlContent().BotSightMarkers();
+	for(i32 s = 0; s + 1 < (i32)sightMarkers.size() && !markerJumps.full(); s += 2) {
+		auto ma = map->aiMarkers.find(sightMarkers[s]);
+		auto mb = map->aiMarkers.find(sightMarkers[s + 1]);
+		if(ma == map->aiMarkers.end() || mb == map->aiMarkers.end()) continue;
+		const bool aLow = ma->second.z <= mb->second.z;
+		const u16 low = (u16)botNav.size();
+		botNav.push_back();
+		botNav.back().pos = aLow ? ma->second : mb->second;
+		const u16 high = (u16)botNav.size();
+		botNav.push_back();
+		botNav.back().pos = aLow ? mb->second : ma->second;
+		markerJumps.push_back(eastl::make_pair(low, high));
+	}
 	for(i32 a = 0; a < (i32)botNav.size(); a++) {
 		for(i32 b = a + 1; b < (i32)botNav.size(); b++) {
 			if(glm::length(vec2(botNav[a].pos) - vec2(botNav[b].pos)) > BOT_NAV_LINK_RANGE) continue;
@@ -752,6 +767,13 @@ void World::BuildBotNav()
 			botNav[a].jumps.push_back((u16)b);
 			jumps++;
 		}
+	}
+	foreach_const(mj, markerJumps) {
+		auto& low = botNav[mj->first];
+		auto& high = botNav[mj->second];
+		if(eastl::find(low.jumps.begin(), low.jumps.end(), mj->second) == low.jumps.end() && !low.jumps.full()) { low.jumps.push_back(mj->second); jumps++; }
+		if(eastl::find(high.links.begin(), high.links.end(), mj->first) == high.links.end() && !high.links.full()) high.links.push_back(mj->first);
+		LOG("Bot :: nav sight marker jump (%.0f, %.0f, %.0f) -> (%.0f, %.0f, %.0f), ground links %d, platform links %d", low.pos.x, low.pos.y, low.pos.z, high.pos.x, high.pos.y, high.pos.z, (i32)low.links.size(), (i32)high.links.size());
 	}
 	LOG("Bot :: nav %d jump links (rise up to %.0f)", jumps, jumpRise);
 	for(i32 team = 0; team < 2; team++) {

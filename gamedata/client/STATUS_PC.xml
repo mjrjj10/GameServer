@@ -1322,7 +1322,7 @@
     <ST_COMMONSTATUS _CanDispel="false" _Description="[정령사]이베이드 상태 0.5초" _DurationTime="300" _EffectType="STATUS_EFFECT_BUFF" _Name="정령사 회피시 회피" _Passive="false" _ReAction="false" _SaveDB="false" _SkillIndex="180100002" _Type="STATUS_TYPE_EVADE" />
   </INFO>
   <INFO ID="1230100062" KEYNAME="STATUS_SOULMASTER_SHIRK_MOVESPEED">
-    <ST_COMMONSTATUS _CanDispel="true" _Description="[정령사]이속 증가 버프 100%" _DurationTime="300" _EffectType="STATUS_EFFECT_BUFF" _Name="정령사 회피시 이속 증가" _Passive="false" _ReAction="false" _SaveDB="false" _SkillIndex="180100002" _Type="STATUS_TYPE_STAT" />
+    <ST_COMMONSTATUS _CanDispel="true" _Description="[정령사]이속 증가 버프 100%" _DurationTime="2000" _EffectType="STATUS_EFFECT_BUFF" _Name="정령사 회피시 이속 증가" _Passive="false" _ReAction="false" _SaveDB="false" _SkillIndex="180100002" _Type="STATUS_TYPE_STAT" />
   </INFO>
   <INFO ID="1230100070" KEYNAME="STATUS_SOULMASTER_SKILL_ROOT_POISON">
     <ST_COMMONSTATUS _CanDispel="true" _Description="[정령사]DOT 버닝" _DotBaseDamage="57.6" _DurationTime="3010" _EffectKeyName="STATUS_SFX_PC_SOULMASTER_GRASPSOUL_DOT" _EffectSlot="11007" _EffectType="STATUS_EFFECT_DEBUFF" _IconAlias="poison_01" _Interval="1000" _MaxOverlapCount="3" _Name="정령사 속박 강화 DOT" _Passive="false" _ReAction="false" _SaveDB="false" _SkillIndex="180100010" _Tooltip="STR_STATUS_PC_TOOLTIP_1230100070" _Type="STATUS_TYPE_POISON" />
@@ -4793,7 +4793,7 @@
     <ST_COMMONSTATUS _CanDispel="false" _Description="스킬1 강화용 FLAG" _DurationTime="1" _EffectType="STATUS_EFFECT_UNKNOWN" _MaxOverlapCount="1" _Name="[셔틀] 스킬1 강화 FLAG" _Passive="false" _ReAction="false" _SaveDB="false" _SkillIndex="180410010" _Type="STATUS_TYPE_FLAG" />
   </INFO>
   <INFO ID="1230410013" KEYNAME="STATUS_SHUTTLE_SK1_DRAGGED" _DocID="100000041">
-    <ST_COMMONSTATUS _CanDispel="false" _Description="DRAGGED" _DraggedByForceMax="70" _DraggedByForceMin="20" _DurationTime="100" _EffectType="STATUS_EFFECT_DEBUFF" _MaxDragDistance="-1" _Name="[셔틀] DRAGGED" _Passive="false" _ReAction="true" _SaveDB="false" _SkillIndex="180410010" _Type="STATUS_TYPE_DRAGGEDBYFORCE" />
+    <ST_COMMONSTATUS _CanDispel="false" _Description="DRAGGED" _DraggedByForceMax="500" _DraggedByForceMin="300" _DurationTime="100" _EffectType="STATUS_EFFECT_DEBUFF" _MaxDragDistance="-1" _Name="[셔틀] DRAGGED" _Passive="false" _ReAction="true" _SaveDB="false" _SkillIndex="180410010" _Type="STATUS_TYPE_DRAGGEDBYFORCE" />
     <ST_TOOLTIP _Attr="DELIGATE" />
   </INFO>
   <INFO ID="1230410020" KEYNAME="STATUS_SHUTTLE_SK2_STAMINABURN" _DocID="100000041">

@@ -968,6 +968,15 @@ bool GameXmlContent::LoadMapByID(Map* map, MapIndex index)
 			}
 		}
 	}
+	XMLDocument markerDoc;
+	if(LoadXMLFile(LFMT(L"/%s/AIMarker.xml", tempPathData), markerDoc, true) && markerDoc.FirstChildElement()) {
+		XMLElement* pInfo = markerDoc.FirstChildElement()->FirstChildElement("AI_MARKER_INFO");
+		for(XMLElement* pGroup = pInfo ? pInfo->FirstChildElement("_MarkerGroup") : nullptr; pGroup; pGroup = pGroup->NextSiblingElement("_MarkerGroup")) {
+			XMLElement* pMarker = pGroup->FirstChildElement("_MarkerList");
+			if(!pMarker) continue;
+			map->aiMarkers[pGroup->IntAttribute("id")] = vec3(pMarker->FloatAttribute("x"), pMarker->FloatAttribute("y"), pMarker->FloatAttribute("z"));
+		}
+	}
 	return true;
 }
 
@@ -6579,6 +6588,11 @@ bool GameXmlContent::LoadBotBrain()
 			else if(EA::StdC::Strcmp(k, "BOTLOGIC_STAGELEVEL_KEY_AFTER_SKILL_DELAY") == 0) botAfterSkillDelay = v;
 			else botConstants[StatusTypeKey(k)] = v;
 		}
+	}
+	for(XMLElement* p = pRoot ? pRoot->FirstChildElement("_IndexData") : nullptr; p; p = p->NextSiblingElement("_IndexData")) {
+		const char* key = p->Attribute("DATAKEY");
+		if(!key || EA::StdC::Strcmp(key, "BOTLOGIC_DOCINDEX_KEY_AIMARKER_GOT_SIGHTWARD") != 0) continue;
+		for(XMLElement* d = p->FirstChildElement("_Indexes"); d; d = d->NextSiblingElement("_Indexes")) botSightMarkers.push_back(d->IntAttribute("DATA"));
 	}
 	for(XMLElement* p = pRoot ? pRoot->FirstChildElement("_ConstantData") : nullptr; p; p = p->NextSiblingElement("_ConstantData")) {
 		const char* key = p->Attribute("DATAKEY");

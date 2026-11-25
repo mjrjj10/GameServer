@@ -1726,6 +1726,7 @@ bool World::UpdateMonsterScript(ActorNpc& npc, const GameXmlContent::MonsterAi& 
 bool World::UpdateMonsterAllyBuff(ActorNpc& npc, const GameXmlContent::MonsterAi& ai)
 {
 	if(npc.faction != Faction::RED && npc.faction != Faction::BLUE) return false;
+	if(npc.actionState == ActionStateID::SPAWN_BEHAVIORSTATE && localTime < npc.stateEndAt) return true;
 	for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)npc.monsterSkillReady.size(); s++) {
 		const GameXmlContent::MonsterAttack& buff = ai.attacks[s];
 		if(buff.target != GameXmlContent::MonsterAttack::ALLY) continue;

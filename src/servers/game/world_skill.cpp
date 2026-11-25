@@ -1772,6 +1772,15 @@ void World::UpdateBattleStates()
 
 void World::BreakHide(Player& player)
 {
+	static const i32 TESTER_STATUSES_ENDING_WITH_HIDE[] = { 1230100062 };
+	foreach(it, activeStatuses) {
+		if(it->targetIndex != player.index || it->until <= localTime) continue;
+		for(i32 s = 0; s < (i32)ARRAY_COUNT(TESTER_STATUSES_ENDING_WITH_HIDE); s++) {
+			if(it->statusID != TESTER_STATUSES_ENDING_WITH_HIDE[s]) continue;
+			it->until = localTime;
+			LOG("Hide :: %ls cast ends linked status %d", player.name.data(), it->statusID);
+		}
+	}
 	foreach(it, activeStatuses) {
 		if(it->targetIndex != player.index || !it->info || it->info->type != StatusType::HIDE || it->appliedAt >= localTime || it->until <= localTime) continue;
 		it->until = localTime;

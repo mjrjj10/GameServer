@@ -961,6 +961,7 @@ struct GameXmlContent
 		eastl::vector<LevelEventNode> levelEvents;
 		eastl::hash_map<i32, eastl::fixed_vector<vec3,48,true>> paths;
 		eastl::hash_set<i32> roundTripPaths;
+		eastl::hash_map<i32, vec3> aiMarkers;
 
 		const Area* FindArea(i32 id) const { foreach_const(a, areas) if(a->ID == id) return &*a; return nullptr; }
 		const LevelEventNode* FindLevelEvent(i32 id) const { foreach_const(n, levelEvents) if(n->id == id) return &*n; return nullptr; }
@@ -1674,6 +1675,7 @@ struct GameXmlContent
 	f32 BotAfterSkillDelay() const { return botAfterSkillDelay; }
 	f32 BotConstant(const char* key) const { auto f = botConstants.find(StatusTypeKey(key)); return f == botConstants.end() ? 0 : f->second; }
 	i32 BotReturnSkill() const { return botReturnSkill; }
+	const eastl::vector<i32>& BotSightMarkers() const { return botSightMarkers; }
 	i32 BotStageSkillKind(i32 skill) const { for(i32 i = 0; i < (i32)botStageSkills.size(); i++) if(botStageSkills[i] == skill) return i; return -1; }
 	struct MeasuredFireNode { f32 forward = 0; f32 side = 0; f32 up = 0; bool hasChild = false; f32 childForward = 0; f32 childSide = 0; f32 childUp = 0; f32 childRot = 0; f32 childDirZ = 0; };
 	struct FireNodePath { f32 step = 0; eastl::vector<vec3> points; };
@@ -1967,6 +1969,7 @@ private:
 	eastl::hash_map<u32, f32> botConstants;
 	eastl::array<i32,5> botStageSkills = {{ 0, 0, 0, 0, 0 }};
 	i32 botReturnSkill = 0;
+	eastl::vector<i32> botSightMarkers;
 	eastl::hash_map<i32, eastl::fixed_vector<i32,4,false>> passiveStatuses;
 	eastl::hash_map<i32, f32> skillConsumeStamina;
 	eastl::hash_map<i32, f32> skillConsumeMP;
