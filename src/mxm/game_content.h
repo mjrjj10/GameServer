@@ -1693,6 +1693,7 @@ struct GameXmlContent
 	f32 GetBotSkillMaxDistance(i32 skill) const { auto f = botSkillMaxDistance.find(skill); return f == botSkillMaxDistance.end() ? 0 : f->second; }
 	const eastl::vector<BotSkillFeature>* FindBotSkillFeatures(i32 skill) const { auto f = botSkillFeatures.find(skill); return f == botSkillFeatures.end() ? nullptr : &f->second; }
 	bool IsBotWallMoveSkill(i32 skill) const { return botWallMoveSkills.find(skill) != botWallMoveSkills.end(); }
+	bool IsCreatureDynamicTeam(i32 doc) const { return creatureDynamicTeam.find(doc) != creatureDynamicTeam.end(); }
 	f32 BotNormalSkillCoolTime() const { return botNormalSkillCoolTime; }
 	f32 BotUgSkillCoolTime() const { return botUgSkillCoolTime; }
 	f32 BotAfterSkillDelay() const { return botAfterSkillDelay; }
@@ -1987,6 +1988,7 @@ private:
 	eastl::hash_map<i32, f32> botSkillMaxDistance;
 	eastl::hash_map<i32, eastl::vector<BotSkillFeature>> botSkillFeatures;
 	eastl::hash_set<i32> botWallMoveSkills;
+	eastl::hash_set<i32> creatureDynamicTeam;
 	eastl::vector<eastl::hash_map<u32, f32>> botGotLayers;
 	eastl::hash_map<i32, f32> skillRangeX;
 	eastl::hash_map<i32, f32> skillTargetRangeX;

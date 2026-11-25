@@ -908,6 +908,7 @@ World::ActorNpc& World::SpawnMonster(CreatureIndex docID, i32 localID, const vec
 	npc.stateEndAt = TimeAdd(localTime, TimeMsToTime(spawnSec > 0 ? spawnSec * 1000.0 : MEASURED_MONSTER_SPAWN_STATE_MIN_MS));
 	if(npc.monsterHoldUntil < npc.stateEndAt) npc.monsterHoldUntil = npc.stateEndAt;
 	if(npc.monsterAi && npc.monsterAi->playerSide && (faction == Faction::MONSTER || faction == Faction::INVALID)) npc.faction = PlayerSideFaction();
+	else if((faction == Faction::MONSTER || faction == Faction::INVALID) && GetGameXmlContent().IsCreatureDynamicTeam((i32)docID)) npc.faction = Faction::DYNAMIC;
 	if(npc.monsterAi && npc.monsterAi->teamBuff != 0 && (faction == Faction::RED || faction == Faction::BLUE)) {
 		foreach(p, players) {
 			if(p->dead || !p->body || (Faction)p->team != faction || p->Main().classType == ClassType::NONE) continue;
@@ -953,7 +954,9 @@ void World::CallMonsters(const GameXmlContent::LevelEventNode& node, i32 playerI
 			if(const i32 interaction = GetGameXmlContent().FindDynamicInteraction(node.monster)) AddDynamicInteraction(dyn, interaction);
 			continue;
 		}
-		ActorNpc& npc = SpawnMonster((CreatureIndex)node.monster, node.areaID, area->pos, vec3(area->rot.x, area->rot.y, MxmYawToWorldYaw(area->rot.z)), node.team, node.tagID);
+		Faction team = node.team;
+		if((team == Faction::INVALID || team == Faction::MONSTER) && GetGameXmlContent().IsCreatureDynamicTeam(node.monster)) team = playerIndex >= 0 && playerIndex < (i32)players.size() ? (Faction)players[playerIndex].team : Faction::DYNAMIC;
+		ActorNpc& npc = SpawnMonster((CreatureIndex)node.monster, node.areaID, area->pos, vec3(area->rot.x, area->rot.y, MxmYawToWorldYaw(area->rot.z)), team, node.tagID);
 		npc.createRot = area->rot;
 		npc.hasCreateRot = true;
 		npc.spawnAnim = node.spawnAnim;

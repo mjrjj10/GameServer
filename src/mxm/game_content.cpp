@@ -5294,6 +5294,9 @@ bool GameXmlContent::LoadSightData()
 			XMLElement* pEntity = pInfo->FirstChildElement("EntityComData");
 			const char* bushPass = pEntity ? pEntity->Attribute("_bBushPass") : nullptr;
 			if(bushPass && EA::StdC::Stricmp(bushPass, "true") == 0) creatureBushPass.insert(pInfo->IntAttribute("ID"));
+			XMLElement* pStats = pInfo->FirstChildElement("StatsComData");
+			const char* team = pStats ? pStats->Attribute("_Team") : nullptr;
+			if(team && EA::StdC::Strcmp(team, "TEAM_DYNAMIC") == 0) creatureDynamicTeam.insert(pInfo->IntAttribute("ID"));
 			const char* sight = pEntity ? pEntity->Attribute("_SightRadiusType") : nullptr;
 			if(!sight) continue;
 			i32 meters = 0;

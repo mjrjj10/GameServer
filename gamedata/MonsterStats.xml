@@ -832,6 +832,18 @@
     <STAT type="58" value="25" />
     <STAT type="64" value="150" />
   </INFO>
+  <INFO ID="108011130">
+    <STAT type="0" value="193909" />
+    <STAT type="6" value="96" />
+    <STAT type="7" value="340" />
+    <STAT type="8" value="100" />
+    <STAT type="10" value="150" />
+    <STAT type="13" value="100" />
+    <STAT type="14" value="100" />
+    <STAT type="15" value="100" />
+    <STAT type="52" value="100" />
+    <STAT type="64" value="150" />
+  </INFO>
   <INFO ID="108012300">
     <STAT type="0" value="3434" />
     <STAT type="6" value="1045.44" />
