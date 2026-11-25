@@ -1736,7 +1736,7 @@ void World::UpdateBotCombat()
 {
 	foreach(it, players) {
 		Player& bot = *it;
-		if(bot.clientHd != ClientHandle::INVALID || bot.dead) continue;
+		if(bot.clientHd != ClientHandle::INVALID || bot.dead || bot.trainingDummy) continue;
 		if(localTime < bot.tNextBotShot || localTime < bot.ccUntil) continue;
 		vec2 zoneAway;
 		f32 zoneDepth = 0;
