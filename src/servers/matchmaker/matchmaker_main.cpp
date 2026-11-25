@@ -666,7 +666,7 @@ struct Matchmaker
 				else room.teamBlue.push_back(&room.playerList.back());
 			}
 		}
-		while(!pve && !custom && room.teamRed.size() < teamSize) {
+		while(!pve && !custom && !Config().DevNoBots && room.teamRed.size() < teamSize) {
 			Room::Player player(LFMT(L"Bot%d", botID++), AccountUID::INVALID, ClientHandle::INVALID);
 			player.team = Team::RED;
 			player.isBot = true;
@@ -674,7 +674,7 @@ struct Matchmaker
 			room.playerList.push_back(player);
 			room.teamRed.push_back(&room.playerList.back());
 		}
-		while(!pve && !custom && room.teamBlue.size() < teamSize) {
+		while(!pve && !custom && !Config().DevNoBots && room.teamBlue.size() < teamSize) {
 			Room::Player player(LFMT(L"Bot%d", botID++), AccountUID::INVALID, ClientHandle::INVALID);
 			player.team = Team::BLUE;
 			player.isBot = true;

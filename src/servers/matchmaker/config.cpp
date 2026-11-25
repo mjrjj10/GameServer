@@ -7,6 +7,7 @@ bool CConfigGame::ParseLine(const char* line)
 	if(EA::StdC::Sscanf(line, "ListenPort=%d", &ListenPort) == 1) return true;
 	if(EA::StdC::Sscanf(line, "TraceNetwork=%d", &TraceNetwork) == 1) return true;
 	if(EA::StdC::Sscanf(line, "SoloRooms=%d", &SoloRooms) == 1) return true;
+	if(EA::StdC::Sscanf(line, "DevNoBots=%d", &DevNoBots) == 1) return true;
 	if(EA::StdC::Sscanf(line, "TeamSize=%d", &TeamSize) == 1) return true;
 	if(EA::StdC::Sscanf(line, "MatchingWaitSec=%d", &MatchingWaitSec) == 1) return true;
 	if(EA::StdC::Sscanf(line, "GameServerPublicIP=%d.%d.%d.%d", &GameServerPublicIP[0], &GameServerPublicIP[1], &GameServerPublicIP[2], &GameServerPublicIP[3]) == 4) return true;
@@ -80,6 +81,7 @@ void CConfigGame::Print() const
 	LOG("Config = {");
 	LOG("	ListenPort=%d", ListenPort);
 	LOG("	TraceNetwork=%d", TraceNetwork);
+	LOG("	DevNoBots=%d", DevNoBots);
 	LOG("	GameServerPublicIP=%d.%d.%d.%d", GameServerPublicIP[0], GameServerPublicIP[1], GameServerPublicIP[2], GameServerPublicIP[3]);
 	LOG("}");
 }
