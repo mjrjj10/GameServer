@@ -1229,6 +1229,7 @@ bool World::IsBlocked(const Player& p, bool attack, bool skill, bool shirk) cons
 {
 	foreach_const(it, activeStatuses) {
 		if(it->targetIndex != p.index || !it->info || localTime >= it->until) continue;
+		if(it->targetUID != p.Main().UID && it->info->tagMode != StatusInfo::TAG_BOTH) continue;
 		if((attack && it->info->blockAttack) || (skill && it->info->blockSkill) || (shirk && it->info->blockShirk)) return true;
 	}
 	return false;

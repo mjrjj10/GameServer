@@ -926,6 +926,7 @@ void World::OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& d
 	bool blocked = false;
 	foreach_const(st, activeStatuses) {
 		if(st->targetIndex != player.index || !st->info || !st->info->blockAttack || localTime >= st->until) continue;
+		if(st->targetUID != player.Main().UID && st->info->tagMode != StatusInfo::TAG_BOTH) continue;
 		bool ownAniEnd = false;
 		if(st->casterIndex == player.index) foreach_const(id, player.weaponAniEndStatuses) if(*id == st->statusID) ownAniEnd = true;
 		if(!ownAniEnd) blocked = true;
