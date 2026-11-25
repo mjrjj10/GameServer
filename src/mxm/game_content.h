@@ -648,6 +648,8 @@ struct WeaponHeatInfo
 	f32 autoRegenDelay = 0;
 	f32 overheatDuration = 0;
 	f32 overheatResetGauge = 0;
+	f32 overheatPenaltyRatio = 1;
+	f32 consumptionPerSecByCharge = 0;
 };
 
 enum class PraiseType: u8

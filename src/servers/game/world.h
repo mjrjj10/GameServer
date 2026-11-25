@@ -333,6 +333,8 @@ struct World
 		eastl::array<f32,2> heat = { 0, 0 };
 		eastl::array<Time,2> heatLastShot = { Time::ZERO, Time::ZERO };
 		eastl::array<Time,2> overheatUntil = { Time::ZERO, Time::ZERO };
+		Time chargeHeatAt = Time::ZERO;
+		f32 chargeHeatCarry = 0;
 		bool staminaDirty = false;
 		bool ultDirty = false;
 		eastl::array<f32,4> regenSent = { -1, -1, -1, -1 };

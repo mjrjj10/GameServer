@@ -1824,7 +1824,8 @@ void World::UpdateBotCombat()
 			if(bot.chargeAnnounced < bot.botChargeGoal) { bot.tNextBotShot = localTime; continue; }
 			OnWeaponState(bot, WEAPON_STATE_FIRE, bot.chargeAnnounced, bot.firingCombo);
 		}
-		if(!WeaponHeatShot(bot, localTime, replication, WeaponHeatScale(bot))) continue;
+		const f32 overheatDelayMul = WeaponOverheatFireDelayMul(bot);
+		WeaponHeatShot(bot, localTime, replication, WeaponHeatScale(bot));
 		const vec2 rel = vec2(aim) - vec2(pos);
 		const vec2 exact = glm::length(rel) > 1.0f ? glm::normalize(rel) : vec2(1, 0);
 		const f32 margin = GetGameXmlContent().BotConstant("BOTLOGIC_STAGELEVEL_KEY_ATTACKRATE_MARGIN_IN_DEGREE");
@@ -1839,7 +1840,7 @@ void World::UpdateBotCombat()
 		bot.weaponAimYaw = atan2f(dir.y, dir.x);
 		PlayerWeaponShot(bot, pos, dir, best);
 		bot.botIdleResourceGoal = -1;
-		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot, bot.firingCombo) * 1000.0));
+		bot.tNextBotShot = TimeAdd(localTime, TimeMsToTime(BotNextFireDelay(bot, bot.firingCombo) * overheatDelayMul * 1000.0));
 	}
 }
 

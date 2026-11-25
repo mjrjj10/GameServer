@@ -918,6 +918,22 @@ void World::UpdateWeaponHeat(Player& player)
 		replication->SendGauge(player.clientHd, player.userID, 1, false, 0, (u16)h->maxGauge, (u16)h->maxGauge);
 		LOG("Overheat :: %ls weapon cooled down", player.name.data());
 	}
+
+	const bool chargeHeats = h->consumptionPerSecByCharge > 0 && player.weaponState == WEAPON_STATE_CHARGE && player.overheatUntil[m] == Time::ZERO;
+	if(!chargeHeats) {
+		player.chargeHeatAt = Time::ZERO;
+		player.chargeHeatCarry = 0;
+		return;
+	}
+	if(player.chargeHeatAt != Time::ZERO) {
+		const f32 acc = h->consumptionPerSecByCharge * (f32)TimeDiffSec(TimeDiff(player.chargeHeatAt, localTime)) + player.chargeHeatCarry;
+		const f32 whole = floorf(acc);
+		player.chargeHeatCarry = acc - whole;
+		player.heat[m] = CurrentHeat(player, *h, localTime) + whole;
+		player.heatLastShot[m] = localTime;
+		WeaponHeatCheckOverheat(player, *h, localTime, replication);
+	}
+	player.chargeHeatAt = localTime;
 }
 
 void World::OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& dir, f32 distance, const u8* rawPacket, i32 rawSize)
@@ -935,10 +951,7 @@ void World::OnWeaponShotPacket(Player& player, const vec3& origin, const vec2& d
 		LOG("Blocked :: %ls shot ignored (attack blocked by a status)", player.name.data());
 		return;
 	}
-	if(!WeaponHeatShot(player, localTime, replication, WeaponHeatScale(player))) {
-		LOG("Overheat :: %ls shot ignored (weapon overheated)", player.name.data());
-		return;
-	}
+	WeaponHeatShot(player, localTime, replication, WeaponHeatScale(player));
 	BreakHide(player);
 
 	player.pendingShotRawSize = MIN(rawSize, (i32)player.pendingShotRaw.size());

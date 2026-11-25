@@ -129,22 +129,30 @@ static inline vec2 SteerToward(const vec2& dir, const vec2& rel, f32 maxTurn)
 	return vec2(dir.x * c - dir.y * sn, dir.x * sn + dir.y * c);
 }
 
-static inline bool WeaponHeatShot(World::Player& player, Time now, Replication* replication, f32 consumptionScale)
+static inline void WeaponHeatCheckOverheat(World::Player& player, const WeaponHeatInfo& h, Time now, Replication* replication)
+{
+	const u32 m = player.mainCharaID & 1;
+	if(player.heat[m] < h.maxGauge) return;
+	player.heat[m] = h.maxGauge;
+	player.overheatUntil[m] = TimeAdd(now, TimeMsToTime(h.overheatDuration * 1000.0));
+	replication->SendGauge(player.clientHd, player.userID, 1, true, h.overheatDuration, (u16)h.maxGauge, (u16)h.maxGauge);
+	LOG("Overheat :: %ls locked %.1fs", player.name.data(), h.overheatDuration);
+}
+
+static inline void WeaponHeatShot(World::Player& player, Time now, Replication* replication, f32 consumptionScale)
 {
 	const WeaponHeatInfo* h = ActiveWeaponHeat(player);
-	if(!h) return true;
 	const u32 m = player.mainCharaID & 1;
-	if(player.overheatUntil[m] != Time::ZERO) return false;
-
+	if(!h || player.overheatUntil[m] != Time::ZERO) return;
 	player.heat[m] = CurrentHeat(player, *h, now) + h->consumption * consumptionScale;
 	player.heatLastShot[m] = now;
-	if(player.heat[m] >= h->maxGauge) {
-		player.heat[m] = h->maxGauge;
-		player.overheatUntil[m] = TimeAdd(now, TimeMsToTime(h->overheatDuration * 1000.0));
-		replication->SendGauge(player.clientHd, player.userID, 1, true, h->overheatDuration, (u16)h->maxGauge, (u16)h->maxGauge);
-		LOG("Overheat :: %ls locked %.1fs", player.name.data(), h->overheatDuration);
-	}
-	return true;
+	WeaponHeatCheckOverheat(player, *h, now, replication);
+}
+
+static inline f32 WeaponOverheatFireDelayMul(const World::Player& player)
+{
+	const WeaponHeatInfo* h = ActiveWeaponHeat(player);
+	return h && player.overheatUntil[player.mainCharaID & 1] != Time::ZERO ? h->overheatPenaltyRatio : 1.0f;
 }
 
 static inline f32 MasterStat(ClassType classType, i32 statType)

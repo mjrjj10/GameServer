@@ -6346,6 +6346,9 @@ bool GameXmlContent::LoadWeaponFiring()
 		pGauge->QueryFloatAttribute("_AutoRegenDelayTime", &h.autoRegenDelay);
 		pGauge->QueryFloatAttribute("_OverHeatDurationTime", &h.overheatDuration);
 		pGauge->QueryFloatAttribute("_OverHeatResetGauge", &h.overheatResetGauge);
+		pGauge->QueryFloatAttribute("_OverHeatPenaltyRatio", &h.overheatPenaltyRatio);
+		pGauge->QueryFloatAttribute("_ConsumptionPerSecByCharge", &h.consumptionPerSecByCharge);
+		if(h.overheatPenaltyRatio <= 0) h.overheatPenaltyRatio = 1;
 		if(h.maxGauge > 0) byFiring[id] = h;
 	}
 	for(XMLElement* pInfo = xmlWeapon.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
