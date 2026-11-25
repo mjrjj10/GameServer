@@ -140,7 +140,8 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	if(remote->behaviorType == Remote::BehaviorType::GRAPH && remote->fixedGraphLength <= 0 && aimPos && glm::length(vec2(*aimPos)) > 1.0f) {
 		const f32 aimDist = glm::length(vec2(*aimPos) - vec2(pos));
 		inst.range = inst.range > 0 ? MIN(aimDist, inst.range) : aimDist;
-		inst.landZ = aimPos->z;
+		f32 aimGround = 0;
+		inst.landZ = GroundBelow(vec2(*aimPos), MAX(aimPos->z, pos.z), &aimGround) ? aimGround : aimPos->z;
 		inst.hasLandZ = true;
 	}
 	inst.stopAtFirstHit = false;

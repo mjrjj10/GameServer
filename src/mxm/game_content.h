@@ -1380,6 +1380,8 @@ struct GameXmlContent
 		f32 destroy = 0;
 		u8 masterHoldAttacks = 0;
 		f32 masterAttackGap = 0;
+		ActionStateID keepFacingState = ActionStateID::INVALID;
+		eastl::fixed_vector<ActionStateID,4,false> keepFacingAfter;
 		f32 radius = 0;
 		f32 returnSpeedRate = 1;
 		f32 bodyBlockRadius = 0;

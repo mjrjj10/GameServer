@@ -683,6 +683,7 @@ struct World
 		Time monsterMasterRestUntil = Time::ZERO;
 		Time monsterLastMasterAttack = Time::ZERO;
 		u8 monsterMasterAttacks = 0;
+		ActionStateID monsterLastAttackState = ActionStateID::INVALID;
 		bool towerCalled = false;
 		Time botBossFrom = Time::ZERO;
 		Time coreAnnounceAt = Time::ZERO;

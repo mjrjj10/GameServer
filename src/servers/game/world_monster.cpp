@@ -1584,8 +1584,11 @@ static const MeasuredDashLag MEASURED_MONSTER_DASH_CLIENT_LAG[] = {
 
 void World::StartMonsterAttack(ActorNpc& npc,const GameXmlContent::MonsterAi& ai, const GameXmlContent::MonsterAttack* attack, const vec3* targetPos, f32 dist, f32 yaw, f32 run)
 {
+	const bool keepFacing = ai.keepFacingState != ActionStateID::INVALID && attack->state == ai.keepFacingState && eastl::find(ai.keepFacingAfter.begin(), ai.keepFacingAfter.end(), npc.monsterLastAttackState) != ai.keepFacingAfter.end();
+	if(keepFacing) yaw = npc.rot.z;
 	npc.rot.z = yaw;
 	npc.actionState = attack->state;
+	npc.monsterLastAttackState = attack->state;
 	npc.monsterStopSpeed = 0;
 	if(attack->target == GameXmlContent::MonsterAttack::MASTER) {
 		if(npc.monsterMasterAttacks < 255) npc.monsterMasterAttacks++;
@@ -2064,7 +2067,17 @@ void World::UpdateMonsterAi(f32 delta)
 			npc.monsterRetargetAt = TimeAdd(localTime, TimeMsToTime(MEASURED_MINION_RETARGET_MS));
 		}
 		const bool heldByTaunt = taunt != ActorUID::INVALID && taunt == npc.monsterTarget;
-		if(titanMode && lanePusher && targetIsMaster && !heldByTaunt && localTime >= npc.monsterRetargetAt) {
+		if(titanMode && lanePusher && targetIsMaster && !heldByTaunt && ai.masterHoldAttacks > 0 && npc.monsterMasterAttacks >= ai.masterHoldAttacks && localTime >= npc.stateEndAt) {
+			LOG("Monster :: creature=%d (local %d) releases its master target (attacks done)", (i32)npc.docID, npc.localID);
+			npc.monsterMasterSince = Time::ZERO;
+			if(ai.masterAttackGap > 0) npc.monsterMasterRestUntil = TimeAdd(npc.monsterLastMasterAttack, TimeMsToTime(ai.masterAttackGap * 1000.0));
+			npc.monsterTarget = ActorUID::INVALID;
+			targetPos = nullptr;
+			npc.monsterNextSearch = TimeAdd(localTime, TimeMsToTime(MEASURED_MINION_RETARGET_MS));
+			replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
+			MonsterStopIfHeld(npc);
+		}
+		if(titanMode && lanePusher && targetPos && targetIsMaster && !heldByTaunt && localTime >= npc.monsterRetargetAt) {
 			npc.monsterRetargetAt = TimeAdd(localTime, TimeMsToTime(MEASURED_MINION_RETARGET_MS));
 			f32 bestOther = ai.perception;
 			const ActorNpc* other = nullptr;

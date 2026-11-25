@@ -230,6 +230,12 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	proj.range = graph ? MAX(reliable ? MIN(distance, aimMax) : MIN(classRange, aimMax), aimMin) : remoteRange;
 	if(remote && remote->useOwnerRemoteSpeedRatio) proj.speed *= OwnerRemoteSpeedRatio(player);
 	proj.graph = graph;
+	if(graph && remote && remote->bezier && remote->fixedGraphLength <= 0 && fabsf(sinf(remote->bezierRotate[0] * PI / 180.0f)) > 0.01f) {
+		proj.curve = remote;
+		proj.curveStart = vec2(proj.pos);
+		proj.curveDir = proj.dir;
+		proj.curveAdvance = 0;
+	}
 	proj.ignoreWalls = !remote || remote->ignoreGround;
 	proj.wallZ = player.body->GetWorldPos().z + BodyMidHeight(player);
 	proj.jumpClear = FIRE_NODE_HEIGHT + (remote ? (f32)remote->boundSize[2] * 0.5f : 0.0f);
@@ -599,7 +605,7 @@ void World::UpdateProjectiles(f32 delta)
 		proj->pendingAdvance = 0;
 		if(proj->curve && step > 0) {
 			const Remote& c = *proj->curve;
-			const f32 limit = c.fixedGraphLength;
+			const f32 limit = c.fixedGraphLength > 0 ? c.fixedGraphLength : proj->range;
 			proj->curveAdvance += step;
 			const f32 u = MIN(proj->curveAdvance / limit, 1.0f);
 			const f32 v = 1.0f - u;
@@ -638,7 +644,7 @@ void World::UpdateProjectiles(f32 delta)
 		const vec2 to = from + proj->dir * step;
 		bool destroyed = false;
 
-		if(!proj->graph) {
+		if(!proj->graph || proj->curve) {
 			const Remote* shotRemote = GetGameXmlContent().FindRemote(proj->remoteDoc);
 			vec2 contact;
 			RemoteInst* reflector = shotRemote && shotRemote->canReflect ? FindProjectileReflector(*proj, from, to, &contact) : nullptr;

@@ -1364,6 +1364,12 @@ bool GameXmlContent::LoadMonsterAi()
 			ai.destroy = pInfo->FloatAttribute("destroy");
 			ai.masterHoldAttacks = (u8)MAX(pInfo->IntAttribute("masterHoldAttacks"), 0);
 			ai.masterAttackGap = pInfo->FloatAttribute("masterAttackGap");
+			if(const char* keep = pInfo->Attribute("keepFacing")) ai.keepFacingState = ActionStateFromString(keep);
+			if(const char* after = pInfo->Attribute("keepFacingAfter")) {
+				char buf[256];
+				EA::StdC::Strlcpy(buf, after, sizeof(buf));
+				for(char* tok = strtok(buf, " "); tok && !ai.keepFacingAfter.full(); tok = strtok(nullptr, " ")) ai.keepFacingAfter.push_back(ActionStateFromString(tok));
+			}
 			ai.radius = pInfo->FloatAttribute("radius");
 			ai.tagKey = StatusTypeKey(pInfo->Attribute("tag") ? pInfo->Attribute("tag") : "");
 			if(const char* idle = pInfo->Attribute("idle")) ai.idle = ActionStateFromString(idle);
