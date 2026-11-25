@@ -409,8 +409,9 @@ void World::PlayerCancelStance(Player& player)
 void World::StanceWeaponUse(Player& player)
 {
 	ActorMaster& m = player.Main();
+	static const f64 HYP_STANCE_EXIT_AFTER_LAST_SHOT_MS = 100.0;
 	if(m.stance == 0 || m.stanceShotsLeft <= 0) return;
-	if(--m.stanceShotsLeft == 0) SetStance(m, 0, 0, 0, false);
+	if(--m.stanceShotsLeft == 0) m.stanceUntil = TimeAdd(localTime, TimeMsToTime(HYP_STANCE_EXIT_AFTER_LAST_SHOT_MS));
 }
 
 void World::ToggleOn(Player& player, SkillID skillID, const vec3& castPos)
