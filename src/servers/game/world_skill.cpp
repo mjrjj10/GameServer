@@ -1012,6 +1012,14 @@ void World::EndActionStatuses(Player& player)
 		it->until = localTime;
 		LOG("Status :: %ls status=%d removed at client action end", player.name.data(), it->statusID);
 	}
+	foreach(r, remoteInsts) {
+		if(r->ownerIndex != player.index || r->aniEndAt == Time::ZERO || r->aniEndAt <= localTime) continue;
+		r->aniEndAt = localTime;
+		LOG("Remote :: %ls remote %u removed at client action end", player.name.data(), r->remote ? (u32)r->remote->ID : 0u);
+	}
+	for(i32 i = (i32)pendingRemotes.size() - 1; i >= 0; i--) {
+		if(pendingRemotes[i].ownerIndex == player.index && pendingRemotes[i].aniEndAt != Time::ZERO && pendingRemotes[i].aniEndAt > localTime) pendingRemotes.erase(pendingRemotes.begin() + i);
+	}
 }
 
 void World::EndCastStatuses(Player& player, const Player::Casting& c)
