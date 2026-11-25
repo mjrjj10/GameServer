@@ -294,6 +294,8 @@ struct World
 		f32 stamina = -1.0f;
 		f32 benchStamina = -1.0f;
 		f32 mana = -1.0f;
+		eastl::array<f32,3> testerSolRefund = {{ 0, 0, 0 }};
+		Time testerSolRefundAt = Time::ZERO;
 		Time tNextBotShot = Time::ZERO;
 		Time botMoveAt = Time::ZERO;
 		Time botJumpRollAt = Time::ZERO;
