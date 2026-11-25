@@ -1010,7 +1010,9 @@ RemoteIdx World::SelectWeaponRemote(Player& player, const WeaponFiring& wf)
 	RemoteIdx idx = wf.base;
 	if(player.chargeLevel > 0 && player.chargeLevel <= wf.charge.size()) idx = wf.charge[player.chargeLevel - 1];
 	else if(player.firingCombo > 0 && player.firingCombo <= wf.combo.size()) idx = wf.combo[player.firingCombo - 1];
-	player.shotCount[m]++;
+	u16 clientCount = 0;
+	if(player.clientHd != ClientHandle::INVALID && wf.countRate > 0 && player.pendingShotRawSize > 0 && Replication::ShotFiringCount(player.pendingShotRaw.data(), player.pendingShotRawSize, clientCount)) player.shotCount[m] = clientCount;
+	else player.shotCount[m]++;
 	if(wf.countRate > 0 && wf.countRemote != RemoteIdx::INVALID && player.shotCount[m] % wf.countRate == 0) idx = wf.countRemote;
 	if(wf.replaceStatus != 0 && wf.replaceRemote != RemoteIdx::INVALID && FindActiveStatus(player.index, wf.replaceStatus)) {
 		idx = wf.replaceRemote;

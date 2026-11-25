@@ -741,6 +741,10 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 {
 	if(target.dead || target.untargetable) return;
 	if(IsMeasuredRageOnStatus(statusID) && !caster.dead) GainRageOnHit(caster);
+	if(IsMeasuredRageBundleStatus(statusID) && !caster.dead && caster.Main().classType == ClassType::SHUGOTRADER && (caster.rageBundleAt == Time::ZERO || TimeDurationMs(caster.rageBundleAt, localTime) > MEASURED_RAGE_BUNDLE_ONCE_MS)) {
+		caster.rageBundleAt = localTime;
+		GainRageOnHit(caster);
+	}
 	const ActorNpc* npcSource = &caster == &target && statusCasterOverride != ActorUID::INVALID ? FindNpcActor(statusCasterOverride) : nullptr;
 	const bool hostileSource = &caster != &target ? caster.team != target.team : npcSource && (npcSource->ownerUID != ActorUID::INVALID ? npcSource->ownerIndex < players.size() && players[npcSource->ownerIndex].team != target.team : npcSource->faction != (Faction)target.team);
 	if(caster.team != target.team) target.statusesTaken++;
@@ -937,6 +941,10 @@ void World::ApplyStatus(Player& caster, Player& target, i32 statusID, f32 power,
 		if(manaMax > 0 && target.mana >= 0) { target.mana = MIN(target.mana + manaMax * ratio, manaMax); target.manaDirty = true; }
 		if(staminaMax > 0 && target.stamina >= 0) { target.stamina = MIN(target.stamina + staminaMax * ratio, staminaMax); target.staminaDirty = true; }
 		if(ultMax > 0 && target.ultGauge >= 0) { target.ultGauge = MIN(target.ultGauge + ultMax * ratio, ultMax); target.ultDirty = true; }
+		for(i32 r = 0; r < 3; r++) {
+			const f32 resMax = MasterStat(cls, RESOURCES[r].maxStat);
+			if(resMax > 0 && target.res[r] >= 0 && target.res[r] < resMax) { target.res[r] = MIN(target.res[r] + resMax * ratio, resMax); target.resDirty = true; }
+		}
 	}
 	if(info && target.mana >= 0 && !target.dead) {
 		const f32 manaMax = ResourceMax(target.Main(), STAT_MANA);

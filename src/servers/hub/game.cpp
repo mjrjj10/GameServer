@@ -2103,6 +2103,23 @@ void HubGame::MmOnGameEnded(SortieUID sortieUID, bool serverLost)
 	if(eastl::find(endedSorties.begin(), endedSorties.end(), sortieUID) == endedSorties.end()) endedSorties.push_back(sortieUID);
 	if(serverLost) ForgetSortieSentToGame(sortieUID);
 	LOG("HubGame :: game %llu ended%s", (u64)sortieUID, serverLost ? " (game server lost)" : "");
+	if(serverLost) return;
+	foreach(p, playerList) {
+		if(p->suspendedSortieUID != sortieUID) continue;
+		p->suspendedSortieUID = SortieUID::INVALID;
+		p->suspendedAccountUID = AccountUID::INVALID;
+		p->resultSortieUID = sortieUID;
+		LOG("[client%x] HubGame :: game %llu ended while back on the bridge, result screen", p->clientHd, (u64)sortieUID);
+		replication.SendLoadLobby(p->clientHd, MapIndex::LOBBY_NORMAL, false);
+		u32 stayVoteMs = MEASURED_RESTART_VOTE_SHORT_MS;
+		foreach(r, sortieRosters) {
+			if(r->sortieUID != sortieUID) continue;
+			const GameXmlContent::StageMaps* maps = GetGameXmlContent().FindStageMaps(r->stage);
+			if(maps && maps->gameMode == GameModeType::GAME_MODE_GOT) stayVoteMs = MEASURED_RESTART_VOTE_MS;
+			if(r->stayEndAt == Time::ZERO) r->stayEndAt = TimeAdd(localTime, TimeMsToTime(stayVoteMs));
+		}
+		replication.SendResultScreenStart(p->clientHd, stayVoteMs);
+	}
 }
 
 void HubGame::MmOnRoomCancelled(SortieUID sortieUID)

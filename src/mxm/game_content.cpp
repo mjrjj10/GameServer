@@ -1362,6 +1362,8 @@ bool GameXmlContent::LoadMonsterAi()
 			ai.perception = pInfo->FloatAttribute("perception");
 			ai.lost = pInfo->FloatAttribute("lost");
 			ai.destroy = pInfo->FloatAttribute("destroy");
+			ai.masterHoldAttacks = (u8)MAX(pInfo->IntAttribute("masterHoldAttacks"), 0);
+			ai.masterAttackGap = pInfo->FloatAttribute("masterAttackGap");
 			ai.radius = pInfo->FloatAttribute("radius");
 			ai.tagKey = StatusTypeKey(pInfo->Attribute("tag") ? pInfo->Attribute("tag") : "");
 			if(const char* idle = pInfo->Attribute("idle")) ai.idle = ActionStateFromString(idle);
@@ -4329,6 +4331,7 @@ bool GameXmlContent::LoadStatusData()
 			st.bigAggro = type && EA::StdC::Strcmp(type, "STATUS_TYPE_BIGAGGRO") == 0;
 			for(XMLElement* pGroup = pCommon->FirstChildElement(); pGroup; pGroup = pGroup->NextSiblingElement()) {
 				if(pGroup->FirstChildElement("_CoolTimeRecovery")) st.coolTimeRecovery = true;
+				if(EA::StdC::Strcmp(pGroup->Name(), "_SOULMASTER") == 0) pGroup->QueryAttribute("_TeleportDocIndex", &st.teleportDoc);
 				for(XMLElement* pLimit = pGroup->FirstChildElement("_SummonLimit"); pLimit && !st.summonLimits.full(); pLimit = pLimit->NextSiblingElement("_SummonLimit")) {
 					const i32 creature = pLimit->IntAttribute("DATAKEY");
 					const i32 limit = pLimit->IntAttribute("DATA");
@@ -4983,7 +4986,13 @@ bool GameXmlContent::LoadSummons()
 {
 	XMLDocument xmlSummon;
 	if(!LoadXMLFile(L"/client/CREATURE_MONSTER_SUMMON.xml", xmlSummon)) return false;
-	for(XMLElement* pInfo = xmlSummon.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) LoadSummonInfo(pInfo);
+	for(XMLElement* pInfo = xmlSummon.FirstChildElement()->FirstChildElement(); pInfo; pInfo = pInfo->NextSiblingElement()) {
+		LoadSummonInfo(pInfo);
+		if(XMLElement* stats = pInfo->FirstChildElement("StatsComData")) {
+			const i32 defence = stats->IntAttribute("_DFStatusIndex", 0);
+			if(defence != 0) creatureDefenceStatus[pInfo->IntAttribute("ID")] = defence;
+		}
+	}
 	eastl::hash_set<i32> sharedEntities;
 	XMLDocument xmlShared;
 	if(LoadXMLFile(L"/client/ActionBase_Class.xml", xmlShared)) {

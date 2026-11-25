@@ -628,6 +628,7 @@ struct Replication
 	void RelayRemoteSyncTarget(ClientHandle senderHd, const u8* packetData, i32 packetSize);
 	void SendRemoteSyncTargetToAll(u32 remoteID, ActorUID targetUID, const vec3& pos, const vec2* moveDir, f32 moveDirZ = 0);
 	u16 RelayWeaponShot(ClientHandle senderHd, const u8* packetData, i32 packetSize, const vec3& target, RemoteIdx remoteDoc, bool groundTarget = false);
+	static bool ShotFiringCount(const u8* packetData, i32 packetSize, u16& count);
 	void RelayWeaponState(ClientHandle senderHd, ActorUID ownerUID, i32 weaponID, i32 state, u8 chargeLevel, u8 firingCombo);
 	void SendWeaponStateTo(ClientHandle clientHd, ActorUID ownerUID, i32 weaponID, i32 state, i32 result);
 	void SendScoreToAll(UserID killerID, u8 team, i32 kills, i32 score, i32 teamKills, i32 teamScore, UserID victimID, u8 victimTeam, i32 victimDeaths, i32 victimTeamKills);

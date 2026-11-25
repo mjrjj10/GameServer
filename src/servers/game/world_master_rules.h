@@ -331,12 +331,20 @@ static inline bool IsMeasuredSpecialFirst(CreatureIndex doc)
 	return false;
 }
 
-static const i32 MEASURED_RAGE_ON_STATUS[] = { 1230330003, 1230330040, 1230330042, 1230330046 };
+static const i32 MEASURED_RAGE_ON_STATUS[] = { 1230330003 };
+static const i32 MEASURED_RAGE_BUNDLE_STATUS_FIRST = 1230330010;
+static const i32 MEASURED_RAGE_BUNDLE_STATUS_LAST = 1230330049;
+static const f64 MEASURED_RAGE_BUNDLE_ONCE_MS = 100.0;
 
 static inline bool IsMeasuredRageOnStatus(i32 status)
 {
 	for(i32 s : MEASURED_RAGE_ON_STATUS) if(s == status) return true;
 	return false;
+}
+
+static inline bool IsMeasuredRageBundleStatus(i32 status)
+{
+	return status >= MEASURED_RAGE_BUNDLE_STATUS_FIRST && status <= MEASURED_RAGE_BUNDLE_STATUS_LAST;
 }
 
 static const i32 MEASURED_BOT_SKILL_FIRST_UPGRADES = 6;

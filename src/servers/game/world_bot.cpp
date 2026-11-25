@@ -1586,7 +1586,7 @@ bool World::BotGateBlocks(const Player& bot, const vec2& from, vec2* goal) const
 bool World::RaycastShot(const vec3& from, const vec3& to, i32 team, f32* dist, const PxRigidActor** wallActor, ActorDynamic** gate)
 {
 	*gate = nullptr;
-	bool blocked = physics.RaycastStatic(from, to, dist, team, wallActor);
+	bool blocked = physics.RaycastStatic(from, to, dist, team, wallActor, true);
 	const vec2 d = vec2(to) - vec2(from);
 	const f32 len = glm::length(to - from);
 	foreach_const(g, teamGates) {

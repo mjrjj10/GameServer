@@ -126,7 +126,7 @@ World::RemoteInst* World::SpawnRemote(u32 ownerIndex, RemoteIdx idx, const vec3&
 	if(child && remote->groundMoveOffsetZ >= 0) {
 		const auto& groundOwner = players[ownerIndex];
 		const bool lifted = groundOwner.dashFly && groundOwner.dashLift > 0 && groundOwner.dashDone < groundOwner.dashDist;
-		inst.pos.z = (lifted ? groundOwner.dashOrigin.z : groundOwner.body->GetWorldPos().z) + remote->groundMoveOffsetZ;
+		inst.pos.z = (remoteChildFromLanding ? pos.z : lifted ? groundOwner.dashOrigin.z : groundOwner.body->GetWorldPos().z) + remote->groundMoveOffsetZ;
 	}
 	inst.dir = dir;
 	inst.travelled = 0;
@@ -1709,8 +1709,10 @@ bool World::UpdateGraphRemote(RemoteInst& inst, f32 delta)
 			return 3 * v * v * u * remote.bezierUp[0] * cosf(remote.bezierRotate[0] * PI / 180.0f) + 3 * v * u * u * remote.bezierUp[1] * cosf(remote.bezierRotate[1] * PI / 180.0f);
 		};
 		const f32 uAfter = total > 0 ? MIN(inst.travelled / total, 1.0f) : 1.0f;
-		const vec3 rayFrom = vec3(vec2(before), inst.wallZ + arcHeight(uBefore));
-		const vec3 rayTo = vec3(vec2(inst.pos), inst.wallZ + arcHeight(uAfter));
+		const f32 ownerMid = BodyMidHeight(players[inst.ownerIndex]);
+		const f32 lobRise = inst.hasLandZ ? inst.landZ + ownerMid - inst.wallZ : 0.0f;
+		const vec3 rayFrom = vec3(vec2(before), inst.wallZ + arcHeight(uBefore) + lobRise * uBefore);
+		const vec3 rayTo = vec3(vec2(inst.pos), inst.wallZ + arcHeight(uAfter) + lobRise * uAfter);
 		f32 wallDist = 0;
 		const PxRigidActor* wallActor = nullptr;
 		ActorDynamic* wallGate = nullptr;
@@ -1718,7 +1720,9 @@ bool World::UpdateGraphRemote(RemoteInst& inst, f32 delta)
 			const f32 len = glm::length(rayTo - rayFrom);
 			const f32 k = len > 0.001f ? wallDist / len : 0.0f;
 			inst.pos = vec3(vec2(before) + (vec2(inst.pos) - vec2(before)) * k, inst.pos.z);
-			LOG("Remote :: %d lobbed into a wall at (%.0f, %.0f)", (i32)remote.ID, inst.pos.x, inst.pos.y);
+			inst.landZ = rayFrom.z + (rayTo.z - rayFrom.z) * k - ownerMid;
+			inst.hasLandZ = true;
+			LOG("Remote :: %d lobbed into a wall at (%.0f, %.0f, %.0f)", (i32)remote.ID, inst.pos.x, inst.pos.y, inst.landZ);
 			RemoteHitAlongPath(inst);
 			inst.travelled = total;
 			return true;
@@ -1838,6 +1842,7 @@ void World::DestroyRemote(i32 index)
 		const RemoteIdx next = remote.destroyCreateRemote;
 		const RemoteInst copy = inst;
 		remoteInsts.erase_unsorted(remoteInsts.begin() + i);
+		remoteChildFromLanding = copy.hasLandZ;
 		if(!copy.chainEnded) {
 			const i32 childExclude = remote.behaviorType == Remote::BehaviorType::CHAIN ? copy.lastHitIndex : copy.excludeIndex;
 			if(next != RemoteIdx::INVALID) {
@@ -1869,6 +1874,7 @@ void World::DestroyRemote(i32 index)
 			}
 			SpawnRemoteRules(*this, copy, remote.onDestroy, remote.creatorOnDestroy, copy.pos, childExclude, next);
 		}
+		remoteChildFromLanding = false;
 	}
 }
 

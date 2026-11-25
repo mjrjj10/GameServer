@@ -480,14 +480,15 @@ void World::GrantMonsterKillPoints(const ActorNpc& npc, ActorUID killerUID)
 	static const u32 towerCenterTag = StatusTypeKey("Tower_Center");
 	static const u32 towerSideTag = StatusTypeKey("Tower_Side");
 	static const u32 chiefTag = StatusTypeKey("Chief");
+	static const CreatureIndex MEASURED_END_BOSS_CREATURE = CreatureIndex(105001200);
 	if(ActorMaster* master = FindMasterActor(killerUID)) {
 		if(master->parent && npc.monsterAi) {
 			const u32 tag = npc.monsterAi->tagKey;
 			i32 kind = -1;
 			if(tag == minionTag) kind = END_KILL_MINION;
 			else if(tag == towerCenterTag || tag == towerSideTag) kind = END_KILL_TOWER;
-			else if(tag == chiefTag || npc.faction == Faction::ORANGE) kind = END_KILL_BOSS;
-			else if(npc.faction == Faction::MONSTER) kind = END_KILL_NEUTRAL;
+			else if(npc.docID == MEASURED_END_BOSS_CREATURE) kind = END_KILL_BOSS;
+			else if(tag == chiefTag || npc.faction == Faction::ORANGE || npc.faction == Faction::MONSTER) kind = END_KILL_NEUTRAL;
 			if(kind >= 0 && master->parent->monsterKills[kind] < 255) master->parent->monsterKills[kind]++;
 			if(kind == END_KILL_MINION || kind == END_KILL_NEUTRAL || kind == END_KILL_BOSS) replication->SendMonsterKillCountsToAll(master->parent->userID, master->parent->monsterKills[END_KILL_MINION], master->parent->monsterKills[END_KILL_NEUTRAL] + master->parent->monsterKills[END_KILL_BOSS]);
 		}

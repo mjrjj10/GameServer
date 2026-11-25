@@ -539,22 +539,34 @@ void World::UpdateSummonAi(f32 delta)
 			if(lost) {
 				target = nullptr;
 				npcTarget = nullptr;
+				const auto takenBySibling = [&](ActorUID uid) {
+					foreach_const(o, actorNpcList) {
+						if(&*o != &npc && o->ownerIndex == npc.ownerIndex && o->docID == npc.docID && o->hp > 0 && o->removeAt == Time::ZERO && o->chaseTarget == uid) return true;
+					}
+					return false;
+				};
 				f32 best = info->perception;
+				f32 bestTaken = info->perception;
 				ActorUID chosen = ActorUID::INVALID;
+				Player* takenPlayer = nullptr;
+				ActorNpc* takenNpc = nullptr;
+				ActorUID takenUID = ActorUID::INVALID;
 				foreach(e, players) {
 					if(e->dead || e->untargetable || e->team == owner.team || !(e->fogSeenBy & (1u << owner.team))) continue;
-					bool taken = false;
-					foreach_const(o, actorNpcList) {
-						if(&*o != &npc && o->ownerIndex == npc.ownerIndex && o->docID == npc.docID && o->chaseTarget == e->Main().UID) taken = true;
-					}
-					if(taken) continue;
 					const f32 d = glm::length(vec2(e->body->GetWorldPos()) - vec2(npc.pos));
+					if(takenBySibling(e->Main().UID)) { if(d < bestTaken) { bestTaken = d; takenPlayer = &*e; takenNpc = nullptr; takenUID = e->Main().UID; } continue; }
 					if(d < best) { best = d; target = &*e; chosen = e->Main().UID; }
 				}
-				foreach_const(o, actorNpcList) {
+				foreach(o, actorNpcList) {
 					if(&*o == &npc || o->hp <= 0 || o->removeAt != Time::ZERO || !NpcHittableBy(*o, owner)) continue;
 					const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos));
+					if(takenBySibling(o->UID)) { if(d < bestTaken) { bestTaken = d; takenPlayer = nullptr; takenNpc = &*o; takenUID = o->UID; } continue; }
 					if(d < best) { best = d; target = nullptr; npcTarget = &*o; chosen = o->UID; }
+				}
+				if(chosen == ActorUID::INVALID && takenUID != ActorUID::INVALID) {
+					target = takenPlayer;
+					npcTarget = takenNpc;
+					chosen = takenUID;
 				}
 				if(chosen != npc.chaseTarget) {
 					if(chosen != ActorUID::INVALID) StopNpcLeg(npc);

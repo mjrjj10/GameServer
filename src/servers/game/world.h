@@ -330,6 +330,7 @@ struct World
 		Time tNextSpeedRefresh = Time::ZERO;
 		Time tNextRegen = Time::ZERO;
 		Time rageGainAt = Time::ZERO;
+		Time rageBundleAt = Time::ZERO;
 		eastl::array<f32,2> heat = { 0, 0 };
 		eastl::array<Time,2> heatLastShot = { Time::ZERO, Time::ZERO };
 		eastl::array<Time,2> overheatUntil = { Time::ZERO, Time::ZERO };
@@ -384,6 +385,8 @@ struct World
 		f32 dragElapsed = 0;
 		Time fearNextTurn = Time::ZERO;
 		Time dashUntil = Time::ZERO;
+		SkillID dashSkill = SkillID::INVALID;
+		Time jumpAt = Time::ZERO;
 		bool dashJumpable = false;
 		Time weaponLungeUntil = Time::ZERO;
 		vec2 dashDir = vec2(1, 0);
@@ -676,6 +679,10 @@ struct World
 		Time monsterNextSearch = Time::ZERO;
 		Time monsterRetargetAt = Time::ZERO;
 		Time monsterMasterSince = Time::ZERO;
+		Time monsterTitanCheckAt = Time::ZERO;
+		Time monsterMasterRestUntil = Time::ZERO;
+		Time monsterLastMasterAttack = Time::ZERO;
+		u8 monsterMasterAttacks = 0;
 		bool towerCalled = false;
 		Time botBossFrom = Time::ZERO;
 		Time coreAnnounceAt = Time::ZERO;
@@ -1208,7 +1215,7 @@ struct World
 	struct MonsterFireEvent { ActorUID npc; ActorUID target; Time at; const GameXmlContent::MonsterFire* fire; u32 seed; bool byRemotes = false; f32 castYaw = 0; Time passEnd = Time::ZERO; };
 	eastl::fixed_vector<MonsterFireEvent,64,true> monsterFires;
 	void FireMonsterRemote(const MonsterFireEvent& fire);
-	struct MonsterRemote { ActorUID owner; ActorUID target; const Remote* remote; vec3 pos; vec2 dir; Time expire; Time nextTime; i32 activations; f32 travelled; bool impacted; u32 seed = 0; u32 creatorSeed = 0; f32 lift = 0; i32 spinIndex = -1; f32 spinAngle = 0; Time spinFrom = Time::ZERO; f32 offsetY = 0; ActorUID spared = ActorUID::INVALID; vec2 graphStart = vec2(0); vec2 graphDir = vec2(1, 0); f32 syncIn = MEASURED_REMOTE_SYNC_FIRST_SEC; eastl::fixed_vector<eastl::pair<ActorUID,Time>,24,true> hitUntil; };
+	struct MonsterRemote { ActorUID owner; ActorUID target; const Remote* remote; vec3 pos; vec2 dir; Time expire; Time nextTime; i32 activations; f32 travelled; bool impacted; u32 seed = 0; u32 creatorSeed = 0; f32 lift = 0; i32 spinIndex = -1; f32 spinAngle = 0; Time spinFrom = Time::ZERO; f32 offsetY = 0; ActorUID spared = ActorUID::INVALID; vec2 graphStart = vec2(0); vec2 graphDir = vec2(1, 0); f32 syncIn = MEASURED_REMOTE_SYNC_FIRST_SEC; Time retargetAt = Time::ZERO; eastl::fixed_vector<eastl::pair<ActorUID,Time>,24,true> hitUntil; };
 	eastl::fixed_vector<MonsterRemote,128,true> monsterRemotes;
 	void SpawnMonsterRemote(const ActorNpc& npc, const Remote& remote, const vec3& pos, const vec2& dir, ActorUID target, bool send, u32 seed = 0, u32 parentSeed = 0, f32 lift = 0, ActorUID spared = ActorUID::INVALID, bool sceneRoot = false, i32 spinIndex = -1, f32 spinAngle = 0, const vec3* spinOrigin = nullptr);
 	void SpawnMonsterChildRemotes(const ActorNpc& npc, const Remote& child, const Remote::SpawnRule& rule, const vec3& pos, const vec2& dir, ActorUID target, u32 parentSeed = 0, bool viaCreator = false, u32 childSeedBase = 0, f32 lift = 0, ActorUID spared = ActorUID::INVALID);
@@ -1261,6 +1268,7 @@ struct World
 	void BindClientRemote(Player& player, RemoteIdx doc, u32 seed);
 	void BindMeleeSeed(Player& player, u32 seed);
 	ActorUID remoteParentOverride = ActorUID::INVALID;
+	bool remoteChildFromLanding = false;
 	u32 remoteSendParentID = 0;
 	ClientHandle remoteSendParentSeedHd = ClientHandle::INVALID;
 	ActorUID remoteTargetEntityOverride = ActorUID::INVALID;

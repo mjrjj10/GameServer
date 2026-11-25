@@ -751,7 +751,6 @@ void Replication::SendChatWhisperToClient(ClientHandle destClientHd, const wchar
 
 static const i32 PROFILE_WEAPON_TYPES = 3;
 static const i32 MEASURED_TRAINING_BENCH_CHARACTER_TYPE = 5;
-static const i32 PROFILE_WEAPON_STRIDE = 4;
 
 void Replication::SendAccountDataPvp(ClientHandle clientHd)
 {
@@ -871,7 +870,7 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 	{
 		PacketWriter<Sv::SN_ProfileWeapons,8192> packet;
 
-		packet.Write<u16>(fullRoster ? (u16)(2 + (content.masters.size() - 2) * PROFILE_WEAPON_TYPES) : (u16)2);
+		packet.Write<u16>(fullRoster ? (u16)(content.masters.size() * PROFILE_WEAPON_TYPES) : (u16)2);
 
 		Sv::SN_ProfileWeapons::Weapon weap;
 		weap.characterID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (i32)player->mainClass);
@@ -892,15 +891,18 @@ void Replication::SendAccountDataPvp(ClientHandle clientHd)
 
 		if(fullRoster) {
 			foreach_const(m, content.masters) {
-				if(m->classType == player->mainClass || m->classType == player->subClass) continue;
+				const bool pair = m->classType == player->mainClass || m->classType == player->subClass;
+				const u32 equippedType = (u32)(m->classType == player->mainClass ? content.WeaponTypeOf(player->mainClass, player->mainWeapon) : m->classType == player->subClass ? content.WeaponTypeOf(player->subClass, player->subWeapon) : 1);
 				weap.characterID = (LocalActorID)((u32)LocalActorID::FIRST_SELF_MASTER + (i32)m->classType);
 				for(int wi = 0; wi < PROFILE_WEAPON_TYPES; wi++) {
-					const u32 at = (u32)(1 + wi * PROFILE_WEAPON_STRIDE);
-					weap.weaponType = wi + 1;
-					weap.weaponIndex = at < m->weaponIDs.size() ? m->weaponIDs[at] : m->weaponIDs[0];
+					const u32 type = (u32)(wi + 1);
+					if(pair && type == equippedType) continue;
+					weap.weaponType = type;
+					const i32 index = content.WeaponIndexFor(*m, type, 0);
+					weap.weaponIndex = index > 0 ? (decltype(weap.weaponIndex))index : m->weaponIDs[0];
 					weap.grade = 0;
-					weap.isUnlocked = wi == 0;
-					weap.isActivated = wi == 0;
+					weap.isUnlocked = 1;
+					weap.isActivated = !pair && type == equippedType;
 					packet.Write(weap);
 				}
 			}
@@ -2024,6 +2026,30 @@ bool Replication::SendRemoteCreateToClient(i32 clientID, const RemoteCreate& rem
 	packet.Write<u32>((u32)targetLocal);
 	packet.Write<u8>(remote.flags);
 	SendPacket(clientHd, packet);
+	return true;
+}
+
+bool Replication::ShotFiringCount(const u8* packetData, i32 packetSize, u16& count)
+{
+	ConstBuffer buff(packetData, packetSize);
+	if(!buff.CanRead(sizeof(LocalActorID) * 2 + sizeof(u32) + sizeof(float3) + (offsetof(Cl::CQ_GamePlayerSyncPhy, charNameLen) - offsetof(Cl::CQ_GamePlayerSyncPhy, unkShort1)) + sizeof(u16))) return false;
+	buff.Read<LocalActorID>();
+	buff.Read<LocalActorID>();
+	buff.Read<u32>();
+	buff.Read<float3>();
+	buff.ReadRaw(offsetof(Cl::CQ_GamePlayerSyncPhy, charNameLen) - offsetof(Cl::CQ_GamePlayerSyncPhy, unkShort1));
+	const u16 fireObjectLen = buff.Read<u16>();
+	if(fireObjectLen > MAX_FIRE_OBJECT_LEN || !buff.CanRead(fireObjectLen * sizeof(wchar) + sizeof(u16) + sizeof(f32) + sizeof(u32) * 2 + sizeof(u16) * 4 + sizeof(u8) * 4)) return false;
+	buff.ReadRaw(fireObjectLen * sizeof(wchar));
+	buff.Read<u16>();
+	buff.Read<f32>();
+	buff.Read<u32>();
+	buff.Read<u16>();
+	buff.Read<u16>();
+	buff.Read<u16>();
+	buff.Read<u8>();
+	buff.Read<u8>();
+	count = buff.Read<u16>();
 	return true;
 }
 

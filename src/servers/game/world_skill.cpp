@@ -759,7 +759,33 @@ bool World::TeleportNextToTarget(Player& player, ActorUID target)
 		const GameXmlContent::MonsterAi* same = GetGameXmlContent().FindMonsterAi(m->first);
 		if(same && m->second > 0 && same->radius == targetAi->radius && same->sizeRank == targetAi->sizeRank && same->tagKey != 0 && targetAi->tagKey != 0) { measured = m->second; break; }
 	}
-	if(measured >= 0) dest = vec3(vec2(targetPos) + dir * measured, targetPos.z);
+	if(measured >= 0) {
+		static const f32 HYP_TELEPORT_CLEARANCE_MARGIN = 40.0f;
+		static const f32 HYP_TELEPORT_ROTATE_STEP_DEG = 15.0f;
+		const f32 mid = BodyMidHeight(player);
+		const f32 clearance = HitRadius(player) + HYP_TELEPORT_CLEARANCE_MARGIN;
+		const auto clearAt = [&](const vec2& at) {
+			const vec3 c = vec3(at, targetPos.z + mid);
+			if(physics.InsideStatic(c, clearance * 4.0f)) return false;
+			for(i32 k = 0; k < 8; k++) {
+				const f32 a = (f32)k * PI / 4.0f;
+				f32 d = 0;
+				if(physics.RaycastStatic(c, c + vec3(cosf(a) * clearance, sinf(a) * clearance, 0), &d)) return false;
+			}
+			return true;
+		};
+		vec2 chosen = dir;
+		for(i32 s = 0; s <= 12; s++) {
+			const f32 deg = (f32)((s + 1) / 2) * HYP_TELEPORT_ROTATE_STEP_DEG * (s % 2 ? 1.0f : -1.0f);
+			const f32 ra = deg * PI / 180.0f;
+			const vec2 d = vec2(dir.x * cosf(ra) - dir.y * sinf(ra), dir.x * sinf(ra) + dir.y * cosf(ra));
+			if(clearAt(vec2(targetPos) + d * measured)) { chosen = d; if(s > 0) LOG("Teleport :: %ls spot next to target %u blocked, turned %.0f deg", player.name.data(), (u32)target, deg); break; }
+		}
+		dir = chosen;
+		dest = vec3(vec2(targetPos) + dir * measured, targetPos.z);
+		f32 ground = 0;
+		if(GroundBelow(vec2(dest), targetPos.z, &ground)) dest.z = ground;
+	}
 	else if(physics.RaycastStatic(probe, vec3(vec2(targetPos), targetPos.z + TELEPORT_PROBE_HEIGHT), &hit)) dest = vec3(vec2(targetPos) + dir * (TELEPORT_PROBE_DIST - hit + HitRadius(player)), targetPos.z);
 	LOG("Teleport :: %ls next to target %u at (%.0f, %.0f), %.0f from it", player.name.data(), (u32)target, dest.x, dest.y, glm::length(vec2(dest) - vec2(targetPos)));
 	WarpPlayer(player, dest, atan2f(-dir.y, -dir.x));
@@ -1491,6 +1517,16 @@ bool World::ScheduleSkillRemotes(Player& player, SkillID skillID, const vec3& ca
 	}
 	if(teleportToChild) {
 		const ActorNpc* child = FindNpcActor(player.lastChildUID);
+		i32 teleportDoc = 0;
+		foreach_const(st, activeStatuses) if(st->targetIndex == player.index && st->info && st->info->teleportDoc != 0 && st->until > localTime) teleportDoc = st->info->teleportDoc;
+		if(teleportDoc != 0) {
+			const ActorNpc* marker = nullptr;
+			foreach_const(n, actorNpcList) {
+				if((i32)n->docID != teleportDoc || n->hp <= 0 || (n->despawnAt != Time::ZERO && localTime >= n->despawnAt) || (n->ownerUID != player.Main().UID && n->ownerUID != player.Sub().UID)) continue;
+				if(!marker || (u32)n->UID > (u32)marker->UID) marker = &*n;
+			}
+			if(marker) child = marker;
+		}
 		if(child && localTime < child->despawnAt) {
 			vec3 to = vec3(vec2(child->pos), MAX(child->pos.z, player.body->GetWorldPos().z));
 			f32 ground = 0;
@@ -1649,6 +1685,7 @@ void World::RunSkillProgramCommand(SkillProgram& prog, ActorMaster* caster, i32 
 			mover.dashCurve = curve;
 			mover.dashFly = fly;
 			mover.dashLift = lift;
+			mover.dashSkill = prog.skillID;
 			if(fly) LOG("Dash :: %ls long jump flies %.0f over obstacles", mover.name.data(), moveDist);
 			mover.dashAwaitClientStart = mover.clientHd != ClientHandle::INVALID;
 			mover.dashUntil = TimeAdd(localTime, TimeMsToTime(moveDuration * 1000.0));

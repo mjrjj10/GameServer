@@ -394,6 +394,7 @@ struct StatusInfo
 	eastl::fixed_vector<i32,8,false> stackRemotes;
 	eastl::fixed_vector<i32,4,false> fullStackSkills;
 	i32 casterStatus = 0;
+	i32 teleportDoc = 0;
 	bool staminaBurn = false;
 	f32 descDefenceDown = 0;
 	f32 descHeal = 0;
@@ -1377,6 +1378,8 @@ struct GameXmlContent
 		f32 perception = 0;
 		f32 lost = 0;
 		f32 destroy = 0;
+		u8 masterHoldAttacks = 0;
+		f32 masterAttackGap = 0;
 		f32 radius = 0;
 		f32 returnSpeedRate = 1;
 		f32 bodyBlockRadius = 0;

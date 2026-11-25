@@ -467,10 +467,11 @@ struct IgnoreTeamWalls: PxQueryFilterCallback
 {
 	u32 teamWord = 0;
 	bool sight = false;
+	bool passGuardrail = false;
 	PxQueryHitType::Enum preFilter(const PxFilterData&, const PxShape* shape, const PxRigidActor*, PxHitFlags&) override
 	{
 		const PxFilterData data = shape->getQueryFilterData();
-		return data.word1 == BODY_BLOCKER_WORD || (teamWord != 0 && data.word0 == teamWord) || (sight && data.word2 == NO_SIGHT_WORD) ? PxQueryHitType::eNONE : PxQueryHitType::eBLOCK;
+		return data.word1 == BODY_BLOCKER_WORD || (teamWord != 0 && data.word0 == teamWord) || (sight && data.word2 == NO_SIGHT_WORD) || (passGuardrail && (data.word3 & GUARDRAIL_WORD)) ? PxQueryHitType::eNONE : PxQueryHitType::eBLOCK;
 	}
 	PxQueryHitType::Enum postFilter(const PxFilterData&, const PxQueryHit&) override { return PxQueryHitType::eBLOCK; }
 };
@@ -491,7 +492,7 @@ bool PhysicsScene::InsideStatic(const vec3& at, f32 reach)
 	return back >= INSIDE_MIN_BACK_HITS;
 }
 
-bool PhysicsScene::RaycastStatic(const vec3& from, const vec3& to, f32* hitDist, i32 ignoreTeam, const PxRigidActor** hitActor)
+bool PhysicsScene::RaycastStatic(const vec3& from, const vec3& to, f32* hitDist, i32 ignoreTeam, const PxRigidActor** hitActor, bool passGuardrail)
 {
 	const vec3 d = to - from;
 	const f32 len = glm::length(d);
@@ -499,6 +500,7 @@ bool PhysicsScene::RaycastStatic(const vec3& from, const vec3& to, f32* hitDist,
 	PxRaycastBuffer hit;
 	IgnoreTeamWalls teamFilter;
 	teamFilter.teamWord = ignoreTeam >= 0 ? (u32)ignoreTeam + 1 : 0;
+	teamFilter.passGuardrail = passGuardrail;
 	const PxQueryFilterData filter(PxQueryFlag::eSTATIC | PxQueryFlag::ePREFILTER);
 	if(!scene->raycast(PxVec3(from.x, from.y, from.z), PxVec3(d.x / len, d.y / len, d.z / len), len, hit, PxHitFlag::eDEFAULT, filter, &teamFilter)) return false;
 	if(!hit.hasBlock) return false;

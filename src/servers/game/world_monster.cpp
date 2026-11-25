@@ -102,7 +102,9 @@ bool World::MonsterHostile(const ActorNpc& monster, const Player& player) const
 	static const u32 playerTag = StatusTypeKey("Player");
 	if(player.dead || player.untargetable || !player.body) return false;
 	if(MonsterNeutral(monster, hostileMonsters)) return monster.monsterTarget == player.Main().UID && player.hiddenUID == ActorUID::INVALID;
-	if((monster.faction == Faction::RED || monster.faction == Faction::BLUE) && !(player.fogSeenBy & (1u << (monster.faction == Faction::RED ? 0 : 1)))) return false;
+	const bool structure = IsStructure(monster);
+	if(structure && player.hiddenUID != ActorUID::INVALID) return false;
+	if(!structure && (monster.faction == Faction::RED || monster.faction == Faction::BLUE) && !(player.fogSeenBy & (1u << (monster.faction == Faction::RED ? 0 : 1)))) return false;
 	return FactionsOppose(monster.faction, (Faction)player.team, hostileMonsters) && (monster.monsterAi->Hates(playerTag) || (hostileMonsters && monster.monsterAi->enemyTags.empty()));
 }
 
@@ -118,6 +120,7 @@ void World::MonsterAggroOnHit(ActorNpc& npc, Player& attacker)
 	if(!neutral && !MonsterHostile(npc, attacker)) return;
 	const bool titanMode = map && map->ingameLevels;
 	if(neutral && titanMode && (npc.monsterReturning || npc.monsterGoHome)) return;
+	if(titanMode && localTime < npc.monsterMasterRestUntil) return;
 	if(npc.monsterReturning && titanMode) ApplyMonsterStatus(npc, MEASURED_GOT_MOB_RETURN_SUPERARMOR, false);
 	npc.monsterTarget = attacker.Main().UID;
 	npc.monsterReturning = false;
@@ -1089,8 +1092,20 @@ void World::UpdateMonsterRemotes(f32 delta)
 		bool expired = localTime >= mr.expire;
 		bool blocked = false;
 		if(remote.maxSpeed > 0 && !mr.impacted) {
+			const bool repick = remote.behaviorType == Remote::BehaviorType::HOMING && remote.homingLength > 0 && remote.homingTime > 0;
+			if(repick && localTime >= mr.retargetAt) {
+				mr.retargetAt = TimeAdd(localTime, TimeMsToTime(remote.homingTime * 1000.0));
+				ActorUID nearest = ActorUID::INVALID;
+				f32 bestNear = remote.homingLength;
+				foreach_const(p, players) {
+					if(p->dead || p->untargetable || !p->body || p->hiddenUID != ActorUID::INVALID || (!MonsterNeutral(owner, hostileMonsters) && !MonsterHostile(owner, *p))) continue;
+					const f32 d = glm::length(vec2(p->body->GetWorldPos()) - vec2(mr.pos));
+					if(d <= bestNear) { bestNear = d; nearest = p->Main().UID; }
+				}
+				mr.target = nearest;
+			}
 			const vec3 goal = MonsterFireTargetPos(owner, mr.target);
-			const bool homing = remote.behaviorType == Remote::BehaviorType::FOLLOW_TARGET || remote.behaviorType == Remote::BehaviorType::HOMING;
+			const bool homing = (remote.behaviorType == Remote::BehaviorType::FOLLOW_TARGET || remote.behaviorType == Remote::BehaviorType::HOMING) && !(repick && mr.target == ActorUID::INVALID);
 			const vec2 rel = vec2(goal) - vec2(mr.pos);
 			const f32 dist = glm::length(rel);
 			const bool steered = homing && remote.angularVel > 0;
@@ -1509,7 +1524,7 @@ bool World::StartMonsterWalkState(ActorNpc& npc, const GameXmlContent::MonsterAi
 
 bool World::UpdateMonsterMasterSpecial(ActorNpc& npc, const GameXmlContent::MonsterAi& ai, const GameXmlContent::MonsterAttack& current, f32 run)
 {
-	if(current.target == GameXmlContent::MonsterAttack::MASTER || !map || !map->ingameLevels || IsStructure(npc) || localTime < npc.monsterNextAttack) return false;
+	if(current.target == GameXmlContent::MonsterAttack::MASTER || current.target == GameXmlContent::MonsterAttack::TITAN || !map || !map->ingameLevels || IsStructure(npc) || localTime < npc.monsterNextAttack) return false;
 	const f32 hpRatio = npc.hpMax > 0 ? (f32)npc.hp / (f32)npc.hpMax : 1.0f;
 	for(i32 s = 0; s < (i32)ai.attacks.size() && s < (i32)npc.monsterSkillReady.size(); s++) {
 		const GameXmlContent::MonsterAttack& special = ai.attacks[s];
@@ -1572,6 +1587,10 @@ void World::StartMonsterAttack(ActorNpc& npc,const GameXmlContent::MonsterAi& ai
 	npc.rot.z = yaw;
 	npc.actionState = attack->state;
 	npc.monsterStopSpeed = 0;
+	if(attack->target == GameXmlContent::MonsterAttack::MASTER) {
+		if(npc.monsterMasterAttacks < 255) npc.monsterMasterAttacks++;
+		npc.monsterLastMasterAttack = localTime;
+	}
 	if(ai.masterMark != 0 && attack->target == GameXmlContent::MonsterAttack::MASTER) {
 		ActorMaster* marked = FindMasterActor(npc.monsterTarget);
 		if(marked && marked->parent) ApplyStatusFromNpc(npc, *marked->parent, ai.masterMark);
@@ -2041,6 +2060,7 @@ void World::UpdateMonsterAi(f32 delta)
 		}
 		else if(npc.monsterMasterSince == Time::ZERO) {
 			npc.monsterMasterSince = localTime;
+			npc.monsterMasterAttacks = 0;
 			npc.monsterRetargetAt = TimeAdd(localTime, TimeMsToTime(MEASURED_MINION_RETARGET_MS));
 		}
 		const bool heldByTaunt = taunt != ActorUID::INVALID && taunt == npc.monsterTarget;
@@ -2057,10 +2077,12 @@ void World::UpdateMonsterAi(f32 delta)
 				if(d < bestOther) { bestOther = d; other = &*o; otherAttack = a; }
 			}
 			const bool chiefOutOfReach = ai.tagKey == chiefTag && attack && glm::length(vec2(*targetPos) - vec2(npc.pos)) > attack->range + MONSTER_REACH_TOLERANCE;
-			const bool tooLong = chiefOutOfReach || TimeDiffSec(TimeDiff(npc.monsterMasterSince, localTime)) >= masterChaseSec;
+			const bool holdDone = ai.masterHoldAttacks > 0 && npc.monsterMasterAttacks >= ai.masterHoldAttacks && localTime >= npc.stateEndAt;
+			const bool tooLong = chiefOutOfReach || holdDone || TimeDiffSec(TimeDiff(npc.monsterMasterSince, localTime)) >= masterChaseSec;
 			if(other || tooLong) {
-				LOG("Monster :: creature=%d (local %d) releases its master target (%s)", (i32)npc.docID, npc.localID, other ? "closer minion or structure" : "chase too long");
+				LOG("Monster :: creature=%d (local %d) releases its master target (%s)", (i32)npc.docID, npc.localID, other ? "closer minion or structure" : (holdDone ? "attacks done" : "chase too long"));
 				npc.monsterMasterSince = Time::ZERO;
+				if(holdDone && ai.masterAttackGap > 0) npc.monsterMasterRestUntil = TimeAdd(npc.monsterLastMasterAttack, TimeMsToTime(ai.masterAttackGap * 1000.0));
 				if(other) {
 					npc.monsterTarget = other->UID;
 					targetAt = other->pos;
@@ -2092,6 +2114,29 @@ void World::UpdateMonsterAi(f32 delta)
 				replication->SendAiSetTargetToAll(npc.UID, monster);
 			}
 		}
+		if(titanMode && ai.tagKey == titanTag && ai.byTarget[GameXmlContent::MonsterAttack::TITAN] && localTime >= npc.monsterTitanCheckAt) {
+			npc.monsterTitanCheckAt = TimeAdd(localTime, TimeMsToTime(MEASURED_MINION_RETARGET_MS));
+			const ActorNpc* cur = targetPos && npc.monsterTarget != ActorUID::INVALID ? FindNpcActor(npc.monsterTarget) : nullptr;
+			const bool onTitan = cur && cur->monsterAi && cur->monsterAi->tagKey == titanTag;
+			f32 bestRival = ai.perception;
+			const ActorNpc* rival = nullptr;
+			if(!onTitan) foreach_const(o, actorNpcList) {
+				if(!o->monsterAi || o->monsterAi->tagKey != titanTag || o->hp <= 0 || !MonsterHostile(npc, *o)) continue;
+				const f32 d = glm::length(vec2(o->pos) - vec2(npc.pos));
+				if(d < bestRival) { bestRival = d; rival = &*o; }
+			}
+			if(rival) {
+				LOG("Monster :: titan creature=%d (local %d) turns to the enemy titan %u at %.0f", (i32)npc.docID, npc.localID, (u32)rival->UID, bestRival);
+				npc.monsterTarget = rival->UID;
+				npc.monsterMasterSince = Time::ZERO;
+				targetAt = rival->pos;
+				targetPos = &targetAt;
+				attack = ai.byTarget[GameXmlContent::MonsterAttack::TITAN];
+				targetLost = false;
+				SetMonsterBattle(npc, true);
+				replication->SendAiSetTargetToAll(npc.UID, rival->UID);
+			}
+		}
 		if(taunt != ActorUID::INVALID && taunt != npc.monsterTarget) {
 			LOG("Monster :: creature=%d (local %d) is taunted by %u", (i32)npc.docID, npc.localID, (u32)taunt);
 			npc.monsterTarget = taunt;
@@ -2110,7 +2155,7 @@ void World::UpdateMonsterAi(f32 delta)
 			const bool mastersLast = titanMode && IsStructure(npc);
 			const bool monstersFirst = titanMode && ai.tagKey == chiefTag;
 			bool masterPicked = false;
-			if(ai.byTarget[GameXmlContent::MonsterAttack::MASTER] && !mastersLast) {
+			if(ai.byTarget[GameXmlContent::MonsterAttack::MASTER] && !mastersLast && localTime >= npc.monsterMasterRestUntil) {
 				foreach(p, players) {
 					if(!MonsterHostile(npc, *p)) continue;
 					const f32 d = glm::length(vec2(p->body->GetWorldPos()) - vec2(npc.pos));

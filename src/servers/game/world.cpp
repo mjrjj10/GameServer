@@ -925,6 +925,18 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		if(player.clientHd != ClientHandle::INVALID) replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_SKILL_INVALID_STATE_BLOCK, player.body->GetWorldPos(), player.input.rot.upperYaw, player.input.speed, clientTime);
 		return;
 	}
+	if(localTime < player.dashUntil && player.dashSkill != SkillID::INVALID && GetGameXmlContent().GetComboBaseSkill((i32)skillID) == (i32)player.dashSkill) {
+		LOG("Dash :: %ls dash of %d cancelled by its recast %d after %.0f of %.0f", player.name.data(), (i32)player.dashSkill, (i32)skillID, player.dashDone, player.dashDist);
+		player.dashDist = player.dashDone;
+		player.dashStartAt = localTime;
+		player.dashUntil = localTime;
+		player.dashBlockUntil = localTime;
+		player.dashSkill = SkillID::INVALID;
+		if(player.dashFly && player.dashLift > 0) {
+			physics.Move(player.body, vec3(0, 0, -player.dashLift), 0.02f);
+			player.dashLift = 0;
+		}
+	}
 	if(forcedAction == ActionStateID::INVALID) TitanOnCast(player, skillIn);
 	MarkInBattle(player);
 	const ActorUID hitEventTarget = player.memorizedTarget;
@@ -932,7 +944,16 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		const bool recastOpen = player.comboSkill == skillID && player.comboSlot >= 0 && localTime < player.comboUntil;
 		if(!recastOpen) {
 			LOG("Skill :: %ls cast %d refused (no open recast)", player.name.data(), (i32)skillID);
-			if(player.clientHd != ClientHandle::INVALID) replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_SKILL_INVALID_STATE_BLOCK, player.body->GetWorldPos(), player.input.rot.upperYaw, player.input.speed, clientTime);
+			if(player.clientHd != ClientHandle::INVALID) {
+				replication->SendCastSkillRefused(player.clientHd, player.Main().UID, skillID, ERROR_TYPE_SKILL_INVALID_STATE_BLOCK, player.body->GetWorldPos(), player.input.rot.upperYaw, player.input.speed, clientTime);
+				const SkillID baseSkill = SkillID(GetGameXmlContent().GetComboBaseSkill((i32)skillID));
+				const i32 b = (i32)player.mainCharaID * 2;
+				for(i32 k = 0; k < 2; k++) {
+					if((i32)baseSkill == 0 || baseSkill == SkillID::INVALID || player.skills[b + k] != baseSkill || (player.comboSlot == MEASURED_COMBO_SLOT_FIRST + k && localTime < player.comboUntil)) continue;
+					replication->SendChangeSkillSlot(player.clientHd, player.Main().UID, MEASURED_COMBO_SLOT_FIRST + k, baseSkill, 0);
+					LOG("Combo :: %ls slot %d back to %d after a stale recast", player.name.data(), MEASURED_COMBO_SLOT_FIRST + k, (i32)baseSkill);
+				}
+			}
 			return;
 		}
 		player.memorizedTarget = ActorUID::INVALID;
@@ -1205,7 +1226,11 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 	}
 	if(distance != 0) {
 		const vec2 moveDir = glm::length(gotoDir) > 0.5f ? gotoDir : dir;
-		const vec3 endPos = physics.FindSkillMovePos(player.body, distance < 0 ? -moveDir : moveDir, fabsf(distance), moveDuration, SkillMoveLift(skillID));
+		const f32 moveLift = SkillMoveLift(skillID);
+		vec3 endPos = physics.FindSkillMovePos(player.body, distance < 0 ? -moveDir : moveDir, fabsf(distance), moveDuration, moveLift);
+		f32 landGround = 0;
+		static const f32 HYP_LIFTED_LAND_STEP_UP = 120.0f;
+		if(moveLift > 0 && GroundBelow(vec2(endPos), endPos.z, &landGround) && landGround > endPos.z && landGround <= endPos.z + HYP_LIFTED_LAND_STEP_UP) endPos.z = landGround;
 		rpExec.moveDir = moveDir;
 		rpExec.endPos = endPos;
 		if(leap) rpExec.endPos.z = rpExec.startPos.z + leap->endRise;

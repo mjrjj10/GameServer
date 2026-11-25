@@ -527,7 +527,7 @@ void Game::Update(Time localTime_)
 				}
 			}
 			if(!gameEnded && tGameStarted != Time::ZERO && world.winnerTeam >= 0) EndGame();
-			if(!gameEnded && tGameStarted != Time::ZERO) {
+			if(!gameEnded && tGameStarted != Time::ZERO && !replication.trainingTeams) {
 				f32 limit = GetGameXmlContent().GetStageTimeLimit((i32)replication.stageIndex);
 				if(limit <= 0) limit = STAGE_TIME_LIMIT_FALLBACK_SEC;
 				if(Config().DevGameTimeSec > 0) limit = (f32)Config().DevGameTimeSec;
@@ -687,7 +687,7 @@ bool Game::LoadMap()
 		}
 		const bool mobGuardrail = EA::StdC::Stristr(c->mesh.data(), "Guardrailmob") != nullptr || EA::StdC::Stristr(c->mesh.data(), "Jumpguard") != nullptr;
 		const bool blocksSight = !mobGuardrail || EA::StdC::Stristr(c->mesh.data(), "UnSightable") != nullptr;
-		const bool flightGuardrail = EA::StdC::Stristr(c->mesh.data(), "Guardrailmob") != nullptr;
+		const bool flightGuardrail = mobGuardrail;
 		world.physics.NameActor(world.physics.CreateStaticCollider(c->mesh.data(), c->pos, c->rot, c->scale, blocksSight, false, flightGuardrail), c->mesh.data());
 	}
 
@@ -1287,7 +1287,9 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 		LOG("Dash :: %ls moves again after the state block, server dash ended", player.name.data());
 	}
 	const vec3 bodyPos = player.body->GetWorldPos();
-	const bool drifted = glm::length(vec2(pos) - vec2(bodyPos)) > HYP_HUMAN_POSITION_SNAP || fabsf(pos.z - bodyPos.z) > HYP_HUMAN_POSITION_SNAP;
+	static const f64 MEASURED_JUMP_AIRTIME_MS = 800.0;
+	const bool jumping = player.jumpAt != Time::ZERO && TimeDurationMs(player.jumpAt, world.localTime) < MEASURED_JUMP_AIRTIME_MS;
+	const bool drifted = glm::length(vec2(pos) - vec2(bodyPos)) > HYP_HUMAN_POSITION_SNAP || (!jumping && fabsf(pos.z - bodyPos.z) > HYP_HUMAN_POSITION_SNAP);
 	const bool awaitStart = player.dashAwaitClientStart && !force;
 	if(awaitStart) player.dashAwaitClientStart = false;
 	if(awaitStart && glm::length(vec2(pos) - vec2(player.dashOrigin)) <= HYP_HUMAN_POSITION_SNAP) {
@@ -1297,8 +1299,8 @@ void Game::OnPlayerUpdatePosition(ClientHandle clientHd, ActorUID actorUID, cons
 		player.body->vel = vec3(0);
 	}
 	else if(force || world.localTime < player.ccUntil || (world.localTime >= player.dashUntil && drifted) || glm::length(vec2(pos) - vec2(bodyPos)) > HYP_HUMAN_DASH_SNAP) {
-		player.body->collider->setFootPosition(PxExtendedVec3(pos.x, pos.y, pos.z));
-		player.body->vel = vec3(0);
+		player.body->collider->setFootPosition(PxExtendedVec3(pos.x, pos.y, jumping ? MAX(pos.z, bodyPos.z) : pos.z));
+		player.body->vel = jumping ? vec3(0, 0, player.body->vel.z) : vec3(0);
 		if(player.dashDone < player.dashDist) player.dashOrigin = vec3(vec2(pos) - player.dashDir * player.dashDone, player.dashFly && player.dashLift > 0 ? player.dashOrigin.z : pos.z);
 	}
 
@@ -2324,6 +2326,7 @@ void Game::OnPlayerJump(ClientHandle clientHd, ActorUID actorUID, f32 rotate, f3
 	ASSERT(player.clientHd == clientHd);
 
 	player.input.jump = 1;
+	player.jumpAt = world.localTime;
 }
 
 void Game::OnPlayerWeaponFire(ClientHandle clientHd, f32 aimYaw)
