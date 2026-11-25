@@ -14,7 +14,7 @@
 #include <mxm/account_progress.h>
 
 static const f32 STAGE_TIME_LIMIT_FALLBACK_SEC = 300.0f;
-static const f64 RETURN_TO_LOBBY_DELAY_SEC = 20.0;
+static const f64 MEASURED_PVP_RESULT_CONNECT_SEC = 0.5;
 static const u32 MEASURED_PVE_FAIL_RETURN_MS = 15000;
 static const f32 HYP_HUMAN_POSITION_SNAP = 100.0f;
 static const f32 HYP_CLIENT_BLOCKED_STEP = 5.0f;
@@ -544,7 +544,7 @@ void Game::Update(Time localTime_)
 					}
 				}
 			}
-			const f64 lobbyDelay = defenceStage ? (f64)MEASURED_DEFENCE_RETURN_MS / 1000.0 : pveStage && !world.stageCleared ? (f64)MEASURED_PVE_FAIL_RETURN_MS / 1000.0 : pveStage ? PVE_REWARD_TIMEOUT_SEC : RETURN_TO_LOBBY_DELAY_SEC;
+			const f64 lobbyDelay = defenceStage ? (f64)MEASURED_DEFENCE_RETURN_MS / 1000.0 : pveStage && !world.stageCleared ? (f64)MEASURED_PVE_FAIL_RETURN_MS / 1000.0 : pveStage ? PVE_REWARD_TIMEOUT_SEC : MEASURED_PVP_RESULT_CONNECT_SEC;
 			if(gameEnded && !sentBackToLobby && TimeDiffSec(TimeDiff(tGameEnded, localTime)) >= lobbyDelay) {
 				sentBackToLobby = true;
 				foreach_const(p, playerList) {
