@@ -675,7 +675,7 @@ void World::Replicate()
 		rfl.tagID = actor.tagID;
 		rfl.seed = actor.seed;
 		rfl.entityType = actor.entityType;
-		rfl.immortal = actor.destroyHits == 0;
+		rfl.immortal = GetGameXmlContent().dynamicDestroyHits.find((i32)actor.docID) == GetGameXmlContent().dynamicDestroyHits.end();
 
 
 		replication->FramePushDynamicActor(rfl);

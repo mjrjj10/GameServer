@@ -650,6 +650,18 @@ void World::UpdateProjectiles(f32 delta)
 					hitWall = true;
 				}
 			}
+			else if(proj->wallZ - proj->aimZ > WEAPON_PROJECTILE_HIT_HEIGHT) {
+				const PxRigidActor* belowActor = nullptr;
+				ActorDynamic* belowGate = nullptr;
+				f32 belowDist = 0;
+				if(RaycastShot(vec3(a, proj->aimZ), vec3(a + proj->dir * step, proj->aimZ), (i32)players[proj->ownerIndex].team, &belowDist, &belowActor, &belowGate) && (belowGate || IsDynamicCollider(belowActor))) {
+					LOG("Shot :: aimed %.0f below the fire height, hits a dynamic at %.0f", proj->wallZ - proj->aimZ, belowDist);
+					step = belowDist;
+					hitWall = true;
+					wallActor = belowActor;
+					wallGate = belowGate;
+				}
+			}
 		}
 		const bool lastStep = hitWall || proj->travelled + step >= proj->range - 0.01f;
 		const vec2 from = vec2(proj->pos);

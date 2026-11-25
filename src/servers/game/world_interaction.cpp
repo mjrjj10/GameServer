@@ -1527,6 +1527,13 @@ bool World::TakeGroundItem(Player& player, u32 itemUID, GroundItem* taken)
 	return true;
 }
 
+bool World::IsDynamicCollider(const PxRigidActor* actor) const
+{
+	if(!actor) return false;
+	foreach_const(d, actorDynamicList) if(!d->destroyed && d->collider && (const void*)d->collider == (const void*)actor) return true;
+	return false;
+}
+
 ActorUID World::OnDynamicHit(const PxRigidActor* actor, u32 remoteID, ClientHandle seedOwnerHd, ClientHandle skipHd, const vec3& pos, ActorDynamic* known, i32 ownerIndex, i32 damage, RemoteIdx remoteDoc)
 {
 	ActorDynamic* hit = known;
