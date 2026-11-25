@@ -1816,16 +1816,13 @@ void World::OccupyScore(Player& player, i32 points, bool capture)
 
 bool World::OccupyTarget(const Player& bot, vec2* point, ActorUID* object, f32* reach) const
 {
-	static const f32 HYP_BOT_TOTEM_SEARCH = 3500.0f;
-	static const i32 HYP_BOT_TOTEM_ROLE_EVERY = 3;
-	static const f32 TESTER_BOT_TOTEM_NEAR_SEARCH = 2000.0f;
+	static const i32 GOT_LAYER_TAKE_SIGHT = 28;
 	static const f32 MEASURED_BOT_ALTAR_ENEMY_RANGE = 4000.0f;
 	static const i32 MEASURED_BOT_ALTAR_ENEMY_MAX = 1;
 	const bool titanTotems = !occupyMode && map && map->ingameLevels && bot.clientHd == ClientHandle::INVALID;
-	const bool totemRole = titanTotems && bot.index % HYP_BOT_TOTEM_ROLE_EVERY == 0;
 	if(!occupyMode && !titanTotems) return false;
 	const vec2 here = vec2(bot.body->GetWorldPos());
-	f32 best = titanTotems ? (totemRole ? HYP_BOT_TOTEM_SEARCH : TESTER_BOT_TOTEM_NEAR_SEARCH) : 1e9f;
+	f32 best = titanTotems ? GetGameXmlContent().BotGotLayer(GOT_LAYER_TAKE_SIGHT, "BOTLOGIC_WARD_CHECK_DISTANCE") : 1e9f;
 	bool found = false;
 	foreach_const(m, mapInteractions) {
 		const GameXmlContent::InteractionInfo* info = GetGameXmlContent().FindInteraction(m->interactionID);
@@ -1851,7 +1848,7 @@ bool World::OccupyTarget(const Player& bot, vec2* point, ActorUID* object, f32* 
 				if(&*p == &bot || p->dead || p->removed || !p->body) continue;
 				const f32 pd = glm::length(vec2(p->body->GetWorldPos()) - vec2(pos));
 				if(p->team != bot.team) { if(pd <= MEASURED_BOT_ALTAR_ENEMY_RANGE && const_cast<World*>(this)->TeamSees(bot.team, *p)) enemies++; }
-				else if(!totemRole && p->clientHd == ClientHandle::INVALID && pd < d) closerMate = true;
+				else if(p->clientHd == ClientHandle::INVALID && pd < d) closerMate = true;
 			}
 			if(enemies > MEASURED_BOT_ALTAR_ENEMY_MAX || closerMate) continue;
 		}

@@ -1695,6 +1695,7 @@ struct GameXmlContent
 	f32 BotUgSkillCoolTime() const { return botUgSkillCoolTime; }
 	f32 BotAfterSkillDelay() const { return botAfterSkillDelay; }
 	f32 BotConstant(const char* key) const { auto f = botConstants.find(StatusTypeKey(key)); return f == botConstants.end() ? 0 : f->second; }
+	f32 BotGotLayer(i32 layer, const char* key) const { ASSERT(layer >= 0 && layer < (i32)botGotLayers.size()); auto f = botGotLayers[layer].find(StatusTypeKey(key)); ASSERT(f != botGotLayers[layer].end()); return f->second; }
 	i32 BotReturnSkill() const { return botReturnSkill; }
 	const eastl::vector<i32>& BotSightMarkers() const { return botSightMarkers; }
 	i32 BotStageSkillKind(i32 skill) const { for(i32 i = 0; i < (i32)botStageSkills.size(); i++) if(botStageSkills[i] == skill) return i; return -1; }
@@ -1984,6 +1985,7 @@ private:
 	eastl::hash_map<i32, f32> botSkillMaxDistance;
 	eastl::hash_map<i32, eastl::vector<BotSkillFeature>> botSkillFeatures;
 	eastl::hash_set<i32> botWallMoveSkills;
+	eastl::vector<eastl::hash_map<u32, f32>> botGotLayers;
 	eastl::hash_map<i32, f32> skillRangeX;
 	eastl::hash_map<i32, f32> skillTargetRangeX;
 	f32 botNormalSkillCoolTime = 0;

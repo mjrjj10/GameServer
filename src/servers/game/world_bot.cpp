@@ -554,7 +554,6 @@ static const f32 BOT_STRAFE_STEP = 0.6f;
 static const f32 BOT_REPATH_DIST = 150.0f;
 static const f32 BOT_STUCK_DIST = 20.0f;
 static const f32 BOT_ROAM_STEP = 800.0f;
-static const f32 BOT_PIECE_SEARCH_RANGE = 4000.0f;
 static const f32 MEASURED_BOT_ITEM_REACH = 1500.0f;
 static const i32 BOT_TITAN_PIECE_ITEM = 130100904;
 
@@ -780,12 +779,34 @@ bool World::BotBossGoal(const Player& bot, vec2* goal)
 	return true;
 }
 
+static const i32 GOT_LAYER_SAVE_PIECES = 15;
+static const i32 GOT_LAYER_RETURN_WITH_PIECES = 16;
+static const i32 GOT_LAYER_PICK_PIECE = 11;
+
+bool World::BotBossWithin(const Player& bot, f32 dist) const
+{
+	const vec2 here = vec2(bot.body->GetWorldPos());
+	foreach_const(npc, actorNpcList) {
+		if(!npc->monsterAi || npc->faction != Faction::ORANGE || npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
+		bool boss = false;
+		for(i32 r = 0; r < (i32)ARRAY_COUNT(MEASURED_BOT_BOSS_RULES); r++) if((i32)npc->docID == MEASURED_BOT_BOSS_RULES[r].docID) boss = true;
+		if(boss && glm::length(vec2(npc->pos) - here) <= dist) return true;
+	}
+	return false;
+}
+
+bool World::BotSavesPieces(const Player& bot) const
+{
+	const auto& content = GetGameXmlContent();
+	return (f32)bot.titanPieces >= content.BotGotLayer(GOT_LAYER_SAVE_PIECES, "BOTLOGIC_HOST_TITAN_PIECE_COUNT_MORE_MIN") && !BotBossWithin(bot, content.BotGotLayer(GOT_LAYER_SAVE_PIECES, "BOTLOGIC_BOSS_CHECK_DISTANCE"));
+}
+
 bool World::BotObjective(const Player& bot, vec2* goal)
 {
 	if(!map) return false;
 	BuildTitanSaveAreas();
 	const vec2 here = vec2(bot.body->GetWorldPos());
-	if(bot.titanPieces > 0 && titanSaveAreaKnown[bot.team]) {
+	if(titanSaveAreaKnown[bot.team] && BotSavesPieces(bot)) {
 		*goal = titanSaveAreas[bot.team];
 		botObjectiveKind = 's';
 		return true;
@@ -795,7 +816,7 @@ bool World::BotObjective(const Player& bot, vec2* goal)
 	botObjectiveKind = 'b';
 	if(BotBossGoal(bot, goal)) return true;
 	botObjectiveKind = 'p';
-	f32 best = BOT_PIECE_SEARCH_RANGE;
+	f32 best = GetGameXmlContent().BotGotLayer(GOT_LAYER_PICK_PIECE, "BOTLOGIC_CHECK_RANGE_FROM_HOST");
 	bool found = false;
 	foreach_const(g, groundItems) {
 		if(g->itemIndex != BOT_TITAN_PIECE_ITEM) continue;
@@ -819,12 +840,10 @@ bool World::BotItemGoal(const Player& bot, vec2* goal) const
 }
 static const u32 BOT_DECISION_MIN_MS = 400;
 static const f32 HYP_BOT_OCCUPY_FIGHT_RANGE = 600.0f;
-static const f32 HYP_BOT_TITAN_ENGAGE_RANGE = 1000.0f;
+static const i32 GOT_LAYER_ENGAGE_ENEMY = 19;
 enum BotMode: u8 { BOT_MODE_FIGHT = 0, BOT_MODE_OCCUPY, BOT_MODE_OBJECTIVE, BOT_MODE_FARM, BOT_MODE_LANE, BOT_MODE_ROAM };
 static const char* const BOT_MODE_NAMES[] = { "fight", "occupy", "objective", "farm", "lane", "roam" };
 static const f32 HYP_BOT_LANE_FARM_RANGE = 1500.0f;
-static const f32 HYP_BOT_RETREAT_HP = 0.25f;
-static const f32 HYP_BOT_RETREAT_DONE_HP = 0.9f;
 static const i32 HYP_BOT_SIEGE_TANKS = 2;
 static const i32 HYP_BOT_SIEGE_GIANT_WEIGHT = 3;
 static const f32 MEASURED_FIRST_MASTER_TOWER_HIT_SEC[] = { 113.0f, 125.0f, 171.0f, 205.0f, 207.0f, 209.0f, 235.0f };
@@ -1155,9 +1174,19 @@ bool World::BotRetreat(Player& bot, vec2* goal)
 	}
 	BuildTitanSaveAreas();
 	if(!titanSaveAreaKnown[bot.team]) return false;
+	const auto& content = GetGameXmlContent();
 	const f32 ratio = HpRatio(bot.Main().hp, bot.Main().hpMax);
-	if(ratio < HYP_BOT_RETREAT_HP) bot.botRetreat = true;
-	else if(ratio >= HYP_BOT_RETREAT_DONE_HP) bot.botRetreat = false;
+	const f32 pieces = (f32)bot.titanPieces;
+	const f32 teamPieces = (f32)teamTitanPieces[bot.team];
+	const bool critical = ratio <= content.BotGotLayer(GOT_LAYER_SAVE_PIECES, "BOTLOGIC_HOST_HP_PERCENT_LESS_MAX");
+	const bool teamReady = teamPieces >= content.BotGotLayer(GOT_LAYER_SAVE_PIECES, "BOTLOGIC_HOST_TEAM_TITAN_PIECE_COUNT_MIN") && ratio <= content.BotGotLayer(GOT_LAYER_SAVE_PIECES, "BOTLOGIC_HOST_HP_PERCENT_MORE_MAX");
+	const bool hurtWithPieces = ratio <= content.BotGotLayer(GOT_LAYER_RETURN_WITH_PIECES, "BOTLOGIC_HOST_MORE_HP_PERCENT_MAX") && pieces >= content.BotGotLayer(GOT_LAYER_RETURN_WITH_PIECES, "BOTLOGIC_HOST_MORE_TITAN_PIECE_COUNT_MIN");
+	const bool lowWithPiece = ratio <= content.BotGotLayer(GOT_LAYER_RETURN_WITH_PIECES, "BOTLOGIC_HOST_LESS_HP_PERCENT_MAX") && pieces >= content.BotGotLayer(GOT_LAYER_RETURN_WITH_PIECES, "BOTLOGIC_HOST_LESS_TITAN_PIECE_COUNT_MIN");
+	if(!bot.botRetreat && (critical || teamReady || hurtWithPieces || lowWithPiece)) {
+		bot.botRetreat = true;
+		LOG("BotRetreat :: %ls returns to base, hp %.2f pieces %d team pieces %d (%s)", bot.name.data(), ratio, bot.titanPieces, teamTitanPieces[bot.team], critical ? "critical" : teamReady ? "team ready" : hurtWithPieces ? "hurt with pieces" : "low with a piece");
+	}
+	else if(bot.botRetreat && ratio >= content.BotGotLayer(GOT_LAYER_SAVE_PIECES, "BOTLOGIC_WAIT_FOR_RECOVER_HOST_HP_PERCENT_MAX")) bot.botRetreat = false;
 	if(!bot.botRetreat || bot.titanForm >= 0) return false;
 	*goal = titanHealAreaKnown[bot.team] ? titanHealAreas[bot.team] : vec2(bot.spawnPos);
 	return true;
@@ -1343,7 +1372,7 @@ void World::UpdateBotMovement()
 		const bool itemGoal = titanNav && BotItemGoal(bot, &objective);
 		const bool objectiveGoal = itemGoal || retreatGoal || (titanNav && BotObjective(bot, &objective));
 		bot.botGoalKind = itemGoal ? 'i' : retreatGoal ? 'r' : objectiveGoal ? botObjectiveKind : '-';
-		const f32 engage = occupyGoal || objectiveGoal ? HYP_BOT_OCCUPY_FIGHT_RANGE : (titanNav ? HYP_BOT_TITAN_ENGAGE_RANGE : BOT_ENGAGE_RANGE);
+		const f32 engage = occupyGoal || objectiveGoal ? HYP_BOT_OCCUPY_FIGHT_RANGE : (titanNav ? GetGameXmlContent().BotGotLayer(GOT_LAYER_ENGAGE_ENEMY, "BOTLOGIC_ENEMY_PC_CHECK_DISTANCE") : BOT_ENGAGE_RANGE);
 		bool fighting = false;
 		bool farm = false;
 		u8 mode = BOT_MODE_ROAM;
