@@ -1393,10 +1393,6 @@ bool World::CheckAndPayCast(Player& player, SkillID skillID, const vec3& castPos
 		}
 		LOG("Cost :: %ls skill=%d empowered level (consumed rp=%.0f bb=%.0f, %d remotes / %d statuses replaced, damage x%.3f)", player.name.data(), (i32)skillID,
 			castCostLevel->consume[1], castCostLevel->consume[2], (i32)castCostLevel->remoteReplace.size(), (i32)castCostLevel->statusReplace.size(), castCostLevel->damageRatio);
-		if((i32)skillID == TESTER_SOL_REFUND_SKILL) {
-			for(i32 r = 0; r < 3; r++) player.testerSolRefund[r] = MAX(castCostLevel->consume[r], 0.0f);
-			player.testerSolRefundAt = TimeAdd(localTime, TimeMsToTime(TESTER_SOL_FINAL_WINDOW_MS));
-		}
 	}
 	return true;
 }

@@ -55,14 +55,6 @@ void World::UpdateUltimateGauges(f32 delta)
 		const ClassType benchCls = it->Sub().classType;
 
 		UpdateWeaponHeat(*it);
-		if(it->testerSolRefundAt != Time::ZERO && localTime >= it->testerSolRefundAt) {
-			it->testerSolRefundAt = Time::ZERO;
-			for(i32 r = 0; r < 3; r++) {
-				const f32 refundMax = MasterStat(it->Main().classType, RESOURCES[r].maxStat);
-				if(it->testerSolRefund[r] > 0 && it->res[r] >= 0) { it->res[r] = refundMax > 0 ? MIN(it->res[r] + it->testerSolRefund[r], refundMax) : it->res[r] + it->testerSolRefund[r]; it->resDirty = true; }
-			}
-			LOG("Cost :: %ls final blow of skill %d missed, refunds rp=%.0f", it->name.data(), TESTER_SOL_REFUND_SKILL, it->testerSolRefund[1]);
-		}
 
 		if(localTime >= it->tNextSpeedRefresh) {
 			it->tNextSpeedRefresh = TimeAdd(localTime, TimeMsToTime(1000));

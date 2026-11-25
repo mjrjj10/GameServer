@@ -272,7 +272,6 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 	const bool preMitigated = damagePreMitigated;
 	damagePreMitigated = false;
 	if(frozen || target.dead || target.untargetable) return;
-	if((i32)remoteDoc == TESTER_SOL_FINAL_REMOTE && attacker.team != target.team) attacker.testerSolRefundAt = Time::ZERO;
 	if(attacker.index != target.index) {
 		attacker.lastHitTargetIndex = (i32)target.index;
 		attacker.lastHitAt = localTime;
@@ -636,7 +635,6 @@ f32 World::RollCritical(const Player& attacker, bool weapon, RemoteIdx doc, f32 
 void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 damage, const Replication::RemoteDamage* remoteHit)
 {
 	if(damage <= 0 || !NpcHittableBy(npc, attacker)) return;
-	if(remoteHit && (i32)remoteHit->remoteDoc == TESTER_SOL_FINAL_REMOTE) attacker.testerSolRefundAt = Time::ZERO;
 	if(npc.ownerUID == ActorUID::INVALID && NpcHasStatusType(npc, StatusType::GODMODE)) return;
 	if(npc.monsterEvadeUntil != Time::ZERO && localTime < npc.monsterEvadeUntil) return;
 	const f32 titanPen = skillID == SkillID::INVALID ? MAX(TitanDefencePenetration(attacker), 0.0f) : 0.0f;
