@@ -1631,6 +1631,7 @@ public:
 	bool BotBossWithin(const Player& bot, f32 dist) const;
 	bool BotSavesPieces(const Player& bot) const;
 	bool BotFarmTarget(Player& bot, vec2* goal, f32 range);
+	bool BotNearAvoidedNeutral(const vec2& at) const;
 	bool BotStageSkill(Player& bot);
 	bool BotReturnSkill(Player& bot);
 	bool BotEvadeZone(const Player& bot, vec2* away, f32* depth) const;

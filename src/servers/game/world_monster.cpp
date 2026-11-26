@@ -153,6 +153,7 @@ void World::ApplyDeathHit(const DeathHit& hit)
 	const bool teamed = origin == Faction::RED || origin == Faction::BLUE;
 	const i32 damage = (i32)(MonsterAttackPower(*helper) * NpcStatusMul(*helper, StatusMod::ATTACK) * d.multiplier + 0.5f);
 	const i32 firstStatus = d.statuses.empty() ? 0 : d.statuses[0];
+	const Remote* deathFalloffRemote = GetGameXmlContent().FindRemote((RemoteIdx)d.remote);
 	replication->SendRemoteCreateToAll(helper->UID, MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID++ & MONSTER_REMOTE_ID_MASK), (RemoteIdx)d.remote, helper->pos, helper->rot.z, helper->pos, ActorUID::INVALID);
 	if(d.pc) {
 		foreach(p, players) {
@@ -160,7 +161,8 @@ void World::ApplyDeathHit(const DeathHit& hit)
 			const bool ally = teamed && (Faction)p->team == origin;
 			if(ally != d.ally || (!teamed && d.ally)) continue;
 			if(glm::length(vec2(p->body->GetWorldPos()) - vec2(helper->pos)) > d.radius) continue;
-			if(damage > 0 && !d.ally) DamagePlayerFromNpc(*helper, *p, damage, d.remote, firstStatus, hit.remoteID);
+			const f32 playerFalloff = deathFalloffRemote ? RemoteDistanceFalloff(*deathFalloffRemote, glm::length(vec2(p->body->GetWorldPos()) - vec2(helper->pos))) : 1.0f;
+			if(damage > 0 && !d.ally) DamagePlayerFromNpc(*helper, *p, MAX((i32)(damage * playerFalloff), 1), d.remote, firstStatus, hit.remoteID);
 			else if(firstStatus != 0) ApplyStatusFromNpc(*helper, *p, firstStatus);
 			for(i32 s = 1; s < (i32)d.statuses.size(); s++) if(!p->dead) ApplyStatusFromNpc(*helper, *p, d.statuses[s]);
 		}
@@ -171,7 +173,8 @@ void World::ApplyDeathHit(const DeathHit& hit)
 			const bool ally = teamed && o->faction == origin;
 			if(ally != d.ally) continue;
 			if(glm::length(vec2(o->pos) - vec2(helper->pos)) > d.radius + o->monsterAi->radius) continue;
-			if(damage > 0 && !d.ally) DamageNpcFromNpc(*helper, *o, damage, d.remote, hit.remoteID, firstStatus);
+			const f32 npcFalloff = deathFalloffRemote ? RemoteDistanceFalloff(*deathFalloffRemote, glm::length(vec2(o->pos) - vec2(helper->pos))) : 1.0f;
+			if(damage > 0 && !d.ally) DamageNpcFromNpc(*helper, *o, MAX((i32)(damage * npcFalloff), 1), d.remote, hit.remoteID, firstStatus);
 			else if(firstStatus != 0) ApplyStatusToNpcFromNpc(*helper, *o, firstStatus);
 			for(i32 s = 1; s < (i32)d.statuses.size(); s++) if(o->hp > 0) ApplyStatusToNpcFromNpc(*helper, *o, d.statuses[s]);
 		}
@@ -327,6 +330,8 @@ void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDo
 {
 	if(npc.removeAt != Time::ZERO) return;
 	CancelNpcPendingHits(npc);
+	if(npc.monsterTarget != ActorUID::INVALID) replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
+	npc.monsterTarget = ActorUID::INVALID;
 	SetMonsterBattle(npc, false);
 	npc.hp = 0;
 	npc.killerUID = killerUID;
@@ -341,8 +346,6 @@ void World::MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDo
 			if(const Remote* remote = GetGameXmlContent().FindRemote((RemoteIdx)*r)) SpawnMonsterRemote(npc, *remote, npc.pos, vec2(cosf(npc.rot.z), sinf(npc.rot.z)), ActorUID::INVALID, true);
 		}
 	}
-	if(npc.monsterTarget != ActorUID::INVALID) replication->SendAiSetTargetToAll(npc.UID, ActorUID::INVALID);
-	npc.monsterTarget = ActorUID::INVALID;
 	const f32 destroy = npc.monsterAi ? npc.monsterAi->destroy : 0.0f;
 	npc.removeAt = TimeAdd(localTime, TimeMsToTime(MAX(destroy, 1.0f) * 1000.0));
 	npc.dieStandAt = TimeAdd(localTime, TimeMsToTime(npc.monsterAi && npc.monsterAi->dieStand > 0 ? (f64)npc.monsterAi->dieStand * 1000.0 : MEASURED_NPC_DIE_STAND_MS));

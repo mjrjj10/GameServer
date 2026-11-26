@@ -568,6 +568,19 @@ static const f32 BOT_FARM_RANGE = 4000.0f;
 static const i32 HYP_BOT_JUNGLE_ROLE_EVERY = 5;
 static const f32 HYP_BOT_JUNGLE_RANGE = 4000.0f;
 
+static const i32 TESTER_BOT_AVOIDED_NEUTRALS[] = { 105001040 };
+
+bool World::BotNearAvoidedNeutral(const vec2& at) const
+{
+	foreach_const(npc, actorNpcList) {
+		if(!npc->monsterAi || npc->hp <= 0 || npc->removeAt != Time::ZERO) continue;
+		bool avoided = false;
+		for(i32 doc : TESTER_BOT_AVOIDED_NEUTRALS) if((i32)npc->docID == doc) avoided = true;
+		if(avoided && glm::length(at - vec2(npc->pos)) <= npc->monsterAi->perception) return true;
+	}
+	return false;
+}
+
 bool World::BotFarmTarget(Player& bot, vec2* goal, f32 range)
 {
 	static const f32 HYP_BOT_FARM_PROGRESS_SEC = 8.0f;
@@ -596,7 +609,7 @@ bool World::BotFarmTarget(Player& bot, vec2* goal, f32 range)
 				if(d < bestMinion) { bestMinion = d; minion = &*npc; }
 			}
 		}
-		else if((npc->faction == Faction::ORANGE || npc->faction == Faction::MONSTER) && d < neutralRange * HYP_BOT_FARM_KEEP_RANGE_MUL) {
+		else if((npc->faction == Faction::ORANGE || npc->faction == Faction::MONSTER) && d < neutralRange * HYP_BOT_FARM_KEEP_RANGE_MUL && !BotNearAvoidedNeutral(vec2(npc->pos))) {
 			if(npc->UID == bot.botFarmUID) kept = &*npc;
 			if(d < bestNeutral) { bestNeutral = d; neutral = &*npc; }
 		}
@@ -716,7 +729,6 @@ bool World::BotChiefGoal(const Player& bot, vec2* goal) const
 }
 
 static const i32 MEASURED_COMPONENT_FIRST_MASTER_HIT_SEC[] = { 15, 24, 27, 232, 233, 278, 311, 313, 449, 569 };
-static const i32 MEASURED_KING_FIRST_MASTER_HIT_SEC[] = { 34, 46, 49, 78, 78, 132, 155, 166, 183, 233 };
 static const i32 MEASURED_ROBOT_BUFF_FIRST_MASTER_HIT_SEC[] = { 3, 6, 13, 21, 24, 37, 51, 59, 72, 93 };
 static const i32 MEASURED_ROBOT_EXP_FIRST_MASTER_HIT_SEC[] = { 1, 2, 10, 20, 30, 57, 82, 144, 255, 387 };
 static const i32 MEASURED_ROBOT_BUFF2_FIRST_MASTER_HIT_SEC[] = { 1, 8, 13, 14, 23, 31, 48, 73, 84, 115 };
@@ -729,7 +741,6 @@ struct BotBossRule
 };
 static const BotBossRule MEASURED_BOT_BOSS_RULES[] = {
 	{ 105001402, MEASURED_COMPONENT_FIRST_MASTER_HIT_SEC, (i32)ARRAY_COUNT(MEASURED_COMPONENT_FIRST_MASTER_HIT_SEC), 1 },
-	{ 105001040, MEASURED_KING_FIRST_MASTER_HIT_SEC, (i32)ARRAY_COUNT(MEASURED_KING_FIRST_MASTER_HIT_SEC), 3 },
 	{ 105001400, MEASURED_ROBOT_BUFF_FIRST_MASTER_HIT_SEC, (i32)ARRAY_COUNT(MEASURED_ROBOT_BUFF_FIRST_MASTER_HIT_SEC), 1 },
 	{ 105001401, MEASURED_ROBOT_EXP_FIRST_MASTER_HIT_SEC, (i32)ARRAY_COUNT(MEASURED_ROBOT_EXP_FIRST_MASTER_HIT_SEC), 1 },
 	{ 105001403, MEASURED_ROBOT_BUFF2_FIRST_MASTER_HIT_SEC, (i32)ARRAY_COUNT(MEASURED_ROBOT_BUFF2_FIRST_MASTER_HIT_SEC), 2 },
