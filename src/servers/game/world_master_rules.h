@@ -9,6 +9,7 @@ enum class ResourceEvent: u8
 	CHARGING_PER_SEC,
 	REMOTE_HIT_ENEMY,
 	SELF_STATUS,
+	EVADE,
 };
 
 struct ResourceGainRule
@@ -35,6 +36,7 @@ static const ResourceGainRule RESOURCE_GAIN_RULES[] = {
 	{ ClassType::SHUTTLE, ResourceEvent::CHARGING_PER_SEC, 1, 5.0f, RemoteIdx::INVALID },
 	{ ClassType::SHUTTLE, ResourceEvent::REMOTE_HIT_ENEMY, 1, 22.0f, RemoteIdx(1440410000) },
 	{ ClassType::JINSEOYEON, ResourceEvent::SELF_STATUS, 2, 1.0f, RemoteIdx::INVALID, 1230120011 },
+	{ ClassType::JINSEOYEON, ResourceEvent::EVADE, 2, 0.0f, RemoteIdx::INVALID },
 };
 
 static inline const ResourceGainRule* FindResourceGainRule(ClassType master, ResourceEvent event, RemoteIdx remote = RemoteIdx::INVALID, i32 status = 0)
@@ -61,6 +63,24 @@ static inline bool ResourceStartsFull(ClassType master, i32 slot, bool startFull
 		if(rule.master == master && rule.slot == slot) return false;
 	}
 	return startFull;
+}
+
+struct ResourceStartFull
+{
+	ClassType master;
+	i32 slot;
+};
+
+static const ResourceStartFull TESTER_RESOURCE_START_FULL[] = {
+	{ ClassType::POHWARAN, 2 },
+};
+
+static inline bool ResourceStartsAtMax(ClassType master, i32 slot)
+{
+	for(const ResourceStartFull& rule : TESTER_RESOURCE_START_FULL) {
+		if(rule.master == master && rule.slot == slot) return true;
+	}
+	return false;
 }
 
 static const ClassType TESTER_RAGE_FROM_WEAPON_ONLY[] = {

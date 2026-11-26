@@ -4593,7 +4593,11 @@ void Replication::SendActorNpcSpawn(ClientHandle clientHd, const ActorNpc& actor
 		packet.Write<u8>(0); // isDead
 		packet.Write<i64>((i64)TimeDiffMs(TimeRelNow())); // serverTime
 
-		packet.Write<u16>(0); // meshChangeActionHistory_count
+		packet.Write<u16>((u16)actor.meshHistory.size());
+		foreach_const(h, actor.meshHistory) {
+			packet.Write<i32>(h->first);
+			packet.Write<i64>(h->second);
+		}
 
 		SendPacket(clientHd, packet);
 	}
@@ -4719,6 +4723,24 @@ void Replication::SendActorDynamicSpawn(ClientHandle clientHd, const ActorDynami
 
 		SendPacket(clientHd, packet);
 	}
+
+	if(actor.destroyed) {
+		Sv::SN_UpdateStat stat;
+		stat.characterID = (u32)localActorID;
+		stat._STAT_TYPE = (u32)StatType::STAT_TYPE_HEALTH;
+		stat._CUR = 0;
+		stat._MAX = 1;
+		stat._ReasonCode = 0;
+		SendPacket(clientHd, stat);
+		Sv::SN_DeadAck dead;
+		dead.sourceID = (u32)localActorID;
+		dead.targetID = 0;
+		dead.targetDocIndex = 0;
+		dead.dwRemoteID = 0;
+		dead.dwRemoteDocIndex = 0xFFFFFFFF;
+		dead.isPast = 0;
+		SendPacket(clientHd, dead);
+	}
 }
 
 void Replication::SendActorDestroy(ClientHandle clientHd, ActorUID actorUID, bool despawned)
@@ -4764,7 +4786,7 @@ void Replication::SendMasterSkillSlots(ClientHandle clientHd, const Replication:
 			packet.Write<u32>(0);
 			packet.Write<u8>(1);
 			u8 level = 0;
-			if(pveTeams) foreach_const(l, player.skillLevels) if(l->first == (i32)master.skillIDs[i]) level = l->second;
+			foreach_const(l, player.skillLevels) if(l->first == (i32)master.skillIDs[i]) level = l->second;
 			const auto* ups = level > 0 ? content.FindSkillUpgrades((i32)master.skillIDs[i]) : nullptr;
 			const u16 props = ups ? (u16)MIN((size_t)level, ups->size()) : 0;
 			packet.Write<u16>(props);

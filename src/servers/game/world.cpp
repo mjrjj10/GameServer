@@ -9,6 +9,7 @@ static const i32 STATUS_PC_RESPAWN_INVICIBLE_3S = 1230000010;
 static const i32 STATUS_PC_TAG_GODMODE = 1230000020;
 static const f64 MEASURED_TAG_FIRST_ATTACK_MS = 110.0;
 static const f64 MEASURED_GRAPH_END_SYNC_DELAY_MS = 190.0;
+static const f64 HYP_JUMPABLE_CLIENT_LAG_MS = 500.0;
 static const f64 MEASURED_UNSYNCED_GRAPH_MAX_SEC = 0.5;
 static const f64 WEAPON_HIT_INTERVAL_MS = 80.0;
 static const i32 MEASURED_COMBO_SLOT_FIRST = 0;
@@ -201,7 +202,7 @@ void World::Update(Time localTime_)
 
 		if(p.body) p.body->team = p.team;
 		if(p.body) p.body->passWallTeam = !p.dead && p.clientHd == ClientHandle::INVALID && localTime < p.pushUntil && p.pushPassWallTeam >= 0 ? p.pushPassWallTeam : -1;
-		if(p.body) p.body->passJumpable = p.dashJumpable && localTime < p.dashUntil;
+		if(p.body) p.body->passJumpable = p.dashJumpable && localTime < (p.clientHd != ClientHandle::INVALID ? TimeAdd(p.dashUntil, TimeMsToTime(HYP_JUMPABLE_CLIENT_LAG_MS)) : p.dashUntil);
 		if(!p.dead && p.clientHd == ClientHandle::INVALID && localTime < p.ccUntil) {
 			const ActiveStatus* fear = nullptr;
 			foreach_const(st, activeStatuses) {
@@ -563,7 +564,8 @@ void World::Replicate()
 			const bool idle = chara.actionState == ActionStateID::INVALID || chara.actionState == ActionStateID::NONE_BEHAVIORSTATE;
 			const bool walking = player.movement.moveSpeed > 0 && localTime >= player.dashUntil;
 			const bool holdState = localTime < player.botAttackStateUntil && !(player.botAttackStateSkill && walking);
-			rch.actionState = idle && player.clientHd == ClientHandle::INVALID && holdState ? player.botAttackState : chara.actionState;
+			const bool botChannel = player.clientHd == ClientHandle::INVALID && player.interactSlot >= 0 && localTime < player.interactEndAt;
+			rch.actionState = botChannel ? ActionStateID::INTERACTION_CAST_BEHAVIORSTATE : (idle && player.clientHd == ClientHandle::INVALID && holdState ? player.botAttackState : chara.actionState);
 			rch.actionParam1 = chara.actionParam1;
 			rch.actionParam2 = chara.actionParam2;
 
@@ -651,6 +653,7 @@ void World::Replicate()
 				rfl.dashSpeed = togo / left;
 			}
 		}
+		for(u8 b = 0; b < actor.towerBreakShown && b < 2; b++) rfl.meshHistory.push_back({ (i32)(b == 0 ? ActionStateID::EXTRAMOTION_1_BEHAVIORSTATE : ActionStateID::EXTRAMOTION_2_BEHAVIORSTATE), actor.towerBreakMs[b] });
 
 
 		replication->FramePushNpcActor(rfl);
@@ -676,6 +679,7 @@ void World::Replicate()
 		rfl.seed = actor.seed;
 		rfl.entityType = actor.entityType;
 		rfl.immortal = GetGameXmlContent().dynamicDestroyHits.find((i32)actor.docID) == GetGameXmlContent().dynamicDestroyHits.end();
+		rfl.destroyed = actor.destroyed;
 
 
 		replication->FramePushDynamicActor(rfl);
@@ -1089,6 +1093,15 @@ void World::PlayerCastSkill(Player& player, SkillID skillIn, const vec3& castPos
 		const vec2 moving = vec2(player.input.moveTo) - vec2(player.body->GetWorldPos());
 		if(glm::length(moving) > 10.0f) angle = atan2f(moving.y, moving.x);
 	}
+	if((forcedAction != ActionStateID::INVALID && targets.size() > 0) || castFacesCastPos) {
+		vec2 aimAt = vec2(castPos);
+		if(targets.size() > 0) {
+			if(const ActorMaster* t = FindMasterActor(targets[0])) { if(t->parent && t->parent->body) aimAt = vec2(t->parent->body->GetWorldPos()); }
+			else if(const ActorNpc* n = FindNpcActor(targets[0])) aimAt = vec2(n->pos);
+		}
+		const vec2 toTarget = aimAt - vec2(player.body->GetWorldPos());
+		if(glm::length(toTarget) > 1.0f) angle = atan2f(toTarget.y, toTarget.x);
+	}
 	const vec2 dir = vec2(cosf(angle), sinf(angle));
 
 	Replication::SkillCast rpCast;
@@ -1470,6 +1483,10 @@ void World::UpdateComboSlot(Player& player, SkillID skillID, SkillType skillType
 		const i32 windowMs = slot >= 0 ? content.GetComboDurationMs(combo) : 0;
 		if(slot >= 0 && windowMs <= 0) LOG("Combo :: %ls skill %d next %d has no combo window, no slot change", player.name.data(), (i32)skillID, combo);
 		if(slot >= 0 && windowMs > 0) {
+			if(player.comboSlot >= 0 && player.comboSlot != slot) {
+				replication->SendChangeSkillSlot(player.clientHd, player.Main().UID, player.comboSlot, player.comboBase, 0);
+				LOG("Combo :: %ls slot %d back to %d (combo opened on slot %d)", player.name.data(), player.comboSlot, (i32)player.comboBase, slot);
+			}
 			player.comboPending = SkillID(combo);
 			player.comboSkill = SkillID(combo);
 			player.comboSendAt = TimeAdd(localTime, TimeMsToTime(50.0));
@@ -1593,6 +1610,7 @@ void World::SwapMainMaster(Player& p)
 	p.regenResend = true;
 	ShowTagToEnemies(p);
 	const ActorUID newMain = p.Main().UID;
+	bool movedShield = false;
 	foreach(st, activeStatuses) {
 		if(st->targetIndex != p.index || st->targetUID != oldMain || !st->info || localTime >= st->until) continue;
 		if(st->info->tagMode == StatusInfo::TAG_DROP) st->until = localTime;
@@ -1602,7 +1620,16 @@ void World::SwapMainMaster(Player& p)
 			const f32 remain = st->info->permanent ? StatusSentDuration(*st->info) : MIN((f32)TimeDiffSec(TimeDiff(localTime, st->until)), STATUS_INFINITE_DURATION_SEC);
 			const vec3 at = p.body ? p.body->GetWorldPos() : vec3(0);
 			replication->SendAddStatusToAll(st->statusID, newMain, st->casterUID, remain, at, at, 0, st->overlap, 1.0f, -1.0f, false, false);
+			if(st->custom > 0) replication->SendModifyStatusToAll(st->statusID, newMain, st->casterUID, (u8)st->overlap, (u8)st->custom);
+			if(st->shieldMax > 0) movedShield = true;
 		}
+	}
+	if(movedShield) SendShieldStat(p);
+	foreach_const(st, activeStatuses) {
+		if(st->targetIndex != p.index || st->targetUID != newMain || !st->info || !st->info->permanent || localTime >= st->until) continue;
+		const vec3 at = p.body ? p.body->GetWorldPos() : vec3(0);
+		replication->SendAddStatusToAll(st->statusID, newMain, st->casterUID, StatusSentDuration(*st->info), at, at, 0, st->overlap, 1.0f, -1.0f, false, false);
+		if(st->custom > 0) replication->SendModifyStatusToAll(st->statusID, newMain, st->casterUID, (u8)st->overlap, (u8)st->custom);
 	}
 	foreach(st, activeStatuses) {
 		if(st->casterUID != oldMain || st->targetIndex == p.index || !st->info || st->info->type != StatusType::LINK || localTime >= st->until) continue;

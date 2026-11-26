@@ -465,6 +465,23 @@ static bool RemotePullsToCaster(const Remote& remote)
 	return false;
 }
 
+struct MeasuredFlankRate { i32 statusID; f32 backCos; i32 backRate; i32 otherRate; };
+static const MeasuredFlankRate MEASURED_FLANK_STATUS_RATES[] = {
+	{ 1230030100, 0.5f, 70, 10 },
+};
+
+static i32 FlankStatusRate(i32 statusID, i32 rate, const vec2& hitDir, f32 targetYaw)
+{
+	for(const MeasuredFlankRate& m : MEASURED_FLANK_STATUS_RATES) {
+		if(m.statusID != statusID) continue;
+		const f32 len = glm::length(hitDir);
+		if(len < 0.001f) return rate;
+		const bool back = glm::dot(hitDir / len, vec2(cosf(targetYaw), sinf(targetYaw))) > m.backCos;
+		return back ? m.backRate : m.otherRate;
+	}
+	return rate;
+}
+
 bool World::RemoteHit(RemoteInst& inst, Player& target)
 {
 	const Remote& remote = *inst.remote;
@@ -577,7 +594,8 @@ bool World::RemoteHit(RemoteInst& inst, Player& target)
 						distanceOverride = sr->distanceRatio;
 					}
 				}
-				if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) {
+				const i32 rate = enemy ? FlankStatusRate(st->statusID, st->rate, vec2(inst.dir), target.input.rot.upperYaw) : st->rate;
+				if(rate >= 100 || (i32)(RandUint() % 100) < rate) {
 					statusCasterOverride = inst.sourceUID;
 					statusDistanceRatioOverride = distanceOverride;
 					statusDurationScale = enemy ? falloff : 1.0f;
@@ -1042,9 +1060,11 @@ bool World::RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist)
 	const vec3 prevCenter = statusForceCenter;
 	statusForceCenter = inst.pos;
 	statusForceCenterSet = true;
+	statusDurationScale = RemoteDistanceFalloff(remote, dist);
 	foreach_const(st, remote.statuses) {
 		if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(players[inst.ownerIndex], npc, st->statusID, false);
 	}
+	statusDurationScale = 1.0f;
 	statusForceCenter = prevCenter;
 	statusForceCenterSet = prevCenterSet;
 	if(fixedForce) statusPushDirSet = false;

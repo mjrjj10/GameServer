@@ -13,6 +13,8 @@
 #include "world_master_rules.h"
 #include <mxm/account_progress.h>
 
+static const i32 MEASURED_GOT_ACTIVITY_STAGE = 200101000;
+static const u32 MEASURED_GOT_ACTIVITY_SECONDS = 1800;
 static const f32 STAGE_TIME_LIMIT_FALLBACK_SEC = 300.0f;
 static const f64 MEASURED_PVP_RESULT_CONNECT_SEC = 0.5;
 static const u32 MEASURED_PVE_FAIL_RETURN_MS = 15000;
@@ -1923,6 +1925,7 @@ void Game::EndGame()
 		record.gameType = (i32)replication.gameType;
 		record.classTypes = { (i32)p.mainClass, (i32)p.subClass };
 		record.playSeconds = tGameStarted != Time::ZERO ? (u32)TimeDiffSec(TimeDiff(tGameStarted, localTime)) : 0;
+		if((i32)replication.stageIndex == MEASURED_GOT_ACTIVITY_STAGE) record.playSeconds = MEASURED_GOT_ACTIVITY_SECONDS;
 		record.guildPoints = (i32)(e->guildBase + e->guildBonus);
 		if(replication.customGame) {
 			record.stageIndex = 0;

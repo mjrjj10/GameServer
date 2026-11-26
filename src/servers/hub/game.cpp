@@ -1,3 +1,4 @@
+#include <common/suspended_game.h>
 #include <mxm/achievements.h>
 #include "game.h"
 #include <mutex>
@@ -2102,6 +2103,7 @@ void HubGame::MmOnPartyCreated(PartyUID partyUID, AccountUID leader)
 void HubGame::MmOnGameEnded(SortieUID sortieUID, bool serverLost)
 {
 	if(eastl::find(endedSorties.begin(), endedSorties.end(), sortieUID) == endedSorties.end()) endedSorties.push_back(sortieUID);
+	SuspendedSortieDelete((u64)sortieUID);
 	if(serverLost) ForgetSortieSentToGame(sortieUID);
 	LOG("HubGame :: game %llu ended%s", (u64)sortieUID, serverLost ? " (game server lost)" : "");
 	if(serverLost) return;
@@ -2183,6 +2185,7 @@ void HubGame::MmOnMatchFound(const In::MN_MatchingPartyFound& matchingParty)
 		roster->stage = party.stageIndex;
 		roster->gameType = matchingParty.gameType;
 		roster->gameDefinition = party.gameDefinition;
+		SuspendedSortieWrite((u64)roster->sortieUID, "game", "%lld %lld %lld", (i64)roster->stage, (i64)roster->gameType, (i64)roster->gameDefinition, 0, 0);
 		const bool pve = matchingParty.gameType == GameType::PVE_NORMAL || matchingParty.gameType == GameType::PVE_RANDOM || matchingParty.gameType == GameType::PVE_TICKET;
 		for(i32 i = 0; i < matchingParty.playerCount && !roster->members.full(); i++) {
 			const auto& p = matchingParty.playerList[i];

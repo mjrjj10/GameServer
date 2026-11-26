@@ -220,7 +220,10 @@ static void SkillEquip(Account& account, const GameXmlContent::Master& master, A
 	}
 	SkillID current[2];
 	ArsenalSkills(arsenal, master, current);
-	if((i32)current[r->skillSlot ^ 1] == r->skill) current[r->skillSlot ^ 1] = current[r->skillSlot];
+	if((i32)current[r->skillSlot ^ 1] == r->skill) {
+		current[r->skillSlot ^ 1] = current[r->skillSlot];
+		r->swappedSkill = (i32)current[r->skillSlot];
+	}
 	current[r->skillSlot] = (SkillID)r->skill;
 	if(AccountArsenal::SkillLoadout* l = arsenal.Loadout((i32)master.classType)) {
 		l->skills[0] = (i32)current[0];

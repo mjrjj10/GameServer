@@ -33,6 +33,7 @@ struct ArsenalResult
 	u32 itemReason = 0;
 	bool unlockedOnEquip = false;
 	u32 skillSlot = 0;
+	i32 swappedSkill = -1;
 	AchieveEvent achieve;
 	eastl::fixed_vector<AccountItem,16,false> items;
 };
@@ -108,6 +109,14 @@ void ArsenalSend(const ArsenalResult& r, Send send)
 		packet.Write<i32>(r.skill);
 		packet.Write<u32>(r.skillSlot);
 		send(packet);
+		if(r.swappedSkill >= 0 && r.result == 0) {
+			PacketWriter<Sv::SA_SkillSelect,64> other;
+			other.Write<u32>(r.characterID);
+			other.Write<u32>(r.result);
+			other.Write<i32>(r.swappedSkill);
+			other.Write<u32>(r.skillSlot ^ 1);
+			send(other);
+		}
 		return;
 	}
 	auto weapon = [&r](auto& packet, u32 result) {

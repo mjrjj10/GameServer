@@ -5,6 +5,8 @@
 #include <common/packet_serialize.h>
 #include <common/packet_validator.h>
 #include <common/platform.h>
+#include <common/inner_protocol.h>
+#include <common/suspended_game.h>
 #include <EAStdC/EASprintf.h>
 
 struct Config
@@ -295,6 +297,47 @@ struct Client
 				NT_LOG("[client%x] Server :: %s", clientID, PacketSerialize<Sv::SA_EnterWaitingQueue>(&status, sizeof(status)));
 				SendPacket(status);
 
+				SuspendedGame suspended;
+				if(SuspendedGameRead(nickname.data(), &suspended)) {
+					Sv::SN_SuspendedToCity offer;
+					offer.stageIdx = (u32)suspended.stage;
+					offer.gameType = (u8)suspended.gameType;
+					offer.gameDefType = (u8)suspended.gameDefinition;
+					LOG("[client%x] Login :: %ls has a running game %llu, offering to return", clientID, nickname.data(), suspended.sortieUID);
+					SendPacket(offer);
+					break;
+				}
+				SendChannelServer();
+			} break;
+
+			case Cl::CQ_ReturnToGame::NET_ID: {
+				SuspendedGame suspended;
+				if(!SuspendedGameRead(nickname.data(), &suspended)) {
+					LOG("[client%x] Login :: %ls return to game refused (game over), bridge", clientID, nickname.data());
+					SendChannelServer();
+					break;
+				}
+				PacketWriter<Sv::SN_DoConnectGameServer> packet;
+				packet.Write<u16>(suspended.port);
+				packet.Write<u8[4]>(suspended.ip);
+				packet.Write<i32>((i32)(suspended.sortieUID & 0xFFFFFFFF));
+				packet.Write<u32>(0x0);
+				packet.WriteStringObj(nickname.data(), nickname.size());
+				packet.Write<u32>(In::ProduceInstantKey(AccountUID((u32)suspended.gameAccountUID), SortieUID(suspended.sortieUID)));
+				LOG("[client%x] Login :: %ls returns to game %llu", clientID, nickname.data(), suspended.sortieUID);
+				SendPacketData(Sv::SN_DoConnectGameServer::NET_ID, packet.size, packet.data);
+			} break;
+
+			case Cl::CQ_ReturnToCity::NET_ID: {
+				LOG("[client%x] Login :: %ls declines the running game, bridge", clientID, nickname.data());
+				SendChannelServer();
+			} break;
+		}
+	}
+
+	void SendChannelServer()
+	{
+		{
 				PacketWriter<Sv::SN_DoConnectChannelServer> packet;
 
 				packet.Write<u16>(1); // count
@@ -312,7 +355,6 @@ struct Client
 
 				NT_LOG("[client%x] Server :: %s", clientID, PacketSerialize<Sv::SN_DoConnectChannelServer>(packet.data, packet.size));
 				SendPacketData(Sv::SN_DoConnectChannelServer::NET_ID, packet.size, packet.data);
-			} break;
 		}
 	}
 

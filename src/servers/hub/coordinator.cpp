@@ -750,7 +750,6 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 	}
 	progress.gold = MAX(progress.gold, TESTER_MIN_GOLD);
 	progress.ccoin = MAX(progress.ccoin, TESTER_MIN_CCOIN);
-	AchieveOnLogin(account, progress);
 	ActivityRefresh(&progress, (i64)time(nullptr));
 	if(reward.playSeconds > 0) progress.activityPoint = MIN(progress.activityPoint + (i32)reward.playSeconds, GetGameXmlContent().activityMaxPoint);
 	AccountProgressSave(account.nickname.data(), progress);
@@ -778,6 +777,24 @@ void Coordinator::HandlePacket_CQ_Authenticate(ClientHandle clientHd, const NetH
 			AccountInventorySave(account.nickname.data(), inventory);
 		}
 	}
+	{
+		const GameXmlContent& content = GetGameXmlContent();
+		AccountInventory inventory = AccountInventoryLoad(account.nickname.data());
+		bool changed = false;
+		for(i32 doc : TESTER_UPGRADE_MATERIALS) {
+			i32 need = 0;
+			foreach_const(w, content.weaponIngredients) foreach_const(n, w->second) if(n->first == doc) need += n->second;
+			i32 held = 0;
+			foreach_const(it, inventory.items) if(it->docIndex == doc) held += it->count;
+			const GameXmlContent::ItemInfo* info = content.FindItemInfo(doc);
+			if(!info || held >= need) continue;
+			AccountInventoryAdd(&inventory, doc, need - held, info->maxStack, nullptr, info->firstSlot);
+			LOG("[client%x] Account :: %ls tops up upgrade material %d x%d", clientHd, account.nickname.data(), doc, need - held);
+			changed = true;
+		}
+		if(changed) AccountInventorySave(account.nickname.data(), inventory);
+	}
+	AchieveOnLogin(account, progress);
 	account.level = progress.level;
 	account.levelExp = progress.levelExp;
 	account.gold = progress.gold;

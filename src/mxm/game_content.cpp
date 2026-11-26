@@ -3154,16 +3154,43 @@ bool GameXmlContent::LoadSkillUpgrades()
 		skillBasePowerMul[it->first] = mul;
 	}
 	for(const auto& m : MEASURED_SKILL_POWER_MUL) skillBasePowerMul[m.skillID] = m.mul;
+	{
+		XMLDocument official;
+		i32 officialCount = 0;
+		if(LoadXMLFile(L"/OfficialSkillRatios.xml", official, true)) {
+			for(XMLElement* e = official.FirstChildElement()->FirstChildElement("SKILL"); e; e = e->NextSiblingElement("SKILL")) {
+				if(e->FloatAttribute("base") <= 0) continue;
+				const i32 id = e->IntAttribute("id");
+				skillBasePowerMul[id] = e->FloatAttribute("att");
+				if(GetSkillBaseDamage(id) <= 0 && skillBaseDamage.find(id) == skillBaseDamage.end()) {
+					auto sk = skillMap.find(SkillID(id));
+					SkillNormalLevelModel* level = sk != skillMap.end() ? const_cast<SkillNormalModel&>(sk->second).getSkillNormalLevelByIndex(0) : nullptr;
+					if(level && level->getBaseDamage() <= 0) skillBaseDamage[id] = e->FloatAttribute("base");
+				}
+				officialCount++;
+			}
+		}
+		LOG("Loaded official skill power ratios for %d skills", officialCount);
+	}
+	static const MeasuredSkillPowerMul TESTER_SKILL_POWER_MUL[] = { { 180430010, 0.65f }, { 180430040, 0.65f } };
+	for(const auto& m : TESTER_SKILL_POWER_MUL) {
+		skillBasePowerMul[m.skillID] = m.mul;
+		auto ups = skillUpgrades.find(m.skillID);
+		if(ups == skillUpgrades.end()) continue;
+		foreach(up, ups->second) if(up->type == SkillUpgrade::Type::DAMAGE && up->attackMultiplier > 0) up->attackMultiplier = m.mul;
+	}
 	static const i32 HYP_PORTED_SKILL_CLASSES[] = { 41, 43 };
-	static const f32 HYP_PORTED_POWER_PER_DAMAGE = 0.000867f;
+	static const f32 MEASURED_OFFICIAL_POWER_PER_DAMAGE = 0.001044f;
+	static const f32 MEASURED_OFFICIAL_ULT_POWER_PER_DAMAGE = 0.000553f;
+	const auto powerPerDamage = [](i32 skill) { return (skill / 10) % 10 == 5 ? MEASURED_OFFICIAL_ULT_POWER_PER_DAMAGE : MEASURED_OFFICIAL_POWER_PER_DAMAGE; };
 	const auto ported = [](i32 skill) { for(i32 c : HYP_PORTED_SKILL_CLASSES) if((skill / 10000) % 100 == c) return true; return false; };
 	foreach_const(it, skillTooltipDamage) {
 		if(it->second <= 0 || !ported(it->first) || skillBasePowerMul.find(it->first) != skillBasePowerMul.end()) continue;
-		skillBasePowerMul[it->first] = it->second * HYP_PORTED_POWER_PER_DAMAGE;
+		skillBasePowerMul[it->first] = it->second * powerPerDamage(it->first);
 	}
 	foreach(it, skillUpgrades) {
 		if(!ported(it->first)) continue;
-		foreach(up, it->second) if(up->type == SkillUpgrade::Type::DAMAGE && up->baseDamage > 0 && up->attackMultiplier <= 0) up->attackMultiplier = up->baseDamage * HYP_PORTED_POWER_PER_DAMAGE;
+		foreach(up, it->second) if(up->type == SkillUpgrade::Type::DAMAGE && up->baseDamage > 0 && up->attackMultiplier <= 0) up->attackMultiplier = up->baseDamage * powerPerDamage(it->first);
 	}
 	static const f32 TOOLTIP_SCALE_MISMATCH = 1.5f;
 	foreach(it, skillUpgrades) {
@@ -3410,6 +3437,13 @@ bool GameXmlContent::LoadRemoteData()
 		}
 
 		remoteMap.emplace(remote.ID, remote);
+	}
+
+	struct MeasuredForceAngle { i32 remote; f32 angle; };
+	static const MeasuredForceAngle MEASURED_REMOTE_FORCE_ANGLES[] = { { 1440180040, 180.0f } };
+	for(const MeasuredForceAngle& m : MEASURED_REMOTE_FORCE_ANGLES) {
+		auto r = remoteMap.find(RemoteIdx(m.remote));
+		if(r != remoteMap.end() && r->second.forceFixedAngle == 0) r->second.forceFixedAngle = m.angle;
 	}
 
 	return true;
@@ -4182,6 +4216,7 @@ StatusType StatusTypeFromString(const char* str)
 		"STATUS_TYPE_HIT_PLAGUE",
 		"STATUS_TYPE_HPTRIGGER",
 		"STATUS_TYPE_IMMUNESKILL",
+		"STATUS_TYPE_JINSEOYEON",
 		"STATUS_TYPE_KNOCKDOWN",
 		"STATUS_TYPE_KROMEDE",
 		"STATUS_TYPE_LINK",
@@ -4380,6 +4415,7 @@ bool GameXmlContent::LoadStatusData()
 				if(XMLElement* pHit = pCommon->FirstChildElement("_HITEFFECT")) {
 					pHit->QueryAttribute("_StatusDocIndex", &st.hitEffectStatus);
 					pHit->QueryFloatAttribute("_AddValue", &st.hitEffectValue);
+					pHit->QueryAttribute("_CheckTime", &st.hitEffectCheckMs);
 				}
 				if(XMLElement* pStack = pCommon->FirstChildElement("_STACKATTACK")) {
 					pStack->QueryAttribute("_Index", &st.stackStatus);
@@ -4667,11 +4703,25 @@ bool GameXmlContent::LoadBalanceMultipliers()
 		pBalance->QueryFloatAttribute("_ShieldMultiplier", &m.shield);
 		balance[pBalance->IntAttribute("_Index")] = m;
 	}
+	eastl::hash_map<i32, Multipliers> official;
+	{
+		XMLDocument officialDoc;
+		if(LoadXMLFile(L"/OfficialSkillRatios.xml", officialDoc, true)) {
+			for(XMLElement* e = officialDoc.FirstChildElement()->FirstChildElement("SKILL"); e; e = e->NextSiblingElement("SKILL")) {
+				Multipliers m;
+				m.dot = e->FloatAttribute("dot");
+				m.heal = e->FloatAttribute("heal");
+				m.shield = e->FloatAttribute("shield");
+				if(m.dot > 0 || m.heal > 0 || m.shield > 0) official[e->IntAttribute("id")] = m;
+			}
+		}
+	}
 	i32 count = 0;
 	foreach(it, statusMap) {
 		StatusInfo& st = it->second;
 		if(st.skillIndex == 0) continue;
-		auto found = balance.find(st.skillIndex + BALANCE_INDEX_SKILL_OFFSET);
+		auto found = official.find(st.skillIndex);
+		if(found == official.end()) found = balance.find(st.skillIndex + BALANCE_INDEX_SKILL_OFFSET);
 		if(found == balance.end()) found = balance.find(st.skillIndex / 10 * 10 + BALANCE_INDEX_SKILL_OFFSET);
 		if(found == balance.end()) continue;
 		st.dotMul = found->second.dot;
@@ -6113,6 +6163,15 @@ bool GameXmlContent::LoadSummonBaseStats()
 			summon.baseStats.push_back({ (u8)st->IntAttribute("type"), st->FloatAttribute("value") });
 		}
 		count++;
+	}
+	struct SummonStatsFrom { i32 creature; i32 statsOf; };
+	static const SummonStatsFrom HYP_SUMMON_STATS_FROM[] = { { 100033830, 100033820 }, { 100033831, 100033821 }, { 100033832, 100033822 } };
+	for(const SummonStatsFrom& c : HYP_SUMMON_STATS_FROM) {
+		auto to = summonMap.find(c.creature);
+		auto from = summonMap.find(c.statsOf);
+		if(to == summonMap.end() || from == summonMap.end() || !to->second.baseStats.empty()) continue;
+		to->second.baseStats = from->second.baseStats;
+		LOG("Summon :: creature %d has no base stats, uses those of %d (HYP)", c.creature, c.statsOf);
 	}
 	LOG("Loaded base stats of %d summons", count);
 	return true;

@@ -1,6 +1,7 @@
 #include "achieve_rules.h"
 #include "account.h"
 #include <mxm/account_progress.h>
+#include <EASTL/hash_map.h>
 
 typedef GameXmlContent::AchieveSub AchieveSub;
 
@@ -30,9 +31,11 @@ void AchieveOnLogin(Account& account, const AccountProgress& progress)
 	}
 	AchieveApply(acc, Event(AchieveSub::COMMON_MASTER_TOTAL, (i64)content.masters.size(), true), &state);
 	const AccountInventory inventory = AccountInventoryLoad(nick);
-	foreach_const(it, inventory.items) {
-		AchieveEvent item = Event(AchieveSub::COMMON_ITEM, 1, true);
-		item.object = it->docIndex;
+	eastl::hash_map<i32, i64> held;
+	foreach_const(it, inventory.items) held[it->docIndex] += MAX(it->count, 1);
+	foreach_const(h, held) {
+		AchieveEvent item = Event(AchieveSub::COMMON_ITEM, h->second, true);
+		item.object = h->first;
 		AchieveApply(acc, item, &state);
 	}
 

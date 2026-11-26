@@ -1,3 +1,4 @@
+#include <common/suspended_game.h>
 #include <mutex>
 #include <EASTL/sort.h>
 #include "config.h"
@@ -99,10 +100,12 @@ void MarkAccountSentToGame(const WideString& nickname, SortieUID sortieUID, Acco
 		if(it->nickname != nickname) continue;
 		it->sortieUID = sortieUID;
 		it->gameAccountUID = gameAccountUID;
+		SuspendedAccountWrite(nickname.data(), (u64)sortieUID, (u64)gameAccountUID);
 		LOG("[Room] %ls sent to a game server", nickname.data());
 		return;
 	}
 	g_sentToGame.push_back({ nickname, sortieUID, gameAccountUID });
+	SuspendedAccountWrite(nickname.data(), (u64)sortieUID, (u64)gameAccountUID);
 	LOG("[Room] %ls sent to a game server", nickname.data());
 }
 
@@ -117,6 +120,7 @@ static eastl::fixed_vector<SortieGameServer,64,true> g_sortieGameServers;
 void MarkSortieGameServer(SortieUID sortieUID, const eastl::array<u8,4>& ip, u16 port)
 {
 	std::lock_guard<std::mutex> lock(g_sentToGameMutex);
+	SuspendedSortieWrite((u64)sortieUID, "server", "%lld %lld %lld %lld %lld", ip[0], ip[1], ip[2], ip[3], port);
 	foreach(it, g_sortieGameServers) {
 		if(it->sortieUID != sortieUID) continue;
 		it->ip = ip;
@@ -156,6 +160,7 @@ bool TakeAccountReturningFromGame(const WideString& nickname, SortieUID* sortieU
 		*sortieUID = it->sortieUID;
 		*gameAccountUID = it->gameAccountUID;
 		g_sentToGame.erase(it);
+		SuspendedAccountDelete(nickname.data());
 		return true;
 	}
 	return false;
@@ -1035,6 +1040,11 @@ void RoomInstance::OnClientPacket(ClientHandle clientHd, const NetHeader& header
 			notify.dwSkillIndex = (u32)skill;
 			notify.dwSkillSlot = (u32)slot;
 			SendPacket(clientHd, notify);
+			if(r.swappedSkill >= 0) {
+				notify.dwSkillIndex = (u32)r.swappedSkill;
+				notify.dwSkillSlot = (u32)(slot ^ 1);
+				SendPacket(clientHd, notify);
+			}
 		} break;
 
 		case Cl::CQ_StageSkillSelect::NET_ID: {

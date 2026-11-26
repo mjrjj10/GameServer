@@ -9,6 +9,8 @@ static const f64 BOT_ATTACK_STATE_MS = 300.0;
 static const f32 WEAPON_PROJECTILE_SPEED = 4000.0f;
 static const f32 WEAPON_MELEE_MAX_RANGE = 600.0f;
 static const f32 PROJECTILE_TARGET_RADIUS = 70.0f;
+static const f32 HYP_LOW_ARC_BODY_HEIGHT = 150.0f;
+static const bool HYP_WEAPON_CURVE_ENDS_AT_AIM = true;
 static const f32 WEAPON_SHOT_RELIABLE_DISTANCE = 100.0f;
 static const f32 WEAPON_SHOT_MAX_DISTANCE = 2500.0f;
 static const f32 SHOT_AIM_OFFSET_SCALE = 10.0f;
@@ -260,6 +262,14 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 	proj.range = graph ? MAX(reliable ? MIN(distance, aimMax) : MIN(classRange, aimMax), aimMin) : remoteRange;
 	if(remote && remote->useOwnerRemoteSpeedRatio) proj.speed *= OwnerRemoteSpeedRatio(player);
 	proj.graph = graph;
+	if(graph && remote && remote->bezier && fabsf(sinf(remote->bezierRotate[0] * PI / 180.0f)) <= 0.01f) {
+		f32 peak = 0;
+		for(i32 i = 1; i < 20; i++) {
+			const f32 t = i / 20.0f;
+			peak = MAX(peak, 3.0f * t * (1.0f - t) * (1.0f - t) * remote->bezierUp[0] + 3.0f * t * t * (1.0f - t) * remote->bezierUp[1]);
+		}
+		proj.lowArc = peak <= HYP_LOW_ARC_BODY_HEIGHT;
+	}
 	if(graph && remote && remote->bezier && remote->fixedGraphLength <= 0 && fabsf(sinf(remote->bezierRotate[0] * PI / 180.0f)) > 0.01f) {
 		proj.curve = remote;
 		proj.curveStart = vec2(proj.pos);
@@ -398,6 +408,7 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 				p.curveStart = vec2(p.pos);
 				p.curveDir = p.dir;
 				p.curveAdvance = 0;
+				if(HYP_WEAPON_CURVE_ENDS_AT_AIM && reliable) p.curveLength = MIN(extra->fixedGraphLength, MAX(distance, 1.0f));
 			}
 			p.damage = (i32)WeaponHitDamage(player, extra);
 			p.halfWidth = extra->boundSize[0] * 0.5f;
@@ -637,9 +648,13 @@ void World::UpdateProjectiles(f32 delta)
 		}
 		f32 step = MIN(proj->speed * delta + proj->pendingAdvance, proj->range - proj->travelled);
 		proj->pendingAdvance = 0;
+		if(proj->curve && proj->curveLength > 0 && proj->curveAdvance >= proj->curveLength) {
+			proj->dir = proj->curveDir;
+			proj->curve = nullptr;
+		}
 		if(proj->curve && step > 0) {
 			const Remote& c = *proj->curve;
-			const f32 limit = c.fixedGraphLength > 0 ? c.fixedGraphLength : proj->range;
+			const f32 limit = proj->curveLength > 0 ? proj->curveLength : (c.fixedGraphLength > 0 ? c.fixedGraphLength : proj->range);
 			proj->curveAdvance += step;
 			const f32 u = MIN(proj->curveAdvance / limit, 1.0f);
 			const f32 v = 1.0f - u;
@@ -690,7 +705,7 @@ void World::UpdateProjectiles(f32 delta)
 		const vec2 to = from + proj->dir * step;
 		bool destroyed = false;
 
-		if(!proj->graph || proj->curve) {
+		if(!proj->graph || proj->curve || proj->lowArc) {
 			const Remote* shotRemote = GetGameXmlContent().FindRemote(proj->remoteDoc);
 			vec2 contact;
 			RemoteInst* reflector = shotRemote && shotRemote->canReflect ? FindProjectileReflector(*proj, from, to, &contact) : nullptr;
@@ -710,8 +725,10 @@ void World::UpdateProjectiles(f32 delta)
 			}
 			u32 activationCost = 0;
 			const Player* activationTarget = nullptr;
-			if(shotRemote && !shotRemote->friendlyStatuses.empty() && (shotRemote->contactFriend || shotRemote->includeParty)) {
+			const bool bombOnSummon = shotRemote && shotRemote->friendlyStatuses.empty() && shotRemote->includeParty && shotRemote->destroyCreateRemote != RemoteIdx::INVALID;
+			if(shotRemote && (!shotRemote->friendlyStatuses.empty() || bombOnSummon) && (shotRemote->contactFriend || shotRemote->includeParty)) {
 				foreach(it, players) {
+					if(bombOnSummon) break;
 					if(it->team != owner.team || it->dead || it->index == owner.index || proj->friendHitList.full()) continue;
 					if(eastl::find(proj->friendHitList.begin(), proj->friendHitList.end(), it->index) != proj->friendHitList.end()) continue;
 					const vec3 pos = it->body->GetWorldPos();
@@ -734,11 +751,12 @@ void World::UpdateProjectiles(f32 delta)
 				foreach(npc, actorNpcList) {
 					if(destroyed) break;
 					if(npc->faction != ownFaction || npc->hp <= 0 || npc->removeAt != Time::ZERO || proj->friendNpcHitList.full()) continue;
+					if(bombOnSummon && npc->ownerUID == ActorUID::INVALID) continue;
 					if(eastl::find(proj->friendNpcHitList.begin(), proj->friendNpcHitList.end(), npc->UID) != proj->friendNpcHitList.end()) continue;
 					if(SegmentPointDist2D(from, to, vec2(npc->pos)) > proj->halfWidth + NpcHitRadius(*npc)) continue;
 					proj->friendNpcHitList.push_back(npc->UID);
 					ApplyFriendlyRemoteStatuses(owner, *shotRemote, nullptr, &*npc);
-					if(shotRemote->contactFriend) {
+					if(shotRemote->contactFriend || bombOnSummon) {
 						const vec3 friendHit = vec3(vec2(npc->pos), proj->pos.z);
 						if(proj->remoteID != 0) {
 							proj->npcActivation += NpcDensity(*npc);

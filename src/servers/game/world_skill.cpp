@@ -3,6 +3,8 @@
 #include "world_common.h"
 #include <mxm/game_content.h>
 
+static const i32 MEASURED_STAT_REMOTESPEED = 52;
+
 static f32 MovespeedMul(f32 percentSum, f32 statPercent)
 {
 	static const f32 MEASURED_MOVESPEED_MUL_MIN = 0.1f;
@@ -59,6 +61,14 @@ void World::UpdateUltimateGauges(f32 delta)
 		if(localTime >= it->tNextSpeedRefresh) {
 			it->tNextSpeedRefresh = TimeAdd(localTime, TimeMsToTime(1000));
 			it->moveSpeedSent = -1.0f;
+			it->remoteSpeedSent = -1.0f;
+		}
+		{
+			const f32 remoteSpeed = MasterStat(cls, MEASURED_STAT_REMOTESPEED) + StatusModSum(*it, StatusMod::REMOTESPEED);
+			if(remoteSpeed > 0 && fabsf(remoteSpeed - it->remoteSpeedSent) > 0.01f) {
+				it->remoteSpeedSent = remoteSpeed;
+				replication->SendStatToAll(it->Main().UID, MEASURED_STAT_REMOTESPEED, 0.0f, remoteSpeed);
+			}
 		}
 		{
 			const f32 base = MasterStat(cls, STAT_MOVESPEED) + StatBonus(*it, STAT_MOVESPEED);
@@ -80,7 +90,7 @@ void World::UpdateUltimateGauges(f32 delta)
 		if(staminaMax > 0 && it->stamina < 0) { it->stamina = staminaMax; it->staminaDirty = true; }
 		if(manaMax > 0 && it->mana < 0) { it->mana = manaMax; it->manaDirty = true; }
 		for(int r = 0; r < 3; r++) {
-			if(resMax[r] > 0 && it->res[r] < 0) { it->res[r] = MasterStartResource(cls, r, resMax[r], ResourceStartsFull(cls, r, RESOURCES[r].startFull)); it->resDirty = true; }
+			if(resMax[r] > 0 && it->res[r] < 0) { it->res[r] = ResourceStartsAtMax(cls, r) ? resMax[r] : MasterStartResource(cls, r, resMax[r], ResourceStartsFull(cls, r, RESOURCES[r].startFull)); it->resDirty = true; }
 		}
 
 		const ActorMaster& sub = it->Sub();
@@ -98,7 +108,7 @@ void World::UpdateUltimateGauges(f32 delta)
 		}
 		for(int r = 0; r < 3; r++) {
 			if(benchResMax[r] <= 0 || it->benchRes[r] >= 0) continue;
-			it->benchRes[r] = MasterStartResource(benchCls, r, benchResMax[r], ResourceStartsFull(benchCls, r, RESOURCES[r].startFull));
+			it->benchRes[r] = ResourceStartsAtMax(benchCls, r) ? benchResMax[r] : MasterStartResource(benchCls, r, benchResMax[r], ResourceStartsFull(benchCls, r, RESOURCES[r].startFull));
 			replication->SendStatToAll(sub.UID, RESOURCES[r].maxStat, it->benchRes[r], benchResMax[r]);
 		}
 
@@ -647,7 +657,7 @@ void World::ApplyStatusToNpc(Player& caster, ActorNpc& npc, i32 statusID, bool r
 	if(statusPushDirSet && info && (info->type == StatusType::FLY || info->type == StatusType::PUSH)) center = npc.pos - vec3(glm::normalize(statusPushDir) * 100.0f, 0);
 	const NpcCcGraph cc = StartNpcCc(npc, info, center, vec2(center), caster.body->GetWorldPos(), 0.0f);
 	const bool summonBound = info && info->durationSec < 0 && cc.graphSec <= 0 && npc.ownerUID != ActorUID::INVALID && info->dotDamage <= 0 && info->intervalSec <= 0;
-	const f32 duration = summonBound ? STATUS_INFINITE_DURATION_SEC : cc.duration;
+	const f32 duration = summonBound ? STATUS_INFINITE_DURATION_SEC : (cc.graphSec > 0 ? cc.duration : cc.duration * statusDurationScale);
 	const i32 overlap = prevOverlap > 0 ? MIN(prevOverlap + 1, MAX(info ? info->maxOverlap : 1, 1)) : 1;
 	replication->SendAddStatusToAll(statusID, npc.UID, casterField, duration, from, cc.to, cc.graphSec, overlap, 1.0f, cc.nominal, cc.graph, prevOverlap > 0);
 	if(info && info->raiseStunByPush && cc.graphSec > 0) AddPushBound(caster, npc.UID, *info, cc.graphSec);
@@ -1152,9 +1162,16 @@ void World::UpdateCasts()
 			if((it->comboSlot >= 0 || it->clientHd == ClientHandle::INVALID) && it->comboSkill != SkillID::INVALID && !it->dead) {
 				const GameXmlContent::SkillInput* comboIn = GetGameXmlContent().FindSkillInput((i32)it->comboSkill);
 				const bool petToCaster = it->clientHd == ClientHandle::INVALID && comboIn && comboIn->petCaster && comboIn->needsClick && IsCarrying(*it);
-				const vec3 comboPos = petToCaster ? it->body->GetWorldPos() : it->comboCastPos;
+				vec3 comboPos = petToCaster ? it->body->GetWorldPos() : it->comboCastPos;
+				if(it->clientHd != ClientHandle::INVALID && comboIn && comboIn->directionOnly) {
+					const vec3 here = it->body->GetWorldPos();
+					const f32 reach = MAX(glm::length(vec2(it->comboCastPos) - vec2(here)), 1.0f);
+					comboPos = vec3(vec2(here) + vec2(cosf(it->input.rot.upperYaw), sinf(it->input.rot.upperYaw)) * reach, here.z);
+				}
 				LOG("Combo :: %ls auto-cast %d at (%.0f, %.0f)", it->name.data(), (i32)it->comboSkill, comboPos.x, comboPos.y);
+				castFacesCastPos = true;
 				PlayerCastSkill(*it, it->comboSkill, comboPos, Slice<const ActorUID>(), 0);
+				castFacesCastPos = false;
 			}
 		}
 		if(it->comboSlot >= 0 && localTime >= it->comboUntil) {
@@ -2216,7 +2233,8 @@ void World::UpdateNpcFog()
 		const i32 npcTeam = summon ? (i32)players[npc->ownerIndex].team : (npc->faction == Faction::RED ? 0 : npc->faction == Faction::BLUE ? 1 : -1);
 		bool sees[2];
 		const f32 npcSlack = !summon && npc->monsterAi ? npc->monsterAi->radius : 0.0f;
-		for(i32 team = 0; team < 2; team++) sees[team] = team == npcTeam || TeamSeesAt(team, npc->pos, ActorUID::INVALID, npcSlack, HYP_FOG_SIGHT_MARGIN);
+		const bool stealthed = summon && NpcHasStatusType(*npc, StatusType::HIDE);
+		for(i32 team = 0; team < 2; team++) sees[team] = team == npcTeam || (!stealthed && TeamSeesAt(team, npc->pos, ActorUID::INVALID, npcSlack, HYP_FOG_SIGHT_MARGIN));
 		foreach(viewer, players) {
 			if(viewer->clientHd == ClientHandle::INVALID) continue;
 			const u32 bit = 1u << viewer->index;
@@ -2351,6 +2369,10 @@ void World::ResendSkillState(const Player& viewer)
 	}
 	if(ingameSkillPoints) replication->SendSkillPoints(viewer.clientHd, viewer.userID, viewer.skillPoints);
 	for(u32 m = 0; m < 2; m++) if(viewer.characters[m]->traitPoints > 0) replication->SendCharacterPropertyPoint(viewer.clientHd, viewer.characters[m]->UID, viewer.characters[m]->traitPoints);
+	if(map && map->ingameLevels) {
+		foreach_const(p, players) if(!p->removed) replication->SendPointsToAll(p->userID, p->team, p->points, TeamPoints(p->team));
+		for(i32 t = 0; t < 2; t++) replication->SendTeamPointsToAll((u8)t, TeamPoints(t));
+	}
 	LOG("Upgrade :: %ls skill state resent (points %d)", viewer.name.data(), viewer.skillPoints);
 }
 

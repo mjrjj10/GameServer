@@ -93,7 +93,9 @@ bool World::MonsterHostile(const ActorNpc& monster, const ActorNpc& other) const
 	static const u32 playerSummoneeTag = StatusTypeKey("Player_Summonee");
 	if(&monster == &other || other.hp <= 0 || other.removeAt != Time::ZERO) return false;
 	if(other.despawnAt != Time::ZERO && localTime >= other.despawnAt) return false;
-	if(!other.monsterAi) return other.playerSummon && FactionsOppose(monster.faction, other.faction, hostileMonsters) && monster.monsterAi->Hates(playerSummoneeTag);
+	static const u32 coreTag = StatusTypeKey("Core");
+	if(other.monsterAi && other.monsterAi->tagKey == coreTag && other.coreStage > 0 && other.coreStage < 5) return false;
+	if(!other.monsterAi) return other.playerSummon && !NpcHasStatusType(other, StatusType::HIDE) && FactionsOppose(monster.faction, other.faction, hostileMonsters) && monster.monsterAi->Hates(playerSummoneeTag);
 	return FactionsOppose(monster.faction, other.faction, hostileMonsters) && monster.monsterAi->Hates(other.monsterAi->tagKey);
 }
 
@@ -138,6 +140,8 @@ static const u32 MONSTER_REMOTE_ID_MASK = 0x3FFFFFFFu;
 static const u32 MEASURED_MONSTER_HIT_PENETRATION = 10;
 static const f32 HYP_MONSTER_MELEE_HIT_SLACK = 60.0f;
 static const f32 HYP_MINION_CROWD_DIST = 40.0f;
+static const f32 MEASURED_TOWER_BREAK_HP[] = { 2.0f / 3.0f, 1.0f / 3.0f };
+static const ActionStateID MEASURED_TOWER_BREAK_STATE = ActionStateID::SKILL_4_BEHAVIORSTATE;
 static const f32 HYP_MINION_ATTACK_SPACING = 55.0f;
 static const f32 HYP_MONSTER_SHELL_HIT_RADIUS = 200.0f;
 static const f32 HYP_MONSTER_TARGET_RADIUS = 55.0f;
@@ -1121,9 +1125,12 @@ void World::UpdateMonsterRemotes(f32 delta)
 				mr.retargetAt = TimeAdd(localTime, TimeMsToTime(remote.homingTime * 1000.0));
 				ActorUID nearest = ActorUID::INVALID;
 				f32 bestNear = remote.homingLength;
+				const bool coned = remote.homingAngle > 0 && remote.homingAngle < 360 && glm::length(mr.dir) > 0.5f;
+				const f32 halfCos = cosf(remote.homingAngle * 0.5f * PI / 180.0f);
 				foreach_const(p, players) {
 					if(p->dead || p->untargetable || !p->body || p->hiddenUID != ActorUID::INVALID || (!MonsterNeutral(owner, hostileMonsters) && !MonsterHostile(owner, *p))) continue;
 					const f32 d = glm::length(vec2(p->body->GetWorldPos()) - vec2(mr.pos));
+					if(coned && d > 1.0f && glm::dot((vec2(p->body->GetWorldPos()) - vec2(mr.pos)) / d, glm::normalize(mr.dir)) < halfCos) continue;
 					if(d <= bestNear) { bestNear = d; nearest = p->Main().UID; }
 				}
 				mr.target = nearest;
@@ -1835,6 +1842,43 @@ void World::SnapNpcToGround(ActorNpc& npc)
 	}
 }
 
+bool World::TowerBreaks(const ActorNpc& npc) const
+{
+	static const u32 towerCenterTag = StatusTypeKey("Tower_Center");
+	static const u32 towerSideTag = StatusTypeKey("Tower_Side");
+	return map && map->ingameLevels && npc.monsterAi && (npc.monsterAi->tagKey == towerCenterTag || npc.monsterAi->tagKey == towerSideTag);
+}
+
+bool World::UpdateTowerBreak(ActorNpc& npc)
+{
+	if(!TowerBreaks(npc) || npc.hpMax <= 0) return false;
+	if(npc.towerBreakAt != Time::ZERO && localTime >= npc.towerBreakAt) {
+		npc.towerBreakAt = Time::ZERO;
+		const ActionStateID shown = npc.towerBreakStage == 1 ? ActionStateID::EXTRAMOTION_1_BEHAVIORSTATE : ActionStateID::EXTRAMOTION_2_BEHAVIORSTATE;
+		EnterNpcState(npc, shown);
+		npc.towerBreakMs[npc.towerBreakStage - 1] = (i64)TimeDiffMs(TimeRelNow());
+		npc.towerBreakShown = npc.towerBreakStage;
+		npc.towerBreakIdleAt = TimeAdd(localTime, TimeMsToTime(MAX(NpcStateAnimSec(npc, shown), 0.0f) * 1000.0));
+		LOG("Tower :: creature=%d (local %d) break stage %d shown at hp %d/%d", (i32)npc.docID, npc.localID, npc.towerBreakStage, npc.hp, npc.hpMax);
+	}
+	if(npc.towerBreakIdleAt != Time::ZERO && localTime >= npc.towerBreakIdleAt) {
+		npc.towerBreakIdleAt = Time::ZERO;
+		EnterNpcState(npc, ActionStateID::NONE_BEHAVIORSTATE);
+	}
+	if(npc.towerBreakAt != Time::ZERO) return true;
+	const u8 stage = npc.towerBreakStage;
+	if(stage >= 2 || npc.hp >= npc.hpMax * MEASURED_TOWER_BREAK_HP[stage]) return false;
+	const GameXmlContent::MonsterAttack* wave = nullptr;
+	foreach_const(a, npc.monsterAi->attacks) if(a->special && a->state == MEASURED_TOWER_BREAK_STATE) { wave = &*a; break; }
+	if(!wave) return false;
+	npc.towerBreakStage = stage + 1;
+	npc.towerBreakAt = TimeAdd(localTime, TimeMsToTime(MAX(wave->anim, 0.0f) * 1000.0));
+	LOG("Tower :: creature=%d (local %d) crosses break threshold %d at hp %d/%d, knockback wave", (i32)npc.docID, npc.localID, npc.towerBreakStage, npc.hp, npc.hpMax);
+	const vec3 center = npc.pos;
+	StartMonsterAttack(npc, *npc.monsterAi, wave, &center, 0.0f, npc.rot.z, 0.0f);
+	return true;
+}
+
 void World::UpdateMonsterAi(f32 delta)
 {
 	UpdateMonsterHits();
@@ -1880,6 +1924,7 @@ void World::UpdateMonsterAi(f32 delta)
 		UpdateMonsterAllyBuffs(npc);
 		UpdateNpcDefeat(npc);
 		UpdateNpcVictory(npc);
+		if(UpdateTowerBreak(npc)) continue;
 		UpdateMonsterDash(npc);
 		UpdateNpcDrag(npc, delta);
 		if((npc.ccControl & NPC_CONTROL_ROOT) && !npc.monsterReturning && (npc.monsterChasing || npc.monsterWalking)) {
@@ -2344,6 +2389,7 @@ void World::UpdateMonsterAi(f32 delta)
 						const GameXmlContent::MonsterAttack& special = ai.attacks[s];
 						if((npc.ccControl & NPC_CONTROL_SILENCE) || !special.special || special.target != attack->target || special.range <= reach || (special.minRange <= 0 && (npc.path || ai.tagKey == StatusTypeKey("Minion") || ai.tagKey == StatusTypeKey("Titan")))) continue;
 						if(hpNow < special.hpMin || hpNow > special.hpMax || dist < special.minRange || dist > special.range) continue;
+						if(special.state == MEASURED_TOWER_BREAK_STATE && TowerBreaks(npc)) continue;
 						if(npc.monsterSkillReady[s] == Time::ZERO) npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime((special.firstAt >= 0 ? special.firstAt : special.cooldown) * 1000.0));
 						if(localTime < npc.monsterSkillReady[s]) continue;
 						if(MonsterDashNeedsTurn(npc, special, yaw)) continue;
@@ -2525,6 +2571,7 @@ void World::UpdateMonsterAi(f32 delta)
 					const GameXmlContent::MonsterAttack& special = ai.attacks[s];
 					if((npc.ccControl & NPC_CONTROL_SILENCE) || !special.special || special.target != attack->target || localTime < npc.monsterSkillReady[s]) continue;
 					if(hpRatio < special.hpMin || hpRatio > special.hpMax) continue;
+					if(special.state == MEASURED_TOWER_BREAK_STATE && TowerBreaks(npc)) continue;
 					if(npc.monsterSkillReady[s] == Time::ZERO) {
 						npc.monsterSkillReady[s] = TimeAdd(localTime, TimeMsToTime((special.firstAt >= 0 ? special.firstAt : special.cooldown) * 1000.0));
 						if(localTime < npc.monsterSkillReady[s]) continue;

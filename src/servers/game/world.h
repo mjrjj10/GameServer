@@ -220,6 +220,7 @@ struct World
 		i32 titanPieces = 0;
 		i32 savedPieces = 0;
 		i32 interactSlot = -1;
+		Time evadeGainReadyAt = Time::ZERO;
 		Time interactEndAt = Time::ZERO;
 		vec2 interactFrom = vec2(0);
 		u32 occupyStreak = 0;
@@ -335,6 +336,7 @@ struct World
 		i32 botMeshJumpEdge = -1;
 		Time botMeshJumpAt = Time::ZERO;
 		f32 moveSpeedSent = -1.0f;
+		f32 remoteSpeedSent = -1.0f;
 		bool manaDirty = false;
 		eastl::array<f32,3> res = { -1, -1, -1 };
 		f32 benchMana = -1.0f;
@@ -714,6 +716,11 @@ struct World
 		ActorUID monsterInReachTarget = ActorUID::INVALID;
 		vec2 monsterSpreadGoal = vec2(0);
 		u8 coreStage = 0;
+		u8 towerBreakStage = 0;
+		u8 towerBreakShown = 0;
+		Time towerBreakAt = Time::ZERO;
+		Time towerBreakIdleAt = Time::ZERO;
+		i64 towerBreakMs[2] = { 0, 0 };
 		Time coreNextAt = Time::ZERO;
 		bool monsterWalkStateOn = false;
 		Time monsterWalkStateAt = Time::ZERO;
@@ -854,6 +861,8 @@ struct World
 		i32 hitsLeft;
 		bool graph;
 		const Remote* curve = nullptr;
+		bool lowArc = false;
+		f32 curveLength = 0;
 		vec2 curveStart = vec2(0);
 		vec2 curveDir = vec2(1, 0);
 		f32 curveAdvance = 0;
@@ -1212,7 +1221,7 @@ struct World
 	void SendNpcHit(const ActorNpc& attacker, ActorUID targetUID, const vec3& targetPos, i32 remote, u32 remoteID, i32 damage, i32 hp, i32 hpMax);
 	void DamageNpcFromNpc(ActorNpc& attacker, ActorNpc& target, i32 damage, i32 remote, u32 remoteID = 0, i32 status = 0, bool exact = false);
 	void ApplyStatusFromNpc(const ActorNpc& caster, Player& target, i32 statusID, f32 durationOverride = -1);
-	void WeaponLifesteal(Player& attacker, i32 damage);
+	void WeaponLifesteal(Player& attacker, i32 damage, bool skill);
 	void DamagePlayerFromNpc(ActorNpc& attacker, Player& target, i32 damage, i32 remote, i32 status, u32 remoteID = 0);
 	void MonsterDie(ActorNpc& npc, ActorUID killerUID, CreatureIndex killerDoc);
 	void DestroyTeamCore(i32 team);
@@ -1301,6 +1310,7 @@ struct World
 	RemoteActivation remoteActivation = { 0, ClientHandle::INVALID, ActorUID::INVALID, 0, vec3(0) };
 	f32 statusDistanceRatioOverride = 0;
 	f32 statusDurationScale = 1.0f;
+	bool castFacesCastPos = false;
 	bool statusFromBehind = false;
 	bool statusPushDirSet = false;
 	vec2 statusPushDir = vec2(0);
@@ -1584,6 +1594,8 @@ public:
 	eastl::array<i32,2> giantsKilled = {{ 0, 0 }};
 	f64 GameTimeSec() const { return gameStartedAt == Time::ZERO ? 0.0 : TimeDiffSec(TimeDiff(gameStartedAt, localTime)); }
 	bool IsStructure(const ActorNpc& npc) const;
+	bool TowerBreaks(const ActorNpc& npc) const;
+	bool UpdateTowerBreak(ActorNpc& npc);
 	vec2 DetourDeadStructures(const ActorNpc& npc, const vec2& goal) const;
 	void GrantMonsterKillPoints(const ActorNpc& npc, ActorUID killerUID);
 	Time nextPassiveExpAt = Time::ZERO;

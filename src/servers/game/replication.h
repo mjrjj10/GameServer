@@ -152,6 +152,7 @@ struct Replication
 		f32 stateSpeed = 0;
 		vec2 dashGoal = vec2(0);
 		f32 dashSpeed = 0;
+		eastl::fixed_vector<eastl::pair<i32,i64>,2,false> meshHistory;
 
 
 		vec3 pos;
@@ -172,6 +173,7 @@ struct Replication
 		i32 seed = 0;
 		i32 entityType = 3;
 		bool immortal = true;
+		bool destroyed = false;
 
 		vec3 pos;
 		vec3 rot;

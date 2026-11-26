@@ -2127,7 +2127,7 @@ void World::UpdateBotCombat()
 			}
 			if(!swing && !Config().DevShowcase) {
 				foreach_const(npc, actorNpcList) {
-					if(!NpcHittableBy(*npc, bot) || (IsStructure(*npc) && !BotSiegeOk(bot, *npc))) continue;
+					if(!NpcHittableBy(*npc, bot) || (IsStructure(*npc) && !BotSiegeOk(bot, *npc)) || (npc->ownerUID != ActorUID::INVALID && NpcHasStatusType(*npc, StatusType::HIDE))) continue;
 					if(glm::length(vec2(npc->pos) - vec2(bot.body->GetWorldPos())) <= meleeReach + NpcHitRadius(*npc) + HitRadius(bot)) { swing = true; swingAt = vec2(npc->pos); break; }
 				}
 			}
@@ -2178,7 +2178,7 @@ void World::UpdateBotCombat()
 		if(!target && !repair && !Config().DevShowcase) {
 			f32 bestNpc = range;
 			foreach_const(npc, actorNpcList) {
-				if(!NpcHittableBy(*npc, bot) || (IsStructure(*npc) && !BotSiegeOk(bot, *npc))) continue;
+				if(!NpcHittableBy(*npc, bot) || (IsStructure(*npc) && !BotSiegeOk(bot, *npc)) || (npc->ownerUID != ActorUID::INVALID && NpcHasStatusType(*npc, StatusType::HIDE))) continue;
 				const f32 d = glm::length(vec2(npc->pos) - vec2(pos));
 				if(d < bestNpc && BotShotClear(bot, npc->pos, NpcHitRadius(*npc))) { bestNpc = d; best = d; aim = npc->pos; }
 			}

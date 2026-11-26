@@ -1,6 +1,7 @@
 #include <common/platform.h>
 #include <mxm/game_content.h>
 #include <mxm/safe_file.h>
+#include <common/suspended_game.h>
 
 #include "coordinator.h"
 #include "config.h"
@@ -39,6 +40,7 @@ int main(int argc, char** argv)
 		static const i32 ACCOUNT_BACKUPS_KEPT = 10;
 		const i32 copied = BackupDirectory("accounts", "accounts_backup", ACCOUNT_BACKUPS_KEPT);
 		LOG("Accounts backup :: %d file(s) copied", copied);
+		LOG("Suspended games :: %d stale file(s) removed", SuspendedGamesClear());
 	}
 
 	r = GameXmlContentLoad();

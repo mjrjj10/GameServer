@@ -390,7 +390,8 @@ void World::DamagePlayer(Player& attacker, Player& target, SkillID skillID, i32 
 		LightAttacker(attacker.body->GetWorldPos(), target.team);
 		attacker.damageDealt += damage;
 		const bool normalHit = weaponHit;
-		if(normalHit) WeaponLifesteal(attacker, damage);
+		if(normalHit) WeaponLifesteal(attacker, damage, false);
+		else if(skillID != SkillID::INVALID) WeaponLifesteal(attacker, damage, true);
 		attacker.damageStats[END_DMG_MAX_DEALT] = MAX(attacker.damageStats[END_DMG_MAX_DEALT], (u32)damage);
 		attacker.damageStats[normalHit ? END_DMG_NORMAL_DEALT : END_DMG_SKILL_DEALT] += (u32)damage;
 		target.damageStats[END_DMG_TAKEN] += (u32)damage;
@@ -576,10 +577,10 @@ u32 World::NpcDensity(const ActorNpc& npc) const
 	return npc.monsterAi ? (u32)npc.monsterAi->density : 0;
 }
 
-void World::WeaponLifesteal(Player& attacker, i32 damage)
+void World::WeaponLifesteal(Player& attacker, i32 damage, bool skill)
 {
-	const f32 ratio = StatusRegenBonus(attacker, StatusMod::LIFESTEAL, false);
 	ActorMaster& chara = attacker.Main();
+	const f32 ratio = skill ? chara.GearBonus((u8)StatType::STAT_TYPE_SKILL_LIFESTEAL) : StatusRegenBonus(attacker, StatusMod::LIFESTEAL, false) + chara.GearBonus((u8)StatType::STAT_TYPE_LIFESTEAL);
 	if(ratio <= 0 || damage <= 0 || attacker.dead || chara.hp <= 0 || chara.hp >= chara.hpMax) return;
 	const i32 hpBefore = chara.hp;
 	chara.hp = MIN(chara.hp + MAX((i32)(damage * ratio / 100.0f), 1), chara.hpMax);
@@ -672,7 +673,8 @@ void World::DamageNpc(Player& attacker, ActorNpc& npc, SkillID skillID, i32 dama
 	if(IsStructure(npc)) attacker.damageStats[END_DMG_BUILDING_DEALT] += (u32)(hpBefore - npc.hp);
 	static const u32 coreTag = StatusTypeKey("Core");
 	if(npc.monsterAi && npc.monsterAi->tagKey == coreTag) attacker.coreDamage += hpBefore - npc.hp;
-	if(skillID == SkillID::INVALID && remoteHit) WeaponLifesteal(attacker, hpBefore - npc.hp);
+	if(skillID == SkillID::INVALID && remoteHit) WeaponLifesteal(attacker, hpBefore - npc.hp, false);
+	else if(skillID != SkillID::INVALID) WeaponLifesteal(attacker, hpBefore - npc.hp, true);
 	if(npc.faction == Faction::RED || npc.faction == Faction::BLUE) {
 		RevealToTeam(attacker, (i32)npc.faction);
 		LightAttacker(attacker.body->GetWorldPos(), (i32)npc.faction);

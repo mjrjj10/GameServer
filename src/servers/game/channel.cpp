@@ -648,7 +648,7 @@ void GamePacketHandler::HandlePacket_CQ_CancelCastSkill(ClientHandle clientHd, c
 
 void GamePacketHandler::HandlePacket_CQ_PlayerCancelStance(ClientHandle clientHd, const NetHeader& header, const u8* packetData, const i32 packetSize)
 {
-	if(!ValidatePacket<Cl::CQ_PlayerCancelStance>(packetData, packetSize)) {
+	if(packetSize != 0 && !ValidatePacket<Cl::CQ_PlayerCancelStance>(packetData, packetSize)) {
 		WARN("[client%x] WARNING: invalid CQ_PlayerCancelStance (size=%d)", clientHd, packetSize);
 		return;
 	}

@@ -249,6 +249,7 @@ enum class StatusType: u8
 	HIT_PLAGUE,
 	HPTRIGGER,
 	IMMUNESKILL,
+	JINSEOYEON,
 	KNOCKDOWN,
 	KROMEDE,
 	LINK,
@@ -365,6 +366,7 @@ struct StatusInfo
 	i32 customMax = 0;
 	i32 hitEffectStatus = 0;
 	f32 hitEffectValue = 0;
+	i32 hitEffectCheckMs = 0;
 	f32 costRatioMP = 0;
 	f32 stackDurationSec = 0;
 	i32 stackMax = 0;

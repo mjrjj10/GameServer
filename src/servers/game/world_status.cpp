@@ -574,6 +574,13 @@ void World::OnEvade(Player& target)
 		LOG("Passive :: %ls evaded -> status %d", target.name.data(), *s);
 		ApplyStatus(target, target, *s);
 	}
+	const ActiveStatus* gain = FindPassiveOfType(target, StatusType::JINSEOYEON);
+	const ResourceGainRule* rule = gain && gain->info && gain->info->hitEffectValue > 0 ? FindResourceGainRule(target.Main().classType, ResourceEvent::EVADE) : nullptr;
+	if(rule && localTime >= target.evadeGainReadyAt) {
+		target.evadeGainReadyAt = TimeAdd(localTime, TimeMsToTime((f64)gain->info->hitEffectCheckMs));
+		LOG("Passive :: %ls evaded -> resource slot %d +%.0f", target.name.data(), rule->slot, gain->info->hitEffectValue);
+		GainResource(target, rule->slot, gain->info->hitEffectValue);
+	}
 }
 
 void World::PassiveOnWeaponStatusHit(Player& attacker, Player& target)
