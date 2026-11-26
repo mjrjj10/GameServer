@@ -10,7 +10,6 @@ static const f32 WEAPON_PROJECTILE_SPEED = 4000.0f;
 static const f32 WEAPON_MELEE_MAX_RANGE = 600.0f;
 static const f32 PROJECTILE_TARGET_RADIUS = 70.0f;
 static const f32 HYP_LOW_ARC_BODY_HEIGHT = 150.0f;
-static const bool HYP_WEAPON_CURVE_ENDS_AT_AIM = true;
 static const f32 WEAPON_SHOT_RELIABLE_DISTANCE = 100.0f;
 static const f32 WEAPON_SHOT_MAX_DISTANCE = 2500.0f;
 static const f32 SHOT_AIM_OFFSET_SCALE = 10.0f;
@@ -408,7 +407,6 @@ void World::PlayerWeaponShot(Player& player, const vec3& origin, const vec2& dir
 				p.curveStart = vec2(p.pos);
 				p.curveDir = p.dir;
 				p.curveAdvance = 0;
-				if(HYP_WEAPON_CURVE_ENDS_AT_AIM && reliable) p.curveLength = MIN(extra->fixedGraphLength, MAX(distance, 1.0f));
 			}
 			p.damage = (i32)WeaponHitDamage(player, extra);
 			p.halfWidth = extra->boundSize[0] * 0.5f;
@@ -648,19 +646,15 @@ void World::UpdateProjectiles(f32 delta)
 		}
 		f32 step = MIN(proj->speed * delta + proj->pendingAdvance, proj->range - proj->travelled);
 		proj->pendingAdvance = 0;
-		if(proj->curve && proj->curveLength > 0 && proj->curveAdvance >= proj->curveLength) {
-			proj->dir = proj->curveDir;
-			proj->curve = nullptr;
-		}
 		if(proj->curve && step > 0) {
 			const Remote& c = *proj->curve;
-			const f32 limit = proj->curveLength > 0 ? proj->curveLength : (c.fixedGraphLength > 0 ? c.fixedGraphLength : proj->range);
+			const f32 limit = c.fixedGraphLength > 0 ? c.fixedGraphLength : proj->range;
 			proj->curveAdvance += step;
 			const f32 u = MIN(proj->curveAdvance / limit, 1.0f);
 			const f32 v = 1.0f - u;
 			const vec2 side = -Perp(proj->curveDir);
 			vec2 ctrl[2];
-			for(int k = 0; k < 2; k++) ctrl[k] = proj->curveStart + proj->curveDir * (limit * (k + 1) / 3.0f + c.bezierFront[k]) + side * (c.bezierUp[k] * sinf(c.bezierRotate[k] * PI / 180.0f));
+			for(int k = 0; k < 2; k++) ctrl[k] = proj->curveStart + proj->curveDir * (c.fixedGraphLength > 0 ? c.bezierFront[k] : limit * (k + 1) / 3.0f + c.bezierFront[k]) + side * (c.bezierUp[k] * sinf(c.bezierRotate[k] * PI / 180.0f));
 			const vec2 end = proj->curveStart + proj->curveDir * limit;
 			const vec2 point = proj->curveStart * (v * v * v) + ctrl[0] * (3 * v * v * u) + ctrl[1] * (3 * v * u * u) + end * (u * u * u);
 			const vec2 move = point - vec2(proj->pos);

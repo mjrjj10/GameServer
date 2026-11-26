@@ -3392,6 +3392,7 @@ bool GameXmlContent::LoadRemoteData()
 					else if(EA::StdC::Strcmp(p->Name(), "_BezierRotate") == 0 && nRot < 2) remote.bezierRotate[nRot++] = v;
 					else if(EA::StdC::Strcmp(p->Name(), "_BezierFront") == 0 && nFront < 2) remote.bezierFront[nFront++] = v;
 				}
+				if(!graphType && (nUp > 0 || nFront > 0)) remote.bezier = true;
 			}
 
 			else if((EA::StdC::Strcmp("SteeringBehaviorsComData", compName) == 0)) {

@@ -862,7 +862,6 @@ struct World
 		bool graph;
 		const Remote* curve = nullptr;
 		bool lowArc = false;
-		f32 curveLength = 0;
 		vec2 curveStart = vec2(0);
 		vec2 curveDir = vec2(1, 0);
 		f32 curveAdvance = 0;
