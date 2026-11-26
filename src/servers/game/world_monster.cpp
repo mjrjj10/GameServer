@@ -555,12 +555,23 @@ void World::MonsterAttackHit(ActorUID attackerUID, ActorUID targetUID, const Gam
 		else if(castAim) center = *castAim;
 		else if(targetIt != actorNpcMap.end()) center = targetIt->second->pos;
 		else if(master && master->parent) center = master->parent->body->GetWorldPos();
+		const bool cone = hitData && hitData->angle > 0 && hitData->angle < 360.0f && !aimPos && !castAim;
+		const f32 coneHalfCos = cone ? cosf(hitData->angle * 0.5f * PI / 180.0f) : -2.0f;
+		if(cone) center = attacker.pos;
+		const vec2 face = vec2(cosf(attacker.rot.z), sinf(attacker.rot.z));
+		const auto inCone = [&](const vec2& at, f32 r) {
+			if(!cone) return true;
+			const vec2 rel = at - vec2(center);
+			const f32 d = glm::length(rel);
+			return d <= r || glm::dot(rel / d, face) >= coneHalfCos;
+		};
 		foreach(p, players) {
-			if(p->dead || !p->body || !MonsterHostile(attacker, *p) || glm::length(vec2(p->body->GetWorldPos()) - vec2(center)) > areaRadius + (aimPos || attack.selfCentered ? HitRadius(*p) : 0.0f)) continue;
+			if(p->dead || !p->body || !MonsterHostile(attacker, *p) || glm::length(vec2(p->body->GetWorldPos()) - vec2(center)) > areaRadius + (aimPos || attack.selfCentered || cone ? HitRadius(*p) : 0.0f)) continue;
+			if(!inCone(vec2(p->body->GetWorldPos()), HitRadius(*p))) continue;
 			DamagePlayerFromNpc(attacker, *p, damage, attack.hitRemote, attack.status, remoteID);
 		}
 		foreach(o, actorNpcList) {
-			if(&*o == &attacker || o->hp <= 0 || !MonsterHostile(attacker, *o) || glm::length(vec2(o->pos) - vec2(center)) > areaRadius) continue;
+			if(&*o == &attacker || o->hp <= 0 || !MonsterHostile(attacker, *o) || glm::length(vec2(o->pos) - vec2(center)) > areaRadius + (cone ? NpcHitRadius(*o) : 0.0f) || !inCone(vec2(o->pos), NpcHitRadius(*o))) continue;
 			const bool execute = attack.executeMinion && o->monsterAi && MonsterTargetKind(*o->monsterAi) == GameXmlContent::MonsterAttack::MINION;
 			DamageNpcFromNpc(attacker, *o, execute ? o->hpMax : damage, attack.hitRemote, remoteID, attack.status, execute);
 		}
@@ -712,6 +723,7 @@ void World::HideMonster(ActorNpc& npc)
 	npc.actionState = ai.idle;
 	replication->SendMonsterStateToAll(npc.UID, ai.idle, npc.pos, 0.0f);
 	foreach_const(st, ai.hideStatuses) ApplyMonsterStatus(npc, *st, true);
+	foreach_const(st, ai.wakeStatuses) ApplyMonsterStatus(npc, *st, true);
 	npc.monsterSkillReady.fill(Time::ZERO);
 	LOG("Monster :: creature=%d (local %d) hides", (i32)npc.docID, npc.localID);
 }
@@ -1005,6 +1017,8 @@ void World::MonsterRemoteApply(MonsterRemote& mr, ActorNpc& owner)
 			if(active && (!stInfo || stInfo->maxOverlap <= 1)) continue;
 			if(p) ApplyStatusFromNpc(owner, *p, st->statusID);
 			else ApplyStatusToNpcFromNpc(owner, *n, st->statusID);
+			const u64 firstKey = ((u64)(u32)remote.ID << 32) | (u32)st->statusID;
+			if(monsterZoneStatusLogged.insert(firstKey).second) LOG("Monster :: remote %d of creature %d first applies status %d to %s", (i32)remote.ID, (i32)owner.docID, st->statusID, p ? "a master" : "a creature");
 		}
 	};
 	const u32 remoteID = mr.seed != 0 ? mr.seed + MEASURED_REMOTE_RUNTIME_ID_OFFSET : (MONSTER_REMOTE_ID_BASE | (nextMonsterRemoteID++ & MONSTER_REMOTE_ID_MASK));
@@ -1823,8 +1837,11 @@ void World::UpdateMonsterAi(f32 delta)
 	UpdateMonsterHits();
 	UpdateMonsterRemotes(delta);
 	if(frozen) return;
-	foreach(it, actorNpcList) {
-		ActorNpc& npc = *it;
+	eastl::fixed_vector<ActorNpc*,512,true> aiOrder;
+	foreach(it, actorNpcList) aiOrder.push_back(&*it);
+	if((monsterAiTick++ & 1) != 0) eastl::reverse(aiOrder.begin(), aiOrder.end());
+	foreach(op, aiOrder) {
+		ActorNpc& npc = **op;
 		SnapNpcToGround(npc);
 		if(npc.selfDestructAt != Time::ZERO && localTime >= npc.selfDestructAt && npc.hp > 0 && npc.removeAt == Time::ZERO) {
 			MonsterDie(npc, ActorUID::INVALID, CreatureIndex(0));
@@ -2040,6 +2057,10 @@ void World::UpdateMonsterAi(f32 delta)
 					npc.monsterAwake = false;
 					npc.actionState = ai.idle;
 					replication->SendMonsterStateToAll(npc.UID, ai.idle, npc.pos, 0.0f);
+					if(titanMode && !ai.hideStatuses.empty()) {
+						foreach_const(st, ai.hideStatuses) ApplyMonsterStatus(npc, *st, true);
+						foreach_const(st, ai.wakeStatuses) ApplyMonsterStatus(npc, *st, true);
+					}
 				}
 				if(!titanMode) replication->SendHpToAll(npc.UID, npc.hp, npc.hpMax);
 				npc.monsterSkillReady.fill(Time::ZERO);

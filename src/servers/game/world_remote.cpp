@@ -833,13 +833,14 @@ void World::RemoteHitNpcs(RemoteInst& inst)
 	const Remote& remote = *inst.remote;
 	const i32 base = (i32)(inst.damage * remote.attackMultiplier);
 	const bool enemies = !(base <= 0 && remote.statuses.empty() && remote.changeCasterAction == ActionStateID::INVALID && remote.onActivate.empty() && remote.onHitCharacter.empty() && remote.onHitOwnerStatus == 0) && (remote.damageGroup == Remote::DamageGroup::eENEMY || remote.damageGroup == Remote::DamageGroup::eALL);
-	if(!enemies && remote.friendlyStatuses.empty()) return;
+	const bool friendAreaStatuses = (remote.damageGroup == Remote::DamageGroup::eFRIEND || remote.damageGroup == Remote::DamageGroup::eALL) && (remote.vs & (1u << Remote::VS_NPC_MONSTER)) && !remote.statuses.empty();
+	if(!enemies && remote.friendlyStatuses.empty() && !friendAreaStatuses) return;
 	Player& owner = players[inst.ownerIndex];
 	const bool sphere = remote.boundType == Remote::BoundType::E_BOUND_SPHERE || remote.boundType == Remote::BoundType::E_BOUND_CAPSULE || remote.angle > 0;
 	const f32 roundRadius = CapsuleOrSphereRadius(remote);
 	foreach(npc, actorNpcList) {
 		const bool hittable = NpcHittableBy(*npc, owner);
-		if(hittable ? !enemies : remote.friendlyStatuses.empty()) continue;
+		if(hittable ? !enemies : (remote.friendlyStatuses.empty() && !friendAreaStatuses)) continue;
 		const f32 r = NpcHitRadius(*npc);
 		const vec2 rel = remote.boundType == Remote::BoundType::E_BOUND_CAPSULE && remote.attachFireObject ? vec2(npc->pos) - vec2(owner.body->GetWorldPos()) : vec2(npc->pos) - vec2(inst.pos) - inst.dir * RemoteBoundOffset(remote);
 		const f32 dist = glm::length(rel);
@@ -854,8 +855,28 @@ void World::RemoteHitNpcs(RemoteInst& inst)
 			if(along < -r || along > length + r || fabsf(glm::dot(local, Perp(inst.dir))) > remote.boundSize[0] * 0.5f + r) continue;
 		}
 		if(hittable) RemoteDamageNpc(inst, *npc, dist);
-		else RemoteFriendNpc(inst, *npc);
+		else if(!RemoteFriendNpc(inst, *npc) && friendAreaStatuses) RemoteFriendAreaNpc(inst, *npc);
 	}
+}
+
+void World::RemoteFriendAreaNpc(RemoteInst& inst, ActorNpc& npc)
+{
+	const Remote& remote = *inst.remote;
+	Player& owner = players[inst.ownerIndex];
+	const Faction ownFaction = owner.team == 0 ? Faction::RED : Faction::BLUE;
+	if(npc.faction != ownFaction || npc.hp <= 0 || npc.removeAt != Time::ZERO || GetGameXmlContent().CreatureUntargetable((i32)npc.docID)) return;
+	const Time until = TimeAdd(localTime, TimeMsToTime(MAX(remote.hitInvalidTime, 0.1f) * 1000.0));
+	foreach(h, inst.npcHits) {
+		if(h->uid != npc.UID) continue;
+		if(localTime < h->until) return;
+		h->until = until;
+		foreach_const(st, remote.statuses) if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(owner, npc, st->statusID, false);
+		return;
+	}
+	if(inst.npcHits.full()) return;
+	inst.npcHits.push_back({ npc.UID, until });
+	foreach_const(st, remote.statuses) if(st->rate >= 100 || (i32)(RandUint() % 100) < st->rate) ApplyStatusToNpc(owner, npc, st->statusID, false);
+	LOG("Remote :: %d friendly area statuses on allied creature=%d", (i32)remote.ID, (i32)npc.docID);
 }
 
 bool World::RemoteFriendNpc(RemoteInst& inst, ActorNpc& npc)

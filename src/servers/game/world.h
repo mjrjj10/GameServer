@@ -10,6 +10,7 @@
 
 #include <EASTL/array.h>
 #include <EASTL/fixed_list.h>
+#include <EASTL/hash_set.h>
 #include <EASTL/fixed_vector.h>
 
 #include "replication.h"
@@ -331,6 +332,8 @@ struct World
 		NavMesh::Route botMeshRoute;
 		vec2 botMeshGoal = vec2(0);
 		Time botMeshPlannedAt = Time::ZERO;
+		i32 botMeshJumpEdge = -1;
+		Time botMeshJumpAt = Time::ZERO;
 		f32 moveSpeedSent = -1.0f;
 		bool manaDirty = false;
 		eastl::array<f32,3> res = { -1, -1, -1 };
@@ -802,6 +805,8 @@ struct World
 	eastl::array<u8,10> progressLoaded = {};
 	eastl::fixed_list<ActorMaster,512,true> actorMasterList;
 	eastl::fixed_list<ActorNpc,512,true> actorNpcList;
+	u32 monsterAiTick = 0;
+	eastl::hash_set<u64> monsterZoneStatusLogged;
 	eastl::fixed_list<ActorDynamic,512,true> actorDynamicList;
 
 	typedef ListItT<ActorNpc> ActorNpcHandle;
@@ -1467,6 +1472,7 @@ public:
 	bool RemoteDamageNpc(RemoteInst& inst, ActorNpc& npc, f32 dist);
 	bool RemoteFriendNpc(RemoteInst& inst, ActorNpc& npc);
 	void RemoteFriendTargetNpc(RemoteInst& inst, ActorNpc& npc);
+	void RemoteFriendAreaNpc(RemoteInst& inst, ActorNpc& npc);
 	void ChangeCasterActionOnHit(RemoteInst& inst, Player& owner, ActorUID targetUID, const vec3& targetPos);
 	void StartLevelEvents();
 	void StartTimeRecord();

@@ -1150,6 +1150,8 @@ bool World::BotPassesStuckSpot(const Player& bot, const vec2& from, const vec2& 
 static const f64 HYP_BOT_MESH_REPLAN_MS = 3000.0;
 static const f32 HYP_BOT_MESH_REACHED = 120.0f;
 static const u8 HYP_BOT_MESH_EDGE_MAX_FAILS = 2;
+static const f64 HYP_BOT_MESH_JUMP_RETRY_MIN_MS = 800.0;
+static const f64 HYP_BOT_MESH_JUMP_RETRY_WINDOW_MS = 10000.0;
 static const i32 BOT_MESH_SKIP_AHEAD = 4;
 
 bool World::BotMeshStep(Player& bot, const vec2& goal, vec2* step)
@@ -1188,6 +1190,18 @@ bool World::BotMeshStep(Player& bot, const vec2& goal, vec2* step)
 	}
 	const NavMesh::Waypoint& next = bot.botMeshRoute.front();
 	if(next.userEdge >= 0 && bot.clientHd == ClientHandle::INVALID && bot.body->grounded && next.pos.z - pos.z >= HYP_BOT_NAV_LEDGE && glm::length(vec2(next.pos) - here) < HYP_BOT_NAV_JUMP_TRIGGER) {
+		if(bot.botMeshJumpEdge == next.userEdge && localTime >= TimeAdd(bot.botMeshJumpAt, TimeMsToTime(HYP_BOT_MESH_JUMP_RETRY_MIN_MS)) && localTime < TimeAdd(bot.botMeshJumpAt, TimeMsToTime(HYP_BOT_MESH_JUMP_RETRY_WINDOW_MS))) {
+			u8& fails = botMeshEdgeFails[next.userEdge];
+			fails++;
+			LOG("BotNav :: %ls retries navmesh user edge %d (%d failures)%s", bot.name.data(), next.userEdge, (i32)fails, fails >= HYP_BOT_MESH_EDGE_MAX_FAILS ? ", dropped" : "");
+			if(fails >= HYP_BOT_MESH_EDGE_MAX_FAILS) {
+				bot.botMeshRoute.clear();
+				bot.botMeshJumpEdge = -1;
+				return false;
+			}
+		}
+		bot.botMeshJumpEdge = next.userEdge;
+		bot.botMeshJumpAt = localTime;
 		bot.input.jump = 1;
 		LOG("BotNav :: %ls jumps navmesh user edge %d toward (%.0f, %.0f, %.0f) from z %.0f", bot.name.data(), next.userEdge, next.pos.x, next.pos.y, next.pos.z, pos.z);
 	}
